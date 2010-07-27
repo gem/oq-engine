@@ -1,0 +1,43 @@
+/*
+ * Google Earth API for Ext JS
+ * Copyright(c) 2008, Bjorn Sandvik
+ * bjorn@thematicmapping.org
+ * http://thematicmapping.org
+ *
+ * License: GNU General Public License v3
+ *
+ * Version: 1.1
+ *
+ */
+
+.x-tree-node img.Folder, .x-tree-node-collapsed img.Folder{
+    background: url("images/default/tree/closedfolder.png");
+}
+
+.x-tree-node-expanded img.Folder {
+    background: url("images/default/tree/openfolder.png");
+}
+
+.x-tree-node img.kmlFolder, .x-tree-node-collapsed img.kmlFolder{
+    background: url("images/default/tree/closedfolder.png");
+}
+
+.x-tree-node-expanded img.kmlFolder {
+    background: url("images/default/tree/openfolder.png");
+}
+
+.x-tree-node img.kmlDocument, .x-tree-node-collapsed img.kmlDocument{
+    background: url("images/default/tree/closedfolder.png");
+}
+
+.x-tree-node-expanded img.kmlDocument {
+    background: url("images/default/tree/openfolder.png");
+}
+
+.x-tree-node img.kmlScreenOverlay, .x-tree-node-collapsed img.kmlScreenOverlay{
+    background: url("images/default/tree/overlay.png");
+}
+
+.x-tree-node img.kmlGroundOverlay, .x-tree-node-collapsed img.kmlGroundOverlay{
+    background: url("images/default/tree/overlay.png");
+}

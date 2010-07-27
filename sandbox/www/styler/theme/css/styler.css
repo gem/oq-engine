@@ -1,0 +1,61 @@
+body {
+    margin: 1em;
+    font-family: sans-serif;
+}
+h1, h2, h3, h4 {
+    margin-top: 1em;
+    margin-bottom: 0.5em;
+}
+
+/**
+ * PointSymbolizer
+ */
+.gx-pointsymbolizer-mark-item img {
+    vertical-align: text-bottom;
+}
+.gx-pointsymbolizer-mark-item span {
+    margin-left: 0.5em;
+}
+
+/**
+ * ScaleSlider
+ */
+.gx-scaleslider {
+    position: absolute;
+    z-index: 1000;
+    top: 71px;
+    left: 12px;
+    cursor: pointer;
+}
+
+.x-btn .add {
+    background-image: url(../img/add.png);
+}
+
+.x-btn .delete {
+    background-image: url(../img/delete.png);
+}
+
+.x-btn .save {
+    background-image: url(../img/palette.png);
+}
+
+.x-btn .cancel {
+    background-image: url(../img/cancel.png);
+}
+
+.x-btn-icon .expand {
+    background-image: url(../img/arrow_down.png);
+}
+
+.x-btn-icon .collapse {
+    background-image: url(../img/arrow_up.png);
+}
+
+.x-btn-icon .trash {
+    background-image: url(../img/bin_empty.png);
+}
+
+.x-btn-icon .magnify {
+    background-image: url(../img/magnifier.png);
+}
