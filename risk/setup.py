@@ -17,6 +17,7 @@ import os
 import sys
 
 from setuptools import setup, find_packages
+""" this is a dummy comment, for testing the repository handling. Anybody kindly requested to remove """
 
 srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'src')
 
