@@ -1,7 +1,18 @@
+"""
+This is a basic set of tests for risk engine,
+specifically file formats.
+
+"""
+
 import unittest
 import test
 from greek import reader, esri
 from greek.reader import ESRIBinaryFileExposureReader, AsciiFileHazardIMLReader
+
+class MyInterface:
+    def this_function(self, some_arg):
+        raise Exception("Unimplemented")
+        
 
 class RiskBaseTestCase(test.BaseTestCase):
     """Basic unit tests of the Risk Engine"""
