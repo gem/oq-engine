@@ -1,1 +1,15 @@
-I like to write in Python.
+OpenGEM System:
+
+== Dependencies ==
+
+* Sci.Py
+* PyYAML
+* Eventlet
+* Sphinx (for documentation)
+
+== Systems Used ==
+
+* GitHub (http://github.com/gem/opengem)
+* Rietveld (http://gemreview.appspot.com)
+* PivotalTracker (http://pivotaltracker.com)
+
