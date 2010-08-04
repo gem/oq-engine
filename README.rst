@@ -17,6 +17,18 @@ For the most part the Python packages in here can be installed using `pip`
 * Eventlet
 * Sphinx (for documentation)
 
+
+Running Tests
+-------------
+
+To run the python tests use:
+
+::
+
+    python runtests.py
+
+
+
 Tools / Services
 ----------------
 
