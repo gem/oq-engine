@@ -1,0 +1,81 @@
+/*
+ * [COPYRIGHT]
+ *
+ * [NAME] is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
+package org.gem.engine.core.event.listener;
+
+import static org.gem.engine.core.AdditionalEvents.CACHE_EMPTY;
+import static org.gem.engine.core.AdditionalPipeKeys.MEAN_FUNCTION;
+
+import org.gem.engine.core.cache.Cache;
+import org.gem.engine.core.cache.Pipe;
+import org.gem.engine.core.event.Filter;
+import org.gem.engine.data.DiscreteVulnerabilityFunction;
+
+/**
+ * Loads an object from the {@link Cache} using the {@link DiscreteVulnerabilityFunction} code as key.
+ * <p>
+ * This filters is useful to store data that change only when the related {@link DiscreteVulnerabilityFunction} change.
+ * <p>
+ * This filter raises:<br/>
+ * <ul>
+ * <li><code>Event.CACHE_EMPTY</code> if the cache has not the object corresponding to the given {@link DiscreteVulnerabilityFunction} code
+ * </ul>
+ * 
+ * @author Andrea Cerisara
+ * @version $Id: DiscreteVulnerabilityFunctionKeyCacheLoader.java 567 2010-07-20 10:10:52Z acerisara $
+ */
+public class DiscreteVulnerabilityFunctionKeyCacheLoader extends Filter
+{
+
+    private final String key;
+    private final Cache cache;
+
+    /**
+     * @param cache the cache implementation used
+     * @param key the key used to load the cached data from the pipe
+     */
+    public DiscreteVulnerabilityFunctionKeyCacheLoader(Cache cache, String key)
+    {
+        this.key = key;
+        this.cache = cache;
+
+        canRaise(CACHE_EMPTY);
+    }
+
+    private boolean objectInCache(DiscreteVulnerabilityFunction function)
+    {
+        return cache.get(function.getVulnerabilityCode()) != null;
+    }
+
+    @Override
+    protected void filter(Cache buffer, Pipe pipe)
+    {
+        DiscreteVulnerabilityFunction function = pipe.get(MEAN_FUNCTION);
+
+        if (objectInCache(function))
+        {
+            pipe.put(key, cache.get(function.getVulnerabilityCode()));
+        }
+        else
+        {
+            raise(CACHE_EMPTY, buffer, pipe);
+        }
+    }
+
+}
