@@ -68,6 +68,9 @@ def main():
         cursor.execute("DROP TABLE testTable")
         conn.commit()
         
+        cursor.close()
+	conn.close()
+       
         print "End CRUD Test with Python, DB API 2.0 with db adapter psycopg2!"
     except:
         # Get the most recent exception
