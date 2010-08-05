@@ -22,6 +22,8 @@ from eventlet import event
 from eventlet import greenpool
 from eventlet import queue
 
+logging = eventlet.import_patched('logging')
+
 # this is a hack so that it is easier to test these scripts,
 # it will add the proper directories to the path so that 
 # this script can be run from a checkout
@@ -50,11 +52,14 @@ flags.DEFINE_string('region', 'region.data', 'region input')
 flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
 flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
                     'loss ratio map output')
-
+flags.DEFINE_boolean('debug', False, 'whether to show debug output')
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
     
+    if FLAGS.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
     # This is our pool of coroutines
     pool = greenpool.GreenPool()
 
@@ -77,26 +82,35 @@ if __name__ == '__main__':
 
     def consume_shakemap():
         for cell, data in shakemap_parser.filter(region_constraint):
+            logging.debug('found shakemap data')
             loss_grid.cell(cell).receive('shakemap', data)
             loss_ratio_grid.cell(cell).receive('shakemap', data)
+        logging.debug('shakemap done')
 
     def consume_exposure():
         for cell, data in exposure_parser.filter(region_constraint):
+            logging.debug('found exposure data')
             loss_grid.cell(cell).receive('exposure', data)
             loss_ratio_grid.cell(cell).receive('exposure', data)
+        logging.debug('exposure done')
 
     def consume_vulnerability():
         for cell, data in vulnerability_parser.filter(region_constraint):
+            logging.debug('found vulnerability data')
             loss_grid.cell(cell).receive('vulnerability', data)
             loss_ratio_grid.cell(cell).receive('vulnerability', data)
+        logging.debug('vulnerability done')
 
     def consume_loss_results():
         while (not shakemap_parser.finished.ready()
                and not exposure_parser.finished.ready()
                and not vulnerability_parser.finished.ready()):
             for cell, value in loss_grid.results():
+                logging.debug('consume loss results')
                 loss_map.write(cell, value)
+            eventlet.sleep(0)
 
+        logging.debug('consume loss results done')
         loss_map.close()
 
     def consume_loss_ratio_results():
@@ -104,8 +118,11 @@ if __name__ == '__main__':
                and not exposure_parser.finished.ready()
                and not vulnerability_parser.finished.ready()):
             for cell, value in loss_ratio_grid.results():
+                logging.debug('consume loss ratio results')
                 loss_ratio_map.write(cell, value)
+            eventlet.sleep(0)
 
+        logging.debug('consume loss ratio results done')
         loss_ratio_map.close()
     
     # These will all be run in their own coroutines
@@ -129,5 +146,9 @@ if __name__ == '__main__':
     pool.spawn(consume_vulnerability)
     pool.spawn(consume_loss_results)
     pool.spawn(consume_loss_ratio_results)
-
-    pool.waitall()    
+    
+    try:
+        pool.waitall()
+    except KeyboardInterrupt:
+        logging.error('still running: %d', pool.running())
+        raise

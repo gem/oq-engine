@@ -19,5 +19,5 @@ class WordProducer(producer.FileProducer):
         if not line:
             return None
 
-        x, y, value = line.strip().split()
-        return ((int(x), int(y)), value) 
+        x, y, value = line.strip().split(' ', 2)
+        return ((float(x), float(y)), value) 

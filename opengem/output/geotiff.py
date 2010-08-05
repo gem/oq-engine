@@ -2,7 +2,7 @@
 
 from opengem import writer
 
-class GeotTiffFile(writer.FileWriter):
+class GeoTiffFile(writer.FileWriter):
     """Example output class.
 
     Were this a real class it would probably be doing something much more
@@ -12,3 +12,4 @@ class GeotTiffFile(writer.FileWriter):
     
     def write(self, cell, value):
         self.file.write('%s %s %s\n' % (cell[0], cell[1], value))
+        #self.file.flush()

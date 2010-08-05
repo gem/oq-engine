@@ -20,11 +20,12 @@ class FileProducer(object):
                 rv = self._parse_one()
         except Exception, e:
             self.finished.send_exception(e)
+            raise
         
         self.finished.send(True)
 
     def filter(self, constraint):
-        for next in self:
+        for next in iter(self):
             if constraint.match(next):
                 yield next
   

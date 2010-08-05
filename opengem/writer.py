@@ -11,7 +11,7 @@ class FileWriter(object):
 
         # file i/o will tend to block, wrap it in a thread so it will
         # play nice with ohters
-        self.file = tpool.Proxy(open(self.path, 'r'))
+        self.file = tpool.Proxy(open(self.path, 'w'))
 
     def write(self, cell, value):
         raise NotImplemented
