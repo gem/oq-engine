@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
 
     # Region contstraints are loaded all at once
-    region_constraint = region.from_file(FLAGS.region)
+    region_constraint = region.RegionConstraint.from_file(FLAGS.region)
     
     # Files will be iterated through
     shakemap_parser = shakemap.ShakemapFile(FLAGS.shakemap)

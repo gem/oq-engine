@@ -14,8 +14,10 @@ For the most part the Python packages in here can be installed using `pip`
   http://www.scipy.org/Installing_SciPy/Mac_OS_X
 
 * PyYAML
+* python-gflags
 * Eventlet
 * Shapely
+  * requires geos (c library)
 * Sphinx (for documentation)
 
 

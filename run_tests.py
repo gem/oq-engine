@@ -19,6 +19,7 @@ import unittest
 import sys
 
 from tests.example_unittest import *
+from tests.region_unittest import *
 
 
 if __name__ == '__main__':
