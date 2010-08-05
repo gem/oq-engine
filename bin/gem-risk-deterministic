@@ -1,48 +1,133 @@
 #!/usr/bin/python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-from opengem import flags
-from opengem.parser import hazard_curve
-from opengem.risk import calc
+"""Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
 
-FLAGS = flags.FLAGS
-
-""" 
-
-Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
-
-    Expects to receive a:
+Expects to receive:
     Shakemap (ground motion per grid cell)
     Exposure (value per grid cell)
     Vulnerability functions (multiple lists per grid cell)
     Region of interest
 
-    Expects to compute:
+Expects to compute:
     A loss ratio map and store the results in GeoTIFF
     A loss map and store the results in GeoTIFF
-
-Probabilistic:
-
-    Expects to receive:
-    Hazard (hazard curves per grid cell)
-    Exposure (value per grid cell)
-    Vulnerability functions (multiple lists per grid cell)
-    Region of interest (mostly rectangle)
-
-    Expects to compute:
-    Loss curves and store as ascii file
-    Loss ratio curves and store as ascii file
-    Loss maps from loss curves and store as GeoTIFF
-    Loss ratio maps from loss ratio curves and store as GeoTIFF
-
 """
 
-if __name__ == '__main__':
-    FLAGS.parse()
-        
-    
+import os
+import sys
 
-    loss_ratio_curve = calc.LossRatioCurve(FLAGS.output)
-    for curve in hazard_curve.parse_iter(FLAGS.input):
-        loss_ratio_curve.compute(curve)
+import eventlet
+from eventlet import event
+from eventlet import greenpool
+from eventlet import queue
+
+# this is a hack so that it is easier to test these scripts,
+# it will add the proper directories to the path so that 
+# this script can be run from a checkout
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                  'opengem')):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from opengem import flags
+from opengem import region
+from opengem import computation
+from opengem.output import geotiff
+from opengem.parser import exposure
+from opengem.parser import shakemap
+from opengem.parser import vulnerability
+from opengem.risk import loss
+from opengem.risk import loss_ratio
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
+flags.DEFINE_string('exposure', 'exposure.data', 'exposure input')
+flags.DEFINE_string('vulnerability', 'vulnerability.data',
+                    'vulnerability input')
+flags.DEFINE_string('region', 'region.data', 'region input')
+
+flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
+flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
+                    'loss ratio map output')
+
+
+if __name__ == '__main__':
+    args = FLAGS(sys.argv)
     
+    # This is our pool of coroutines
+    pool = greenpool.GreenPool()
+
+    # Region contstraints are loaded all at once
+    region_constraint = region.RegionConstraint.from_file(FLAGS.region)
+    
+    # Files will be iterated through
+    shakemap_parser = shakemap.ShakemapFile(FLAGS.shakemap)
+    exposure_parser = exposure.ExposureFile(FLAGS.exposure)
+    vulnerability_parser = vulnerability.VulnerabilityFile(FLAGS.vulnerability)
+    
+    # These are the computations we are doing
+    loss_grid = computation.Grid(pool, cell_factory=loss.LossComputation)
+    loss_ratio_grid = computation.Grid(
+            pool, cell_factory=loss_ratio.LossRatioComputation)
+
+    # These are our output formats
+    loss_map = geotiff.GeoTiffFile(FLAGS.loss_map)
+    loss_ratio_map = geotiff.GeoTiffFile(FLAGS.loss_ratio_map)
+
+    def consume_shakemap():
+        for cell, data in shakemap_parser.filter(region_constraint):
+            loss_grid.cell(cell).receive('shakemap', data)
+            loss_ratio_grid.cell(cell).receive('shakemap', data)
+
+    def consume_exposure():
+        for cell, data in exposure_parser.filter(region_constraint):
+            loss_grid.cell(cell).receive('exposure', data)
+            loss_ratio_grid.cell(cell).receive('exposure', data)
+
+    def consume_vulnerability():
+        for cell, data in vulnerability_parser.filter(region_constraint):
+            loss_grid.cell(cell).receive('vulnerability', data)
+            loss_ratio_grid.cell(cell).receive('vulnerability', data)
+
+    def consume_loss_results():
+        while (not shakemap_parser.finished.ready()
+               and not exposure_parser.finished.ready()
+               and not vulnerability_parser.finished.ready()):
+            for cell, value in loss_grid.results():
+                loss_map.write(cell, value)
+
+        loss_map.close()
+
+    def consume_loss_ratio_results():
+        while (not shakemap_parser.finished.ready()
+               and not exposure_parser.finished.ready()
+               and not vulnerability_parser.finished.ready()):
+            for cell, value in loss_ratio_grid.results():
+                loss_ratio_map.write(cell, value)
+
+        loss_ratio_map.close()
+    
+    # These will all be run in their own coroutines
+    # The flow will be: 
+    #
+    #   As information for cells that match the region constraint are parsed
+    #   from the files it will be given to the computations being held by the
+    #   grid.
+    #
+    #   As computations receive enough information to execute they will begin
+    #   to provide results.
+    #   
+    #   As results become available the output handlers will begin writing
+    #   the output. 
+    #
+    #   Once all the files have been parsed and all the results have been
+    #   have been processed, the script will end.
+
+    pool.spawn(consume_shakemap)
+    pool.spawn(consume_exposure)
+    pool.spawn(consume_vulnerability)
+    pool.spawn(consume_loss_results)
+    pool.spawn(consume_loss_ratio_results)
+
+    pool.waitall()    
