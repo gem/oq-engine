@@ -4,14 +4,16 @@ from eventlet import event
 from eventlet import queue
 
 class Computation(object):
-    def __init__(self, pool, keys=None):
+    def __init__(self, pool, cell, data_keys=None):
         self.pool = pool
+        self.cell = cell
         self.result = event.Event()
-        if keys is None:
-            keys = []
 
-        self.data = {}
-        for k in keys:
+        if data_keys is None:
+            data_keys = []
+
+        self._data = {}
+        for k in data_keys:
             self._data[k] = event.Event()
     
     def receive(self, key, _data):
@@ -25,7 +27,8 @@ class Computation(object):
         result = self._compute(**data)
 
         # send to finished
-        self.result.send(result)
+        self.result.send((self.cell, result))
+        return (self.cell, result)
 
 
 class Grid(object):
@@ -41,5 +44,11 @@ class Grid(object):
 
     def _new_cell(self, key):
         cell = self.cell_factory(self.pool, key)
+        self.pool.spawn(cell.compute)
+        self._queue.put(cell.result)
         return cell
+    
+    def results(self):
+        while not self._queue.empty():
+            yield self._queue.get().wait()
 
