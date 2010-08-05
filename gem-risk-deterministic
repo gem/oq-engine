@@ -97,6 +97,22 @@ if __name__ == '__main__':
                 loss_ratio_map.write(cell, value)
 
         loss_ratio_map.close()
+    
+    # These will all be run in their own coroutines
+    # The flow will be: 
+    #
+    #   As information for cells that match the region constraint are parsed
+    #   from the files it will be given to the computations being held by the
+    #   grid.
+    #
+    #   As computations receive enough information to execute they will begin
+    #   to provide results.
+    #   
+    #   As results become available the output handlers will begin writing
+    #   the output. 
+    #
+    #   Once all the files have been parsed and all the results have been
+    #   have been processed, the script will end.
 
     pool.spawn(consume_shakemap)
     pool.spawn(consume_exposure)
