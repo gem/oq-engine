@@ -15,6 +15,7 @@ For the most part the Python packages in here can be installed using `pip`
 
 * PyYAML
 * Eventlet
+* Shapely
 * Sphinx (for documentation)
 
 

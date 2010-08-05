@@ -1,0 +1,48 @@
+#!/usr/bin/python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+from opengem import flags
+from opengem.parser import hazard_curve
+from opengem.risk import calc
+
+FLAGS = flags.FLAGS
+
+""" 
+
+Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
+
+    Expects to receive a:
+    Shakemap (ground motion per grid cell)
+    Exposure (value per grid cell)
+    Vulnerability functions (multiple lists per grid cell)
+    Region of interest
+
+    Expects to compute:
+    A loss ratio map and store the results in GeoTIFF
+    A loss map and store the results in GeoTIFF
+
+Probabilistic:
+
+    Expects to receive:
+    Hazard (hazard curves per grid cell)
+    Exposure (value per grid cell)
+    Vulnerability functions (multiple lists per grid cell)
+    Region of interest (mostly rectangle)
+
+    Expects to compute:
+    Loss curves and store as ascii file
+    Loss ratio curves and store as ascii file
+    Loss maps from loss curves and store as GeoTIFF
+    Loss ratio maps from loss ratio curves and store as GeoTIFF
+
+"""
+
+if __name__ == '__main__':
+    FLAGS.parse()
+        
+    
+
+    loss_ratio_curve = calc.LossRatioCurve(FLAGS.output)
+    for curve in hazard_curve.parse_iter(FLAGS.input):
+        loss_ratio_curve.compute(curve)
+    
