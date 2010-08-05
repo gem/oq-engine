@@ -45,7 +45,8 @@ class Grid(object):
 
     def cell(self, key):
         if key not in self._cells:
-            self._cells = self._new_cell(key)
+            self._cells[key] = self._new_cell(key)
+        return self._cells[key]
 
     def _new_cell(self, key):
         cell = self.cell_factory(self.pool, key)
