@@ -3,6 +3,7 @@
 from eventlet import event
 from eventlet import queue
 
+
 class Computation(object):
     def __init__(self, pool, cell, data_keys=None):
         self.pool = pool

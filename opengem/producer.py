@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+
 class FileProducer(object):
     def __init__(self):
         self.finished = event.Event()

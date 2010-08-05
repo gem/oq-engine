@@ -30,6 +30,7 @@ from opengem.parser import exposure
 from opengem.parser import shakemap
 from opengem.parser import vulnerability
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
 flags.DEFINE_string('exposure', 'exposure.data', 'exposure input')
@@ -40,6 +41,7 @@ flags.DEFINE_string('region', 'region.data', 'region input')
 flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
 flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
                     'loss ratio map output')
+
 
 if __name__ == '__main__':
     args = FLAGS.parse(sys.argv)

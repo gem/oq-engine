@@ -3,6 +3,7 @@
 from shapely import geometry
 from shapely import wkt
 
+
 class RegionConstraint(object):
     def __init__(self, polygon):
         self.polygon = polygon
