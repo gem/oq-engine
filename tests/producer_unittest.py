@@ -43,7 +43,7 @@ class FileProducerTestCase(unittest.TestCase):
         path = self._make_data_file('test')
         prod = test.WordProducer(path)
         for cell, data in prod:
-            self.assertEqual(data, 'test%s' % cell[0])
+            self.assertEqual(data, 'test%s' % int(cell[0]))
 
     def test_filter(self):
         constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
@@ -56,7 +56,7 @@ class FileProducerTestCase(unittest.TestCase):
 
         for cell, data in prod.filter(constraint):
             expected.pop(cell[0])
-            self.assertEqual(data, 'test%s' % cell[0])
+            self.assertEqual(data, 'test%s' % int(cell[0]))
         
         self.assertEqual(len(expected), 0)
 
@@ -73,7 +73,7 @@ class FileProducerTestCase(unittest.TestCase):
         self.assertRaises(timeout.Timeout, _wait_for_producer)
 
         for cell, data in prod:
-            self.assertEqual(data, 'test%s' % cell[0])
+            self.assertEqual(data, 'test%s' % int(cell[0]))
         
         self.assert_(_wait_for_producer())
         
