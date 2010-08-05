@@ -1,0 +1,77 @@
+#!/usr/bin/python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+"""Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
+
+Expects to receive:
+    Shakemap (ground motion per grid cell)
+    Exposure (value per grid cell)
+    Vulnerability functions (multiple lists per grid cell)
+    Region of interest
+
+Expects to compute:
+    A loss ratio map and store the results in GeoTIFF
+    A loss map and store the results in GeoTIFF
+"""
+
+import sys
+
+import eventlet
+from eventlet import event
+from eventlet import greenpool
+from eventlet import queue
+
+from opengem import flags
+from opengem import region
+from opengem import computation
+from opengem import risk
+from opengem.parser import exposure
+from opengem.parser import shakemap
+from opengem.parser import vulnerability
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
+flags.DEFINE_string('exposure', 'exposure.data', 'exposure input')
+flags.DEFINE_string('vulnerability', 'vulnerability.data',
+                    'vulnerability input')
+flags.DEFINE_string('region', 'region.data', 'region input')
+
+
+if __name__ == '__main__':
+    args = FLAGS.parse(sys.argv)
+
+    pool = greenpool.GreenPool()
+
+
+    # Region contstraints are loaded all at once
+    region_constraint = region.from_file(FLAGS.region)
+    
+    # Files will be iterated through
+    shakemap_parser = shakemap.ShakemapFile(FLAGS.shakemap)
+    exposure_parser = exposure.ExposureFile(FLAGS.exposure)
+    vulnerability_parser = vulnerability.VulnerabilityFile(FLAGS.vulnerability)
+    
+    # These are the computations we are doing
+    loss_grid = computation.Grid(cell_factory=risk.LossComputation)
+    loss_ratio_grid = computation.Grid(cell_factory=risk.LossRatioComputation)
+
+    def consume_shakemap():
+        for cell, data in shakemap_parser.filter(region_constraint):
+            loss_grid.cell(cell).receive('shakemap', data)
+            loss_ratio_grid.cell(cell).receive('shakemap', data)
+
+    def consume_exposure():
+        for cell, data in exposure_parser.filter(region_constraint):
+            loss_grid.cell(cell).receive('exposure', data)
+            loss_ratio_grid.cell(cell).receive('exposure', data)
+
+    def consume_vulnerability():
+        for cell, data in vulnerability_parser.filter(region_constraint):
+            loss_grid.cell(cell).receive('vulnerability', data)
+            loss_ratio_grid.cell(cell).receive('vulnerability', data)
+
+    pool.spawn(consume_shakemap)
+    pool.spawn(consume_exposure)
+    pool.spawn(consume_vulnerability)
+
+    
