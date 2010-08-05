@@ -98,7 +98,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ConditionalLossCalculatorTest.class, LossRatioStdDevCalculatorTest.class, HazardIMLLoaderTest.class,
         HazardIMLRounderTest.class, ESRIToGTIFFConverterTest.class, IsDataComputableTest.class,
         AndSpecificationTest.class, ValidatorTest.class, IsHazardIMLInRangeTest.class })
-public class AllTests
+public class RiskEngineTests
 {
 
 }

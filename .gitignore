@@ -5,3 +5,4 @@ docs/build/*
 build/*
 build-stamp
 bin/*
+dist/*
