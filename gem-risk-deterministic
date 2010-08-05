@@ -24,11 +24,12 @@ from eventlet import queue
 from opengem import flags
 from opengem import region
 from opengem import computation
-from opengem import risk
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shakemap
 from opengem.parser import vulnerability
+from opengem.risk import loss
+from opengem.risk import loss_ratio
 
 
 FLAGS = flags.FLAGS
@@ -44,7 +45,7 @@ flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
 
 
 if __name__ == '__main__':
-    args = FLAGS.parse(sys.argv)
+    args = FLAGS(sys.argv)
     
     # This is our pool of coroutines
     pool = greenpool.GreenPool()
@@ -58,8 +59,9 @@ if __name__ == '__main__':
     vulnerability_parser = vulnerability.VulnerabilityFile(FLAGS.vulnerability)
     
     # These are the computations we are doing
-    loss_grid = computation.Grid(cell_factory=risk.LossComputation)
-    loss_ratio_grid = computation.Grid(cell_factory=risk.LossRatioComputation)
+    loss_grid = computation.Grid(pool, cell_factory=loss.LossComputation)
+    loss_ratio_grid = computation.Grid(
+            pool, cell_factory=loss_ratio.LossRatioComputation)
 
     # These are our output formats
     loss_map = geotiff.GeoTiffFile(FLAGS.loss_map)
