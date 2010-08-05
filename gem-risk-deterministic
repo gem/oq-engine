@@ -45,9 +45,9 @@ flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
 
 if __name__ == '__main__':
     args = FLAGS.parse(sys.argv)
-
+    
+    # This is our pool of coroutines
     pool = greenpool.GreenPool()
-
 
     # Region contstraints are loaded all at once
     region_constraint = region.RegionConstraint.from_file(FLAGS.region)

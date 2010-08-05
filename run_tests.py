@@ -18,6 +18,7 @@ Usage Examples:
 import unittest
 import sys
 
+from tests.computation_unittest import *
 from tests.example_unittest import *
 from tests.region_unittest import *
 

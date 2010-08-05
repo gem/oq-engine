@@ -5,16 +5,16 @@ from eventlet import queue
 
 
 class Computation(object):
-    def __init__(self, pool, cell, data_keys=None):
+    def __init__(self, pool, cell, keys=None):
         self.pool = pool
         self.cell = cell
         self.result = event.Event()
 
-        if data_keys is None:
-            data_keys = []
+        if keys is None:
+            keys = []
 
         self._data = {}
-        for k in data_keys:
+        for k in keys:
             self._data[k] = event.Event()
     
     def receive(self, key, _data):
@@ -22,7 +22,7 @@ class Computation(object):
 
     def compute(self):
         # wait on all input
-        data = [(k, v.wait()) for k, v in self._data.iteritems()]
+        data = dict([(k, v.wait()) for k, v in self._data.iteritems()])
         
         # do the computation
         result = self._compute(**data)
@@ -30,6 +30,10 @@ class Computation(object):
         # send to finished
         self.result.send((self.cell, result))
         return (self.cell, result)
+
+    def _compute(self, **kw):
+        """Do the actual computation"""
+        raise NotImplementedError
 
 
 class Grid(object):
