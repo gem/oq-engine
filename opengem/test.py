@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from opengem import computation
+from opengem import producer
 
 
 class ConcatComputation(computation.Computation):
@@ -10,3 +11,13 @@ class ConcatComputation(computation.Computation):
 
     def _compute(self, **kw):
         return ':'.join(str(x) for x in sorted(kw.values()))
+
+
+class WordProducer(producer.FileProducer):
+    def _parse_one(self):
+        line = self.file.readline()
+        if not line:
+            return None
+
+        x, y, value = line.strip().split()
+        return ((int(x), int(y)), value) 
