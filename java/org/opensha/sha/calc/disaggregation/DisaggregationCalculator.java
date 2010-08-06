@@ -35,10 +35,10 @@ import java.util.Map;
 import org.apache.commons.lang.NotImplementedException;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
-import org.opensha.commons.mapping.gmt.GMT_MapGenerator;
+//import org.opensha.commons.mapping.gmt.GMT_MapGenerator;
 import org.opensha.commons.param.ParameterAPI;
 import org.opensha.commons.param.WarningParameterAPI;
-import org.opensha.commons.util.ServerPrefUtils;
+//import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -76,7 +76,7 @@ implements DisaggregationCalculatorAPI{
 	protected final static boolean D = false;
 
 
-	public static final String OPENSHA_SERVLET_URL = ServerPrefUtils.SERVER_PREFS.getServletBaseURL() + "DisaggregationPlotServlet";
+	//public static final String OPENSHA_SERVLET_URL = ServerPrefUtils.SERVER_PREFS.getServletBaseURL() + "DisaggregationPlotServlet";
 
 	// disaggregation stuff
 
@@ -789,263 +789,263 @@ System.out.println("numRupRejected="+numRupRejected);
 		}
 	}
 
-	/**
-	 * Gets the plot image for the Disaggregation
-	 * @param metadata String
-	 * @return String
-	 */
-	public String getDisaggregationPlotUsingServlet(String metadata) throws java.
-	rmi.RemoteException {
-		DisaggregationPlotData data = new DisaggregationPlotData(mag_center, mag_binEdges, dist_center, dist_binEdges,
-				maxContrEpsilonForGMT_Plot, NUM_E, pdf3D);
-		disaggregationPlotImgWebAddr = openServletConnection(data, metadata);
-		return disaggregationPlotImgWebAddr;
-	}
+//	/**
+//	 * Gets the plot image for the Disaggregation
+//	 * @param metadata String
+//	 * @return String
+//	 */
+//	public String getDisaggregationPlotUsingServlet(String metadata) throws java.
+//	rmi.RemoteException {
+//		DisaggregationPlotData data = new DisaggregationPlotData(mag_center, mag_binEdges, dist_center, dist_binEdges,
+//				maxContrEpsilonForGMT_Plot, NUM_E, pdf3D);
+//		disaggregationPlotImgWebAddr = openServletConnection(data, metadata);
+//		return disaggregationPlotImgWebAddr;
+//	}
 
 
 
 	/**
 	 * Creates the GMT_Script lines
 	 */
-	public static ArrayList<String> createGMTScriptForDisaggregationPlot(DisaggregationPlotData data, String dir){
-
-		double x_axis_length = 4.5; // in inches
-		double y_axis_length = 4.0; // in inches
-		double z_axis_length = 2.5; // in inches
-
-		int numTicksToDrawForZAxis = 5;
-		// compute z-axis tick spacing & max z value
-		double z_tick = Math.ceil(data.getMaxContrEpsilonForGMT_Plot()/numTicksToDrawForZAxis);
-		double maxZVal = z_tick * numTicksToDrawForZAxis;
-		ArrayList<String> gmtScriptLines = new ArrayList<String>();
-		// System.out.println(maxContrEpsilonForDisaggrPlot+"\t"+z_grid+"\t"+maxZVal);
-		
-		double dist_binEdges[] = data.getDist_binEdges();
-		double mag_binEdges[] = data.getMag_binEdges();
-		double dist_center[] = data.getDist_center();
-		double mag_center[] = data.getMag_center();
-		
-		int numE = data.getNUM_E();
-		
-		double pdf3D[][][] = data.getPdf3D();
-		
-//		data.get
-
-		float min_dist = (float) dist_binEdges[0];
-		float max_dist = (float) dist_binEdges[dist_binEdges.length-1];
-		float min_mag = (float) mag_binEdges[0];
-		float max_mag = (float) mag_binEdges[mag_binEdges.length-1];
-
-		double totDist = dist_binEdges[dist_binEdges.length-1]-dist_binEdges[0];
-		double x_tick;
-		if(totDist<115) x_tick = 10;
-		else if (totDist<225) x_tick = 20;
-		else if (totDist<335) x_tick = 30;
-		else if (totDist<445) x_tick = 40;
-		else x_tick = 50;
-
-		double distBinWidthToInches = x_axis_length/totDist;
-
-
-		double totMag = mag_binEdges[mag_binEdges.length-1]-mag_binEdges[0];
-		double y_tick;
-		if(totMag<5) y_tick = 0.5;
-		else y_tick = 1.0;
-
-		double magBinWidthToInches = y_axis_length/totMag;
-
-		gmtScriptLines.add("#!/bin/bash");
-		gmtScriptLines.add("");
-		gmtScriptLines.add("cd " + dir);
-		gmtScriptLines.add("");
-		gmtScriptLines.addAll(GMT_MapGenerator.getGMTPathEnvLines());
-		gmtScriptLines.add("## Plot Script ##");
-		gmtScriptLines.add("");
-		
-		try{
-			String region = "-R"+min_dist+"/"+max_dist+"/"+min_mag+"/"+max_mag+"/"+0+"/"+maxZVal;
-			String projection = "-JX"+x_axis_length+"i/"+y_axis_length+"i";
-			String viewAngle = "-E150/30";
-			String boxPenWidth = "-W0.5p";  // pen width for drawing boxes
-			String verticalScaling = "-JZ"+z_axis_length+"i";
-			// temporarily switching background color to 0/0/0 from 180/180/180 because anything
-			// that's not pure white comes out as pure black
-			gmtScriptLines.add("${GMT_PATH}gmtset PAGE_COLOR 255/255/255");
-			gmtScriptLines.add("${GMT_PATH}gmtset X_ORIGIN 1.0i");
-			gmtScriptLines.add("${GMT_PATH}gmtset Y_ORIGIN 2.0i");
-			gmtScriptLines.add("");
-			String img_ps_file = "DisaggregationPlot.ps";
-
-			String axisBoundaryTicksBounds = "-B"+x_tick+":\"Rupture Distance (km)\":"+"/"+y_tick+":Magnitude:"+
-			"/"+z_tick+":%Contribution:"+"wSnEZ";
-			gmtScriptLines.add("${COMMAND_PATH}echo \"plotting axis\"");
-			gmtScriptLines.add("${COMMAND_PATH}cat << END > temp_segments");
-			//creating the grid lines on Z axis.
-			//System.out.println(z_tick+"   "+maxZVal+"   "+maxContrEpsilonForDisaggrPlot);
-			for (double k = z_tick; k <= maxZVal; k += z_tick) {
-				gmtScriptLines.add(">");
-				gmtScriptLines.add(min_dist+"  "+ min_mag+" "+k);
-				gmtScriptLines.add(min_dist+"  "+max_mag+"  "+k);
-				gmtScriptLines.add(">");
-				gmtScriptLines.add(min_dist+"  "+ max_mag+"  "+k);
-				gmtScriptLines.add(+max_dist+"   "+max_mag+"  "+k);
-			}
-			gmtScriptLines.add(">");
-			gmtScriptLines.add(min_dist +"   "+ max_mag+"  " + 0);
-			gmtScriptLines.add( min_dist + "  "+max_mag + "  " + maxZVal);
-			gmtScriptLines.add(">");
-			gmtScriptLines.add(max_dist + "  "+ max_mag + " "  + 0);
-			gmtScriptLines.add(  + max_dist + "  " +max_mag+ " "+ maxZVal);
-			gmtScriptLines.add("END");
-			gmtScriptLines.add("");
-
-			//creating the GMT_Script for the plot
-			gmtScriptLines.add("${GMT_PATH}psxyz temp_segments -P "+
-					region+" -M  " +projection +"  "+verticalScaling+" -K -G0/0/0 "+
-					viewAngle + "  "+boxPenWidth+"  "+axisBoundaryTicksBounds +" >  "+img_ps_file);
-
-			float contribution, base, top;
-			gmtScriptLines.add("${COMMAND_PATH}echo \"plotting disagg\"");
-			for (int i = 0; i < dist_center.length; ++i) {
-				gmtScriptLines.add("${COMMAND_PATH}echo \"plotting dist bin " + i + "\"");
-				for (int j = mag_center.length - 1; j >= 0; --j) {   // ordering here is important
-
-					double box_x_width = (dist_binEdges[i+1]- dist_binEdges[i])*distBinWidthToInches - 0.05; // lst term leaves some space
-					double box_y_width = (mag_binEdges[j+1]- mag_binEdges[j])*magBinWidthToInches - 0.05;
-					String symbol = " -So"+box_x_width+"i/"+box_y_width+"ib";
-
-					base = 0;
-					top = 0;
-					for (int k = 0; k < numE; ++k) {
-						contribution = (float) pdf3D[i][j][k];
-						top = base + contribution;
-						if (contribution > 0.0) {
-							gmtScriptLines.add("${COMMAND_PATH}echo " + "\"" + dist_center[i] + " " + mag_center[j] + " " + top +
-									"\"" +
-									" | ${GMT_PATH}psxyz "
-									+ "-P " + region + " " + projection + " " +
-									verticalScaling + symbol + base +
-									" -K -O " + epsilonColors[k] + "  " +
-									viewAngle +
-									"  " + boxPenWidth + " >> " + img_ps_file);
-							base = top;
-						}
-
-					}
-				}
-			}
-			
-			gmtScriptLines.add("");
-			gmtScriptLines.add("${COMMAND_PATH}echo \"plotting legend\"");
-			// add the legend boxes
-			// 1st legend box has origin offset in Y by -2 inches (and X by minus some too)
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"" + dist_binEdges[dist_binEdges.length-1] + " " + mag_binEdges[0] + " " + (0.8*z_tick) +
-					"\"" + " | ${GMT_PATH}psxyz " + "-P -Y-1.25i -X-4.2i " +
-					region + " " +
-					projection + " " + verticalScaling + " -So0.3ib0 " +
-					" -K -O " +
-					epsilonColors[0] + "  " + viewAngle + "  " + boxPenWidth +
-					" >> " + img_ps_file);
-
-			// each now has origin offset in the X direction
-			for (int k = 1; k < numE; ++k) {
-				gmtScriptLines.add("${COMMAND_PATH}echo " + "\"" + dist_binEdges[dist_binEdges.length-1] + " " + mag_binEdges[0] + " " + (0.8*z_tick) +
-						"\"" + " | ${GMT_PATH}psxyz " + "-P -X0.9i " +
-						region + " " +
-						projection + " " + verticalScaling + " -So0.3ib0 " +
-						" -K -O " +
-						epsilonColors[k] + "  " + viewAngle + "  " + boxPenWidth +
-						" >> " + img_ps_file);
-			}
-
-
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"0.0 0.75 13 0.0 12 CB e<-2\" > temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"0.9 0.75 13 0.0 12 CB -2<e<-1\" >> temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"1.8 0.75 13 0.0 12 CB -1<e<-0.5\" >> temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"2.7 0.75 13 0.0 12 CB -0.5<e<0\" >> temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"3.6 0.75 13 0.0 12 CB 0<e<0.5\" >> temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"4.5 0.75 13 0.0 12 CB 0.5<e<1\" >> temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"5.4 0.75 13 0.0 12 CB 1<e<2\" >> temp_label");
-			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"6.3 0.75 13 0.0 12 CB 2<e\" >> temp_label");
-			// on gravity we used -X-2.45, but for some reason that puts stuff to the right
-			// on opensha.usc.edu
-			gmtScriptLines.add("${GMT_PATH}pstext temp_label -R0/8.5/0/11 -N -Jx1i -X-6.1 -P -O >> " + img_ps_file);
-			gmtScriptLines.add("");
-			gmtScriptLines.add("${COMMAND_PATH}echo \"converting postscript\"");
-			gmtScriptLines.add("${COMMAND_PATH}cat "+img_ps_file+ " |"+ "gs -sDEVICE=jpeg -sOutputFile=temp.jpg"+" -");
-			gmtScriptLines.add("${PS2PDF_PATH} "+img_ps_file+"  "+DISAGGREGATION_PLOT_PDF_NAME);
-			gmtScriptLines.add("${CONVERT_PATH} -crop 0x0 temp.jpg "+DISAGGREGATION_PLOT_IMG_NAME);
-			gmtScriptLines.add("${COMMAND_PATH}rm temp.jpg temp_segments");
-		}catch(Exception e){
-			e.printStackTrace();
-		}
-
-		return gmtScriptLines;
-	}
+//	public static ArrayList<String> createGMTScriptForDisaggregationPlot(DisaggregationPlotData data, String dir){
+//
+//		double x_axis_length = 4.5; // in inches
+//		double y_axis_length = 4.0; // in inches
+//		double z_axis_length = 2.5; // in inches
+//
+//		int numTicksToDrawForZAxis = 5;
+//		// compute z-axis tick spacing & max z value
+//		double z_tick = Math.ceil(data.getMaxContrEpsilonForGMT_Plot()/numTicksToDrawForZAxis);
+//		double maxZVal = z_tick * numTicksToDrawForZAxis;
+//		ArrayList<String> gmtScriptLines = new ArrayList<String>();
+//		// System.out.println(maxContrEpsilonForDisaggrPlot+"\t"+z_grid+"\t"+maxZVal);
+//		
+//		double dist_binEdges[] = data.getDist_binEdges();
+//		double mag_binEdges[] = data.getMag_binEdges();
+//		double dist_center[] = data.getDist_center();
+//		double mag_center[] = data.getMag_center();
+//		
+//		int numE = data.getNUM_E();
+//		
+//		double pdf3D[][][] = data.getPdf3D();
+//		
+////		data.get
+//
+//		float min_dist = (float) dist_binEdges[0];
+//		float max_dist = (float) dist_binEdges[dist_binEdges.length-1];
+//		float min_mag = (float) mag_binEdges[0];
+//		float max_mag = (float) mag_binEdges[mag_binEdges.length-1];
+//
+//		double totDist = dist_binEdges[dist_binEdges.length-1]-dist_binEdges[0];
+//		double x_tick;
+//		if(totDist<115) x_tick = 10;
+//		else if (totDist<225) x_tick = 20;
+//		else if (totDist<335) x_tick = 30;
+//		else if (totDist<445) x_tick = 40;
+//		else x_tick = 50;
+//
+//		double distBinWidthToInches = x_axis_length/totDist;
+//
+//
+//		double totMag = mag_binEdges[mag_binEdges.length-1]-mag_binEdges[0];
+//		double y_tick;
+//		if(totMag<5) y_tick = 0.5;
+//		else y_tick = 1.0;
+//
+//		double magBinWidthToInches = y_axis_length/totMag;
+//
+//		gmtScriptLines.add("#!/bin/bash");
+//		gmtScriptLines.add("");
+//		gmtScriptLines.add("cd " + dir);
+//		gmtScriptLines.add("");
+//		gmtScriptLines.addAll(GMT_MapGenerator.getGMTPathEnvLines());
+//		gmtScriptLines.add("## Plot Script ##");
+//		gmtScriptLines.add("");
+//		
+//		try{
+//			String region = "-R"+min_dist+"/"+max_dist+"/"+min_mag+"/"+max_mag+"/"+0+"/"+maxZVal;
+//			String projection = "-JX"+x_axis_length+"i/"+y_axis_length+"i";
+//			String viewAngle = "-E150/30";
+//			String boxPenWidth = "-W0.5p";  // pen width for drawing boxes
+//			String verticalScaling = "-JZ"+z_axis_length+"i";
+//			// temporarily switching background color to 0/0/0 from 180/180/180 because anything
+//			// that's not pure white comes out as pure black
+//			gmtScriptLines.add("${GMT_PATH}gmtset PAGE_COLOR 255/255/255");
+//			gmtScriptLines.add("${GMT_PATH}gmtset X_ORIGIN 1.0i");
+//			gmtScriptLines.add("${GMT_PATH}gmtset Y_ORIGIN 2.0i");
+//			gmtScriptLines.add("");
+//			String img_ps_file = "DisaggregationPlot.ps";
+//
+//			String axisBoundaryTicksBounds = "-B"+x_tick+":\"Rupture Distance (km)\":"+"/"+y_tick+":Magnitude:"+
+//			"/"+z_tick+":%Contribution:"+"wSnEZ";
+//			gmtScriptLines.add("${COMMAND_PATH}echo \"plotting axis\"");
+//			gmtScriptLines.add("${COMMAND_PATH}cat << END > temp_segments");
+//			//creating the grid lines on Z axis.
+//			//System.out.println(z_tick+"   "+maxZVal+"   "+maxContrEpsilonForDisaggrPlot);
+//			for (double k = z_tick; k <= maxZVal; k += z_tick) {
+//				gmtScriptLines.add(">");
+//				gmtScriptLines.add(min_dist+"  "+ min_mag+" "+k);
+//				gmtScriptLines.add(min_dist+"  "+max_mag+"  "+k);
+//				gmtScriptLines.add(">");
+//				gmtScriptLines.add(min_dist+"  "+ max_mag+"  "+k);
+//				gmtScriptLines.add(+max_dist+"   "+max_mag+"  "+k);
+//			}
+//			gmtScriptLines.add(">");
+//			gmtScriptLines.add(min_dist +"   "+ max_mag+"  " + 0);
+//			gmtScriptLines.add( min_dist + "  "+max_mag + "  " + maxZVal);
+//			gmtScriptLines.add(">");
+//			gmtScriptLines.add(max_dist + "  "+ max_mag + " "  + 0);
+//			gmtScriptLines.add(  + max_dist + "  " +max_mag+ " "+ maxZVal);
+//			gmtScriptLines.add("END");
+//			gmtScriptLines.add("");
+//
+//			//creating the GMT_Script for the plot
+//			gmtScriptLines.add("${GMT_PATH}psxyz temp_segments -P "+
+//					region+" -M  " +projection +"  "+verticalScaling+" -K -G0/0/0 "+
+//					viewAngle + "  "+boxPenWidth+"  "+axisBoundaryTicksBounds +" >  "+img_ps_file);
+//
+//			float contribution, base, top;
+//			gmtScriptLines.add("${COMMAND_PATH}echo \"plotting disagg\"");
+//			for (int i = 0; i < dist_center.length; ++i) {
+//				gmtScriptLines.add("${COMMAND_PATH}echo \"plotting dist bin " + i + "\"");
+//				for (int j = mag_center.length - 1; j >= 0; --j) {   // ordering here is important
+//
+//					double box_x_width = (dist_binEdges[i+1]- dist_binEdges[i])*distBinWidthToInches - 0.05; // lst term leaves some space
+//					double box_y_width = (mag_binEdges[j+1]- mag_binEdges[j])*magBinWidthToInches - 0.05;
+//					String symbol = " -So"+box_x_width+"i/"+box_y_width+"ib";
+//
+//					base = 0;
+//					top = 0;
+//					for (int k = 0; k < numE; ++k) {
+//						contribution = (float) pdf3D[i][j][k];
+//						top = base + contribution;
+//						if (contribution > 0.0) {
+//							gmtScriptLines.add("${COMMAND_PATH}echo " + "\"" + dist_center[i] + " " + mag_center[j] + " " + top +
+//									"\"" +
+//									" | ${GMT_PATH}psxyz "
+//									+ "-P " + region + " " + projection + " " +
+//									verticalScaling + symbol + base +
+//									" -K -O " + epsilonColors[k] + "  " +
+//									viewAngle +
+//									"  " + boxPenWidth + " >> " + img_ps_file);
+//							base = top;
+//						}
+//
+//					}
+//				}
+//			}
+//			
+//			gmtScriptLines.add("");
+//			gmtScriptLines.add("${COMMAND_PATH}echo \"plotting legend\"");
+//			// add the legend boxes
+//			// 1st legend box has origin offset in Y by -2 inches (and X by minus some too)
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"" + dist_binEdges[dist_binEdges.length-1] + " " + mag_binEdges[0] + " " + (0.8*z_tick) +
+//					"\"" + " | ${GMT_PATH}psxyz " + "-P -Y-1.25i -X-4.2i " +
+//					region + " " +
+//					projection + " " + verticalScaling + " -So0.3ib0 " +
+//					" -K -O " +
+//					epsilonColors[0] + "  " + viewAngle + "  " + boxPenWidth +
+//					" >> " + img_ps_file);
+//
+//			// each now has origin offset in the X direction
+//			for (int k = 1; k < numE; ++k) {
+//				gmtScriptLines.add("${COMMAND_PATH}echo " + "\"" + dist_binEdges[dist_binEdges.length-1] + " " + mag_binEdges[0] + " " + (0.8*z_tick) +
+//						"\"" + " | ${GMT_PATH}psxyz " + "-P -X0.9i " +
+//						region + " " +
+//						projection + " " + verticalScaling + " -So0.3ib0 " +
+//						" -K -O " +
+//						epsilonColors[k] + "  " + viewAngle + "  " + boxPenWidth +
+//						" >> " + img_ps_file);
+//			}
+//
+//
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"0.0 0.75 13 0.0 12 CB e<-2\" > temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"0.9 0.75 13 0.0 12 CB -2<e<-1\" >> temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"1.8 0.75 13 0.0 12 CB -1<e<-0.5\" >> temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"2.7 0.75 13 0.0 12 CB -0.5<e<0\" >> temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"3.6 0.75 13 0.0 12 CB 0<e<0.5\" >> temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"4.5 0.75 13 0.0 12 CB 0.5<e<1\" >> temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"5.4 0.75 13 0.0 12 CB 1<e<2\" >> temp_label");
+//			gmtScriptLines.add("${COMMAND_PATH}echo " + "\"6.3 0.75 13 0.0 12 CB 2<e\" >> temp_label");
+//			// on gravity we used -X-2.45, but for some reason that puts stuff to the right
+//			// on opensha.usc.edu
+//			gmtScriptLines.add("${GMT_PATH}pstext temp_label -R0/8.5/0/11 -N -Jx1i -X-6.1 -P -O >> " + img_ps_file);
+//			gmtScriptLines.add("");
+//			gmtScriptLines.add("${COMMAND_PATH}echo \"converting postscript\"");
+//			gmtScriptLines.add("${COMMAND_PATH}cat "+img_ps_file+ " |"+ "gs -sDEVICE=jpeg -sOutputFile=temp.jpg"+" -");
+//			gmtScriptLines.add("${PS2PDF_PATH} "+img_ps_file+"  "+DISAGGREGATION_PLOT_PDF_NAME);
+//			gmtScriptLines.add("${CONVERT_PATH} -crop 0x0 temp.jpg "+DISAGGREGATION_PLOT_IMG_NAME);
+//			gmtScriptLines.add("${COMMAND_PATH}rm temp.jpg temp_segments");
+//		}catch(Exception e){
+//			e.printStackTrace();
+//		}
+//
+//		return gmtScriptLines;
+//	}
 
 
 	/**
 	 * sets up the connection with the servlet on the server (gravity.usc.edu)
 	 */
-	private String openServletConnection(DisaggregationPlotData data,
-			String metadata) throws RuntimeException{
-
-		String webaddr=null;
-		try{
-
-			if(D) System.out.println("starting to make connection with servlet");
-			URL gmtPlotServlet = new URL(OPENSHA_SERVLET_URL);
-
-
-			URLConnection servletConnection = gmtPlotServlet.openConnection();
-			if(D) System.out.println("connection established");
-
-			// inform the connection that we will send output and accept input
-			servletConnection.setDoInput(true);
-			servletConnection.setDoOutput(true);
-
-			// Don't use a cached version of URL connection.
-			servletConnection.setUseCaches (false);
-			servletConnection.setDefaultUseCaches (false);
-			// Specify the content type that we will send binary data
-			servletConnection.setRequestProperty ("Content-Type","application/octet-stream");
-
-			ObjectOutputStream outputToServlet = new
-			ObjectOutputStream(servletConnection.getOutputStream());
-
-
-			//sending the disagg data
-			outputToServlet.writeObject(data);
-			//sending the contents of the Metadata file to the server.
-			outputToServlet.writeObject(metadata);
-
-
-			outputToServlet.flush();
-			outputToServlet.close();
-
-			// Receive the "actual webaddress of all the gmt related files"
-			// from the servlet after it has received all the data
-			ObjectInputStream inputToServlet = new
-			ObjectInputStream(servletConnection.getInputStream());
-
-			Object messageFromServlet = inputToServlet.readObject();
-			inputToServlet.close();
-			if(messageFromServlet instanceof String){
-				webaddr = (String) messageFromServlet;
-				if (D) System.out.println("Receiving the Input from the Servlet:" +
-						webaddr);
-			}
-			else
-				throw (RuntimeException)messageFromServlet;
-		}catch(RuntimeException e){
-			e.printStackTrace();
-			throw new RuntimeException(e.getMessage());
-		}catch (Exception e) {
-			e.printStackTrace();
-			throw new RuntimeException("Server is down , please try again later");
-		}
-		return webaddr;
-	}
+//	private String openServletConnection(DisaggregationPlotData data,
+//			String metadata) throws RuntimeException{
+//
+//		String webaddr=null;
+//		try{
+//
+//			if(D) System.out.println("starting to make connection with servlet");
+//			URL gmtPlotServlet = new URL(OPENSHA_SERVLET_URL);
+//
+//
+//			URLConnection servletConnection = gmtPlotServlet.openConnection();
+//			if(D) System.out.println("connection established");
+//
+//			// inform the connection that we will send output and accept input
+//			servletConnection.setDoInput(true);
+//			servletConnection.setDoOutput(true);
+//
+//			// Don't use a cached version of URL connection.
+//			servletConnection.setUseCaches (false);
+//			servletConnection.setDefaultUseCaches (false);
+//			// Specify the content type that we will send binary data
+//			servletConnection.setRequestProperty ("Content-Type","application/octet-stream");
+//
+//			ObjectOutputStream outputToServlet = new
+//			ObjectOutputStream(servletConnection.getOutputStream());
+//
+//
+//			//sending the disagg data
+//			outputToServlet.writeObject(data);
+//			//sending the contents of the Metadata file to the server.
+//			outputToServlet.writeObject(metadata);
+//
+//
+//			outputToServlet.flush();
+//			outputToServlet.close();
+//
+//			// Receive the "actual webaddress of all the gmt related files"
+//			// from the servlet after it has received all the data
+//			ObjectInputStream inputToServlet = new
+//			ObjectInputStream(servletConnection.getInputStream());
+//
+//			Object messageFromServlet = inputToServlet.readObject();
+//			inputToServlet.close();
+//			if(messageFromServlet instanceof String){
+//				webaddr = (String) messageFromServlet;
+//				if (D) System.out.println("Receiving the Input from the Servlet:" +
+//						webaddr);
+//			}
+//			else
+//				throw (RuntimeException)messageFromServlet;
+//		}catch(RuntimeException e){
+//			e.printStackTrace();
+//			throw new RuntimeException(e.getMessage());
+//		}catch (Exception e) {
+//			e.printStackTrace();
+//			throw new RuntimeException("Server is down , please try again later");
+//		}
+//		return webaddr;
+//	}
 
 
 	/**

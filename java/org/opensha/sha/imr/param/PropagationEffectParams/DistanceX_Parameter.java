@@ -32,8 +32,8 @@ import org.opensha.commons.param.DoubleConstraint;
 import org.opensha.commons.param.ParameterConstraintAPI;
 import org.opensha.commons.param.WarningParameterAPI;
 import org.opensha.sha.earthquake.ProbEqkRupture;
-import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2;
-import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
+//import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.UCERF2;
+//import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2.MeanUCERF2;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 
 /**
@@ -273,27 +273,27 @@ public class DistanceX_Parameter
 		return false;
 	}
 	
-	/**
-	 * This performs simple tests
-	 * @param args
-	 */
-	  public static void main(String[] args) {
-		  MeanUCERF2 meanUCERF2 = new MeanUCERF2();
-		  meanUCERF2.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_EXCLUDE);
-		  meanUCERF2.updateForecast();
-//		  for(int s=0; s<meanUCERF2.getNumSources();s++)
-//			  System.out.println(s+"   "+meanUCERF2.getSource(s).getName());
-		  
-		  // sierra madre is src # 271
-		  ProbEqkRupture sierraMadreRup = meanUCERF2.getSource(271).getRupture(meanUCERF2.getSource(271).getNumRuptures()-1);
-		  
-		  Site site = new Site();
-		  site.setLocation(sierraMadreRup.getRuptureSurface().getLocation(0, 0));
-		  
-		  DistanceX_Parameter distX = new DistanceX_Parameter();
-		  distX.setValue(sierraMadreRup, site);
-		  
-	  }
+//	/**
+//	 * This performs simple tests
+//	 * @param args
+//	 */
+//	  public static void main(String[] args) {
+//		  MeanUCERF2 meanUCERF2 = new MeanUCERF2();
+//		  meanUCERF2.setParameter(UCERF2.BACK_SEIS_NAME, UCERF2.BACK_SEIS_EXCLUDE);
+//		  meanUCERF2.updateForecast();
+////		  for(int s=0; s<meanUCERF2.getNumSources();s++)
+////			  System.out.println(s+"   "+meanUCERF2.getSource(s).getName());
+//		  
+//		  // sierra madre is src # 271
+//		  ProbEqkRupture sierraMadreRup = meanUCERF2.getSource(271).getRupture(meanUCERF2.getSource(271).getNumRuptures()-1);
+//		  
+//		  Site site = new Site();
+//		  site.setLocation(sierraMadreRup.getRuptureSurface().getLocation(0, 0));
+//		  
+//		  DistanceX_Parameter distX = new DistanceX_Parameter();
+//		  distX.setValue(sierraMadreRup, site);
+//		  
+//	  }
 		   
 
 

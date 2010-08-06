@@ -25,7 +25,6 @@ import org.junit.runners.Suite;;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
 	Spudich_1999_test.class,
-	Shakemap_2003_test.class,
 	Abrahamson_2000_test.class,
 	Abrahamson_Silva_1997_test.class,
 	BJF_1997_test.class,

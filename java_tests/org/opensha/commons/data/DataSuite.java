@@ -21,7 +21,6 @@ package org.opensha.commons.data;
 
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
-import org.opensha.commons.data.siteData.SiteDataProvidersTest;
 import org.opensha.commons.geo.GriddedRegionTest;
 import org.opensha.commons.geo.RegionTest;
 
@@ -31,8 +30,7 @@ import org.opensha.commons.geo.RegionTest;
 	DataPoint2DTreeMapTests.class,
 	TimeSpanTests.class,
 	GriddedRegionTest.class,
-	RegionTest.class,
-	SiteDataProvidersTest.class
+	RegionTest.class
 })
 
 public class DataSuite

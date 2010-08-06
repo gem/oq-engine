@@ -13,9 +13,9 @@ import org.opensha.commons.geo.LocationVector;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.faultSurface.FaultTrace;
-import org.opensha.sha.gui.controls.PlotColorAndLineTypeSelectorControlPanel;
-import org.opensha.sha.gui.infoTools.GraphiWindowAPI_Impl;
-import org.opensha.sha.gui.infoTools.PlotCurveCharacterstics;
+//import org.opensha.sha.gui.controls.PlotColorAndLineTypeSelectorControlPanel;
+//import org.opensha.sha.gui.infoTools.GraphiWindowAPI_Impl;
+//import org.opensha.sha.gui.infoTools.PlotCurveCharacterstics;
 
 /**
  *  <b>Title:</b> EqualLengthSubSectionsTrace<p>
