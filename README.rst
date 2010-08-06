@@ -17,8 +17,8 @@ For the most part the Python packages in here can be installed using `pip`
 * python-gflags
 * Eventlet
 * Shapely
-  * requires geos (c library)
-* Sphinx (for documentation)
+  * requires geos (c library, also called libgeos)
+* Sphinx (for building documentation only)
 
 
 Running Tests
