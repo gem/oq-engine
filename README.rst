@@ -7,15 +7,19 @@ Dependencies
 For the most part the Python packages in here can be installed using `pip`
 (python-pip on ubuntu) or your favorite package manager.
 
+On OS X a good way to intall the pieces that are not Python (if you don't
+already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebrew/
+
 * lxml
 * SciPy
-  
-  On OS X you'll probably want to follow the instructions at:
-  http://www.scipy.org/Installing_SciPy/Mac_OS_X
-
+  * You will need gfortran, for os x that is at: http://r.research.att.com/gfortran-4.2.3.dmg 
+  * After that `pip install scipy` should work.
 * PyYAML
+* python-gflags
 * Eventlet
-* Sphinx (for documentation)
+* Shapely
+  * requires geos (c library, also called libgeos)
+* Sphinx (for building documentation only)
 
 
 Running Tests
