@@ -14,10 +14,8 @@ class FileProducer(object):
 
     def __iter__(self):
         try:
-            rv = self._parse_one()
-            while rv:
+            for rv in self._parse():
                 yield rv
-                rv = self._parse_one()
         except Exception, e:
             self.finished.send_exception(e)
             raise
@@ -29,7 +27,7 @@ class FileProducer(object):
             if constraint.match(next):
                 yield next
   
-    def _parse_one(self):
+    def _parse(self):
         """Parse one logical item from the file.
 
         Should return a (cell, data) tuple.

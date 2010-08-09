@@ -4,6 +4,8 @@ from shapely import geometry
 from shapely import wkt
 
 
+LineString = geometry.LineString
+
 class RegionConstraint(object):
     def __init__(self, polygon):
         self.polygon = polygon
