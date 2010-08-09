@@ -11,6 +11,7 @@ On OS X a good way to intall the pieces that are not Python (if you don't
 already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebrew/
 
 * eventlet
+* jpype
 * lxml
 * PyYAML
 * python-gflags
