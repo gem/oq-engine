@@ -103,8 +103,8 @@ if __name__ == '__main__':
 
     def consume_loss_results():
         while (not shakemap_parser.finished.ready()
-               and not exposure_parser.finished.ready()
-               and not vulnerability_parser.finished.ready()):
+               or not exposure_parser.finished.ready()
+               or not vulnerability_parser.finished.ready()):
             for cell, value in loss_grid.results():
                 logging.debug('consume loss results')
                 loss_map.write(cell, value)
@@ -115,8 +115,8 @@ if __name__ == '__main__':
 
     def consume_loss_ratio_results():
         while (not shakemap_parser.finished.ready()
-               and not exposure_parser.finished.ready()
-               and not vulnerability_parser.finished.ready()):
+               or not exposure_parser.finished.ready()
+               or not vulnerability_parser.finished.ready()):
             for cell, value in loss_ratio_grid.results():
                 logging.debug('consume loss ratio results')
                 loss_ratio_map.write(cell, value)
