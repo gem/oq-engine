@@ -14,7 +14,7 @@ class ShamlFile(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(self.file,
                                               events=('start', 'end')):
-            # we currently only care about the tag name, not the namespace
+            # We currently only care about the tag name, not the namespace
             tag = element.tag.split('}')[-1]
 
             if event == 'end' and tag == 'BranchLevelList':
@@ -23,6 +23,9 @@ class ShamlFile(producer.FileProducer):
                 self._set_branch(element.get('label'))
             elif event == 'end' and tag == 'Source':
                 yield (self._to_region(element), self._to_source(element))
+
+            # To save space we could clear elements we no longer care about
+            # by doing element.clear(), for example on the Source elements
 
     def _build_branching_levels(self, branching_levels):
         pass
