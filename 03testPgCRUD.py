@@ -21,7 +21,7 @@ def main():
     #start of script
     #Define our connection string
 
-    conn_string = "host='gemsun01.ethz.ch' dbname='opengemdb' user='gemuser' password='gem4321'"
+    conn_string = "host='gemsun01.ethz.ch' dbname='opengemdb' user='user' password=''"
     
     # print the connection string we will use to connect
     print "Connecting to database\n    ->%s" % (conn_string)
