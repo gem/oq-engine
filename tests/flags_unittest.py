@@ -63,3 +63,43 @@ class flags_unittest(unittest.TestCase):
     def test_accepts_the_probability_for_the_loss_maps(self):
         self.assertTrue(flags.LOSS_MAPS_PROBABILITY in FLAGS.RegisteredFlags(), 'Must accept the probability to use for the loss maps')
         self.assertDefaultValueIs(flags.LOSS_MAPS_PROBABILITY, 0.1)
+
+    def test_accepts_the_hazard_means_iml(self):
+        self.assertTrue(flags.MEANS_IML in FLAGS.RegisteredFlags(), 'Must accept the file with means iml')
+    
+    def test_accepts_the_computation_type(self):
+        self.assertTrue(flags.COMPUTATION_TYPE in FLAGS.RegisteredFlags(), 'Must accept the computation type')
+        self.assertDefaultValueIs(flags.COMPUTATION_TYPE, 'LOSSRATIO')
+        
+    def test_accepeted_values_for_the_computation_type(self):
+        self.parse(['./RISKENGINE', '--comp-type=LOSSRATIO'])
+        self.parse(['./RISKENGINE', '--comp-type=LOSS'])
+        self.parse(['./RISKENGINE', '--comp-type=LOSSRATIOSTD'])
+        self.parse(['./RISKENGINE', '--comp-type=LOSSSTD'])
+        self.parse(['./RISKENGINE', '--comp-type=LOSSCURVE'])
+        self.parse(['./RISKENGINE', '--comp-type=MEANLOSS'])
+        self.parse(['./RISKENGINE', '--comp-type=LOSSMAP'])
+    
+    def test_accepsts_the_hazard_curves(self):
+        self.assertTrue(flags.HAZARD_CURVES in FLAGS.RegisteredFlags(), 'Must accept the hazard curves')
+    
+    def test_hazard_curves_is_mandatory_with_probabilistic_scenario(self):
+        # hazard curves not specified
+        self.parse(['./RISKENGINE', '--comp-type=LOSSCURVE'])
+        self.assertRaises(flags.FlagsError, flags.check_mandatory_parameters_for_probabilistic_scenario)
+        
+        self.parse(['./RISKENGINE', '--comp-type=MEANLOSS'])
+        self.assertRaises(flags.FlagsError, flags.check_mandatory_parameters_for_probabilistic_scenario)
+        
+        self.parse(['./RISKENGINE', '--comp-type=LOSSMAP'])
+        self.assertRaises(flags.FlagsError, flags.check_mandatory_parameters_for_probabilistic_scenario)
+        
+        # hazard curves specified
+        self.parse(['./RISKENGINE', '--comp-type=LOSSMAP', '--hazard-curves=/path'])
+        flags.check_mandatory_parameters_for_probabilistic_scenario()
+        
+        self.parse(['./RISKENGINE', '--comp-type=MEANLOSS', '--hazard-curves=/path'])
+        flags.check_mandatory_parameters_for_probabilistic_scenario()
+        
+        self.parse(['./RISKENGINE', '--comp-type=LOSSMAP', '--hazard-curves=/path'])
+        flags.check_mandatory_parameters_for_probabilistic_scenario()
