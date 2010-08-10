@@ -103,3 +103,7 @@ class flags_unittest(unittest.TestCase):
         
         self.parse(['./RISKENGINE', '--comp-type=LOSSMAP', '--hazard-curves=/path'])
         flags.check_mandatory_parameters_for_probabilistic_scenario()
+
+        # with other types is not mandatory
+        self.parse(['./RISKENGINE', '--comp-type=LOSSRATIO'])
+        flags.check_mandatory_parameters_for_probabilistic_scenario()
