@@ -1,0 +1,271 @@
+FIELD (2000)
+
+SetIntensityMeasure(SA)
+SetParameter("DistanceJB") = 10
+SetParameter("Vs30") = 620
+SetParameter("Fault Type") = "Reverse"
+SetParameter("Magnitude") = 7
+SetParameter("Field-Basin-Depth") = 0.0
+
+SetParameter("SA Period") = 0.00
+GetValue("Median") = 0.258683
+
+SetParameter("SA Period") = 0.30
+GetValue("Median") = 0.508729
+
+SetParameter("SA Period") = 1.00
+GetValue("Median") = 0.178373
+
+SetParameter("SA Period") = 3.00
+GetValue("Median") = 0.035805
+
+
+SetIntensityMeasure(SA)
+SetParameter("DistanceJB") = 10
+SetParameter("Vs30") = 620
+SetParameter("Fault Type") = "Reverse"
+SetParameter("Magnitude") = 7
+SetParameter("Field-Basin-Depth") = 5.0
+
+SetParameter("SA Period") = 0.00
+GetValue("Median") = 0.361623
+
+SetParameter("SA Period") = 0.30
+GetValue("Median") = 0.676489
+
+SetParameter("SA Period") = 1.00
+GetValue("Median") = 0.325018
+
+SetParameter("SA Period") = 3.00
+GetValue("Median") = 0.062060
+
+
+SetIntensityMeasure(SA)
+SetParameter("DistanceJB") = 10
+SetParameter("Vs30") = 620
+SetParameter("Fault Type") = "Other/Unknown"
+SetParameter("Magnitude") = 7
+SetParameter("Field-Basin-Depth") = 0.0
+
+SetParameter("SA Period") = 0.00
+GetValue("Median") = 0.253814
+
+SetParameter("SA Period") = 0.30
+GetValue("Median") = 0.459857
+
+SetParameter("SA Period") = 1.00
+GetValue("Median") = 0.197725
+
+SetParameter("SA Period") = 3.00
+GetValue("Median") = 0.054168
+
+
+SetIntensityMeasure(SA)
+SetParameter("DistanceJB") = 10
+SetParameter("Vs30") = 620
+SetParameter("Fault Type") = "Other/Unknown"
+SetParameter("Magnitude") = 7
+SetParameter("Field-Basin-Depth") = 5.0
+
+SetParameter("SA Period") = 0.00
+GetValue("Median") = 0.354817
+
+SetParameter("SA Period") = 0.30
+GetValue("Median") = 0.611501
+
+SetParameter("SA Period") = 1.00
+GetValue("Median") = 0.360279
+
+SetParameter("SA Period") = 3.00
+GetValue("Median") = 0.093887
+
+
+SetIntensityMeasure(SA)
+SetParameter("DistanceJB") = 10
+SetParameter("Vs30") = 310
+SetParameter("Fault Type") = "Reverse"
+SetParameter("Magnitude") = 7
+SetParameter("Field-Basin-Depth") = 5.0
+
+SetParameter("SA Period") = 0.00
+GetValue("Median") = 0.402360
+
+SetParameter("SA Period") = 0.30
+GetValue("Median") = 0.862226
+
+SetParameter("SA Period") = 1.00
+GetValue("Median") = 0.529459
+
+SetParameter("SA Period") = 3.00
+GetValue("Median") = 0.099016
+
+
+SetIntensityMeasure(SA)
+SetParameter("DistanceJB") = 10
+SetParameter("Vs30") = 620
+SetParameter("Fault Type") = "Reverse"
+SetParameter("Magnitude") = 6
+SetParameter("Field-Basin-Depth") = 5.0
+
+SetParameter("SA Period") = 0.00
+GetValue("Median") = 0.248539
+
+SetParameter("SA Period") = 0.30
+GetValue("Median") = 0.458480
+
+SetParameter("SA Period") = 1.00
+GetValue("Median") = 0.131746
+
+SetParameter("SA Period") = 3.00
+GetValue("Median") = 0.021012
+
+SetIntensityMeasure(SA)
+SetParameter("Magnitude") = 7.5
+SetParameter("Std Dev Type") = "Total (Mag Dependent)"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.479583
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.538516
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.547723
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.640312
+
+
+
+SetIntensityMeasure(SA)
+SetParameter("Magnitude") = 7.0
+SetParameter("Std Dev Type") = "Total (Mag Dependent)"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.479583
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.538516
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.547723
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.640312
+
+
+SetIntensityMeasure(SA)
+SetParameter("Magnitude") = 6.0
+SetParameter("Std Dev Type") = "Total (Mag Dependent)"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.574456
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.632456
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.632456
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.519615
+
+
+SetIntensityMeasure(SA)
+SetParameter("Magnitude") = 7.5
+SetParameter("Std Dev Type") = "Intra-Event (Mag Dependent)"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.420833
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.471593
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.501597
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.565685
+
+
+SetIntensityMeasure(SA)
+SetParameter("Magnitude") = 7.0
+SetParameter("Std Dev Type") = "Intra-Event (Mag Dependent)"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.420833
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.471593
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.501597
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.565685
+
+
+
+SetIntensityMeasure(SA)
+SetParameter("Magnitude") = 6.0
+SetParameter("Std Dev Type") = "Intra-Event (Mag Dependent)"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.526403
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.576541
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.592959
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.424264
+
+
+SetIntensityMeasure(SA)
+SetParameter("Std Dev Type") = "Total"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.523259
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.590339
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.573847
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.600333
+
+
+SetIntensityMeasure(SA)
+SetParameter("Std Dev Type") = "Inter-Event"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.230000
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.260000
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.220000
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.300000
+
+
+SetIntensityMeasure(SA)
+SetParameter("Std Dev Type") = "Intra-Event"
+
+SetParameter("SA Period") = 0.00
+GetValue("Std. Dev.") = 0.470000
+
+SetParameter("SA Period") = 0.30
+GetValue("Std. Dev.") = 0.530000
+
+SetParameter("SA Period") = 1.00
+GetValue("Std. Dev.") = 0.530000
+
+SetParameter("SA Period") = 3.00
+GetValue("Std. Dev.") = 0.520000
