@@ -71,7 +71,7 @@ class flags_unittest(unittest.TestCase):
         self.assertTrue(flags.COMPUTATION_TYPE in FLAGS.RegisteredFlags(), 'Must accept the computation type')
         self.assertDefaultValueIs(flags.COMPUTATION_TYPE, 'LOSSRATIO')
         
-    def test_accepeted_values_for_the_computation_type(self):
+    def test_accepted_values_for_the_computation_type(self):
         self.parse(['./RISKENGINE', '--comp-type=LOSSRATIO'])
         self.parse(['./RISKENGINE', '--comp-type=LOSS'])
         self.parse(['./RISKENGINE', '--comp-type=LOSSRATIOSTD'])
@@ -80,7 +80,7 @@ class flags_unittest(unittest.TestCase):
         self.parse(['./RISKENGINE', '--comp-type=MEANLOSS'])
         self.parse(['./RISKENGINE', '--comp-type=LOSSMAP'])
     
-    def test_accepsts_the_hazard_curves(self):
+    def test_accepts_the_hazard_curves(self):
         self.assertTrue(flags.HAZARD_CURVES in FLAGS.RegisteredFlags(), 'Must accept the hazard curves')
     
     def test_hazard_curves_is_mandatory_with_probabilistic_scenario(self):
