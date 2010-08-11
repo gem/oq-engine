@@ -15,6 +15,7 @@ HAZARD_CURVES = 'hazard-curves'
 
 MANDATORY_PARAMETERS = (POPULATION_EXPOSURE, COUNTRIES_EXPOSURE, FROM, TO)
 
+# flags definition
 DEFINE_string(POPULATION_EXPOSURE, None, 'Path of the ESRI binary file containing the population exposure [MANDATORY]')
 DEFINE_string(COUNTRIES_EXPOSURE, None, 'Path of the ESRI binary file containing the countries exposure [MANDATORY]')
 
@@ -33,9 +34,10 @@ DEFINE_string(HAZARD_CURVES, None, 'Path of the hazard curves file')
 def check_mandatory_parameters():
     """Checks if the mandatory parameters have been specified from the command line."""
     
-    if not FLAGS[POPULATION_EXPOSURE].present or not FLAGS[COUNTRIES_EXPOSURE].present or not FLAGS[FROM].present or not FLAGS[TO].present:
-        raise FlagsError('You need to specify all the mandatory parameters, ie. ' + str(MANDATORY_PARAMETERS))
-
+    for parameter in MANDATORY_PARAMETERS:
+        if not FLAGS[parameter].present:
+            raise FlagsError('You need to specify all the mandatory parameters, ie. ' + str(MANDATORY_PARAMETERS))
+    
 def check_mandatory_parameters_for_probabilistic_scenario():
     """Checks the mandatory parameters if the probabilistic scenario is specified."""
     
