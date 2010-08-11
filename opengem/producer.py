@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from eventlet import event
@@ -14,14 +15,12 @@ class FileProducer(object):
 
     def __iter__(self):
         try:
-            rv = self._parse_one()
-            while rv:
+            for rv in self._parse():
                 yield rv
-                rv = self._parse_one()
         except Exception, e:
             self.finished.send_exception(e)
             raise
-        
+
         self.finished.send(True)
 
     def filter(self, constraint):
@@ -29,7 +28,7 @@ class FileProducer(object):
             if constraint.match(next):
                 yield next
   
-    def _parse_one(self):
+    def _parse(self):
         """Parse one logical item from the file.
 
         Should return a (cell, data) tuple.

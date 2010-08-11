@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from shapely import geometry
 from shapely import wkt
 
+Point = geometry.Point
 
 class RegionConstraint(object):
     def __init__(self, polygon):
