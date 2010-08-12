@@ -647,8 +647,7 @@ public class RegionTest {
 		assertTrue(MathUtils.equals(-105, octRegion.getMaxLon(), TOLERANCE));
 	}
 
-	//@Test
-	//TODO: implement the test
+	@Test
 	public final void testDistanceToLocation() {
 		fail("Not yet implemented");
 	}

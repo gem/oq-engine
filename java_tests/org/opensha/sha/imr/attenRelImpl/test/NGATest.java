@@ -38,7 +38,7 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 	private String dir;
 
 	public NGATest(String dir) {
-		this.dir = "java_tests" + File.separator + dir;
+		this.dir = "test" + File.separator + dir;
 	}
 
 	@Before
@@ -67,7 +67,6 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 		File[] fileList = f.listFiles();
 
 		ArrayList<File> files = new ArrayList<File>();
-	
 
 		for(int i=0;i<fileList.length;++i) {
 

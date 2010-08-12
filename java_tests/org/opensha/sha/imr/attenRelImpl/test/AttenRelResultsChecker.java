@@ -324,17 +324,17 @@ public class AttenRelResultsChecker {
 				str = br.readLine();
 			}
 		}
-//		if (!result && outBuff != null) {
-//			FileWriter fw;
-//			try {
-//				fw = new FileWriter(newOutFile);
-//				fw.write(outBuff.toString());
-//				fw.close();
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
+		if (!result && outBuff != null) {
+			FileWriter fw;
+			try {
+				fw = new FileWriter(newOutFile);
+				fw.write(outBuff.toString());
+				fw.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 
 		// test cases vector that contains the failed test number
 		//if the size of this vector is not zero then return false(to make sure that some test did failed)
