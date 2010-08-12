@@ -10,6 +10,34 @@ SHAML_NS='http://shaml.org/xmlns/shaml/0.1'
 GML_NS='http://www.opengis.net/gml'
 
 class ShamlOutputFile(producer.FileProducer):
+    """ This class parses a shaML output file. The contents of a shaML output
+    file is meant to be used as input for the risk engine. The class is
+    implemented as a generator. It yields a pair of objects, of which the
+    first one is a shapely.geometry object of type Point (representing a
+    geographical site as WGS84 lon/lat), and the second one
+    is a dictionary with hazard-related attribute values for this site.
+    
+    The attribute dictionary looks like
+    {'IMT': 'PGA',
+     'IDmodel': 'Model_Id',
+     'timeSpanDuration': 50.0,
+     'saPeriod': 1.0,
+     'saDamping': 1.0,
+     'calcSettingsID': 'foo',
+     'endBranchLabel': '1_2_3', 
+     'IML': [-5.3, -4.9, ...],
+     'maxProb': 0.7,
+     'minProb': 0.001, 
+     'Values': [0.70, 0.68, ...],
+     'vs30': 760.0
+    }
+
+    Notes:
+    1) 'IMT' must be from a list of allowed values, this is not enforced
+    2) 'endBranchLabel' can be replaced by 'aggregationType'
+    3) 'aggregationType' must be from a list of allowed values, this is not enforced
+    4) 'saPeriod', 'saDamping', 'calcSettingsID', 'maxProb' and 'minProb' are optional
+    """
     def _parse(self):
         for event, element in etree.iterparse(self.file,
                                               events=('start', 'end')):
@@ -28,19 +56,22 @@ class ShamlOutputFile(producer.FileProducer):
 
         self._current_result_meta = {}
 
-        for required_attribute in ('IMT', 'IDmodel', 'timeSpanDuration'):
-            attr_value = result_element.get(required_attribute)
+        for required_attribute in (('IMT', str), ('IDmodel', str), 
+                                   ('timeSpanDuration', float)):
+            attr_value = result_element.get(required_attribute[0])
             if attr_value is not None:
-                self._current_result_meta[required_attribute] = attr_value
+                self._current_result_meta[required_attribute[0]] = \
+                    required_attribute[1](attr_value)
             else:
                 error_str = "element shaml:Result: missing required " \
-                    "attribute %s" % required_attribute
+                    "attribute %s" % required_attribute[0]
                 raise ValueError(error_str) 
 
-        for optional_attribute in ('saPeriod', 'saDamping', 'calcSettingsID'):
-            attr_value = result_element.get(optional_attribute)
+        for optional_attribute in (('saPeriod', float), ('saDamping', float), 
+                                   ('calcSettingsID', str)):
+            attr_value = result_element.get(optional_attribute[0])
             if attr_value is not None:
-                self._current_result_meta[optional_attribute] = attr_value
+                self._current_result_meta[optional_attribute[0]] = optional_attribute[1](attr_value)
 
     def _set_result_descriptor(self, descriptor_element):
         
@@ -96,7 +127,7 @@ class ShamlOutputFile(producer.FileProducer):
             site_attributes['Values'] = map(float, 
                 value_el[0].text.strip().split())
         except Exception:
-            error_str = "invalid shaML site values array"
+            error_str = "invalid or missing shaML site values array"
             raise ValueError(error_str)
 
         vs30_el = element.xpath('shaml:Site/shaml:vs30', 
@@ -104,7 +135,7 @@ class ShamlOutputFile(producer.FileProducer):
         try:
             site_attributes['vs30'] = float(vs30_el[0].text)
         except Exception:
-            error_str = "invalid shaML site vs30 value"
+            error_str = "invalid or missing shaML site vs30 value"
             raise ValueError(error_str) 
 
         for optional_attribute in ('minProb', 'maxProb'):
@@ -119,3 +150,19 @@ class ShamlOutputFile(producer.FileProducer):
         site_attributes.update(self._current_curvelist_iml)
 
         return site_attributes
+
+    def filter(self, region_constraint, metadata_constraint=None):
+        for next in iter(self):
+            if (metadata_constraint is not None and \
+                    region_constraint.match(next[0]) and \
+                    metadata_constraint.match(next[1])) or \
+               (region_constraint.match(next[0])):
+                yield next
+
+
+class ShamlOutputConstraint(object):
+    def __init__(self, metadata=None):
+        self.metadata = metadata
+
+    def match(self, metadata):
+        return True
