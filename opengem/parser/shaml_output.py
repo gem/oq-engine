@@ -101,7 +101,7 @@ class ShamlOutputFile(producer.FileProducer):
                 descriptor_aggregationType[0].text.strip()
         else:
             error_str = "shaML output instance Descriptor element " \
-                "is missing or broken"
+                "is broken"
             raise ValueError(error_str) 
 
     def _set_curvelist_iml(self, iml_element):
@@ -151,9 +151,26 @@ class ShamlOutputFile(producer.FileProducer):
             except Exception:
                 pass
 
-        site_attributes.update(self._current_result_meta)
-        site_attributes.update(self._current_result_descriptor)
-        site_attributes.update(self._current_curvelist_iml)
+        try:
+            site_attributes.update(self._current_result_meta)
+        except Exception:
+            error_str = "shaML output instance Result element " \
+                "is missing"
+            raise ValueError(error_str)
+
+        try:
+            site_attributes.update(self._current_result_descriptor)
+        except Exception:
+            error_str = "shaML output instance Result/Descriptor element " \
+                "is missing"
+            raise ValueError(error_str)
+
+        try:
+            site_attributes.update(self._current_curvelist_iml)
+        except Exception:
+            error_str = "shaML output instance HazardCurveList/IML element " \
+                "is missing"
+            raise ValueError(error_str)
 
         return site_attributes
 
