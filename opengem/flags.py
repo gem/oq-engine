@@ -13,13 +13,14 @@ MEANS_IML = 'means-iml'
 COMPUTATION_TYPE = 'comp-type'
 HAZARD_CURVES = 'hazard-curves'
 
+# mandatory parameters for both scenarios
 MANDATORY_PARAMETERS = (POPULATION_EXPOSURE, COUNTRIES_EXPOSURE, FROM, TO)
 
 # flags definition
 DEFINE_string(POPULATION_EXPOSURE, None, 'Path of the ESRI binary file containing the population exposure [MANDATORY]')
 DEFINE_string(COUNTRIES_EXPOSURE, None, 'Path of the ESRI binary file containing the countries exposure [MANDATORY]')
 
-# TODO Ask review about the format
+# TODO review the format
 DEFINE_string(FROM, None, 'Upper left corner of the region, in this format longitude,latitude (for example --from=1.0,2.0) [MANDATORY]')
 DEFINE_string(TO, None, 'Lower right corner of the region, in this format longitude,latitude (for example --to=1.0,2.0) [MANDATORY]')
 
@@ -39,7 +40,7 @@ def check_mandatory_parameters():
             raise FlagsError('You need to specify all the mandatory parameters, ie. ' + str(MANDATORY_PARAMETERS))
     
 def check_mandatory_parameters_for_probabilistic_scenario():
-    """Checks the mandatory parameters if the probabilistic scenario is specified."""
+    """Checks the mandatory parameters for the probabilistic scenario."""
     
     if FLAGS[COMPUTATION_TYPE].value in ('LOSSCURVE', 'MEANLOSS', 'LOSSMAP') and not FLAGS[HAZARD_CURVES].present:
         raise FlagsError('You need to specify the hazard curves file parameter when computing the probabilistic scenario.')
