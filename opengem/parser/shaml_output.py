@@ -12,7 +12,8 @@ GML_NS='http://www.opengis.net/gml'
 class ShamlOutputFile(producer.FileProducer):
     """ This class parses a shaML output file. The contents of a shaML output
     file is meant to be used as input for the risk engine. The class is
-    implemented as a generator. It yields a pair of objects, of which the
+    implemented as a generator. For each 'Curve' element in the parsed 
+    instance document, it yields a pair of objects, of which the
     first one is a shapely.geometry object of type Point (representing a
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with hazard-related attribute values for this site.
@@ -35,8 +36,12 @@ class ShamlOutputFile(producer.FileProducer):
     Notes:
     1) 'IMT' must be from a list of allowed values, this is not enforced
     2) 'endBranchLabel' can be replaced by 'aggregationType'
-    3) 'aggregationType' must be from a list of allowed values, this is not enforced
-    4) 'saPeriod', 'saDamping', 'calcSettingsID', 'maxProb' and 'minProb' are optional
+    3) 'aggregationType' must be from a list of allowed values, this is not
+       enforced
+    4) 'saPeriod', 'saDamping', 'calcSettingsID', 'maxProb' and 'minProb' are
+       optional
+    5) shaML output can also contain hazard maps, parsing of those is not yet
+       implemented
     """
     def _parse(self):
         for event, element in etree.iterparse(self.file,
@@ -71,7 +76,8 @@ class ShamlOutputFile(producer.FileProducer):
                                    ('calcSettingsID', str)):
             attr_value = result_element.get(optional_attribute[0])
             if attr_value is not None:
-                self._current_result_meta[optional_attribute[0]] = optional_attribute[1](attr_value)
+                self._current_result_meta[optional_attribute[0]] = \
+                    optional_attribute[1](attr_value)
 
     def _set_result_descriptor(self, descriptor_element):
         
@@ -151,18 +157,28 @@ class ShamlOutputFile(producer.FileProducer):
 
         return site_attributes
 
-    def filter(self, region_constraint, metadata_constraint=None):
+    def filter(self, region_constraint, attribute_constraint=None):
         for next in iter(self):
-            if (metadata_constraint is not None and \
+            if (attribute_constraint is not None and \
                     region_constraint.match(next[0]) and \
-                    metadata_constraint.match(next[1])) or \
-               (region_constraint.match(next[0])):
+                    attribute_constraint.match(next[1])) or \
+               (attribute_constraint is None and \
+                    region_constraint.match(next[0])):
                 yield next
 
 
 class ShamlOutputConstraint(object):
-    def __init__(self, metadata=None):
-        self.metadata = metadata
+    """ This class represents a constraint that can be used to filter
+    hazard curve elements from a shaML output instance document
+    based on their site attributes. The constructor requires a dictionary as
+    argument. Items in this dictionary have to match the corresponding ones
+    in the checked site attribute object.
+    """
+    def __init__(self, attribute):
+        self.attribute = attribute
 
-    def match(self, metadata):
+    def match(self, compared_attribute):
+        for k, v in self.attribute.items():
+            if not ( k in compared_attribute and compared_attribute[k] == v ):
+                return False
         return True
