@@ -51,6 +51,9 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                                           TEST_FILE))
 
         ctr = None
+
+        # this loop is not expected to be entered - generator should
+        # not yield any item
         for ctr, shaml_item in enumerate(shaml.filter(region_constraint)):
             pass
 
