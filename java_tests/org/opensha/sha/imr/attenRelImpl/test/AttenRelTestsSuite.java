@@ -29,7 +29,6 @@ import org.junit.runners.Suite;;
 	Abrahamson_Silva_1997_test.class,
 	BJF_1997_test.class,
 	CB_2003_test.class,
-	SCEMY_1997_test.class,
 	Campbell_1997_test.class,
 	Field_2000_test.class,
 	AS_2008_test.class,

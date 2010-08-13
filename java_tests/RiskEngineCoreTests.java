@@ -17,13 +17,13 @@
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
 
-import org.gem.engine.core.EngineTest;
-import org.gem.engine.core.RegionTest;
-import org.gem.engine.core.SiteTest;
-import org.gem.engine.core.cache.InMemoryCacheTest;
-import org.gem.engine.core.event.EventSourceTest;
-import org.gem.engine.core.event.MultiEventFilterTest;
-import org.gem.engine.core.event.MultiEventListenerTest;
+import org.gem.engine.risk.core.EngineTest;
+import org.gem.engine.risk.core.RegionTest;
+import org.gem.engine.risk.core.SiteTest;
+import org.gem.engine.risk.core.cache.InMemoryCacheTest;
+import org.gem.engine.risk.core.event.EventSourceTest;
+import org.gem.engine.risk.core.event.MultiEventFilterTest;
+import org.gem.engine.risk.core.event.MultiEventListenerTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
