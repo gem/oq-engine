@@ -173,7 +173,7 @@
     </shaml:Result>
     
     <!-- extra dataset with special gml:pos and MMI-->
-    <shaml:Result timeSpanDuration="50.0" IDmodel="PGV_3_1" IMT="MMI">
+    <shaml:Result timeSpanDuration="50.0" IDmodel="MMI_3_1" IMT="MMI">
         <shaml:Descriptor>
             <shaml:endBranchLabel>3_1</shaml:endBranchLabel>
         </shaml:Descriptor>
