@@ -1,10 +1,7 @@
-'''
-Created on Aug 11, 2010
-
-@author: Aurea Moemke
-'''
 #!/usr/bin/env python2
 """Parser for Earthquake Catalog and Event Data
+
+@author: Aurea Moemke
 
 Writes earthquake catalaog and event data into the opengemdb based on an
 ASCII text file specified in a given format
@@ -14,41 +11,56 @@ specific format and writes it into the opengemdb.
 Visit the opengem github site for the latest version.
 """
 
-__author__ = "Aurea Moemke (aurea.moemke@yahoo.com, aurea.moemke@sed.ethz.ch)"
+__author__ = "Aurea Moemke (aurea.moemke@sed.ethz.ch)"
 __version__ = "$Revision: 1.0 $"
 __date__ = "$Date: 2010/08/12 10:43 $"
 __copyright__ = "Copyright (c) 2010 Aurea Moemke"
 __license__ = "Python"
 
 import sys
-import getopt
+
+from sqlalchemy.ext import declarative
+from sqlalchemy import MetaData
+from sqlalchemy.orm import session
+
+from geoalchemy import postgis
+from geoalchemy import base
+from geoalchemy import geometry
+
+import dbconnect
 import eventdata
-
-from dbconnect import dbconnect
-
-from sqlalchemy import *
-from sqlalchemy.orm import *
-from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
-from geoalchemy import *
-from geoalchemy.postgis import PGComparator
-import binascii
-
-from geoalchemy.functions import functions
-from geoalchemy.postgis import pg_functions
 
 _debug = 0
 
-class NoSourceError(Exception): pass
+conn_str = "postgresql://<user>:<password>@<host>/<dbname>"
+engine = dbconnect.dbconnect(conn_str)
+metadata = MetaData(engine)
+Base = declarative.declarative_base(metadata = metadata)
+    
+# Define the model classes
+class EarthquakeCatalog(Base):
+    __tablename__ = 'earthquakecatalog'
+    __table_args__ = {'autoload': True}
+    ecpgareapolygon = geometry.GeometryColumn(geometry.Polygon(2), 
+                        comparator = postgis.PGComparator)
+    ecpgareamultipolygon = geometry.GeometryColumn(geometry.MultiPolygon(2),
+                        comparator = postgis.PGComparator)
 
+class Event(Base):
+    __tablename__ = 'event'
+    __table_args__ = {'autoload': True}
+    evpgpoint = geometry.GeometryColumn(geometry.Point(1), 
+                        comparator = postgis.PGComparator)
+ 
+class NoSourceError(Exception): pass
 
 class EqCatParser:
     """generates earthquake catalog and event data from an ASCII text file"""
     
     def __init__(self,inputfile,ecid, formatdefn):
-        self.inputfile=inputfile;
-        self.ecid=ecid;
-        self.formatdefn=formatdefn;
+        self.inputfile = inputfile;
+        self.ecid = ecid;
+        self.formatdefn = formatdefn;
         
     def loadEqcatfile(self):
         """load ASCII file
@@ -61,7 +73,7 @@ class EqCatParser:
         
         if self.formatdefn == 1:
             eventData = eventdata.EventData()
-            eventData.parseGshapeaEventData(line)
+            eventData.parse_gshapea_event_data(line)
        
         return eventData
    
@@ -69,77 +81,73 @@ def usage():
     print __doc__
 
 def main(argv):
-    
-    conn_str = "postgresql://gemdev:gem4321@gemsun01.ethz.ch/opengemdbpython"
+
     inputfile = "gshapeacat.txt"
-    formatdefn = 1  #default: 1=GSHAPEA format
+    # Default is 1 = GSHAPEA format
+    formatdefn = 1  
     catalogname = 'GSHAPEA'
-    catalogshortname='GSHAPEA'
-    catalogpolygon="POLYGON((40 0,160 0,160 60, 40 60,40 0))"
-    
-    engine = dbconnect(conn_str)
-    metadata = MetaData(engine)
-    Base = declarative_base(metadata=metadata)
-    connection = engine.connect()
-    
-    # Define the model classes
-    class EarthquakeCatalog(Base):
-        __tablename__ = 'earthquakecatalog'
-        __table_args__ = {'autoload': True}
-        ecpgareapolygon = GeometryColumn(Polygon(2), comparator=PGComparator)
-        ecpgareamultipolygon = GeometryColumn(MultiPolygon(2), comparator=PGComparator)
-    
-    class Event(Base):
-        __tablename__ = 'event'
-        __table_args__ = {'autoload': True}
-        evpgpoint = GeometryColumn(Point(1), comparator=PGComparator)
- 
-    Session=sessionmaker(bind=engine)
-    session=Session()
+    catalogshortname = 'GSHAPEA'
+    catalogpolygon = "POLYGON((40 0,160 0,160 60, 40 60,40 0))"
+
+    Session = session.sessionmaker(bind = engine)
+    sess = Session()
             
-    #CREATE Earthquake Catalog in Earthquakecatalog file
-    #FOR VER140 in gemsun01:
+    # Create Earthquake Catalog in Earthquakecatalog file
+    # For Ver140:
  
-    eqcat = EarthquakeCatalog(ecprivatetag=False, ecshortname=catalogshortname, ecname=catalogname,\
-                              ecareapolygon=catalogpolygon, ecpgareapolygon=WKTSpatialElement(catalogpolygon))
+    eqcat = EarthquakeCatalog(ecprivatetag = False,
+                    ecshortname = catalogshortname, 
+                    ecname = catalogname, 
+                    ecareapolygon = catalogpolygon, 
+                    ecpgareapolygon = base.WKTSpatialElement(catalogpolygon))
     
-    session.add(eqcat)
-    session.commit()
+    sess.add(eqcat)
+    sess.commit()
     
     eqcatid = eqcat.ecid
     
-    #Display all earthquake catalogs in database
-    #results=session.query(EarthquakeCatalog).all()
-    
-    #for row in results:
+    # To display all earthquake catalogs in database
+    # 
+    # results=session.query(EarthquakeCatalog).all()
+    # for row in results:
     #    print row.ecname, session.scalar(row.ecpgareapolygon.wkt)
     
-    #Show values of current earthquake catalog
-    results = session.query(EarthquakeCatalog).filter(EarthquakeCatalog.ecshortname==catalogname)
+    # Show values of current earthquake catalog
+    results = sess.query(EarthquakeCatalog).\
+            filter(EarthquakeCatalog.ecshortname == catalogname)
     for row in results:
-        print row.ecid, row.ecshortname, session.scalar(row.ecpgareapolygon.wkt)
+        print row.ecid, row.ecshortname, sess.scalar(row.ecpgareapolygon.wkt)
     
     f = EqCatParser(inputfile,eqcatid,formatdefn)
     
     contents = f.loadEqcatfile()
     
-    #CREATE EVENTS For EarthquakeCatalog GSHAPEA4
+    # Read each line in Earthquakecatalog file and parse
     i = 0
-    
-    #READ EACH LINE IN EqCat File and parse
     for line in contents:
-        if i==0:
+        if i == 0:
             i = i + 1
             continue
         print i, ": ", line
         i = i + 1
         eventData = f.loadEventData(line)
-        event = Event(ecid=eqcatid,evtimestamp=eventData.eventtimestamp,evyear=eventData.eventyear,evmonth=eventData.eventmonth,\
-                      evday=eventData.eventday, evmin=eventData.eventmins,evsec=eventData.eventsecs,evnanosec=eventData.eventnanosecs,\
-                      evlat=eventData.eventlat,evlong=eventData.eventlon,evmagnitude=eventData.eventmagnitude,evdepth=eventData.eventdepth,\
-                      evremarks=eventData.eventremarks,evpoint=eventData.eventpoint,evpgpoint=WKTSpatialElement(eventData.eventpoint))
-        session.add(event)
-        session.commit()
+        event = Event(ecid = eqcatid, evtimestamp = eventData.timestamp,
+                    evyear = eventData.year, 
+                    evmonth = eventData.month,
+                    evday = eventData.day, 
+                    evmin = eventData.mins, 
+                    evsec = eventData.secs, 
+                    evnanosec = eventData.nanosecs,
+                    evlat = eventData.lat, 
+                    evlong = eventData.lon,
+                    evmagnitude = eventData.magnitude, 
+                    evdepth = eventData.depth, 
+                    evremarks = eventData.remarks,
+                    evpoint = eventData.point, 
+                    evpgpoint = base.WKTSpatialElement(eventData.point))
+        
+        sess.add(event)
+        sess.commit()
 
 if __name__ == "__main__":
     main(sys.argv[1:])

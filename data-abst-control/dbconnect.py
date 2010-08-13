@@ -11,7 +11,8 @@ def dbconnect(conn_str):
     """connects to a given database based on the connection string
     
     For a postgresql database:
-    conn_str = 'postgresql://<username>:<password>@<hostname>/<databasename>'  """
+    conn_str = 'postgresql://<username>:<password>@<hostname>/<databasename>'
+    """
     
     engine = create_engine (conn_str, echo=True)
     return engine
