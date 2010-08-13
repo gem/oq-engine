@@ -1,0 +1,8 @@
+*.pyc
+*.DS_Store
+local_settings.py
+docs/build/*
+build/*
+build-stamp
+bin/*
+dist/*
