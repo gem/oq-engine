@@ -6,6 +6,8 @@ Created on Aug 12, 2010
 from datetime import datetime
 
 class EventData:
+    """This class takes event data information from an earthquake catalog in a specific ascii text file format and parses out the
+    event data (for later write to the opengemdb)"""
     
     def __init__(self):
         self.eventtimestamp = None
@@ -23,9 +25,8 @@ class EventData:
         self.eventremarks=""
         self.eventerrorcode=None
         self.eventpoint=None
-        print "Now inside init of EventData!!!"
         
-    def parseEventData(self, line):
+    def parseGshapeaEventData(self, line):
         if len(line[4:9].strip()) == 0: #empty string
             self.eventyear=0
         else:
