@@ -1,66 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry kind="src" path="java_tests"/>
+	<classpathentry excluding="data/" kind="src" path="java_tests"/>
+	<classpathentry kind="src" path="java_tests/data"/>
 	<classpathentry kind="src" path="java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/commons-lang-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/commons-math-2.1.jar"/>
+	<classpathentry kind="lib" path="lib/dom4j.jar"/>
 	<classpathentry kind="lib" path="lib/commons-logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/emma_ant.jar"/>
 	<classpathentry kind="lib" path="lib/emma.jar"/>
+	<classpathentry kind="lib" path="lib/hamcrest-all-1.2.jar"/>
 	<classpathentry kind="lib" path="lib/junit-4.8.1.jar"/>
 	<classpathentry kind="lib" path="lib/lambdaj-2.1-with-dependencies.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
 	<classpathentry kind="lib" path="lib/lombok.jar"/>
 	<classpathentry kind="lib" path="lib/mockito-all-1.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/oscache-2.4.1.jar"/>
-	<classpathentry kind="lib" path="lib/activation.jar"/>
-	<classpathentry kind="lib" path="lib/BrowserLauncher2-1_3.jar"/>
-	<classpathentry kind="lib" path="lib/commons-beanutils.jar"/>
-	<classpathentry kind="lib" path="lib/commons-cli-1.2.jar"/>
-	<classpathentry kind="lib" path="lib/commons-codec-1.3.jar"/>
-	<classpathentry kind="lib" path="lib/commons-collections.jar"/>
-	<classpathentry kind="lib" path="lib/commons-io-1.4.jar"/>
-	<classpathentry kind="lib" path="lib/commons-lang-2.4.jar"/>
-	<classpathentry kind="lib" path="lib/commons-logging.jar"/>
-	<classpathentry kind="lib" path="lib/commons-math-2.1.jar"/>
-	<classpathentry kind="lib" path="lib/DBConnection.jar"/>
-	<classpathentry kind="lib" path="lib/dom4j.jar"/>
-	<classpathentry kind="lib" path="lib/f2jutil.jar"/>
-	<classpathentry kind="lib" path="lib/isti.util.jar"/>
-	<classpathentry kind="lib" path="lib/itext-1.3.jar"/>
-	<classpathentry kind="lib" path="lib/jaas.jar"/>
-	<classpathentry kind="lib" path="lib/Jama-1.0.2.jar"/>
-	<classpathentry kind="lib" path="lib/jax-qname.jar"/>
-	<classpathentry kind="lib" path="lib/jaxrpc-api.jar"/>
-	<classpathentry kind="lib" path="lib/jaxrpc-impl.jar"/>
-	<classpathentry kind="lib" path="lib/jcommon-1.0.5.jar"/>
-	<classpathentry kind="lib" path="lib/jfreechart-1.0.2.jar"/>
-	<classpathentry kind="lib" path="lib/jh.jar"/>
-	<classpathentry kind="lib" path="lib/jpedal.jar"/>
-	<classpathentry kind="lib" path="lib/jstl.jar"/>
-	<classpathentry kind="lib" path="lib/jta-spec1_0_1.jar"/>
-	<classpathentry kind="lib" path="lib/junit-4.5.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.4.jar"/>
-	<classpathentry kind="lib" path="lib/mail.jar"/>
-	<classpathentry kind="lib" path="lib/mysql-connector-java-3.1.6-bin.jar"/>
-	<classpathentry kind="lib" path="lib/namespace.jar"/>
-	<classpathentry kind="lib" path="lib/ncCore-4.0.jar"/>
-	<classpathentry kind="lib" path="lib/nnls.jar"/>
-	<classpathentry kind="lib" path="lib/ojdbc14.jar"/>
-	<classpathentry kind="lib" path="lib/poi-2.5.1-final-20040804.jar"/>
-	<classpathentry kind="lib" path="lib/policy.all"/>
-	<classpathentry kind="lib" path="lib/README"/>
-	<classpathentry kind="lib" path="lib/relaxngDatatype.jar"/>
-	<classpathentry kind="lib" path="lib/saaj-api.jar"/>
-	<classpathentry kind="lib" path="lib/saaj-impl.jar"/>
-	<classpathentry kind="lib" path="lib/scec_vdo.jar"/>
-	<classpathentry kind="lib" path="lib/sdoapi.jar"/>
-	<classpathentry kind="lib" path="lib/servlet.jar"/>
-	<classpathentry kind="lib" path="lib/standard.jar"/>
-	<classpathentry kind="lib" path="lib/USGSUtils.jar"/>
-	<classpathentry kind="lib" path="lib/xercesImpl.jar"/>
-	<classpathentry kind="lib" path="lib/xercesSamples.jar"/>
-	<classpathentry kind="lib" path="lib/xml-apis.jar"/>
-	<classpathentry kind="lib" path="lib/xmlParserAPIs.jar"/>
-	<classpathentry kind="lib" path="lib/xsdlib.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
