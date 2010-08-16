@@ -36,11 +36,9 @@ class ExposurePortfolioFile(producer.FileProducer):
         for event, element in etree.iterparse(self.file,
                                               events=('start', 'end')):
 
-            if event == 'start' and \
-                element.tag == '{%s}ExposurePortfolio' % SHAML_NS:
+            if event == 'start' and element.tag == 'ExposurePortfolio':
                 self._set_portfolio_meta(element)
-            elif event == 'end' and \
-                element.tag == '{%s}AssetInstance' % SHAML_NS:
+            elif event == 'end' and element.tag == 'AssetInstance':
                 yield (self._to_site(element), 
                        self._to_site_attributes(element))
 
@@ -85,7 +83,7 @@ class ExposurePortfolioFile(producer.FileProducer):
                 site_attributes[required_attribute[0]] = \
                     required_attribute[1](attr_value)
             else:
-                error_str = "element ExposurePortfolio: missing required " \
+                error_str = "element AssetInstance: missing required " \
                     "attribute %s" % required_attribute[0]
                 raise ValueError(error_str) 
 
