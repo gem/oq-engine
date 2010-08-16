@@ -21,7 +21,6 @@ public class GEMFaultSourceData extends GEMSourceData implements Serializable {
 	private double seismDepthUpp;
 	private IncrementalMagFreqDist mfd;
 	private boolean floatRuptureFlag;
-	//private EvenlyDiscretizedFunc mfd;
 	
 	/**
 	 * 
@@ -51,7 +50,7 @@ public class GEMFaultSourceData extends GEMSourceData implements Serializable {
 		this.seismDepthUpp = seismDepthUpp;
 		this.floatRuptureFlag = floatRuptureFlag;
 	}
-	
+
 	public double getDip() {
 		return dip;
 	}
@@ -68,7 +67,6 @@ public class GEMFaultSourceData extends GEMSourceData implements Serializable {
 		return seismDepthUpp;
 	}
 
-	//public IncrementalMagFreqDist getMfd() {
 	public IncrementalMagFreqDist getMfd() {
 		return mfd;
 	}

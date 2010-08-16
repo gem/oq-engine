@@ -1,0 +1,132 @@
+// This is the configuration file of the command line calculator
+
+// FILE CONTAINING ERF LOGIC TREE STRUCTURE
+/Users/damianomonelli/Documents/Workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/ErfLogicTree.inp
+
+// FILE CONTAINING GMPE LOGIC TREE STRUCTURE
+/Users/damianomonelli/Documents/Workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/GmpeLogicTree.inp
+
+// OUTPUT DIRECTORY
+/Users/damianomonelli/Desktop/Test/
+
+// MINIMUM MAGNITUDE (Mw)
+5.0
+
+// INVESTIGATION TIME (years)
+50.0
+
+// MAXIMUM INTEGRATION DISTANCE (km)
+200.0
+
+// MFD BIN WIDTH
+0.1
+
+// COMPONENT (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
+Average Horizontal (GMRotI50)
+
+// INTENSITY MEASURE TYPE (PGA (g), PGD (cm), PGV (cm/s), SA (g))
+PGA
+
+// PERIOD (s) (0.0 for PGA, PGV, PGD)
+0.0
+
+// DAMPING (%) (0.0 for PGA, PGV, PGD)
+5.0 
+
+// INTENSITY MEASURE LEVELS (in the same units of the intensity measure type)
+0.005 0.007 0.098 0.0137 0.0192 0.0269 0.0376 0.0527 0.0738 0.103 0.145 0.203 0.284 0.397 0.556 0.778 1.09 1.52 2.13
+
+// GMPE TRUNCATION TYPE (None, 1 Sided, 2 Sided)
+2 Sided
+
+// TRUNCATION LEVEL (1,2,3,...)
+3
+
+// STANDARD DEVIATION TYPE (Total, Inter-Event, Intra-Event, None (zero), Total (Mag Dependent), Total (PGA Dependent), Intra-Event (Mag Dependent))
+Total
+
+// REFERENCE VS30 VALUE 
+760.0
+
+// INCLUDE AREA SOURCES (yes,no)
+yes
+
+// TREAT AREA SOURCE RUPTURES AS (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
+Point Sources
+
+// AREA SOURCE DISCRETIZATION (degrees)
+0.1
+
+// AREA SOURCE MAGNITUDE SCALING RELATIONSHIP (W&C 1994 Mag-Length Rel.)
+W&C 1994 Mag-Length Rel.
+
+// INCLUDE GRID SOURCES (yes,no)
+yes
+
+// TREAT GRID SOURCE AS (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
+Point Sources
+
+// GRID SOURCE MAGNITUDE SCALING RELATIONSHIP (W&C 1994 Mag-Length Rel.)
+W&C 1994 Mag-Length Rel.
+
+// INCLUDE FAULT SOURCE (yes,no)
+yes
+
+// FAULT RUPTURE OFFSET (km)
+5.0
+
+// FAULT SURFACE DISCRETIZATION (km)
+1.0
+
+// FAULT MAGNITUDE SCALING RELATIONSHIP (W&C 1994 Mag-Length Rel.)
+W&C 1994 Mag-Length Rel.
+
+// FAULT MAGNITUDE SCALING SIGMA
+0.0
+
+// RUPTURE ASPECT RATIO (rupture length/rupture width)
+1.5
+
+// RUPTURE FLOATING TYPE (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
+Along strike and down dip
+
+// INCLUDE SUBDUCTION FAULT SOURCE (yes,no)
+yes
+
+// SUBDUCTION FAULT RUPTURE OFFSET (km)
+10.0
+
+// SUBDUCTION FAULT SURFACE DISCRETIZATION (km)
+10.0
+
+// SUBDUCTION FAULT MAGNITUDE SCALING RELATIONSHIP (W&C 1994 Mag-Length Rel.)
+W&C 1994 Mag-Length Rel.
+
+// SUBDUCTION FAULT MAGNITUDE SCALING SIGMA
+0.0
+
+// SUBDUCTION RUPTURE ASPECT RATIO (rupture length/rupture width)
+1.5
+
+// SUBDUCTION RUPTURE FLOATING TYPE (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
+Along strike and down dip
+
+// RESULT TYPE (Hazard map) 
+Hazard map
+
+// PROBABILITY OF EXCEEDANCE
+0.1
+
+// REGION lat, lon of polygon vertices (in clock or counter-clock wise order) and grid spacing
+-78.0 0.0 -77.0 0.0 -77.0 1.0 -78.0 1.0 1.0
+
+// CALCULATION MODE (Monte Carlo, Full Calculation)
+// if Monte Carlo is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
+// if Full Calculation is chosen than uncertainties defined by rules are treated as correlated, and hazard curves are calculated for each end-branch of the logic tree 
+Monte Carlo
+
+// NUMBER OF HAZARD CURVE CALCULATIONS PER GRID POINT (used if Monte Carlo approach is chosen)
+100
+
+// NUMBER OF PROCESSORS
+1

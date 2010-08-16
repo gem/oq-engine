@@ -1,0 +1,177 @@
+// Here is our beautiful new source file format
+
+// newsource keyword indicates beginning of source definition	
+// in this case we define an area source
+newsource
+// source id
+src01
+// source name
+Quito area source Model 1
+// tectonic region type
+Active Shallow Crust
+// source typology
+area
+// if area give polygon boundaries (number of vertices and coordinates)
+// Now we define the geometry (lat,lon)
+4
+-78.0 0.0
+-77.0 0.0
+-77.0 1.0
+-78.0 1.0
+// Here we specify the mag-freq properties 
+// First we define the number of pairs mag-freq distribution
+// - focal mechanism for this zone
+1
+// 
+// Then we specify the parameters characterizing the 
+// mag-freq dist
+// 	gr aGR(cumulative) bGR mMin mMax 
+// 	ch magChar rateChar sigmaChar numSigma 
+gr 5.0 0.8 5.0 7.0
+// Focal mechanism follows the Aki-Richards convention. 
+// -999.0 means not defined
+// strike dip rake
+-999.0 90.0 0.0
+// Here we than describe the depth to the top of rupture
+// properties for this area source. The first value of
+// magnitude corresponds to the first magnitude for which 
+// we take into account the finiteness of the rupture.
+// Format (depth is positive [km]): 
+// <mag_1> <dep_1> <mag_2> <dep_2> â..., <mag_n> <dep_n> 
+6.0 5.0 6.5 3.0 7.0 0.0
+// Here we define the hypocentral depth [km] for the 
+// seismicity modeled as point source (i.e. the 
+// seismicity with magnitude lower than the lower value
+// of magnitude used in the description of the depth to 
+// the top of rupture.
+5.0
+
+// newsource keyword indicates beginning of source definition	
+// in this case we define an point source (a collection of point sources makes
+// a grid source)
+newsource
+// source id
+src02
+// source name
+point 1
+// tectonic region type
+Active Shallow Crust
+// source typology
+point
+// location (lat,lon)
+-78.5 0.5
+// Here we specify the mag-freq properties 
+// First we define the number of pairs mag-freq distribution
+// - focal mechanism for this zone
+1
+// 
+// Then we specify the parameters characterizing the 
+// mag-freq dist
+// 	gr aGR(cumulative) bGR mMin mMax 
+// 	ch magChar rateChar sigmaChar numSigma 
+gr 5.0 0.8 5.0 7.0
+// Focal mechanism follows the Aki-Richards convention. 
+// -999.0 means not defined
+// strike dip rake
+-999.0 90.0 0.0
+// Here we than describe the depth to the top of rupture
+// properties for this area source. The first value of
+// magnitude corresponds to the first magnitude for which 
+// we take into account the finiteness of the rupture.
+// Format (depth is positive [km]): 
+// <mag_1> <dep_1> <mag_2> <dep_2> â..., <mag_n> <dep_n> 
+6.0 5.0 6.5 3.0 7.0 0.0
+// Here we define the hypocentral depth [km] for the 
+// seismicity modeled as point source (i.e. the 
+// seismicity with magnitude lower than the lower value
+// of magnitude used in the description of the depth to 
+// the top of rupture.
+5.0
+
+
+// newsource keyword indicates beginning of source definition	
+// in this case we define a fault source
+newsource
+// source id
+src03
+// source name
+Mount Diablo Thrust 
+// tectonic region type
+Active Shallow Crust
+// source typology
+fault
+// fault trace (lat,lon)
+// intersection of fault surface with earth surface
+// number of fault trace coordinates
+2
+37.73010 -121.82290
+37.87710 -122.03880
+// fault dip (degree)
+38.0
+// fault rake (degree)
+90
+// seismogenic layer top depth (km)
+8
+// seismogenic layer bottom depth (km)
+13
+// magnitude frequency distribution
+// 	gr aGR(cumulative) bGR mMax 
+// 	ch magChar rateChar sigmaChar numSigma 
+gr 5.0 0.8 6.5 7.0
+
+// newsource keyword indicates beginning of source definition	
+// in this case we define a subduction fault source
+newsource
+// source id
+src04
+// source name
+Cascadia Megathrust
+// tectonic region type
+Subduction Interface
+// source typology
+subduction fault
+// upper surface limit (lat,lon, depth)
+// number of top of fault trace coordinates
+16 
+40.363  -124.704  0.5493260E+01
+41.214  -124.977  0.4988560E+01
+42.096  -125.140  0.4897340E+01
+42.965  -125.219  0.4847610E+01
+43.852  -125.257  0.4871280E+01
+44.718  -125.313  0.4782420E+01
+45.458  -125.416  0.4410880E+01
+46.337  -125.623  0.4028170E+01
+46.642  -125.746  0.3797400E+01
+46.965  -125.874  0.3649880E+01
+47.289  -126.015  0.3650670E+01
+47.661  -126.240  0.3675160E+01
+47.994  -126.422  0.3907950E+01
+48.287  -126.660  0.4125160E+01
+48.711  -127.037  0.4583670E+01
+49.279  -127.605  0.4761580E+01
+// lower surface limit (lat,lon, depth)
+// number of bottom of fault trace coordinates
+16
+40.347  -123.829  0.2038490E+02
+41.218  -124.137  0.1741390E+02
+42.115  -124.252  0.1752740E+02
+42.984  -124.313  0.1729190E+02
+43.868  -124.263  0.1856200E+02
+44.740  -124.213  0.1977810E+02
+45.494  -124.099  0.2230320E+02
+46.369  -123.853  0.2575860E+02
+46.811  -123.644  0.2711490E+02
+47.300  -123.423  0.2761730E+02
+47.792  -123.440  0.2750930E+02
+48.221  -124.075  0.2602160E+02
+48.560  -124.773  0.2572870E+02
+48.873  -125.409  0.2544710E+02
+49.244  -126.117  0.2471340E+02
+49.687  -126.911  0.2275770E+02
+// fault rake (degree)
+0
+// magnitude frequency distribution
+// 	gr aGR(cumulative) bGR mMax 
+// 	ch magChar rateChar sigmaChar numSigma 
+gr 5.0 0.8 6.5 9.0
+

@@ -39,7 +39,11 @@ import org.opensha.sha.earthquake.griddedForecast.MagFreqDistsForFocalMechs;
 import org.opensha.sha.earthquake.rupForecastImpl.GriddedRegionPoissonEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
+import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
@@ -60,14 +64,15 @@ public class CommandLineCalculator {
 	 * @throws IllegalArgumentException 
 	 */
 	public static void main(String[] args) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, SecurityException, NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
-		
-//		/Users/damianomonelli/Documents/Workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/CalculatorConfig.inp
+
 		
 		// calculator configuration file
-		String calculatorConfigFile = "/Users/damianomonelli/Documents/Workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/CalculatorConfig.inp";
-	    
+		String calculatorConfigFile = "CalculatorConfig.inp";
+		
 	    // read configuration file
 	    CalculatorConfigData calcConfig = new CalculatorConfigData(calculatorConfigFile);
+	    
+	    
 	    
 	    // read ERF logic tree file
 	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(calcConfig.getErfLogicTreeFile());
@@ -301,13 +306,12 @@ public class CommandLineCalculator {
 				if(branch.getRule()!=null){
 					
 					// apply rule
-					// uncertainty on maximum magnitude
+					// uncertainty on GR maximum magnitude
 	    			if(branch.getRule().getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.mMaxGRRelative.toString())){
 	    				
+	    				// if area source
 	    				if(src instanceof GEMAreaSourceData){
-	    					
-	    					//System.out.println("Applying mMaxRule");
-	    					
+
 	    					// define area source
 	    					GEMAreaSourceData areaSrc = (GEMAreaSourceData)src;
 	    					
@@ -318,59 +322,13 @@ public class CommandLineCalculator {
 	    						
 	    						if (mfd instanceof GutenbergRichterMagFreqDist){
 	    							
-	    							GutenbergRichterMagFreqDist mfdGR = (GutenbergRichterMagFreqDist)mfd;
+	    							// create new mfd by applying rule
+	    							GutenbergRichterMagFreqDist newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)mfd, branch.getRule().getVal(), areaSrc.getName());
 	    							
-	    							// minimum magnitude
-	    							double mMin = mfdGR.getMagLower();
-	    							// b value
-	    							double bVal = mfdGR.get_bValue();
-	    							// total moment rate
-	    							double totMoRate = mfdGR.getTotalMomentRate();
-	    							// deltaM
-	    							double deltaM = mfdGR.getDelta();
-	    							
-	    							// calculate new mMax value
-	    							// old mMax value
-	    							double mMax = mfdGR.getMagUpper();
-	    							//System.out.println("Old mMax: "+mMax);
-	    							// add uncertainty value (deltaM/2 is added because mMax 
-	    							// refers to bin center
-	    							mMax = mMax+deltaM/2+branch.getRule().getVal();
-	    							// round mMax with respect to deltaM
-	    							mMax = Math.round(mMax/deltaM)*deltaM;
-	    							// move back to bin center
-	    							mMax = mMax-deltaM/2;
-	    							//System.out.println("New mMax: "+mMax);
-	    							
-	    							if(mMax - mMin>=deltaM){
-	    								
-	    								// calculate number of magnitude values
-	    								int numVal = (int)((mMax-mMin)/deltaM + 1);
-		    							
-		    							// create new GR mfd
-		    							GutenbergRichterMagFreqDist newMfdGr = new GutenbergRichterMagFreqDist(mMin,numVal,deltaM);
-		    							newMfdGr.setAllButTotCumRate(mMin, mMax, totMoRate, bVal);
-		    							
-		    							// substitute old mfd with new mfd
-		    							areaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] = newMfdGr;
-		    							
-		    							
-	    							}
-	    							else{
-	    								System.out.println("Uncertaintiy value: "+branch.getRule().getVal()+" on maximum magnitude for source: "+areaSrc.getName()+" give maximum magnitude smaller than minimum magnitude!");
-	    								System.out.println("In this case uncertainties are not taken into account.");
-	    								System.out.println("Execution continues but be aware of that!");
-	    							}
-	    							
-	    							
+	    							// substitute old mfd with new mfd
+	    							areaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] = newMfdGr;
 	    							
 	    						} // end if mfd is GR
-	    						else{
-	    							System.out.println("mMaxRelative rule is supported only for GR mfd!");
-	    	    					System.out.println("Please correct your input!");
-	    	    					System.out.println("Execution stopped!");
-	    	    					System.exit(0);
-	    						} // end if not GR
 	    						
 	    						mfdIndex = mfdIndex + 1;
 	    					} // end loop over mfds
@@ -379,17 +337,88 @@ public class CommandLineCalculator {
 	    					srcList.set(sourceIndex, areaSrc);
 	    					
 	    				} // end if area source
+	    				// if point source
+	    				else if(src instanceof GEMPointSourceData){
+	    					
+	    					// define point source
+	    					GEMPointSourceData pntSrc = (GEMPointSourceData)src;
+	    					
+	    					// loop over mfds
+	    					// mfd index
+	    					int mfdIndex = 0;
+	    					for(IncrementalMagFreqDist mfd: pntSrc.getHypoMagFreqDistAtLoc().getMagFreqDistList()){
+	    						
+	    						if(mfd instanceof GutenbergRichterMagFreqDist){
+	    							
+	    							// create new mfd by applying rule
+	    							GutenbergRichterMagFreqDist newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)mfd, branch.getRule().getVal(), pntSrc.getName());
+	    							
+	    							// substitute old mfd with new mfd
+	    							pntSrc.getHypoMagFreqDistAtLoc().getMagFreqDistList()[mfdIndex] = newMfdGr;
+	    						}
+	    						
+	    					}
+	    					
+	    					// replace the old point source with the new point source
+	    					srcList.set(sourceIndex, pntSrc);
+	    					
+	    				} // end if point source
+	    				// if fault source
+	    				else if(src instanceof GEMFaultSourceData){
+	    					
+	    					// define fault source
+	    					GEMFaultSourceData faultSrc = (GEMFaultSourceData)src;
+	    					
+	    					// mfd
+	    					IncrementalMagFreqDist mfd = faultSrc.getMfd();
+	    					
+	    					if(mfd instanceof GutenbergRichterMagFreqDist){
+	    					
+								// create new mfd by applying rule
+								GutenbergRichterMagFreqDist newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)faultSrc.getMfd(), branch.getRule().getVal(), faultSrc.getName());
+
+								// replace old fault source with new fault source with the new mfd
+								srcList.set(sourceIndex, new GEMFaultSourceData(faultSrc.getID(), faultSrc.getName(), faultSrc.getTectReg(), 
+										newMfdGr, faultSrc.getTrace(), faultSrc.getDip(), 
+										faultSrc.getDip(), faultSrc.getSeismDepthLow(), faultSrc.getSeismDepthUpp(), faultSrc.getFloatRuptureFlag()));
+	    						
+	    					}
+	    					
+	    				}
+	    				// if subduction fault
+	    				else if(src instanceof GEMSubductionFaultSourceData){
+	    					
+	    					// define subduction source
+	    					GEMSubductionFaultSourceData subFaultSrc = (GEMSubductionFaultSourceData)src;
+	    					
+	    					// mfd
+	    					IncrementalMagFreqDist mfd = subFaultSrc.getMfd();
+	    					
+	    					if(mfd instanceof GutenbergRichterMagFreqDist){
+	    						
+								// create new mfd by applying rule
+								GutenbergRichterMagFreqDist newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)subFaultSrc.getMfd(), branch.getRule().getVal(), subFaultSrc.getName());
+
+								// replace old fault source with new fault source with the new mfd
+								srcList.set(sourceIndex, new GEMSubductionFaultSourceData(subFaultSrc.getID(), subFaultSrc.getName(), subFaultSrc.getTectReg(),
+										subFaultSrc.getTopTrace(), subFaultSrc.getBottomTrace(), 
+										subFaultSrc.getRake(), newMfdGr, subFaultSrc.getFloatRuptureFlag()));
+								
+	    					}
+	    					
+	    				}
 	    				else{
 	    					System.out.println("Source "+src.getClass().getName()+" not supported!");
 	    					System.out.println("Please correct your input!");
 	    					System.out.println("Execution stopped!");
 	    					System.exit(0);
-	    				} // end if not area source
+	    				}
 	    				
 	    			} // end if mMaxRule
 	    			// uncertainties on GR b value
 	    			else if(branch.getRule().getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())){
 	    				
+	    				// if area source
 	    				if(src instanceof GEMAreaSourceData){
 	    					
 	    					// define area source
@@ -404,49 +433,10 @@ public class CommandLineCalculator {
 	    							
 	    							GutenbergRichterMagFreqDist mfdGR = (GutenbergRichterMagFreqDist)mfd;
 	    							
-	    							// minimum magnitude
-	    							double mMin = mfdGR.getMagLower();
-	    							// maximum magnitude
-	    							double mMax = mfdGR.getMagUpper();
-	    							// b value
-	    							double bVal = mfdGR.get_bValue();
-	    							// total moment rate
-	    							double totMoRate = mfdGR.getTotalMomentRate();
-	    							// deltaM
-	    							double deltaM = mfdGR.getDelta();
-	    							
-	    							// calculate new b value
-	    							bVal = bVal + branch.getRule().getVal();
-	    							
-	    							if(bVal>=0.0){
-	    								
-	    								// calculate number of magnitude values
-	    								int numVal = (int)((mMax-mMin)/deltaM + 1);
-		    							
-		    							// create new GR mfd
-		    							GutenbergRichterMagFreqDist newMfdGr = new GutenbergRichterMagFreqDist(mMin,numVal,deltaM);
-		    							newMfdGr.setAllButTotCumRate(mMin, mMax, totMoRate, bVal);
-		    							
-		    							// substitute old mfd with new mfd
-		    							areaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] = newMfdGr;
-		    							
-		    							
-	    							}
-	    							else{
-	    								System.out.println("Uncertaintiy value: "+branch.getRule().getVal()+" on b value for source: "+areaSrc.getName()+" give b value smaller than 0!");
-	    								System.out.println("In this case uncertainties are not taken into account.");
-	    								System.out.println("Execution continues but be aware of that!");
-	    							}
-	    							
-	    							
+	    							// substitute old mfd with new mfd
+	    							areaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] = applybGrRelative(mfdGR, branch.getRule().getVal(), areaSrc.getName());
 	    							
 	    						} // end if mfd is GR
-	    						else{
-	    							System.out.println("bGRRelative rule is supported only for GR mfd!");
-	    	    					System.out.println("Please correct your input!");
-	    	    					System.out.println("Execution stopped!");
-	    	    					System.exit(0);
-	    						} // end if not GR
 	    						
 	    						mfdIndex = mfdIndex + 1;
 	    					} // end loop over mfds
@@ -455,6 +445,13 @@ public class CommandLineCalculator {
 	    					srcList.set(sourceIndex, areaSrc);
 	    					
 	    				} // end if area source
+	    				// point source
+	    				else if(src instanceof GEMPointSourceData){
+	    					
+	    					// define point source
+	    					GEMPointSourceData pntSrc = (GEMPointSourceData)src;
+	    					
+	    				}
 	    				else{
 	    					System.out.println("Source "+src.getClass().getName()+" not supported!");
 	    					System.out.println("Please correct your input!");
@@ -512,6 +509,97 @@ public class CommandLineCalculator {
 		erf.updateForecast();
 		
 		return erf;
+	}
+	
+	/**
+	 * 
+	 * @param mfdGR: original magnitude frequency distribution
+	 * @param deltaMmax: uncertainty on maximum magnitude
+	 * @param areaSrc: source
+	 * @return
+	 */
+	private static GutenbergRichterMagFreqDist applyMmaxGrRelative(GutenbergRichterMagFreqDist mfdGR, double deltaMmax, String sourceName){
+
+		// minimum magnitude
+		double mMin = mfdGR.getMagLower();
+		// b value
+		double bVal = mfdGR.get_bValue();
+		// total moment rate
+		double totMoRate = mfdGR.getTotalMomentRate();
+		// deltaM
+		double deltaM = mfdGR.getDelta();
+		
+		// calculate new mMax value
+		// old mMax value
+		double mMax = mfdGR.getMagUpper();
+		// add uncertainty value (deltaM/2 is added because mMax 
+		// refers to bin center
+		mMax = mMax+deltaM/2+deltaMmax;
+		// round mMax with respect to deltaM
+		mMax = Math.round(mMax/deltaM)*deltaM;
+		// move back to bin center
+		mMax = mMax-deltaM/2;
+		//System.out.println("New mMax: "+mMax);
+		
+		if(mMax - mMin>=deltaM){
+			
+			// calculate number of magnitude values
+			int numVal = (int)((mMax-mMin)/deltaM + 1);
+			
+			// create new GR mfd
+			GutenbergRichterMagFreqDist newMfdGr = new GutenbergRichterMagFreqDist(mMin,numVal,deltaM);
+			newMfdGr.setAllButTotCumRate(mMin, mMax, totMoRate, bVal);
+			
+			// return new mfd
+			return newMfdGr;
+			
+			
+		}
+		else{
+			// stop execution and return null
+			System.out.println("Uncertaintiy value: "+deltaMmax+" on maximum magnitude for source: "+sourceName+" give maximum magnitude smaller than minimum magnitude!");
+			System.out.println("Check your input. Execution stopped.");
+			return null;
+		}
+		
+	}
+	
+	private static GutenbergRichterMagFreqDist applybGrRelative(GutenbergRichterMagFreqDist mfdGR, double deltaB, String sourceName){
+		
+		// minimum magnitude
+		double mMin = mfdGR.getMagLower();
+		// maximum magnitude
+		double mMax = mfdGR.getMagUpper();
+		// b value
+		double bVal = mfdGR.get_bValue();
+		// total moment rate
+		double totMoRate = mfdGR.getTotalMomentRate();
+		// deltaM
+		double deltaM = mfdGR.getDelta();
+		
+		// calculate new b value
+		bVal = bVal + deltaB;
+		
+		if(bVal>=0.0){
+			
+			// calculate number of magnitude values
+			int numVal = (int)((mMax-mMin)/deltaM + 1);
+			
+			// create new GR mfd
+			GutenbergRichterMagFreqDist newMfdGr = new GutenbergRichterMagFreqDist(mMin,numVal,deltaM);
+			newMfdGr.setAllButTotCumRate(mMin, mMax, totMoRate, bVal);
+			
+			// return new mfd
+			return newMfdGr;
+			
+		}
+		else{
+			System.out.println("Uncertaintiy value: "+deltaB+" on b value for source: "+sourceName+" give b value smaller than 0!");
+			System.out.println("Check your input. Execution stopped!");
+			System.exit(0);
+			return null;
+		}
+
 	}
 	
 	private static HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI> sampleGemLogicTreeGMPE(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE){
