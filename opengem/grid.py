@@ -2,6 +2,11 @@
 
 from eventlet import queue
 
+class Grid(object):
+    def __init__(self, *args, **kwargs):
+        self.cellsize = 0.1
+        self.__dict__.update(kwargs)
+
 def ComputeGrid(object):
     def __init__(self, cell_factory, pool):
         self.queue = queue.Queue()
