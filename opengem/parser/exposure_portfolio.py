@@ -122,3 +122,6 @@ class ExposurePortfolioConstraint(object):
             if not ( k in compared_attribute and compared_attribute[k] == v ):
                 return False
         return True
+
+
+	
