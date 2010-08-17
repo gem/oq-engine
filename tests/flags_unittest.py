@@ -2,6 +2,8 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # encoding: utf-8
 
+import sys
+sys.path.append("/Users/benwyss/Projects/opengem")
 import unittest
 from opengem import flags
 

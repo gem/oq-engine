@@ -2,9 +2,11 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from lxml import etree
-
+import sys
+sys.path.append("/Users/benwyss/Projects/opengem")
 from opengem import producer
 from opengem import region
+
 
 # do not use namespace for now
 RISKML_NS=''
