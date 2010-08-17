@@ -10,6 +10,11 @@ For the most part the Python packages in here can be installed using `pip`
 On OS X a good way to intall the pieces that are not Python (if you don't
 already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebrew/
 
+* gdal
+ * Brew install gdal itself, then
+ * sudo pip install gdal (FAILS, so):
+ * Use the package from http://www.kyngchaos.com/software:frameworks
+* osgeo (pip install)
 * eventlet
 * lxml
 * PyYAML
@@ -23,6 +28,8 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
   * requires geos (c library, also called libgeos)
 * Sphinx (for building documentation only)
 
+
+You'll need to mess with PYTHONPATH (in your .bash_profile file), or add a .pth file, both for gdal and for opengem itself.
 
 Running Tests
 -------------
