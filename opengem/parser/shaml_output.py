@@ -184,6 +184,9 @@ class ShamlOutputFile(producer.FileProducer):
         return site_attributes
 
     def filter(self, region_constraint, attribute_constraint=None):
+        """ region_constraint has to be of type region.RegionConstraint 
+        (defined in file region.py)
+        """
         for next in iter(self):
             if (attribute_constraint is not None and \
                     region_constraint.match(next[0]) and \
