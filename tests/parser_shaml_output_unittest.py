@@ -87,7 +87,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                 "filter yielded unexpected point at position %s: %s, %s" % (
                 counter, shaml_point, expected_result[counter][0]))
 
-            self.assertTrue(shaml_attr == expected_result[counter][1],
+            self.assertEqual(shaml_attr, expected_result[counter][1],
                 "filter yielded unexpected attribute values at position " \
                 "%s: %s, %s" % (counter, shaml_attr, 
                                 expected_result[counter][1]))
@@ -99,7 +99,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(counter == len(expected_result)-1, 
+        self.assertEqual(counter, len(expected_result)-1, 
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, len(expected_result)))
 
@@ -126,7 +126,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(counter == expected_result_counter-1, 
+        self.assertEqual(counter, expected_result_counter-1, 
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, expected_result_counter))
 
@@ -239,7 +239,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                     % (counter, shaml_point, 
                        expected_results[attr_test_counter][counter][0]))
 
-                self.assertTrue(shaml_attr == expected_results[
+                self.assertEqual(shaml_attr, expected_results[
                     attr_test_counter][counter][1],
                     "filter yielded unexpected attribute values at position" \
                     " %s: %s, %s" % (counter, shaml_attr, 
@@ -252,7 +252,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
 
             # ensure that generator returns exactly the number of items of the
             # expected result list
-            self.assertTrue(counter == len(
-                expected_results[attr_test_counter])-1,
+            self.assertEqual(counter, 
+                len(expected_results[attr_test_counter])-1,
                 "filter yielded wrong number of items (%s), expected were %s" \
                 % (counter+1, len(expected_results[attr_test_counter])))
