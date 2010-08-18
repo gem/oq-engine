@@ -1,6 +1,15 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+""" This module contains a class that parses instance document files of a
+specific flavour of the shaML data format. This flavour is shaML "output",
+i.e., the potential outcome of the hazard engine. The root element of such
+shaML instance documents is <HazardResultList>.
+
+In the future, this module will probably be refactored/renamed in order to 
+support other flavours of shaML (the "input" formats).
+"""
+
 from lxml import etree
 
 from opengem import producer
