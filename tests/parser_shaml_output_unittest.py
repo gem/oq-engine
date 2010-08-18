@@ -46,15 +46,15 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
                                                           TEST_FILE))
 
-        ctr = None
+        counter = None
 
         # this loop is not expected to be entered - generator should
         # not yield any item
-        for ctr, shaml_item in enumerate(shaml.filter(region_constraint)):
+        for counter, shaml_item in enumerate(shaml.filter(region_constraint)):
             pass
 
         # ensure that generator didn't yield an item
-        self.assertTrue(ctr is None, 
+        self.assertTrue(counter is None, 
             "filter yielded item(s) although no items were expected")
 
     def test_filter_region_constraint_one_site(self):
@@ -78,29 +78,30 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                             'Values': [0.005, 0.007, 0.009],
                             'vs30': 760.0})]
 
-        ctr = None
-        for ctr, (shaml_point, shaml_attr) in enumerate(
+        counter = None
+        for counter, (shaml_point, shaml_attr) in enumerate(
             shaml.filter(region_constraint)):
 
             # check topological equality for points
-            self.assertTrue(shaml_point.equals(expected_result[ctr][0]),
+            self.assertTrue(shaml_point.equals(expected_result[counter][0]),
                 "filter yielded unexpected point at position %s: %s, %s" % (
-                ctr, shaml_point, expected_result[ctr][0]))
+                counter, shaml_point, expected_result[counter][0]))
 
-            self.assertTrue(shaml_attr == expected_result[ctr][1],
+            self.assertTrue(shaml_attr == expected_result[counter][1],
                 "filter yielded unexpected attribute values at position " \
-                "%s: %s, %s" % (ctr, shaml_attr, expected_result[ctr][1]))
+                "%s: %s, %s" % (counter, shaml_attr, 
+                                expected_result[counter][1]))
 
         # ensure that generator yielded at least one item
-        self.assertTrue(ctr is not None, 
+        self.assertTrue(counter is not None, 
             "filter yielded nothing although %s item(s) were expected" % \
             len(expected_result))
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(ctr == len(expected_result)-1, 
+        self.assertTrue(counter == len(expected_result)-1, 
             "filter yielded wrong number of items (%s), expected were %s" % (
-                ctr+1, len(expected_result)))
+                counter+1, len(expected_result)))
 
     def test_filter_region_constraint_all_sites(self):
 
@@ -110,24 +111,24 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
                                                           TEST_FILE))
 
-        expected_result_ctr = 10
-        ctr = None
+        expected_result_counter = 10
+        counter = None
 
         # just loop through iterator in order to count items
-        for ctr, (shaml_point, shaml_attr) in enumerate(
+        for counter, (shaml_point, shaml_attr) in enumerate(
             shaml.filter(region_constraint)):
             pass
 
         # ensure that generator yielded at least one item
-        self.assertTrue(ctr is not None, 
+        self.assertTrue(counter is not None, 
             "filter yielded nothing although %s item(s) were expected" % \
-            expected_result_ctr)
+            expected_result_counter)
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(ctr == expected_result_ctr-1, 
+        self.assertTrue(counter == expected_result_counter-1, 
             "filter yielded wrong number of items (%s), expected were %s" % (
-                ctr+1, expected_result_ctr))
+                counter+1, expected_result_counter))
 
     def test_filter_attribute_constraint(self):
         """ This test uses the attribute constraint filter to select items
@@ -219,7 +220,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         # set a region constraint that inlcudes all points 
         region_constraint = region.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
-        for attr_test_ctr, curr_attribute_dict in enumerate(
+        for attr_test_counter, curr_attribute_dict in enumerate(
             test_attribute_dicts):
             attribute_constraint = \
                 shaml_output.ShamlOutputConstraint(curr_attribute_dict)
@@ -227,30 +228,31 @@ class ShamlOutputFileTestCase(unittest.TestCase):
             shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
                                                               TEST_FILE))
 
-            ctr = None
-            for ctr, (shaml_point, shaml_attr) in enumerate(
+            counter = None
+            for counter, (shaml_point, shaml_attr) in enumerate(
                 shaml.filter(region_constraint, attribute_constraint)):
 
                 # check topological equality for points
                 self.assertTrue(shaml_point.equals(
-                    expected_results[attr_test_ctr][ctr][0]),
+                    expected_results[attr_test_counter][counter][0]),
                     "filter yielded unexpected point at position %s: %s, %s" \
-                    % (ctr, shaml_point, 
-                       expected_results[attr_test_ctr][ctr][0]))
+                    % (counter, shaml_point, 
+                       expected_results[attr_test_counter][counter][0]))
 
                 self.assertTrue(shaml_attr == expected_results[
-                    attr_test_ctr][ctr][1],
+                    attr_test_counter][counter][1],
                     "filter yielded unexpected attribute values at position" \
-                    " %s: %s, %s" % (ctr, shaml_attr, 
-                                     expected_results[attr_test_ctr][ctr][1]))
+                    " %s: %s, %s" % (counter, shaml_attr, 
+                        expected_results[attr_test_counter][counter][1]))
 
             # ensure that generator yielded at least one item
-            self.assertTrue(ctr is not None, 
+            self.assertTrue(counter is not None, 
                 "filter yielded nothing although %s item(s) were expected" % \
-                len(expected_results[attr_test_ctr]))
+                len(expected_results[attr_test_counter]))
 
             # ensure that generator returns exactly the number of items of the
             # expected result list
-            self.assertTrue(ctr == len(expected_results[attr_test_ctr])-1, 
+            self.assertTrue(counter == len(
+                expected_results[attr_test_counter])-1,
                 "filter yielded wrong number of items (%s), expected were %s" \
-                % (ctr+1, len(expected_results[attr_test_ctr])))
+                % (counter+1, len(expected_results[attr_test_counter])))
