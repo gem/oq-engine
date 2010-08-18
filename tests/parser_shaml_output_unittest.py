@@ -17,7 +17,7 @@ FILES_KNOWN_TO_FAIL = ['ShamlOutputFile-fail-missing_required_attribute.xml',
                        'ShamlOutputFile-fail-curve_values_type_mismatch.xml',
                        'ShamlOutputFile-fail-missing_curve_vs30.xml']
 
-TEST_FILE = 'ShamlOutputFile-test.xml'
+TEST_FILE = 'ShamlOutputFile-PASS.xml'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
