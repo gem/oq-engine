@@ -76,23 +76,23 @@ class ShamlOutputFile(producer.FileProducer):
 
         self._current_result_meta = {}
 
-        for required_attribute in (('IMT', str), ('IDmodel', str), 
-                                   ('timeSpanDuration', float)):
-            attr_value = result_element.get(required_attribute[0])
+        for (required_attr, attr_type) in (('IMT', str), ('IDmodel', str),
+            ('timeSpanDuration', float)):
+            attr_value = result_element.get(required_attr)
             if attr_value is not None:
-                self._current_result_meta[required_attribute[0]] = \
-                    required_attribute[1](attr_value)
+                self._current_result_meta[required_attr] = \
+                    attr_type(attr_value)
             else:
                 error_str = "element shaml:Result: missing required " \
-                    "attribute %s" % required_attribute[0]
+                    "attribute %s" % required_attr
                 raise ValueError(error_str) 
 
-        for optional_attribute in (('saPeriod', float), ('saDamping', float), 
-                                   ('calcSettingsID', str)):
-            attr_value = result_element.get(optional_attribute[0])
+        for (optional_attr, attr_type) in (('saPeriod', float), 
+            ('saDamping', float), ('calcSettingsID', str)):
+            attr_value = result_element.get(optional_attr)
             if attr_value is not None:
-                self._current_result_meta[optional_attribute[0]] = \
-                    optional_attribute[1](attr_value)
+                self._current_result_meta[optional_attr] = \
+                    attr_type(attr_value)
 
     def _set_result_descriptor(self, descriptor_element):
         
