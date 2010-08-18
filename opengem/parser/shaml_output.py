@@ -43,10 +43,11 @@ class ShamlOutputFile(producer.FileProducer):
     }
 
     Notes:
-    1) 'IMT' must be from a list of allowed values, this is not enforced
+    1) TODO(fab): require that attribute values of 'IMT' are from list
+       of allowed values (see shaML XML Schema)
     2) 'endBranchLabel' can be replaced by 'aggregationType'
-    3) 'aggregationType' must be from a list of allowed values, this is not
-       enforced
+    3) TODO(fab): require that value of 'aggregationType' element is from a
+       list of allowed values (see shaML XML Schema)
     4) 'saPeriod', 'saDamping', 'calcSettingsID', 'maxProb' and 'minProb' are
        optional
     5) shaML output can also contain hazard maps, parsing of those is not yet
@@ -60,6 +61,11 @@ class ShamlOutputFile(producer.FileProducer):
                 self._set_result_meta(element)
             elif event == 'end' and element.tag == '{%s}Descriptor' % SHAML_NS:
                 self._set_result_descriptor(element)
+            elif event == 'start' and element.tag == '{%s}HazardMap' \
+                % SHAML_NS:
+                error_str = "parsing of HazardMap elements is not yet " \
+                    "implemented"
+                raise NotImplementedError()
             elif event == 'end' and element.tag == '{%s}IML' % SHAML_NS:
                 self._set_curvelist_iml(element)
             elif event == 'end' and element.tag == '{%s}Curve' % SHAML_NS:

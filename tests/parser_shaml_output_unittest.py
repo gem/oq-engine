@@ -17,6 +17,8 @@ FILES_KNOWN_TO_FAIL = ['ShamlOutputFile-fail-missing_required_attribute.xml',
                        'ShamlOutputFile-fail-curve_values_type_mismatch.xml',
                        'ShamlOutputFile-fail-missing_curve_vs30.xml']
 
+FILE_FLAVOUR_NOT_IMPLEMENTED = 'ShamlOutputFile-HazardMap-PASS.xml'
+
 TEST_FILE = 'ShamlOutputFile-PASS.xml'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
@@ -29,6 +31,12 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                                               testfile))
 
             self.assertRaises(ValueError, map, None, shaml)
+
+    def test_shamlfiles_hazardmap_not_implemented(self):
+        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+            FILE_FLAVOUR_NOT_IMPLEMENTED))
+
+        self.assertRaises(NotImplementedError, map, None, shaml)
 
     def test_filter_region_constraint_known_to_fail(self):
 
