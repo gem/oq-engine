@@ -71,6 +71,7 @@ public class GEM1ERF extends EqkRupForecast {
 	final static double MINMAG = 0;   // this sets the minimum mag considered in the forecast (overriding that implied in the source data)
 	
 	// calculation settings (primitive versions of the adj parameters)
+	double minMagValue;
 	// for area sources
 	String areaSrcRupTypeValue;
 	double areaSrcLowerSeisDepthValue;
@@ -99,6 +100,15 @@ public class GEM1ERF extends EqkRupForecast {
 
 
 	// THE REST IS FOR ALL THE ADJUSTABLE PARAMERS:
+	
+	// minimum magnitude
+	public final static String MIN_MAG_NAME = "minimum magnitude in the forecast";
+	public final static Double MIN_MAG_MIN = new Double(0.0);
+	public final static Double MIN_MAG_MAX = new Double(10.0);
+	public final static Double MIN_MAG_DEFAULT = new Double(0.0);
+	public final static String MIN_MAG_UNITS = "Mw";
+	public final static String MIN_MAG_INFO = "minimum magnitude in the forecast (overriding that implied in the source data)";
+	private DoubleParameter minMagParam;
 	
 	//-------------------------------------------------------------------------------- AREA SOURCES
 	
@@ -425,6 +435,14 @@ public class GEM1ERF extends EqkRupForecast {
 	
 	// Make the adjustable parameters & the list
 	private void initAdjParams() {
+		
+		// minimum magnitude
+		minMagParam = new DoubleParameter(MIN_MAG_NAME,
+				MIN_MAG_MIN,
+				MIN_MAG_MAX,
+				MIN_MAG_UNITS,
+				MIN_MAG_DEFAULT);
+		minMagParam.setInfo(MIN_MAG_INFO);
 
 		// ---------------------------------------------------------------------------- AREA SOURCES
 		
@@ -581,6 +599,7 @@ public class GEM1ERF extends EqkRupForecast {
 			sourceCache = new HashMap<Integer, ProbEqkSource>();
 
 		// Add the change listener to parameters
+		minMagParam.addParameterChangeListener(this);
 		// -- Area sources
 		includeAreaSourceParam.addParameterChangeListener(this);
 		areaSrcDiscrParam.addParameterChangeListener(this);
@@ -652,6 +671,8 @@ public class GEM1ERF extends EqkRupForecast {
 	protected void createParamList() {
 
 		adjustableParams = new ParameterList();
+		
+		adjustableParams.addParameter(minMagParam);
 
 		if(areaSourceDataList != null) {
 			adjustableParams.addParameter(includeAreaSourceParam);
@@ -744,7 +765,7 @@ public class GEM1ERF extends EqkRupForecast {
 	                this.faultRupOffsetValue,			// floating rupture offset
 	                gemFaultSourceData.getRake(),	// average rake of the ruptures
 	                duration,						// duration of forecast
-	                MINMAG,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
+	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                faultFloaterTypeValue,				// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                12.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
 			
@@ -760,7 +781,7 @@ public class GEM1ERF extends EqkRupForecast {
 	                this.faultRupOffsetValue,			// floating rupture offset
 	                gemFaultSourceData.getRake(),	// average rake of the ruptures
 	                duration,						// duration of forecast
-	                MINMAG,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
+	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                faultFloaterTypeValue,				// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                0.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
 			
@@ -792,7 +813,7 @@ public class GEM1ERF extends EqkRupForecast {
 	                this.subductionRupOffsetValue,			// floating rupture offset
 	                gemSubductFaultSourceData.getRake(),	// average rake of the ruptures
 	                timeSpan.getDuration(),						// duration of forecast
-	                MINMAG,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
+	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                subductionFloaterTypeValue,					// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                12.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
 			
@@ -808,7 +829,7 @@ public class GEM1ERF extends EqkRupForecast {
 	                this.subductionRupOffsetValue,			// floating rupture offset
 	                gemSubductFaultSourceData.getRake(),	// average rake of the ruptures
 	                timeSpan.getDuration(),						// duration of forecast
-	                MINMAG,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
+	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                subductionFloaterTypeValue,					// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                0.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
 			
@@ -829,28 +850,28 @@ public class GEM1ERF extends EqkRupForecast {
 		if (areaSrcRupTypeValue.equals(AREA_SRC_RUP_TYPE_POINT)){
 			PoissonAreaSource src = new PoissonAreaSource(areaSourceData.getRegion(),AREA_SRC_DISCR_PARAM_DEFAULT,
 					areaSourceData.getMagfreqDistFocMech(),areaSourceData.getAveRupTopVsMag(),
-					areaSourceData.getAveHypoDepth(),duration,MINMAG);
+					areaSourceData.getAveHypoDepth(),duration,minMagValue);
 			src.setTectonicRegionType(areaSourceData.getTectReg());
 			return src;
 		} else if (areaSrcRupTypeValue.equals(AREA_SRC_RUP_TYPE_LINE)) {
 			PoissonAreaSource src = new PoissonAreaSource(areaSourceData.getRegion(),AREA_SRC_DISCR_PARAM_DEFAULT,
 					areaSourceData.getMagfreqDistFocMech(),areaSourceData.getAveRupTopVsMag(),
 					areaSourceData.getAveHypoDepth(),areaSrcMagScalingRel,areaSrcLowerSeisDepthValue,
-					duration,MINMAG);
+					duration,minMagValue);
 			src.setTectonicRegionType(areaSourceData.getTectReg());
 			return src;
 		} else if (areaSrcRupTypeValue.equals(AREA_SRC_RUP_TYPE_CROSS_HAIR)) {
 			PoissonAreaSource src = new PoissonAreaSource(areaSourceData.getRegion(),AREA_SRC_DISCR_PARAM_DEFAULT,
 					areaSourceData.getMagfreqDistFocMech(),areaSourceData.getAveRupTopVsMag(),
 					areaSourceData.getAveHypoDepth(),areaSrcMagScalingRel,areaSrcLowerSeisDepthValue,
-					duration,MINMAG,2,0);
+					duration,minMagValue,2,0);
 			src.setTectonicRegionType(areaSourceData.getTectReg());
 			return src;
 		} else if (areaSrcRupTypeValue.equals(AREA_SRC_RUP_TYPE_SPOKED)) {
 			PoissonAreaSource src = new PoissonAreaSource(areaSourceData.getRegion(),AREA_SRC_DISCR_PARAM_DEFAULT,
 					areaSourceData.getMagfreqDistFocMech(),areaSourceData.getAveRupTopVsMag(),
 					areaSourceData.getAveHypoDepth(),areaSrcMagScalingRel,areaSrcLowerSeisDepthValue,
-					duration,MINMAG,16,0);
+					duration,minMagValue,16,0);
 			src.setTectonicRegionType(areaSourceData.getTectReg());
 			return src;
 		} else if(areaSrcRupTypeValue.equals(AREA_SRC_RUP_TYPE_FINITE_SURF)) {
@@ -871,7 +892,7 @@ public class GEM1ERF extends EqkRupForecast {
 			PointEqkSource src = new PointEqkSource(gridSourceData.getHypoMagFreqDistAtLoc(),
 					gridSourceData.getAveRupTopVsMag(), 
 					gridSourceData.getAveHypoDepth(),
-					duration, MINMAG);
+					duration, minMagValue);
 			src.setTectonicRegionType(gridSourceData.getTectReg());
 			return src;
 		}
@@ -881,7 +902,7 @@ public class GEM1ERF extends EqkRupForecast {
 					gridSourceData.getAveHypoDepth(),
 					griddedSeisMagScalingRel,
 					griddedSeisLowerSeisDepthValue, 
-					duration, MINMAG);
+					duration, minMagValue);
 			src.setTectonicRegionType(gridSourceData.getTectReg());
 			return src;
 		}
@@ -891,7 +912,7 @@ public class GEM1ERF extends EqkRupForecast {
 					gridSourceData.getAveHypoDepth(),
 					griddedSeisMagScalingRel,
 					griddedSeisLowerSeisDepthValue, 
-					duration, MINMAG,
+					duration, minMagValue,
 					2, 0);
 			src.setTectonicRegionType(gridSourceData.getTectReg());
 			return src;
@@ -902,7 +923,7 @@ public class GEM1ERF extends EqkRupForecast {
 					gridSourceData.getAveHypoDepth(),
 					griddedSeisMagScalingRel,
 					griddedSeisLowerSeisDepthValue, 
-					duration, MINMAG,
+					duration, minMagValue,
 					16, 0);
 			src.setTectonicRegionType(gridSourceData.getTectReg());
 			return src;
@@ -985,6 +1006,7 @@ public class GEM1ERF extends EqkRupForecast {
 		
 			// set the primitive parameters here so it's not repeated many times in the source-creation 
 			// methods (this could alternatively be done in the parameterChange method)
+			minMagValue = minMagParam.getValue();
 			
 			// ------------------------------------------------------------------------- AREA SOURCE
 			areaSrcRupTypeValue = areaSrcRupTypeParam.getValue();

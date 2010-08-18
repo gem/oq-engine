@@ -1,5 +1,5 @@
 // Input file for ERF logic tree definition. 
-
+    
 // A logic tree is defined by a series of branching levels (each identified by the keyword "BranchingLevel"). 
 // Each branching level is defined by:
 // - a integer number: (identifying the position of the level in the logic tree)
@@ -40,14 +40,12 @@ BranchSet
 // uncertainty model type
 inputfile
 // input file name(s)
-/Users/damianomonelli/Documents/workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/src_model1.dat     /Users/damianomonelli/Documents/workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/src_model2.dat
-// Users/damianomonelli/Desktop/EcuadorSource.dat
+/Users/damianomonelli/Projects/opengem/data/src_model1.dat     /Users/damianomonelli/Projects/opengem/data/src_model2.dat
 // input file descriptor(s) (in each descriptor spaces are not allowed)
 source_geometry_model_#1   source_geometry_model_#2
 //source_model1
 // weight(s)
-1.0  0.0
-// 1
+1.  0.
 
 // We define now the second branching level. This branching level
 // describe uncertainties on the maximum magnitude.
@@ -92,3 +90,8 @@ bGRRelative
 0.1 0.0 -0.1
 // uncertainty weights
 0.2 0.6 0.2
+
+
+
+
+

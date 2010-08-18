@@ -2,7 +2,7 @@ package org.opensha.gem.GEM1.util;
 
 public enum ResultTypeParams {
 
-	HAZARD_MAP("Hazard map"),
+	MEAN_GROUND_MOTION_MAP("Mean ground motion map"),
 
 	HAZARD_CURVE("Hazard curve"),
 	

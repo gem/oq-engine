@@ -1,10 +1,10 @@
 // This is the configuration file of the command line calculator
 
 // FILE CONTAINING ERF LOGIC TREE STRUCTURE
-/Users/damianomonelli/Documents/Workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/ErfLogicTree.inp
+/Users/damianomonelli/Projects/opengem/data/ErfLogicTree.inp
 
 // FILE CONTAINING GMPE LOGIC TREE STRUCTURE
-/Users/damianomonelli/Documents/Workspace/OpenSHA/src/org/opensha/gem/GEM1/data/command_line_input_files/GmpeLogicTree.inp
+/Users/damianomonelli/Projects/opengem/data/GmpeLogicTree.inp
 
 // OUTPUT DIRECTORY
 /Users/damianomonelli/Desktop/Test/
@@ -111,14 +111,14 @@ W&C 1994 Mag-Length Rel.
 // SUBDUCTION RUPTURE FLOATING TYPE (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 Along strike and down dip
 
-// RESULT TYPE (Hazard map) 
-Hazard map
+// RESULT TYPE (Mean ground motion map) 
+Mean ground motion map
 
 // PROBABILITY OF EXCEEDANCE
 0.1
 
 // REGION lat, lon of polygon vertices (in clock or counter-clock wise order) and grid spacing
--78.0 0.0 -77.0 0.0 -77.0 1.0 -78.0 1.0 1.0
+37.5 -122.5 37.5 -121.5 38.5 -121.5 38.5 -122.5 0.1
 
 // CALCULATION MODE (Monte Carlo, Full Calculation)
 // if Monte Carlo is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
@@ -126,7 +126,7 @@ Hazard map
 Monte Carlo
 
 // NUMBER OF HAZARD CURVE CALCULATIONS PER GRID POINT (used if Monte Carlo approach is chosen)
-100
+4
 
 // NUMBER OF PROCESSORS
 1

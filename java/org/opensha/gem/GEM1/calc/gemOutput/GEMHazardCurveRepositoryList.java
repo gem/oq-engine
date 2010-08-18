@@ -230,6 +230,47 @@ public class GEMHazardCurveRepositoryList {
 		return meanHM;
 	}
 	
+	
+	/**
+	 *  This method returns the mean ground motion map (for a given probability of exceedance)
+	 *  from a set of hazard curves generated through Monte Carlo approach.
+	 *  The mean ground motion value at each grid point is calculated as the mean value of the 
+	 *  ground motion values (corresponding to the selected probability of exceedance) resulting 
+	 *  from the different calculated hazard curves.
+	 *  
+	 * @return
+	 */
+	public ArrayList<Double> getMeanGrounMotionMap(double probEx){
+		
+		// instantiate mean hazard map
+		ArrayList<Double> meanHM =hcRepList.get(0).getHazardMap(probEx);
+		// initialize to zero
+		for(int i=0;i<meanHM.size();i++) meanHM.set(i, 0.0);
+		
+		// loop over end-branches (that is hazard curve realizations per grid point)
+		for (int i=0; i<hcRepList.size(); i++){
+			
+			// get the current hazard map
+			ArrayList<Double> HM = hcRepList.get(i).getHazardMap(probEx);
+			
+			// loop over grid nodes
+			for(int ii=0;ii<meanHM.size();ii++){
+				double val = meanHM.get(ii)+HM.get(ii);
+				meanHM.set(ii, val);
+			}
+			
+		}// end loop over end-branches
+		
+		// divide by the total number of hazard curve realizations
+		// loop over grid nodes
+		for(int ii=0;ii<meanHM.size();ii++){
+			double val = meanHM.get(ii)/hcRepList.size();
+			meanHM.set(ii, val);
+		}
+		
+		return meanHM;
+	}
+	
 	/**
 	 * 
 	 * @return
