@@ -53,7 +53,11 @@ class ShamlOutputFile(producer.FileProducer):
     5) shaML output can also contain hazard maps, parsing of those is not yet
        implemented
     """
+
     def _parse(self):
+        self._current_result_meta = None
+        self._current_result_descriptor = None
+        self._current_curvelist_iml = None
         for event, element in etree.iterparse(self.file,
                                               events=('start', 'end')):
 
@@ -166,26 +170,16 @@ class ShamlOutputFile(producer.FileProducer):
             except Exception:
                 pass
 
-        try:
-            site_attributes.update(self._current_result_meta)
-        except Exception:
-            error_str = "shaML output instance Result element " \
-                "is missing"
-            raise ValueError(error_str)
+        for (attribute_chunk, ref_string) in (
+            (self._current_result_meta, "Result"),
+            (self._current_result_descriptor, "Result/Descriptor"),
+            (self._current_curvelist_iml, "HazardCurveList/IML")):
 
-        try:
-            site_attributes.update(self._current_result_descriptor)
-        except Exception:
-            error_str = "shaML output instance Result/Descriptor element " \
-                "is missing"
-            raise ValueError(error_str)
-
-        try:
-            site_attributes.update(self._current_curvelist_iml)
-        except Exception:
-            error_str = "shaML output instance HazardCurveList/IML element " \
-                "is missing"
-            raise ValueError(error_str)
+            try:
+                site_attributes.update(attribute_chunk)
+            except Exception:
+                error_str = "missing shaML element: %s" % ref_string
+                raise ValueError(error_str)
 
         return site_attributes
 
