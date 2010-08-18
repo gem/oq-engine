@@ -28,19 +28,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
             shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
                                                               testfile))
 
-            value_error_found = False
-            try:
-                # just loop through generator, in order to trigger exception
-                for point, attributes in shaml:
-                    pass
-            except ValueError:
-                # this is the exception we are expecting
-                value_error_found = True
-            except Exception, e:
-                raise RuntimeError, "unexpected exception: %s" % e
-
-            self.assertTrue(value_error_found, 
-                "expected ValueError not raised in test file %s" % testfile)
+            self.assertRaises(ValueError, map, None, shaml)
 
     def test_filter_region_constraint_known_to_fail(self):
 
