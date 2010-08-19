@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeHazardLogicTree;
 
@@ -241,4 +242,5 @@ public class GemLogicTree<Element> implements GemLogicTreeAPI<Element>, Serializ
 		
 		return sample;
 	}
+
 }

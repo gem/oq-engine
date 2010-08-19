@@ -24,7 +24,7 @@ from tests.example_unittest import *
 from tests.parser_shaml_output_unittest import *
 from tests.producer_unittest import *
 from tests.region_unittest import *
-
+from tests.flags_unittest import *
 
 if __name__ == '__main__':
   unittest.main()
