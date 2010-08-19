@@ -35,7 +35,7 @@ public class InputModelData {
 	private static BorderType borderType = BorderType.GREAT_CIRCLE;
 	
 	// comment line identifier
-	private static String comment = "//";
+	private static String comment = "#";
 	
 	// key words
 	private static String NEW_SOURCE = "newsource";
@@ -75,7 +75,7 @@ public class InputModelData {
         while(sRecord!=null){
         	
         	// skip comments or empty lines
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -84,7 +84,7 @@ public class InputModelData {
             	
             	// read source id
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -93,7 +93,7 @@ public class InputModelData {
                 
                 // read source name
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -102,7 +102,7 @@ public class InputModelData {
                 
                 // read tectonic region type
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -111,7 +111,7 @@ public class InputModelData {
                 
                 // continue reading
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -157,7 +157,7 @@ public class InputModelData {
             // continue reading until next newsource is found or end of file
         	// skip comments or empty lines
             while((sRecord = oReader.readLine())!=null){
-            	if(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()) continue;
+            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
             	else if(sRecord.trim().equalsIgnoreCase(NEW_SOURCE)) break;
             }
             
@@ -176,7 +176,7 @@ public class InputModelData {
 		
     	// read number of vertices in the polygon boundary
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -189,7 +189,7 @@ public class InputModelData {
         // read polygon vertices
         for(int i=0;i<numVert;i++){
         	sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -205,7 +205,7 @@ public class InputModelData {
         
         // read number of mfd-focal mechanisms pairs
         sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -224,7 +224,7 @@ public class InputModelData {
         	
         	// read mfd specification
         	sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -251,7 +251,7 @@ public class InputModelData {
             
             // read focal mechanism specification
             sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -272,7 +272,7 @@ public class InputModelData {
         // read top of rupture distribution
         ArbitrarilyDiscretizedFunc aveRupTopVsMag = new ArbitrarilyDiscretizedFunc();
         sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -288,7 +288,7 @@ public class InputModelData {
         
         // read average hypocentral depth
         sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -309,7 +309,7 @@ public class InputModelData {
 		
     	// read source location
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -322,7 +322,7 @@ public class InputModelData {
         
         // read number of mfd-focal mechanisms pairs
         sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -341,7 +341,7 @@ public class InputModelData {
         	
         	// read mfd specification
         	sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -367,7 +367,7 @@ public class InputModelData {
             
             // read focal mechanism specification
             sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -389,7 +389,7 @@ public class InputModelData {
         // read top of rupture distribution
         ArbitrarilyDiscretizedFunc aveRupTopVsMag = new ArbitrarilyDiscretizedFunc();
         sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -405,7 +405,7 @@ public class InputModelData {
         
         // read average hypocentral depth
         sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -425,7 +425,7 @@ public class InputModelData {
 		
     	// read number of points in fault trace
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -436,7 +436,7 @@ public class InputModelData {
     	FaultTrace trace = new FaultTrace(sourceName);
         for(int i=0;i<numPoint;i++){
         	sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -449,7 +449,7 @@ public class InputModelData {
         
         // read fault dip
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -458,7 +458,7 @@ public class InputModelData {
         
         // read fault rake
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -467,7 +467,7 @@ public class InputModelData {
         
         // read top depth
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -476,7 +476,7 @@ public class InputModelData {
         
         // read bottom depth
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -487,7 +487,7 @@ public class InputModelData {
         IncrementalMagFreqDist mfd = null;
         Boolean floatRuptureFlag = null;
      	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -526,7 +526,7 @@ public class InputModelData {
     	
     	// read number of points in top fault trace
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -537,7 +537,7 @@ public class InputModelData {
     	FaultTrace topTrace = new FaultTrace(sourceName);
         for(int i=0;i<numPointTop;i++){
         	sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -551,7 +551,7 @@ public class InputModelData {
         
     	// read number of points in bottom fault trace
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -562,7 +562,7 @@ public class InputModelData {
     	FaultTrace bottomTrace = new FaultTrace(sourceName);
         for(int i=0;i<numPointBottom;i++){
         	sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -576,7 +576,7 @@ public class InputModelData {
         
         // read fault rake
     	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }
@@ -587,7 +587,7 @@ public class InputModelData {
         IncrementalMagFreqDist mfd = null;
         Boolean floatRuptureFlag = null;
      	sRecord = oReader.readLine();
-        while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+        while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
         	sRecord = oReader.readLine();
         	continue;
         }

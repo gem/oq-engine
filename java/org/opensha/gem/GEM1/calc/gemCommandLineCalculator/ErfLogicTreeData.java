@@ -27,7 +27,7 @@ public class ErfLogicTreeData {
 	private GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree;
 	
 	// comment line identifier
-	private static String comment = "//";
+	private static String comment = "#";
 	
 	// keyword
 	private static String BRANCHING_LEVEL = "BranchingLevel";
@@ -64,7 +64,7 @@ public class ErfLogicTreeData {
         while(sRecord!=null){
 
         	// skip comments or empty lines
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -75,7 +75,7 @@ public class ErfLogicTreeData {
             	
             	// read branching level number
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -83,7 +83,7 @@ public class ErfLogicTreeData {
                 
                 // read branching label
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -91,7 +91,7 @@ public class ErfLogicTreeData {
                 
                 // read applies to
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -126,7 +126,7 @@ public class ErfLogicTreeData {
                 
                 // read branch uncertainty model
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -136,7 +136,7 @@ public class ErfLogicTreeData {
                 	
                 	// read input file names
                 	sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -145,7 +145,7 @@ public class ErfLogicTreeData {
                     
                     // read labels
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -154,7 +154,7 @@ public class ErfLogicTreeData {
                     
                     // read weights
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -186,7 +186,7 @@ public class ErfLogicTreeData {
                 	
                 	// read rule name
                 	sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -194,7 +194,7 @@ public class ErfLogicTreeData {
                     
                     // read uncertainty values
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -203,7 +203,7 @@ public class ErfLogicTreeData {
                     
                     // read uncertainty weights
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -244,7 +244,7 @@ public class ErfLogicTreeData {
             // continue reading until next keyword is found or end of file
         	// skip comments or empty lines
             while((sRecord = oReader.readLine())!=null){
-            	if(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()) continue;
+            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
             	else if(sRecord.trim().equalsIgnoreCase(BRANCHING_LEVEL) || sRecord.trim().equalsIgnoreCase(BRANCH_SET)) break;
             }
             

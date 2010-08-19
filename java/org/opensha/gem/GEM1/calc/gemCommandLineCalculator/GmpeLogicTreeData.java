@@ -39,7 +39,7 @@ public class GmpeLogicTreeData {
 	private HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap;
 	
 	// comment line identifier
-	private static String comment = "//";
+	private static String comment = "#";
 	
 	// package for gmpe
 	private String packageName = "org.opensha.sha.imr.attenRelImpl.";
@@ -82,7 +82,7 @@ public class GmpeLogicTreeData {
         while((sRecord= oReader.readLine())!=null){
         	
         	// skip comments or empty lines
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
@@ -92,7 +92,7 @@ public class GmpeLogicTreeData {
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -102,7 +102,7 @@ public class GmpeLogicTreeData {
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -116,7 +116,7 @@ public class GmpeLogicTreeData {
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -126,7 +126,7 @@ public class GmpeLogicTreeData {
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -140,7 +140,7 @@ public class GmpeLogicTreeData {
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -150,7 +150,7 @@ public class GmpeLogicTreeData {
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -165,7 +165,7 @@ public class GmpeLogicTreeData {
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -175,7 +175,7 @@ public class GmpeLogicTreeData {
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
@@ -188,7 +188,7 @@ public class GmpeLogicTreeData {
             // continue reading until next keyword is found or end of file
         	// skip comments or empty lines
             while((sRecord = oReader.readLine())!=null){
-            	if(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.replaceAll(" ","").isEmpty()) continue;
+            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
             	else if(sRecord.trim().equalsIgnoreCase(TectonicRegionType.ACTIVE_SHALLOW.toString()) ||
             			sRecord.trim().equalsIgnoreCase(TectonicRegionType.STABLE_SHALLOW.toString()) ||
             			sRecord.trim().equalsIgnoreCase(TectonicRegionType.SUBDUCTION_INTERFACE.toString()) ||

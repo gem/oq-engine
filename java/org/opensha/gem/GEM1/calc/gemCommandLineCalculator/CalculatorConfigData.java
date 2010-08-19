@@ -126,7 +126,7 @@ public class CalculatorConfigData {
 	private static Integer numThreads = null;
 	
 	// comment line identifier
-	private static String comment = "//";
+	private static String comment = "#";
 	
 	/**
 	 * 
@@ -148,96 +148,96 @@ public class CalculatorConfigData {
         
         // read erf logic tree file
         // skip comment lines
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.erfLogicTreeFile = sRecord.trim();
         
         // read GMPEs logic tree file
         // skip comment lines
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.gmpeLogicTreeFile = sRecord.trim();
         
         // read output directory path
         // skip comment lines
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.outputDir = sRecord.trim();
         
         // read minimum magnitude
         // skip comment lines
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.minMag = Double.parseDouble(sRecord.trim());
         
         // read investigation time
         // skip comment lines
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.investigationTime = Double.parseDouble(sRecord.trim());
         
         // read maximum distance
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.maxDistance = Double.parseDouble(sRecord.trim());
         
         // read MFD bin width
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.mfdBinWidth = Double.parseDouble(sRecord.trim());
         
         // read component
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.component = sRecord.trim();
         
         // read intensity measure type
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.intensityMeasureType = sRecord.trim();
         
         // read period
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.period = Double.parseDouble(sRecord.trim());
         
         // read damping
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.damping = Double.parseDouble(sRecord.trim());
         
         // read intensity measure levels
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         st = new StringTokenizer(sRecord);
         int numGMV = st.countTokens();
         for(int i=0;i<numGMV;i++) this.imlList.set(Math.log(Double.parseDouble(st.nextToken())), 1.0);
         
         // read truncation type
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.truncationType = sRecord.trim();
         
         // read truncation level
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.truncationLevel = Double.parseDouble(sRecord.trim());
         
         // read standard deviation type
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.standardDeviationType = sRecord.trim();
     
         // read reference vs30
         // skip comment lines
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.vs30Reference = Double.parseDouble(sRecord.trim());
         
         //************************ read params for area source **************//
         
         // read include area source
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeAreaSource = true;
@@ -247,24 +247,24 @@ public class CalculatorConfigData {
         }
         
         // read area source rupture model
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.areaSourceRuptureModel = sRecord.trim();
         
         // read area source discretization   
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.areaSourceDiscretization = Double.parseDouble(sRecord.trim());
         
         // read mag-area scaling relationship
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.areaSourceMagAreaRel = sRecord.trim();
         
         //********************* read params for grid source *****************//
         
         // read include grid sources
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeGridSource = true;
@@ -274,19 +274,19 @@ public class CalculatorConfigData {
         }
         
         // read grid source rupture model
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.gridSourceRuptureModel = sRecord.trim();
         
         // read grid source mag-area relationship
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.gridSourceMagAreaRel = sRecord.trim();
         
         //********************** read params for fault source ****************//
         
         // read include fault source
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeFaultSource = true;
@@ -296,39 +296,39 @@ public class CalculatorConfigData {
         }
         
         // fault rupture offset
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.faultSourceRuptureOffset = Double.parseDouble(sRecord.trim());
         
         // fault surface discretization
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.faultSourceSurfaceDiscretization = Double.parseDouble(sRecord.trim());
         
         // fault mag-area rel
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.faultSourceMagAreaRel = sRecord.trim();
         
         // fault mag-area rel sigma
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.faultSourceMagSigma = Double.parseDouble(sRecord.trim());
 
         // fault rupture aspect ratio
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.faultSourceRuptureAspectRatio = Double.parseDouble(sRecord.trim());
         
         // fault rupture floating type
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.faultSourceRuptureFloatingType = sRecord.trim();
         
         //********************** read params for subduction fault source ****************//
         
         // read include fault source
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeSubductionFaultSource = true;
@@ -338,37 +338,37 @@ public class CalculatorConfigData {
         }
         
         // rupture offset
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.subductionFaultSourceRuptureOffset = Double.parseDouble(sRecord.trim());
         
         // surface discretization
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.subductionFaultSourceSurfaceDiscretization = Double.parseDouble(sRecord.trim());
         
         // mag-area rel
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.subductionFaultSourceMagAreaRel = sRecord.trim();
         
         // mag-area rel sigma
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.subductionFaultSourceMagSigma = Double.parseDouble(sRecord.trim());
 
         // rupture aspect ratio
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.subductionFaultSourceRuptureAspectRatio = Double.parseDouble(sRecord.trim());
         
         // rupture floating type
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.subductionFaultSourceRuptureFloatingType = sRecord.trim();
         
         // read result type
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.resultType = sRecord.trim();
         
@@ -376,12 +376,12 @@ public class CalculatorConfigData {
         if(this.resultType.equalsIgnoreCase(ResultTypeParams.MEAN_GROUND_MOTION_MAP.toString())){
         	
         	// read probability of exceedance
-            while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+            while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
             	continue;
             this.probExc = Double.parseDouble(sRecord.trim());
             
             // read region boundary
-            while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+            while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
             	continue;
             st = new StringTokenizer(sRecord);
             // number of vertices
@@ -402,18 +402,18 @@ public class CalculatorConfigData {
         }
         
         // calculation mode
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.calculationMode = sRecord.trim();
         
         // read number of samples to be generated
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.numHazCurve = Integer.parseInt(sRecord.trim());
         
         
         // read number of threads
-        while((sRecord=oReader.readLine()).contains(comment.subSequence(0, comment.length()))  || sRecord.replaceAll(" ","").isEmpty())
+        while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
         this.numThreads = Integer.parseInt(sRecord.trim());
         
