@@ -6,6 +6,14 @@ class Grid(object):
     def __init__(self, *args, **kwargs):
         self.cellsize = 0.1
         self.__dict__.update(kwargs)
+    
+    @property
+    def xulcorner(self):
+        return self.xllcorner
+        
+    @property
+    def yulcorner(self):
+        return self.yllcorner - (self.cellsize * self.ncols)
 
 def ComputeGrid(object):
     def __init__(self, cell_factory, pool):

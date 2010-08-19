@@ -39,8 +39,8 @@ class GeoTiffFile(writer.FileWriter):
         # top left x, w-e pixel resolution, rotation, 
         #   top left y, rotation, n-s pixel resolution
         self.target.SetGeoTransform(
-            [self.grid.xllcorner, self.grid.cellsize, 
-             0, self.grid.yllcorner, 0, self.grid.cellsize])
+            [self.grid.xulcorner, self.grid.cellsize, 
+             0, self.grid.yulcorner, 0, self.grid.cellsize])
 
         # set the reference info 
         srs = osr.SpatialReference()
