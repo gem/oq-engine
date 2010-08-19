@@ -31,3 +31,5 @@ class OutputTestCase(unittest.TestCase):
         retval = subprocess.call(["tiffcmp", "-t", path, comp_path], 
             stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         self.assertTrue(retval == 0)
+        # TODO(jmc): Figure out how to validate the geo coordinates as well
+        # TODO(jmc): Use validation that supports tiled geotiffs
