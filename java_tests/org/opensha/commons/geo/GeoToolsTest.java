@@ -14,47 +14,47 @@ public class GeoToolsTest {
 	public static void setUpBeforeClass() throws Exception {
 	}
 
-	@Test
+	//@Test
 	public void testValidateLats() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testValidateLat() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testValidateLons() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testValidateLon() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testValidateDepths() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testValidateDepth() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testRadiusAtLocation() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testDegreesLatPerKm() {
 		fail("Not yet implemented");
 	}
 
-	@Test
+	//@Test
 	public void testDegreesLonPerKm() {
 		fail("Not yet implemented");
 	}

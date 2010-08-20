@@ -54,7 +54,12 @@ class Grid(object):
         self._queue.put(cell.result)
         return cell
     
-    def results(self):
+    def results(self, clear=False):
         while not self._queue.empty():
-            yield self._queue.get().wait()
+            cell, result = self._queue.get().wait()
+            yield (cell, result)
+            if clear:
+                del self._cells[cell]
 
+    def size(self):
+        return len(self._cells)

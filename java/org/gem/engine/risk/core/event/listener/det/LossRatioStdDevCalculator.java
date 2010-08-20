@@ -1,0 +1,53 @@
+/*
+ * [COPYRIGHT]
+ *
+ * [NAME] is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation; either version 2.1 of
+ * the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this software; if not, write to the Free
+ * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
+ * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ */
+
+package org.gem.engine.risk.core.event.listener.det;
+
+import static org.gem.engine.risk.core.AdditionalPipeKeys.COV_FUNCTION;
+import static org.gem.engine.risk.core.AdditionalPipeKeys.DISTRIBUTION;
+import static org.gem.engine.risk.core.AdditionalPipeKeys.LOSS_RATIO_STD_DEV_RESULT;
+import static org.gem.engine.risk.core.AdditionalPipeKeys.MEAN_FUNCTION;
+
+import org.gem.engine.risk.calc.LossRatioStdDev;
+import org.gem.engine.risk.core.cache.Cache;
+import org.gem.engine.risk.core.cache.Pipe;
+import org.gem.engine.risk.core.event.Filter;
+import org.gem.engine.risk.data.DiscreteVulnerabilityFunction;
+import org.gem.engine.risk.data.distribution.Distribution;
+
+/**
+ * Computes the {@link LossRatioStdDev} for the deterministic scenario.
+ * 
+ * @author Andrea Cerisara
+ * @version $Id: LossRatioStdDevCalculator.java 567 2010-07-20 10:10:52Z acerisara $
+ */
+public class LossRatioStdDevCalculator extends Filter
+{
+
+    @Override
+    protected void filter(Cache buffer, Pipe pipe)
+    {
+        Distribution distribution = pipe.get(DISTRIBUTION);
+        DiscreteVulnerabilityFunction cov = pipe.get(COV_FUNCTION);
+        DiscreteVulnerabilityFunction mean = pipe.get(MEAN_FUNCTION);
+
+        pipe.put(LOSS_RATIO_STD_DEV_RESULT, new LossRatioStdDev(distribution).compute(mean, cov));
+    }
+
+}

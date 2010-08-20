@@ -34,6 +34,12 @@ To run the python tests use:
 
     python runtests.py
 
+To run the java tests use:
+
+::
+
+    ant
+
 
 Running Demos
 -------------

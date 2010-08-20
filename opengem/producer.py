@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from eventlet import event
@@ -19,12 +20,12 @@ class FileProducer(object):
         except Exception, e:
             self.finished.send_exception(e)
             raise
-        
+
         self.finished.send(True)
 
     def filter(self, constraint):
         for next in iter(self):
-            if constraint.match(next):
+            if constraint.match(next[0]):
                 yield next
   
     def _parse(self):
@@ -33,4 +34,4 @@ class FileProducer(object):
         Should return a (cell, data) tuple.
         
         """
-        raise NotImplemented
+        raise NotImplementedError

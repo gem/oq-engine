@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 import os
@@ -32,8 +33,8 @@ class FileProducerTestCase(unittest.TestCase):
     def _make_data_file(self, prefix):
         fd, path = tempfile.mkstemp(suffix='.test')
         f = open(path, 'w')
-        for cell, word in generate_data(prefix):
-            f.write('%d %d %s\n' % (cell[0], cell[1], word))
+        for ((cell_x, cell_y), word) in generate_data(prefix):
+            f.write('%d %d %s\n' % (cell_x, cell_y, word))
 
         f.close()
         self.files.append(path)
@@ -42,8 +43,8 @@ class FileProducerTestCase(unittest.TestCase):
     def test_iterator_interface(self):
         path = self._make_data_file('test')
         prod = test.WordProducer(path)
-        for cell, data in prod:
-            self.assertEqual(data, 'test%s' % int(cell[0]))
+        for ((cell_x, cell_y), data) in prod:
+            self.assertEqual(data, 'test%s' % int(cell_x))
 
     def test_filter(self):
         constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
@@ -54,9 +55,9 @@ class FileProducerTestCase(unittest.TestCase):
         # TODO(termie): Right now the bound
         expected = dict(zip(range(11, 100), range(11, 100)))
 
-        for cell, data in prod.filter(constraint):
-            expected.pop(cell[0])
-            self.assertEqual(data, 'test%s' % int(cell[0]))
+        for ((cell_x, cell_y), data) in prod.filter(constraint):
+            test_cell = expected.pop(int(cell_x))
+            self.assertEqual(data, 'test%s' % int(test_cell))
         
         self.assertEqual(len(expected), 0)
 
@@ -72,8 +73,8 @@ class FileProducerTestCase(unittest.TestCase):
 
         self.assertRaises(timeout.Timeout, _wait_for_producer)
 
-        for cell, data in prod:
-            self.assertEqual(data, 'test%s' % int(cell[0]))
+        for ((cell_x, cell_y), data) in prod:
+            self.assertEqual(data, 'test%s' % int(cell_x))
         
         self.assert_(_wait_for_producer())
         

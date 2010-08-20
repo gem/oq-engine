@@ -85,5 +85,19 @@ class GridTestCase(unittest.TestCase):
 
         self.assertEqual(result_cell, cell)
         self.assertEqual(result, 'one:two')
-        
 
+    def test_clear(self):
+        cell = (50, 50)
+        next_grid = computation.Grid(pool=self.pool, 
+                                     cell_factory=test.ConcatComputation)
+
+        test_cell = next_grid.cell(cell)
+        test_cell.receive('shake', 'one')
+        test_cell.receive('roll', 'two')
+
+        self.assertEqual(next_grid.size(), 1)
+
+        for cell, result in next_grid.results(clear=True):
+            pass
+
+        self.assertEqual(next_grid.size(), 0)
