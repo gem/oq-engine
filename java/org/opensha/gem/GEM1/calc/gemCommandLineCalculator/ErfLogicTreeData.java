@@ -175,7 +175,7 @@ public class ErfLogicTreeData {
                     	// set input file name
                     	branch.setNameInputFile(fileNameToken.nextToken());
                     	// add to branching level
-                    	branchingLevel.addTreeBranch(branch);
+                    	branchingLevel.addBranch(branch);
                     }
                     
                 	// add the previously created branching level to the logic tree
@@ -231,7 +231,7 @@ public class ErfLogicTreeData {
                     	// set input file name
                     	branch.setRule(new GemLogicTreeRule(GemLogicTreeRuleParam.getTypeForName(ruleName),uncertVal));
                     	// add to branching level
-                    	branchingLevel.addTreeBranch(branch);
+                    	branchingLevel.addBranch(branch);
                     }
                     
                 	// add the previously created branching level to the logic tree

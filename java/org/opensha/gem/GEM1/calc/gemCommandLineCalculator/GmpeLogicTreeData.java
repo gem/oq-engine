@@ -35,7 +35,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class GmpeLogicTreeData {
 	
-	// gmpe logic tree
+	// hash map of gmpe logic tree
 	private HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap;
 	
 	// comment line identifier
@@ -51,7 +51,7 @@ public class GmpeLogicTreeData {
 			double period, double damping, String truncType, double truncLevel, String stdType,
 			double vs30) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, SecurityException, NoSuchMethodException, IllegalArgumentException, InvocationTargetException{
 		
-		// instatiate gmpe logic tree
+		// instatiate hash map of gmpe logic tree
 		gmpeLogicTreeHashMap = new HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>();
         
         String sRecord = null;
@@ -77,9 +77,9 @@ public class GmpeLogicTreeData {
         if(D) System.out.println("\n\n");
         if(D) System.out.println("GMPE Logic Tree structure");
         
-        //sRecord = oReader.readLine();
+        sRecord = oReader.readLine();
         // start reading the file
-        while((sRecord= oReader.readLine())!=null){
+        while(sRecord!=null){
         	
         	// skip comments or empty lines
             while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
@@ -281,7 +281,7 @@ public class GmpeLogicTreeData {
     		
     		branch = new GemLogicTreeBranch((i+1), gmpeName, gmpeWeight);
     		
-    		branchingLevel.addTreeBranch(branch);
+    		branchingLevel.addBranch(branch);
     		
     	}
     	

@@ -73,7 +73,8 @@ public class CommandLineCalculator {
 		// load calculation configuration data
 		calcConfig = new CalculatorConfigData(calcConfigFile);
 		
-		// initialize container for mean ground motion map
+		// initialize container for output results
+		// mean ground motion map
 		meanGroundMotionMap = new ArrayList<Double>();
 		
 		// initialize site array
@@ -104,23 +105,23 @@ public class CommandLineCalculator {
 			if(calcConfig.getResultType().equalsIgnoreCase(MEAN_GROUND_MOTION_MAP)){
 				
 				// do calculation
-				doHazardMapCalculationThroughMonteCarloApproach();
+				doCalculationThroughMonteCarloApproach();
 				
 				// save mean ground motion map
 				saveMeanGroundMotionMapToGMTAsciiFile();
 				
 			}
 			else{
-				System.out.println("Result type: "+calcConfig.getResultType()+" not recognized. Check the configuration file!");
+				System.out.println("Result type: "+calcConfig.getResultType()+" non recognized. Check the configuration file!");
 				System.out.println("Execution stopped!");
 				System.exit(0);
 			}
 			
 		}
 		else if(calcConfig.getCalculationMode().equalsIgnoreCase(FULL_CALCULATION)){
-			System.out.println("Calculation mode: "+FULL_CALCULATION+" not yet supported. Please be patient!");
-			System.out.println("Execution stopped!");
-			System.exit(0);
+			
+			doFullCalculation();
+			
 		}
 		else{
 			System.out.println("Calculation mode: "+calcConfig.getCalculationMode()+" non recognized. Check the configuration file!");
@@ -141,7 +142,9 @@ public class CommandLineCalculator {
 		
 	}
 	
-	private void doHazardMapCalculationThroughMonteCarloApproach() throws IOException, SecurityException, IllegalArgumentException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
+	private void doCalculationThroughMonteCarloApproach() throws IOException, SecurityException, IllegalArgumentException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
+		
+		System.out.println("Performing calculation through Monte Carlo Approach.\n");
 		
 	    // load ERF logic tree data
 	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(calcConfig.getErfLogicTreeFile());
@@ -181,6 +184,213 @@ public class CommandLineCalculator {
 	    
 	    // calculate mean hazard map for the given prob of exceedance
 		meanGroundMotionMap = hcRepList.getMeanGrounMotionMap(calcConfig.getProbExc());
+	}
+	
+	private void doFullCalculation() throws IOException, SecurityException, IllegalArgumentException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
+		
+		System.out.println("Performing full calculation. \n");
+		
+	    // load ERF logic tree data
+	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(calcConfig.getErfLogicTreeFile());
+	    
+	    // load GMPE logic tree data
+	    GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(calcConfig.getGmpeLogicTreeFile(),calcConfig.getComponent(),calcConfig.getIntensityMeasureType(),
+	    		                               calcConfig.getPeriod(), calcConfig.getDamping(), calcConfig.getTruncationType(), calcConfig.getTruncationLevel(),
+	    		                               calcConfig.getStandardDeviationType(), calcConfig.getVs30Reference());
+		
+	    
+	    // compute ERF logic tree end-branch models
+	    HashMap<String,ArrayList<GEMSourceData>> endBranchModels = new HashMap<String,ArrayList<GEMSourceData>>();
+	    computeErfLogicTreeEndBrancheModels(erfLogicTree.getErfLogicTree(), endBranchModels);
+	    
+	    // loop over ERF end-branch models
+	    Iterator<String> endBranchLabels = endBranchModels.keySet().iterator();
+	    while(endBranchLabels.hasNext()){
+	    	
+	    	// current erf end-branch model label
+	    	String erfLabel = endBranchLabels.next();
+	    	System.out.println("Processing end-branch model: "+erfLabel);
+	    	
+	    	// instantiate GEM1ERF with the source model corresponding
+	    	// to the current label
+	    	GEM1ERF erf = new GEM1ERF(endBranchModels.get(erfLabel));
+	    	
+			// set ERF parameters
+			setGEM1ERFParams(erf, calcConfig);
+			
+			// compute gmpe logic tree end-branch models
+			HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModels
+			 = new HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>>();
+			computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree.getGmpeLogicTreeHashMap(), gmpeEndBranchModels);
+			
+			Iterator<String> gmpeEndBranchModelLabels = gmpeEndBranchModels.keySet().iterator();
+			while(gmpeEndBranchModelLabels.hasNext()){
+				
+				String label = gmpeEndBranchModelLabels.next();
+				
+				System.out.println(label);
+				
+			}
+			
+	    }
+	    
+		
+	}
+	
+	private void computeGmpeLogicTreeEndBrancheModels(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap,
+			HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModels){
+
+			
+		// loop over tectonic region types
+		Iterator<TectonicRegionType> iterTectRegType = gmpeLogicTreeHashMap.keySet().iterator();
+		ArrayList<TectonicRegionType> trtLabel = new ArrayList<TectonicRegionType>();
+		while(iterTectRegType.hasNext()) trtLabel.add(iterTectRegType.next());
+		for(TectonicRegionType trt:trtLabel){
+			
+			if(gmpeEndBranchModels.isEmpty()){
+				
+				// loop over gmpe end branch models for the current tectonic region type
+				Iterator<String> endBranchGmpeLabel = gmpeLogicTreeHashMap.get(trt).getEBMap().keySet().iterator();
+				while(endBranchGmpeLabel.hasNext()){
+					
+					// current gmpe end-branch label
+					String gmpeLabel = endBranchGmpeLabel.next();
+					
+					// current gmpe
+					ScalarIntensityMeasureRelationshipAPI gmpe = gmpeLogicTreeHashMap.get(trt).getEBMap().get(gmpeLabel);
+					
+					HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI> newHashMap = new HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>();
+					newHashMap.put(trt, gmpe);
+					
+					gmpeEndBranchModels.put(trt.toString()+"_"+gmpeLabel, newHashMap);
+					
+				}
+				
+			} // end if gmpeEndBranchModels.isEmpty()
+			
+			else if(!gmpeEndBranchModels.isEmpty()){
+				
+				// loop over gmpe end branch models for the current tectonic region type
+				Iterator<String> endBranchGmpeLabel = gmpeLogicTreeHashMap.get(trt).getEBMap().keySet().iterator();
+				while(endBranchGmpeLabel.hasNext()){
+					
+					// current gmpe end-branch label
+					String gmpeLabel = endBranchGmpeLabel.next();
+					
+					// current gmpe
+					ScalarIntensityMeasureRelationshipAPI gmpe = gmpeLogicTreeHashMap.get(trt).getEBMap().get(gmpeLabel);
+					
+					// loop over gmpe end branch models
+					Iterator<String> iterCurrentEndBranchGmpeLabel = gmpeEndBranchModels.keySet().iterator();
+					ArrayList<String> labels = new ArrayList<String>();
+					while(iterCurrentEndBranchGmpeLabel.hasNext()) labels.add(iterCurrentEndBranchGmpeLabel.next());
+					for(String currentLabel:labels){
+						
+						HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> newHashMap = gmpeEndBranchModels.get(currentLabel);	
+						
+						// add gmpe for the new tectonic region type
+						newHashMap.put(trt, gmpe);
+						
+						gmpeEndBranchModels.put(currentLabel+"-"+trt.toString()+"_"+gmpeLabel, newHashMap);
+						
+						gmpeEndBranchModels.remove(currentLabel);
+					}
+
+				}
+				
+			} // end if gmpeEndBranchModels.isEmpty()
+				
+			
+		} // end loop over tectonic regions
+		
+	}
+	
+	private void computeErfLogicTreeEndBrancheModels(GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree, 
+			HashMap<String,ArrayList<GEMSourceData>> endBranchModels) throws IOException{
+
+		
+		// load source models from first branching level
+		if(endBranchModels.isEmpty()){
+			
+			// number of branches in the first branching level
+			int numBranch = erfLogicTree.getBranchingLevel(0).getBranchList().size();
+
+			// loop over branches of the first branching level
+			for(int i=0;i<numBranch;i++){
+				
+				// get current branch
+				GemLogicTreeBranch branch = erfLogicTree.getBranchingLevel(0).getBranch(i);
+				
+				// define label from branch ID number
+				String label = Integer.toString(branch.getRelativeID());
+				
+				// read the corresponding source model
+				ArrayList<GEMSourceData> srcList = new InputModelData(branch.getNameInputFile(),calcConfig.getMfdBinWidth()).getSourceList();
+
+				// save in the hash map
+                endBranchModels.put(label, srcList);
+			
+			}
+			
+			// remove processed branching level
+			erfLogicTree.getBranchingLevelsList().remove(0);
+
+		}
+		
+		// if the hash map already contains the models from the
+		// first branching levels go through the remaining 
+		// branching levels (if they exist) and create the new models
+		if(!endBranchModels.isEmpty()){
+			
+			// while there are additional branching levels
+			while(!erfLogicTree.getBranchingLevelsList().isEmpty()){
+				
+				// loop over current end branch models
+				Iterator<String> endBranchModelLabels = endBranchModels.keySet().iterator();
+				ArrayList<String> labels = new ArrayList<String>();
+				while(endBranchModelLabels.hasNext()) labels.add(endBranchModelLabels.next());
+				for(String label: labels){
+					
+					// current end branch model
+					ArrayList<GEMSourceData> srcList = endBranchModels.get(label);
+					
+					// from the current end branch model create
+					// models corresponding to the branches in
+					// the first branching level of the current logic tree
+					
+					// number of branches in the first branching level
+					int numBranch = erfLogicTree.getBranchingLevel(0).getBranchList().size();
+					
+					// loop over branches of the first branching level
+					for(int i=0;i<numBranch;i++){
+						
+						// get current branch
+						GemLogicTreeBranch branch = erfLogicTree.getBranchingLevel(0).getBranch(i);
+						
+						// new label
+						String newLabel = label+"_"+branch.getRelativeID();
+						
+						// new source model
+						ArrayList<GEMSourceData> newSrcList = applyRuleToSourceList(srcList, branch.getRule());
+						
+						// add new entry
+						endBranchModels.put(newLabel, newSrcList);
+
+					}
+					
+					// from the hash map remove the entry corresponding
+					// to the current model
+					endBranchModels.remove(label);
+					
+				} // end loop over current end-branch models
+				
+				// remove processed branching level
+				erfLogicTree.getBranchingLevelsList().remove(0);			
+
+			} // end while !erfLogicTree.getBranchingLevelsList().isEmpty()
+			
+		} // end if !endBranchModels.isEmpty()
+		
 	}
 	
 	private void saveMeanGroundMotionMapToGMTAsciiFile() throws IOException{
@@ -641,6 +851,31 @@ public class CommandLineCalculator {
 		return null;
 	}
 	
+	private static ArrayList<GEMSourceData> applyRuleToSourceList(ArrayList<GEMSourceData> srcList, GemLogicTreeRule rule){
+		
+		ArrayList<GEMSourceData> newSrcList = new ArrayList<GEMSourceData>();
+		
+		for(GEMSourceData src:srcList){
+			
+			if(src instanceof GEMAreaSourceData){
+				newSrcList.add(applyRuleToAreaSource((GEMAreaSourceData)src,rule));
+			}
+			else if(src instanceof GEMPointSourceData){
+				newSrcList.add(applyRuleToPointSource((GEMPointSourceData)src,rule));
+			}
+			else if(src instanceof GEMFaultSourceData){
+				newSrcList.add(applyRuleToFaultSource((GEMFaultSourceData)src,rule));
+			}
+			else if(src instanceof GEMSubductionFaultSourceData){
+				newSrcList.add(applyRuleToSubductionFaultSource((GEMSubductionFaultSourceData)src,rule));
+			}
+			
+		}
+		
+		return newSrcList;
+		
+	}
+	
 	/**
 	 * 
 	 * @param mfdGR: original magnitude frequency distribution
@@ -836,7 +1071,7 @@ public class CommandLineCalculator {
 		
 		CommandLineCalculator clc = new CommandLineCalculator("CalculatorConfig.inp");
 		
-		clc.doHazardMapCalculationThroughMonteCarloApproach();
+		clc.doCalculationThroughMonteCarloApproach();
 		
 		clc.saveMeanGroundMotionMapToGMTAsciiFile();
 		

@@ -58,7 +58,7 @@ public class GemGmpe3 {
 		// create branch(s)
 		GemLogicTreeBranch bra1gmpe = new GemLogicTreeBranch(1,"B&A2008_ZHAO2006_A&B2006",1.0);
 		// add to branching level
-		braLev1gmpe.addTreeBranch(bra1gmpe);
+		braLev1gmpe.addBranch(bra1gmpe);
 		// add branching level to logic tree
 		gmpeLT.addBranchingLevel(braLev1gmpe);
 	    // add end branch mapping
