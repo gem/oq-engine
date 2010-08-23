@@ -61,7 +61,7 @@ Point Sources
 W&C 1994 Mag-Length Rel.
 
 # INCLUDE GRID SOURCES (yes,no)
-yes
+no
 
 # TREAT GRID SOURCE AS (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
 Point Sources
@@ -70,7 +70,7 @@ Point Sources
 W&C 1994 Mag-Length Rel.
 
 # INCLUDE FAULT SOURCE (yes,no)
-yes
+no
 
 # FAULT RUPTURE OFFSET (km)
 5.0
@@ -91,7 +91,7 @@ W&C 1994 Mag-Length Rel.
 Along strike and down dip
 
 # INCLUDE SUBDUCTION FAULT SOURCE (yes,no)
-yes
+no
 
 # SUBDUCTION FAULT RUPTURE OFFSET (km)
 10.0
@@ -123,10 +123,10 @@ Mean ground motion map
 # CALCULATION MODE (Monte Carlo, Full Calculation)
 # if Monte Carlo is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
 # if Full Calculation is chosen than uncertainties defined by rules are treated as correlated, and hazard curves are calculated for each end-branch of the logic tree 
-Monte Carlo
+Full Calculation
 
 # NUMBER OF HAZARD CURVE CALCULATIONS PER GRID POINT (used if Monte Carlo approach is chosen)
-4
+1
 
 # NUMBER OF PROCESSORS
 1
