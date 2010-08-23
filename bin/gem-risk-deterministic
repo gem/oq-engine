@@ -31,9 +31,10 @@ if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'opengem')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from opengem import flags
-from opengem import region
 from opengem import computation
+from opengem import flags
+from opengem import grid
+from opengem import region
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shakemap
@@ -77,11 +78,16 @@ if __name__ == '__main__':
             pool, cell_factory=loss_ratio.LossRatioComputation)
 
     # These are our output formats
-    loss_map = geotiff.GeoTiffFile(FLAGS.loss_map)
-    loss_ratio_map = geotiff.GeoTiffFile(FLAGS.loss_ratio_map)
+    # TODO(jmc): Make this grid the bounding box of the region
+    
+    image_grid = grid.Grid(ncols=100, nrows=100, 
+                    xllcorner=123.25, yllcorner=48.35, cellsize=0.1)
+    loss_map = geotiff.GeoTiffFile(FLAGS.loss_map, image_grid)
+    loss_ratio_map = geotiff.GeoTiffFile(FLAGS.loss_ratio_map, image_grid)
 
     def consume_shakemap():
         for cell, data in shakemap_parser.filter(region_constraint):
+            data = float(data)
             logging.debug('found shakemap data')
             loss_grid.cell(cell).receive('shakemap', data)
             loss_ratio_grid.cell(cell).receive('shakemap', data)
@@ -89,6 +95,7 @@ if __name__ == '__main__':
 
     def consume_exposure():
         for cell, data in exposure_parser.filter(region_constraint):
+            data = float(data)
             logging.debug('found exposure data')
             loss_grid.cell(cell).receive('exposure', data)
             loss_ratio_grid.cell(cell).receive('exposure', data)
@@ -96,6 +103,7 @@ if __name__ == '__main__':
 
     def consume_vulnerability():
         for cell, data in vulnerability_parser.filter(region_constraint):
+            data = float(data)
             logging.debug('found vulnerability data')
             loss_grid.cell(cell).receive('vulnerability', data)
             loss_ratio_grid.cell(cell).receive('vulnerability', data)
@@ -140,7 +148,7 @@ if __name__ == '__main__':
     #
     #   Once all the files have been parsed and all the results have been
     #   have been processed, the script will end.
-
+    
     pool.spawn(consume_shakemap)
     pool.spawn(consume_exposure)
     pool.spawn(consume_vulnerability)
