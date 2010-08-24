@@ -1,6 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-import sys
-sys.path.append("/Users/benwyss/Projects/opengem")
+
 from opengem import producer
 from opengem import test
 
