@@ -37,5 +37,3 @@ class FileProducer(object):
 
         raise NotImplementedError
 
-        raise NotImplementedError
-
