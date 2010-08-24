@@ -27,7 +27,11 @@ public class ErfLogicTreeData {
 	private GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree;
 	
 	// comment line identifier
-	private static String comment = "//";
+	private static String comment = "#";
+	
+	// keyword
+	private static String BRANCHING_LEVEL = "BranchingLevel";
+	private static String BRANCH_SET = "BranchSet";
 	
 	// for debugging
 	private static Boolean D = false;
@@ -55,46 +59,43 @@ public class ErfLogicTreeData {
         BufferedInputStream oBIS = new BufferedInputStream(oFIS);
         BufferedReader oReader = new BufferedReader(new InputStreamReader(oBIS));
         
-        System.out.println("\n\n");
-        System.out.println("ERF Logic Tree structure");
-        
         sRecord = oReader.readLine();
         // start reading the file
         while(sRecord!=null){
 
         	// skip comments or empty lines
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
             
             // if the keyword BranchingLevel is found
             // define branching level
-            if(sRecord.equalsIgnoreCase("BranchingLevel")){
+            if(sRecord.trim().equalsIgnoreCase("BranchingLevel")){
             	
             	// read branching level number
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                int branchingLevelNumber = Integer.parseInt(sRecord);
+                int branchingLevelNumber = Integer.parseInt(sRecord.trim());
                 
                 // read branching label
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                String branchingLabel = sRecord;
+                String branchingLabel = sRecord.trim();
                 
                 // read applies to
                 sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                String appliesTo = sRecord;
+                String appliesTo = sRecord.trim();
                 
                 if(D) System.out.println("\n\n");
                 if(D) System.out.println("//----------------------------------------------------------------------------------------//");
@@ -110,37 +111,32 @@ public class ErfLogicTreeData {
                 	branchingLevel = new GemLogicTreeBranchingLevel(branchingLevelNumber,branchingLabel,-1);
                 }
                 else{
-                	System.out.println("At the moment a branching level can be applied to nothing (-1) or ALL. No other options are available!");
+                	System.out.println("At the moment a branching level can be applied to NONE or ALL. No other options are available!");
                 	System.out.println("Execution stopped!");
                 	System.exit(0);
                 }
                 
             } // end if BranchLevel
+
             
-        	// skip comments or empty lines
-            sRecord = oReader.readLine();
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
-            	sRecord = oReader.readLine();
-            	continue;
-            }
             // if keyword BranchSet is found
             // define branches to be added to the
             // previously created branching level
-            if(sRecord.equalsIgnoreCase("BranchSet")){
+            if(sRecord.trim().equalsIgnoreCase("BranchSet")){
                 
                 // read branch uncertainty model
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                String branchModel = sRecord;
+                String branchModel = sRecord.trim();
                 
                 if(branchModel.equalsIgnoreCase("inputfile")){
                 	
                 	// read input file names
                 	sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -149,7 +145,7 @@ public class ErfLogicTreeData {
                     
                     // read labels
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -158,7 +154,7 @@ public class ErfLogicTreeData {
                     
                     // read weights
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -179,25 +175,26 @@ public class ErfLogicTreeData {
                     	// set input file name
                     	branch.setNameInputFile(fileNameToken.nextToken());
                     	// add to branching level
-                    	branchingLevel.addTreeBranch(branch);
+                    	branchingLevel.addBranch(branch);
                     }
-                	
-                    // read next line
-                    sRecord = oReader.readLine();
+                    
+                	// add the previously created branching level to the logic tree
+                	erfLogicTree.addBranchingLevel(branchingLevel);
+
                 } // end if inputfile
                 else if(branchModel.equalsIgnoreCase("rule")){
                 	
                 	// read rule name
                 	sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
-                    String ruleName = sRecord;
+                    String ruleName = sRecord.trim();
                     
                     // read uncertainty values
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -206,7 +203,7 @@ public class ErfLogicTreeData {
                     
                     // read uncertainty weights
                     sRecord = oReader.readLine();
-                    while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                    while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                     	sRecord = oReader.readLine();
                     	continue;
                     }
@@ -217,9 +214,6 @@ public class ErfLogicTreeData {
                     if(D) System.out.println("Rule: "+ruleName);
                     if(D) System.out.println("Uncertainty values: "+uncertaintyValues);
                     if(D) System.out.println("Uncertainty weights: "+uncertaintyWeights);
-                    
-                    // read next line
-                    sRecord = oReader.readLine();
                     
                     // instantiate branches
                     // number of branches
@@ -237,17 +231,24 @@ public class ErfLogicTreeData {
                     	// set input file name
                     	branch.setRule(new GemLogicTreeRule(GemLogicTreeRuleParam.getTypeForName(ruleName),uncertVal));
                     	// add to branching level
-                    	branchingLevel.addTreeBranch(branch);
+                    	branchingLevel.addBranch(branch);
                     }
+                    
+                	// add the previously created branching level to the logic tree
+                	erfLogicTree.addBranchingLevel(branchingLevel);
                 	
                 }// end if rule
       
             } // end if BranchSet
+        	
+            // continue reading until next keyword is found or end of file
+        	// skip comments or empty lines
+            while((sRecord = oReader.readLine())!=null){
+            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
+            	else if(sRecord.trim().equalsIgnoreCase(BRANCHING_LEVEL) || sRecord.trim().equalsIgnoreCase(BRANCH_SET)) break;
+            }
             
-        	// add the previously created branching level to the logic tree
-        	erfLogicTree.addBranchingLevel(branchingLevel);
-            
-        }
+        } // end sRecord is null
 
 	}
 

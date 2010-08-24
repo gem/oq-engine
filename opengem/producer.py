@@ -25,7 +25,7 @@ class FileProducer(object):
 
     def filter(self, constraint):
         for next in iter(self):
-            if constraint.match(next):
+            if constraint.match(next[0]):
                 yield next
   
     def _parse(self):
@@ -34,4 +34,8 @@ class FileProducer(object):
         Should return a (cell, data) tuple.
         
         """
+
         raise NotImplementedError
+
+        raise NotImplementedError
+

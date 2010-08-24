@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shaml:HazardResultList xmlns:shaml="http://shaml.org/xmlns/shaml/0.1" 
+                        xmlns:gml="http://www.opengis.net/gml">
+    <shaml:Result timeSpanDuration="50.0" IDmodel="PGA_1_1" IMT="PGA">
+        <shaml:Descriptor>
+            <shaml:endBranchLabel>1_1</shaml:endBranchLabel>
+        </shaml:Descriptor>
+        <shaml:Values>
+            <shaml:HazardMap exceedanceProb="0.1" fixedGMLevel="1.0">
+                <shaml:Site>
+                    <shaml:Site>
+                        <gml:pos>2.0 48.0</gml:pos>
+                    </shaml:Site>
+                    <shaml:Values>0.1</shaml:Values>
+                    <shaml:vs30>760.0</shaml:vs30>
+                </shaml:Site>
+                <shaml:Site>
+                    <shaml:Site>
+                        <gml:pos>2.0 48.1</gml:pos>
+                    </shaml:Site>
+                    <shaml:Values>0.2</shaml:Values>
+                    <shaml:vs30>760.0</shaml:vs30>
+                </shaml:Site>
+                <shaml:Site>
+                    <shaml:Site>
+                        <gml:pos>2.1 48.0</gml:pos>
+                    </shaml:Site>
+                    <shaml:Values>0.3</shaml:Values>
+                    <shaml:vs30>760.0</shaml:vs30>
+                </shaml:Site>
+                <shaml:Site>
+                    <shaml:Site>
+                        <gml:pos>2.1 48.1</gml:pos>
+                    </shaml:Site>
+                    <shaml:Values>0.4</shaml:Values>
+                    <shaml:vs30>760.0</shaml:vs30>
+                </shaml:Site>
+            </shaml:HazardMap>
+        </shaml:Values>
+    </shaml:Result>
+</shaml:HazardResultList>

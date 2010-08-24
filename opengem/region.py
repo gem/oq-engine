@@ -30,6 +30,6 @@ class RegionConstraint(object):
         return cls(polygon=polygon)
 
     def match(self, point):
-        if type(point) is type(tuple()):
-            point = geometry.Point(*point)
+        if not isinstance(point, geometry.Point): 
+            point = geometry.Point(point[0], point[1])
         return self.polygon.contains(point)
