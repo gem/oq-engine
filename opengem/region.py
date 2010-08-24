@@ -1,8 +1,10 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from shapely import geometry
 from shapely import wkt
 
+Point = geometry.Point
 
 class RegionConstraint(object):
     def __init__(self, polygon):
@@ -28,6 +30,6 @@ class RegionConstraint(object):
         return cls(polygon=polygon)
 
     def match(self, point):
-        if type(point) is type(tuple()):
-            point = geometry.Point(*point)
+        if not isinstance(point, geometry.Point): 
+            point = geometry.Point(point[0], point[1])
         return self.polygon.contains(point)
