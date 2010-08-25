@@ -82,7 +82,7 @@ newsource
                                # mag-freq dist
                                # 	gr aGR(cumulative) bGR mMin mMax 
                                # 	ch magChar rateChar sigmaChar numSigma (NOTE: not yet implemented)
-                               gr 5.0 0.8 5.0 7.0
+                               gr 0.5 0.8 5.0 7.0
                                # Focal mechanism follows the Aki-Richards convention. 
                                # -999.0 means not defined
                                # strike dip rake
@@ -122,7 +122,7 @@ newsource
                                             # magnitude frequency distribution
                                             # 	gr aGR(cumulative) bGR mMax 
                                             # 	ch magChar rateChar sigmaChar numSigma (NOTE: not yet implemented!)
-                                            gr 5.0 0.8 6.5 7.0
+                                            gr 3.0 0.8 6.5 7.0
 
 
 
@@ -180,5 +180,5 @@ newsource
                                               # magnitude frequency distribution
                                               # 	gr aGR(cumulative) bGR mMax 
                                               # 	ch magChar rateChar sigmaChar numSigma  (NOTE: not yet implemented!)
-                                              gr 5.0 0.8 6.5 9.0
+                                              gr 1. 0.8 6.5 9.0
 

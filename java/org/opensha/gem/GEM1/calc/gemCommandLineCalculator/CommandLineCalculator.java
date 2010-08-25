@@ -30,6 +30,7 @@ import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeRule;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeRuleParam;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
+import org.opensha.gem.GEM1.commons.UnoptimizedDeepCopy;
 import org.opensha.gem.GEM1.util.CpuParams;
 import org.opensha.gem.GEM1.util.DistanceParams;
 import org.opensha.gem.GEM1.util.IMLListParams;
@@ -120,7 +121,11 @@ public class CommandLineCalculator {
 		}
 		else if(calcConfig.getCalculationMode().equalsIgnoreCase(FULL_CALCULATION)){
 			
+			// do calculation
 			doFullCalculation();
+			
+			// save mean ground motion map
+			saveMeanGroundMotionMapToGMTAsciiFile();
 			
 		}
 		else{
@@ -200,9 +205,44 @@ public class CommandLineCalculator {
 		
 	    
 	    // compute ERF logic tree end-branch models
-	    HashMap<String,ArrayList<GEMSourceData>> endBranchModels = new HashMap<String,ArrayList<GEMSourceData>>();
-	    computeErfLogicTreeEndBrancheModels(erfLogicTree.getErfLogicTree(), endBranchModels);
+	    HashMap<String,ArrayList<GEMSourceData>> endBranchModels = computeErfLogicTreeEndBrancheModels(erfLogicTree.getErfLogicTree());
+	    // print info
+	    System.out.println("ERF logic tree end branch models (total number: "+endBranchModels.keySet().size()+").\n");
+	    Iterator<String> erfEndBranchLabelIter = endBranchModels.keySet().iterator();
+	    while(erfEndBranchLabelIter.hasNext()){
+	    	
+	    	String erfEndBranchLabel = erfEndBranchLabelIter.next();
+	    	System.out.println("End branch label: "+erfEndBranchLabel+"\n");
+	    	
+	    }
 	    
+	    
+		// compute gmpe logic tree end-branch models
+		HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModel = computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree.getGmpeLogicTreeHashMap());
+		// print info
+		System.out.println("GMPE logic tree end branch models (total number: "+gmpeEndBranchModel.keySet().size()+").\n");
+		Iterator<String> gmpeEndBranchLabelIter = gmpeEndBranchModel.keySet().iterator();
+		while(gmpeEndBranchLabelIter.hasNext()){
+			
+			String gmpeEndBranchLabel = gmpeEndBranchLabelIter.next();	
+			System.out.println("End branch label: "+gmpeEndBranchLabel);
+			
+			Iterator<TectonicRegionType> trtIter = gmpeEndBranchModel.get(gmpeEndBranchLabel).keySet().iterator();
+			while(trtIter.hasNext()){
+				
+				TectonicRegionType trt = trtIter.next();
+				
+				System.out.println("                  Tectonic region type: "+trt.toString()+
+						" --> GMPE: "+gmpeEndBranchModel.get(gmpeEndBranchLabel).get(trt).getName());
+				
+			}
+			System.out.println("\n");
+			
+		}
+		
+		// instantiate the repository for the results
+		GEMHazardCurveRepositoryList hcRepList = new GEMHazardCurveRepositoryList();
+		
 	    // loop over ERF end-branch models
 	    Iterator<String> endBranchLabels = endBranchModels.keySet().iterator();
 	    while(endBranchLabels.hasNext()){
@@ -218,108 +258,183 @@ public class CommandLineCalculator {
 			// set ERF parameters
 			setGEM1ERFParams(erf, calcConfig);
 			
-			// compute gmpe logic tree end-branch models
-			HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModels
-			 = new HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>>();
-			computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree.getGmpeLogicTreeHashMap(), gmpeEndBranchModels);
-			
-			Iterator<String> gmpeEndBranchModelLabels = gmpeEndBranchModels.keySet().iterator();
-			while(gmpeEndBranchModelLabels.hasNext()){
+			// loop over GMPE end-branch models
+			Iterator<String> gmpeEndBranchLabels = gmpeEndBranchModel.keySet().iterator();
+			while(gmpeEndBranchLabels.hasNext()){
 				
-				String label = gmpeEndBranchModelLabels.next();
+				String gmpeLabel = gmpeEndBranchLabels.next();
 				
-				System.out.println(label);
+				System.out.println("Processing gmpe end-branch model: "+gmpeLabel);
+				
+		    	// do calculation
+				GemComputeHazard compHaz = new GemComputeHazard(
+						calcConfig.getNumThreads(), 
+						sites, 
+						erf, 
+						gmpeEndBranchModel.get(gmpeLabel),
+						calcConfig.getImlList(),
+						calcConfig.getMaxDistance() );
+				
+				// store results
+				hcRepList.add(compHaz.getValues(),erfLabel+"-"+gmpeLabel);
 				
 			}
+			
+		    // calculate mean hazard map for the given prob of exceedance
+			meanGroundMotionMap = hcRepList.getMeanGroundMotionMap(calcConfig.getProbExc(),erfLogicTree.getErfLogicTree(),gmpeLogicTree.getGmpeLogicTreeHashMap());
+
 			
 	    }
 	    
 		
 	}
 	
-	private void computeGmpeLogicTreeEndBrancheModels(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap,
-			HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModels){
+	/**
+	 * @param gmpeLogicTreeHashMap: this is an hash map relating a set of tectonic settings with a set of logic trees
+	 * for gmpes. The idea is the user can define, for each tectonic setting, a different logic tree for the gmpes.
+	 * @return an hash map relating an end branch label with an hash map
+	 * that relates different tectonic settings with different gmpes.
+	 * For instance if there are two logic tree for gmpes:
+	 * Stable Region (branch 1: D&M2008, weight: 0.5; branch 2: M&P2008, weight: 0.5)
+	 * Active Region (branch 1: B&A2008, weight: 0.5; branch 2: C&B2008, weight: 0.5)
+	 * then the method will result in a hash map containing four end branch labels:
+	 * Stable Region_1-ActiveRegion_1 (referring to an hash map: {(Stable Region: D&M2008),(Active Region: B&A2008)}
+	 * Stable Region_1-ActiveRegion_2 (referring to an hash map: {(Stable Region: D&M2008),(Active Region: C&B2008)}
+	 * Stable Region_2-ActiveRegion_1 (referring to an hash map: {(Stable Region: M&P2008),(Active Region: B&A2008)}
+	 * Stable Region_2-ActiveRegion_2 (referring to an hash map: {(Stable Region: M&P2008),(Active Region: C&B2008)}
+	 * NOTE: the major assumption in this method is that the logic tree for the Gmpes contains only one branching level.
+	 */
+	private HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> computeGmpeLogicTreeEndBrancheModels(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap){
+		
+		// make deep copy
+		HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMapCopy = 
+			(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>) UnoptimizedDeepCopy.copy(gmpeLogicTreeHashMap);
+		
+		// hash map containing gmpe end branch models
+		HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> endBranchModels = 
+			new HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>>();
+		
+		// tectonic region types
+		Iterator<TectonicRegionType> trtIter = gmpeLogicTreeHashMapCopy.keySet().iterator();
+		ArrayList<TectonicRegionType> trtList = new ArrayList<TectonicRegionType>();
+		while(trtIter.hasNext()) trtList.add(trtIter.next());
+		
+		// load gmpe models from first tectonic region type
+		if(endBranchModels.isEmpty()){
+			
+			// number of branches for the first tectonic region type
+			int numBranch = gmpeLogicTreeHashMapCopy.get(trtList.get(0)).getBranchingLevel(0).getBranchList().size();
 
-			
-		// loop over tectonic region types
-		Iterator<TectonicRegionType> iterTectRegType = gmpeLogicTreeHashMap.keySet().iterator();
-		ArrayList<TectonicRegionType> trtLabel = new ArrayList<TectonicRegionType>();
-		while(iterTectRegType.hasNext()) trtLabel.add(iterTectRegType.next());
-		for(TectonicRegionType trt:trtLabel){
-			
-			if(gmpeEndBranchModels.isEmpty()){
+			// loop over branches
+			for(int i=0;i<numBranch;i++){
 				
-				// loop over gmpe end branch models for the current tectonic region type
-				Iterator<String> endBranchGmpeLabel = gmpeLogicTreeHashMap.get(trt).getEBMap().keySet().iterator();
-				while(endBranchGmpeLabel.hasNext()){
-					
-					// current gmpe end-branch label
-					String gmpeLabel = endBranchGmpeLabel.next();
-					
-					// current gmpe
-					ScalarIntensityMeasureRelationshipAPI gmpe = gmpeLogicTreeHashMap.get(trt).getEBMap().get(gmpeLabel);
-					
-					HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI> newHashMap = new HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>();
-					newHashMap.put(trt, gmpe);
-					
-					gmpeEndBranchModels.put(trt.toString()+"_"+gmpeLabel, newHashMap);
-					
-				}
+				// get current branch
+				GemLogicTreeBranch branch = gmpeLogicTreeHashMapCopy.get(trtList.get(0)).getBranchingLevel(0).getBranch(i);
 				
-			} // end if gmpeEndBranchModels.isEmpty()
+				// define label from branch ID number
+				String label = trtList.get(0)+"_"+Integer.toString(branch.getRelativeID());
+				
+				// get gmpe
+				ScalarIntensityMeasureRelationshipAPI gmpe = gmpeLogicTreeHashMapCopy.get(trtList.get(0)).getEBMap().get(Integer.toString(branch.getRelativeID()));
+
+				HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI> newHashMap = new
+					HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>();
+				
+				newHashMap.put(trtList.get(0), gmpe);
+				
+				// save in the hash map
+                endBranchModels.put(label, newHashMap);
 			
-			else if(!gmpeEndBranchModels.isEmpty()){
+			}
+			
+			// remove processed tectonic setting 
+			gmpeLogicTreeHashMapCopy.remove(trtList.get(0));
+			trtList.remove(0);
+
+		}
+		
+
+		if(!endBranchModels.isEmpty()){
+			
+			// while there are additional tectonic settings
+			while(!gmpeLogicTreeHashMapCopy.keySet().isEmpty()){
 				
-				// loop over gmpe end branch models for the current tectonic region type
-				Iterator<String> endBranchGmpeLabel = gmpeLogicTreeHashMap.get(trt).getEBMap().keySet().iterator();
-				while(endBranchGmpeLabel.hasNext()){
+				// loop over current end branch models
+				Iterator<String> endBranchModelLabels = endBranchModels.keySet().iterator();
+				ArrayList<String> labels = new ArrayList<String>();
+				while(endBranchModelLabels.hasNext()) labels.add(endBranchModelLabels.next());
+				for(String label: labels){
 					
-					// current gmpe end-branch label
-					String gmpeLabel = endBranchGmpeLabel.next();
+					// number of branches in the first branching level of the current tectonic setting
+					int numBranch = gmpeLogicTreeHashMapCopy.get(trtList.get(0)).getBranchingLevel(0).getBranchList().size();
 					
-					// current gmpe
-					ScalarIntensityMeasureRelationshipAPI gmpe = gmpeLogicTreeHashMap.get(trt).getEBMap().get(gmpeLabel);
-					
-					// loop over gmpe end branch models
-					Iterator<String> iterCurrentEndBranchGmpeLabel = gmpeEndBranchModels.keySet().iterator();
-					ArrayList<String> labels = new ArrayList<String>();
-					while(iterCurrentEndBranchGmpeLabel.hasNext()) labels.add(iterCurrentEndBranchGmpeLabel.next());
-					for(String currentLabel:labels){
+					// loop over branches
+					for(int i=0;i<numBranch;i++){
 						
-						HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> newHashMap = gmpeEndBranchModels.get(currentLabel);	
+						// get current branch
+						GemLogicTreeBranch branch = gmpeLogicTreeHashMapCopy.get(trtList.get(0)).getBranchingLevel(0).getBranch(i);
 						
-						// add gmpe for the new tectonic region type
-						newHashMap.put(trt, gmpe);
+						// new label
+						String newLabel = label+"-"+trtList.get(0)+"_"+branch.getRelativeID();
 						
-						gmpeEndBranchModels.put(currentLabel+"-"+trt.toString()+"_"+gmpeLabel, newHashMap);
+						// get gmpe
+						ScalarIntensityMeasureRelationshipAPI gmpe = gmpeLogicTreeHashMapCopy.get(trtList.get(0)).getEBMap().get(Integer.toString(branch.getRelativeID()));
 						
-						gmpeEndBranchModels.remove(currentLabel);
+						
+						// add tectonic setting - gmpe
+						// current end branch model
+						HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI> newHashMap = new HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>();
+						// copy previous entries
+						Iterator<TectonicRegionType> iterTrt = endBranchModels.get(label).keySet().iterator();
+						while(iterTrt.hasNext()){
+							TectonicRegionType trt = iterTrt.next();
+							ScalarIntensityMeasureRelationshipAPI ar =  endBranchModels.get(label).get(trt);
+							newHashMap.put(trt, ar);
+						}
+						// add new entry
+						newHashMap.put(trtList.get(0), gmpe);
+						
+						// add new entry in the end branch hash map
+						endBranchModels.put(newLabel, newHashMap);
+
 					}
+					
+					// from the hash map remove the entry corresponding
+					// to the current model
+					endBranchModels.remove(label);
+					
+				} // end loop over current end-branch models
+				
+				// remove processed tectonic setting
+				gmpeLogicTreeHashMapCopy.remove(trtList.get(0));
+				trtList.remove(0);			
 
-				}
-				
-			} // end if gmpeEndBranchModels.isEmpty()
-				
+			} // end while !gmpeLogicTreeHashMapCopy.keySet().isEmpty()
 			
-		} // end loop over tectonic regions
+		} // end if !endBranchModels.isEmpty()
+		
+		return endBranchModels;
 		
 	}
 	
-	private void computeErfLogicTreeEndBrancheModels(GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree, 
-			HashMap<String,ArrayList<GEMSourceData>> endBranchModels) throws IOException{
-
+	private HashMap<String, ArrayList<GEMSourceData>> computeErfLogicTreeEndBrancheModels(GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree) throws IOException{
+		
+		// make deep copy
+		GemLogicTree<ArrayList<GEMSourceData>> erfLogicTreeCopy = (GemLogicTree<ArrayList<GEMSourceData>>) UnoptimizedDeepCopy.copy(erfLogicTree);
+		
+		HashMap<String,ArrayList<GEMSourceData>> endBranchModels = new HashMap<String,ArrayList<GEMSourceData>>();
 		
 		// load source models from first branching level
 		if(endBranchModels.isEmpty()){
 			
 			// number of branches in the first branching level
-			int numBranch = erfLogicTree.getBranchingLevel(0).getBranchList().size();
+			int numBranch = erfLogicTreeCopy.getBranchingLevel(0).getBranchList().size();
 
 			// loop over branches of the first branching level
 			for(int i=0;i<numBranch;i++){
 				
 				// get current branch
-				GemLogicTreeBranch branch = erfLogicTree.getBranchingLevel(0).getBranch(i);
+				GemLogicTreeBranch branch = erfLogicTreeCopy.getBranchingLevel(0).getBranch(i);
 				
 				// define label from branch ID number
 				String label = Integer.toString(branch.getRelativeID());
@@ -333,7 +448,7 @@ public class CommandLineCalculator {
 			}
 			
 			// remove processed branching level
-			erfLogicTree.getBranchingLevelsList().remove(0);
+			erfLogicTreeCopy.getBranchingLevelsList().remove(0);
 
 		}
 		
@@ -343,7 +458,7 @@ public class CommandLineCalculator {
 		if(!endBranchModels.isEmpty()){
 			
 			// while there are additional branching levels
-			while(!erfLogicTree.getBranchingLevelsList().isEmpty()){
+			while(!erfLogicTreeCopy.getBranchingLevelsList().isEmpty()){
 				
 				// loop over current end branch models
 				Iterator<String> endBranchModelLabels = endBranchModels.keySet().iterator();
@@ -359,13 +474,13 @@ public class CommandLineCalculator {
 					// the first branching level of the current logic tree
 					
 					// number of branches in the first branching level
-					int numBranch = erfLogicTree.getBranchingLevel(0).getBranchList().size();
+					int numBranch = erfLogicTreeCopy.getBranchingLevel(0).getBranchList().size();
 					
 					// loop over branches of the first branching level
 					for(int i=0;i<numBranch;i++){
 						
 						// get current branch
-						GemLogicTreeBranch branch = erfLogicTree.getBranchingLevel(0).getBranch(i);
+						GemLogicTreeBranch branch = erfLogicTreeCopy.getBranchingLevel(0).getBranch(i);
 						
 						// new label
 						String newLabel = label+"_"+branch.getRelativeID();
@@ -385,11 +500,13 @@ public class CommandLineCalculator {
 				} // end loop over current end-branch models
 				
 				// remove processed branching level
-				erfLogicTree.getBranchingLevelsList().remove(0);			
+				erfLogicTreeCopy.getBranchingLevelsList().remove(0);			
 
-			} // end while !erfLogicTree.getBranchingLevelsList().isEmpty()
+			} // end while !erfLogicTreeCopy.getBranchingLevelsList().isEmpty()
 			
 		} // end if !endBranchModels.isEmpty()
+		
+		return endBranchModels;
 		
 	}
 	

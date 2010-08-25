@@ -4,6 +4,7 @@ package org.opensha.gem.GEM1.calc.gemOutput;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.StringTokenizer;
 
 import org.opensha.commons.data.Site;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
@@ -266,6 +267,63 @@ public class GEMHazardCurveRepositoryList {
 		for(int ii=0;ii<meanHM.size();ii++){
 			double val = meanHM.get(ii)/hcRepList.size();
 			meanHM.set(ii, val);
+		}
+		
+		return meanHM;
+	}
+	
+	public ArrayList<Double> getMeanGroundMotionMap(double probEx, GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree, HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap){
+		
+		// instantiate mean hazard map
+		ArrayList<Double> meanHM =hcRepList.get(0).getHazardMap(probEx);
+		// initialize to zero
+		for(int i=0;i<meanHM.size();i++) meanHM.set(i, 0.0);
+		
+		// loop over end-branches
+		for (int i=0; i<hcRepList.size(); i++){
+			
+			// get the current hazard map
+			ArrayList<Double> HM = hcRepList.get(i).getHazardMap(probEx);
+			
+			// get the i-th end branch label
+			String lab = endBranchLabels.get(i);
+			
+			// get the label corresponding to the ERF and the GMPE logic trees
+			StringTokenizer labTokens = new StringTokenizer(lab,"-");
+			
+			// erf label
+			String erfLab = labTokens.nextToken();
+			
+			ArrayList<String> gmpeLab = new ArrayList<String>();
+			ArrayList<TectonicRegionType> gmpeTectRegType = new ArrayList<TectonicRegionType>();
+			while(labTokens.hasMoreTokens()){
+				StringTokenizer st = new StringTokenizer(labTokens.nextToken(),"_");
+				// tectonic region type
+				String trtName = st.nextToken();
+				// label
+				String label = st.nextToken();
+				gmpeTectRegType.add(TectonicRegionType.getTypeForName(trtName));
+				// label
+				gmpeLab.add(label);
+			}
+			
+			// Find the weight 
+            // given by the product of the total weight of the InputToERF logic tree end branch
+			// and the total weight of the GMPE logic tree end branch
+			double wei = erfLogicTree.getTotWeight(erfLab);
+			// loop over tectonic region types
+			int indexTrt = 0;
+			for(TectonicRegionType trt:gmpeTectRegType){
+				wei = wei*gmpeLogicTreeHashMap.get(trt).getTotWeight(gmpeLab.get(indexTrt));
+				indexTrt = indexTrt + 1;
+			}
+			
+			// loop over grid nodes
+			for(int ii=0;ii<meanHM.size();ii++){
+				double val = meanHM.get(ii)+HM.get(ii)*wei;
+				meanHM.set(ii, val);
+			}
+			
 		}
 		
 		return meanHM;
