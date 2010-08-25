@@ -7,7 +7,7 @@ Dependencies
 For the most part the Python packages in here can be installed using `pip`
 (python-pip on ubuntu) or your favorite package manager.
 
-On OS X a good way to intall the pieces that are not Python (if you don't
+On OS X a good way to install the pieces that are not Python (if you don't
 already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebrew/
 
 * gdal
