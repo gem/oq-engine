@@ -1,6 +1,8 @@
 package org.opensha.gem.GEM1.calc.gemLogicTree;
 
-public class GemLogicTreeRule {
+import java.io.Serializable;
+
+public class GemLogicTreeRule implements Serializable{
 	
 	private GemLogicTreeRuleParam rule;
 	

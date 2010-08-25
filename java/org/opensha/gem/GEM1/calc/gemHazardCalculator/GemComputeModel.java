@@ -196,7 +196,7 @@ public class GemComputeModel {
 		bra1 = new GemLogicTreeBranch(1,"MeanModel",1.0);
 		
 		// add branches to 1st branching level
-		braLev1.addTreeBranch(bra1);
+		braLev1.addBranch(bra1);
 		
         // add branching levels to logic tree
         modelLogicTree.addBranchingLevel(braLev1);
@@ -247,7 +247,7 @@ public class GemComputeModel {
 		bra1 = new GemLogicTreeBranch(1,"MeanModel",1.0);
 		
 		// add branches to 1st branching level
-		braLev1.addTreeBranch(bra1);
+		braLev1.addBranch(bra1);
 		
         // add branching levels to logic tree
         modelLogicTree.addBranchingLevel(braLev1);

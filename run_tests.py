@@ -22,6 +22,7 @@ import sys
 from tests.computation_unittest import *
 from tests.example_unittest import *
 from tests.output_unittest import *
+from tests.output_unittest import *
 from tests.parser_shaml_output_unittest import *
 from tests.producer_unittest import *
 from tests.region_unittest import *
