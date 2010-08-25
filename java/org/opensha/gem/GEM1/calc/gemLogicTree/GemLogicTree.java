@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeHazardLogicTree;
 
@@ -164,7 +165,7 @@ public class GemLogicTree<Element> implements GemLogicTreeAPI<Element>, Serializ
 	    	System.out.println("Branching level: "+braLev.getLevel()+", label: "+braLev.getBranchingLabel()+", appliesTo: "+braLev.getAppliesTo());
 	    	
 	    	// number of branches
-	    	int numBranches = braLev.getTreeBranchList().size();
+	    	int numBranches = braLev.getBranchList().size();
 	        // loop over branches
 	    	for(int j=0;j<numBranches;j++){
 	    		
@@ -199,13 +200,13 @@ public class GemLogicTree<Element> implements GemLogicTreeAPI<Element>, Serializ
 		GemLogicTreeBranchingLevel bl = this.branLevLst.get(branchingLevelIndex);
 		
 		// x values
-		int[] x = new int[bl.getTreeBranchList().size()];
+		int[] x = new int[bl.getBranchList().size()];
 		// p (probability values)
-		double[] p = new double[bl.getTreeBranchList().size()];
+		double[] p = new double[bl.getBranchList().size()];
 		
 		// loop over branches
 		int i = 0;
-		for(GemLogicTreeBranch b: bl.getTreeBranchList()){
+		for(GemLogicTreeBranch b: bl.getBranchList()){
 			
 			x[i] = b.getRelativeID();
 			p[i] = b.getWeight();
@@ -241,4 +242,5 @@ public class GemLogicTree<Element> implements GemLogicTreeAPI<Element>, Serializ
 		
 		return sample;
 	}
+
 }

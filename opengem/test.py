@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 from opengem import computation
@@ -14,10 +15,7 @@ class ConcatComputation(computation.Computation):
 
 
 class WordProducer(producer.FileProducer):
-    def _parse_one(self):
-        line = self.file.readline()
-        if not line:
-            return None
-
-        x, y, value = line.strip().split(' ', 2)
-        return ((float(x), float(y)), value) 
+    def _parse(self):
+        for line in self.file:
+            x, y, value = line.strip().split(' ', 2)
+            yield ((int(x), int(y)), value)

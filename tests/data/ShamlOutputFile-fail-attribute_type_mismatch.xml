@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shaml:HazardResultList xmlns:shaml="http://shaml.org/xmlns/shaml/0.1" 
+                        xmlns:gml="http://www.opengis.net/gml">
+    <shaml:Result timeSpanDuration="foo" IDmodel="PGV_2_2" IMT="PGV">
+        <shaml:Descriptor>
+            <shaml:endBranchLabel>2_2</shaml:endBranchLabel>
+        </shaml:Descriptor>
+        <shaml:Values>
+            <shaml:HazardCurveList>
+                <shaml:IML>100.0 200.0 300.0</shaml:IML>
+                <shaml:List>
+                    <shaml:Curve maxProb="0.9" minProb="0.1">
+                        <shaml:Site>
+                            <shaml:Site>
+                                <gml:pos>13.40 52.50</gml:pos>
+                            </shaml:Site>
+                            <shaml:Values>0.005 0.007 0.009</shaml:Values>
+                            <shaml:vs30>760.0</shaml:vs30>
+                        </shaml:Site>
+                    </shaml:Curve>
+                </shaml:List>
+            </shaml:HazardCurveList>
+        </shaml:Values>
+    </shaml:Result>
+</shaml:HazardResultList>

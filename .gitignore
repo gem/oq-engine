@@ -5,3 +5,6 @@ docs/build/**/*
 build/**/*
 build-stamp
 dist/**/*
+tests/data/test.tiff
+tests/data/*.fake
+

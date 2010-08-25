@@ -27,14 +27,14 @@ public class GemLogicTreeBranchingLevel implements Serializable {
 	 * 
 	 * @param treeBranch
 	 */
-	public void addTreeBranch(GemLogicTreeBranch treeBranch){
+	public void addBranch(GemLogicTreeBranch treeBranch){
 		this.treeBranchList.add(treeBranch);
 	}
 	/**
 	 * 
 	 * @return treeBranchList
 	 */
-	public ArrayList<GemLogicTreeBranch> getTreeBranchList() {
+	public ArrayList<GemLogicTreeBranch> getBranchList() {
 		return treeBranchList;
 	}
 	/**

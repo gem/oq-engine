@@ -35,11 +35,11 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class GmpeLogicTreeData {
 	
-	// gmpe logic tree
+	// hash map of gmpe logic tree
 	private HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap;
 	
 	// comment line identifier
-	private static String comment = "//";
+	private static String comment = "#";
 	
 	// package for gmpe
 	private String packageName = "org.opensha.sha.imr.attenRelImpl.";
@@ -51,7 +51,7 @@ public class GmpeLogicTreeData {
 			double period, double damping, String truncType, double truncLevel, String stdType,
 			double vs30) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, SecurityException, NoSuchMethodException, IllegalArgumentException, InvocationTargetException{
 		
-		// instatiate gmpe logic tree
+		// instatiate hash map of gmpe logic tree
 		gmpeLogicTreeHashMap = new HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>();
         
         String sRecord = null;
@@ -77,121 +77,122 @@ public class GmpeLogicTreeData {
         if(D) System.out.println("\n\n");
         if(D) System.out.println("GMPE Logic Tree structure");
         
-        //sRecord = oReader.readLine();
+        sRecord = oReader.readLine();
         // start reading the file
-        while((sRecord= oReader.readLine())!=null){
+        while(sRecord!=null){
         	
         	// skip comments or empty lines
-            while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
             	sRecord = oReader.readLine();
             	continue;
             }
             
             // if gmpes for Active shallow crust are defined
-            if(sRecord.equalsIgnoreCase(TectonicRegionType.ACTIVE_SHALLOW.toString())){
+            if(sRecord.trim().equalsIgnoreCase(TectonicRegionType.ACTIVE_SHALLOW.toString())){
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                activeShallowGmpeNames = sRecord;
+                activeShallowGmpeNames = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes for "+TectonicRegionType.ACTIVE_SHALLOW+": "+activeShallowGmpeNames);
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                activeShallowGmpeWeights = sRecord;
+                activeShallowGmpeWeights = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes weights: "+activeShallowGmpeWeights);
-                
-                //sRecord = oReader.readLine();
-                
             }
             
             // if gmpes for stable continental crust are defined
-            else if(sRecord.equalsIgnoreCase(TectonicRegionType.STABLE_SHALLOW.toString())){
+            else if(sRecord.trim().equalsIgnoreCase(TectonicRegionType.STABLE_SHALLOW.toString())){
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                stableShallowGmpeNames = sRecord;
+                stableShallowGmpeNames = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes for "+TectonicRegionType.STABLE_SHALLOW+": "+stableShallowGmpeNames);
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                stableShallowGmpeWeights = sRecord;
+                stableShallowGmpeWeights = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes weights: "+stableShallowGmpeWeights);
-                
-                //sRecord = oReader.readLine();
-                
             }
             
             // if gmpes for subduction interface are defined
-            else if(sRecord.equalsIgnoreCase(TectonicRegionType.SUBDUCTION_INTERFACE.toString())){
+            else if(sRecord.trim().equalsIgnoreCase(TectonicRegionType.SUBDUCTION_INTERFACE.toString())){
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                subductionInterfaceGmpeNames = sRecord;
+                subductionInterfaceGmpeNames = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes for "+TectonicRegionType.SUBDUCTION_INTERFACE+": "+subductionInterfaceGmpeNames);
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                subductionInterfaceGmpeWeights = sRecord;
+                subductionInterfaceGmpeWeights = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes weights: "+subductionInterfaceGmpeWeights);
-                
-                //sRecord = oReader.readLine();
                 
             }
             
             // if gmpes for subduction intraslab are defined
-            else if(sRecord.equalsIgnoreCase(TectonicRegionType.SUBDUCTION_SLAB.toString())){
+            else if(sRecord.trim().equalsIgnoreCase(TectonicRegionType.SUBDUCTION_SLAB.toString())){
             	
             	// read names
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                subductionIntraSlabGmpeNames = sRecord;
+                subductionIntraSlabGmpeNames = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes for "+TectonicRegionType.SUBDUCTION_SLAB+": "+subductionIntraSlabGmpeNames);
                 
                 // read weights
             	sRecord = oReader.readLine();
-                while(sRecord.contains(comment.subSequence(0, comment.length())) || sRecord.isEmpty()){
+                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
                 	sRecord = oReader.readLine();
                 	continue;
                 }
-                subductionIntraSlabGmpeWeights = sRecord;
+                subductionIntraSlabGmpeWeights = sRecord.trim();
                 
                 if(D) System.out.println("Gmpes weights: "+subductionIntraSlabGmpeWeights);
-                
-                //sRecord = oReader.readLine();
+
+            }
+            
+            // continue reading until next keyword is found or end of file
+        	// skip comments or empty lines
+            while((sRecord = oReader.readLine())!=null){
+            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
+            	else if(sRecord.trim().equalsIgnoreCase(TectonicRegionType.ACTIVE_SHALLOW.toString()) ||
+            			sRecord.trim().equalsIgnoreCase(TectonicRegionType.STABLE_SHALLOW.toString()) ||
+            			sRecord.trim().equalsIgnoreCase(TectonicRegionType.SUBDUCTION_INTERFACE.toString()) ||
+            			sRecord.trim().equalsIgnoreCase(TectonicRegionType.SUBDUCTION_SLAB.toString())) break;
             }
             
         	
@@ -280,7 +281,7 @@ public class GmpeLogicTreeData {
     		
     		branch = new GemLogicTreeBranch((i+1), gmpeName, gmpeWeight);
     		
-    		branchingLevel.addTreeBranch(branch);
+    		branchingLevel.addBranch(branch);
     		
     	}
     	
