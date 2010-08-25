@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+"""
+Executable binary for spawning parallelized OpenGem jobs.
+"""
+
+import logging
+import os
+import sys
+
+# this is a hack so that it is easier to test these scripts,
+# it will add the proper directories to the path so that 
+# this script can be run from a checkout
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                  'opengem')):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from opengem import flags
+from opengem import grid
+from opengem import region
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_boolean('debug', False, 'whether to show debug output')
+
+
+def main():
+    logging.debug("Running this OpenGEM job.")
+
+if __name__ == '__main__':
+    args = FLAGS(sys.argv)
+    
+    if FLAGS.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+
+    main()
+
