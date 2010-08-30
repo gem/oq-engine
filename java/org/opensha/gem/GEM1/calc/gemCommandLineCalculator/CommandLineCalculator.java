@@ -68,7 +68,13 @@ public class CommandLineCalculator {
 	// for debugging
 	private static Boolean D = false;
 
-	
+	/**
+	 * Command line calculator constructor.
+	 * @param calcConfigFile: configuration file name (that must reside in the working directory).
+	 * @throws IOException
+	 * TODO: this constructor is useful for testing. But probably a second constructor that takes
+	 * the configuration file path directly from the command line is more useful.
+	 */
 	public CommandLineCalculator(String calcConfigFile) throws IOException{
 		
 		// load calculation configuration data
@@ -79,15 +85,14 @@ public class CommandLineCalculator {
 		meanGroundMotionMap = new ArrayList<Double>();
 		
 		// initialize site array
-		sites = createSiteList(calcConfig);
+		sites = createSiteList(calcConfig.getRegionBoundary(),calcConfig.getGridSpacing());
 		
 	}
 	
 	/**
-	 * This is the main method that do the calculations. According to the specifications in the
-	 * configuration file the method will do the required calculations.
-	 * At the moment the only implemented calculation is for mean ground motion map using a Monte Carlo
-	 * approach.
+	 * This is the main method that does the calculations. According to the specifications in the
+	 * configuration file the method will do the calculations following the specified method and will
+	 * save the requested output.
 	 * @throws SecurityException
 	 * @throws IllegalArgumentException
 	 * @throws IOException
@@ -103,29 +108,16 @@ public class CommandLineCalculator {
 		
 		if(calcConfig.getCalculationMode().equalsIgnoreCase(MONTE_CARLO)){
 			
-			if(calcConfig.getResultType().equalsIgnoreCase(MEAN_GROUND_MOTION_MAP)){
-				
-				// do calculation
-				doCalculationThroughMonteCarloApproach();
-				
-				// save mean ground motion map
-				saveMeanGroundMotionMapToGMTAsciiFile();
-				
-			}
-			else{
-				System.out.println("Result type: "+calcConfig.getResultType()+" non recognized. Check the configuration file!");
-				System.out.println("Execution stopped!");
-				System.exit(0);
-			}
+			// do calculation through Monte Carlo approach
+			// and save requested output
+			doCalculationThroughMonteCarloApproach();
 			
 		}
 		else if(calcConfig.getCalculationMode().equalsIgnoreCase(FULL_CALCULATION)){
 			
-			// do calculation
+			// do full calculation (that is calculate hazard curves for all the logic tree end-branche models)
+			// and save requested output
 			doFullCalculation();
-			
-			// save mean ground motion map
-			saveMeanGroundMotionMapToGMTAsciiFile();
 			
 		}
 		else{
@@ -142,11 +134,20 @@ public class CommandLineCalculator {
         // 1 min = 60*10^3 ms
         System.out.printf("minutes: %6.3f\n",taskTimeMs/(60*Math.pow(10, 3)));
 		
-		
-		
-		
 	}
 	
+	/**
+	 * Method performing hazard calculation using a Monte Carlo approach for sampling the logic tree for both
+	 * the earthquake rupture forecast and the GMPEs. 
+	 * @throws IOException
+	 * @throws SecurityException
+	 * @throws IllegalArgumentException
+	 * @throws ClassNotFoundException
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws NoSuchMethodException
+	 * @throws InvocationTargetException
+	 */
 	private void doCalculationThroughMonteCarloApproach() throws IOException, SecurityException, IllegalArgumentException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
 		
 		System.out.println("Performing calculation through Monte Carlo Approach.\n");
@@ -184,13 +185,37 @@ public class CommandLineCalculator {
 	    	
 	    }
 	    
-	    // save hazard curves
+	    // save hazard curves for debugging
 	    if (D) saveHazardCurves(calcConfig.getOutputDir(), hcRepList);
 	    
-	    // calculate mean hazard map for the given prob of exceedance
-		meanGroundMotionMap = hcRepList.getMeanGrounMotionMap(calcConfig.getProbExc());
+	    // calculate and save mean ground motion map
+	    if(calcConfig.getResultType().equalsIgnoreCase(MEAN_GROUND_MOTION_MAP)){
+		    // calculate mean hazard map for the given prob of exceedance
+			meanGroundMotionMap = hcRepList.getMeanGrounMotionMap(calcConfig.getProbExc());
+			// save mean ground motion map in a GMT (Generic Mapping Tool) format
+			String name = MEAN_GROUND_MOTION_MAP.replaceAll(" ", "_")+"_"+calcConfig.getProbExc()+"%_"+calcConfig.getInvestigationTime()+"yr"+".dat";
+			saveMapToGMTAsciiFile(name,meanGroundMotionMap,sites);
+	    }
+		else{
+			System.out.println("Result type: "+calcConfig.getResultType()+" non recognized. Check the configuration file!");
+			System.out.println("Execution stopped!");
+			System.exit(0);
+		}
+	    
+
 	}
 	
+	/**
+	 * Method performing hazard calculation by listing all the models defined in both the ERF and GMPE logic trees.
+	 * @throws IOException
+	 * @throws SecurityException
+	 * @throws IllegalArgumentException
+	 * @throws ClassNotFoundException
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws NoSuchMethodException
+	 * @throws InvocationTargetException
+	 */
 	private void doFullCalculation() throws IOException, SecurityException, IllegalArgumentException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
 		
 		System.out.println("Performing full calculation. \n");
@@ -280,18 +305,29 @@ public class CommandLineCalculator {
 				
 			}
 			
-		    // calculate mean hazard map for the given prob of exceedance
-			meanGroundMotionMap = hcRepList.getMeanGroundMotionMap(calcConfig.getProbExc(),erfLogicTree.getErfLogicTree(),gmpeLogicTree.getGmpeLogicTreeHashMap());
-
+			// calculate and save mean ground motion map
+		    if(calcConfig.getResultType().equalsIgnoreCase(MEAN_GROUND_MOTION_MAP)){
+			    // calculate mean hazard map for the given prob of exceedance
+				meanGroundMotionMap = hcRepList.getMeanGroundMotionMap(calcConfig.getProbExc(),erfLogicTree.getErfLogicTree(),gmpeLogicTree.getGmpeLogicTreeHashMap());
+				// save mean ground motion map in a GMT (Generic Mapping Tool) format
+				String name = MEAN_GROUND_MOTION_MAP.replaceAll(" ", "_")+"_"+calcConfig.getProbExc()+"%_"+calcConfig.getInvestigationTime()+"yr"+".dat";
+				saveMapToGMTAsciiFile(name,meanGroundMotionMap,sites);
+		    }
+			else{
+				System.out.println("Result type: "+calcConfig.getResultType()+" non recognized. Check the configuration file!");
+				System.out.println("Execution stopped!");
+				System.exit(0);
+			}
 			
 	    }
 	    
 		
 	}
 	
-	/**
+	/** Method calculating all the end branch models coming from the GMPE logic tree
 	 * @param gmpeLogicTreeHashMap: this is an hash map relating a set of tectonic settings with a set of logic trees
-	 * for gmpes. The idea is the user can define, for each tectonic setting, a different logic tree for the gmpes.
+	 * for gmpes. The idea is that the user can define, for each tectonic setting, a different logic tree on GMPEs for
+	 * different tectonic region types.
 	 * @return an hash map relating an end branch label with an hash map
 	 * that relates different tectonic settings with different gmpes.
 	 * For instance if there are two logic tree for gmpes:
@@ -302,11 +338,12 @@ public class CommandLineCalculator {
 	 * Stable Region_1-ActiveRegion_2 (referring to an hash map: {(Stable Region: D&M2008),(Active Region: C&B2008)}
 	 * Stable Region_2-ActiveRegion_1 (referring to an hash map: {(Stable Region: M&P2008),(Active Region: B&A2008)}
 	 * Stable Region_2-ActiveRegion_2 (referring to an hash map: {(Stable Region: M&P2008),(Active Region: C&B2008)}
-	 * NOTE: the major assumption in this method is that the logic tree for the Gmpes contains only one branching level.
+	 * NOTE: this method requires the logic tree for GMPEs consisting of only one branching level and having the end-branch
+	 * mapping hash map to be already defined.
 	 */
 	private HashMap<String,HashMap<TectonicRegionType,ScalarIntensityMeasureRelationshipAPI>> computeGmpeLogicTreeEndBrancheModels(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap){
 		
-		// make deep copy
+		// make deep copy so that the original hash map is not changed
 		HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMapCopy = 
 			(HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>) UnoptimizedDeepCopy.copy(gmpeLogicTreeHashMap);
 		
@@ -417,9 +454,15 @@ public class CommandLineCalculator {
 		
 	}
 	
+	/**
+	 * Method enumerating all the end-branch models deriving from the ERF logic tree
+	 * @param erfLogicTree: logic tree for the earthquake rupture forecast
+	 * @return: an hash map relating end-branch labels with the corresponding source models (that is array lists of GEMSourceData objects)
+	 * @throws IOException
+	 */
 	private HashMap<String, ArrayList<GEMSourceData>> computeErfLogicTreeEndBrancheModels(GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree) throws IOException{
 		
-		// make deep copy
+		// make deep copy to avoid changing the original logic tree
 		GemLogicTree<ArrayList<GEMSourceData>> erfLogicTreeCopy = (GemLogicTree<ArrayList<GEMSourceData>>) UnoptimizedDeepCopy.copy(erfLogicTree);
 		
 		HashMap<String,ArrayList<GEMSourceData>> endBranchModels = new HashMap<String,ArrayList<GEMSourceData>>();
@@ -510,137 +553,7 @@ public class CommandLineCalculator {
 		
 	}
 	
-	private void saveMeanGroundMotionMapToGMTAsciiFile() throws IOException{
-		
-		String outfile = calcConfig.getOutputDir()+"meanGroundMotionMap_"+calcConfig.getProbExc()*100+"%_"+calcConfig.getInvestigationTime()+"yr"+".dat";
-		
-		FileOutputStream oOutFIS = new FileOutputStream(outfile);
-        BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
-        BufferedWriter oWriter = new BufferedWriter(new OutputStreamWriter(oOutBIS));
-        
-        // loop over grid points
-        for(int i=0;i<sites.size();i++){
-        	
-        	double lon = sites.get(i).getLocation().getLongitude();
-        	double lat = sites.get(i).getLocation().getLatitude();
-        	double gmv = meanGroundMotionMap.get(i);
-        	
-        	oWriter.write(String.format("%+8.4f %+7.4f %7.4e \n",lon,lat,gmv));
-        	
-        }
-        
-        oWriter.close();
-        oOutBIS.close();
-        oOutFIS.close();
-		
-	}
-	
-	
 
-	
-	private static void saveHazardCurves(String dirName, GEMHazardCurveRepositoryList hazardCurves) throws IOException{
-
-		String outfile = dirName+"hazardCurves"+".dat";
-		
-		FileOutputStream oOutFIS = new FileOutputStream(outfile);
-        BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
-        BufferedWriter oWriter = new BufferedWriter(new OutputStreamWriter(oOutBIS));
-       
-        // first line contains ground motion values
-		// loop over ground motion values
-        oWriter.write(String.format("%8s %8s "," "," "));
-		for(int igmv=0;igmv<hazardCurves.getHcRepList().get(0).getGmLevels().size();igmv++){
-			double gmv = hazardCurves.getHcRepList().get(0).getGmLevels().get(igmv);
-			gmv = Math.exp(gmv);
-			oWriter.write(String.format("%7.4e ",gmv));
-		}
-		oWriter.write("\n");
-		
-        // loop over grid points
-		for(int igp=0;igp<hazardCurves.getHcRepList().get(0).getNodesNumber();igp++){
-			
-			// loop over hazard curve realizations
-			for(int ihc=0;ihc<hazardCurves.getHcRepList().size();ihc++){
-				
-				double lat = hazardCurves.getHcRepList().get(0).getGridNode().get(igp).getLocation().getLatitude();
-				double lon = hazardCurves.getHcRepList().get(0).getGridNode().get(igp).getLocation().getLongitude();
-				oWriter.write(String.format("%+8.4f %+7.4f ",lon,lat));
-				
-				GEMHazardCurveRepository hcRep = hazardCurves.getHcRepList().get(ihc);
-				
-				// loop over ground motion values
-				for(int igmv=0;igmv<hcRep.getGmLevels().size();igmv++){
-					double probEx = hcRep.getProbExceedanceList(igp)[igmv];
-					oWriter.write(String.format("%7.4e ",probEx));
-				}
-				oWriter.write("\n");
-				
-			}
-			
-		}
-        oWriter.close();
-        oOutBIS.close();
-        oOutFIS.close();
-		
-	}
-	
-	
-	private static void saveFractiles(String dirName, double probLevel, GEMHazardCurveRepository fractile) throws IOException{
-
-		String outfile = dirName+"hazardCurves_"+probLevel+".dat";
-		
-		FileOutputStream oOutFIS = new FileOutputStream(outfile);
-        BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
-        BufferedWriter oWriter = new BufferedWriter(new OutputStreamWriter(oOutBIS));
-       
-        // first line contains ground motion values
-		// loop over ground motion values
-        oWriter.write(String.format("%8s %8s "," "," "));
-		for(int igmv=0;igmv<fractile.getGmLevels().size();igmv++){
-			double gmv = fractile.getGmLevels().get(igmv);
-			gmv = Math.exp(gmv);
-			oWriter.write(String.format("%7.4e ",gmv));
-		}
-		oWriter.write("\n");
-		
-        // loop over grid points
-		for(int igp=0;igp<fractile.getNodesNumber();igp++){
-			
-			double lat = fractile.getGridNode().get(igp).getLocation().getLatitude();
-			double lon = fractile.getGridNode().get(igp).getLocation().getLongitude();
-			oWriter.write(String.format("%+8.4f %+7.4f ",lon,lat));
-			
-				// loop over ground motion values
-				for(int igmv=0;igmv<fractile.getGmLevels().size();igmv++){
-					double probEx = fractile.getProbExceedanceList(igp)[igmv];
-					oWriter.write(String.format("%7.4e ",probEx));
-				}
-				oWriter.write("\n");
-		}
-        oWriter.close();
-        oOutBIS.close();
-        oOutFIS.close();
-		
-	}
-	
-	private static ArrayList<Site> createSiteList(CalculatorConfigData calcConfig){
-		
-	    // arraylist of sites storing locations where hazard curves must be calculated
-	    ArrayList<Site> sites = new ArrayList<Site>();
-		
-	    // create gridded region from borders coordinates and grid spacing
-	    GriddedRegion gridReg = new GriddedRegion(calcConfig.getRegionBoundary(),BorderType.MERCATOR_LINEAR,calcConfig.getGridSpacing(),null);
-	    
-	    // get list of locations in the region
-	    LocationList locList = gridReg.getNodeList();
-
-	    // store locations as sites
-	    Iterator<Location> iter = locList.iterator();
-	    while(iter.hasNext()) sites.add(new Site(iter.next()));
-		
-	    // return array list of sites
-		return sites;
-	}
 	
 	private static GEM1ERF sampleGemLogicTreeERF(GemLogicTree<ArrayList<GEMSourceData>> ltERF, CalculatorConfigData calcConfig) throws IOException{
 		
@@ -1182,109 +1095,157 @@ public class CommandLineCalculator {
 		
 	}
 	
+	/**
+	 * Method for creating list of sites (lat,lon) where hazard curves have to be calculated.
+	 * The list of site is calculated from
+	 * @param boundary: LocationList specifing region of interest (that is a polygon)
+	 * @param gridSpacing: spacing for discretization of the region of interest
+	 * @return array list of site
+	 */
+	private static ArrayList<Site> createSiteList(LocationList boundary, double gridSpacing){
+	    // arraylist of sites storing locations where hazard curves must be calculated
+	    ArrayList<Site> sites = new ArrayList<Site>();
+		
+	    // create gridded region from borders coordinates and grid spacing
+	    GriddedRegion gridReg = new GriddedRegion(boundary,BorderType.MERCATOR_LINEAR,gridSpacing,null);
+	    
+	    // get list of locations in the region
+	    LocationList locList = gridReg.getNodeList();
+
+	    // store locations as sites
+	    Iterator<Location> iter = locList.iterator();
+	    while(iter.hasNext()) sites.add(new Site(iter.next()));
+		
+	    // return array list of sites
+		return sites;
+	}
 	
-	// for testing
-	public static void main(String[] args) throws IOException, SecurityException, IllegalArgumentException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
+	/**
+	 * Method for saving map in a GMT (Generic Mapping Tools) ASCII format (that is lon, lat, val).
+	 * @throws IOException
+	 */
+	private void saveMapToGMTAsciiFile(String name, ArrayList<Double> map, ArrayList<Site> siteList) throws IOException{
 		
-		CommandLineCalculator clc = new CommandLineCalculator("CalculatorConfig.inp");
+		String outfile = calcConfig.getOutputDir()+name+".dat";
 		
-		clc.doCalculationThroughMonteCarloApproach();
-		
-		clc.saveMeanGroundMotionMapToGMTAsciiFile();
-		
-		System.exit(0);
+		FileOutputStream oOutFIS = new FileOutputStream(outfile);
+        BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
+        BufferedWriter oWriter = new BufferedWriter(new OutputStreamWriter(oOutBIS));
+        
+        // loop over grid points
+        for(int i=0;i<siteList.size();i++){
+        	
+        	double lon = siteList.get(i).getLocation().getLongitude();
+        	double lat = siteList.get(i).getLocation().getLatitude();
+        	double gmv = map.get(i);
+        	
+        	oWriter.write(String.format("%+8.4f %+7.4f %7.4e \n",lon,lat,gmv));
+        	
+        }
+        
+        oWriter.close();
+        oOutBIS.close();
+        oOutFIS.close();
 		
 	}
+	
+	
 
-//	/**
-//	 * @param args
-//	 * @throws IOException 
-//	 * @throws IllegalAccessException 
-//	 * @throws InstantiationException 
-//	 * @throws ClassNotFoundException 
-//	 * @throws NoSuchMethodException 
-//	 * @throws SecurityException 
-//	 * @throws InvocationTargetException 
-//	 * @throws IllegalArgumentException 
-//	 */
-//	public static void main(String[] args) throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, SecurityException, NoSuchMethodException, IllegalArgumentException, InvocationTargetException {
-//
-//		
-//		// calculator configuration file
-//		String calculatorConfigFile = "CalculatorConfig.inp";
-//		
-//	    // read configuration file
-//	    CalculatorConfigData calcConfig = new CalculatorConfigData(calculatorConfigFile);
-//	    
-//	    
-//	    
-//	    // read ERF logic tree file
-//	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(calcConfig.getErfLogicTreeFile());
-//	    
-//	    // print to standard output the erf logic tree structure
-//	    // just to be sure that input file is read correctly
-//	    erfLogicTree.getErfLogicTree().printGemLogicTreeStructure();
-//	    
-//	    // read GMPE logic tree file and set gmpe logic tree
-//	    GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(calcConfig.getGmpeLogicTreeFile(),calcConfig.getComponent(),calcConfig.getIntensityMeasureType(),
-//	    		                               calcConfig.getPeriod(), calcConfig.getDamping(), calcConfig.getTruncationType(), calcConfig.getTruncationLevel(),
-//	    		                               calcConfig.getStandardDeviationType(), calcConfig.getVs30Reference());
-//	    
-//    	// get logic tree for each tectonic type and print the structure to standard output
-//	    // again to check that the input file is read correctly
-//	    Iterator<TectonicRegionType> tecRegTypeIter =  gmpeLogicTree.getGmpeLogicTreeHashMap().keySet().iterator();
-//	    while(tecRegTypeIter.hasNext()){
-//	    	TectonicRegionType trt = tecRegTypeIter.next();
-//	    	System.out.println("Gmpe Logic Tree for "+trt);
-//	    	gmpeLogicTree.getGmpeLogicTreeHashMap().get(trt).printGemLogicTreeStructure();
-//	    } 
-//   
-//		// instantiate the repository for the results
-//		GEMHazardCurveRepositoryList hcRepList = new GEMHazardCurveRepositoryList();
-//	    
-//		// get list of sites where hazard curves have to be calculated
-//		ArrayList<Site> locs = createSiteList(calcConfig);
-//		
-//	    // loop over number of hazard curves to be generated
-//	    for(int i=0;i<calcConfig.getNumHazCurve();i++){
-//
-//	    	// do calculation
-//			GemComputeHazard compHaz = new GemComputeHazard(
-//					calcConfig.getNumThreads(), 
-//					locs, 
-//					sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),calcConfig), 
-//					sampleGemLogicTreeGMPE(gmpeLogicTree.getGmpeLogicTreeHashMap()),
-//					calcConfig.getImlList(),
-//					calcConfig.getMaxDistance() );
-//			
-//			// store results
-//			hcRepList.add(compHaz.getValues(),Integer.toString(i));
-//	    	
-//	    }
-//	    
-//		// save hazard curves
-//		saveHazardCurves(calcConfig.getOutputDir(),hcRepList);
-//		
-//		// calculate fractiles (median)
-//		GEMHazardCurveRepository fractile = hcRepList.getQuantiles(0.5);
-//		// save
-//		saveFractiles(calcConfig.getOutputDir(), 0.5, fractile);
-//		
-//		// calculate fractiles (1st quartile)
-//		fractile = hcRepList.getQuantiles(0.25);
-//		// save
-//		saveFractiles(calcConfig.getOutputDir(), 0.25, fractile);
-//		
-//		// calculate fractiles (3rd quartile)
-//		fractile = hcRepList.getQuantiles(0.75);
-//		// save
-//		saveFractiles(calcConfig.getOutputDir(), 0.75, fractile);
-//		
-//		System.exit(0);
-//	    
-//	    
-//	    
-//
-//	} // end main
+	/**
+	 * Method for saving individual hazard curves (that is all the hazard curves corresponding to the different logic tree end branches)
+	 * @param dirName: output directory
+	 * @param hazardCurves: GEMHazardCurveRepositoryList
+	 * @throws IOException
+	 */
+	private static void saveHazardCurves(String dirName, GEMHazardCurveRepositoryList hazardCurves) throws IOException{
+
+		String outfile = dirName+"hazardCurves"+".dat";
+		
+		FileOutputStream oOutFIS = new FileOutputStream(outfile);
+        BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
+        BufferedWriter oWriter = new BufferedWriter(new OutputStreamWriter(oOutBIS));
+       
+        // first line contains ground motion values
+		// loop over ground motion values
+        oWriter.write(String.format("%8s %8s "," "," "));
+		for(int igmv=0;igmv<hazardCurves.getHcRepList().get(0).getGmLevels().size();igmv++){
+			double gmv = hazardCurves.getHcRepList().get(0).getGmLevels().get(igmv);
+			gmv = Math.exp(gmv);
+			oWriter.write(String.format("%7.4e ",gmv));
+		}
+		oWriter.write("\n");
+		
+        // loop over grid points
+		for(int igp=0;igp<hazardCurves.getHcRepList().get(0).getNodesNumber();igp++){
+			
+			// loop over hazard curve realizations
+			for(int ihc=0;ihc<hazardCurves.getHcRepList().size();ihc++){
+				
+				double lat = hazardCurves.getHcRepList().get(0).getGridNode().get(igp).getLocation().getLatitude();
+				double lon = hazardCurves.getHcRepList().get(0).getGridNode().get(igp).getLocation().getLongitude();
+				oWriter.write(String.format("%+8.4f %+7.4f ",lon,lat));
+				
+				GEMHazardCurveRepository hcRep = hazardCurves.getHcRepList().get(ihc);
+				
+				// loop over ground motion values
+				for(int igmv=0;igmv<hcRep.getGmLevels().size();igmv++){
+					double probEx = hcRep.getProbExceedanceList(igp)[igmv];
+					oWriter.write(String.format("%7.4e ",probEx));
+				}
+				oWriter.write("\n");
+				
+			}
+			
+		}
+        oWriter.close();
+        oOutBIS.close();
+        oOutFIS.close();
+		
+	}
+	
+	/**
+	 * Method for saving hazard curves fractiles.
+	 * @param dirName
+	 * @param probLevel
+	 * @param fractile
+	 * @throws IOException
+	 */
+	private static void saveFractiles(String dirName, double probLevel, GEMHazardCurveRepository fractile) throws IOException{
+
+		String outfile = dirName+"hazardCurves_"+probLevel+".dat";
+		
+		FileOutputStream oOutFIS = new FileOutputStream(outfile);
+        BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
+        BufferedWriter oWriter = new BufferedWriter(new OutputStreamWriter(oOutBIS));
+       
+        // first line contains ground motion values
+		// loop over ground motion values
+        oWriter.write(String.format("%8s %8s "," "," "));
+		for(int igmv=0;igmv<fractile.getGmLevels().size();igmv++){
+			double gmv = fractile.getGmLevels().get(igmv);
+			gmv = Math.exp(gmv);
+			oWriter.write(String.format("%7.4e ",gmv));
+		}
+		oWriter.write("\n");
+		
+        // loop over grid points
+		for(int igp=0;igp<fractile.getNodesNumber();igp++){
+			
+			double lat = fractile.getGridNode().get(igp).getLocation().getLatitude();
+			double lon = fractile.getGridNode().get(igp).getLocation().getLongitude();
+			oWriter.write(String.format("%+8.4f %+7.4f ",lon,lat));
+			
+				// loop over ground motion values
+				for(int igmv=0;igmv<fractile.getGmLevels().size();igmv++){
+					double probEx = fractile.getProbExceedanceList(igp)[igmv];
+					oWriter.write(String.format("%7.4e ",probEx));
+				}
+				oWriter.write("\n");
+		}
+        oWriter.close();
+        oOutBIS.close();
+        oOutFIS.close();
+		
+	}
 	
 }
