@@ -3,10 +3,8 @@
 
 import os
 import unittest
-
 from opengem import region
 from opengem.parser import parser_exposure_portfolio
-from opengem.parser import parser_vulnerability_model
 
 TEST_FILE = 'ExposurePortfolioFile-test.xml'
 
