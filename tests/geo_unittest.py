@@ -5,6 +5,7 @@ import unittest
 import tempfile
 
 from opengem import region
+from opengem import grid
 
 
 POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000, 100.0000000000000000 100.0000000000000000, 100.0000000000000000 10.0000000000000000, 10.0000000000000000 10.0000000000000000, 10.0000000000000000 100.0000000000000000))'
@@ -21,6 +22,22 @@ OUTSIDE = [(50, 9),
            (101, 50),
            (50, 101),
            (101, 101)]
+
+class SiteTestCase(unittest.TestCase):
+    
+    def test_sites_can_be_keys(self):
+        """ Site objects can be dictionary keys,
+        So must hash reliably."""
+        lat = 10.5
+        lon = -49.5
+        first_site = grid.Site(lon, lat)
+        second_site = grid.Site(lon, lat)
+        sites = {}
+        sites[first_site] = "one"
+        sites[second_site] = "two"
+        self.assertEqual(first_site, second_site)
+        self.assertEqual(sites[first_site], "one")
+        self.assertEqual(sites[second_site], "two")
 
 
 class RegionTestCase(unittest.TestCase):
