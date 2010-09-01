@@ -7,6 +7,9 @@ import tempfile
 from opengem import region
 from opengem import grid
 
+from opengem import flags
+FLAGS = flags.FLAGS
+
 
 POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000, 100.0000000000000000 100.0000000000000000, 100.0000000000000000 10.0000000000000000, 10.0000000000000000 10.0000000000000000, 10.0000000000000000 100.0000000000000000))'
 
@@ -45,7 +48,19 @@ class SiteTestCase(unittest.TestCase):
         first_site = grid.Site(lon, lat)
         self.assertEqual(first_site.latitude, lat)
         self.assertEqual(first_site.longitude, lon)
-
+    
+    def test_site_precision_matters(self):
+        FLAGS.distance_precision = 11
+        lat = 10.5
+        lon = -49.5
+        first_site = grid.Site(lon, lat)
+        lat += 0.0000001
+        lon += 0.0000001
+        second_site = grid.Site(lon, lat) 
+        self.assertEqual(first_site, second_site)
+        FLAGS.distance_precision = 12
+        self.assertNotEqual(first_site, second_site)
+    
 
 class RegionTestCase(unittest.TestCase):
     def _check_match(self, constraint):

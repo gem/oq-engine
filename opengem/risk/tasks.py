@@ -40,22 +40,21 @@ def main():
     vulnerability_curves['stone'] = ([0.2, 0.21, 0.41, 0.94, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
     vulnerability_curves['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
     
-
-    
     # Since we've got hazard curves, let's do probabilistic assessment
-    probabalistic_engine = engines.ProbabalisticLossRatioCalculator(hazard_curves, vulnerability_curves)
+    ratio_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, vulnerability_curves)
     
-    # exposure_portfolio = {}
+    exposure_portfolio = {}
     # # Pretend there are only two cities in this country
-    # exposure_portfolio[grid.Site(-175.2, 49.0)] = (200000, 'New York')
-    # exposure_portfolio[grid.Site(65.2, 55.0)] = (400000, 'London')
-    # loss_engine = engines.LossCalculator(exposure_portfolio)
+    exposure_portfolio[grid.Site(-175.2, 49.0)] = (200000, 'New York')
+    exposure_portfolio[grid.Site(65.2, 55.0)] = (400000, 'London')
+    loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
     # 
     # TODO(jmc): Load this from a portfolio file
     
     sites_of_interest = {}
     assets = {}
-    results = {}
+    ratio_results = {}
+    loss_results = {}
     
     for lon in range(10.0, 50.0):
         for lat in range(-60.0, -30.0):
@@ -67,13 +66,12 @@ def main():
     for site in sites_of_interest:
         # TODO(jmc): Spawn a task for each larger region, eg
         # Make smaller sets of sites and batch them off
-        results[site] = probabalistic_engine.compute(site)
-    
+        ratio_results[site] = ratio_engine.compute(site)
+        loss_results[site] = loss_engine.compute(site, ratio_results[site])
     
     # TODO(jmc): Pick output generator from config or cli flags
     output_generator = output.SimpleOutput()
-    
-    return output_generator.serialize(results)
+    return output_generator.serialize(loss_results)
 
 
 if __name__ == "__main__":

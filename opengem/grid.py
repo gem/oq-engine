@@ -10,7 +10,7 @@ from shapely import wkt
 import flags
 import geohash
 
-flags.DEFINE_integer('distance_precision', 6, "Points within this precision will be considered the same point")
+flags.DEFINE_integer('distance_precision', 12, "Points within this geohash precision will be considered the same point")
 FLAGS = flags.FLAGS
 
 Point = geometry.Point
@@ -80,7 +80,7 @@ class Site(geometry.Point):
         return self.hash()
         
     def __str__(self):
-        return self.hash()
+        return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
 
 class Sites(object):
