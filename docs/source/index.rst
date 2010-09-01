@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
    
    architecture
+   output
 
 Indices and tables
 ==================
