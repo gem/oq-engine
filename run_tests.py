@@ -27,6 +27,7 @@ from tests.parser_shaml_output_unittest import *
 from tests.parser_vulnerability_model_unittest import *
 from tests.producer_unittest import *
 from tests.region_unittest import *
+from tests.xml_speedtests import *
 
 
 if __name__ == '__main__':
