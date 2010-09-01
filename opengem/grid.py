@@ -78,9 +78,14 @@ class Site(geometry.Point):
     
     def __repr__(self):
         return self.hash()
+        
+    def __str__(self):
+        return self.hash()
 
 
 class Sites(object):
     """A collection of Site objects"""
     def __init__(self):
         pass
+    
+    

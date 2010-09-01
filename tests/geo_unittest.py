@@ -39,6 +39,13 @@ class SiteTestCase(unittest.TestCase):
         self.assertEqual(sites[first_site], "one")
         self.assertEqual(sites[second_site], "two")
 
+    def test_sites_have_geo_accessors(self):    
+        lat = 10.5
+        lon = -49.5
+        first_site = grid.Site(lon, lat)
+        self.assertEqual(first_site.latitude, lat)
+        self.assertEqual(first_site.longitude, lon)
+
 
 class RegionTestCase(unittest.TestCase):
     def _check_match(self, constraint):
