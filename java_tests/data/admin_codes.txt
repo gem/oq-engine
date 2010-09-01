@@ -1,0 +1,246 @@
+[AdminCode][VulCode][RegionName]
+004	AF	Afghanistan
+008	G12	Albania
+012	DZ	Algeria
+016	G07	American Samoa
+020	G13	Andorra
+024	G08	Angola
+660	G05	Anguilla
+010	G07	Antarctica
+028	G05	Antigua And Barbuda
+032	G17	Argentina
+051	G14	Armenia
+533	G05	Aruba
+036	G18	Australia
+040	G13	Austria
+031	G14	Azerbaijan
+044	G05	Bahamas
+048	G04	Bahrain
+050	G03	Bangladesh
+052	G05	Barbados
+112	G14	Belarus
+056	G13	Belgium
+084	G05	Belize
+204	G08	Benin
+060	G07	Bermuda
+064	G03	Bhutan
+068	G19	Bolivia
+070	G12	Bosnia and Herzegovina
+072	G08	Botswana
+074	G13	Bouvet
+076	G19	Brazil
+086	G07	British Indian Ocean Territory
+092	G05	British Virgin Islands
+096	G02	Brunei
+100	G12	Bulgaria
+854	G08	Burkina Faso
+104	G03	Burma
+108	G08	Burundi
+116	G07	Cambodia
+120	G08	Cameroon
+124	G18	Canada
+132	G13	Cape Verde
+136	G05	Cayman Islands
+140	G08	Central African Republic
+148	G08	Chad
+152	CL	Chile
+156	CN	China
+162	G07	Christmas Island
+166	G07	Cocos (Keeling) Island
+170	CO	Colombia
+174	G07	Comoros
+180	G08	Congo,  Democratic Republic of the
+178	G08	Congo,  Republic of the
+184	G07	Cook Islands
+188	CR	Costa Rica
+384	G08	Cote D'Ivoire
+191	G12	Croatia
+192	G05	Cuba
+196	G04	Cyprus
+203	G12	Czech Republic
+208	G13	Denmark
+262	G08	Djibouti
+212	G05	Dominica
+214	G15	Dominican Republic
+626	G07	East Timor
+218	EC	Ecuador
+818	G10	Egypt
+222	SV	El Salvador
+226	G08	Equatorial Guinea
+232	G08	Eritrea
+233	G14	Estonia
+231	G08	Ethiopia
+238	G13	Falkland Islands
+234	G13	Faroe Island
+242	G07	Fiji
+246	G13	Finland
+250	G13	France
+254	G19	French Guiana
+258	G07	French Polynesia
+260	G07	French Southern and Antarctic
+266	G08	Gabon
+268	GE	Georgia
+276	G13	Germany
+288	G08	Ghana
+292	G13	Gibraltar
+300	GR	Greece
+304	G13	Greenland
+308	G05	Grenada
+312	G15	Guadeloupe
+316	G07	Guam
+320	GT	Guatemala
+831	G13	Guernsey
+324	G08	Guinea
+624	G08	Guinea-Bissau
+328	G19	Guyana
+332	G05	Haiti
+334	G07	Heard and McDonald Islands
+336	G06	Holy See
+340	G05	Honduras
+344	G09	Hong Kong
+348	G12	Hungary
+352	G13	Iceland
+356	IN	India
+360	ID	Indonesia
+364	IR	Iran
+368	G01	Iraq
+372	G13	Ireland
+833	G13	Isle of Man
+376	G04	Israel
+380	IT	Italy
+388	G15	Jamaica
+392	JP	Japan
+832	G13	Jersey
+400	G04	Jordan
+398	G11	Kazakhstan
+404	G08	Kenya
+296	G07	Kiribati
+414	G04	Kuwait
+417	G11	Kyrgyzstan
+418	G07	Laos
+428	G14	Latvia
+422	G04	Lebanon
+426	G08	Lesotho
+430	G08	Liberia
+434	G04	Libya
+438	G13	Liechtenstein
+440	G14	Lithuania
+442	G13	Luxembourg
+446	G02	Macau
+807	G12	Macedonia
+450	G08	Madagascar
+454	G08	Malawi
+458	G09	Malaysia
+462	G07	Maldives
+466	G08	Mali
+470	G06	Malta
+584	G07	Marshall Islands
+474	G05	Martinique
+478	G08	Mauritania
+480	G07	Mauritius
+175	G07	Mayotte
+484	MX	Mexico
+583	G07	Micronesia,  Federate States of
+498	G12	Moldova
+492	G13	Monaco
+496	G02	Mongolia
+499	G12	Montenegro
+500	G05	Montserrat
+504	MA	Morocco
+508	G08	Mozambique
+516	G08	Namibia
+520	G07	Nauru
+524	G03	Nepal
+528	G13	Netherlands
+530	G05	Netherlands Antilles
+540	G07	New Caledonia
+554	G16	New Zealand
+558	G05	Nicaragua
+562	G08	Niger
+566	G08	Nigeria
+570	G07	Niue
+574	G07	Norfolk Island
+408	G02	North Korea
+580	G07	Northern Mariana Islands
+578	G13	Norway
+512	G04	Oman
+586	PK	Pakistan
+585	G07	Palau
+591	G21	Panama
+598	G07	Papua New Guinea
+600	G19	Paraguay
+604	PE	Peru
+608	PH	Philippines
+612	G07	Pitcairn Islands
+616	G13	Poland
+620	PT	Portugal
+630	G05	Puerto Rico
+634	G04	Qatar
+638	G07	Reunion
+642	RO	Romania
+643	G14	Russia
+646	G08	Rwanda
+654	G13	Saint Helena
+659	G05	Saint Kitts And Nevis
+662	G05	Saint Lucia
+882	G07	Samoa
+674	G06	San Marino
+678	G08	Sao Tome and Principe
+682	G04	Saudi Arabia
+686	G08	Senegal
+688	G12	Serbia
+690	G07	Seychelles
+694	G08	Sierra Leone
+702	G09	Singapore
+703	G12	Slovakia
+705	G12	Slovenia
+090	G07	Solomon Islands
+706	G08	Somalia
+710	G08	South Africa
+239	G13	South Georgia and South Sandwich Islands
+410	G02	South Korea
+724	G13	Spain
+598	G07	Spratly Islands
+144	G03	Sri Lanka
+666	G18	St. Pierre and Miquelon
+670	G05	St. Vincent and the Grenadines
+736	G08	Sudan
+740	G19	Suriname
+744	G13	Svalbard
+748	G08	Swaziland
+752	G13	Sweden
+756	G13	Switzerland
+760	G04	Syria
+158	TW	Taiwan
+762	G11	Tajikistan
+834	G08	Tanzania
+764	G09	Thailand
+270	G08	The Gambia
+768	G08	Togo
+772	G07	Tokelau
+776	G07	Tonga
+780	G05	Trinidad and Tobago
+788	G10	Tunisia
+792	TR	Turkey
+795	G11	Turkmenistan
+796	G05	Turks & Caicos Islands
+798	G07	Tuvalu
+800	G08	Uganda
+804	G14	Ukraine
+784	G04	United Arab Emirate
+826	G13	United Kingdom
+840	G18	United States
+858	G19	Uruguay
+860	G11	Uzbekistan
+548	G07	Vanuatu
+862	G20	Venezuela
+704	G07	Vietnam
+850	G05	Virgin Islands
+876	G07	Wallis And Futuna
+275	G04	West Bank and Gaza
+732	G10	Western Sahara
+887	G08	Yemen
+894	G08	Zambia
+716	G08	Zimbabwe
+999	XF	California
+891	G12	Yugoslavia

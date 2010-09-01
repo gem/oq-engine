@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,13 +21,26 @@ Usage Examples:
     # to run all the tests
     python run_tests.py
 
+    # to run a specific test suite imported here
+    python run_tests.py ExampleTestCase
+
+    # to run a specific test imported here
+    python run_tests.py ExampleTestCase.testBasic
 
 """
-import __main__
-import sys
-import unittest
 
-from tests import *
+import unittest
+import sys
+
+from tests.computation_unittest import *
+from tests.example_unittest import *
+from tests.flags_unittest import *
+from tests.parser_exposure_portfolio_unittest import *
+from tests.parser_shaml_output_unittest import *
+from tests.parser_vulnerability_model_unittest import *
+from tests.producer_unittest import *
+from tests.region_unittest import *
+
 
 if __name__ == '__main__':
-    unittest.main()
+  unittest.main()

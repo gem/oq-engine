@@ -1,5 +1,10 @@
 *.pyc
 *.DS_Store
 local_settings.py
-build/*
+docs/build/**/*
+build/**/*
 build-stamp
+dist/**/*
+tests/data/test.tiff
+tests/data/*.fake
+*.tiff
