@@ -134,7 +134,7 @@ class ShamlOutputFile(producer.FileProducer):
             namespaces={'shaml': SHAML_NS, 'gml': GML_NS})
         try:
             coord = map(float, pos_el[0].text.strip().split())
-            return shapes.Point(coord[0], coord[1])
+            return shapes.Site(coord[0], coord[1])
         except Exception:
             error_str = "shaML point coordinate error: %s" % \
                 ( pos_el[0].text )

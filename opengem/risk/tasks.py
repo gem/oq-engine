@@ -10,57 +10,80 @@ Tasks in the risk engine include the following:
 """
 
 import logging
+import os
 import sys
+
+import eventlet
+from eventlet import event
+from eventlet import greenpool
+from eventlet import queue
+
+logging = eventlet.import_patched('logging')
 
 from opengem.risk import engines
 from opengem import output
 from opengem import shapes
+from opengem.parser import exposure
+from opengem.parser import shaml_output
+from opengem.parser import vulnerability
+from opengem import state
+STATE = state.STATE
 
 from opengem import flags
 FLAGS = flags.FLAGS
 
 
+STATE['vulnerability_curves'] = {}
+def ingest_vulnerability(path):
+    # STATE['vulnerability_curves']['brick'] = ([0.2, 0.3, 0.4, 0.9, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    # STATE['vulnerability_curves']['stone'] = ([0.2, 0.21, 0.41, 0.94, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    # STATE['vulnerability_curves']['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
 
+    for data in vulnerability.VulnerabilityModelFile(path):
+        logging.debug('found vulnerability data')
+        STATE['vulnerability_curves'][data['ID']] = data
+    logging.debug('vulnerability done')
+    
 
-def main():
+# TODO(jmc): rather than passing files in here, determine the right parser to 
+# use or create in the binary, and pass in loaded parsers.
+# This will support config setting of cell_size, etc.
+
+def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file):
     """ Typically this will run in daemon mode,
     and these tasks will be spawned from AMQP messages.
     In testing mode, we run directly against a simple set
     of input files."""
-    # Parse the input files, and decide what to do
     
+    # This is our pool of coroutines
+    pool = greenpool.GreenPool()
+    
+    # TODO(JMC): Support portfolio of sites, not just regions
+    region_constraint = shapes.RegionConstraint.from_file(region_file)
+    region_constraint.cell_size = 1.0
+                                                            
     hazard_curves = {}
-    for lon in range(10.0, 50.0, 2):
-        for lat in range(-60.0, -30.0, 5):
-            site = shapes.Site(lon, lat)
-            hazard_curves[site] = ([1.0, 0.9, 0.4, 0.2, 0.0, 0.0], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    
-    vulnerability_curves = {}
-    vulnerability_curves['brick'] = ([0.2, 0.3, 0.4, 0.9, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    vulnerability_curves['stone'] = ([0.2, 0.21, 0.41, 0.94, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    vulnerability_curves['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+    shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
+    for site, hazard_curve in shaml_parser.filter(region_constraint):
+        hazard_curves[site] = hazard_curve
+        
+    ingest_vulnerability(vulnerability_model_file)
     
     # Since we've got hazard curves, let's do probabilistic assessment
-    ratio_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, vulnerability_curves)
+    ratio_engine = engines.ProbabilisticLossRatioCalculator(
+        hazard_curves, STATE['vulnerability_curves'])
     
     exposure_portfolio = {}
-    # # Pretend there are only two cities in this country
-    exposure_portfolio[shapes.Site(-175.2, 49.0)] = (200000, 'New York')
-    exposure_portfolio[shapes.Site(65.2, 55.0)] = (400000, 'London')
+    exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
+    for site, asset in exposure_parser.filter(region_constraint):
+        print "%s: %s" % (site, asset)
+        exposure_portfolio[site] = asset
     loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
-    # 
-    # TODO(jmc): Load this from a portfolio file
     
-    sites_of_interest = {}
     ratio_results = {}
     loss_results = {}
     
-    for lon in range(10.0, 50.0):
-        for lat in range(-60.0, -30.0):
-            site = shapes.Site(lon, lat)
-            sites_of_interest[site] = True # Is this retarded?
-    
-    for site in sites_of_interest:
+    for site in region_constraint:
         # TODO(jmc): Spawn a task for each larger region, eg
         # Make smaller sets of sites and batch them off
         ratio_results[site] = ratio_engine.compute(site)
@@ -70,11 +93,16 @@ def main():
     output_generator = output.SimpleOutput()
     return output_generator.serialize(loss_results)
 
+    
+    # These are the computations we are doing
+    # loss_grid = computation.Grid(pool, cell_factory=loss.LossComputation)
+    # loss_ratio_grid = computation.Grid(
+    #         pool, cell_factory=loss_ratio.LossRatioComputation)
 
-if __name__ == "__main__":
-    ARGS = FLAGS(sys.argv)
-    
-    if FLAGS.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    main()
+    # These are our output formats
+    # TODO(jmc): Make this grid the bounding box of the region
+    # 
+    # image_grid = grid.Grid(ncols=100, nrows=100, 
+    #                 xllcorner=123.25, yllcorner=48.35, cellsize=0.1)
+    # loss_map = geotiff.GeoTiffFile(FLAGS.loss_map, image_grid)
+    # loss_ratio_map = geotiff.GeoTiffFile(FLAGS.loss_ratio_map, image_grid)

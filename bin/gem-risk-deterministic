@@ -1,0 +1,70 @@
+#!/usr/bin/python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+"""Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
+
+Expects to receive:
+    Shakemap (ground motion per grid cell)
+    Exposure (value per grid cell)
+    Vulnerability functions (multiple lists per grid cell)
+    Region of interest
+
+It can receive these either through gflags (current functionality), or
+through a configuration file.
+
+Expects to compute:
+    A grid of loss-ratio curves and store the results in XML
+    A grid of loss curves and store the results in XML 
+    A map of losses at each interval and store the results in GeoTIFF
+
+"""
+
+import os
+import sys
+
+import eventlet
+
+logging = eventlet.import_patched('logging')
+
+# this is a hack so that it is easier to test these scripts,
+# it will add the proper directories to the path so that 
+# this script can be run from a checkout
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                  'opengem')):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+from opengem import computation
+from opengem import flags
+from opengem import grid
+from opengem import region
+from opengem.output import geotiff
+from opengem.parser import exposure
+from opengem.parser import shakemap
+from opengem.parser import vulnerability
+from opengem.risk import loss
+from opengem.risk import loss_ratio
+from opengem.risk import tasks
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
+flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
+flags.DEFINE_string('vulnerability', 'vulnerability.xml',
+                    'vulnerability input')
+flags.DEFINE_string('region', 'region.data', 'region input')
+flags.DEFINE_string('hazard_curves', 'hazard_curves.xml', 
+                    'hazard curves')
+
+flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
+flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
+                    'loss ratio map output')
+
+
+
+if __name__ == '__main__':
+    args = FLAGS(sys.argv)
+    
+    if FLAGS.debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    
+    tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure)

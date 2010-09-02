@@ -26,7 +26,7 @@ The :mod:`parser` Module
     :show-inheritance:
 
 
-.. automodule:: opengem.parser.parser_exposure_portfolio
+.. automodule:: opengem.parser.exposure
     :members:
     :undoc-members:
     :show-inheritance:

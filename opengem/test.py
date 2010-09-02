@@ -49,4 +49,3 @@ def guarantee_file(path, url):
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
-            
