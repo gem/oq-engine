@@ -8,7 +8,7 @@ import os
 import unittest
 from opengem.risk import engines
 from opengem.output import risk as risk_output
-from opengem import grid
+from opengem import shapes
 
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
@@ -21,10 +21,10 @@ class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
     
     def test_site_intersections(self):
-        first_site = grid.Site(10.0, 10.0)
-        second_site = grid.Site(11.0, 11.0)
-        third_site = grid.Site(12.0, 12.0)
-        fourth_site = grid.Site(13.0, 13.0)
+        first_site = shapes.Site(10.0, 10.0)
+        second_site = shapes.Site(11.0, 11.0)
+        third_site = shapes.Site(12.0, 12.0)
+        fourth_site = shapes.Site(13.0, 13.0)
         
         hazard_curves = {}
         hazard_curves[first_site] = ([1.0, 0.0], [1.0, 0.0])
@@ -75,7 +75,7 @@ class RiskOutputTestCase(unittest.TestCase):
     def test_xml_is_valid(self):
         xml_writer = risk_output.RiskXMLWriter(
             os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
-        first_site = grid.Site(10.0, 10.0)
+        first_site = shapes.Site(10.0, 10.0)
         site_attributes = {}
         site_attributes['loss_ratio'] = ([0.0, 0.1, 0.2],[1.0, 0.9, 0.8])
         xml_writer.write(first_site, site_attributes)

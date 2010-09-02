@@ -5,7 +5,7 @@ import unittest
 import tempfile
 
 from opengem import region
-from opengem import grid
+from opengem import shapes
 
 from opengem import flags
 FLAGS = flags.FLAGS
@@ -33,8 +33,8 @@ class SiteTestCase(unittest.TestCase):
         So must hash reliably."""
         lat = 10.5
         lon = -49.5
-        first_site = grid.Site(lon, lat)
-        second_site = grid.Site(lon, lat)
+        first_site = shapes.Site(lon, lat)
+        second_site = shapes.Site(lon, lat)
         sites = {}
         sites[first_site] = "one"
         sites[second_site] = "two"
@@ -45,7 +45,7 @@ class SiteTestCase(unittest.TestCase):
     def test_sites_have_geo_accessors(self):    
         lat = 10.5
         lon = -49.5
-        first_site = grid.Site(lon, lat)
+        first_site = shapes.Site(lon, lat)
         self.assertEqual(first_site.latitude, lat)
         self.assertEqual(first_site.longitude, lon)
     
@@ -53,10 +53,10 @@ class SiteTestCase(unittest.TestCase):
         FLAGS.distance_precision = 11
         lat = 10.5
         lon = -49.5
-        first_site = grid.Site(lon, lat)
+        first_site = shapes.Site(lon, lat)
         lat += 0.0000001
         lon += 0.0000001
-        second_site = grid.Site(lon, lat) 
+        second_site = shapes.Site(lon, lat) 
         self.assertEqual(first_site, second_site)
         FLAGS.distance_precision = 12
         self.assertNotEqual(first_site, second_site)

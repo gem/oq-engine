@@ -1,8 +1,9 @@
 from gflags import *
-from gflags import FLAGS
+from gflags import FLAGS, DEFINE_boolean
 
 DEFINE_boolean('debug', False, 'Turns on debug logging and verbose output')
 
+from gflags import *
 # arguments name definition
 POPULATION_EXPOSURE = 'population-exposure'
 COUNTRIES_EXPOSURE = 'countries-exposure'

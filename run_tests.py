@@ -28,8 +28,14 @@ Usage Examples:
 
 """
 
+import logging
 import unittest
 import sys
+
+from opengem import flags
+FLAGS = flags.FLAGS
+
+flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")
 
 from tests.computation_unittest import *
 from tests.example_unittest import *
@@ -43,4 +49,10 @@ from tests.risk_tests import *
 from tests.probabilistic_scenario_unittest import *
 
 if __name__ == '__main__':
-  unittest.main()
+    sys.argv = FLAGS(sys.argv)  
+    logging.getLogger().setLevel(logging.DEBUG)
+    
+    if FLAGS.speed_tests:
+        from tests.xml_speedtests import *
+    
+    unittest.main()
