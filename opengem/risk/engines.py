@@ -1,7 +1,9 @@
-
+"""
+Top-level managers for computation classes.
+"""
 
 class ProbabilisticLossRatioCalculator(object):
-    """ Computes loss ratio curves based on hazard curves and 
+    """Computes loss ratio curves based on hazard curves and 
     exposure portfolios"""
     
     def __init__(self, hazard_curves, vulnerability_curves):
@@ -14,9 +16,18 @@ class ProbabilisticLossRatioCalculator(object):
         if site not in self.hazard_curves:
             return None
         return ([2.0, 1.0, 0.0], [0.1, 0.2, 0.3])
+    
+    def compute_all(self, sites_of_interest):
+        """Compute ALL the sites (only for testing)"""
+        ratio_results = {}
+        for site in sites_of_interest:
+            ratio_results[site] = self.compute(site)
+        return ratio_results
 
 
 class ProbabilisticLossCalculator(object):
+    """Computes loss curves based on exposure portfolio and
+    loss ratio curves"""
     def __init__(self, exposure_portfolio):
         self.exposure_portfolio = exposure_portfolio
     

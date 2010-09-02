@@ -14,9 +14,7 @@ from lxml import etree
 
 from opengem import producer
 from opengem import region
-
-SHAML_NS='http://shaml.org/xmlns/shaml/0.1'
-GML_NS='http://www.opengis.net/gml'
+from opengem.xml import SHAML_NS, GML_NS
 
 class ShamlOutputFile(producer.FileProducer):
     """ This class parses a shaML output file. The contents of a shaML output

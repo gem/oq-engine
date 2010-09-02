@@ -52,15 +52,12 @@ def main():
     # TODO(jmc): Load this from a portfolio file
     
     sites_of_interest = {}
-    assets = {}
     ratio_results = {}
     loss_results = {}
     
     for lon in range(10.0, 50.0):
         for lat in range(-60.0, -30.0):
-            # Random asset value
             site = grid.Site(lon, lat)
-            assets[site] = 100
             sites_of_interest[site] = True # Is this retarded?
     
     for site in sites_of_interest:

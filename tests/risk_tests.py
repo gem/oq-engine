@@ -4,18 +4,22 @@ specifically file formats.
 
 """
 
+import os
 import unittest
 from opengem.risk import engines
+from opengem.output import risk as risk_output
 from opengem import grid
 
-class RiskBaseTestCase(unittest.TestCase):
+
+LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
+LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
+
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
+
+
+class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
     
-    def test_tests_work(self):
-        """The ultimate bootstrap"""
-        self.assertTrue(True)
-        self.assertFalse(False)
-        
     def test_site_intersections(self):
         first_site = grid.Site(10.0, 10.0)
         second_site = grid.Site(11.0, 11.0)
@@ -59,7 +63,25 @@ class RiskBaseTestCase(unittest.TestCase):
         # No exposure at second site, so no loss results
         self.assertEqual(loss_results[second_site], None)
         self.assertNotEqual(loss_results[fourth_site], None)
+
+
+class RiskOutputTestCase(unittest.TestCase):
+    """Confirm that XML output from risk engine is valid against schema,
+    as well as correct given the inputs."""
+    
+    def setUp(self):
+        pass
+    
+    def test_xml_is_valid(self):
+        xml_writer = risk_output.RiskXMLWriter(
+            os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
+        first_site = grid.Site(10.0, 10.0)
+        site_attributes = {}
+        site_attributes['loss_ratio'] = ([0.0, 0.1, 0.2],[1.0, 0.9, 0.8])
+        xml_writer.write(first_site, site_attributes)
+        xml_writer.close()
         
+        # TODO(jmc): Validate that the contents of this xml file match schema
 
     # 
     # def test_find_test_resources(self):
