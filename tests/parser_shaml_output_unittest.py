@@ -4,7 +4,8 @@
 import os
 import unittest
 
-from opengem import region
+from opengem import shapes
+from opengem import test
 from opengem.parser import shaml_output
 
 FILES_KNOWN_TO_FAIL = ['ShamlOutputFile-fail-missing_required_attribute.xml',
@@ -21,19 +22,17 @@ FILE_FLAVOUR_NOT_IMPLEMENTED = 'ShamlOutputFile-HazardMap-PASS.xml'
 
 TEST_FILE = 'ShamlOutputFile-PASS.xml'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
-
 class ShamlOutputFileTestCase(unittest.TestCase):
 
     def test_shamlfiles_known_to_fail(self):
         for testfile in FILES_KNOWN_TO_FAIL:
-            shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+            shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                               testfile))
 
             self.assertRaises(ValueError, map, None, shaml)
 
     def test_shamlfiles_hazardmap_not_implemented(self):
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
             FILE_FLAVOUR_NOT_IMPLEMENTED))
 
         self.assertRaises(NotImplementedError, map, None, shaml)
@@ -41,9 +40,9 @@ class ShamlOutputFileTestCase(unittest.TestCase):
     def test_filter_region_constraint_known_to_fail(self):
 
         # set region in which no site is found in input file
-        region_constraint = region.RegionConstraint.from_simple((170.0, -80.0),
+        region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         counter = None
@@ -62,12 +61,12 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         # look for sites within specified rectangle
         # constraint is met by one and only one site in the example file 
         # (lon=16.35/lat=48.25)
-        region_constraint = region.RegionConstraint.from_simple((16.0, 49.0),
+        region_constraint = shapes.RegionConstraint.from_simple((16.0, 49.0),
                                                                 (17.0, 48.0))
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
-        expected_result = [(region.Point(16.35, 48.25),
+        expected_result = [(shapes.Point(16.35, 48.25),
                            {'IMT': 'MMI',
                             'IDmodel': 'MMI_3_1',
                             'timeSpanDuration': 50.0,
@@ -106,9 +105,9 @@ class ShamlOutputFileTestCase(unittest.TestCase):
     def test_filter_region_constraint_all_sites(self):
 
         # specified rectangle contains all sites in example file 
-        region_constraint = region.RegionConstraint.from_simple((-20.0, 80.0),
+        region_constraint = shapes.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         expected_result_counter = 10
@@ -145,7 +144,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
             {'IMT': 'PGV', 'IML': [100.0, 200.0, 300.0]}
         ]
 
-        expected_results = [ [(region.Point(2.35, 48.85),
+        expected_results = [ [(shapes.Point(2.35, 48.85),
                                 {'IMT': 'PGA',
                                 'IDmodel': 'PGA_1_1',
                                 'timeSpanDuration': 50.0,
@@ -155,7 +154,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                 'minProb': 0.1,
                                 'Values': [0.1, 0.2, 0.3],
                                 'vs30': 760.0}),
-                              (region.Point(12.45, 41.90),
+                              (shapes.Point(12.45, 41.90),
                                 {'IMT': 'PGA',
                                 'IDmodel': 'PGA_1_1',
                                 'timeSpanDuration': 50.0,
@@ -165,7 +164,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                 'minProb': 0.1,
                                 'Values': [0.1, 0.2, 0.3],
                                 'vs30': 760.0}),
-                              (region.Point(-0.2, 51.45),
+                              (shapes.Point(-0.2, 51.45),
                                 {'IMT': 'PGA',
                                 'IDmodel': 'PGA_1_2',
                                 'timeSpanDuration': 50.0,
@@ -175,7 +174,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                 'minProb': 0.1,
                                 'Values': [0.01, 0.02, 0.03],
                                 'vs30': 760.0}),
-                              (region.Point(13.40, 52.50),
+                              (shapes.Point(13.40, 52.50),
                                 {'IMT': 'PGA',
                                 'IDmodel': 'PGA_1_3',
                                 'timeSpanDuration': 50.0,
@@ -185,7 +184,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                 'minProb': 0.1,
                                 'Values': [0.001, 0.002, 0.003],
                                 'vs30': 760.0})],
-                             [(region.Point(-0.2, 51.45),
+                             [(shapes.Point(-0.2, 51.45),
                                 {'IMT': 'PGA',
                                 'IDmodel': 'PGA_1_2',
                                 'timeSpanDuration': 50.0,
@@ -195,7 +194,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                 'minProb': 0.1,
                                 'Values': [0.01, 0.02, 0.03],
                                 'vs30': 760.0}),
-                              (region.Point(-0.2, 51.45),
+                              (shapes.Point(-0.2, 51.45),
                                 {'IMT': 'PGV',
                                 'IDmodel': 'PGV_1_2',
                                 'timeSpanDuration': 50.0,
@@ -205,7 +204,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                                 'minProb': 0.1,
                                 'Values': [0.01, 0.02, 0.03],
                                 'vs30': 760.0})],
-                             [(region.Point(13.40, 52.50),
+                             [(shapes.Point(13.40, 52.50),
                                 {'IMT': 'PGV',
                                 'IDmodel': 'PGV_2_1',
                                 'timeSpanDuration': 20.0,
@@ -218,14 +217,14 @@ class ShamlOutputFileTestCase(unittest.TestCase):
                            ]
 
         # set a region constraint that inlcudes all points 
-        region_constraint = region.RegionConstraint.from_simple((-20.0, 80.0),
+        region_constraint = shapes.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
         for attr_test_counter, curr_attribute_dict in enumerate(
             test_attribute_dicts):
             attribute_constraint = \
                 shaml_output.ShamlOutputConstraint(curr_attribute_dict)
 
-            shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+            shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                               TEST_FILE))
 
             counter = None

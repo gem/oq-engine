@@ -12,7 +12,7 @@ from opengem.xml import SHAML_NS, GML_NS
 
 SHAML = "{%s}" % SHAML_NS
 GML = "{%s}" % GML_NS
-NSMAP = {None : SHAML_NS} # the default namespace (no prefix)
+NSMAP = {None : SHAML_NS, "gml" : GML_NS}
 
 class RiskXMLWriter(writer.FileWriter):
     def write(self, cell, value):
@@ -24,5 +24,4 @@ class RiskXMLWriter(writer.FileWriter):
             subnode.text = str(val)
         et = lxml.etree.ElementTree(node)
         et.write(self.file)
-        #self.file.write(lxml.etree.tostring(node))
     

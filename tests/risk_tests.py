@@ -11,9 +11,12 @@ import numpy.core.multiarray as ncm
 
 from opengem.risk import engines
 from opengem.output import risk as risk_output
+<<<<<<< HEAD
 from opengem import grid
 from opengem import region
 from opengem.risk import engines
+=======
+>>>>>>> risk-engine-port
 from opengem import shapes
 
 
@@ -28,12 +31,13 @@ class RiskEngineTestCase(unittest.TestCase):
     
     def test_loss_map_generation(self):
         #get grid of columns and rows from region of coordinates
-        
+            #see shapes.py for region, grid, and site
         cellsize = 0.1
         loss_map_region = region.Region.from_coordinates(
             [(10, 100), (100, 100), (100, 10), (10, 10)])
         
         # Fill the region up with loss curve sites
+            #see shapes.py for region, grid, and site
         for site in loss_map_region:
             # TODO(bw): Generate believable data here
             loss_map_region[site] = shapes.Curve([0.0, 0.1, 0.2],[1.0, 0.5, 0.2])
@@ -49,6 +53,31 @@ class RiskEngineTestCase(unittest.TestCase):
                 loss_value = engines.compute_loss(site, interval)
                 losses[col, row] = loss_value
             # TODO(bw): Add asserts that verify the array contents here.
+        
+        self.assertFalse(first_site in ratio_results)
+        self.assertEqual(ratio_results[third_site], None)
+        self.assertNotEqual(ratio_results[second_site], None)
+
+        # No exposure at second site, so no loss results
+        self.assertEqual(loss_results[second_site], None)
+        self.assertNotEqual(loss_results[fourth_site], None)   
+            
+            
+            
+        for site in sites_of_interest:
+              ratio_results[site] = ratio_engine.compute(site)
+              loss_results[site] = loss_engine.compute(site, ratio_results[site])
+
+          self.assertFalse(first_site in ratio_results)
+          self.assertEqual(ratio_results[third_site], None)
+          self.assertNotEqual(ratio_results[second_site], None)
+
+          # No exposure at second site, so no loss results
+          self.assertEqual(loss_results[second_site], None)
+          self.assertNotEqual(loss_results[fourth_site], None)
+          
+          
+          
         
     def test_loss_value_interpolation(self):
         pass
@@ -67,10 +96,10 @@ class RiskEngineTestCase(unittest.TestCase):
         
     
     def test_site_intersections(self):
-        first_site = grid.Site(10.0, 10.0)
-        second_site = grid.Site(11.0, 11.0)
-        third_site = grid.Site(12.0, 12.0)
-        fourth_site = grid.Site(13.0, 13.0)
+        first_site = shapes.Site(10.0, 10.0)
+        second_site = shapes.Site(11.0, 11.0)
+        third_site = shapes.Site(12.0, 12.0)
+        fourth_site = shapes.Site(13.0, 13.0)
         
         hazard_curves = {}
         hazard_curves[first_site] = ([1.0, 0.0], [1.0, 0.0])
@@ -121,7 +150,7 @@ class RiskOutputTestCase(unittest.TestCase):
     def test_xml_is_valid(self):
         xml_writer = risk_output.RiskXMLWriter(
             os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
-        first_site = grid.Site(10.0, 10.0)
+        first_site = shapes.Site(10.0, 10.0)
         site_attributes = {}
         site_attributes['loss_ratio'] = ([0.0, 0.1, 0.2],[1.0, 0.9, 0.8])
         xml_writer.write(first_site, site_attributes)

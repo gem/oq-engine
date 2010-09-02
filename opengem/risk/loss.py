@@ -1,5 +1,9 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-
+"""
+This module will read the loss/loss ratio curves currently stored in the xml 
+format, and compute the loss/loss ratio at each site that corresponds to a 
+certain probability of exceedance
+"""
 from opengem import computation
 
 class LossComputation(computation.Computation):

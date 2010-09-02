@@ -10,10 +10,40 @@ Copyright (c) 2010 __MyCompanyName__. All rights reserved.
 import sys
 import os
 import unittest
-import esri
 import math
 import struct
 
+
+
+class Grid:
+    """ESRIGrid format as per http://en.wikipedia.org/wiki/ESRI_grid"""
+    def __init__(self, rows, columns, no_data_value=9999):
+        self.columns = columns
+        self.rows = rows
+        self.no_data_value = no_data_value
+
+    def is_no_data_value(self, val):
+        return val == self.no_data_value
+        
+    def check_column(self, point):
+        if (self.columns < point.column or point.column < 1):
+            raise Exception("Point is not on the Grid")
+            
+    def check_row(self, point):
+        if (self.rows < point.row or point.row < 1):
+            raise Exception("Point is not on the Grid")
+
+class Point:
+    """Simple (trivial) point class"""
+    def __init__(self, row, column):
+        self.column = column
+        self.row = row
+
+class Site:
+    """Site has lat and long"""
+    def __init__(self, latitude, longitude):
+        self.latitude = latitude
+        self.longitude = longitude
 
 class BaseExposureReader:
     """Base class for reading exposure data from file formats"""
@@ -61,8 +91,8 @@ class ESRIRasterMetadata():
             cell_size = float(header_file.readline().split()[1])
             no_data_value = int(header_file.readline().split()[1])
 
-        lower_left_corner = esri.Site(xllcorner, yllcorner)
-        grid = esri.Grid(rows, columns, no_data_value)
+        lower_left_corner = Site(xllcorner, yllcorner)
+        grid = Grid(rows, columns, no_data_value)
         return cls(cell_size, grid, lower_left_corner)
         
     @classmethod
@@ -78,8 +108,8 @@ class ESRIRasterMetadata():
             columns = int(tokens[0].replace("[", ""))
             cell_size = float(tokens[4].replace("]", ""))
 
-        lower_left_corner = esri.Site(xllcorner, yllcorner)
-        grid = esri.Grid(rows, columns, 0)
+        lower_left_corner = Site(xllcorner, yllcorner)
+        grid = Grid(rows, columns, 0)
         return cls(cell_size, grid, lower_left_corner)
 
     def _latitude_to_row(self, latitude):
@@ -99,7 +129,7 @@ class ESRIRasterMetadata():
         print "%s, %s" % (site.latitude, site.longitude)
         row = self._latitude_to_row(site.latitude)
         column = self._longitude_to_column(site.longitude)
-        result = esri.Point(row, column)
+        result = Point(row, column)
         print "%s, %s" % (row, column)
         self.grid.check_row(result)
         self.grid.check_column(result)

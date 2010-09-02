@@ -4,14 +4,16 @@ import os
 import unittest
 import tempfile
 
-from opengem import region
-from opengem import grid
+from opengem import shapes
 
 from opengem import flags
 FLAGS = flags.FLAGS
 
 
-POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000, 100.0000000000000000 100.0000000000000000, 100.0000000000000000 10.0000000000000000, 10.0000000000000000 10.0000000000000000, 10.0000000000000000 100.0000000000000000))'
+POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000,\
+ 100.0000000000000000 100.0000000000000000, 100.0000000000000000\
+ 10.0000000000000000, 10.0000000000000000 10.0000000000000000,\
+ 10.0000000000000000 100.0000000000000000))'
 
 
 INSIDE = [(50, 50),
@@ -33,8 +35,8 @@ class SiteTestCase(unittest.TestCase):
         So must hash reliably."""
         lat = 10.5
         lon = -49.5
-        first_site = grid.Site(lon, lat)
-        second_site = grid.Site(lon, lat)
+        first_site = shapes.Site(lon, lat)
+        second_site = shapes.Site(lon, lat)
         sites = {}
         sites[first_site] = "one"
         sites[second_site] = "two"
@@ -45,7 +47,7 @@ class SiteTestCase(unittest.TestCase):
     def test_sites_have_geo_accessors(self):    
         lat = 10.5
         lon = -49.5
-        first_site = grid.Site(lon, lat)
+        first_site = shapes.Site(lon, lat)
         self.assertEqual(first_site.latitude, lat)
         self.assertEqual(first_site.longitude, lon)
     
@@ -53,10 +55,10 @@ class SiteTestCase(unittest.TestCase):
         FLAGS.distance_precision = 11
         lat = 10.5
         lon = -49.5
-        first_site = grid.Site(lon, lat)
+        first_site = shapes.Site(lon, lat)
         lat += 0.0000001
         lon += 0.0000001
-        second_site = grid.Site(lon, lat) 
+        second_site = shapes.Site(lon, lat) 
         self.assertEqual(first_site, second_site)
         FLAGS.distance_precision = 12
         self.assertNotEqual(first_site, second_site)
@@ -74,22 +76,26 @@ class RegionTestCase(unittest.TestCase):
 
     def test_from_file(self):
         fd, path = tempfile.mkstemp(suffix='.wkt')
-        f = open(path, 'w')
-        f.write(POLYGON_WKT)
-        f.close()
+        with open(path, 'w') as wkt_file:
+            wkt_file.write(POLYGON_WKT)
         
         try:
-            constraint = region.RegionConstraint.from_file(path)
+            constraint = shapes.RegionConstraint.from_file(path)
             self._check_match(constraint)
         finally:
             os.unlink(path)
 
     def test_from_coordinates(self):
-        constraint = region.RegionConstraint.from_coordinates(
-                [(10, 100), (100, 100), (100, 10), (10, 10)])
+        constraint = shapes.RegionConstraint.from_coordinates(
+                [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
         self._check_match(constraint)
 
     def test_from_simple(self):
-        constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
+        constraint = shapes.RegionConstraint.from_simple(
+            (10.0, 10.0), (100.0, 100.0))
         self._check_match(constraint)
+        
+    def test_bounding_box(self):
+        switzerland = shapes.Region.from_coordinates(
+            [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
 
