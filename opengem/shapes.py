@@ -23,6 +23,7 @@ class Region(object):
     """A container of polygons, used for bounds checking"""
     def __init__(self, polygon):
         self.polygon = polygon
+        self.cell_size = 0.1
         # TODO(JMC): Make this a multipolygon instead?
 
     @classmethod
@@ -76,17 +77,28 @@ class Region(object):
         (_minx, _miny, maxx, maxy) = self.bounds
         return Site(maxy, maxx)
     
-    def grid(self, cell_size):
+    @property
+    def grid(self):
         """Returns a proxy interface that maps lat/lon 
         to col/row based on a specific cellsize. Proxy is
         also iterable."""
-        return Grid(self, cell_size)
+        if not self.cell_size:
+            raise Exception("Can't generate grid without cell_size being set")
+        return Grid(self, self.cell_size)
+    
+    def __iter__(self):    
+        if not self.cell_size:
+            raise Exception("Can't generate grid without cell_size being set")
+        for gridpoint in self.grid:
+            yield gridpoint.site
 
 
 class RegionConstraint(Region):
     """Extends a basic region to work as a constraint on parsers"""
     def match(self, point):
         """Point (specified by Point class or tuple) is contained?"""
+        if isinstance(point, Site):
+            point = point.point
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
         return self.polygon.contains(point)
@@ -94,9 +106,14 @@ class RegionConstraint(Region):
 
 class GridPoint(object):
     """Simple (trivial) point class"""
-    def __init__(self, column, row):
+    def __init__(self, grid, column, row):
         self.column = column
         self.row = row
+        self.grid = grid
+    
+    @property
+    def site(self):
+        return self.grid.site_at(self)
 
 
 class Grid(object):
@@ -111,6 +128,7 @@ class Grid(object):
                     self.region.upper_right_corner.longitude)
         self.rows = self._latitude_to_row(
                     self.region.upper_right_corner.latitude)
+        print "Grid with %s rows and %s columns" % (self.rows, self.columns)
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
@@ -119,29 +137,51 @@ class Grid(object):
             raise Exception("Point is not on the Grid")
         # TODO(JMC): Confirm that we always want to test this...
     
+    def check_point(self, gridpoint):
+        """Confirm that the point is contained by the region"""
+        point = Point(self._column_to_longitude(gridpoint.column),
+                             self._row_to_latitude(gridpoint.row))
+        # print "Checking point at %s" % point
+        if not (self.region.polygon.contains(point)):
+            raise Exception("Point is not on the Grid")
+    
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
         print "lat offset = %s" % latitude_offset
-        return int(self.rows - (latitude_offset / self.cell_size)) + 1
+        return int((latitude_offset / self.cell_size)) + 1
+
+    def _row_to_latitude(self, row):
+        return self.lower_left_corner.latitude + ((row-1) * self.cell_size)
 
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
         print "long offset = %s" % longitude_offset
         return int((longitude_offset / self.cell_size) + 1)
+    
+    def _column_to_longitude(self, column):
+        return self.lower_left_corner.longitude + ((column-1) * self.cell_size)
 
     def point_at(self, site):
         """Translates a site into a matrix bidimensional point."""
         self.check_site(site)
         row = self._latitude_to_row(site.latitude)
         column = self._longitude_to_column(site.longitude)
-        return GridPoint(column, row)
+        return GridPoint(self, column, row)
     
+    def site_at(self, gridpoint):    
+        return Site(self._column_to_longitude(gridpoint.column),
+                             self._row_to_latitude(gridpoint.row))
     def __iter__(self):
         for row in range(1, self.rows):
             for col in range(1, self.columns):
-                yield GridPoint(col, row)
+                try:
+                    point = GridPoint(self, col, row)
+                    self.check_point(point)
+                    yield point
+                except Exception, e:
+                    pass
 
 
 class Site(object):

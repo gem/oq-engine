@@ -4,7 +4,7 @@
 import os
 import unittest
 from opengem import shapes
-from opengem.parser import parser_exposure_portfolio
+from opengem.parser import exposure
 
 TEST_FILE = 'ExposurePortfolioFile-test.xml'
 
@@ -17,7 +17,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         # set region in which no site is found in input file
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
-        ep = parser_exposure_portfolio.ExposurePortfolioFile(
+        ep = exposure.ExposurePortfolioFile(
             os.path.join(data_dir, TEST_FILE))
 
         ctr = None
@@ -39,7 +39,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         # 9.15333 45.12200
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.15332, 45.12201), (9.15334, 45.12199))
-        ep = parser_exposure_portfolio.ExposurePortfolioFile(
+        ep = exposure.ExposurePortfolioFile(
             os.path.join(data_dir, TEST_FILE))
 
         expected_result = [
@@ -83,7 +83,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         # specified rectangle contains all sites in example file 
         region_constraint = shapes.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
-        ep = parser_exposure_portfolio.ExposurePortfolioFile(
+        ep = exposure.ExposurePortfolioFile(
             os.path.join(data_dir, TEST_FILE))
 
         expected_result_ctr = 6

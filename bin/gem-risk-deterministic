@@ -9,18 +9,20 @@ Expects to receive:
     Vulnerability functions (multiple lists per grid cell)
     Region of interest
 
+It can receive these either through gflags (current functionality), or
+through a configuration file.
+
 Expects to compute:
-    A loss ratio map and store the results in GeoTIFF
-    A loss map and store the results in GeoTIFF
+    A grid of loss-ratio curves and store the results in XML
+    A grid of loss curves and store the results in XML 
+    A map of losses at each interval and store the results in GeoTIFF
+
 """
 
 import os
 import sys
 
 import eventlet
-from eventlet import event
-from eventlet import greenpool
-from eventlet import queue
 
 logging = eventlet.import_patched('logging')
 
@@ -41,122 +43,28 @@ from opengem.parser import shakemap
 from opengem.parser import vulnerability
 from opengem.risk import loss
 from opengem.risk import loss_ratio
+from opengem.risk import tasks
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
-flags.DEFINE_string('exposure', 'exposure.data', 'exposure input')
-flags.DEFINE_string('vulnerability', 'vulnerability.data',
+flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
+flags.DEFINE_string('vulnerability', 'vulnerability.xml',
                     'vulnerability input')
 flags.DEFINE_string('region', 'region.data', 'region input')
+flags.DEFINE_string('hazard_curves', 'hazard_curves.xml', 
+                    'hazard curves')
 
 flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
 flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
                     'loss ratio map output')
-flags.DEFINE_boolean('debug', False, 'whether to show debug output')
+
+
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
     
     if FLAGS.debug:
         logging.getLogger().setLevel(logging.DEBUG)
-
-    # This is our pool of coroutines
-    pool = greenpool.GreenPool()
-
-    # Region contstraints are loaded all at once
-    region_constraint = region.RegionConstraint.from_file(FLAGS.region)
     
-    # Files will be iterated through
-    shakemap_parser = shakemap.ShakemapFile(FLAGS.shakemap)
-    exposure_parser = exposure.ExposureFile(FLAGS.exposure)
-    vulnerability_parser = vulnerability.VulnerabilityFile(FLAGS.vulnerability)
-    
-    # These are the computations we are doing
-    loss_grid = computation.Grid(pool, cell_factory=loss.LossComputation)
-    loss_ratio_grid = computation.Grid(
-            pool, cell_factory=loss_ratio.LossRatioComputation)
-
-    # These are our output formats
-    # TODO(jmc): Make this grid the bounding box of the region
-    
-    image_grid = grid.Grid(ncols=100, nrows=100, 
-                    xllcorner=123.25, yllcorner=48.35, cellsize=0.1)
-    loss_map = geotiff.GeoTiffFile(FLAGS.loss_map, image_grid)
-    loss_ratio_map = geotiff.GeoTiffFile(FLAGS.loss_ratio_map, image_grid)
-
-    def consume_shakemap():
-        for cell, data in shakemap_parser.filter(region_constraint):
-            data = float(data)
-            logging.debug('found shakemap data')
-            loss_grid.cell(cell).receive('shakemap', data)
-            loss_ratio_grid.cell(cell).receive('shakemap', data)
-        logging.debug('shakemap done')
-
-    def consume_exposure():
-        for cell, data in exposure_parser.filter(region_constraint):
-            data = float(data)
-            logging.debug('found exposure data')
-            loss_grid.cell(cell).receive('exposure', data)
-            loss_ratio_grid.cell(cell).receive('exposure', data)
-        logging.debug('exposure done')
-
-    def consume_vulnerability():
-        for cell, data in vulnerability_parser.filter(region_constraint):
-            data = float(data)
-            logging.debug('found vulnerability data')
-            loss_grid.cell(cell).receive('vulnerability', data)
-            loss_ratio_grid.cell(cell).receive('vulnerability', data)
-        logging.debug('vulnerability done')
-
-    def consume_loss_results():
-        while (not shakemap_parser.finished.ready()
-               and not exposure_parser.finished.ready()
-               and not vulnerability_parser.finished.ready()):
-            for cell, value in loss_grid.results():
-                logging.debug('consume loss results')
-                loss_map.write(cell, value)
-            eventlet.sleep(0)
-
-        logging.debug('consume loss results done')
-        loss_map.close()
-
-    def consume_loss_ratio_results():
-        while (not shakemap_parser.finished.ready()
-               and not exposure_parser.finished.ready()
-               and not vulnerability_parser.finished.ready()):
-            for cell, value in loss_ratio_grid.results():
-                logging.debug('consume loss ratio results')
-                loss_ratio_map.write(cell, value)
-            eventlet.sleep(0)
-
-        logging.debug('consume loss ratio results done')
-        loss_ratio_map.close()
-    
-    # These will all be run in their own coroutines
-    # The flow will be: 
-    #
-    #   As information for cells that match the region constraint are parsed
-    #   from the files it will be given to the computations being held by the
-    #   grid.
-    #
-    #   As computations receive enough information to execute they will begin
-    #   to provide results.
-    #   
-    #   As results become available the output handlers will begin writing
-    #   the output. 
-    #
-    #   Once all the files have been parsed and all the results have been
-    #   have been processed, the script will end.
-    
-    pool.spawn(consume_shakemap)
-    pool.spawn(consume_exposure)
-    pool.spawn(consume_vulnerability)
-    pool.spawn(consume_loss_results)
-    pool.spawn(consume_loss_ratio_results)
-    
-    try:
-        pool.waitall()
-    except KeyboardInterrupt:
-        logging.error('still running: %d', pool.running())
-        raise
+    tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure)
