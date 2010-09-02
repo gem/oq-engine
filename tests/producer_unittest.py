@@ -9,7 +9,7 @@ from eventlet import greenpool
 from eventlet import timeout
 
 from opengem import producer
-from opengem import region
+from opengem import shapes
 from opengem import test
 
 
@@ -47,7 +47,7 @@ class FileProducerTestCase(unittest.TestCase):
             self.assertEqual(data, 'test%s' % int(cell_x))
 
     def test_filter(self):
-        constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
+        constraint = shapes.RegionConstraint.from_simple((10, 10), (100, 100))
 
         path = self._make_data_file('test')
         prod = test.WordProducer(path)
