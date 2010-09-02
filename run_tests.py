@@ -16,8 +16,8 @@ Usage Examples:
 
 """
 
-import unittest
 import sys
+import unittest
 
 from opengem import flags
 FLAGS = flags.FLAGS
