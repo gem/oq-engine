@@ -1,5 +1,5 @@
 from gflags import *
-from gflags import FLAGS, DEFINE_boolean
+from gflags import FLAGS, DEFINE_boolean, DEFINE_integer
 
 DEFINE_boolean('debug', False, 'Turns on debug logging and verbose output')
 

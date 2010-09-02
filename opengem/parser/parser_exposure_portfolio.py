@@ -4,7 +4,7 @@
 from lxml import etree
 
 from opengem import producer
-from opengem import region
+from opengem import shapes
 
 
 # do not use namespace for now
@@ -65,7 +65,7 @@ class ExposurePortfolioFile(producer.FileProducer):
         try:
             lon = float(element.get('Longitude').strip())
             lat = float(element.get('Latitude').strip())
-            return region.Point(lon, lat)
+            return shapes.Point(lon, lat)
         except Exception:
             error_str = "element AssetInstance: no valid lon/lat coordinates"
             raise ValueError(error_str)

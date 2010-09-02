@@ -4,7 +4,6 @@ import os
 import unittest
 import tempfile
 
-from opengem import region
 from opengem import shapes
 
 from opengem import flags
@@ -79,21 +78,21 @@ class RegionTestCase(unittest.TestCase):
         f.close()
         
         try:
-            constraint = region.RegionConstraint.from_file(path)
+            constraint = shapes.RegionConstraint.from_file(path)
             self._check_match(constraint)
         finally:
             os.unlink(path)
 
     def test_from_coordinates(self):
-        constraint = region.RegionConstraint.from_coordinates(
+        constraint = shapes.RegionConstraint.from_coordinates(
                 [(10, 100), (100, 100), (100, 10), (10, 10)])
         self._check_match(constraint)
 
     def test_from_simple(self):
-        constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
+        constraint = shapes.RegionConstraint.from_simple((10, 10), (100, 100))
         self._check_match(constraint)
         
     def test_bounding_box(self):
-        switzerland = region.Region.from_coordinates(
+        switzerland = shapes.Region.from_coordinates(
             [(10, 100), (100, 100), (100, 10), (10, 10)])
 
