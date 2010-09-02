@@ -5,6 +5,7 @@ import os
 import unittest
 
 from opengem import region
+from opengem import test
 from opengem.parser import shaml_output
 
 FILES_KNOWN_TO_FAIL = ['ShamlOutputFile-fail-missing_required_attribute.xml',
@@ -21,19 +22,17 @@ FILE_FLAVOUR_NOT_IMPLEMENTED = 'ShamlOutputFile-HazardMap-PASS.xml'
 
 TEST_FILE = 'ShamlOutputFile-PASS.xml'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
-
 class ShamlOutputFileTestCase(unittest.TestCase):
 
     def test_shamlfiles_known_to_fail(self):
         for testfile in FILES_KNOWN_TO_FAIL:
-            shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+            shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                               testfile))
 
             self.assertRaises(ValueError, map, None, shaml)
 
     def test_shamlfiles_hazardmap_not_implemented(self):
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
             FILE_FLAVOUR_NOT_IMPLEMENTED))
 
         self.assertRaises(NotImplementedError, map, None, shaml)
@@ -43,7 +42,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         # set region in which no site is found in input file
         region_constraint = region.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         counter = None
@@ -64,7 +63,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         # (lon=16.35/lat=48.25)
         region_constraint = region.RegionConstraint.from_simple((16.0, 49.0),
                                                                 (17.0, 48.0))
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         expected_result = [(region.Point(16.35, 48.25),
@@ -108,7 +107,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         # specified rectangle contains all sites in example file 
         region_constraint = region.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
-        shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+        shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         expected_result_counter = 10
@@ -225,7 +224,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
             attribute_constraint = \
                 shaml_output.ShamlOutputConstraint(curr_attribute_dict)
 
-            shaml = shaml_output.ShamlOutputFile(os.path.join(data_dir, 
+            shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                               TEST_FILE))
 
             counter = None
