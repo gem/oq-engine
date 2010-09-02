@@ -65,7 +65,7 @@ class ExposurePortfolioFile(producer.FileProducer):
         try:
             lon = float(element.get('Longitude').strip())
             lat = float(element.get('Latitude').strip())
-            return shapes.Point(lon, lat)
+            return shapes.Site(lon, lat)
         except Exception:
             error_str = "element AssetInstance: no valid lon/lat coordinates"
             raise ValueError(error_str)
