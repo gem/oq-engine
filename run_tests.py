@@ -24,10 +24,12 @@ FLAGS = flags.FLAGS
 
 from tests.computation_unittest import *
 from tests.example_unittest import *
+from tests.flags_unittest import *
+from tests.parser_exposure_portfolio_unittest import *
 from tests.parser_shaml_output_unittest import *
+from tests.parser_vulnerability_model_unittest import *
 from tests.producer_unittest import *
 from tests.region_unittest import *
-from tests.flags_unittest import *
 from tests.xml_speedtests import *
 
 if __name__ == '__main__':

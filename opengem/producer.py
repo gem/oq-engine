@@ -34,4 +34,6 @@ class FileProducer(object):
         Should return a (cell, data) tuple.
         
         """
+
         raise NotImplementedError
+
