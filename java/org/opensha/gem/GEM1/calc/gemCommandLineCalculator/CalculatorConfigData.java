@@ -141,12 +141,19 @@ public class CalculatorConfigData {
         StringTokenizer st = null;
 		
 		// open file
-		File file = new File(this.getClass().getClassLoader().getResource(configFile).getPath());
+		System.out.println("xxr configFile = " + configFile);
+		try {
+			System.out.println("xxr ClassLoader-Resource-Path = " + this.getClass().getClassLoader().getResource(configFile).getPath());
+		} catch (NullPointerException e) {
+			System.out.println("xxr this.getClass().getClassLoader().getResource(configFile) = " + this.getClass().getClassLoader().getResource(configFile));
+		}
+        File file = new File(configFile);
+		//File file = new File(this.getClass().getClassLoader().getResource(configFile).getPath());
         FileInputStream oFIS = new FileInputStream(file.getPath());
         BufferedInputStream oBIS = new BufferedInputStream(oFIS);
         BufferedReader oReader = new BufferedReader(new InputStreamReader(oBIS));
         
-        // read erf logic tree file
+        // rnead erf logic tree file
         // skip comment lines
         while((sRecord=oReader.readLine()).trim().startsWith(comment)  || sRecord.replaceAll(" ","").isEmpty())
         	continue;
@@ -269,6 +276,10 @@ public class CalculatorConfigData {
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeGridSource = true;
         }
+        // xxr: this case should also be considered (actually only this case):
+        if(Boolean.parseBoolean(sRecord.trim())) {
+        	includeGridSource = true;
+        }
         else{
         	this.includeGridSource = false;
         }
@@ -290,6 +301,10 @@ public class CalculatorConfigData {
         	continue;
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeFaultSource = true;
+        }
+        // xxr: this case should also be considered (actually only this case):
+        if(Boolean.parseBoolean(sRecord.trim())) {
+        	includeFaultSource = true;
         }
         else{
         	this.includeFaultSource = false;
@@ -332,6 +347,10 @@ public class CalculatorConfigData {
         	continue;
         if(sRecord.trim().equalsIgnoreCase("yes")){
         	this.includeSubductionFaultSource = true;
+        }
+        // xxr: this case should also be considered (actually only this case):
+        if(Boolean.parseBoolean(sRecord.trim())) {
+        	includeSubductionFaultSource = true;
         }
         else{
         	this.includeSubductionFaultSource = false;
