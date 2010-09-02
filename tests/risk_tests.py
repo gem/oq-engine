@@ -6,9 +6,15 @@ specifically file formats.
 
 import os
 import unittest
+
+import numpy.core.multiarray as ncm
+
 from opengem.risk import engines
 from opengem.output import risk as risk_output
 from opengem import grid
+from opengem import region
+from opengem.risk import engines
+from opengem import shapes
 
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
@@ -19,6 +25,46 @@ data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
+    
+    def test_loss_map_generation(self):
+        #get grid of columns and rows from region of coordinates
+        
+        cellsize = 0.1
+        loss_map_region = region.Region.from_coordinates(
+            [(10, 100), (100, 100), (100, 10), (10, 10)])
+        
+        # Fill the region up with loss curve sites
+        for site in loss_map_region:
+            # TODO(bw): Generate believable data here
+            loss_map_region[site] = shapes.Curve([0.0, 0.1, 0.2],[1.0, 0.5, 0.2])
+            
+        grid = loss_map_region.grid(cellsize)
+        losses = ncm.zeros((grid.columns, grid.rows))
+        
+        #interpolation intervals are defined as [1%, 2%, 5%, 10%] in 50 years
+        intervals = [0.01, 0.02, 0.05, 0.10]
+        for interval in intervals:
+            for point, site in grid:
+                (col, row) = point
+                loss_value = engines.compute_loss(site, interval)
+                losses[col, row] = loss_value
+            # TODO(bw): Add asserts that verify the array contents here.
+        
+    def test_loss_value_interpolation(self):
+        pass
+    
+    def test_loss_value_interpolation_bounds(self):
+        # for a set of example loss ratio curves and a single invest. interval,
+        interval = 0.01
+        zero_curve = Curve(0.0)
+        huge_curve = Curve(10.0, 10.0)
+        normal_curve = Curve((0.1, 0.2), (0.2, 0.21))
+        loss_curves = [zero_curve, normal_curve, huge_curve]
+        # interpolate the loss value
+        # check that curves of zero produce zero loss (and no error)
+        # check that curves with no point < 5 don't throw an error
+        # check that the loss is the expected value
+        
     
     def test_site_intersections(self):
         first_site = grid.Site(10.0, 10.0)
