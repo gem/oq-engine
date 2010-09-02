@@ -60,6 +60,7 @@ def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file
     
     # TODO(JMC): Support portfolio of sites, not just regions
     region_constraint = shapes.RegionConstraint.from_file(region_file)
+    region_constraint.cell_size = 1.0
                                                             
     hazard_curves = {}
     shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
@@ -69,7 +70,8 @@ def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file
     ingest_vulnerability(vulnerability_model_file)
     
     # Since we've got hazard curves, let's do probabilistic assessment
-    ratio_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, STATE['vulnerability_curves'])
+    ratio_engine = engines.ProbabilisticLossRatioCalculator(
+        hazard_curves, STATE['vulnerability_curves'])
     
     exposure_portfolio = {}
     exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
