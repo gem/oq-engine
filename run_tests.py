@@ -40,7 +40,7 @@ from tests.parser_shaml_output_unittest import *
 from tests.parser_vulnerability_model_unittest import *
 from tests.producer_unittest import *
 from tests.risk_tests import *
-
+from tests.probabilistic_scenario_unittest import *
 
 if __name__ == '__main__':
   unittest.main()
