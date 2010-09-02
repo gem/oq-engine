@@ -14,7 +14,7 @@ import sys
 
 from opengem.risk import engines
 from opengem import output
-from opengem import grid
+from opengem import shapes
 
 from opengem import flags
 FLAGS = flags.FLAGS
@@ -32,7 +32,7 @@ def main():
     hazard_curves = {}
     for lon in range(10.0, 50.0, 2):
         for lat in range(-60.0, -30.0, 5):
-            site = grid.Site(lon, lat)
+            site = shapes.Site(lon, lat)
             hazard_curves[site] = ([1.0, 0.9, 0.4, 0.2, 0.0, 0.0], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
     
     vulnerability_curves = {}
@@ -45,8 +45,8 @@ def main():
     
     exposure_portfolio = {}
     # # Pretend there are only two cities in this country
-    exposure_portfolio[grid.Site(-175.2, 49.0)] = (200000, 'New York')
-    exposure_portfolio[grid.Site(65.2, 55.0)] = (400000, 'London')
+    exposure_portfolio[shapes.Site(-175.2, 49.0)] = (200000, 'New York')
+    exposure_portfolio[shapes.Site(65.2, 55.0)] = (400000, 'London')
     loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
     # 
     # TODO(jmc): Load this from a portfolio file
@@ -57,7 +57,7 @@ def main():
     
     for lon in range(10.0, 50.0):
         for lat in range(-60.0, -30.0):
-            site = grid.Site(lon, lat)
+            site = shapes.Site(lon, lat)
             sites_of_interest[site] = True # Is this retarded?
     
     for site in sites_of_interest:

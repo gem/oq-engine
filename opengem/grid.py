@@ -1,19 +1,4 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-"""
-Collection of base classes for processing 
-spatially-related data."""
-
-
-from shapely import geometry
-from shapely import wkt
-
-import flags
-import geohash
-
-flags.DEFINE_integer('distance_precision', 12, "Points within this geohash precision will be considered the same point")
-FLAGS = flags.FLAGS
-
-Point = geometry.Point
 
 from eventlet import queue
 
@@ -52,40 +37,3 @@ def ComputeGrid(object):
         
         self.pool.spawn(_queue_computation)
         return new_cell
-
-
-class Site(geometry.Point):
-    """Site is a dictionary-keyable point"""
-    def __init__(self, longitude, latitude):
-        self.point = Point(longitude, latitude)
-    
-    @property
-    def longitude(self):
-        return self.point.x
-        
-    @property
-    def latitude(self):
-        return self.point.y
-
-    def __eq__(self, other):
-        return self.hash() == other.hash()
-    
-    def hash(self):
-        return geohash.encode(self.point.y, self.point.x, precision=FLAGS.distance_precision)
-    
-    def __cmp__(self, other):
-        return self.hash() == other.hash()
-    
-    def __repr__(self):
-        return self.hash()
-        
-    def __str__(self):
-        return "<Site(%s, %s)>" % (self.longitude, self.latitude)
-
-
-class Sites(object):
-    """A collection of Site objects"""
-    def __init__(self):
-        pass
-    
-    
