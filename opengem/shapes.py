@@ -15,6 +15,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('distance_precision', 12, 
     "Points within this geohash precision will be considered the same point")
 
+LineString = geometry.LineString
 Point = geometry.Point
 
 

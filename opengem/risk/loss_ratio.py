@@ -13,5 +13,6 @@ class LossRatioComputation(computation.Computation):
         super(LossRatioComputation, self).__init__(pool, cell, keys=keys)
 
     def _compute(self, shakemap, exposure, vulnerability):
-        output = ':'.join(str(x) for x in (shakemap, exposure, vulnerability))
-        return 'loss_ratio:' + output
+        # output = ':'.join(str(x) for x in (shakemap, exposure, vulnerability))
+        # return 'loss_ratio:' + output
+        return float(shakemap * exposure * vulnerability * 254/9)

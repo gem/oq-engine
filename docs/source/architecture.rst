@@ -24,10 +24,24 @@ Data stores will be of four types:
 System components list:
 
 * Modeller's Toolkit
-* Engines:
- * Risk Engine
- * Hazard Engine
- * SEI Engine
+ - This is a web-based GIS interface that provides real-time analysis of composite spatial data, and an integrated set of GIS editing tools to produce source zone definitions, and other required inputs to the Engines and calculators.
+ 
+There are three "Engines", each of which is composed of multiple "calculators":
+
+The HAZARD ENGINE is composed of the following calculators:
+
+ - the ERF calculator(s) (Takes a set of sources of four types) (Generates a Synthetic Catalog of ERF)
+ - the PSHA calculator(s) (Takes ERF catalog (spatial), and GMPE (also spatial)) - (Generates a grid of hazard curves)
+ - the Occurrence / Exceedence calculator (takes a grid of hazard curves) - (Generates a Hazard Map)
+ 
+The RISK ENGINE is composed of the following calculators:
+
+ - The LOSS CURVE calculator (Takes gridded exposure, vulnerability, and either (hazard curves | hazard map | ERF catalog))
+ - The LOSS RATIO calculator (Takes ???)
+
+The SOCIO-ECONOMIC IMPACT Engine is composed of the following calculators:
+ - ??
+
 * Viewer's Interface
 * Datastores (with REST interfaces)
 * Job Queue
