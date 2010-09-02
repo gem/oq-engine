@@ -43,7 +43,6 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     
     def test_empty_when_the_vulnerability_function_is_empty(self):
         """Degenerate case."""
-        
         self.assertEqual([], compute_lrem_po(shapes.EMPTY_CURVE,
                 [], shapes.EMPTY_CURVE))
         

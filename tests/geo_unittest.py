@@ -10,7 +10,10 @@ from opengem import flags
 FLAGS = flags.FLAGS
 
 
-POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000, 100.0000000000000000 100.0000000000000000, 100.0000000000000000 10.0000000000000000, 10.0000000000000000 10.0000000000000000, 10.0000000000000000 100.0000000000000000))'
+POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000,\
+ 100.0000000000000000 100.0000000000000000, 100.0000000000000000\
+ 10.0000000000000000, 10.0000000000000000 10.0000000000000000,\
+ 10.0000000000000000 100.0000000000000000))'
 
 
 INSIDE = [(50, 50),
@@ -73,9 +76,8 @@ class RegionTestCase(unittest.TestCase):
 
     def test_from_file(self):
         fd, path = tempfile.mkstemp(suffix='.wkt')
-        f = open(path, 'w')
-        f.write(POLYGON_WKT)
-        f.close()
+        with open(path, 'w') as wkt_file:
+            wkt_file.write(POLYGON_WKT)
         
         try:
             constraint = shapes.RegionConstraint.from_file(path)
@@ -85,14 +87,15 @@ class RegionTestCase(unittest.TestCase):
 
     def test_from_coordinates(self):
         constraint = shapes.RegionConstraint.from_coordinates(
-                [(10, 100), (100, 100), (100, 10), (10, 10)])
+                [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
         self._check_match(constraint)
 
     def test_from_simple(self):
-        constraint = shapes.RegionConstraint.from_simple((10, 10), (100, 100))
+        constraint = shapes.RegionConstraint.from_simple(
+            (10.0, 10.0), (100.0, 100.0))
         self._check_match(constraint)
         
     def test_bounding_box(self):
         switzerland = shapes.Region.from_coordinates(
-            [(10, 100), (100, 100), (100, 10), (10, 10)])
+            [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
 
