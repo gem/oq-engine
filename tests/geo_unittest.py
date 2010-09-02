@@ -92,4 +92,8 @@ class RegionTestCase(unittest.TestCase):
     def test_from_simple(self):
         constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
         self._check_match(constraint)
+        
+    def test_bounding_box(self):
+        switzerland = region.Region.from_coordinates(
+            [(10, 100), (100, 100), (100, 10), (10, 10)])
 

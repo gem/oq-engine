@@ -6,7 +6,7 @@ from shapely import wkt
 
 Point = geometry.Point
 
-class RegionConstraint(object):
+class Region(object):
     def __init__(self, polygon):
         self.polygon = polygon
 
@@ -28,7 +28,13 @@ class RegionConstraint(object):
         f = open(path)
         polygon = wkt.loads(f.read())
         return cls(polygon=polygon)
+    
+    @property
+    def bounds(self):
+        return self.polygon.bounds
 
+
+class RegionConstraint(Region):
     def match(self, point):
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
