@@ -15,15 +15,6 @@ class Curve(object):
     def __init__(self, values):
         self.values = values
     
-    @property
-    def domain(self):
-        return self.values.keys()
-    
-    def get_for(self, x_value):
-        """Returns the y value (codomain) for the given x value (domain)."""
-        
-        return self.values[x_value]
-    
     def __eq__(self, other):
         return self.values == other.values
 
@@ -36,9 +27,8 @@ def compute_loss_curve(loss_ratio_curve, asset):
     if not asset: return EMPTY_CURVE
     
     loss_curve_values = {}
-    
-    for loss_ratio in loss_ratio_curve.domain:
-        loss_curve_values[loss_ratio * asset] = \
-                loss_ratio_curve.get_for(loss_ratio)
+    for loss_ratio, probability_occurrence \
+            in loss_ratio_curve.values.iteritems(): \
+            loss_curve_values[loss_ratio * asset] = probability_occurrence
     
     return Curve(loss_curve_values)
