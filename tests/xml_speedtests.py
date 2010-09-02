@@ -5,6 +5,7 @@ Performance testing of various xml parsers
 
 
 import os
+import subprocess
 import time
 import unittest
 from xml.etree import ElementTree
@@ -51,6 +52,8 @@ class MySAXHandler(saxutils.XMLGenerator):
 class XMLSpeedTestCase(unittest.TestCase):
     def setUp(self):
         self.file = os.path.join(DATA_DIR, TEST_FILE)
+        if not os.path.isfile(self.file):
+            subprocess.call(["curl", "-O", "http://gemsun02.ethz.ch/~jmckenty/large.xml", "-o", self.file])
 
     @timeit
     def test_lxml_iterparse(self):
