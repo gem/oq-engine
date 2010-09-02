@@ -7,6 +7,7 @@ Helper functions for our unit and smoke tests.
 import logging
 import os
 import subprocess
+
 from opengem import computation
 from opengem import producer
 from opengem import flags

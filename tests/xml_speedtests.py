@@ -3,17 +3,17 @@
 Performance testing of various xml parsers
 """
 
-import sys
 import logging
 import os
+import sys
 import time
 import unittest
-from lxml import etree
 from xml.etree import ElementTree
 import xml.sax
 from xml.sax import saxutils
 
-import guppy 
+import guppy
+from lxml import etree
 
 from opengem import test
 from opengem import flags
