@@ -23,6 +23,7 @@ logging = eventlet.import_patched('logging')
 from opengem.risk import engines
 from opengem import output
 from opengem import shapes
+from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
@@ -49,7 +50,7 @@ def ingest_vulnerability(path):
 # use or create in the binary, and pass in loaded parsers.
 # This will support config setting of cell_size, etc.
 
-def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file):
+def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file, output_file):
     """ Typically this will run in daemon mode,
     and these tasks will be spawned from AMQP messages.
     In testing mode, we run directly against a simple set
@@ -65,8 +66,10 @@ def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file
     hazard_curves = {}
     shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
     for site, hazard_curve in shaml_parser.filter(region_constraint):
-        hazard_curves[site] = hazard_curve
-        
+        gridpoint = region_constraint.grid.point_at(site)
+        print "%s: %s" % (gridpoint, hazard_curve)
+        hazard_curves[gridpoint] = hazard_curve
+       
     ingest_vulnerability(vulnerability_model_file)
     
     # Since we've got hazard curves, let's do probabilistic assessment
@@ -76,22 +79,33 @@ def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file
     exposure_portfolio = {}
     exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
     for site, asset in exposure_parser.filter(region_constraint):
-        print "%s: %s" % (site, asset)
-        exposure_portfolio[site] = asset
+        gridpoint = region_constraint.grid.point_at(site)
+        print "%s: %s" % (gridpoint, asset)
+        exposure_portfolio[gridpoint] = asset
     loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
     
     ratio_results = {}
-    loss_results = {}
+    loss_curves = {}
+    losses_one_perc = {}
+    interval = 0.01
     
-    for site in region_constraint:
+    for gridpoint in region_constraint.grid:
         # TODO(jmc): Spawn a task for each larger region, eg
         # Make smaller sets of sites and batch them off
-        ratio_results[site] = ratio_engine.compute(site)
-        loss_results[site] = loss_engine.compute(site, ratio_results[site])
+        site = gridpoint.site
+        val = ratio_engine.compute(gridpoint)
+        if val:
+            ratio_results[gridpoint] = val
+            loss_curve = loss_engine.compute(gridpoint, ratio_results[gridpoint])
+            loss_curves[gridpoint] = loss_curve
+            losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
     
     # TODO(jmc): Pick output generator from config or cli flags
     output_generator = output.SimpleOutput()
-    return output_generator.serialize(loss_results)
+    output_generator.serialize(ratio_results)
+    output_generator.serialize(loss_curves)
+    output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
+    output_generator.serialize(losses_one_perc)
 
     
     # These are the computations we are doing
