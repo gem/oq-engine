@@ -11,9 +11,11 @@ class ProbabilisticLossRatioCalculator(object):
         self.hazard_curves = hazard_curves
         self.vulnerability_curves = vulnerability_curves
     
-    def compute(self, site):
+    def compute(self, gridpoint):
         """ Returns the loss ratio curve for a single site"""
-        if site not in self.hazard_curves:
+        # TODO(jmc): Hazard Curves need to be indexed by gridpoint
+
+        if gridpoint not in self.hazard_curves.keys():
             return None
         return ([2.0, 1.0, 0.0], [0.1, 0.2, 0.3])
     
@@ -31,10 +33,16 @@ class ProbabilisticLossCalculator(object):
     def __init__(self, exposure_portfolio):
         self.exposure_portfolio = exposure_portfolio
     
-    def compute(self, site, loss_ratio_curve):
+    def compute(self, gridpoint, loss_ratio_curve):
         """ Returns the loss curve based on loss ratio and exposure"""
         if loss_ratio_curve is None:
+            print "No loss ratio curve at %s" % gridpoint
             return None
-        if site not in self.exposure_portfolio:
+        # TODO(jmc): Exposure needs to be indexed by gridpoint
+        if gridpoint not in self.exposure_portfolio.keys():
+            print "Don't have exposure for this point: %s" % gridpoint
             return None
         return ([0.0, 0.1, 0.2, 0.3], [0.9, 0.8, 0.5, 0.2])
+
+def loss_from_curve(curve, interval):
+    return 0.4
