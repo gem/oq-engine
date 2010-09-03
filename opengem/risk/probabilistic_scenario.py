@@ -9,7 +9,7 @@ scientific model at <http://to_be_defined>.
 from opengem import shapes
 
 def compute_loss_curve(loss_ratio_curve, asset):
-    """Computes the loss curve for the given loss ratio curve."""
+    """Computes the loss curve."""
     
     # invalid asset
     if not asset: return shapes.EMPTY_CURVE
@@ -43,3 +43,18 @@ def compute_lrem_po(vuln_function, lrem, hazard_curve):
         current_column += 1
 
     return lrem_po
+
+def compute_loss_ratio_curve(loss_ratios, lrem_po):
+    """Computes the loss ratio curve."""
+    
+    loss_ratio_curve_values = {}
+    
+    for row in range(len(lrem_po)):
+        prob_occ = 0.0
+        
+        for column in range(len(lrem_po[row])):
+            prob_occ += lrem_po[row][column]
+    
+        loss_ratio_curve_values[loss_ratios[row]] = prob_occ
+
+    return shapes.Curve(loss_ratio_curve_values)

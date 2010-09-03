@@ -183,7 +183,6 @@ class Grid(object):
                 except Exception, e:
                     pass
 
-
 class Site(object):
     """Site is a dictionary-keyable point"""
     
@@ -233,6 +232,9 @@ class Curve(object):
 
     def __eq__(self, other):
         return self.values == other.values
+
+    def __str__(self):
+        return self.values.__str__()
 
     @property
     def domain(self):
