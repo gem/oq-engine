@@ -183,6 +183,7 @@ class Grid(object):
                 except Exception, e:
                     pass
 
+
 class Site(object):
     """Site is a dictionary-keyable point"""
     

@@ -28,7 +28,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         """Degenerate case."""
         
         self.assertEqual(compute_loss_curve(
-                shapes.EMPTY_CURVE, ASSET_VALUE),
+                shapes.EMPTY_CURVE, None),
                 shapes.EMPTY_CURVE)
     
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
@@ -51,7 +51,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         """Degenerate case."""
         
         self.assertEqual([], compute_lrem_po(shapes.EMPTY_CURVE,
-                [], shapes.EMPTY_CURVE))
+                None, None))
         
     def test_lrem_po_computation(self):
         lrem_po = compute_lrem_po(VULNERABILITY_FUNCTION, 
@@ -71,7 +71,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     def test_empty_loss_ratio_curve(self):
         """Degenerate case."""
         
-        self.assertEqual(shapes.EMPTY_CURVE, compute_loss_ratio_curve([], []))
+        self.assertEqual(shapes.EMPTY_CURVE, compute_loss_ratio_curve(None, []))
         
     def test_loss_ratio_curve_computation(self):
         loss_ratio_curve = compute_loss_ratio_curve([1.0, 2.0], 
@@ -80,3 +80,53 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
 
         self.assertAlmostEquals(0.2891, loss_ratio_curve.get_for(1.0), 0.0001)
         self.assertAlmostEquals(0.1853, loss_ratio_curve.get_for(2.0), 0.0001)
+
+    # lrem tests
+    
+    def test_empty_matrix(self):
+        """Degenerate case."""
+        
+        self.assertEqual([], compute_lrem([], shapes.EMPTY_CURVE))
+
+    def test_lrem_computation(self):
+        vuln_function = shapes.Curve({5.0: (1.0, 0.1), 5.5: (2.0, 0.2) })
+        loss_ratios = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
+
+        # fake distribution
+        class FakeDistribution(object):
+            
+            def cdf(self, value, mean, std_dev):
+                probabilities = {0.2: 0.1, 0.4: 0.2, 0.6: 0.3,
+                        0.8: 0.4, 1.0: 0.7, 1.2: 0.8, 1.4: 0.9,
+                        1.6: 1.0, 1.8: 1.1, 2.0: 1.2}
+                
+                return probabilities[value]
+        
+        lrem = compute_lrem(loss_ratios, vuln_function, FakeDistribution())
+        
+        self.assertEquals(1.0 - 0.1, lrem[0][0])
+        self.assertEquals(1.0 - 0.1, lrem[0][1])
+        self.assertEquals(1.0 - 0.2, lrem[1][0])
+        self.assertEquals(1.0 - 0.2, lrem[1][1])
+        self.assertEquals(1.0 - 0.3, lrem[2][0])
+        self.assertEquals(1.0 - 0.3, lrem[2][1])
+        self.assertEquals(1.0 - 0.4, lrem[3][0])
+        self.assertEquals(1.0 - 0.4, lrem[3][1])
+        self.assertEquals(1.0 - 0.7, lrem[4][0])
+        self.assertEquals(1.0 - 0.7, lrem[4][1])
+        self.assertEquals(1.0 - 0.8, lrem[5][0])
+        self.assertEquals(1.0 - 0.8, lrem[5][1])
+        self.assertEquals(1.0 - 0.9, lrem[6][0])
+        self.assertEquals(1.0 - 0.9, lrem[6][1])
+        self.assertEquals(1.0 - 1.0, lrem[7][0])
+        self.assertEquals(1.0 - 1.0, lrem[7][1])
+
+        # negative values are not allowed
+        self.assertEquals(0.0, lrem[8][0], 0.0)
+        self.assertEquals(0.0, lrem[8][1], 0.0)
+        self.assertEquals(0.0, lrem[9][0], 0.0)
+        self.assertEquals(0.0, lrem[9][1], 0.0)
+        
+        # last loss ratio is always 1.0
+        self.assertEquals(1.0 - 0.7, lrem[10][0])
+        self.assertEquals(1.0 - 0.7, lrem[10][1])
