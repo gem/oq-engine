@@ -248,6 +248,11 @@ class Curve(object):
         """Returns the domain values of this curve."""
         return self.values.keys()
 
+    @property
+    def codomain(self):
+        """Returns the codomain values of this curve."""
+        return self.values.values()
+
     def get_for(self, x_value):
         """Returns the y value (codomain) corresponding
         to the given x value (domain)."""
