@@ -14,8 +14,10 @@ from opengem import shapes
 # input test values
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
-VULNERABILITY_FUNCTION = shapes.Curve({5.0: 0.0, 6.0: 0.0, 7.0: 0.0, 8.0: 0.0})
 HAZARD_CURVE = shapes.Curve({5.0: 0.138, 6.0: 0.099, 7.0: 0.068, 8.0: 0.041})
+
+VULNERABILITY_FUNCTION = shapes.Curve({5.0: (0.0, 0.0),
+        6.0: (0.0, 0.0), 7.0: (0.0, 0.0), 8.0: (0.0, 0.0)})
 
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
