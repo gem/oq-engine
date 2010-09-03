@@ -2,7 +2,7 @@
 # encoding: utf-8
 """
 Test cases for the probablistic scenario described
-in the scientific model. The values we check against are from
+in the scientific model. The values we check against are taken from
 the documentation you can find at <http://to_be_defined>.
 """
 
@@ -41,7 +41,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
 
     # loss ratio exceedance matrix * po tests
     
-    def test_empty_when_the_vulnerability_function_is_empty(self):
+    def test_empty_matrix(self):
         """Degenerate case."""
         
         self.assertEqual([], compute_lrem_po(shapes.EMPTY_CURVE,
