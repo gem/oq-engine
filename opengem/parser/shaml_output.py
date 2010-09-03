@@ -13,7 +13,7 @@ support other flavours of shaML (the "input" formats).
 from lxml import etree
 
 from opengem import producer
-from opengem import region
+from opengem import shapes
 from opengem.xml import SHAML_NS, GML_NS
 
 class ShamlOutputFile(producer.FileProducer):
@@ -134,7 +134,7 @@ class ShamlOutputFile(producer.FileProducer):
             namespaces={'shaml': SHAML_NS, 'gml': GML_NS})
         try:
             coord = map(float, pos_el[0].text.strip().split())
-            return region.Point(coord[0], coord[1])
+            return shapes.Site(coord[0], coord[1])
         except Exception:
             error_str = "shaML point coordinate error: %s" % \
                 ( pos_el[0].text )
@@ -182,8 +182,8 @@ class ShamlOutputFile(producer.FileProducer):
         return site_attributes
 
     def filter(self, region_constraint, attribute_constraint=None):
-        """ region_constraint has to be of type region.RegionConstraint 
-        (defined in file region.py)
+        """ region_constraint has to be of type shapes.RegionConstraint 
+        (defined in file shapes.py)
         """
         for next in iter(self):
             if (attribute_constraint is not None and \

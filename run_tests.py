@@ -29,8 +29,8 @@ Usage Examples:
 """
 
 import logging
-import unittest
 import sys
+import unittest
 
 from opengem import flags
 FLAGS = flags.FLAGS
@@ -41,6 +41,7 @@ from tests.computation_unittest import *
 from tests.example_unittest import *
 from tests.flags_unittest import *
 from tests.geo_unittest import *
+from tests.output_unittest import *
 from tests.parser_exposure_portfolio_unittest import *
 from tests.parser_shaml_output_unittest import *
 from tests.parser_vulnerability_model_unittest import *

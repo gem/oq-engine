@@ -7,6 +7,7 @@ Helper functions for our unit and smoke tests.
 import logging
 import os
 import subprocess
+
 from opengem import computation
 from opengem import producer
 from opengem import flags
@@ -48,4 +49,3 @@ def guarantee_file(path, url):
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
-            

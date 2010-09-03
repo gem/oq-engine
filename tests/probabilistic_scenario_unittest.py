@@ -43,7 +43,6 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     
     def test_empty_matrix(self):
         """Degenerate case."""
-        
         self.assertEqual([], compute_lrem_po(shapes.EMPTY_CURVE,
                 [], shapes.EMPTY_CURVE))
         
