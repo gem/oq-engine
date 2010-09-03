@@ -155,8 +155,16 @@ def compute_lrem(loss_ratios, vuln_function, distribution=stats.lognorm):
     return lrem
 
 def split_loss_ratios(loss_ratios, ratios_per_interval=RATIOS_PER_INTERVAL):
-    """Splits the loss ratios."""
+    """Splits the loss ratios.
     
+    ratios_per_interval is the number of steps we make to go from one loss
+    ratio to the other. For example, if we have [1.0, 2.0]:
+
+    ratios_per_interval = 1 produces [1.0, 2.0]
+    ratios_per_interval = 2 produces [1.0, 1.5, 2.0]
+    ratios_per_interval = 3 produces [1.0, 1.33, 1.66, 2.0]
+    """
+
     splitted_loss_ratios = []
     
     for i in range(len(loss_ratios) - 1):
