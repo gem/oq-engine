@@ -54,30 +54,6 @@ class RiskEngineTestCase(unittest.TestCase):
                 losses[col, row] = loss_value
             # TODO(bw): Add asserts that verify the array contents here.
         
-        self.assertFalse(first_site in ratio_results)
-        self.assertEqual(ratio_results[third_site], None)
-        self.assertNotEqual(ratio_results[second_site], None)
-
-        # No exposure at second site, so no loss results
-        self.assertEqual(loss_results[second_site], None)
-        self.assertNotEqual(loss_results[fourth_site], None)   
-            
-            
-            
-        for site in sites_of_interest:
-              ratio_results[site] = ratio_engine.compute(site)
-              loss_results[site] = loss_engine.compute(site, ratio_results[site])
-
-          self.assertFalse(first_site in ratio_results)
-          self.assertEqual(ratio_results[third_site], None)
-          self.assertNotEqual(ratio_results[second_site], None)
-
-          # No exposure at second site, so no loss results
-          self.assertEqual(loss_results[second_site], None)
-          self.assertNotEqual(loss_results[fourth_site], None)
-          
-          
-          
         
     def test_loss_value_interpolation(self):
         pass
