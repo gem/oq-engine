@@ -126,9 +126,9 @@ def compute_lrem(loss_ratios, vuln_function, distribution=stats.lognorm):
     imls = list(vuln_function.domain)
     imls.sort()
 
-# TODO (ac): Find out why we have negative probabilities
-# for values close to zero. Same behaviour in Java, so it probably
-# depends on how floating point values are handled internally
+    # TODO (ac): Find out why we have negative probabilities
+    # for values close to zero. Same behaviour in Java, so it probably
+    # depends on how floating point values are handled internally
     def fix_value(prob):
         if prob < 0.00001: return 0.0
         else: return prob
