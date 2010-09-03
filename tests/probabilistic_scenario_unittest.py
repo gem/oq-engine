@@ -130,3 +130,62 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         # last loss ratio is always 1.0
         self.assertEquals(1.0 - 0.7, lrem[10][0])
         self.assertEquals(1.0 - 0.7, lrem[10][1])
+        
+    # loss ratios splitting tests
+
+# TODO (ac): Maybe SciPy already defines something like this?
+    def test_splits_single_interval_and_no_values_between(self):
+        self.assertEqual([1.0, 2.0], split_loss_ratios([1.0, 2.0], 1))
+        
+    def test_splits_single_interval_and_a_value_between(self):
+        self.assertEqual([1.0, 1.5, 2.0], split_loss_ratios([1.0, 2.0], 2))
+    
+    def test_splits_single_interval_and_values_between(self):
+        self.assertEqual([1.0, 1.25, 1.50, 1.75, 2.0],
+                split_loss_ratios([1.0, 2.0], 4))
+    
+    def test_splits_multiple_intervals_and_a_value_between(self):
+        self.assertEqual([1.0, 1.5, 2.0, 2.5, 3.0],
+                split_loss_ratios([1.0, 2.0, 3.0], 2))
+    
+    def test_splits_multiple_intervals_and_values_between(self):
+        self.assertEqual([1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0], 
+                split_loss_ratios([1.0, 2.0, 3.0], 4))    
+
+    def test_splits_with_real_values_from_turkey(self):
+        loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
+                7.16E-05, 7.96E-04, 5.37E-03, 2.39E-02, 7.51E-02, 1.77E-01]
+        
+        result =  [0.0, 3.9199999999999996e-16, 7.8399999999999992e-16,
+                1.1759999999999998e-15, 1.5679999999999998e-15,
+                1.9599999999999999e-15, 5.0756799999999998e-13,
+                1.0131759999999998e-12, 1.5187839999999998e-12,
+                2.024392e-12, 2.5299999999999999e-12, 1.6202400000000001e-10,
+                3.2151800000000003e-10, 4.8101199999999999e-10,
+                6.4050600000000006e-10, 8.0000000000000003e-10,
+                1.726e-08, 3.372e-08, 5.0179999999999997e-08,
+                6.6639999999999993e-08, 8.3099999999999996e-08,
+                7.7048000000000005e-07, 1.4578600000000002e-06,
+                2.1452400000000005e-06, 2.8326200000000003e-06,
+                3.5200000000000002e-06, 1.7136000000000003e-05,
+                3.0752000000000006e-05, 4.4368000000000013e-05,
+                5.7984000000000013e-05, 7.1600000000000006e-05,
+                0.00021648000000000001, 0.00036136000000000002,
+                0.00050624000000000003, 0.00065112000000000004,
+                0.00079600000000000005, 0.0017108000000000002,
+                0.0026256000000000001, 0.0035404, 0.0044552000000000003,
+                0.0053699999999999998, 0.0090760000000000007, 0.012782,
+                0.016487999999999999, 0.020194, 0.023900000000000001,
+                0.034140000000000004, 0.044380000000000003,
+                0.054620000000000002, 0.064860000000000001, 0.0751,
+                0.095479999999999995, 0.11585999999999999, 0.13624,
+                0.15661999999999998, 0.17699999999999999]
+        
+        self.assertEqual(result, split_loss_ratios(loss_ratios))
+
+    def test_splits_with_real_values_from_taiwan(self):
+        loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
+                2.495E-11, 2.769E-09, 1.372E-07, 3.481E-06,
+                5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
+        
+        self.assertEqual(56, len(split_loss_ratios(loss_ratios)))
