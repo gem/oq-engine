@@ -11,12 +11,9 @@ import numpy.core.multiarray as ncm
 
 from opengem.risk import engines
 from opengem.output import risk as risk_output
-<<<<<<< HEAD
 from opengem import grid
 from opengem import region
 from opengem.risk import engines
-=======
->>>>>>> risk-engine-port
 from opengem import shapes
 
 
