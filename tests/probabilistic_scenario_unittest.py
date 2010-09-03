@@ -136,21 +136,21 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     # loss ratios splitting tests
 
 # TODO (ac): Maybe SciPy already defines something like this?
-    def test_splits_single_interval_and_no_steps_between(self):
+    def test_splits_single_interval_with_no_steps_between(self):
         self.assertEqual([1.0, 2.0], split_loss_ratios([1.0, 2.0], 1))
         
-    def test_splits_single_interval_and_a_step_between(self):
+    def test_splits_single_interval_with_a_step_between(self):
         self.assertEqual([1.0, 1.5, 2.0], split_loss_ratios([1.0, 2.0], 2))
     
-    def test_splits_single_interval_and_steps_between(self):
+    def test_splits_single_interval_with_steps_between(self):
         self.assertEqual([1.0, 1.25, 1.50, 1.75, 2.0],
                 split_loss_ratios([1.0, 2.0], 4))
     
-    def test_splits_multiple_intervals_and_a_step_between(self):
+    def test_splits_multiple_intervals_with_a_step_between(self):
         self.assertEqual([1.0, 1.5, 2.0, 2.5, 3.0],
                 split_loss_ratios([1.0, 2.0, 3.0], 2))
     
-    def test_splits_multiple_intervals_and_steps_between(self):
+    def test_splits_multiple_intervals_with_steps_between(self):
         self.assertEqual([1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0], 
                 split_loss_ratios([1.0, 2.0, 3.0], 4))    
 
