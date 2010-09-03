@@ -23,6 +23,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * Shapely
   * requires geos (c library, also called libgeos)
 * Sphinx (for building documentation only)
+* Guppy (http://guppy-pe.sourceforge.net)
 
 
 Running Tests
