@@ -63,7 +63,7 @@ from scipy import stats
 
 from opengem import shapes
 
-RATIOS_PER_INTERVAL = 5
+STEPS_PER_INTERVAL = 5
 
 def compute_loss_curve(loss_ratio_curve, asset):
     """Computes the loss curve."""
@@ -154,15 +154,15 @@ def compute_lrem(loss_ratios, vuln_function, distribution=stats.lognorm):
 
     return lrem
 
-def split_loss_ratios(loss_ratios, ratios_per_interval=RATIOS_PER_INTERVAL):
+def split_loss_ratios(loss_ratios, steps_per_interval=STEPS_PER_INTERVAL):
     """Splits the loss ratios.
     
-    ratios_per_interval is the number of steps we make to go from one loss
+    steps_per_interval is the number of steps we make to go from one loss
     ratio to the other. For example, if we have [1.0, 2.0]:
 
-    ratios_per_interval = 1 produces [1.0, 2.0]
-    ratios_per_interval = 2 produces [1.0, 1.5, 2.0]
-    ratios_per_interval = 3 produces [1.0, 1.33, 1.66, 2.0]
+    steps_per_interval = 1 produces [1.0, 2.0]
+    steps_per_interval = 2 produces [1.0, 1.5, 2.0]
+    steps_per_interval = 3 produces [1.0, 1.33, 1.66, 2.0]
     """
 
     splitted_loss_ratios = []
@@ -171,9 +171,9 @@ def split_loss_ratios(loss_ratios, ratios_per_interval=RATIOS_PER_INTERVAL):
         # lower bound added only in the first interval
         if not i: splitted_loss_ratios.append(loss_ratios[i])
         
-        offset = (loss_ratios[i + 1] - loss_ratios[i]) / ratios_per_interval
+        offset = (loss_ratios[i + 1] - loss_ratios[i]) / steps_per_interval
         
-        for k in range(ratios_per_interval - 1):
+        for k in range(steps_per_interval - 1):
             splitted_loss_ratios.append(loss_ratios[i] + (offset * (k + 1)))
     
         splitted_loss_ratios.append(loss_ratios[i + 1])
