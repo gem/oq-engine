@@ -4,6 +4,7 @@ Collection of base classes for processing
 spatially-related data."""
 
 import math
+from ordereddict import *
 
 import geohash
 from shapely import geometry
@@ -101,7 +102,7 @@ class RegionConstraint(Region):
             point = point.point
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
-        return self.polygon.intersects(point)
+        return self.polygon.contains(point)
 
 
 class GridPoint(object):
@@ -145,7 +146,7 @@ class Grid(object):
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
         # if (self.columns < gridpoint.column or gridpoint.column < 1):
-        if not (self.region.polygon.intersects(site.point)):
+        if not (self.region.polygon.contains(site.point)):
             raise Exception("Point is not on the Grid")
         # TODO(JMC): Confirm that we always want to test this...
     
@@ -154,7 +155,7 @@ class Grid(object):
         point = Point(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
         # print "Checking point at %s" % point
-        if not (self.region.polygon.intersects(point)):
+        if not (self.region.polygon.contains(point)):
             raise Exception("Point is not on the Grid")
     
     def _latitude_to_row(self, latitude):
@@ -215,6 +216,9 @@ class Site(object):
     def __eq__(self, other):
         return self.hash() == other.hash()
     
+    def equals(self, other):
+        return self.point.equals(other)
+    
     def hash(self):
         """A geohash-encoded string for dict keys"""
         return geohash.encode(self.point.y, self.point.x, 
@@ -235,6 +239,9 @@ class Curve(object):
     used in the risk domain."""
 
     def __init__(self, values):
+        # if values is a bare dict, we'll have problems...
+        if not isinstance(values, OrderedDict):
+            raise Exception("You need to use an OrderedDict here.")
         self.values = values
 
     def __eq__(self, other):
@@ -258,4 +265,4 @@ class Curve(object):
         to the given x value (domain)."""
         return self.values[x_value]
 
-EMPTY_CURVE = Curve({})
+EMPTY_CURVE = Curve(OrderedDict())

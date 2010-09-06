@@ -43,6 +43,10 @@
 		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/gem/engine/risk/**/*.java " srcdir="${src.dir}" />
 	</target>
 
+    <target name="compile" depends="compile-sources">
+        <jar manifest="${classes.dir}" includes="org/gem/engine/risk/**/*.java "  jarfile="${build.dir}/small.jar" />
+    </target>
+
 	<taskdef resource="emma_ant.properties" classpathref="libraries" />
 
 	<target name="junit-tests-with-coverage" depends="compile-sources">

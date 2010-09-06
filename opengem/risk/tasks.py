@@ -50,7 +50,8 @@ def ingest_vulnerability(path):
 # use or create in the binary, and pass in loaded parsers.
 # This will support config setting of cell_size, etc.
 
-def main(vulnerability_model_file, hazard_curve_file, region_file, exposure_file, output_file):
+def main(vulnerability_model_file, hazard_curve_file, 
+            region_file, exposure_file, output_file):
     """ Typically this will run in daemon mode,
     and these tasks will be spawned from AMQP messages.
     In testing mode, we run directly against a simple set

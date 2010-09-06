@@ -10,7 +10,7 @@ import subprocess
 import os
 import unittest
 
-from opengem import grid
+from opengem import shapes
 from opengem.output import geotiff
 
 
@@ -20,8 +20,9 @@ class OutputTestCase(unittest.TestCase):
         """Generate a geotiff file with a smiley face."""
         data_dir = os.path.join(os.path.dirname(__file__), 'data')
         path = os.path.join(data_dir, "test.tiff")
-        image_grid = grid.Grid(ncols=320, nrows=320, 
-                        xllcorner=123.25, yllcorner=48.35, cellsize=0.1)
+        switzerland = shapes.Region.from_coordinates(
+            [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
+        image_grid = switzerland.grid
         gwriter = geotiff.GeoTiffFile(path, image_grid)
         for xpoint in range(0, 320):
             for ypoint in range(0, 320):
