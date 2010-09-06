@@ -16,9 +16,6 @@ import sys
 sys.path.append("/Users/benwyss/Projects/opengem")
 
 from opengem import computation
-from opengem.parser import shaml_output
-
-
 
 class LossComputation(computation.Computation):
     """Example Loss Computation
