@@ -253,9 +253,22 @@ class Curve(object):
         """Returns the codomain values of this curve."""
         return self.values.values()
 
+# TODO (ac): Change name according to the other function
     def get_for(self, x_value):
         """Returns the y value (codomain) corresponding
         to the given x value (domain)."""
         return self.values[x_value]
+
+    def domain_for(self, y_value):
+        """Returns the x value (domain) corresponding
+        to the given y value (codomain)."""
+
+# TODO (bw): Find out if there is a better way to do this
+        for x, y in self.values.items():
+            if y == y_value: return x
+
+# TODO (bw): Test this corner case
+        error_str = "%s is not contained in this function" % (y_value, )
+        raise ValueError(error_str)
 
 EMPTY_CURVE = Curve({})
