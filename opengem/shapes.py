@@ -101,7 +101,7 @@ class RegionConstraint(Region):
             point = point.point
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
-        return self.polygon.contains(point)
+        return self.polygon.intersects(point)
 
 
 class GridPoint(object):
@@ -111,9 +111,21 @@ class GridPoint(object):
         self.row = row
         self.grid = grid
     
+    def __eq__(self, other):
+        if isinstance(other, Site):
+            other = self.grid.point_at(other)
+        return (self.column == other.column and 
+            self.row == other.row and 
+            self.grid.region.bounds == other.grid.region.bounds and
+            self.grid.cell_size == other.grid.cell_size)
+    
     @property
     def site(self):
         return self.grid.site_at(self)
+
+
+    def __repr__(self):
+        return "%s:%s:%s" % (self.column, self.row, self.grid.cell_size)
 
 
 class Grid(object):
@@ -133,7 +145,7 @@ class Grid(object):
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
         # if (self.columns < gridpoint.column or gridpoint.column < 1):
-        if not (self.region.polygon.contains(site.point)):
+        if not (self.region.polygon.intersects(site.point)):
             raise Exception("Point is not on the Grid")
         # TODO(JMC): Confirm that we always want to test this...
     
@@ -142,7 +154,7 @@ class Grid(object):
         point = Point(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
         # print "Checking point at %s" % point
-        if not (self.region.polygon.contains(point)):
+        if not (self.region.polygon.intersects(point)):
             raise Exception("Point is not on the Grid")
     
     def _latitude_to_row(self, latitude):
@@ -183,6 +195,7 @@ class Grid(object):
                 except Exception, e:
                     pass
 
+
 class Site(object):
     """Site is a dictionary-keyable point"""
     
@@ -217,12 +230,6 @@ class Site(object):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
 
-class Sites(object):
-    """A collection of Site objects"""
-    def __init__(self):
-        pass
-    
-
 class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
@@ -240,6 +247,11 @@ class Curve(object):
     def domain(self):
         """Returns the domain values of this curve."""
         return self.values.keys()
+
+    @property
+    def codomain(self):
+        """Returns the codomain values of this curve."""
+        return self.values.values()
 
     def get_for(self, x_value):
         """Returns the y value (codomain) corresponding

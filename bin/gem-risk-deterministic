@@ -67,4 +67,4 @@ if __name__ == '__main__':
     if FLAGS.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure)
+    tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure, FLAGS.loss_map)

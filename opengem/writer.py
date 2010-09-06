@@ -21,3 +21,8 @@ class FileWriter(object):
     def close(self):
         self.file.close()
         self.finished.send(True)
+
+    def serialize(self, iterable):
+        for key, val in iterable.items():
+            self.write(key, val)
+        self.close()

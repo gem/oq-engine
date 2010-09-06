@@ -29,6 +29,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * Shapely
   * requires geos (c library, also called libgeos)
 * Sphinx (for building documentation only)
+* Guppy (http://guppy-pe.sourceforge.net)
 
 
 You'll need to mess with PYTHONPATH (in your .bash_profile file), or add a .pth file, both for gdal and for opengem itself.
