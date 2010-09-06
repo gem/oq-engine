@@ -191,3 +191,9 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
                 5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
         
         self.assertEqual(56, len(split_loss_ratios(loss_ratios)))
+
+    # conditional loss test (for computing loss ratio or loss maps)
+
+    def test_ratio_is_zero_if_is_out_of_bounds(self):
+        loss_curve = shapes.Curve({0.21: 0.131, 0.24: 0.131, 0.27: 0.089, 0.30: 0.066})
+        self.assertEqual(0.0, compute_conditional_loss(loss_curve, 0.050))
