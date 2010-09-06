@@ -124,10 +124,10 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         self.assertEquals(1.0 - 1.0, lrem[7][1])
 
         # negative values are not allowed
-        self.assertEquals(0.0, lrem[8][0], 0.0)
-        self.assertEquals(0.0, lrem[8][1], 0.0)
-        self.assertEquals(0.0, lrem[9][0], 0.0)
-        self.assertEquals(0.0, lrem[9][1], 0.0)
+        self.assertEquals(0.0, lrem[8][0])
+        self.assertEquals(0.0, lrem[8][1])
+        self.assertEquals(0.0, lrem[9][0])
+        self.assertEquals(0.0, lrem[9][1])
         
         # last loss ratio is always 1.0
         self.assertEquals(1.0 - 0.7, lrem[10][0])
@@ -208,5 +208,6 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     def test_conditional_loss_computation(self):
         loss_curve = shapes.Curve({0.21: 0.131, 0.24: 0.108,
                 0.27: 0.089, 0.30: 0.066})
-        
-        self.assertEqual(0.2526, compute_conditional_loss(loss_curve, 0.100))
+
+        self.assertAlmostEqual(0.2526, 
+                compute_conditional_loss(loss_curve, 0.100), 0.0001)

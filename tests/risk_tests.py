@@ -16,8 +16,6 @@ from opengem import region
 from opengem import test
 from opengem.risk import engines
 from opengem import shapes
-from opengem.parser.shaml_output import ShamlOutputFile
-from opengem import shapes
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
@@ -28,19 +26,9 @@ data_dir = os.path.join(os.path.dirname(__file__), 'data')
 class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
     
-    def test_loss_curve_reading(self):
-        reader = ShamlOutputFile(os.path.join(test.DATA_DIR, "ShamlOutputFile-PASS.xml"))
-        region_constraint = shapes.RegionConstraint.from_simple((16.0, 49.0),
-                                                                (17.0, 48.0))
-        
-        for site, loss_curve_data in reader.filter(region_constraint):
-            print site
-            print loss_curve_data
-        
-        
-    def loss_map_generation(self):
+    def test_loss_map_generation(self):
         #get grid of columns and rows from region of coordinates
-            #see shapes.py for region, grid, and site
+        #see shapes.py for region, grid, and site
         cellsize = 0.1
         loss_map_region = region.Region.from_coordinates(
             [(10, 100), (100, 100), (100, 10), (10, 10)])
@@ -67,12 +55,12 @@ class RiskEngineTestCase(unittest.TestCase):
     def test_loss_value_interpolation(self):
         pass
     
-    def loss_value_interpolation_bounds(self):
+    def test_loss_value_interpolation_bounds(self):
         # for a set of example loss ratio curves and a single invest. interval,
         interval = 0.01
-        zero_curve = Curve(0.0)
-        huge_curve = Curve(10.0, 10.0)
-        normal_curve = Curve((0.1, 0.2), (0.2, 0.21))
+        zero_curve = shapes.Curve(0.0)
+        huge_curve = shapes.Curve(10.0, 10.0)
+        normal_curve = shapes.Curve((0.1, 0.2), (0.2, 0.21))
         loss_curves = [zero_curve, normal_curve, huge_curve]
         # interpolate the loss value
         # check that curves of zero produce zero loss (and no error)
@@ -80,7 +68,7 @@ class RiskEngineTestCase(unittest.TestCase):
         # check that the loss is the expected value
         
     
-    def site_intersections(self):
+    def test_site_intersections(self):
         first_site = shapes.Site(10.0, 10.0)
         second_site = shapes.Site(11.0, 11.0)
         third_site = shapes.Site(12.0, 12.0)
@@ -132,7 +120,7 @@ class RiskOutputTestCase(unittest.TestCase):
     def setUp(self):
         pass
     
-    def xml_is_valid(self):
+    def test_xml_is_valid(self):
         xml_writer = risk_output.RiskXMLWriter(
             os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
         first_site = shapes.Site(10.0, 10.0)
