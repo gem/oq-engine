@@ -27,20 +27,21 @@ class GeoTiffFile(writer.FileWriter):
     
     def __init__(self, path, image_grid):
         self.grid = image_grid
-        self.raster = ncm.zeros((self.grid.ncols, self.grid.nrows))
+        self.raster = ncm.zeros((self.grid.columns, self.grid.rows))
         self.target = None
         super(GeoTiffFile, self).__init__(path)
         
     def _init_file(self):
         driver = gdal.GetDriverByName(self.format)
-        self.target = driver.Create(self.path, self.grid.ncols, 
-                        self.grid.nrows, 1, gdal.GDT_Byte)
+        self.target = driver.Create(self.path, self.grid.columns, 
+                        self.grid.rows, 1, gdal.GDT_Byte)
 
         # top left x, w-e pixel resolution, rotation, 
         #   top left y, rotation, n-s pixel resolution
+        corner = self.grid.region.upper_left_corner
         self.target.SetGeoTransform(
-            [self.grid.xulcorner, self.grid.cellsize, 
-             0, self.grid.yulcorner, 0, self.grid.cellsize])
+            [corner.longitude, self.grid.cell_size, 
+             0, corner.latitude, 0, self.grid.cell_size])
 
         # set the reference info 
         srs = osr.SpatialReference()
@@ -60,6 +61,13 @@ class GeoTiffFile(writer.FileWriter):
         self.target.GetRasterBand(1).WriteArray(self.raster)
         self.target = None  # This is required to flush the file
         self.finished.send(True)
+    
+    def serialize(self, iterable):
+        # TODO(JMC): Normalize the values
+        maxval = max(iterable.values())
+        for key, val in iterable.items():
+            self.write((key.column, key.row), val/maxval * 254)
+        self.close()
 
 
 # http://adventuresindevelopment.blogspot.com/2008/12/

@@ -105,7 +105,6 @@ class ExposurePortfolioFile(producer.FileProducer):
                     region_constraint.match(next[0])):
                 yield next
 
-
 class ExposurePortfolioConstraint(object):
     """ This class represents a constraint that can be used to filter
     AssetInstance elements from an ExposurePortfolio XML instance document
