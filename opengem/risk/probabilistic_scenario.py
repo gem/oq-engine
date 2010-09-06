@@ -135,7 +135,7 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     # print loss_ratio_curve_values
     return shapes.Curve(loss_ratio_curve_values)
     
-
+@memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
     loss_ratios = [value[0] for value in vuln_function.codomain] 
@@ -144,7 +144,7 @@ def _generate_loss_ratios(vuln_function):
         # we need to add 0.0 as first value
     return _split_loss_ratios(loss_ratios)
 
-
+@memoize
 def _compute_lrem(vuln_function, distribution=stats.lognorm):
     """Computes the loss ratio exceedance matrix."""
     loss_ratios = _generate_loss_ratios(vuln_function)

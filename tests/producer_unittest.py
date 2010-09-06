@@ -53,8 +53,7 @@ class FileProducerTestCase(unittest.TestCase):
         prod = test.WordProducer(path)
 
         # TODO(termie): Right now the bound
-        expected = dict(zip(range(11, 100), range(11, 100)))
-
+        expected = dict(zip(range(10, 101), range(10, 101)))
         for ((cell_x, cell_y), data) in prod.filter(constraint):
             test_cell = expected.pop(int(cell_x))
             self.assertEqual(data, 'test%s' % int(test_cell))

@@ -102,7 +102,9 @@ class RegionConstraint(Region):
             point = point.point
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
-        return self.polygon.contains(point)
+        test = self.polygon.contains(point) or self.polygon.touches(point)
+        # print "Does point match? %s" % (test)
+        return test
 
 
 class GridPoint(object):
@@ -141,27 +143,30 @@ class Grid(object):
                     self.region.upper_right_corner.longitude)
         self.rows = self._latitude_to_row(
                     self.region.upper_right_corner.latitude)
-        print "Grid with %s rows and %s columns" % (self.rows, self.columns)
+        # print "Grid with %s rows and %s columns" % (self.rows, self.columns)
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
-        # if (self.columns < gridpoint.column or gridpoint.column < 1):
-        if not (self.region.polygon.contains(site.point)):
-            raise Exception("Point is not on the Grid")
-        # TODO(JMC): Confirm that we always want to test this...
+        return self.check_point(site.point)
     
-    def check_point(self, gridpoint):
+    def check_point(self, point):    
+        # print "Checking point at %s" % point
+        if (self.region.polygon.contains(point)):
+            return True
+        if self.region.polygon.touches(point):
+            return True
+        raise Exception("Point is not on the Grid")
+    
+    def check_gridpoint(self, gridpoint):
         """Confirm that the point is contained by the region"""
         point = Point(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
-        # print "Checking point at %s" % point
-        if not (self.region.polygon.contains(point)):
-            raise Exception("Point is not on the Grid")
+        return self.check_point(point)
     
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
-        print "lat offset = %s" % latitude_offset
+        # print "lat offset = %s" % latitude_offset
         return int((latitude_offset / self.cell_size)) + 1
 
     def _row_to_latitude(self, row):
@@ -170,7 +175,7 @@ class Grid(object):
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
-        print "long offset = %s" % longitude_offset
+        # print "long offset = %s" % longitude_offset
         return int((longitude_offset / self.cell_size) + 1)
     
     def _column_to_longitude(self, column):
