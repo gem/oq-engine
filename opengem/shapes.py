@@ -23,6 +23,7 @@ Point = geometry.Point
 class Region(object):
     """A container of polygons, used for bounds checking"""
     def __init__(self, polygon):
+        self._grid = None
         self.polygon = polygon
         self.cell_size = 0.1
         # TODO(JMC): Make this a multipolygon instead?
@@ -83,9 +84,11 @@ class Region(object):
         """Returns a proxy interface that maps lat/lon 
         to col/row based on a specific cellsize. Proxy is
         also iterable."""
-        if not self.cell_size:
-            raise Exception("Can't generate grid without cell_size being set")
-        return Grid(self, self.cell_size)
+        if not self._grid:
+            if not self.cell_size:
+                raise Exception("Can't generate grid without cell_size being set")
+            self._grid = Grid(self, self.cell_size)
+        return self._grid
     
     def __iter__(self):    
         if not self.cell_size:
@@ -117,18 +120,26 @@ class GridPoint(object):
     def __eq__(self, other):
         if isinstance(other, Site):
             other = self.grid.point_at(other)
-        return (self.column == other.column and 
-            self.row == other.row and 
-            self.grid.region.bounds == other.grid.region.bounds and
-            self.grid.cell_size == other.grid.cell_size)
+        test = (self.__hash__() == other.__hash__())
+        # print "Do gridpoints match? %s" % test
+        return test
     
     @property
     def site(self):
         return self.grid.site_at(self)
 
-
+    def hash(self):
+        return self.__hash__()
+        
     def __repr__(self):
-        return "%s:%s:%s" % (self.column, self.row, self.grid.cell_size)
+        return str(self.__hash__())
+
+    def __hash__(self):
+        return self.column * 1000000000 + self.row 
+        #, int(self.grid.cell_size)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class Grid(object):
@@ -143,7 +154,7 @@ class Grid(object):
                     self.region.upper_right_corner.longitude)
         self.rows = self._latitude_to_row(
                     self.region.upper_right_corner.latitude)
-        # print "Grid with %s rows and %s columns" % (self.rows, self.columns)
+        print "Grid with %s rows and %s columns" % (self.rows, self.columns)
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
@@ -192,11 +203,12 @@ class Grid(object):
         return Site(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
     def __iter__(self):
+        # print "Iterating my grid, with a total of %s rows and %s columns" % (self.rows, self.columns)
         for row in range(1, self.rows):
             for col in range(1, self.columns):
                 try:
                     point = GridPoint(self, col, row)
-                    self.check_point(point)
+                    self.check_gridpoint(point)
                     yield point
                 except Exception, e:
                     pass
@@ -225,6 +237,9 @@ class Site(object):
         return self.point.equals(other)
     
     def hash(self):
+        return self.__hash__()
+    
+    def __hash__(self):
         """A geohash-encoded string for dict keys"""
         return geohash.encode(self.point.y, self.point.x, 
             precision=FLAGS.distance_precision)

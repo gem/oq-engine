@@ -41,9 +41,9 @@ def ingest_vulnerability(path):
     # STATE['vulnerability_curves']['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
 
     for data in vulnerability.VulnerabilityModelFile(path):
-        logging.debug('found vulnerability data')
+        # logging.debug('found vulnerability data')
         STATE['vulnerability_curves'][data['ID']] = data
-    logging.debug('vulnerability done')
+    # logging.debug('vulnerability done')
     
 
 # TODO(jmc): rather than passing files in here, determine the right parser to 
@@ -66,24 +66,28 @@ def main(vulnerability_model_file, hazard_curve_file,
                                                             
     hazard_curves = {}
     shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
-    for site, hazard_curve in shaml_parser.filter(region_constraint):
-        gridpoint = region_constraint.grid.point_at(site)
-        print "%s: %s" % (gridpoint, hazard_curve)
-        hazard_curves[gridpoint] = hazard_curve
-       
-    ingest_vulnerability(vulnerability_model_file)
+    attribute_constraint = \
+        shaml_output.ShamlOutputConstraint({'IMT' : 'PGA'})
     
-    # Since we've got hazard curves, let's do probabilistic assessment
-    ratio_engine = engines.ProbabilisticLossRatioCalculator(
-        hazard_curves, STATE['vulnerability_curves'])
+    for site, hazard_curve in shaml_parser.filter(region_constraint, attribute_constraint):
+        gridpoint = region_constraint.grid.point_at(site)
+        hazard_curves[gridpoint] = hazard_curve
+        print "Loading hazard curve at %s: %s" % (site.latitude,  site.longitude)
+    
+    print hazard_curves
+    
+    ingest_vulnerability(vulnerability_model_file)
     
     exposure_portfolio = {}
     exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
     for site, asset in exposure_parser.filter(region_constraint):
         gridpoint = region_constraint.grid.point_at(site)
-        print "%s: %s" % (gridpoint, asset)
         exposure_portfolio[gridpoint] = asset
-    loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
+        print "Loading asset at %s: %s" % (site.latitude,  site.longitude)
+    
+        
+    risk_engine = engines.ProbabilisticLossRatioCalculator(
+            hazard_curves, STATE['vulnerability_curves'], exposure_portfolio)
     
     ratio_results = {}
     loss_curves = {}
@@ -91,13 +95,14 @@ def main(vulnerability_model_file, hazard_curve_file,
     interval = 0.01
     
     for gridpoint in region_constraint.grid:
+        #logging.debug("Computing loss_ratio_curve for %s", gridpoint)
         # TODO(jmc): Spawn a task for each larger region, eg
         # Make smaller sets of sites and batch them off
         site = gridpoint.site
-        val = ratio_engine.compute(gridpoint)
+        val = risk_engine.compute_loss_ratio_curve(gridpoint)
         if val:
             ratio_results[gridpoint] = val
-            loss_curve = loss_engine.compute(gridpoint, ratio_results[gridpoint])
+            loss_curve = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])
             loss_curves[gridpoint] = loss_curve
             losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
     
