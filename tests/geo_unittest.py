@@ -40,8 +40,10 @@ class SiteTestCase(unittest.TestCase):
         sites = {}
         sites[first_site] = "one"
         sites[second_site] = "two"
+        # BOTH will now be "two"! This is correct
+        
         self.assertEqual(first_site, second_site)
-        self.assertEqual(sites[first_site], "one")
+        self.assertEqual(sites[first_site], "two")
         self.assertEqual(sites[second_site], "two")
 
     def test_sites_have_geo_accessors(self):    

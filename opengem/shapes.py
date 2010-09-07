@@ -213,6 +213,8 @@ class Grid(object):
                 except Exception, e:
                     pass
 
+def c_mul(a, b):
+    return eval(hex((long(a) * b) & 0xFFFFFFFFL)[:-1])
 
 class Site(object):
     """Site is a dictionary-keyable point"""
@@ -237,18 +239,30 @@ class Site(object):
         return self.point.equals(other)
     
     def hash(self):
-        return self.__hash__()
+        return self._geohash()
     
     def __hash__(self):
+        if not self:
+            return 0 # empty
+        hash = self._geohash()
+        value = ord(hash[0]) << 7
+        for char in hash:
+            value = c_mul(1000003, value) ^ ord(char)
+        value = value ^ len(hash)
+        if value == -1:
+            value = -2
+        return value
+    
+    def _geohash(self):
         """A geohash-encoded string for dict keys"""
         return geohash.encode(self.point.y, self.point.x, 
             precision=FLAGS.distance_precision)
     
     def __cmp__(self, other):
-        return self.hash() == other.hash()
+        return self._geohash() == other._geohash()
     
     def __repr__(self):
-        return self.hash()
+        return self._geohash()
         
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)

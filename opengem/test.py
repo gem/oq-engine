@@ -14,7 +14,7 @@ from opengem import flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('download_test_data', False, 
+flags.DEFINE_boolean('download_test_data', True, 
         'Fetch test data files if needed')
         
 DATA_DIR = os.path.abspath(os.path.join(
@@ -49,3 +49,29 @@ def guarantee_file(path, url):
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
+
+
+def timeit(method):
+    """Decorator for timing methods"""
+    def _timed(*args, **kw):
+        timestart = time.time()
+        result = method(*args, **kw)
+        timeend = time.time()
+
+        print '%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, timeend-timestart)
+        return result
+
+    return _timed    
+
+
+def skipit(_method):
+    """Decorator for skipping tests"""
+    def _skipme(*_args, **_kw):
+        pass
+    return _skipme
+
+
+def measureit(method):
+    """Decorator that profiles memory usage"""
+    pass

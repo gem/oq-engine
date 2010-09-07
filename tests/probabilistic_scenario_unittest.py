@@ -46,7 +46,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
         self.assertEqual(compute_loss_curve(
-                shapes.Curve(fast_ordered_dict([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)])),
+                shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
                 INVALID_ASSET_VALUE),
                 shapes.EMPTY_CURVE)
     

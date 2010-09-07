@@ -65,8 +65,6 @@ def main(vulnerability_model_file, hazard_curve_file,
     In testing mode, we run directly against a simple set
     of input files."""
     
-    # This is our pool of coroutines
-    pool = greenpool.GreenPool()
     
     # TODO(JMC): Support portfolio of sites, not just regions
     region_constraint = shapes.RegionConstraint.from_file(region_file)
@@ -122,17 +120,3 @@ def main(vulnerability_model_file, hazard_curve_file,
     output_generator.serialize(loss_curves)
     output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
     output_generator.serialize(losses_one_perc)
-
-    
-    # These are the computations we are doing
-    # loss_grid = computation.Grid(pool, cell_factory=loss.LossComputation)
-    # loss_ratio_grid = computation.Grid(
-    #         pool, cell_factory=loss_ratio.LossRatioComputation)
-
-    # These are our output formats
-    # TODO(jmc): Make this grid the bounding box of the region
-    # 
-    # image_grid = grid.Grid(ncols=100, nrows=100, 
-    #                 xllcorner=123.25, yllcorner=48.35, cellsize=0.1)
-    # loss_map = geotiff.GeoTiffFile(FLAGS.loss_map, image_grid)
-    # loss_ratio_map = geotiff.GeoTiffFile(FLAGS.loss_ratio_map, image_grid)

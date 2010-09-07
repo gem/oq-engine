@@ -59,7 +59,9 @@ flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
 flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
                     'loss ratio map output')
 
-
+flags.DEFINE_boolean('profile', False, 'Run profiler?')
+flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
+flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
@@ -67,4 +69,14 @@ if __name__ == '__main__':
     if FLAGS.debug:
         logging.getLogger().setLevel(logging.DEBUG)
     
-    tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure, FLAGS.loss_map)
+    if FLAGS.profile:
+        import cProfile
+        cProfile.run('tasks.main(FLAGS.vulnerability, \
+                        FLAGS.hazard_curves, FLAGS.region, \
+                        FLAGS.exposure, FLAGS.loss_map)', FLAGS.profile_log)
+    elif FLAGS.load_profile:
+        import pstats
+        p = pstats.Stats(FLAGS.profile_log)
+        p.sort_stats('cumulative').print_stats(10)    
+    else:
+        tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure, FLAGS.loss_map)

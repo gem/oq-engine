@@ -43,18 +43,18 @@ class RiskEngineTestCase(unittest.TestCase):
         vulnerability_curves['brick'] = ([0.2, 0.3, 0.4, 0.9, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         vulnerability_curves['stone'] = ([0.2, 0.21, 0.41, 0.94, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
         vulnerability_curves['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-
-        ratio_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, vulnerability_curves)
         
         exposure_portfolio = {}
         # # Pretend there are only two cities in this country
         exposure_portfolio[first_site] = (200000, 'New York')
         exposure_portfolio[fourth_site] = (400000, 'London')
-        loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
+        
+        risk_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, 
+                                vulnerability_curves, exposure_portfolio)
         
         for site in sites_of_interest:
-            ratio_results[site] = ratio_engine.compute(site)
-            loss_results[site] = loss_engine.compute(site, ratio_results[site])
+            ratio_results[site] = risk_engine.compute_loss_ratio_curve(site)
+            loss_results[site] = risk_engine.compute_loss_curve(site, ratio_results[site])
         
         self.assertFalse(first_site in ratio_results)
         self.assertEqual(ratio_results[third_site], None)
