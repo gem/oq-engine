@@ -286,3 +286,9 @@ class Curve(object):
         return self.values[x_value]
 
 EMPTY_CURVE = Curve(OrderedDict())
+
+def FastCurve(values):
+    odict = OrderedDict()
+    for key, val in values:
+        odict[key] = val
+    return Curve(odict)

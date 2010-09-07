@@ -183,7 +183,6 @@ def _compute_lrem(vuln_function, distribution=stats.lognorm):
             cov = float(vuln_function.get_for(iml)[1])
             mean = float(vuln_function.get_for(iml)[0])
             lrem[row][current_column] = fix_value(1.0 - fix_value(distribution.cdf(next_ratio, mean, scale=(mean * cov))))
-            # print "mean is %s, cov is %s, next_ratio is %s, cell value is %s" % (mean, cov, next_ratio, distribution.cdf(next_ratio, mean, scale=(mean * cov)))
         current_column += 1
     return lrem
 

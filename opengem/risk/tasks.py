@@ -17,6 +17,7 @@ import eventlet
 from eventlet import event
 from eventlet import greenpool
 from eventlet import queue
+from ordereddict import *
 
 logging = eventlet.import_patched('logging')
 
@@ -34,6 +35,7 @@ from opengem import flags
 FLAGS = flags.FLAGS
 
 
+STATE['vulnerability_curves_raw'] = {}
 STATE['vulnerability_curves'] = {}
 def ingest_vulnerability(path):
     # STATE['vulnerability_curves']['brick'] = ([0.2, 0.3, 0.4, 0.9, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
@@ -42,7 +44,13 @@ def ingest_vulnerability(path):
 
     for data in vulnerability.VulnerabilityModelFile(path):
         # logging.debug('found vulnerability data')
-        STATE['vulnerability_curves'][data['ID']] = data
+        curve_data = OrderedDict()
+        pairs = zip(data['LossRatioValues'], data['CoefficientVariationValues'])
+        print data['IntensityMeasureValues']
+        for idx, IML in enumerate(data['IntensityMeasureValues']):
+            curve_data[IML] = pairs[idx]
+        STATE['vulnerability_curves_raw'][data['ID']] = data    
+        STATE['vulnerability_curves'][data['ID']] = shapes.Curve(curve_data)
     # logging.debug('vulnerability done')
     
 
@@ -69,10 +77,12 @@ def main(vulnerability_model_file, hazard_curve_file,
     attribute_constraint = \
         shaml_output.ShamlOutputConstraint({'IMT' : 'PGA'})
     
-    for site, hazard_curve in shaml_parser.filter(region_constraint, attribute_constraint):
+    for site, hazard_curve_data in shaml_parser.filter(region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
+        print "Hazard data looks like %s" % zip(hazard_curve_data['IML'], hazard_curve_data['Values'])
+        hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
-        print "Loading hazard curve at %s: %s" % (site.latitude,  site.longitude)
+        print "Loading hazard curve %s at %s: %s" % (hazard_curve, site.latitude,  site.longitude)
     
     print hazard_curves
     
