@@ -59,6 +59,9 @@ Step 5: build the loss curve
 loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 """
 
+import logging
+import math
+
 from decimal import *
 from ordereddict import *
 
@@ -96,7 +99,7 @@ def compute_loss_curve(loss_ratio_curve, asset):
     loss_curve_values = OrderedDict()
     for loss_ratio, probability_occurrence \
             in loss_ratio_curve.values.iteritems(): \
-            loss_curve_values[loss_ratio * asset] = probability_occurrence
+            loss_curve_values["%s" % (loss_ratio * asset)] = probability_occurrence
 
     return shapes.Curve(loss_curve_values)
 
@@ -118,19 +121,23 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
                 lrem_po[row] = [None] * len(vuln_function.domain)
             lrem_po[row][current_column] = lrem[row][current_column] * prob_occ
         current_column += 1
-
+    
+    #print "LREM_PO: \n\n"
+    #print lrem_po
     return lrem_po
 
 
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     """Computes the loss ratio curve."""
     
+    print "Loss_ratios are %s" % loss_ratios
+    
     loss_ratio_curve_values = OrderedDict()
-    for row in range(len(lrem_po)):
+    for row in range(len(lrem_po)-1):
         prob_occ = 0.0
         for column in range(len(lrem_po[row])):
             prob_occ += lrem_po[row][column]
-        loss_ratio_curve_values[loss_ratios[row]] = prob_occ
+        loss_ratio_curve_values["%s" % loss_ratios[row]] = prob_occ
 
     # print loss_ratio_curve_values
     return shapes.Curve(loss_ratio_curve_values)
@@ -142,7 +149,8 @@ def _generate_loss_ratios(vuln_function):
         # get the means
     loss_ratios.insert(0, 0.0)
         # we need to add 0.0 as first value
-    return _split_loss_ratios(loss_ratios)
+    splitted = _split_loss_ratios(loss_ratios)  
+    return splitted
 
 @memoize
 def _compute_lrem(vuln_function, distribution=stats.lognorm):
@@ -152,7 +160,7 @@ def _compute_lrem(vuln_function, distribution=stats.lognorm):
     # print "Vuln Function codomain is: %s" % (vuln_function.codomain)
     
     current_column = 0
-    lrem = [None] * len(loss_ratios)
+    lrem = [None] * (len(loss_ratios)+1)
 
     # we need to process intensity measure levels in ascending order
     imls = list(vuln_function.domain)
@@ -170,20 +178,25 @@ def _compute_lrem(vuln_function, distribution=stats.lognorm):
             return prob
 
     for iml in imls:
-        for row in range(len(loss_ratios)):
+        # we need to use std deviation, but we have cov
+        cov = float(vuln_function.get_for(iml)[1])
+        mean = float(vuln_function.get_for(iml)[0])
+        stddev = cov * mean
+        
+        for row in range(len(loss_ratios)+1):
             if not lrem[row]: 
                 lrem[row] = [None] * len(vuln_function.domain)
             # last loss ratio is fixed to be 1
-            if row < len(loss_ratios) - 1: 
-                next_ratio = loss_ratios[row + 1]
+            if row < len(loss_ratios): 
+                next_ratio = loss_ratios[row]
             else: 
                 next_ratio = 1.0 
-
-            # we need to use std deviation, but we have cov
-            cov = float(vuln_function.get_for(iml)[1])
-            mean = float(vuln_function.get_for(iml)[0])
-            lrem[row][current_column] = fix_value(1.0 - fix_value(distribution.cdf(next_ratio, mean, scale=(mean * cov))))
+            #print "ROW AND COLUMN ARE %s and %s" % (row, current_column)
+            lrem[row][current_column] = fix_value(distribution.sf(math.exp(next_ratio), stddev, scale=math.exp(mean)))
+            #logging.debug("X is %s, mean in %s, stddev is %s, SF value is %s",
+            #    next_ratio, mean, stddev, lrem[row][current_column])
         current_column += 1
+    #logging.debug( "LREM IS \n\n %s", lrem)
     return lrem
 
 

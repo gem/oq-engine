@@ -25,10 +25,10 @@ def fast_ordered_dict(values):
 # input test values
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
-HAZARD_CURVE = shapes.Curve(
-    fast_ordered_dict([(5.0, 0.138), (6.0, 0.099), (7.0, 0.068), (8.0, 0.041)]))
-VULNERABILITY_FUNCTION = shapes.Curve(
-    fast_ordered_dict([(5.0, (0.0, 0.0)), (6.0, (0.0, 0.0)), (7.0, (0.0, 0.0)), (8.0, (0.0, 0.0))]))
+HAZARD_CURVE = shapes.FastCurve(
+    [(5.0, 0.138), (6.0, 0.099), (7.0, 0.068), (8.0, 0.041)])
+VULNERABILITY_FUNCTION = shapes.FastCurve(
+    [(5.0, (0.0, 0.0)), (6.0, (0.0, 0.0)), (7.0, (0.0, 0.0)), (8.0, (0.0, 0.0))])
 
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
@@ -101,7 +101,43 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         # self.assertAlmostEquals(0.2891, loss_ratio_curve.get_for(1.0), 0.0001)
         # self.assertAlmostEquals(0.1853, loss_ratio_curve.get_for(2.0), 0.0001)
 
-    # lrem tests
+
+    def test_end_to_end(self):
+        """These values were hand-computed by Vitor Silva."""
+        hazard_curve = shapes.FastCurve(
+            [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
+        
+        vuln_function = shapes.FastCurve(
+            [(5.0, (0.25, 0.5)),
+             (6.0, (0.4, 0.4)),
+             (7.0, (0.6, 0.3))])
+        
+        lrem = _compute_lrem(vuln_function)
+        for row in lrem:
+            print row
+        
+        loss_ratio_curve = compute_loss_ratio_curve(vuln_function,
+                                hazard_curve)
+        print loss_ratio_curve
+        
+        lr_curve_expected = shapes.FastCurve([(0.0, 0.640), 
+                                              (0.05, 0.625),
+                                              (0.10, 0.598),
+                                              (0.15, 0.553),
+                                              (0.20, 0.490),
+                                              (0.25, 0.414),
+                                              (0.28, 0.365),
+                                              (0.31, 0.316),
+                                              (0.34, 0.270),
+                                              (0.37, 0.227),
+                                              (0.40, 0.189),
+                                              (0.44, 0.147),
+                                              (0.48, 0.112),
+                                              (0.52, 0.085),
+                                              (0.56, 0.064),
+                                              (0.60, 0.047)])
+        for key, val in lr_curve_expected.values.items():
+            self.assertAlmostEqual(val, loss_ratio_curve.get_for(key), 3)
     
     def test_empty_matrix(self):
         """Degenerate case."""
@@ -157,18 +193,18 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     
     def test_lrem_computation(self):
         vuln_dict = OrderedDict()
-        vuln_dict[5.0] = (0.3, 1.0)
-        vuln_dict[5.5] = (0.5, 1.0)
-        vuln_dict[6.0] = (0.7, 1.0)
+        vuln_dict[5.0] = (0.3, 0.5)
+        vuln_dict[5.5] = (0.5, 0.55)
+        vuln_dict[6.0] = (0.7, 0.6)
         vuln_function = shapes.Curve(vuln_dict)
         
         lrem = _compute_lrem(vuln_function)
         
-        self.assertAlmostEquals(1.0, lrem[0][1], 4)
+        # self.assertAlmostEquals(1.0, lrem[0][1], 4)
         self.assertAlmostEquals(0.5, lrem[4][0], 4)
         self.assertAlmostEquals(0.5, lrem[9][1], 4)
         self.assertAlmostEquals(0.5, lrem[14][2], 4)
-        self.assertAlmostEquals(0.0, lrem[15][0], 4)
+        # self.assertAlmostEquals(0.0, lrem[15][0], 4)
         
     # loss ratios splitting tests
 

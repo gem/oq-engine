@@ -304,5 +304,5 @@ EMPTY_CURVE = Curve(OrderedDict())
 def FastCurve(values):
     odict = OrderedDict()
     for key, val in values:
-        odict[key] = val
+        odict["%s" % key] = val
     return Curve(odict)
