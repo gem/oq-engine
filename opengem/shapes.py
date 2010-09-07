@@ -154,7 +154,7 @@ class Grid(object):
                     self.region.upper_right_corner.longitude)
         self.rows = self._latitude_to_row(
                     self.region.upper_right_corner.latitude)
-        print "Grid with %s rows and %s columns" % (self.rows, self.columns)
+        # print "Grid with %s rows and %s columns" % (self.rows, self.columns)
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""

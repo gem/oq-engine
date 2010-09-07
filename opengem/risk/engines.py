@@ -23,14 +23,14 @@ class ProbabilisticLossRatioCalculator(object):
             # print "Don't have haz curve"
             return None
         if (gridpoint not in self.exposure_portfolio.keys()):
-            print "Gridpoint not in exposure portfolio at %s" % gridpoint
+            # print "Gridpoint not in exposure portfolio at %s" % gridpoint
             return None
-        print "Gridpoint object is %s" % gridpoint
+        # print "Gridpoint object is %s" % gridpoint
         asset = self.exposure_portfolio[gridpoint]
         hazard_curve = self.hazard_curves[gridpoint]
-        print "Asset is %s" % asset
-        for vuln in self.vulnerability_curves:
-            print vuln
+        #print "Asset is %s" % asset
+        #for vuln in self.vulnerability_curves:
+        #print vuln
         vuln_curve = self.vulnerability_curves[asset['VulnerabilityFunction']]
         return probabilistic_scenario.compute_loss_ratio_curve(vuln_curve, hazard_curve)
     

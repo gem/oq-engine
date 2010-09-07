@@ -130,7 +130,7 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     """Computes the loss ratio curve."""
     
-    print "Loss_ratios are %s" % loss_ratios
+    # print "Loss_ratios are %s" % loss_ratios
     
     loss_ratio_curve_values = OrderedDict()
     for row in range(len(lrem_po)-1):

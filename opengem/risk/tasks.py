@@ -46,9 +46,9 @@ def ingest_vulnerability(path):
         # logging.debug('found vulnerability data')
         curve_data = OrderedDict()
         pairs = zip(data['LossRatioValues'], data['CoefficientVariationValues'])
-        print data['IntensityMeasureValues']
+        # print data['IntensityMeasureValues']
         for idx, IML in enumerate(data['IntensityMeasureValues']):
-            curve_data[IML] = pairs[idx]
+            curve_data["%s" % IML] = pairs[idx]
         STATE['vulnerability_curves_raw'][data['ID']] = data    
         STATE['vulnerability_curves'][data['ID']] = shapes.Curve(curve_data)
     # logging.debug('vulnerability done')
@@ -73,16 +73,16 @@ def main(vulnerability_model_file, hazard_curve_file,
     hazard_curves = {}
     shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
     attribute_constraint = \
-        shaml_output.ShamlOutputConstraint({'IMT' : 'PGA'})
+        shaml_output.ShamlOutputConstraint({'IMT' : 'MMI'})
     
     for site, hazard_curve_data in shaml_parser.filter(region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
-        print "Hazard data looks like %s" % zip(hazard_curve_data['IML'], hazard_curve_data['Values'])
+        # logging.debug("Hazard data looks like %s", zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
         hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
-        print "Loading hazard curve %s at %s: %s" % (hazard_curve, site.latitude,  site.longitude)
+        # logging.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
     
-    print hazard_curves
+    #print hazard_curves
     
     ingest_vulnerability(vulnerability_model_file)
     
@@ -91,7 +91,7 @@ def main(vulnerability_model_file, hazard_curve_file,
     for site, asset in exposure_parser.filter(region_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         exposure_portfolio[gridpoint] = asset
-        print "Loading asset at %s: %s" % (site.latitude,  site.longitude)
+        #print "Loading asset at %s: %s" % (site.latitude,  site.longitude)
     
         
     risk_engine = engines.ProbabilisticLossRatioCalculator(
@@ -115,8 +115,8 @@ def main(vulnerability_model_file, hazard_curve_file,
             losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
     
     # TODO(jmc): Pick output generator from config or cli flags
-    output_generator = output.SimpleOutput()
-    output_generator.serialize(ratio_results)
-    output_generator.serialize(loss_curves)
+    #output_generator = output.SimpleOutput()
+    #output_generator.serialize(ratio_results)
+    #output_generator.serialize(loss_curves)
     output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
     output_generator.serialize(losses_one_perc)
