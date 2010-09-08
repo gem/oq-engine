@@ -59,7 +59,7 @@ Step 5: build the loss curve
 loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 """
 
-import logging
+
 import math
 
 from decimal import *
@@ -69,6 +69,7 @@ import numpy as np
 from numpy import isnan
 from scipy import stats
 
+from opengem import logs
 from opengem import shapes
 from opengem.state import *
 
@@ -89,7 +90,7 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
     return loss_ratio_curve
 
 
-@memoize
+# @memoize
 def compute_loss_curve(loss_ratio_curve, asset):
     """Computes the loss curve for a specific asset value."""
 
@@ -98,8 +99,9 @@ def compute_loss_curve(loss_ratio_curve, asset):
 
     loss_curve_values = OrderedDict()
     for loss_ratio, probability_occurrence \
-            in loss_ratio_curve.values.iteritems(): \
-            loss_curve_values["%s" % (loss_ratio * asset)] = probability_occurrence
+            in loss_ratio_curve.values.iteritems():
+        logs.risk_log.debug("Loss ratio is %s, PO is %s" % (loss_ratio, probability_occurrence))
+        loss_curve_values["%s" % (float(loss_ratio) * asset)] = probability_occurrence
 
     return shapes.Curve(loss_curve_values)
 
@@ -130,8 +132,6 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     """Computes the loss ratio curve."""
     
-    # print "Loss_ratios are %s" % loss_ratios
-    
     loss_ratio_curve_values = OrderedDict()
     for row in range(len(lrem_po)-1):
         prob_occ = 0.0
@@ -142,7 +142,7 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     # print loss_ratio_curve_values
     return shapes.Curve(loss_ratio_curve_values)
     
-@memoize
+# @memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
     loss_ratios = [value[0] for value in vuln_function.codomain] 
@@ -152,7 +152,7 @@ def _generate_loss_ratios(vuln_function):
     splitted = _split_loss_ratios(loss_ratios)  
     return splitted
 
-@memoize
+# @memoize
 def _compute_lrem(vuln_function, distribution=stats.lognorm):
     """Computes the loss ratio exceedance matrix."""
     loss_ratios = _generate_loss_ratios(vuln_function)

@@ -9,20 +9,16 @@ Tasks in the risk engine include the following:
  
 """
 
-import logging
 import os
 import sys
 
-import eventlet
-from eventlet import event
-from eventlet import greenpool
-from eventlet import queue
 from ordereddict import *
 
-logging = eventlet.import_patched('logging')
 
+from opengem.logs import *
 from opengem.risk import engines
 from opengem import output
+import opengem.output.risk
 from opengem import shapes
 from opengem.output import geotiff
 from opengem.parser import exposure
@@ -38,12 +34,9 @@ FLAGS = flags.FLAGS
 STATE['vulnerability_curves_raw'] = {}
 STATE['vulnerability_curves'] = {}
 def ingest_vulnerability(path):
-    # STATE['vulnerability_curves']['brick'] = ([0.2, 0.3, 0.4, 0.9, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    # STATE['vulnerability_curves']['stone'] = ([0.2, 0.21, 0.41, 0.94, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-    # STATE['vulnerability_curves']['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-
+    """Reads a file of vulnerability curves and loads them into shared state."""
+    
     for data in vulnerability.VulnerabilityModelFile(path):
-        # logging.debug('found vulnerability data')
         curve_data = OrderedDict()
         pairs = zip(data['LossRatioValues'], data['CoefficientVariationValues'])
         # print data['IntensityMeasureValues']
@@ -77,10 +70,9 @@ def main(vulnerability_model_file, hazard_curve_file,
     
     for site, hazard_curve_data in shaml_parser.filter(region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
-        # logging.debug("Hazard data looks like %s", zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
         hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
-        # logging.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
+        hazard_log.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
     
     #print hazard_curves
     
@@ -115,8 +107,9 @@ def main(vulnerability_model_file, hazard_curve_file,
             losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
     
     # TODO(jmc): Pick output generator from config or cli flags
+    output_generator = opengem.output.risk.RiskXMLWriter("loss-curves.xml")
+    output_generator.serialize(loss_curves)
     #output_generator = output.SimpleOutput()
     #output_generator.serialize(ratio_results)
-    #output_generator.serialize(loss_curves)
     output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
     output_generator.serialize(losses_one_perc)

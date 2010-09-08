@@ -37,13 +37,12 @@ class ProbabilisticLossRatioCalculator(object):
     def compute_loss_curve(self, gridpoint, loss_ratio_curve):
         """ Returns the loss curve based on loss ratio and exposure"""
         if loss_ratio_curve is None:
-            # print "No loss ratio curve at %s" % gridpoint
             return None
         # TODO(jmc): Exposure needs to be indexed by gridpoint
         if gridpoint not in self.exposure_portfolio.keys():
-            # print "Don't have exposure for this point: %s" % gridpoint
             return None
-        return ([0.0, 0.1, 0.2, 0.3], [0.9, 0.8, 0.5, 0.2])
+        asset = self.exposure_portfolio[gridpoint]
+        return probabilistic_scenario.compute_loss_curve(loss_ratio_curve, asset['AssetValue'])
 
     def compute_all(self, sites_of_interest):
         """Compute ALL the sites (only for testing)"""

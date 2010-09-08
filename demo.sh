@@ -6,7 +6,7 @@ DATA_DIR=./tests/data
 # python tests/generate_demo_files.py
 
 echo "Running demo..."
-python bin/gem-risk-deterministic \
+python bin/opengem \
   --exposure $DATA_DIR/FakeExposurePortfolio.xml \
   --vulnerability $DATA_DIR/VulnerabilityModel-Buildings.xml \
   --hazard_curves $DATA_DIR/HazardOneSite.xml \

@@ -24,7 +24,7 @@ import sys
 
 import eventlet
 
-logging = eventlet.import_patched('logging')
+# logging = eventlet.import_patched('logging')
 
 # this is a hack so that it is easier to test these scripts,
 # it will add the proper directories to the path so that 
@@ -37,6 +37,7 @@ from opengem import computation
 from opengem import flags
 from opengem import grid
 from opengem import region
+from opengem import logs
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shakemap
@@ -65,9 +66,7 @@ flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
-    
-    if FLAGS.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
+    logs.init_logs()
     
     if FLAGS.profile:
         import cProfile

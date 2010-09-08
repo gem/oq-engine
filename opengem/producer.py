@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+from opengem import logs
+
 from eventlet import event
 from eventlet import tpool
 
 class FileProducer(object):
     def __init__(self, path):
+        
+        logs.general_log.debug('Found data at %s', path)
         self.finished = event.Event()
         self.path = path
 

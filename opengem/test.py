@@ -4,7 +4,7 @@
 Helper functions for our unit and smoke tests.
 """
 
-import logging
+from opengem.logs import general_log as log
 import os
 import subprocess
 
@@ -45,7 +45,7 @@ def guarantee_file(path, url):
     if not os.path.isfile(path):
         if not FLAGS.download_test_data:
             raise Exception("Test data does not exist")
-        logging.info("Downloading test data for %s", path)
+        log.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))

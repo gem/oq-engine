@@ -6,7 +6,6 @@ for now it's just global variables :)
 """
 
 import cPickle
-import logging
 import sys
 
 
