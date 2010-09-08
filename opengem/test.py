@@ -14,7 +14,7 @@ from opengem import flags
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('download_test_data', False, 
+flags.DEFINE_boolean('download_test_data', True, 
         'Fetch test data files if needed')
         
 DATA_DIR = os.path.abspath(os.path.join(
@@ -49,3 +49,7 @@ def guarantee_file(path, url):
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
+<<<<<<< HEAD
+=======
+            
+>>>>>>> master
