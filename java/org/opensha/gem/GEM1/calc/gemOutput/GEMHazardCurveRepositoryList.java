@@ -46,6 +46,112 @@ public class GEMHazardCurveRepositoryList {
 	}
 	
 	/**
+	 * This method compute mean hazard curves generated from
+	 * a set of hazard curves assumed generated through a 
+	 * Monte Carlo process.
+	 */
+	public GEMHazardCurveRepository getMeanHazardCurves(){
+		// define GEMHazardCurveRepository for storing  mean hazard curves
+		// the initialization is done considering the first HazardCurveRepository in the HazardCurveRepositoryList
+        UnoptimizedDeepCopy udp = new UnoptimizedDeepCopy();
+		GEMHazardCurveRepository meanHC = new GEMHazardCurveRepository((ArrayList<Site>) udp.copy(hcRepList.get(0).getGridNode()),
+				(ArrayList<Double>) udp.copy(hcRepList.get(0).getGmLevels()), (ArrayList<Double[]>) udp.copy(hcRepList.get(0).getProbExList()), hcRepList.get(0).getUnitsMeas());
+		// loop over sites
+		int indexSite = 0;
+		for(Site site: meanHC.getGridNode()){
+			// hazard curve (probabilities of exceedance)
+			Double[] probEx = new Double[meanHC.getGmLevels().size()];
+			// loop over ground motion values
+			int indexGMV = 0;
+			for(Double gml: meanHC.getGmLevels()){
+				// array list containing probability of exceedance values 
+				// for the current ground motion values
+				ArrayList<Double> probExValList = new ArrayList<Double>();
+				// loop over hazard curves realizations
+				for(int i=0;i<hcRepList.size();i++){
+					// get corresponding ground motion value
+					probExValList.add(hcRepList.get(i).getProbExceedanceList(indexSite)[indexGMV]);	
+				}
+				// calculate mean value
+				double mean = 0.0;
+				for(int j=0;j<probExValList.size();j++) mean = mean + probExValList.get(j);
+				mean = mean/probExValList.size();
+				probEx[indexGMV] = mean;
+			    indexGMV = indexGMV + 1;
+			}// end loop over ground motion values
+			
+			meanHC.setHazardCurveGridNode(indexSite, site.getLocation().getLatitude(), site.getLocation().getLongitude(), probEx);
+			
+			indexSite = indexSite + 1;
+		}// end loop over site
+		return meanHC;
+	}
+	
+	/**
+	 * This method compute mean hazard curves given a logic tree on the ERF
+	 * and an hash map of tectonic regions/logic tree for gmpes
+	 * 
+	 */
+	public GEMHazardCurveRepository getMeanHazardCurves( GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree, HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap){
+		// define GEMHazardCurveRepository for storing mean hazard curves
+		// the initialization is done considering the first HazardCurveRepository in the HazardCurveRepositoryList
+        UnoptimizedDeepCopy udp = new UnoptimizedDeepCopy();
+		GEMHazardCurveRepository meanhc = new GEMHazardCurveRepository((ArrayList<Site>) udp.copy(hcRepList.get(0).getGridNode()),
+				(ArrayList<Double>) udp.copy(hcRepList.get(0).getGmLevels()), (ArrayList<Double[]>) udp.copy(hcRepList.get(0).getProbExList()), hcRepList.get(0).getUnitsMeas());
+		// initialize ProbExList to 0 for all nodes
+		// loop over grid nodes
+		for(int i=0;i<meanhc.getGridNode().size();i++){
+			// loop over probability values
+			for(int j=0;j<meanhc.getProbExceedanceList(i).length;j++){
+				meanhc.getProbExceedanceList(i)[j] = 0.0;
+			}
+		}
+		// loop over end-branches
+		for (int i=0; i<hcRepList.size(); i++){
+			// take the i-th end-branch
+			GEMHazardCurveRepository hcTmp = hcRepList.get(i);
+			// get the i-th end branch label
+			String lab = endBranchLabels.get(i);
+			// get the label corresponding to the ERF and the GMPE logic trees
+			StringTokenizer labTokens = new StringTokenizer(lab,"-");
+			// erf label
+			String erfLab = labTokens.nextToken();
+			// gmpe labels
+			ArrayList<String> gmpeLab = new ArrayList<String>();
+			ArrayList<TectonicRegionType> gmpeTectRegType = new ArrayList<TectonicRegionType>();
+			while(labTokens.hasMoreTokens()){
+				StringTokenizer st = new StringTokenizer(labTokens.nextToken(),"_");
+				// tectonic region type
+				String trtName = st.nextToken();
+				// label
+				String label = st.nextToken();
+				gmpeTectRegType.add(TectonicRegionType.getTypeForName(trtName));
+				// label
+				gmpeLab.add(label);
+			}
+			// Find the weight 
+            // given by the product of the total weight of the InputToERF logic tree end branch
+			// and the total weight of the GMPE logic tree end branch
+			double wei = erfLogicTree.getTotWeight(erfLab);
+			// loop over tectonic region types
+			int indexTrt = 0;
+			for(TectonicRegionType trt:gmpeTectRegType){
+				wei = wei*gmpeLogicTreeHashMap.get(trt).getTotWeight(gmpeLab.get(indexTrt));
+				indexTrt = indexTrt + 1;
+			}
+			// loop over nodes
+			for (int j=0; j < hcTmp.getNodesNumber(); j++){	
+				// loop over prob values
+				for (int k=0; k<hcTmp.getProbExceedanceList(j).length; k++){
+					meanhc.getProbExList().get(j)[k] = meanhc.getProbExceedanceList(j)[k]+hcTmp.getProbExceedanceList(j)[k]*wei;
+				}
+		    }
+		}
+		
+		return meanhc;
+	}
+
+	/**
 	 * This method computes the mean hazard curve on each node of the grid given the 
 	 * GemLogicTreeInputToERF and the GemLogicTreeGMPE
 	 * 
@@ -184,14 +290,14 @@ public class GEMHazardCurveRepositoryList {
 	 */
 	public ArrayList<Double> getMeanHazardMap(double probEx, GemLogicTree<ArrayList<GEMSourceData>> inputToERFLT, GemLogicTree<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> gmpeLT){
 		GEMHazardCurveRepository meanHC = getMeanHazardCurve(inputToERFLT,gmpeLT);
-		ArrayList<Double> meanHM = meanHC.getHazardMap(probEx);
+		ArrayList<Double> meanHM = meanHC.getGroundMotionMap(probEx);
 		return meanHM;
 	}
 	
 	public ArrayList<Double> getMeanGroundMotionMap(double probEx, GemLogicTree<ArrayList<GEMSourceData>> ilTree, GemLogicTree<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> gmpeLT){
 		
 		// instantiate mean hazard map
-		ArrayList<Double> meanHM =hcRepList.get(0).getHazardMap(probEx);
+		ArrayList<Double> meanHM =hcRepList.get(0).getGroundMotionMap(probEx);
 		// initialize to zero
 		for(int i=0;i<meanHM.size();i++) meanHM.set(i, 0.0);
 		
@@ -199,7 +305,7 @@ public class GEMHazardCurveRepositoryList {
 		for (int i=0; i<hcRepList.size(); i++){
 			
 			// get the current hazard map
-			ArrayList<Double> HM = hcRepList.get(i).getHazardMap(probEx);
+			ArrayList<Double> HM = hcRepList.get(i).getGroundMotionMap(probEx);
 			
 			// get the i-th end branch label
 			String lab = endBranchLabels.get(i);
@@ -244,7 +350,7 @@ public class GEMHazardCurveRepositoryList {
 	public ArrayList<Double> getMeanGrounMotionMap(double probEx){
 		
 		// instantiate mean hazard map
-		ArrayList<Double> meanHM =hcRepList.get(0).getHazardMap(probEx);
+		ArrayList<Double> meanHM =hcRepList.get(0).getGroundMotionMap(probEx);
 		// initialize to zero
 		for(int i=0;i<meanHM.size();i++) meanHM.set(i, 0.0);
 		
@@ -252,7 +358,7 @@ public class GEMHazardCurveRepositoryList {
 		for (int i=0; i<hcRepList.size(); i++){
 			
 			// get the current hazard map
-			ArrayList<Double> HM = hcRepList.get(i).getHazardMap(probEx);
+			ArrayList<Double> HM = hcRepList.get(i).getGroundMotionMap(probEx);
 			
 			// loop over grid nodes
 			for(int ii=0;ii<meanHM.size();ii++){
@@ -275,7 +381,7 @@ public class GEMHazardCurveRepositoryList {
 	public ArrayList<Double> getMeanGroundMotionMap(double probEx, GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree, HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap){
 		
 		// instantiate mean hazard map
-		ArrayList<Double> meanHM =hcRepList.get(0).getHazardMap(probEx);
+		ArrayList<Double> meanHM =hcRepList.get(0).getGroundMotionMap(probEx);
 		// initialize to zero
 		for(int i=0;i<meanHM.size();i++) meanHM.set(i, 0.0);
 		
@@ -283,7 +389,7 @@ public class GEMHazardCurveRepositoryList {
 		for (int i=0; i<hcRepList.size(); i++){
 			
 			// get the current hazard map
-			ArrayList<Double> HM = hcRepList.get(i).getHazardMap(probEx);
+			ArrayList<Double> HM = hcRepList.get(i).getGroundMotionMap(probEx);
 			
 			// get the i-th end branch label
 			String lab = endBranchLabels.get(i);

@@ -21,7 +21,7 @@ public class CommandLineCalculatorMain {
 
 		// define the command line calculator
 		// at the moment the configuration file is assumed to be in the Data folder
-		CommandLineCalculator clc = new CommandLineCalculator("CalculatorConfig.inp");
+		CommandLineCalculator clc = new CommandLineCalculator("/Users/damianomonelli/Projects/opengem/data/CalculatorConfig.inp");
 		
 		// do the calculation
 		clc.doCalculation();
