@@ -14,6 +14,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * lxml
 * PyYAML
 * python-gflags
+* RabbitMQ (Installed using brew install rabbitmq)
 * SciPy
   * You will need gfortran, for os x that is at: http://r.research.att.com/gfortran-4.2.3.dmg 
   * After that `pip install scipy` should work.
@@ -22,6 +23,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * Shapely
   * requires geos (c library, also called libgeos)
 * Sphinx (for building documentation only)
+* Guppy (http://guppy-pe.sourceforge.net)
 
 
 Running Tests
@@ -64,7 +66,7 @@ Tools / Services
     ln -s /path/to/git-cl/upload.py /usr/bin/upload.py
 
 * GitHub (http://github.com/gem/opengem)
-* Rietveld (http://gemreview.appspot.com)
+* Rietveld (http://gemreview.appspot.com) - requires a google account
 * PivotalTracker (http://pivotaltracker.com)
 
 Troubleshooting

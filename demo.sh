@@ -7,7 +7,10 @@ python tests/generate_demo_files.py
 
 echo "Running demo..."
 python bin/gem-risk-deterministic \
-  --shakemap $DATA_DIR/shakemap.fake \
-  --exposure $DATA_DIR/exposure.fake \
-  --vulnerability $DATA_DIR/vulnerability.fake \
+  --exposure $DATA_DIR/ExposurePortfolioFile-test.xml \
+  --vulnerability $DATA_DIR/VulnerabilityModelFile-test.xml \
+  --hazard_curves $DATA_DIR/ShamlOutputFile-PASS.xml \
   --region $DATA_DIR/rect.region $@
+ 
+
+#--shakemap $DATA_DIR/shakemap.fake \
