@@ -16,6 +16,7 @@ Usage Examples:
 
 """
 
+import logging
 import sys
 import unittest
 
