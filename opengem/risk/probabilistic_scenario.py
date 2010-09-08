@@ -179,4 +179,36 @@ def split_loss_ratios(loss_ratios, steps_per_interval=STEPS_PER_INTERVAL):
         splitted_loss_ratios.append(loss_ratios[i + 1])
         
     return splitted_loss_ratios
-    print i
+
+
+def compute_conditional_loss(loss_curve, probability):
+    """Returns the loss corresponding to the given probability of exceedance.
+    
+    This function returns zero if the probability of exceedance if out of bounds.
+    The same applies for loss ratio curves.
+    """
+
+    probabilities = loss_curve.codomain
+    probabilities.sort()
+    
+    # the probability we want to use is out of bounds
+    if probability < probabilities[0] or probability > probabilities[-1]:
+        return 0.0
+    
+    # find the upper bound
+    for index in range(len(probabilities)):
+        if probabilities[index] > probability:
+            upper_bound = index - 1
+    
+    lower_bound = upper_bound - 1
+    
+    # For more information about the math, check the scientific
+    # model at <http://to_be_defined> (LRM chapter)
+    x = (probabilities[lower_bound] - probability) * \
+            loss_curve.domain_for(probabilities[upper_bound])
+            
+    y = (probability - probabilities[upper_bound]) * \
+            loss_curve.domain_for(probabilities[lower_bound])
+    
+    return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
+>>>>>>> bee1c45c07263eeab6d61c4eb1605c99db6c06c4
