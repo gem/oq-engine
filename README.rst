@@ -75,9 +75,20 @@ Troubleshooting
 SciPy can be a real pain to install on OS X. These steps should work if the
 procedure mentioned above does not.
 
+Make sure you have installed numpy >= 1.4, if you have installed GDAL you 
+might have an older version of numpy that may be loaded instead of your new
+installation on numpy. To resolve this, change the python module loading order
+by editing /Python/2.6/site-packages/dgal.pth
+from:
+import sys; sys.path.insert(0,'/Library/Frameworks/GDAL.framework/Versions/1.7/
+Python/site-packages')
+to:
+import sys; sys.path.append('/Library/Frameworks/GDAL.framework/Versions/1.7/
+Python/site-packages')
+
 ::
 
-    svn co http://svn.scipy.org/svn/numpy/trunk numpy
+    svn co http://svn.scipy.org/svn/numpy/trunk numpy 
     svn co http://svn.scipy.org/svn/scipy/trunk scipy
     
     cd numpy
