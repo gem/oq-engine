@@ -211,4 +211,4 @@ def compute_conditional_loss(loss_curve, probability):
             loss_curve.domain_for(probabilities[lower_bound])
     
     return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
->>>>>>> bee1c45c07263eeab6d61c4eb1605c99db6c06c4
+
