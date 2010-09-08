@@ -53,7 +53,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class CommandLineCalculator {
 	
-	// configuration data
+	// configuration data 
 	private CalculatorConfigData calcConfig;
 	// array list containing mean groun motion map
 	private ArrayList<Double> meanGroundMotionMap;
