@@ -179,3 +179,4 @@ def split_loss_ratios(loss_ratios, steps_per_interval=STEPS_PER_INTERVAL):
         splitted_loss_ratios.append(loss_ratios[i + 1])
         
     return splitted_loss_ratios
+    print i
