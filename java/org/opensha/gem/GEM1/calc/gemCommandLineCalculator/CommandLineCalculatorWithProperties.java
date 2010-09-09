@@ -106,16 +106,8 @@ public class CommandLineCalculatorWithProperties {
 	/**
 	 * This is the main method that do the calculations. According to the specifications in the
 	 * configuration file the method will do the required calculations.
-	 * @throws SecurityException
-	 * @throws IllegalArgumentException
-	 * @throws IOException
-	 * @throws ClassNotFoundException
-	 * @throws InstantiationException
-	 * @throws IllegalAccessException
-	 * @throws NoSuchMethodException
-	 * @throws InvocationTargetException
 	 */
-	public void doCalculation() throws IOException, ClassNotFoundException, InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException{
+	public void doCalculation() {
 		// start chronometer
 		long startTimeMs = System.currentTimeMillis();
 		// get calculation mode
