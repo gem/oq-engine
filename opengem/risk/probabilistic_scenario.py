@@ -25,15 +25,13 @@ function with both mean and cov, while I used in the GEM1 risk
 engine a single function for the mean and a single function
 for the cov.
 
-# TODO Understand how to represent vulnerability functions
-
-loss_ratios.insert(0, 0.0) # we need to add 0.0 as first value
 loss_ratios = [value[0] for value in vuln_function.codomain] # get the means
+loss_ratios.insert(0, 0.0) # we need to add 0.0 as first value
 loss_ratios = _split_loss_ratios(loss_ratios)
 
 These loss ratios can be cached because they depend on the
 vulnerability function and the vulnerability function depends
-on the country, so we will have lots of sites with same values.
+on the asset, so we will have lots of sites with same values.
 
 Step 2: build the loss ratio exceedance matrix
 
@@ -60,37 +58,33 @@ loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 """
 
 
-import math
-
-from decimal import *
-from ordereddict import *
-
-import numpy as np
+import scipy
+from ordereddict import OrderedDict
 from numpy import isnan
 from scipy import stats
 
 from opengem import logs
 from opengem import shapes
-from opengem.state import *
+from opengem import state
 
 STEPS_PER_INTERVAL = 5
 
 
-def compute_loss_ratio_curve(vuln_function, hazard_curve):
+def compute_loss_ratio_curve(vuln_function_code, hazard_curve):
     """One of the two main public functions, this produces
     a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function."""
     
-    if vuln_function is None:
-        vuln_function = shapes.EMPTY_CURVE
-    lrem = _compute_lrem(vuln_function)
-    lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
-    loss_ratios = _generate_loss_ratios(vuln_function)
-    loss_ratio_curve = _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po)
+    if vuln_function_code is None:
+        vuln_function_code = "EMPTY"
+    lrem = _compute_lrem(vuln_function_code)
+    lrem_po = _compute_lrem_po(vuln_function_code, lrem, hazard_curve)
+    loss_ratios = _generate_loss_ratios(vuln_function_code)
+    loss_ratio_curve = _compute_loss_ratio_curve_from_lrem_po(
+                            loss_ratios, lrem_po)
     return loss_ratio_curve
 
 
-# @memoize
 def compute_loss_curve(loss_ratio_curve, asset):
     """Computes the loss curve for a specific asset value."""
 
@@ -100,18 +94,21 @@ def compute_loss_curve(loss_ratio_curve, asset):
     loss_curve_values = OrderedDict()
     for loss_ratio, probability_occurrence \
             in loss_ratio_curve.values.iteritems():
-        logs.risk_log.debug("Loss ratio is %s, PO is %s" % (loss_ratio, probability_occurrence))
-        loss_curve_values["%s" % (float(loss_ratio) * asset)] = probability_occurrence
+        logs.risk_log.debug("Loss ratio is %s, PO is %s",
+                (loss_ratio, probability_occurrence))
+        key = "%s" % (float(loss_ratio) * asset)
+        loss_curve_values[key] = probability_occurrence
 
     return shapes.Curve(loss_curve_values)
 
 
-def _compute_lrem_po(vuln_function, lrem, hazard_curve):
+def _compute_lrem_po(vuln_function_code, lrem, hazard_curve):
     """Computes the loss ratio * probability of occurrence matrix.""" 
     
     current_column = 0
     lrem_po = [None] * len(lrem)
     
+    vuln_function = state.get_vuln_function(vuln_function_code)
     # we need to process intensity measure levels in ascending order
     imls = list(vuln_function.domain)
     imls.sort()
@@ -142,9 +139,11 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     # print loss_ratio_curve_values
     return shapes.Curve(loss_ratio_curve_values)
     
-# @memoize
-def _generate_loss_ratios(vuln_function):
+@state.memoize
+def _generate_loss_ratios(vuln_function_code):
     """Loss ratios are a function of the vulnerability curve"""
+    
+    vuln_function = state.get_vuln_function(vuln_function_code)
     loss_ratios = [value[0] for value in vuln_function.codomain] 
         # get the means
     loss_ratios.insert(0, 0.0)
@@ -152,12 +151,16 @@ def _generate_loss_ratios(vuln_function):
     splitted = _split_loss_ratios(loss_ratios)  
     return splitted
 
-# @memoize
-def _compute_lrem(vuln_function, distribution=stats.lognorm):
+# @state.memoize
+def _compute_lrem(vuln_function_code, distribution=None):
     """Computes the loss ratio exceedance matrix."""
-    loss_ratios = _generate_loss_ratios(vuln_function)
-    # print loss_ratios
-    # print "Vuln Function codomain is: %s" % (vuln_function.codomain)
+    
+    if not distribution:
+        distribution = stats.lognorm
+        # This is so we can memoize the thing
+    
+    vuln_function = state.get_vuln_function(vuln_function_code)
+    loss_ratios = _generate_loss_ratios(vuln_function_code)
     
     current_column = 0
     lrem = [None] * (len(loss_ratios)+1)
@@ -166,11 +169,11 @@ def _compute_lrem(vuln_function, distribution=stats.lognorm):
     imls = list(vuln_function.domain)
     imls.sort()
 
-    # TODO (ac): Find out why we have negative probabilities
-    # for values close to zero. Same behaviour in Java, so it probably
-    # depends on how floating point values are handled internally
     def fix_value(prob):
-        if isinstance(prob, float) and isnan(prob):
+        """Fix negative probabilities for values close to zero. 
+        Same behaviour in Java, so it probably depends on how 
+        floating point values are handled internally"""
+        if isnan(prob):
             return 0.0
         if prob < 0.00001: 
             return 0.0
@@ -191,12 +194,10 @@ def _compute_lrem(vuln_function, distribution=stats.lognorm):
                 next_ratio = loss_ratios[row]
             else: 
                 next_ratio = 1.0 
-            #print "ROW AND COLUMN ARE %s and %s" % (row, current_column)
-            lrem[row][current_column] = fix_value(distribution.sf(math.exp(next_ratio), stddev, scale=math.exp(mean)))
-            #logging.debug("X is %s, mean in %s, stddev is %s, SF value is %s",
-            #    next_ratio, mean, stddev, lrem[row][current_column])
+            lrem[row][current_column] = fix_value(
+                distribution.sf(scipy.exp(next_ratio), 
+                        stddev, scale=scipy.exp(mean)))
         current_column += 1
-    #logging.debug( "LREM IS \n\n %s", lrem)
     return lrem
 
 

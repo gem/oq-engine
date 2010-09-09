@@ -24,27 +24,10 @@ from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
-from opengem import state
-STATE = state.STATE
+
 
 from opengem import flags
 FLAGS = flags.FLAGS
-
-
-STATE['vulnerability_curves_raw'] = {}
-STATE['vulnerability_curves'] = {}
-def ingest_vulnerability(path):
-    """Reads a file of vulnerability curves and loads them into shared state."""
-    
-    for data in vulnerability.VulnerabilityModelFile(path):
-        curve_data = OrderedDict()
-        pairs = zip(data['LossRatioValues'], data['CoefficientVariationValues'])
-        # print data['IntensityMeasureValues']
-        for idx, IML in enumerate(data['IntensityMeasureValues']):
-            curve_data["%s" % IML] = pairs[idx]
-        STATE['vulnerability_curves_raw'][data['ID']] = data    
-        STATE['vulnerability_curves'][data['ID']] = shapes.Curve(curve_data)
-    # logging.debug('vulnerability done')
     
 
 # TODO(jmc): rather than passing files in here, determine the right parser to 
@@ -74,20 +57,17 @@ def main(vulnerability_model_file, hazard_curve_file,
         hazard_curves[gridpoint] = hazard_curve
         hazard_log.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
     
-    #print hazard_curves
-    
-    ingest_vulnerability(vulnerability_model_file)
+    vulnerability.ingest_vulnerability(vulnerability_model_file)
     
     exposure_portfolio = {}
     exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
     for site, asset in exposure_parser.filter(region_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         exposure_portfolio[gridpoint] = asset
-        #print "Loading asset at %s: %s" % (site.latitude,  site.longitude)
+        risk_log.debug("Loading asset at %s: %s - %s", site.latitude,  site.longitude, asset)
     
-        
     risk_engine = engines.ProbabilisticLossRatioCalculator(
-            hazard_curves, STATE['vulnerability_curves'], exposure_portfolio)
+            hazard_curves, exposure_portfolio)
     
     ratio_results = {}
     loss_curves = {}
@@ -95,7 +75,6 @@ def main(vulnerability_model_file, hazard_curve_file,
     interval = 0.01
     
     for gridpoint in region_constraint.grid:
-        #logging.debug("Computing loss_ratio_curve for %s", gridpoint)
         # TODO(jmc): Spawn a task for each larger region, eg
         # Make smaller sets of sites and batch them off
         site = gridpoint.site

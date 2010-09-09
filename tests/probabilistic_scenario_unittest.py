@@ -10,25 +10,19 @@ import unittest
 from decimal import *
 from ordereddict import *
 
+from opengem.parser import vulnerability
 from opengem.risk.probabilistic_scenario import *
 from opengem.risk.probabilistic_scenario import _compute_lrem_po, \
     _compute_lrem, _split_loss_ratios, _generate_loss_ratios, \
     _compute_loss_ratio_curve_from_lrem_po
 from opengem import shapes
 
-def fast_ordered_dict(values):
-    odict = OrderedDict()
-    for key, val in values:
-        odict[key] = val
-    return odict
 
 # input test values
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
 HAZARD_CURVE = shapes.FastCurve(
     [(5.0, 0.138), (6.0, 0.099), (7.0, 0.068), (8.0, 0.041)])
-VULNERABILITY_FUNCTION = shapes.FastCurve(
-    [(5.0, (0.0, 0.0)), (6.0, (0.0, 0.0)), (7.0, (0.0, 0.0)), (8.0, (0.0, 0.0))])
 
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
@@ -36,6 +30,14 @@ LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
 class ProbabilisticScenarioTestCase(unittest.TestCase):
 
     # loss curve tests
+    def setUp(self):
+        self.vuln_curve_code = "TEST"
+        vuln_curve = shapes.FastCurve(
+            [(5.0, (0.25, 0.5)),
+             (6.0, (0.4, 0.4)),
+             (7.0, (0.6, 0.3))])
+        vulnerability.register_vuln_curve(self.vuln_curve_code, vuln_curve)
+        
 
     def test_empty_loss_curve(self):
         """Degenerate case."""
@@ -51,7 +53,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
                 shapes.EMPTY_CURVE)
     
     def test_loss_curve_computation(self):
-        loss_ratio_curve = shapes.Curve(fast_ordered_dict([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]))
+        loss_ratio_curve = shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)])
         loss_curve = compute_loss_curve(loss_ratio_curve, ASSET_VALUE)
 
         self.assertEqual(shapes.FastCurve([(0.1 * ASSET_VALUE, 1.0),
@@ -66,7 +68,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
                 None, None))
         
     def test_lrem_po_computation(self):
-        lrem_po = _compute_lrem_po(VULNERABILITY_FUNCTION, 
+        lrem_po = _compute_lrem_po(self.vuln_curve_code, 
                 LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
 
         self.assertAlmostEquals(0.0959, lrem_po[0][0], 4)
@@ -75,8 +77,6 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         self.assertAlmostEquals(0.05049, lrem_po[1][1], 4)
         self.assertAlmostEquals(0.0673, lrem_po[0][2], 4)
         self.assertAlmostEquals(0.05718, lrem_po[1][2], 4)
-        self.assertAlmostEquals(0.0410, lrem_po[0][3], 4)
-        self.assertAlmostEquals(0.0410, lrem_po[1][3], 4)
 
     #
     # loss ratio curve tests
@@ -86,35 +86,14 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         """Degenerate case."""
         self.assertEqual(shapes.EMPTY_CURVE, compute_loss_ratio_curve(None, []))
         
-    def test_loss_ratio_curve_computation(self):
-        #loss_ratio_curve = compute_loss_ratio_curve(VULNERABILITY_FUNCTION,
-        #        HAZARD_CURVE)
-        # ANDREA, I have to kill you. The LREM you were using here, 
-        # does not match the VULNERABILITY FUNCTION.
-        # When I switched to using only the vulnerability, these tests broke.
-        
-        lrem_po = _compute_lrem_po(VULNERABILITY_FUNCTION, 
-            LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
-        loss_ratios = _generate_loss_ratios(VULNERABILITY_FUNCTION)
-        loss_ratio_curve = _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po)
-        
-        # self.assertAlmostEquals(0.2891, loss_ratio_curve.get_for(1.0), 0.0001)
-        # self.assertAlmostEquals(0.1853, loss_ratio_curve.get_for(2.0), 0.0001)
-
-
     def test_end_to_end(self):
         """These values were hand-computed by Vitor Silva."""
         hazard_curve = shapes.FastCurve(
             [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
         
-        vuln_function = shapes.FastCurve(
-            [(5.0, (0.25, 0.5)),
-             (6.0, (0.4, 0.4)),
-             (7.0, (0.6, 0.3))])
+        lrem = _compute_lrem(self.vuln_curve_code)
         
-        lrem = _compute_lrem(vuln_function)
-        
-        loss_ratio_curve = compute_loss_ratio_curve(vuln_function,
+        loss_ratio_curve = compute_loss_ratio_curve(self.vuln_curve_code,
                                 hazard_curve)
         
         lr_curve_expected = shapes.FastCurve([(0.0, 0.640), 
@@ -139,16 +118,11 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
     def test_empty_matrix(self):
         """Degenerate case."""
         #cself.assertEqual([], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
-        self.assertEqual([None], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
+        self.assertEqual([None], _compute_lrem(vulnerability.EMPTY_CODE, shapes.EMPTY_CURVE))
 
     
     def test_lrem_computation(self):
-        vuln_function = shapes.FastCurve(
-            [(5.0, (0.25, 0.5)),
-             (6.0, (0.4, 0.4)),
-             (7.0, (0.6, 0.3))])
-        
-        lrem = _compute_lrem(vuln_function)
+        lrem = _compute_lrem(self.vuln_curve_code)
         
         # self.assertAlmostEquals(1.0, lrem[0][1], 4)
         #self.assertAlmostEquals(0.5, lrem[4][0], 4)

@@ -22,10 +22,6 @@ Expects to compute:
 import os
 import sys
 
-import eventlet
-
-# logging = eventlet.import_patched('logging')
-
 # this is a hack so that it is easier to test these scripts,
 # it will add the proper directories to the path so that 
 # this script can be run from a checkout
@@ -33,17 +29,12 @@ if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'opengem')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from opengem import computation
 from opengem import flags
-from opengem import grid
-from opengem import region
 from opengem import logs
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shakemap
 from opengem.parser import vulnerability
-from opengem.risk import loss
-from opengem.risk import loss_ratio
 from opengem.risk import tasks
 
 
@@ -52,7 +43,8 @@ flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
 flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
 flags.DEFINE_string('vulnerability', 'vulnerability.xml',
                     'vulnerability input')
-flags.DEFINE_string('region', 'region.data', 'region input')
+flags.DEFINE_string('filter_region', None, 'region to filter input')                    
+flags.DEFINE_string('output_region', None, 'region to generate outpu')
 flags.DEFINE_string('hazard_curves', 'hazard_curves.xml', 
                     'hazard curves')
 
@@ -68,6 +60,17 @@ if __name__ == '__main__':
     args = FLAGS(sys.argv)
     logs.init_logs()
     
+    # Collect inputs
+    # Determine Processing type
+    # Validate input data
+    
+    # Prepare final configuration, save it
+    # Hash final config, store that
+    
+    # Kick off processing tasks, and wait...
+    # Collate results
+    # Generate output
+    
     if FLAGS.profile:
         import cProfile
         cProfile.run('tasks.main(FLAGS.vulnerability, \
@@ -76,6 +79,6 @@ if __name__ == '__main__':
     elif FLAGS.load_profile:
         import pstats
         p = pstats.Stats(FLAGS.profile_log)
-        p.sort_stats('cumulative').print_stats(10)    
+        p.sort_stats('cumulative').print_stats(30)    
     else:
-        tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.region, FLAGS.exposure, FLAGS.loss_map)
+        tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.filter_region, FLAGS.exposure, FLAGS.loss_map)

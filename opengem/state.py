@@ -13,6 +13,8 @@ __all__ = ["memoize", "STATE"]
 
 STATE = {}
 
+def get_vuln_function(vuln_function_code):
+    return STATE['vulnerability_curves'][vuln_function_code]
 # 
 # def memoize(function, limit=None):
 #     return function
