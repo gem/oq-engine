@@ -12,7 +12,7 @@ public class CalculatorConfigHelper {
 	// There may be additional/customizable properties
 	// -> does an enum type make sense? ...no.
 	// ...and yes: For the programmer to know at least how to access the defaults.
-	public enum defaultConfigItems {
+	public enum ConfigItems {
 		ERF_LOGIC_TREE_FILE,
 		GMPE_LOGIC_TREE_FILE,
 		OUTPUT_DIR,
@@ -74,7 +74,7 @@ public class CalculatorConfigHelper {
 	 * @return
 	 */
 	public static LocationList makeRegionboundary(Properties calcConfig) {
-		String region = calcConfig.getProperty(defaultConfigItems.REGION.name());
+		String region = calcConfig.getProperty(ConfigItems.REGION.name());
 		StringTokenizer st = new StringTokenizer(region);
         LocationList regionBoundary = new LocationList();
         Location tmpLoc = null;
@@ -108,7 +108,7 @@ public class CalculatorConfigHelper {
 	 */
 	public static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(Properties calcConfig) { 
 		// read intensity measure levels
-		String imlProp = calcConfig.getProperty(defaultConfigItems.INTENSITY_MEASURE_LEVELS.name());
+		String imlProp = calcConfig.getProperty(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
 		StringTokenizer st = new StringTokenizer(imlProp);
 		int numGMV = st.countTokens();
 		ArbitrarilyDiscretizedFunc adf = new ArbitrarilyDiscretizedFunc();

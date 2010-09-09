@@ -41,8 +41,8 @@ public class ErfLogicTreeData {
 	 * @param erfInputFile
 	 * @throws IOException 
 	 */
-	public ErfLogicTreeData(String erfInputFile) throws IOException{
-		
+	public ErfLogicTreeData(String erfInputFile) {
+		try {
 		// instantiate logic tree
 		erfLogicTree = new GemLogicTree<ArrayList<GEMSourceData>>();
 		
@@ -249,11 +249,15 @@ public class ErfLogicTreeData {
             }
             
         } // end sRecord is null
-
-	}
+		} catch(IOException e) {
+			IOException ioe = new IOException("ERF file not found. Program stops.", e);
+			e.printStackTrace();
+			System.exit(-1);
+		} // catch
+	} // constructor
 
 	public GemLogicTree<ArrayList<GEMSourceData>> getErfLogicTree() {
 		return erfLogicTree;
 	}
 
-}
+} // class ErfLogicTreeData
