@@ -1,7 +1,7 @@
 '''
 Created on Aug 12, 2010
 
-@author: apm
+@author: Aurea Moemke
 '''
 from sqlalchemy import *
 from sqlalchemy.orm import *
