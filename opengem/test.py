@@ -4,7 +4,7 @@
 Helper functions for our unit and smoke tests.
 """
 
-import logging
+from opengem.logs import general_log as log
 import os
 import subprocess
 
@@ -45,11 +45,33 @@ def guarantee_file(path, url):
     if not os.path.isfile(path):
         if not FLAGS.download_test_data:
             raise Exception("Test data does not exist")
-        logging.info("Downloading test data for %s", path)
+        log.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
-<<<<<<< HEAD
-=======
-            
->>>>>>> master
+
+
+def timeit(method):
+    """Decorator for timing methods"""
+    def _timed(*args, **kw):
+        timestart = time.time()
+        result = method(*args, **kw)
+        timeend = time.time()
+
+        print '%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, timeend-timestart)
+        return result
+
+    return _timed    
+
+
+def skipit(_method):
+    """Decorator for skipping tests"""
+    def _skipme(*_args, **_kw):
+        pass
+    return _skipme
+
+
+def measureit(method):
+    """Decorator that profiles memory usage"""
+    pass

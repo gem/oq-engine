@@ -219,11 +219,15 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         # set a region constraint that inlcudes all points 
         region_constraint = shapes.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
+        
+        #print "We've made a region constraint with bounds of %s" % (str(region_constraint.bounds))
         for attr_test_counter, curr_attribute_dict in enumerate(
             test_attribute_dicts):
             attribute_constraint = \
                 shaml_output.ShamlOutputConstraint(curr_attribute_dict)
-
+            
+            #print "Shaml attribute constraint is %s" % (attribute_constraint.attribute)
+            
             shaml = shaml_output.ShamlOutputFile(os.path.join(test.DATA_DIR, 
                                                               TEST_FILE))
 
@@ -246,8 +250,8 @@ class ShamlOutputFileTestCase(unittest.TestCase):
 
             # ensure that generator yielded at least one item
             self.assertTrue(counter is not None, 
-                "filter yielded nothing although %s item(s) were expected" % \
-                len(expected_results[attr_test_counter]))
+                "filter yielded nothing although %s item(s) were expected for attribute check of %s" % \
+                (len(expected_results[attr_test_counter]), attribute_constraint.attribute))
 
             # ensure that generator returns exactly the number of items of the
             # expected result list

@@ -11,5 +11,5 @@
     <AssetInstance AssetID="05" AssetDescription="Moment-resisting ductile concrete frame low rise" AssetValue="170000" VulnerabilityFunction="RC/ND-FR-D/LR"
          Latitude="45.13300" Longitude="9.15934"/>
     <AssetInstance AssetID="06" AssetDescription="Moment-resisting ductile concrete frame high rise" AssetValue="320000" VulnerabilityFunction="RC/ND-FR-D/HR"
-         Latitude="12.45" Longitude="41.90"/> 
+         Latitude="45.13805" Longitude="9.15876"/> 
 </ExposurePortfolio>
