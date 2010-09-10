@@ -1,0 +1,164 @@
+{% extends "databrowse/base_site.html" %}
+
+{% block extrahead %}
+     <script src="http://openlayers.org/api/OpenLayers.js"></script>
+     <style type="text/css">
+             #output { width: 100%; height: 300px}
+    </style>
+
+{% endblock %}
+
+{% block title %}{{ object.model.verbose_name|capfirst }}: {{ object }}{% endblock %}
+
+ 
+{% block content %}
+
+<div id="breadcrumbs"><a href="{{ root_url }}">Home</a> / <a href="{{ object.model.url }}">{{ object.model.verbose_name_plural|capfirst }}</a> / {{ object|escape }}</div>
+
+<h1>{{ object.model.verbose_name|capfirst }}: {{ object|escape }}</h1>
+
+<table class="objectinfo">
+{% for field in object.fields %}
+<tr class="{% cycle 'odd' 'even' %}">
+<th>{{ field.field.verbose_name|capfirst }}
+{% ifequal field.field.name "geometry" %}
+
+<br />
+<br />
+<div id="input">
+<label for="formatType">Format</label>
+<select name="formatType" id="formatType" onchange='serialize()'>
+    <option value="geojson" selected="selected">GeoJSON</option>
+    <option value="kml">KML</option>
+    <option value="gml">GML</option>
+    <option value="wkt">Well-Known Text (WKT)</option>
+</select>
+<br />
+Projection: <select id="outproj" onchange='updateFormats()'>
+<option value="EPSG:4326" selected="selected">EPSG:4326</option>
+<option value="EPSG:900913">Spherical Mercator</option>
+</select>
+</div>
+<br />
+<br />
+<div id="info">
+Select Feature to see geometry:<br />
+<textarea id="output"></textarea>
+</div>
+
+{% endifequal %}</th>
+<td>
+{% if field.urls %}
+{% for value, url in field.urls %}
+
+{% ifequal field.field.name "geometry" %}
+<script type="text/javascript">
+//<![CDATA[
+       var map, layer, wkt, features, options, formats;
+       var src = new OpenLayers.Projection('EPSG:4326'); 
+       var dest = new OpenLayers.Projection('EPSG:900913');
+       
+       function updateFormats() { 
+            formats = {
+              'in': {
+                wkt: new OpenLayers.Format.WKT(),
+                geojson: new OpenLayers.Format.GeoJSON(),
+                georss: new OpenLayers.Format.GeoRSS(),
+                gml: new OpenLayers.Format.GML(),
+                kml: new OpenLayers.Format.KML()
+              }, 
+              'out': {
+                wkt: new OpenLayers.Format.WKT(),
+                geojson: new OpenLayers.Format.GeoJSON(),
+                georss: new OpenLayers.Format.GeoRSS(),
+                gml: new OpenLayers.Format.GML(),
+                kml: new OpenLayers.Format.KML()
+              } 
+            };
+        serialize()
+        }
+       
+        function serialize() {
+            if (vectors.selectedFeatures.length == 1) {
+            var feature = vectors.selectedFeatures[0].clone()
+            var type = document.getElementById("formatType").value;
+            var proj = document.getElementById("outproj").value;
+            if (proj == "EPSG:4326") {
+               feature.geometry.transform(dest,src);
+               }
+            var str = formats['out'][type].write(feature);
+            str = str.replace(/,/g, ', ');
+            document.getElementById('output').value = str;
+            } else {document.getElementById('output').value = ''}
+        }
+         
+       function init(){
+       var options = {
+           'projection' : new OpenLayers.Projection("EPSG:900913"),
+           'numZoomLevels' : 20,
+           'displayProjection' : new OpenLayers.Projection("EPSG:4326"),
+           'units' : "m",
+           'maxResolution' : 156543.0339,
+           'maxExtent' : new OpenLayers.Bounds(-20037508,-20037508,20037508,20037508)
+       }
+       map = new OpenLayers.Map( 'map', options );
+       layer = new OpenLayers.Layer.OSM("OpenStreetMap (Mapnik)");
+       map.addLayer(layer);
+       map.addControl(new OpenLayers.Control.MousePosition());
+       vectors = new OpenLayers.Layer.Vector("Vector Layer");
+       wkt = new OpenLayers.Format.WKT();
+       features = wkt.read('{{ value }}');
+       features.geometry.transform(src, dest);
+       vectors.addFeatures([features]);
+       map.addLayer(vectors);
+       map.zoomToExtent(features.geometry.getBounds());
+       if (map.getZoom() > 13) {
+        map.zoomTo(13);
+       }
+       map.getControlsByClass('OpenLayers.Control.Navigation')[0].disableZoomWheel();
+       var select_options = {
+            hover: false,
+            onSelect: serialize,
+            onUnselect: serialize,
+       };
+       var select = new OpenLayers.Control.SelectFeature(vectors, select_options);
+       map.addControl(select);
+       select.activate();
+       updateFormats();
+       }
+//]]>
+</script>
+<div id="map" style="width: 800px; height: 400px;"></div>
+
+<script type="text/javascript">init();</script>
+{% else %}
+
+{% if url %}<a href="{{ url }}">{% endif %}{{ value|escape }} 
+{% if url %}</a>{% endif %}
+
+{% endifequal %}
+
+{% if not forloop.last %}, {% endif %}
+{% endfor %}
+{% else %}None{% endif %}
+</td>
+</tr>
+{% endfor %}
+</table>
+
+{% for related_object in object.related_objects %}
+  <div class="related">
+  <h2>Appears in "{{ related_object.related_field }}" in the following {{ related_object.model.verbose_name_plural }}:</h2>
+  {% if related_object.object_list %}
+  <ul class="objectlist">
+    {% for object in related_object.object_list %}
+    <li class="{% cycle 'odd' 'even' %}"><a href="{{ object.url }}">{{ object|escape }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="quiet">(None)</p>
+  {% endif %}
+  </div>
+{% endfor %}
+
+{% endblock %}

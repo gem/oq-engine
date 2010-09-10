@@ -1,0 +1,36 @@
+INFO: Open of `sourcegeometrycatalog.shp'
+      using driver `ESRI Shapefile' successful.
+
+Layer name: sourcegeometrycatalog
+Geometry: Polygon
+Feature Count: 44
+Extent: (-125.000000, 0.000000) - (160.000000, 75.000000)
+Layer SRS WKT:
+GEOGCS["WGS 84",
+    DATUM["WGS_1984",
+        SPHEROID["WGS 84",6378137,298.257223563,
+            AUTHORITY["EPSG","7030"]],
+        TOWGS84[0,0,0,0,0,0,0],
+        AUTHORITY["EPSG","6326"]],
+    PRIMEM["Greenwich",0,
+        AUTHORITY["EPSG","8901"]],
+    UNIT["degree",0.01745329251994328,
+        AUTHORITY["EPSG","9122"]],
+    AUTHORITY["EPSG","4326"]]
+SCID: Real (11.0)
+SCPRIVATET: String (2.0)
+SCSHORTNAM: String (20.0)
+SCNAME: String (50.0)
+SCDESC: String (100.0)
+SCTYPECODE: String (5.0)
+SCAREAPOLY: String (255.0)
+SCAREAMULT: String (255.0)
+SCSTARTDAT: String (19.0)
+SCENDDATE: String (19.0)
+SCSOURCES: String (255.0)
+SCORIGFORM: Real (11.0)
+SCREMARKS: String (255.0)
+USRCODE: String (10.0)
+GRPCODE: String (10.0)
+SCACCESSRI: String (10.0)
+SCADDDATE: String (19.0)
