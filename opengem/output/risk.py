@@ -27,10 +27,13 @@ class RiskXMLWriter(writer.FileWriter):
         node.attrib[SHAML + 'latitude'] = str(point.y)
         node.attrib[SHAML + 'longitude'] = str(point.x)
         risk_log.debug("Writing loss xml, value is %s", value)
+        subnode_pe = lxml.etree.SubElement(node, SHAML + "CurvePointPE")
+        subnode_pe.text = " "
+        subnode_loss = lxml.etree.SubElement(node, SHAML + "CurvePointLoss")
+        subnode_loss.text = " "
         for key, val in value.values.items():
-            subnode = lxml.etree.SubElement(node, SHAML + "CurvePoint")
-            subnode.attrib[SHAML + 'PE'] = str(val)
-            subnode.text = str(key)
+            subnode_loss.text += " %s" % (val)
+            subnode_pe.text += " %s" % (key)
         et = lxml.etree.ElementTree(node)
-        et.write(self.file)
+        et.write(self.file, pretty_print=True)
     
