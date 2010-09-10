@@ -1,7 +1,7 @@
 from gflags import *
 from gflags import FLAGS, DEFINE_boolean, DEFINE_integer
 
-DEFINE_boolean('debug', False, 'Turns on debug logging and verbose output')
+DEFINE_string('debug', 'warn', 'Turns on debug logging and verbose output')
 
 from gflags import *
 # arguments name definition

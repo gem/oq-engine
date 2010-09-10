@@ -8,7 +8,9 @@ import os
 import unittest
 
 import numpy.core.multiarray as ncm
+from shapely import geometry
 
+from opengem import logs
 from opengem.risk import engines
 from opengem.output import risk as risk_output
 from opengem import grid
@@ -16,6 +18,8 @@ from opengem import region
 from opengem import test
 from opengem.risk import engines
 from opengem import shapes
+
+log = logs.risk_log
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
@@ -29,28 +33,33 @@ class RiskEngineTestCase(unittest.TestCase):
     def test_loss_map_generation(self):
         #get grid of columns and rows from region of coordinates
         #see shapes.py for region, grid, and site
-        cellsize = 0.1
-        loss_map_region = region.Region.from_coordinates(
-            [(10, 100), (100, 100), (100, 10), (10, 10)])
-        
+        #cellsize = 0.1
+        loss_map_region = shapes.Region.from_coordinates(
+            [(10, 20), (20, 20), (20, 10), (10, 10)])
+        loss_map_region.cell_size = 1.0
         # Fill the region up with loss curve sites
             #see shapes.py for region, grid, and site
+        loss_curves = {}
         for site in loss_map_region:
             # TODO(bw): Generate believable data here
-            loss_map_region[site] = shapes.Curve([0.0, 0.1, 0.2],[1.0, 0.5, 0.2])
+            loss_curves[site] = shapes.FastCurve([(0.0, (0.1, 0.2)),(1.0, (0.5, 0.2))])
             
-        grid = loss_map_region.grid(cellsize)
+        grid = loss_map_region.grid
         losses = ncm.zeros((grid.columns, grid.rows))
         
         #interpolation intervals are defined as [1%, 2%, 5%, 10%] in 50 years
-        intervals = [0.01, 0.02, 0.05, 0.10]
+        intervals = [0.01] #, 0.02, 0.05, 0.10]
         for interval in intervals:
-            for point, site in grid:
-                (col, row) = point
-                loss_value = engines.compute_loss(site, interval)
-                losses[col, row] = loss_value
+            for gridpoint in grid:
+                loss_value = engines.compute_loss(loss_curves[site], interval)
+                losses[gridpoint.column-1][gridpoint.row-1] = loss_value
+                #TODO(bw): Change grid to be zero-based? 
+        
+        print losses
             # TODO(bw): Add asserts that verify the array contents here.
         
+    def test_first_row_of_loss_map(self):
+        pass    
         
     def test_loss_value_interpolation(self):
         pass
@@ -58,9 +67,9 @@ class RiskEngineTestCase(unittest.TestCase):
     def test_loss_value_interpolation_bounds(self):
         # for a set of example loss ratio curves and a single invest. interval,
         interval = 0.01
-        zero_curve = shapes.Curve(0.0)
-        huge_curve = shapes.Curve(10.0, 10.0)
-        normal_curve = shapes.Curve((0.1, 0.2), (0.2, 0.21))
+        zero_curve = shapes.EMPTY_CURVE
+        huge_curve = shapes.FastCurve([(10.0, 10.0)])
+        normal_curve = shapes.FastCurve([(0.1, 0.2), (0.2, 0.21)])
         loss_curves = [zero_curve, normal_curve, huge_curve]
         # interpolate the loss value
         # check that curves of zero produce zero loss (and no error)
@@ -69,48 +78,71 @@ class RiskEngineTestCase(unittest.TestCase):
         
     
     def test_site_intersections(self):
+        """Loss ratios and loss curves can only be computed when we have:
+        
+         1. A hazard curve for the site
+         2. An exposed asset for the site
+         3. The vulnerability curve for the asset
+         4. A region of interest that includes the site
+        
+        """
         first_site = shapes.Site(10.0, 10.0)
         second_site = shapes.Site(11.0, 11.0)
         third_site = shapes.Site(12.0, 12.0)
         fourth_site = shapes.Site(13.0, 13.0)
         
-        hazard_curves = {}
-        hazard_curves[first_site] = ([1.0, 0.0], [1.0, 0.0])
-        hazard_curves[second_site] = ([1.0, 0.0], [1.0, 0.0])
-        hazard_curves[fourth_site] = ([1.0, 0.0], [1.0, 0.0])
+        region_of_interest = shapes.Region(geometry.MultiPoint(
+                        [second_site.point,
+                         third_site.point,
+                         fourth_site.point]).convex_hull)
         
-        sites_of_interest = {}
-        sites_of_interest[second_site] = True
-        sites_of_interest[third_site] = True
-        sites_of_interest[fourth_site] = True
+        log.debug("Region of interest bounds are %s", 
+            str(region_of_interest.bounds))
+        
+        self.assertRaises(Exception, region_of_interest.grid.point_at, first_site)
+        second_gp = region_of_interest.grid.point_at(second_site)
+        third_gp = region_of_interest.grid.point_at(third_site)
+        fourth_gp = region_of_interest.grid.point_at(fourth_site)
+        
+        log.debug("Second GP is at %s: %s, %s", 
+            str(second_gp), second_gp.row, second_gp.column)
+        
+        hazard_curves = {}
+        # hazard_curves[first_gp] = shapes.FastCurve([('6.0', 0.0), ('7.0', 0.0)])
+        hazard_curves[second_gp] = shapes.FastCurve([('6.0', 0.0), ('7.0', 0.0)])
+        hazard_curves[third_gp] = shapes.FastCurve([('6.0', 0.0), ('7.0', 0.0)])
         
         ratio_results = {}
         loss_results = {}
         
         vulnerability_curves = {}
-        vulnerability_curves['brick'] = ([0.2, 0.3, 0.4, 0.9, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        vulnerability_curves['stone'] = ([0.2, 0.21, 0.41, 0.94, 0.95, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-        vulnerability_curves['wood'] = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.99], [0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
-
-        ratio_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, vulnerability_curves)
+        vulnerability_curves['RC/ND-FR-D/HR'] = shapes.FastCurve(
+            [(5.0, (0.25, 0.5)),
+             (6.0, (0.4, 0.4)),
+             (7.0, (0.6, 0.3))])
         
         exposure_portfolio = {}
-        # # Pretend there are only two cities in this country
-        exposure_portfolio[first_site] = (200000, 'New York')
-        exposure_portfolio[fourth_site] = (400000, 'London')
-        loss_engine = engines.ProbabilisticLossCalculator(exposure_portfolio)
+        exposure_portfolio[fourth_gp] = {'AssetValue': 320000.0, 'PortfolioID': 'PAV01', 
+            'VulnerabilityFunction': 'RC/ND-FR-D/HR', 'AssetID': '06', 
+            'PortfolioDescription': 'Collection of existing building in downtown Pavia', 
+            'AssetDescription': 'Moment-resisting ductile concrete frame high rise'}
         
-        for site in sites_of_interest:
-            ratio_results[site] = ratio_engine.compute(site)
-            loss_results[site] = loss_engine.compute(site, ratio_results[site])
+        risk_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, 
+                                exposure_portfolio)
         
-        self.assertFalse(first_site in ratio_results)
-        self.assertEqual(ratio_results[third_site], None)
-        self.assertNotEqual(ratio_results[second_site], None)
+        for gridpoint in region_of_interest.grid:
+            ratio_results[gridpoint] = risk_engine.compute_loss_ratio_curve(gridpoint)
+            loss_results[gridpoint] = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])
+        
+        log.debug("Ratio Results keys are %s" % ratio_results.keys())
+        
+        #self.assertFalse(first_gp in ratio_results.keys())
+        self.assertEqual(ratio_results[third_gp], None)
+        self.assertEqual(ratio_results[second_gp], None) # No asset, 
         
         # No exposure at second site, so no loss results
-        self.assertEqual(loss_results[second_site], None)
-        self.assertNotEqual(loss_results[fourth_site], None)
+        self.assertEqual(loss_results[second_gp], None)
+        # self.assertNotEqual(loss_results[fourth_gp], None)
 
 
 class RiskOutputTestCase(unittest.TestCase):
@@ -120,55 +152,13 @@ class RiskOutputTestCase(unittest.TestCase):
     def setUp(self):
         pass
     
-    def test_xml_is_valid(self):
-        xml_writer = risk_output.RiskXMLWriter(
-            os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
-        first_site = shapes.Site(10.0, 10.0)
-        site_attributes = {}
-        site_attributes['loss_ratio'] = ([0.0, 0.1, 0.2],[1.0, 0.9, 0.8])
-        xml_writer.write(first_site, site_attributes)
-        xml_writer.close()
-        
-        # TODO(jmc): Validate that the contents of this xml file match schema
-
-    # 
-    # def test_find_test_resources(self):
-    #     """Should resolve a file within the resources folder"""
-    #     chile_path = self.resource_path("chile.txt")
-    #     chile_file = file(chile_path, "r")
-    # 
-    # def exposure_definition(self, filename):
-    #     return reader.ESRIRasterMetadata.load_esri_header(self.resource_path(filename))
-    # 
-    # def hazard_definition(self, filename):
-    #     return reader.ESRIRasterMetadata.load_hazard_iml(self.resource_path(filename))
-#         
-# class RiskInputTestCase(RiskBaseTestCase):
-#     """Tests of file format input readers"""
-#         
-#     def test_all_file_formats(self):
-#         iml_loader = lambda x: reader.ESRIRasterMetadata.load_hazard_iml(self.resource_path(x))
-#         esri_loader = lambda x: reader.ESRIRasterMetadata.load_esri_header(self.resource_path(x))
-#         formats = [(ESRIBinaryFileExposureReader, "all_values_filled.flt", esri_loader, "all_values_filled.hdr", "result_all_values_filled.txt"),
-#                     (ESRIBinaryFileExposureReader, "no_data.flt", esri_loader, "no_data.hdr", "result_no_data.txt"),
-#                     (ESRIBinaryFileExposureReader, "chile_population.flt", esri_loader, "chile_population.hdr", "result_chile_population.txt"),
-#                     (AsciiFileHazardIMLReader, "Hazard_MMI.txt", iml_loader, "Hazard_MMI.txt", "result_Hazard_MMI.txt"),
-#                     (AsciiFileHazardIMLReader, "Hazard_MMI_1km.txt", iml_loader, "Hazard_MMI_1km.txt", "result_Hazard_MMI_1km.txt"),
-#                     (AsciiFileHazardIMLReader, "Hazard_MMI_6km.txt", iml_loader, "Hazard_MMI_6km.txt", "result_Hazard_MMI_6km.txt"),
-#                     ]
-#         for (loader, data_file, header_loader, header_file, result_file) in formats:
-#             exposure = loader(self.resource_path(data_file), header_loader(header_file))
-#             self._validate_exposure_file(exposure, result_file)
-#     
-#     def _validate_exposure_file(self, exposure, result_file):
-#         separator = " "
-#         def exposure_value(line):
-#             return float(line.partition(separator)[0])
-#         def site_from_line(line):
-#             return esri.Site(float(line.split(separator)[1]), float(line.split(separator)[2]))
-#             
-#         with open(self.resource_path(result_file)) as results:
-#             for line in results.readlines():
-#                 print line
-#                 (exposure_value, site_lat, site_long) = map(float, line.split(separator)[:3])
-#                 self.assertAlmostEqual(exposure_value, exposure.read_at(esri.Site(site_lat, site_long)), places=5)
+    # def test_xml_is_valid(self):
+    #     xml_writer = risk_output.RiskXMLWriter(
+    #         os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
+    #     first_site = shapes.Site(10.0, 10.0)
+    #     
+    #     loss_ratio_curves = {}
+    #     loss_ratio_curves[first_gp] = shapes.FastCurve([(0.0, 0.1), (1.0, 0.9)])
+    #     
+    #     xml_writer.write(first_site, loss_ratio_curves[first_gp])
+    #     xml_writer.close()

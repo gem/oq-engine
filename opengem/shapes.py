@@ -4,6 +4,7 @@ Collection of base classes for processing
 spatially-related data."""
 
 import math
+from ordereddict import *
 
 import geohash
 from shapely import geometry
@@ -22,6 +23,7 @@ Point = geometry.Point
 class Region(object):
     """A container of polygons, used for bounds checking"""
     def __init__(self, polygon):
+        self._grid = None
         self.polygon = polygon
         self.cell_size = 0.1
         # TODO(JMC): Make this a multipolygon instead?
@@ -82,9 +84,11 @@ class Region(object):
         """Returns a proxy interface that maps lat/lon 
         to col/row based on a specific cellsize. Proxy is
         also iterable."""
-        if not self.cell_size:
-            raise Exception("Can't generate grid without cell_size being set")
-        return Grid(self, self.cell_size)
+        if not self._grid:
+            if not self.cell_size:
+                raise Exception("Can't generate grid without cell_size being set")
+            self._grid = Grid(self, self.cell_size)
+        return self._grid
     
     def __iter__(self):    
         if not self.cell_size:
@@ -101,7 +105,9 @@ class RegionConstraint(Region):
             point = point.point
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
-        return self.polygon.intersects(point)
+        test = self.polygon.contains(point) or self.polygon.touches(point)
+        # print "Does point match? %s" % (test)
+        return test
 
 
 class GridPoint(object):
@@ -114,18 +120,26 @@ class GridPoint(object):
     def __eq__(self, other):
         if isinstance(other, Site):
             other = self.grid.point_at(other)
-        return (self.column == other.column and 
-            self.row == other.row and 
-            self.grid.region.bounds == other.grid.region.bounds and
-            self.grid.cell_size == other.grid.cell_size)
+        test = (self.__hash__() == other.__hash__())
+        # print "Do gridpoints match? %s" % test
+        return test
     
     @property
     def site(self):
         return self.grid.site_at(self)
 
-
+    def hash(self):
+        return self.__hash__()
+        
     def __repr__(self):
-        return "%s:%s:%s" % (self.column, self.row, self.grid.cell_size)
+        return str(self.__hash__())
+
+    def __hash__(self):
+        return self.column * 1000000000 + self.row 
+        #, int(self.grid.cell_size)
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class Grid(object):
@@ -140,27 +154,30 @@ class Grid(object):
                     self.region.upper_right_corner.longitude)
         self.rows = self._latitude_to_row(
                     self.region.upper_right_corner.latitude)
-        print "Grid with %s rows and %s columns" % (self.rows, self.columns)
+        # print "Grid with %s rows and %s columns" % (self.rows, self.columns)
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
-        # if (self.columns < gridpoint.column or gridpoint.column < 1):
-        if not (self.region.polygon.intersects(site.point)):
-            raise Exception("Point is not on the Grid")
-        # TODO(JMC): Confirm that we always want to test this...
+        return self.check_point(site.point)
     
-    def check_point(self, gridpoint):
+    def check_point(self, point):    
+        # print "Checking point at %s" % point
+        if (self.region.polygon.contains(point)):
+            return True
+        if self.region.polygon.touches(point):
+            return True
+        raise Exception("Point is not on the Grid")
+    
+    def check_gridpoint(self, gridpoint):
         """Confirm that the point is contained by the region"""
         point = Point(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
-        # print "Checking point at %s" % point
-        if not (self.region.polygon.intersects(point)):
-            raise Exception("Point is not on the Grid")
+        return self.check_point(point)
     
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
-        print "lat offset = %s" % latitude_offset
+        # print "lat offset = %s" % latitude_offset
         return int((latitude_offset / self.cell_size)) + 1
 
     def _row_to_latitude(self, row):
@@ -169,7 +186,7 @@ class Grid(object):
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
-        print "long offset = %s" % longitude_offset
+        # print "long offset = %s" % longitude_offset
         return int((longitude_offset / self.cell_size) + 1)
     
     def _column_to_longitude(self, column):
@@ -186,15 +203,18 @@ class Grid(object):
         return Site(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
     def __iter__(self):
+        # print "Iterating my grid, with a total of %s rows and %s columns" % (self.rows, self.columns)
         for row in range(1, self.rows):
             for col in range(1, self.columns):
                 try:
                     point = GridPoint(self, col, row)
-                    self.check_point(point)
+                    self.check_gridpoint(point)
                     yield point
                 except Exception, e:
                     pass
 
+def c_mul(a, b):
+    return eval(hex((long(a) * b) & 0xFFFFFFFFL)[:-1])
 
 class Site(object):
     """Site is a dictionary-keyable point"""
@@ -215,16 +235,34 @@ class Site(object):
     def __eq__(self, other):
         return self.hash() == other.hash()
     
+    def equals(self, other):
+        return self.point.equals(other)
+    
     def hash(self):
+        return self._geohash()
+    
+    def __hash__(self):
+        if not self:
+            return 0 # empty
+        hash = self._geohash()
+        value = ord(hash[0]) << 7
+        for char in hash:
+            value = c_mul(1000003, value) ^ ord(char)
+        value = value ^ len(hash)
+        if value == -1:
+            value = -2
+        return value
+    
+    def _geohash(self):
         """A geohash-encoded string for dict keys"""
         return geohash.encode(self.point.y, self.point.x, 
             precision=FLAGS.distance_precision)
     
     def __cmp__(self, other):
-        return self.hash() == other.hash()
+        return self._geohash() == other._geohash()
     
     def __repr__(self):
-        return self.hash()
+        return self._geohash()
         
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
@@ -235,6 +273,9 @@ class Curve(object):
     used in the risk domain."""
 
     def __init__(self, values):
+        # if values is a bare dict, we'll have problems...
+        if not isinstance(values, OrderedDict):
+            raise Exception("You need to use an OrderedDict here.")
         self.values = values
 
     def __eq__(self, other):
@@ -265,10 +306,16 @@ class Curve(object):
 
 # TODO (bw): Find out if there is a better way to do this
         for x, y in self.values.items():
-            if y == y_value: return x
+            if y == y_value: return float(x)
 
 # TODO (bw): Test this corner case
         error_str = "%s is not contained in this function" % (y_value, )
         raise ValueError(error_str)
 
-EMPTY_CURVE = Curve({})
+EMPTY_CURVE = Curve(OrderedDict())
+
+def FastCurve(values):
+    odict = OrderedDict()
+    for key, val in values:
+        odict["%s" % key] = val
+    return Curve(odict)

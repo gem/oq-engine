@@ -134,7 +134,7 @@ class ShamlOutputFile(producer.FileProducer):
             namespaces={'shaml': SHAML_NS, 'gml': GML_NS})
         try:
             coord = map(float, pos_el[0].text.strip().split())
-            return shapes.Site(coord[1], coord[0])
+            return shapes.Site(coord[0], coord[1])
         except Exception:
             error_str = "shaML point coordinate error: %s" % \
                 ( pos_el[0].text )
@@ -178,7 +178,7 @@ class ShamlOutputFile(producer.FileProducer):
             except Exception:
                 error_str = "missing shaML element: %s" % ref_string
                 raise ValueError(error_str)
-
+        #print "Site attributes: %s" % (site_attributes)
         return site_attributes
 
     def filter(self, region_constraint, attribute_constraint=None):
@@ -186,6 +186,7 @@ class ShamlOutputFile(producer.FileProducer):
         (defined in file shapes.py)
         """
         for next in iter(self):
+            #print "Inspecting point at %s with attrib %s" % (next[0], str(next[1]))
             if (attribute_constraint is not None and \
                     region_constraint.match(next[0]) and \
                     attribute_constraint.match(next[1])) or \
@@ -207,5 +208,6 @@ class ShamlOutputConstraint(object):
     def match(self, compared_attribute):
         for k, v in self.attribute.items():
             if not ( k in compared_attribute and compared_attribute[k] == v ):
+                #print "Couldnt find %s in attributes with value of %s" % (k, v)
                 return False
         return True
