@@ -239,21 +239,20 @@ def compute_conditional_loss(loss_curve, probability):
     probabilities.sort(reverse=True)
     
     # the probability we want to use is out of bounds
-    if probability < probabilities[0] or probability > probabilities[-1]:
+    if probability > probabilities[0] or probability < probabilities[-1]:
         return 0.0
     
     # find the upper bound
     for index in range(len(probabilities)):
         if probabilities[index] > probability:
-            upper_bound = index - 1
+            upper_bound = index
     
-    lower_bound = upper_bound - 1
+    lower_bound = upper_bound + 1
     
     # For more information about the math, check the scientific
     # model at <http://to_be_defined> (LRM chapter)
     x = probabilities[lower_bound] - probability
-    x *= loss_curve.domain_for(probabilities[upper_bound])
-            
+    x *= loss_curve.domain_for(probabilities[upper_bound])       
     y = (probability - probabilities[upper_bound]) * \
             loss_curve.domain_for(probabilities[lower_bound])
     
