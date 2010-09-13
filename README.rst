@@ -86,7 +86,7 @@ procedure mentioned above does not.
 Make sure you have installed numpy >= 1.4, if you have installed GDAL you 
 might have an older version of numpy that may be loaded by Python before your
 new installation on numpy. To resolve this, change the python module loading 
-order by editing /Python/2.6/site-packages/dgal.pth
+order by editing /Python/2.6/site-packages/gdal.pth
 from:
 import sys; sys.path.insert(0,'/Library/Frameworks/GDAL.framework/Versions/1.7/
 Python/site-packages')

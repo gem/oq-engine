@@ -236,7 +236,7 @@ def compute_conditional_loss(loss_curve, probability):
     """
 
     probabilities = loss_curve.codomain
-    probabilities.sort()
+    probabilities.sort(reverse=True)
     
     # the probability we want to use is out of bounds
     if probability < probabilities[0] or probability > probabilities[-1]:
