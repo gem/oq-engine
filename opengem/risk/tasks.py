@@ -82,6 +82,7 @@ def main(vulnerability_model_file, hazard_curve_file,
         if val:
             ratio_results[gridpoint] = val
             loss_curve = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])
+            print loss_curve
             loss_curves[gridpoint] = loss_curve
             losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
     

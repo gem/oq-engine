@@ -55,7 +55,7 @@ class RiskEngineTestCase(unittest.TestCase):
                 losses[gridpoint.column-1][gridpoint.row-1] = loss_value
                 #TODO(bw): Change grid to be zero-based? 
         
-        print losses
+        print losses 
             # TODO(bw): Add asserts that verify the array contents here.
         
     def test_first_row_of_loss_map(self):
@@ -129,7 +129,7 @@ class RiskEngineTestCase(unittest.TestCase):
         
         risk_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, 
                                 exposure_portfolio)
-        
+                                  
         for gridpoint in region_of_interest.grid:
             ratio_results[gridpoint] = risk_engine.compute_loss_ratio_curve(gridpoint)
             loss_results[gridpoint] = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])

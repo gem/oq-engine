@@ -1,7 +1,8 @@
 """
 Top-level managers for computation classes.
 """
-
+import sys
+sys.path.append("/Users/benwyss/Projects/opengem")
 from opengem.risk import probabilistic_scenario
 
 class ProbabilisticLossRatioCalculator(object):
