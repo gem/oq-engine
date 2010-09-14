@@ -42,6 +42,7 @@ class LossRatioCurveFileTestCase(unittest.TestCase):
         ep = loss_ratio_curve.LossRatioCurveFile(
             os.path.join(data_dir, TEST_FILE))
 
+
         expected_result = [
             (shapes.Point(41.0, 12.0),
             {'CurvePointPE': [0.0, 1280.0, 2560.0, 3840.0, 5120.0, 6400.0, 
