@@ -29,10 +29,11 @@ class LossRatioCurveFile(producer.FileProducer):
             elif event == 'end' and element.tag == 'CurvePointLoss':
                 yield (self._to_site(element), 
                        self._to_site_attributes(element))
-                       
-   def _set_portfolio_meta(self, portfolio_element):
+ 
+ """                      
+   def _set_loss_meta(self, loss_element):
 
-       self._current_portfolio_meta = {}
+       self._current_loss_meta = {}
 
        for required_attribute in (('PortfolioID', str), 
                                   ('PortfolioDescription', str)):
@@ -44,14 +45,14 @@ class LossRatioCurveFile(producer.FileProducer):
                error_str = "element ExposurePortfolio: missing required " \
                    "attribute %s" % required_attribute[0]
                raise ValueError(error_str)
-
+"""
     def _to_site(self, element):
 
         # lon/lat are in XML attributes 'Longitude' and 'Latitude'
         # consider them as mandatory
         try:
-            lon = float(element.get('Longitude').strip())
-            lat = float(element.get('Latitude').strip())
+            lon = float(element.get('longitude').strip())
+            lat = float(element.get('latitude').strip())
             return shapes.Site(lon, lat)
         except Exception:
             error_str = "element AssetInstance: no valid lon/lat coordinates"
@@ -74,9 +75,9 @@ class LossRatioCurveFile(producer.FileProducer):
                 raise ValueError(error_str) 
 
         try:
-            site_attributes.update(self._current_portfolio_meta)
+            site_attributes.update(self._current_loss_meta)
         except Exception:
-            error_str = "root element (ExposurePortfolio) is missing"
+            error_str = "root element (LossRatioCurve) is missing"
             raise ValueError(error_str)
 
         return site_attributes
