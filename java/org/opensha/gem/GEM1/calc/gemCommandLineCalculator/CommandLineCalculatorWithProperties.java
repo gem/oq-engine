@@ -12,6 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -19,6 +20,14 @@ import java.util.Iterator;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
+import org.apache.commons.configuration.AbstractFileConfiguration;
+import org.apache.commons.configuration.CompositeConfiguration;
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationConverter;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.FileConfiguration;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.configuration.PropertyConverter;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -59,7 +68,15 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class CommandLineCalculatorWithProperties {
 	// configuration data
-	private Properties calcConfig;
+	private Properties props;
+	/*
+	 * TODO:
+	 * O.K. this prepares the use of the apache Configuration API.
+	 * Tedious work to replace all Properties.getProperty() calls
+	 * with Configuration.getProperty() calls is left for later.
+	 */
+	private Configuration config;
+	private PropertiesConfiguration propsConfig;
 	// keyword
 	private static String MONTE_CARLO = "Monte Carlo";
 	private static String FULL_CALCULATION = "Full Calculation";
@@ -70,39 +87,64 @@ public class CommandLineCalculatorWithProperties {
 	 * 
 	 * @param inStream e.g. the file input stream
 	 */
-	public CommandLineCalculatorWithProperties(InputStream inStream) {
-		calcConfig = new Properties();
+	public CommandLineCalculatorWithProperties(final InputStream inStream) {
+		props = new Properties();
 		try {
 			// load calculation configuration data
-			calcConfig.load(inStream);
-		} catch (IOException e) { e.printStackTrace(); }
+			props.load(inStream);
+			config = new PropertiesConfiguration();
+			((PropertiesConfiguration)config).load(inStream, null);
+		} catch(IOException e) {
+			e.printStackTrace();
+		} catch(ConfigurationException e) {
+			e.printStackTrace();
+		}
 	} // constructor
 
 	public CommandLineCalculatorWithProperties(Reader reader) {
-		calcConfig = new Properties();
+		props = new Properties();
+		config = new PropertiesConfiguration();
 		try {
 			// load calculation configuration data
-			calcConfig.load(reader);
-		} catch (IOException e) { e.printStackTrace(); }
+			props.load(reader);
+			((PropertiesConfiguration)config).load(reader);
+		} catch (IOException e) {
+			e.printStackTrace();
+        } catch(ConfigurationException e) {
+            e.printStackTrace();
+        }
 	} // constructor
 
-	public CommandLineCalculatorWithProperties(Properties config) {
-		calcConfig = config;
+	public CommandLineCalculatorWithProperties(Properties p) {
+		props = p;
+		config = ConfigurationConverter.getConfiguration(props);
 	} // constructor
 
 	public CommandLineCalculatorWithProperties(String calcConfigFile) {
 		try {
 			FileInputStream fis = new FileInputStream(calcConfigFile);
-			calcConfig = new Properties();
-			calcConfig.load(fis);
-		} catch(FileNotFoundException e) { e.printStackTrace(); }
-		catch(IOException e) { e.printStackTrace(); }
+			props = new Properties();
+			props.load(fis);
+			config = new PropertiesConfiguration();
+			((PropertiesConfiguration)config).load(calcConfigFile);
+		} catch(FileNotFoundException e) {
+			e.printStackTrace();
+		} catch(IOException e) {
+			e.printStackTrace();
+		} catch(ConfigurationException e) {
+	        e.printStackTrace();
+        }
 	} // constructor
 	
-	public void setConfig(Properties config) {
-		calcConfig = config;
+	public void setConfig(Properties p) {
+		props = p;
+		config = ConfigurationConverter.getConfiguration(p);
 	} // setConfig()
 	
+	public void setConfig(Configuration c) {
+		config = c;
+		props = ConfigurationConverter.getProperties(c);
+	}
 	/**
 	 * This is the main method that do the calculations. According to the specifications in the
 	 * configuration file the method will do the required calculations.
@@ -111,7 +153,7 @@ public class CommandLineCalculatorWithProperties {
 		// start chronometer
 		long startTimeMs = System.currentTimeMillis();
 		// get calculation mode
-		String calculationMode = calcConfig.getProperty(ConfigItems.CALCULATION_MODE.name());
+		String calculationMode = props.getProperty(ConfigItems.CALCULATION_MODE.name());
 		if(calculationMode.equalsIgnoreCase(MONTE_CARLO)){
 			// do calculation by random sampling end-branch models
 			doCalculationThroughMonteCarloApproach();
@@ -122,7 +164,7 @@ public class CommandLineCalculatorWithProperties {
 		}
 		else{
 			System.out.println("Calculation mode: "
-	                   + calcConfig.getProperty(ConfigItems.CALCULATION_MODE.name())
+	                   + props.getProperty(ConfigItems.CALCULATION_MODE.name())
 	                   + " not recognized. Check the configuration file!\n"
 	                   +"Execution stops!");
 	        System.exit(0);
@@ -139,28 +181,28 @@ public class CommandLineCalculatorWithProperties {
 	private void doCalculationThroughMonteCarloApproach() {
 		System.out.println("Performing calculation through Monte Carlo Approach.\n");
 	    // load ERF logic tree data
-	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(calcConfig.getProperty(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(props.getProperty(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
 	    // load GMPE logic tree data
-	    GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(calcConfig.getProperty(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
-	                                                            calcConfig.getProperty(ConfigItems.COMPONENT.name()),
-	                                                            calcConfig.getProperty(ConfigItems.INTENSITY_MEASURE_TYPE.name()),
-	                                                            Double.parseDouble(calcConfig.getProperty(ConfigItems.PERIOD.name())),
-	                                                            Double.parseDouble(calcConfig.getProperty(ConfigItems.DAMPING.name())),
-	                                                            calcConfig.getProperty(ConfigItems.GMPE_TRUNCATION_TYPE.name()), 
-	                                                            Double.parseDouble(calcConfig.getProperty(ConfigItems.TRUNCATION_LEVEL.name())), 
-	                                                            calcConfig.getProperty(ConfigItems.STANDARD_DEVIATION_TYPE.name()),
-	                                                            Double.parseDouble(calcConfig.getProperty(ConfigItems.REFERENCE_VS30_VALUE.name())));
+	    GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(props.getProperty(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
+	                                                            props.getProperty(ConfigItems.COMPONENT.name()),
+	                                                            props.getProperty(ConfigItems.INTENSITY_MEASURE_TYPE.name()),
+	                                                            Double.parseDouble(props.getProperty(ConfigItems.PERIOD.name())),
+	                                                            Double.parseDouble(props.getProperty(ConfigItems.DAMPING.name())),
+	                                                            props.getProperty(ConfigItems.GMPE_TRUNCATION_TYPE.name()), 
+	                                                            Double.parseDouble(props.getProperty(ConfigItems.TRUNCATION_LEVEL.name())), 
+	                                                            props.getProperty(ConfigItems.STANDARD_DEVIATION_TYPE.name()),
+	                                                            Double.parseDouble(props.getProperty(ConfigItems.REFERENCE_VS30_VALUE.name())));
 		// instantiate the repository for the results
 		GEMHazardCurveRepositoryList hcRepList = new GEMHazardCurveRepositoryList();
 		// sites for calculation
-		ArrayList<Site> sites = createSiteList(calcConfig);
+		ArrayList<Site> sites = createSiteList(props);
 		// number of hazard curves to be generated for each point
-		int numHazCurves = Integer.parseInt(calcConfig.getProperty(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS.name()));
+		int numHazCurves = Integer.parseInt(props.getProperty(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS.name()));
 	    // loop over number of hazard curves to be generated
 		// The properties are not changed in this loop so it is allowed to retrieve them before.
-    	int numOfThreads = Integer.parseInt(calcConfig.getProperty(ConfigItems.NUMBER_OF_PROCESSORS.name()));
-    	ArbitrarilyDiscretizedFunc imlList = CalculatorConfigHelper.makeImlList(calcConfig);
-    	double maxDistance = Double.parseDouble(calcConfig.getProperty(ConfigItems.MAXIMUM_DISTANCE.name()));
+    	int numOfThreads = Integer.parseInt(props.getProperty(ConfigItems.NUMBER_OF_PROCESSORS.name()));
+    	ArbitrarilyDiscretizedFunc imlList = CalculatorConfigHelper.makeImlList(props);
+    	double maxDistance = Double.parseDouble(props.getProperty(ConfigItems.MAXIMUM_DISTANCE.name()));
 		for (int i = 0; i < numHazCurves; i++) {
 	    	System.out.println("Realization number: "+(i+1)+", of: "+numHazCurves);
 	    	// do calculation
@@ -169,7 +211,7 @@ public class CommandLineCalculatorWithProperties {
 	    	// Damiano: yes because at each iteration both the ERF and GMPEs changes, because they are randomly sampled
 			GemComputeHazard compHaz = new GemComputeHazard(numOfThreads, 
 			                                                sites,
-			                                                sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),calcConfig), 
+			                                                sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),props), 
 			                                                sampleGemLogicTreeGMPE(gmpeLogicTree.getGmpeLogicTreeHashMap()),
 			                                                imlList,
 			                                                maxDistance);
@@ -177,44 +219,45 @@ public class CommandLineCalculatorWithProperties {
 			hcRepList.add(compHaz.getValues(),Integer.toString(i));
 	    } // for
 	    // save hazard curves
-	    if (D) saveHazardCurveRepositoryListToAsciiFile(calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name()), hcRepList);
+	    if (D) saveHazardCurveRepositoryListToAsciiFile(props.getProperty(ConfigItems.OUTPUT_DIR.name()), hcRepList);
 	    // create the requested output
-		if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.MEAN_GROUND_MOTION_MAP.name()))){
+		if(Boolean.parseBoolean(props.getProperty(ConfigItems.MEAN_GROUND_MOTION_MAP.name()))){
 		    // calculate mean ground motion map for the given prob of exceedance
-			ArrayList<Double> meanGroundMotionMap = hcRepList.getMeanGrounMotionMap(Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())));
+			ArrayList<Double> meanGroundMotionMap = hcRepList.getMeanGrounMotionMap(Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())));
 			// save mean ground motion map
-			String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+			// as an example: here we read from Configuration object
+			String outfile = config.getProperty((String)(ConfigItems.OUTPUT_DIR.name()))
 			+ "meanGroundMotionMap_"
-			+ Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
-			+ calcConfig.getProperty(ConfigItems.INVESTIGATION_TIME.name())
+			+ Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
+			+ props.getProperty(ConfigItems.INVESTIGATION_TIME.name())
 			+ "yr.dat";
 			saveGroundMotionMapToAsciiFile(outfile,meanGroundMotionMap,hcRepList.getHcRepList().get(0).getGridNode());
 		}
-		if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INDIVIDUAL_GROUND_MOTION_MAP.name()))){
+		if(Boolean.parseBoolean(props.getProperty(ConfigItems.INDIVIDUAL_GROUND_MOTION_MAP.name()))){
 			// loop over end-branches
 			int indexLabel = 0;
 			for(GEMHazardCurveRepository hcRep: hcRepList.getHcRepList()){
 				// calculate ground motion map
-				ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())));
+				ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())));
 				// define file name
-				String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+				String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 				+ "groundMotionMap_"
 				+ hcRepList.getEndBranchLabels().get(indexLabel)+"_"
-				+ Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
-				+ calcConfig.getProperty(ConfigItems.INVESTIGATION_TIME.name())
+				+ Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
+				+ props.getProperty(ConfigItems.INVESTIGATION_TIME.name())
 				+ "yr.dat";
 				saveGroundMotionMapToAsciiFile(outfile, groundMotionMap, hcRepList.getHcRepList().get(0).getGridNode());
 				indexLabel = indexLabel + 1;
 			}
 		}
-		if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.MEAN_HAZARD_CURVES.name()))){
+		if(Boolean.parseBoolean(props.getProperty(ConfigItems.MEAN_HAZARD_CURVES.name()))){
 			GEMHazardCurveRepository meanHazardCurves = hcRepList.getMeanHazardCurves();
-			String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+			String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 			+ "meanHazardCurves.dat";
 			saveHazardCurveRepositoryToAsciiFile(outfile, meanHazardCurves);
 		}
-		if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name()))){
-			String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+		if(Boolean.parseBoolean(props.getProperty(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name()))){
+			String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 			+ "individualHazardCurves.dat";
 			saveHazardCurveRepositoryListToAsciiFile(outfile, hcRepList);
 		}
@@ -225,17 +268,17 @@ public class CommandLineCalculatorWithProperties {
 	private void doFullCalculation() {
 		System.out.println("Performing full calculation. \n");
 	    // load ERF logic tree data
-	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(calcConfig.getProperty(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+	    ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(props.getProperty(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
 	    // load GMPE logic tree data
-	    String gmpeLogicTreeFile = calcConfig.getProperty(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
-	    String component = calcConfig.getProperty(ConfigItems.COMPONENT.name());
-	    String intensityMeasureType = calcConfig.getProperty(ConfigItems.INTENSITY_MEASURE_TYPE.name());
-	    double period = Double.parseDouble(calcConfig.getProperty(ConfigItems.PERIOD.name()));
-	    double damping = Double.parseDouble(calcConfig.getProperty(ConfigItems.DAMPING.name()));
-	    String truncationType = calcConfig.getProperty(ConfigItems.GMPE_TRUNCATION_TYPE.name());
-	    double truncationLevel = Double.parseDouble(calcConfig.getProperty(ConfigItems.TRUNCATION_LEVEL.name()));
-	    String standardDeviationType = calcConfig.getProperty(ConfigItems.STANDARD_DEVIATION_TYPE.name());
-	    double vs30Reference = Double.parseDouble(calcConfig.getProperty(ConfigItems.REFERENCE_VS30_VALUE.name()));
+	    String gmpeLogicTreeFile = props.getProperty(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
+	    String component = props.getProperty(ConfigItems.COMPONENT.name());
+	    String intensityMeasureType = props.getProperty(ConfigItems.INTENSITY_MEASURE_TYPE.name());
+	    double period = Double.parseDouble(props.getProperty(ConfigItems.PERIOD.name()));
+	    double damping = Double.parseDouble(props.getProperty(ConfigItems.DAMPING.name()));
+	    String truncationType = props.getProperty(ConfigItems.GMPE_TRUNCATION_TYPE.name());
+	    double truncationLevel = Double.parseDouble(props.getProperty(ConfigItems.TRUNCATION_LEVEL.name()));
+	    String standardDeviationType = props.getProperty(ConfigItems.STANDARD_DEVIATION_TYPE.name());
+	    double vs30Reference = Double.parseDouble(props.getProperty(ConfigItems.REFERENCE_VS30_VALUE.name()));
 	    GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(gmpeLogicTreeFile,component,intensityMeasureType,
 	    		period, damping, truncationType, truncationLevel,
 	    		standardDeviationType, vs30Reference);
@@ -267,13 +310,13 @@ public class CommandLineCalculatorWithProperties {
 		// instantiate the repository for the results
 		GEMHazardCurveRepositoryList hcRepList = new GEMHazardCurveRepositoryList();
 		// sites for calculation
-		ArrayList<Site> sites = createSiteList(calcConfig);
+		ArrayList<Site> sites = createSiteList(props);
 		// number of threads
-		int numThreads = Integer.parseInt(calcConfig.getProperty(ConfigItems.NUMBER_OF_PROCESSORS.name()));
+		int numThreads = Integer.parseInt(props.getProperty(ConfigItems.NUMBER_OF_PROCESSORS.name()));
 		// IML list
-		ArbitrarilyDiscretizedFunc imlList =  CalculatorConfigHelper.makeImlList(calcConfig);
+		ArbitrarilyDiscretizedFunc imlList =  CalculatorConfigHelper.makeImlList(props);
 		// maximum integration distance
-		double maxDist = Double.parseDouble(calcConfig.getProperty(ConfigItems.MAXIMUM_DISTANCE.name()));
+		double maxDist = Double.parseDouble(props.getProperty(ConfigItems.MAXIMUM_DISTANCE.name()));
 	    // loop over ERF end-branch models
 	    Iterator<String> endBranchLabels = endBranchModels.keySet().iterator();
 	    while(endBranchLabels.hasNext()){
@@ -284,7 +327,7 @@ public class CommandLineCalculatorWithProperties {
 	    	// to the current label
 	    	GEM1ERF erf = new GEM1ERF(endBranchModels.get(erfLabel));
 			// set ERF parameters
-			setGEM1ERFParams(erf, calcConfig);
+			setGEM1ERFParams(erf, props);
 			// loop over GMPE end-branch models
 			Iterator<String> gmpeEndBranchLabels = gmpeEndBranchModel.keySet().iterator();
 			while(gmpeEndBranchLabels.hasNext()){
@@ -302,42 +345,42 @@ public class CommandLineCalculatorWithProperties {
 				hcRepList.add(compHaz.getValues(),erfLabel+"-"+gmpeLabel);
 			}
 		    // create the requested output
-			if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.MEAN_GROUND_MOTION_MAP.name()))){	
+			if(Boolean.parseBoolean(props.getProperty(ConfigItems.MEAN_GROUND_MOTION_MAP.name()))){	
 			    // calculate mean hazard map for the given prob of exceedance
-				ArrayList<Double> meanGroundMotionMap = hcRepList.getMeanGroundMotionMap(Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())),erfLogicTree.getErfLogicTree(),gmpeLogicTree.getGmpeLogicTreeHashMap());
+				ArrayList<Double> meanGroundMotionMap = hcRepList.getMeanGroundMotionMap(Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())),erfLogicTree.getErfLogicTree(),gmpeLogicTree.getGmpeLogicTreeHashMap());
 				// save mean ground motion map
-				String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+				String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 				+ "meanGroundMotionMap_"
-				+ Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
-				+ calcConfig.getProperty(ConfigItems.INVESTIGATION_TIME.name())
+				+ Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
+				+ props.getProperty(ConfigItems.INVESTIGATION_TIME.name())
 				+ "yr.dat";
 				saveGroundMotionMapToAsciiFile(outfile,meanGroundMotionMap,hcRepList.getHcRepList().get(0).getGridNode());
 			}
-			if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INDIVIDUAL_GROUND_MOTION_MAP.name()))){
+			if(Boolean.parseBoolean(props.getProperty(ConfigItems.INDIVIDUAL_GROUND_MOTION_MAP.name()))){
 				// loop over end-branches
 				int indexLabel = 0;
 				for(GEMHazardCurveRepository hcRep: hcRepList.getHcRepList()){
 					// calculate ground motion map
-					ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())));
+					ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())));
 					// define file name
-					String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+					String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 					+ "groundMotionMap_"
 					+ hcRepList.getEndBranchLabels().get(indexLabel)+"_"
-					+ Double.parseDouble(calcConfig.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
-					+ calcConfig.getProperty(ConfigItems.INVESTIGATION_TIME.name())
+					+ Double.parseDouble(props.getProperty(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name())) * 100 + "%"
+					+ props.getProperty(ConfigItems.INVESTIGATION_TIME.name())
 					+ "yr.dat";
 					saveGroundMotionMapToAsciiFile(outfile, groundMotionMap, hcRepList.getHcRepList().get(0).getGridNode());
 					indexLabel = indexLabel + 1;
 				}
 			}
-			if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.MEAN_HAZARD_CURVES.name()))){
+			if(Boolean.parseBoolean(props.getProperty(ConfigItems.MEAN_HAZARD_CURVES.name()))){
 				GEMHazardCurveRepository meanHazardCurves = hcRepList.getMeanHazardCurves(erfLogicTree.getErfLogicTree(), gmpeLogicTree.getGmpeLogicTreeHashMap());
-				String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+				String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 				+ "meanHazardCurves.dat";
 				saveHazardCurveRepositoryToAsciiFile(outfile, meanHazardCurves);
 			}
-			if(Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name()))){
-				String outfile = calcConfig.getProperty(ConfigItems.OUTPUT_DIR.name())
+			if(Boolean.parseBoolean(props.getProperty(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name()))){
+				String outfile = props.getProperty(ConfigItems.OUTPUT_DIR.name())
 				+ "individualHazardCurves.dat";
 				saveHazardCurveRepositoryListToAsciiFile(outfile, hcRepList);
 			}
@@ -453,7 +496,7 @@ public class CommandLineCalculatorWithProperties {
 				// define label from branch ID number
 				String label = Integer.toString(branch.getRelativeID());
 				// read the corresponding source model
-				ArrayList<GEMSourceData> srcList = new InputModelData(branch.getNameInputFile(),Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name()))).getSourceList();
+				ArrayList<GEMSourceData> srcList = new InputModelData(branch.getNameInputFile(),Double.parseDouble(props.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name()))).getSourceList();
 				// save in the hash map
                 endBranchModels.put(label, srcList);
 			}
