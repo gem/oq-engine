@@ -104,6 +104,10 @@ class RiskEngineTestCase(unittest.TestCase):
         zero_curve = shapes.FastCurve([('0.0', 0.0), ('0.0', 0.0),])
         loss_value = engines.compute_loss(zero_curve, 0.01)
         self.assertEqual(0.0, loss_value)
+        
+    def test_interpolate_loss_value(self):
+        # interpolate the loss value
+        
 
     def test_loss_value_interpolation_bounds(self):
         # for a set of example loss ratio curves and a single invest. interval,
@@ -112,13 +116,9 @@ class RiskEngineTestCase(unittest.TestCase):
         huge_curve = shapes.FastCurve([(10.0, 10.0)])
         normal_curve = shapes.FastCurve([(0.1, 0.2), (0.2, 0.21)])
         loss_curves = [zero_curve, normal_curve, huge_curve]
-        
-        # interpolate the loss value
-        
     
         # check that curves with no point < 5 don't throw an error
-    
-        
+            
     def test_site_intersections(self):
         """Loss ratios and loss curves can only be computed when we have:
         
