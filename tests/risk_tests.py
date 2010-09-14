@@ -79,16 +79,22 @@ class RiskEngineTestCase(unittest.TestCase):
             
         grid = loss_map_region.grid
         losses = ncm.zeros((grid.columns, grid.rows))
-        #print losses
+        print losses
+        probability = 0.01
+        
+        # check that the loss is the expected value
+        self.assertAlmostEqual(111196.24804, engines.compute_loss(loss_curves[site], probability))
+        
         #interpolation intervals are defined as [1%, 2%, 5%, 10%] in 50 years
         intervals = [0.01] #, 0.02, 0.05, 0.10]
         for interval in intervals:
             for gridpoint in grid:
                 loss_value = engines.compute_loss(loss_curves[site], interval)
                 losses[gridpoint.column-1][gridpoint.row-1] = loss_value
+        print '%s = loss_value' % loss_value
 
             # TODO(bw): Add asserts that verify the array contents here.
-            
+         
     def test_first_row_of_loss_map(self):
         pass    
         
@@ -102,13 +108,29 @@ class RiskEngineTestCase(unittest.TestCase):
         huge_curve = shapes.FastCurve([(10.0, 10.0)])
         normal_curve = shapes.FastCurve([(0.1, 0.2), (0.2, 0.21)])
         loss_curves = [zero_curve, normal_curve, huge_curve]
-        loss = engines.compute_loss
         # interpolate the loss value
-        # check that curves of zero produce zero loss (and no error)
         # check that curves with no point < 5 don't throw an error
-        # check that the loss is the expected value
+        
+        # check that curves of zero produce zero loss (and no error)
+        loss_map_region = shapes.Region.from_coordinates(
+            [(10, 20), (20, 20), (20, 10), (10, 10)])
+        loss_map_region.cell_size = 1.0 
+        loss_curves = {}
+        for site in loss_map_region:
+            loss_curves[site] = shapes.FastCurve([
+                ('0.0', 0.0), 
+                ('0.0', 0.0),])
+        grid = loss_map_region.grid
+        losses = ncm.zeros((grid.columns, grid.rows))
+        intervals = [0.01] #, 0.02, 0.05, 0.10]
+        for interval in intervals:
+            for gridpoint in grid:
+                loss_value = engines.compute_loss(loss_curves[site], interval)
+                losses[gridpoint.column-1][gridpoint.row-1] = loss_value
 
- 
+        return loss_value 
+        self.assertEqual(loss_value = 0)
+        
     def test_site_intersections(self):
         """Loss ratios and loss curves can only be computed when we have:
         
