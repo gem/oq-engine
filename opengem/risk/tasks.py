@@ -20,7 +20,7 @@ from opengem.risk import engines
 from opengem import output
 import opengem.output.risk
 from opengem import shapes
-#from opengem.output import geotiff
+from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
@@ -93,5 +93,5 @@ def main(vulnerability_model_file, hazard_curve_file,
     output_generator.serialize(loss_curves)
     #output_generator = output.SimpleOutput()
     #output_generator.serialize(ratio_results)
-    #output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
-    #output_generator.serialize(losses_one_perc)
+    output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
+    output_generator.serialize(losses_one_perc)
