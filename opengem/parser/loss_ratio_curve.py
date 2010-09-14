@@ -11,27 +11,14 @@ from opengem import shapes
 RISKML_NS=''
 
 class LossRatioCurveFile(producer.FileProducer):
-    """ This class parses an ExposurePortfolio XML (part of riskML?) file.
+    """ This class parses an LossRatioCurve XML file.
     The contents of such a file is meant to be used as input for the risk 
     engine. The class is implemented as a generator. 
-    For each 'AssetInstance' element in the parsed 
-    instance document, it yields a pair of objects, of which the
-    first one is a shapely.geometry object of type Point (representing a
-    geographical site as WGS84 lon/lat), and the second one
-    is a dictionary with exposure-related attribute values for this site.
-    
-    The attribute dictionary looks like
-    {'PortfolioID': 'PAV01',
-     'PortfolioDescription': 'Collection of existing buildings in downtown Pavia',
-     'AssetID': '01',
-     'AssetDescription': 'Moment-resisting non-ductile concrete frame low rise',
-     'AssetValue': 150000,
-     'VulnerabilityFunction': 'RC/DMRF-D/LR'
-    }
-
-    Note: at the time of writing this class the author has no access to the
-    XML Schema, so all XML attributes from the example instance documents are
-    assumed to be mandatory
+    For each curve element in the parsed instance document, it yields a pair of
+    objects, of which the first one is a shapely.geometry object of type Point 
+    (representing a geographical site as WGS84 lon/lat), and the second one
+    is a dictionary with probability of exceedance-related attribute for 
+    the site.
     """
     def _parse(self):
         for event, element in etree.iterparse(self.file,
@@ -103,9 +90,9 @@ class LossRatioCurveFile(producer.FileProducer):
                     region_constraint.match(next[0])):
                 yield next
 
-class ExposurePortfolioConstraint(object):
+class LossRatioCurveConstraint(object):
     """ This class represents a constraint that can be used to filter
-    AssetInstance elements from an ExposurePortfolio XML instance document
+    elements from an LossRatioCurve XML instance document
     based on their site attributes. The constructor requires a dictionary as
     argument. Items in this dictionary have to match the corresponding ones
     in the checked site attribute object.
