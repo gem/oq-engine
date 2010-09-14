@@ -196,8 +196,7 @@ class ProbabilisticScenarioTestCase(unittest.TestCase):
         loss_curve = shapes.FastCurve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
                 
-        self.assertEqual(0.0, compute_conditional_loss(
-                loss_curve, 0.050))
+        self.assertEqual(0.0, compute_conditional_loss(loss_curve, 0.050))
                 
         self.assertEqual(0.0, compute_conditional_loss(
                 loss_curve, 0.200))        
