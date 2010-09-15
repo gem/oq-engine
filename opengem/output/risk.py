@@ -8,7 +8,7 @@ as shaml-style XML.
 import lxml
 import lxml.etree
 
-from opengem.logs import *
+from opengem.logs import RISK_LOG
 from opengem import writer
 from opengem.xml import SHAML_NS, GML_NS
 from opengem import shapes
