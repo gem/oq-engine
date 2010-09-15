@@ -30,7 +30,6 @@ if __name__ == '__main__':
     
     logs.init_logs()
     
-    from tests.computation_unittest import *
     from tests.example_unittest import *
     from tests.flags_unittest import *
     from tests.geo_unittest import *

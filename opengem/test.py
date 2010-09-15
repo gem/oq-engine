@@ -8,7 +8,6 @@ from opengem.logs import general_log as log
 import os
 import subprocess
 
-from opengem import computation
 from opengem import producer
 from opengem import flags
 
@@ -19,16 +18,6 @@ flags.DEFINE_boolean('download_test_data', True,
         
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
-
-
-class ConcatComputation(computation.Computation):
-    """Simple computation step that concatenates args"""
-    def __init__(self, pool, cell):
-        keys = ['shake', 'roll']
-        super(ConcatComputation, self).__init__(pool, cell, keys)
-
-    def _compute(self, **kw):
-        return ':'.join(str(x) for x in sorted(kw.values()))
 
 
 class WordProducer(producer.FileProducer):
