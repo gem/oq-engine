@@ -7,7 +7,7 @@ from eventlet import event
 from eventlet import tpool
 
 # TODO (ac): Think about a better name to use
-class InputConstraint(object):
+class AttributeConstraint(object):
     """ A constraint that can be used to filter input elements.
     
     The constructor requires a dictionary as argument. Items in this dictionary
