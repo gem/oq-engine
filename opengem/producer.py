@@ -10,7 +10,7 @@ class AttributeConstraint(object):
     """A constraint that can be used to filter input elements.
     
     The constructor requires a dictionary as argument. Items in this dictionary
-    have to match the corresponding ones in the checked site attribute object.
+    have to match the corresponding ones in the checked site attributes object.
     
     """
 
@@ -25,7 +25,7 @@ class AttributeConstraint(object):
         return True
 
 # TODO Does still make sense to have this code linked to eventlet?
-# TODO This producer assumes that we are always producins elements with sites
+# TODO This producer assumes that we are always producins elements with sites...
 class FileProducer(object):
 
     def __init__(self, path):
