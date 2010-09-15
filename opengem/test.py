@@ -6,6 +6,7 @@ Helper functions for our unit and smoke tests.
 
 from opengem.logs import LOG as log
 import os
+import time
 import subprocess
 
 from opengem import producer
@@ -43,6 +44,7 @@ def guarantee_file(path, url):
 def timeit(method):
     """Decorator for timing methods"""
     def _timed(*args, **kw):
+        """Wrapped function for timed methods"""
         timestart = time.time()
         result = method(*args, **kw)
         timeend = time.time()
@@ -57,10 +59,11 @@ def timeit(method):
 def skipit(_method):
     """Decorator for skipping tests"""
     def _skipme(*_args, **_kw):
+        """The skipped method"""
         pass
     return _skipme
 
 
 def measureit(method):
     """Decorator that profiles memory usage"""
-    pass
+    return method
