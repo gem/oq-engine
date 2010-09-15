@@ -58,10 +58,10 @@ loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 """
 
 
-import scipy
-from ordereddict import OrderedDict
-from numpy import isnan
-from scipy import stats
+import scipy # pylint: disable-msg=F0401
+from ordereddict import OrderedDict # pylint: disable-msg=F0401
+from numpy import isnan # pylint: disable-msg=F0401
+from scipy import stats # pylint: disable-msg=F0401
 
 from opengem import logs
 from opengem import shapes
@@ -94,7 +94,7 @@ def compute_loss_curve(loss_ratio_curve, asset):
     loss_curve_values = OrderedDict()
     for loss_ratio, probability_occurrence \
             in loss_ratio_curve.values.iteritems():
-        logs.risk_log.debug("Loss ratio is %s, PO is %s",
+        logs.RISK_LOG.debug("Loss ratio is %s, PO is %s",
                 (loss_ratio, probability_occurrence))
         key = "%s" % (float(loss_ratio) * asset)
         loss_curve_values[key] = probability_occurrence
