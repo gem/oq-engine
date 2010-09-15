@@ -9,15 +9,8 @@ Tasks in the risk engine include the following:
  
 """
 
-import os
-import sys
-
-from ordereddict import *
-
-
-from opengem.logs import *
+from opengem.logs import HAZARD_LOG, RISK_LOG
 from opengem.risk import engines
-from opengem import output
 import opengem.output.risk
 from opengem import shapes
 from opengem.output import geotiff
@@ -91,7 +84,8 @@ def main(vulnerability_model_file, hazard_curve_file,
             print loss_curve
             loss_curves[gridpoint] = loss_curve
             print loss_curve
-            losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
+            losses_one_perc[gridpoint] = engines.compute_loss(
+                                    loss_curve, interval)
     
     # TODO(jmc): Pick output generator from config or cli flags
     output_generator = opengem.output.risk.RiskXMLWriter("loss-curves.xml")
