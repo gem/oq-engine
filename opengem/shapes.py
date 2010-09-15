@@ -4,8 +4,8 @@ Collection of base classes for processing
 spatially-related data."""
 
 import math
-from ordereddict import *
 
+import ordereddict
 import geohash
 from shapely import geometry
 from shapely import wkt
@@ -16,8 +16,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('distance_precision', 12, 
     "Points within this geohash precision will be considered the same point")
 
-LineString = geometry.LineString
-Point = geometry.Point
+LineString = geometry.LineString # pylint: disable=C0103
+Point = geometry.Point           # pylint: disable=C0103
 
 
 class Region(object):
@@ -86,13 +86,15 @@ class Region(object):
         also iterable."""
         if not self._grid:
             if not self.cell_size:
-                raise Exception("Can't generate grid without cell_size being set")
+                raise Exception(
+                    "Can't generate grid without cell_size being set")
             self._grid = Grid(self, self.cell_size)
         return self._grid
     
     def __iter__(self):    
         if not self.cell_size:
-            raise Exception("Can't generate grid without cell_size being set")
+            raise Exception(
+                "Can't generate grid without cell_size being set")
         for gridpoint in self.grid:
             yield gridpoint.site
 
@@ -126,9 +128,12 @@ class GridPoint(object):
     
     @property
     def site(self):
+        """Trivial accessor for Site at Grid point"""
         return self.grid.site_at(self)
 
     def hash(self):
+        """Ugly hashing function
+        TODO(jmc): Fixme"""
         return self.__hash__()
         
     def __repr__(self):
@@ -140,6 +145,10 @@ class GridPoint(object):
 
     def __str__(self):
         return self.__repr__()
+
+class BoundsException(Exception):
+    """Point is outside of region"""
+    pass
 
 
 class Grid(object):
@@ -161,12 +170,14 @@ class Grid(object):
         return self.check_point(site.point)
     
     def check_point(self, point):    
+        """ Confirm that the point is within the polygon 
+        underlying the gridded region"""
         # print "Checking point at %s" % point
         if (self.region.polygon.contains(point)):
             return True
         if self.region.polygon.touches(point):
             return True
-        raise Exception("Point is not on the Grid")
+        raise BoundsException("Point is not on the Grid")
     
     def check_gridpoint(self, gridpoint):
         """Confirm that the point is contained by the region"""
@@ -181,6 +192,7 @@ class Grid(object):
         return int((latitude_offset / self.cell_size)) + 1
 
     def _row_to_latitude(self, row):
+        """Determine latitude from given grid row"""
         return self.lower_left_corner.latitude + ((row-1) * self.cell_size)
 
     def _longitude_to_column(self, longitude):
@@ -190,6 +202,7 @@ class Grid(object):
         return int((longitude_offset / self.cell_size) + 1)
     
     def _column_to_longitude(self, column):
+        """Determine longitude from given grid column"""
         return self.lower_left_corner.longitude + ((column-1) * self.cell_size)
 
     def point_at(self, site):
@@ -200,21 +213,24 @@ class Grid(object):
         return GridPoint(self, column, row)
     
     def site_at(self, gridpoint):    
+        """Construct a site at the given grid point"""
         return Site(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
     def __iter__(self):
-        # print "Iterating my grid, with a total of %s rows and %s columns" % (self.rows, self.columns)
         for row in range(1, self.rows):
             for col in range(1, self.columns):
                 try:
                     point = GridPoint(self, col, row)
                     self.check_gridpoint(point)
                     yield point
-                except Exception, e:
+                except BoundsException, _e:
                     pass
 
-def c_mul(a, b):
-    return eval(hex((long(a) * b) & 0xFFFFFFFFL)[:-1])
+def c_mul(val_a, val_b):
+    """Ugly method of hashing string to integer
+    TODO(jmc): Get rid of points as dict keys!"""
+    return eval(hex((long(val_a) * val_b) & 0xFFFFFFFFL)[:-1])
+
 
 class Site(object):
     """Site is a dictionary-keyable point"""
@@ -236,19 +252,22 @@ class Site(object):
         return self.hash() == other.hash()
     
     def equals(self, other):
+        """Verbose wrapper around == """
         return self.point.equals(other)
     
     def hash(self):
+        """ Ugly geohashing function, get rid of this!
+        TODO(jmc): Dont use sites as dict keys"""
         return self._geohash()
     
     def __hash__(self):
         if not self:
             return 0 # empty
-        hash = self._geohash()
-        value = ord(hash[0]) << 7
-        for char in hash:
+        geohash_val = self._geohash()
+        value = ord(geohash_val[0]) << 7
+        for char in geohash_val:
             value = c_mul(1000003, value) ^ ord(char)
-        value = value ^ len(hash)
+        value = value ^ len(geohash_val)
         if value == -1:
             value = -2
         return value
@@ -259,24 +278,25 @@ class Site(object):
             precision=FLAGS.distance_precision)
     
     def __cmp__(self, other):
-        return self._geohash() == other._geohash()
+        return self.hash() == other.hash()
     
     def __repr__(self):
-        return self._geohash()
+        return self.hash()
         
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
 
-class Curve(object):
+class FastCurve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
 
     def __init__(self, values):
-        # if values is a bare dict, we'll have problems...
-        if not isinstance(values, OrderedDict):
-            raise Exception("You need to use an OrderedDict here.")
-        self.values = values
+        """Construct a curve object with an ordered dict"""
+        odict = ordereddict.OrderedDict()
+        for key, val in values:
+            odict["%s" % key] = val
+        self.values = odict
 
     def __eq__(self, other):
         return self.values == other.values
@@ -304,18 +324,13 @@ class Curve(object):
         """Returns the x value (domain) corresponding
         to the given y value (codomain)."""
 
-# TODO (bw): Find out if there is a better way to do this
+        # TODO (bw): Find out if there is a better way to do this
         for x, y in self.values.items():
-            if y == y_value: return float(x)
+            if y == y_value: 
+                return float(x)
 
-# TODO (bw): Test this corner case
+        # TODO (bw): Test this corner case
         error_str = "%s is not contained in this function" % (y_value, )
         raise ValueError(error_str)
 
-EMPTY_CURVE = Curve(OrderedDict())
-
-def FastCurve(values):
-    odict = OrderedDict()
-    for key, val in values:
-        odict["%s" % key] = val
-    return Curve(odict)
+EMPTY_CURVE = FastCurve(())
