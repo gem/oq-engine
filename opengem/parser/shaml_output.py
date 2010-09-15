@@ -67,7 +67,7 @@ class ShamlOutputFile(producer.FileProducer):
                 % SHAML_NS:
                 error_str = "parsing of HazardMap elements is not yet " \
                     "implemented"
-                raise NotImplementedError()
+                raise NotImplementedError(error_str)
             elif event == 'end' and element.tag == '{%s}IML' % SHAML_NS:
                 self._set_curvelist_iml(element)
             elif event == 'end' and element.tag == '{%s}Curve' % SHAML_NS:
@@ -185,14 +185,13 @@ class ShamlOutputFile(producer.FileProducer):
         """ region_constraint has to be of type shapes.RegionConstraint 
         (defined in file shapes.py)
         """
-        for next in iter(self):
-            #print "Inspecting point at %s with attrib %s" % (next[0], str(next[1]))
+        for next_val in iter(self):
             if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
+                    region_constraint.match(next_val[0]) and \
+                    attribute_constraint.match(next_val[1])) or \
                (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
+                    region_constraint.match(next_val[0])):
+                yield next_val
 
 
 class ShamlOutputConstraint(object):
@@ -206,6 +205,7 @@ class ShamlOutputConstraint(object):
         self.attribute = attribute
 
     def match(self, compared_attribute):
+        """Constrain file processing to the matched attributes"""
         for k, v in self.attribute.items():
             if not ( k in compared_attribute and compared_attribute[k] == v ):
                 #print "Couldnt find %s in attributes with value of %s" % (k, v)

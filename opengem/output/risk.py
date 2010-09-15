@@ -18,6 +18,8 @@ GML = "{%s}" % GML_NS
 NSMAP = {None : SHAML_NS, "gml" : GML_NS}
 
 class RiskXMLWriter(writer.FileWriter):
+    """Simple serialization of loss curves and loss ratio curves"""
+    
     def write(self, point, value):
         if isinstance(point, shapes.GridPoint):
             point = point.site.point
