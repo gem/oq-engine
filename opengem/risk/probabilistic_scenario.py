@@ -58,10 +58,9 @@ loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 """
 
 
-import scipy # pylint: disable-msg=F0401
-from ordereddict import OrderedDict # pylint: disable-msg=F0401
-from numpy import isnan # pylint: disable-msg=F0401
-from scipy import stats # pylint: disable-msg=F0401
+import scipy # pylint: disable=F0401
+from numpy import isnan # pylint: disable=F0401,E0611
+from scipy import stats # pylint: disable=F0401,E0611
 
 from opengem import logs
 from opengem import shapes

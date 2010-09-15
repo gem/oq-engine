@@ -30,8 +30,8 @@ from opengem import flags
 FLAGS = flags.FLAGS
     
 
-# TODO(jmc): rather than passing files in here, determine the right parser to 
-# use or create in the binary, and pass in loaded parsers.
+# TODO(jmc): rather than passing files in here, determine the right 
+# parser to use or create in the binary, and pass in loaded parsers.
 # This will support config setting of cell_size, etc.
 
 def main(vulnerability_model_file, hazard_curve_file, 
@@ -52,11 +52,14 @@ def main(vulnerability_model_file, hazard_curve_file,
         shaml_output.ShamlOutputConstraint({'IMT' : 'MMI'})
     
     HAZARD_LOG.debug("Going to parse hazard curves")
-    for site, hazard_curve_data in shaml_parser.filter(region_constraint, attribute_constraint):
+    for site, hazard_curve_data in shaml_parser.filter(
+            region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
-        hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
+        hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
+                                hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
-        HAZARD_LOG.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
+        HAZARD_LOG.debug("Loading hazard curve %s at %s: %s", 
+                    hazard_curve, site.latitude,  site.longitude)
     
     vulnerability.ingest_vulnerability(vulnerability_model_file)
     
@@ -65,7 +68,8 @@ def main(vulnerability_model_file, hazard_curve_file,
     for site, asset in exposure_parser.filter(region_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         exposure_portfolio[gridpoint] = asset
-        RISK_LOG.debug("Loading asset at %s: %s - %s", site.latitude,  site.longitude, asset)
+        RISK_LOG.debug("Loading asset at %s: %s - %s", 
+                        site.latitude,  site.longitude, asset)
     
     risk_engine = engines.ProbabilisticLossRatioCalculator(
             hazard_curves, exposure_portfolio)
@@ -82,7 +86,8 @@ def main(vulnerability_model_file, hazard_curve_file,
         val = risk_engine.compute_loss_ratio_curve(gridpoint)
         if val:
             ratio_results[gridpoint] = val
-            loss_curve = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])
+            loss_curve = risk_engine.compute_loss_curve(
+                            gridpoint, ratio_results[gridpoint])
             print loss_curve
             loss_curves[gridpoint] = loss_curve
             print loss_curve

@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+"""Parsers to read exposure files, including exposure portfolios.
+These can include building, population, critical infrastructure,
+and other asset classes."""
 
 from lxml import etree
 
@@ -8,7 +11,7 @@ from opengem import shapes
 
 
 # do not use namespace for now
-RISKML_NS=''
+RISKML_NS = ''
 
 class ExposurePortfolioFile(producer.FileProducer):
     """ This class parses an ExposurePortfolio XML (part of riskML?) file.
@@ -44,7 +47,7 @@ class ExposurePortfolioFile(producer.FileProducer):
                        self._to_site_attributes(element))
 
     def _set_portfolio_meta(self, portfolio_element):
-
+        """Store current attribute to use for dict key in next event"""
         self._current_portfolio_meta = {}
 
         for required_attribute in (('PortfolioID', str), 
@@ -59,7 +62,7 @@ class ExposurePortfolioFile(producer.FileProducer):
                 raise ValueError(error_str) 
 
     def _to_site(self, element):
-
+        """Convert current GML attributes to Site object"""
         # lon/lat are in XML attributes 'Longitude' and 'Latitude'
         # consider them as mandatory
         try:
@@ -71,7 +74,7 @@ class ExposurePortfolioFile(producer.FileProducer):
             raise ValueError(error_str)
 
     def _to_site_attributes(self, element):
-
+        """Build a dict of all node attributes"""
         site_attributes = {}
 
         # consider all attributes of AssetInstance element as mandatory
@@ -97,13 +100,14 @@ class ExposurePortfolioFile(producer.FileProducer):
         return site_attributes
 
     def filter(self, region_constraint, attribute_constraint=None):
-        for next in iter(self):
+        for next_val in iter(self):
             if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
+                    region_constraint.match(next_val[0]) and \
+                    attribute_constraint.match(next_val[1])) or \
                (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
+                    region_constraint.match(next_val[0])):
+                yield next_val
+
 
 class ExposurePortfolioConstraint(object):
     """ This class represents a constraint that can be used to filter
@@ -116,6 +120,7 @@ class ExposurePortfolioConstraint(object):
         self.attribute = attribute
 
     def match(self, compared_attribute):
+        """Constrain file processing to the matched attributes"""
         for k, v in self.attribute.items():
             if not ( k in compared_attribute and compared_attribute[k] == v ):
                 return False
