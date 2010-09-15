@@ -193,21 +193,3 @@ class ShamlOutputFile(producer.FileProducer):
                (attribute_constraint is None and \
                     region_constraint.match(next[0])):
                 yield next
-
-
-class ShamlOutputConstraint(object):
-    """ This class represents a constraint that can be used to filter
-    hazard curve elements from a shaML output instance document
-    based on their site attributes. The constructor requires a dictionary as
-    argument. Items in this dictionary have to match the corresponding ones
-    in the checked site attribute object.
-    """
-    def __init__(self, attribute):
-        self.attribute = attribute
-
-    def match(self, compared_attribute):
-        for k, v in self.attribute.items():
-            if not ( k in compared_attribute and compared_attribute[k] == v ):
-                #print "Couldnt find %s in attributes with value of %s" % (k, v)
-                return False
-        return True
