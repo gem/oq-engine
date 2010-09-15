@@ -6,6 +6,7 @@ import unittest
 
 from opengem import shapes
 from opengem import test
+from opengem import producer
 from opengem.parser import shaml_output
 
 FILES_KNOWN_TO_FAIL = ['ShamlOutputFile-fail-missing_required_attribute.xml',
@@ -224,7 +225,7 @@ class ShamlOutputFileTestCase(unittest.TestCase):
         for attr_test_counter, curr_attribute_dict in enumerate(
             test_attribute_dicts):
             attribute_constraint = \
-                shaml_output.ShamlOutputConstraint(curr_attribute_dict)
+                producer.InputConstraint(curr_attribute_dict)
             
             #print "Shaml attribute constraint is %s" % (attribute_constraint.attribute)
             

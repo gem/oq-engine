@@ -91,21 +91,5 @@ class LossRatioCurveFile(producer.FileProducer):
                     region_constraint.match(next[0])):
                 yield next
 
-class LossRatioCurveConstraint(object):
-    """ This class represents a constraint that can be used to filter
-    elements from an LossRatioCurve XML instance document
-    based on their site attributes. The constructor requires a dictionary as
-    argument. Items in this dictionary have to match the corresponding ones
-    in the checked site attribute object.
-    """
-    def __init__(self, attribute):
-        self.attribute = attribute
-
-    def match(self, compared_attribute):
-        for k, v in self.attribute.items():
-            if not ( k in compared_attribute and compared_attribute[k] == v ):
-                return False
-        return True
-
 
 	

@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-reader.py
-
-Created by Joshua McKenty on 2010-07-30.
-Copyright (c) 2010 __MyCompanyName__. All rights reserved.
-"""
 
 import sys
 import os
@@ -14,9 +8,8 @@ import math
 import struct
 
 
-
 class Grid:
-    """ESRIGrid format as per http://en.wikipedia.org/wiki/ESRI_grid"""
+    """ESRIGrid format as per http://en.wikipedia.org/wiki/ESRI_grid."""
     def __init__(self, rows, columns, no_data_value=9999):
         self.columns = columns
         self.rows = rows
@@ -34,26 +27,26 @@ class Grid:
             raise Exception("Point is not on the Grid")
 
 class Point:
-    """Simple (trivial) point class"""
+    """Simple (trivial) point class."""
     def __init__(self, row, column):
         self.column = column
         self.row = row
 
 class Site:
-    """Site has lat and long"""
+    """Site has lat and long."""
     def __init__(self, latitude, longitude):
         self.latitude = latitude
         self.longitude = longitude
 
 class BaseExposureReader:
-    """Base class for reading exposure data from file formats"""
+    """Base class for reading exposure data from file formats."""
     def __init__(self, filename, exposure_definition):
         self.filename = filename
         self.definition = exposure_definition
         self.exposure_file = open(filename, "rb")
 
 class ESRIBinaryFileExposureReader(BaseExposureReader):
-    """Parses and loads ESRI formatted exposure data from files"""
+    """Parses and loads ESRI formatted exposure data from files."""
 #    def __init__(self, filename, exposure_definition):
 #        super(ESRIBinaryFileExposureReader, self).__init__(filename, exposure_definition)
     
