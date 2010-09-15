@@ -91,15 +91,15 @@ def compute_loss_curve(loss_ratio_curve, asset):
     if not asset: 
         return shapes.EMPTY_CURVE # invalid asset
 
-    loss_curve_values = OrderedDict()
+    loss_curve_values = []
     for loss_ratio, probability_occurrence \
             in loss_ratio_curve.values.iteritems():
         logs.RISK_LOG.debug("Loss ratio is %s, PO is %s",
                 (loss_ratio, probability_occurrence))
         key = "%s" % (float(loss_ratio) * asset)
-        loss_curve_values[key] = probability_occurrence
+        loss_curve_values.append((key, probability_occurrence))
 
-    return shapes.Curve(loss_curve_values)
+    return shapes.FastCurve(loss_curve_values)
 
 
 def _compute_lrem_po(vuln_function_code, lrem, hazard_curve):
@@ -129,15 +129,15 @@ def _compute_lrem_po(vuln_function_code, lrem, hazard_curve):
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     """Computes the loss ratio curve."""
     
-    loss_ratio_curve_values = OrderedDict()
+    loss_ratio_curve_values = []
     for row in range(len(lrem_po)-1):
         prob_occ = 0.0
         for column in range(len(lrem_po[row])):
             prob_occ += lrem_po[row][column]
-        loss_ratio_curve_values["%s" % loss_ratios[row]] = prob_occ
+        loss_ratio_curve_values.append(("%s" % loss_ratios[row], prob_occ))
 
     # print loss_ratio_curve_values
-    return shapes.Curve(loss_ratio_curve_values)
+    return shapes.FastCurve(loss_ratio_curve_values)
     
 @state.memoize
 def _generate_loss_ratios(vuln_function_code):

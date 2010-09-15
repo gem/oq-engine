@@ -20,7 +20,7 @@ HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
 
 def init_logs():
-    
+    """Load logging config, and set log levels based on flags"""
     
     level = LEVELS.get(FLAGS.debug, logging.ERROR)
     logging.basicConfig(level=level)
