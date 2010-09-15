@@ -4,7 +4,7 @@
 Helper functions for our unit and smoke tests.
 """
 
-from opengem.logs import general_log as log
+from opengem.logs import LOG as log
 import os
 import subprocess
 

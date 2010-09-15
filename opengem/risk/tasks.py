@@ -51,12 +51,12 @@ def main(vulnerability_model_file, hazard_curve_file,
     attribute_constraint = \
         shaml_output.ShamlOutputConstraint({'IMT' : 'MMI'})
     
-    hazard_log.debug("Going to parse hazard curves")
+    HAZARD_LOG.debug("Going to parse hazard curves")
     for site, hazard_curve_data in shaml_parser.filter(region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
-        hazard_log.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
+        HAZARD_LOG.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
     
     vulnerability.ingest_vulnerability(vulnerability_model_file)
     
@@ -65,7 +65,7 @@ def main(vulnerability_model_file, hazard_curve_file,
     for site, asset in exposure_parser.filter(region_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         exposure_portfolio[gridpoint] = asset
-        risk_log.debug("Loading asset at %s: %s - %s", site.latitude,  site.longitude, asset)
+        RISK_LOG.debug("Loading asset at %s: %s - %s", site.latitude,  site.longitude, asset)
     
     risk_engine = engines.ProbabilisticLossRatioCalculator(
             hazard_curves, exposure_portfolio)
