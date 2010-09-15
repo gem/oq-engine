@@ -178,18 +178,5 @@ class ShamlOutputFile(producer.FileProducer):
             except Exception:
                 error_str = "missing shaML element: %s" % ref_string
                 raise ValueError(error_str)
-        #print "Site attributes: %s" % (site_attributes)
-        return site_attributes
 
-    def filter(self, region_constraint, attribute_constraint=None):
-        """ region_constraint has to be of type shapes.RegionConstraint 
-        (defined in file shapes.py)
-        """
-        for next in iter(self):
-            #print "Inspecting point at %s with attrib %s" % (next[0], str(next[1]))
-            if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
-               (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
+        return site_attributes

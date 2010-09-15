@@ -94,14 +94,3 @@ class ExposurePortfolioFile(producer.FileProducer):
             raise ValueError(error_str)
 
         return site_attributes
-
-    def filter(self, region_constraint, attribute_constraint=None):
-        for next in iter(self):
-            if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
-               (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
-
-	

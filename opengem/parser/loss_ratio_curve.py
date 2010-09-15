@@ -30,22 +30,6 @@ class LossRatioCurveFile(producer.FileProducer):
                 yield (self._to_site(element), 
                        self._to_site_attributes(element))
  
- """                      
-   def _set_loss_meta(self, loss_element):
-
-       self._current_loss_meta = {}
-
-       for required_attribute in (('PortfolioID', str), 
-                                  ('PortfolioDescription', str)):
-           attr_value = portfolio_element.get(required_attribute[0])
-           if attr_value is not None:
-               self._current_portfolio_meta[required_attribute[0]] = \
-                   required_attribute[1](attr_value)
-           else:
-               error_str = "element ExposurePortfolio: missing required " \
-                   "attribute %s" % required_attribute[0]
-               raise ValueError(error_str)
-"""
     def _to_site(self, element):
 
         # lon/lat are in XML attributes 'Longitude' and 'Latitude'
@@ -81,15 +65,3 @@ class LossRatioCurveFile(producer.FileProducer):
             raise ValueError(error_str)
 
         return site_attributes
-
-    def filter(self, region_constraint, attribute_constraint=None):
-        for next in iter(self):
-            if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
-               (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
-
-
-	
