@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://shaml.org/xmlns/shaml/0.1" xmlns:shaml="http://shaml.org/xmlns/shaml/0.1"
+	xmlns:gml="http://www.opengis.net/gml" xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+	xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc" jaxb:extensionBindingPrefixes="xjc"
+	elementFormDefault="qualified" jaxb:version="2.0">
+
+	<!-- import -->
+	<xs:import namespace="http://www.opengis.net/gml"
+		schemaLocation="http://schemas.opengis.net/gml/3.1.1/base/gml.xsd"/>
+	<xs:include schemaLocation="shaML_common.xsd"/>
+	<!-- -->
+	<xs:complexType name="HazardCurveListType">
+		<xs:all>
+
+			<xs:element name="IML" type="gml:doubleList"/>
+			<xs:element name="List">
+				<xs:complexType>
+					<xs:sequence maxOccurs="unbounded">
+						<xs:element name="Curve" type="shaml:HazardCurveType" maxOccurs="1"/>
+					</xs:sequence>
+				</xs:complexType>
+			</xs:element>
+		</xs:all>
+	</xs:complexType>
+	<xs:complexType name="HazardCurveType">
+		<xs:all>
+			<xs:element name="Site" type="shaml:SiteDataType"/>
+		</xs:all>
+		<xs:attribute name="minProb">
+			<xs:simpleType>
+				<xs:restriction base="xs:double">
+					<xs:minInclusive fixed="true" value="0"/>
+					<xs:maxInclusive fixed="true" value="1"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="maxProb">
+			<xs:simpleType>
+				<xs:restriction base="xs:double">
+					<xs:minInclusive fixed="true" value="0"/>
+					<xs:maxInclusive fixed="true" value="1"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="HazardResultType">
+		<xs:all>
+			<xs:element name="Descriptor">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element name="endBranchLabel" type="xs:string"/>
+						<xs:element name="aggregationType">
+							<xs:simpleType>
+								<xs:restriction base="xs:string">
+									<xs:enumeration value="mean"/>
+									<xs:enumeration value="median"/>
+								</xs:restriction>
+							</xs:simpleType>
+						</xs:element>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+			<xs:element name="Values">
+				<xs:complexType>
+					<xs:choice>
+						<xs:element maxOccurs="unbounded" name="HazardCurveList"
+							type="shaml:HazardCurveListType"/>
+						<xs:element name="HazardMap" type="shaml:HazardMapType"/>
+					</xs:choice>
+				</xs:complexType>
+			</xs:element>
+		</xs:all>
+		<xs:attribute name="calcSettingsID" type="xs:string"/>
+		<xs:attribute name="IMT" use="required">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="PGA"/>
+					<xs:enumeration value="Sa"/>
+					<xs:enumeration value="PGV"/>
+					<xs:enumeration value="PGD"/>
+					<xs:enumeration value="MMI"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="saPeriod" type="xs:double"/>
+		<xs:attribute name="saDamping" type="xs:double"/>
+		<xs:attribute name="IDmodel" type="xs:string" use="required"/>
+		<xs:attribute name="timeSpanDuration" use="required">
+			<xs:simpleType>
+				<xs:restriction base="xs:double">
+					<xs:minInclusive value="0"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="HazardResultListType">
+		<xs:sequence maxOccurs="unbounded">
+			<xs:element name="Result" type="shaml:HazardResultType"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="HazardMapType">
+		<xs:sequence maxOccurs="unbounded">
+			<xs:element name="Site" type="shaml:SiteDataType"/>
+		</xs:sequence>
+		<xs:attribute name="exceedanceProb">
+			<xs:simpleType>
+				<xs:restriction base="xs:double">
+					<xs:minInclusive fixed="true" value="0.0"/>
+					<xs:maxInclusive fixed="true" value="1.0"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="fixedGMLevel" type="xs:double"/>
+	</xs:complexType>
+	<xs:complexType name="SiteDataType">
+		<xs:all>
+			<xs:element name="Site" type="gml:PointType"/>
+			<xs:element name="Values" type="gml:doubleList"/>
+			<xs:element name="vs30" type="xs:double"/>
+		</xs:all>
+	</xs:complexType>
+	<xs:element name="HazardResultList" type="shaml:HazardResultListType"/>
+</xs:schema>
