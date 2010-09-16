@@ -65,7 +65,7 @@ class FileProducer(object):
                (attribute_constraint is None and
                     region_constraint.match(next[0])):
                 
-                    yield next
+                yield next
 
     def _parse(self):
         """Parse one logical item from the file.
