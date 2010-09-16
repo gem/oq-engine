@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+"""This module contains classes to parse ESRI stuff ported from
+the Java version of the risk engine.
+
+This module is not currently used and there isn't any test coverage.
+"""
+
 import sys
 import os
 import unittest
 import math
 import struct
-
 
 class Grid:
     """ESRIGrid format as per http://en.wikipedia.org/wiki/ESRI_grid."""
@@ -47,9 +52,10 @@ class BaseExposureReader:
 
 class ESRIBinaryFileExposureReader(BaseExposureReader):
     """Parses and loads ESRI formatted exposure data from files."""
-#    def __init__(self, filename, exposure_definition):
-#        super(ESRIBinaryFileExposureReader, self).__init__(filename, exposure_definition)
-    
+# def __init__(self, filename, exposure_definition):
+# super(ESRIBinaryFileExposureReader, self).__init__(
+# filename, exposure_definition)
+
     def read_at(self, site):
         point = self.definition.point_at(site)
         position = self.position_of(point)
@@ -68,7 +74,7 @@ class AsciiFileHazardIMLReader(BaseExposureReader):
     pass
 
 class ESRIRasterMetadata():
-    """Object loaded from (various) ESRI header files"""
+    """Object loaded from (various) ESRI header files."""
     def __init__(self, cell_size, grid, lower_left_corner):
         self.cell_size = cell_size
         self.grid = grid
@@ -106,13 +112,13 @@ class ESRIRasterMetadata():
         return cls(cell_size, grid, lower_left_corner)
 
     def _latitude_to_row(self, latitude):
-        """Calculate row from latitude value"""
+        """Calculate row from latitude value."""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
         print "lat offset = %s" % latitude_offset
         return int(self.grid.rows - (latitude_offset / self.cell_size)) + 1
 
     def _longitude_to_column(self, longitude):
-        """Calculate column from longitude value"""
+        """Calculate column from longitude value."""
         longitude_offset = longitude - self.lower_left_corner.longitude
         print "long offset = %s" % longitude_offset
         return int((longitude_offset / self.cell_size) + 1)
@@ -133,7 +139,8 @@ class ESRIRasterMetadata():
 # class AsciiFileHazardIMLReader(BaseExposureReader):
 #     """Parses and loads IML data from Ascii files in standard format"""
 #     def __init__(self, filename, exposure_definition):
-#         super(AsciiFileHazardIMLReader, self).__init__(filename, exposure_definition)
+#         super(AsciiFileHazardIMLReader, self).__init__(
+#         filename, exposure_definition)
 # 
 # 
 # class HazardIMLESRIRasterFileDefinitionReader(ESRIHeaderFileReader):
