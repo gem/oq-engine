@@ -13,6 +13,9 @@ from opengem.risk import engines
 from opengem.output import risk as risk_output
 from opengem import test
 from opengem import shapes
+from opengem import xml
+
+SHAML = "{%s}" % xml.SHAML_NS
 
 log = logs.RISK_LOG
 
@@ -78,8 +81,10 @@ class LossOutputTestCase(unittest.TestCase):
         xml_doc = etree.parse(self.path)
 	loaded_xml = xml_doc.getroot()
 
-	xml_first_curve_pe = map(float, loaded_xml[0][0].text.strip().split())
-	xml_first_curve_value = loaded_xml[0][1].text.strip().split()
+	xml_first_curve_pe = map(float, loaded_xml[0].find(
+				SHAML + "CurvePointPE").text.strip().split())
+	xml_first_curve_value = loaded_xml[0].find(
+				SHAML + "CurvePointLoss").text.strip().split()
 
 	for idx, val in enumerate(TEST_CURVE.codomain):
 		self.assertAlmostEqual(val, xml_first_curve_pe[idx], 6)
