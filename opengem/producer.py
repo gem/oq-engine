@@ -67,17 +67,19 @@ class FileProducer(object):
         and specifies additional attributes to use in the filtring process.
 
         """
-        for next in iter(self):
+        for next_val in iter(self):
             if (attribute_constraint is not None and
-                    region_constraint.match(next[0]) and
-                    attribute_constraint.match(next[1])) or \
+                    region_constraint.match(next_val[0]) and
+                    attribute_constraint.match(next_val[1])) or \
                (attribute_constraint is None and
-                    region_constraint.match(next[0])):
+                    region_constraint.match(next_val[0])):
                 
-                yield next
+                yield next_val
 
-# TODO (ac): Document this stuff
     def _set_meta(self, element):
+        """Sets the metadata of the node that is currently
+        being processed."""
+        
         for (required_attr, attr_type) in self.REQUIRED_ATTRIBUTES:
             attr_value = element.get(required_attr)
             

@@ -53,8 +53,11 @@ class ShamlOutputFile(producer.FileProducer):
 
     """
 
-    REQUIRED_ATTRIBUTES = (('IMT', str), ('IDmodel', str), ('timeSpanDuration', float))
-    OPTIONAL_ATTRIBUTES = (('saPeriod', float), ('saDamping', float), ('calcSettingsID', str))
+    REQUIRED_ATTRIBUTES = (('IMT', str), ('IDmodel', str),
+            ('timeSpanDuration', float))
+            
+    OPTIONAL_ATTRIBUTES = (('saPeriod', float),
+            ('saDamping', float), ('calcSettingsID', str))
 
     def __init__(self, path):
         super(ShamlOutputFile, self).__init__(path)
