@@ -13,10 +13,8 @@ support other flavours of shaML (the "input" formats).
 from lxml import etree
 
 from opengem import producer
-from opengem import region
-
-SHAML_NS='http://shaml.org/xmlns/shaml/0.1'
-GML_NS='http://www.opengis.net/gml'
+from opengem import shapes
+from opengem.xml import SHAML_NS, GML_NS
 
 class ShamlOutputFile(producer.FileProducer):
     """ This class parses a shaML output file. The contents of a shaML output
@@ -69,7 +67,7 @@ class ShamlOutputFile(producer.FileProducer):
                 % SHAML_NS:
                 error_str = "parsing of HazardMap elements is not yet " \
                     "implemented"
-                raise NotImplementedError()
+                raise NotImplementedError(error_str)
             elif event == 'end' and element.tag == '{%s}IML' % SHAML_NS:
                 self._set_curvelist_iml(element)
             elif event == 'end' and element.tag == '{%s}Curve' % SHAML_NS:
@@ -136,7 +134,7 @@ class ShamlOutputFile(producer.FileProducer):
             namespaces={'shaml': SHAML_NS, 'gml': GML_NS})
         try:
             coord = map(float, pos_el[0].text.strip().split())
-            return region.Point(coord[0], coord[1])
+            return shapes.Site(coord[0], coord[1])
         except Exception:
             error_str = "shaML point coordinate error: %s" % \
                 ( pos_el[0].text )
@@ -180,20 +178,20 @@ class ShamlOutputFile(producer.FileProducer):
             except Exception:
                 error_str = "missing shaML element: %s" % ref_string
                 raise ValueError(error_str)
-
+        #print "Site attributes: %s" % (site_attributes)
         return site_attributes
 
     def filter(self, region_constraint, attribute_constraint=None):
-        """ region_constraint has to be of type region.RegionConstraint 
-        (defined in file region.py)
+        """ region_constraint has to be of type shapes.RegionConstraint 
+        (defined in file shapes.py)
         """
-        for next in iter(self):
+        for next_val in iter(self):
             if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
+                    region_constraint.match(next_val[0]) and \
+                    attribute_constraint.match(next_val[1])) or \
                (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
+                    region_constraint.match(next_val[0])):
+                yield next_val
 
 
 class ShamlOutputConstraint(object):
@@ -207,7 +205,9 @@ class ShamlOutputConstraint(object):
         self.attribute = attribute
 
     def match(self, compared_attribute):
+        """Constrain file processing to the matched attributes"""
         for k, v in self.attribute.items():
             if not ( k in compared_attribute and compared_attribute[k] == v ):
+                #print "Couldnt find %s in attributes with value of %s" % (k, v)
                 return False
         return True
