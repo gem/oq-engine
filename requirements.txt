@@ -1,7 +1,10 @@
 gdal
+greenlet
 eventlet
-jpype
 lxml
 PyYAML
 python-gflags
 guppy
+shapely
+ordereddict
+http://python-geohash.googlecode.com/files/python-geohash-0.6.tar.gz
