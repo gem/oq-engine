@@ -47,8 +47,7 @@ class LossRatioCurveFile(producer.FileProducer):
         site_attributes = {}
 
         # consider all attributes of AssetInstance element as mandatory
-        for required_attribute in (('CurvePointPE', float), 
-                                   ('CurvePointLoss', float)
+        for required_attribute in (('CurvePointPE', float), ('CurvePointLoss', float):
             attr_value = element.get(required_attribute[0])
             if attr_value is not None:
                 site_attributes[required_attribute[0]] = \
