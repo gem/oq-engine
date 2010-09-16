@@ -50,17 +50,24 @@ class ShamlOutputFile(producer.FileProducer):
        optional
     5) shaML output can also contain hazard maps, parsing of those is not yet
        implemented
+
     """
 
+    REQUIRED_ATTRIBUTES = (('IMT', str), ('IDmodel', str), ('timeSpanDuration', float))
+    OPTIONAL_ATTRIBUTES = (('saPeriod', float), ('saDamping', float), ('calcSettingsID', str))
+
+    def __init__(self, path):
+        super(ShamlOutputFile, self).__init__(path)
+
     def _parse(self):
-        self._current_result_meta = None
         self._current_result_descriptor = None
         self._current_curvelist_iml = None
+        
         for event, element in etree.iterparse(self.file,
                                               events=('start', 'end')):
 
             if event == 'start' and element.tag == '{%s}Result' % SHAML_NS:
-                self._set_result_meta(element)
+                self._set_meta(element)
             elif event == 'end' and element.tag == '{%s}Descriptor' % SHAML_NS:
                 self._set_result_descriptor(element)
             elif event == 'start' and element.tag == '{%s}HazardMap' \
@@ -73,28 +80,6 @@ class ShamlOutputFile(producer.FileProducer):
             elif event == 'end' and element.tag == '{%s}Curve' % SHAML_NS:
                 yield (self._to_site(element), 
                        self._to_site_attributes(element))
-
-    def _set_result_meta(self, result_element):
-
-        self._current_result_meta = {}
-
-        for (required_attr, attr_type) in (('IMT', str), ('IDmodel', str),
-            ('timeSpanDuration', float)):
-            attr_value = result_element.get(required_attr)
-            if attr_value is not None:
-                self._current_result_meta[required_attr] = \
-                    attr_type(attr_value)
-            else:
-                error_str = "element shaml:Result: missing required " \
-                    "attribute %s" % required_attr
-                raise ValueError(error_str) 
-
-        for (optional_attr, attr_type) in (('saPeriod', float), 
-            ('saDamping', float), ('calcSettingsID', str)):
-            attr_value = result_element.get(optional_attr)
-            if attr_value is not None:
-                self._current_result_meta[optional_attr] = \
-                    attr_type(attr_value)
 
     def _set_result_descriptor(self, descriptor_element):
         
@@ -169,7 +154,7 @@ class ShamlOutputFile(producer.FileProducer):
                 pass
 
         for (attribute_chunk, ref_string) in (
-            (self._current_result_meta, "Result"),
+            (self._current_meta, "Result"),
             (self._current_result_descriptor, "Result/Descriptor"),
             (self._current_curvelist_iml, "HazardCurveList/IML")):
 

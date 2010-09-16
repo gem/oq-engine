@@ -28,6 +28,12 @@ class AttributeConstraint(object):
 # TODO Does still make sense to have this code linked to eventlet?
 class FileProducer(object):
 
+    # required attributes for metadata parsing
+    REQUIRED_ATTRIBUTES = ()
+
+    # optional attributes for metadata parsing
+    OPTIONAL_ATTRIBUTES = ()
+
     def __init__(self, path):
         logs.general_log.debug('Found data at %s', path)
         self.finished = event.Event()
@@ -36,6 +42,9 @@ class FileProducer(object):
         # file i/o will tend to block, wrap it in a thread so it will
         # play nice with ohters
         self.file = tpool.Proxy(open(self.path, 'r'))
+
+        # contains the metadata of the node currently parsed
+        self._current_meta = {}
 
     def __iter__(self):
         try:
@@ -66,6 +75,25 @@ class FileProducer(object):
                     region_constraint.match(next[0])):
                 
                 yield next
+
+# TODO (ac): Document this stuff
+    def _set_meta(self, element):
+        for (required_attr, attr_type) in self.REQUIRED_ATTRIBUTES:
+            attr_value = element.get(required_attr)
+            
+            if attr_value is not None:
+                self._current_meta[required_attr] = attr_type(attr_value)
+            else:
+                error_str = "element %s: missing required " \
+                        "attribute %s" % (element, required_attr)
+                
+                raise ValueError(error_str) 
+
+        for (optional_attr, attr_type) in self.OPTIONAL_ATTRIBUTES:
+            attr_value = element.get(optional_attr)
+            
+            if attr_value is not None:
+                self._current_meta[optional_attr] = attr_type(attr_value)
 
     def _parse(self):
         """Parse one logical item from the file.
