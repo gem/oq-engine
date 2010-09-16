@@ -2,6 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 # encoding: utf-8
 
+
 import unittest
 from opengem import flags
 

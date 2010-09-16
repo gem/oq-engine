@@ -1,5 +1,6 @@
-from gflags import *
+from gflags import FLAGS, DEFINE_boolean
 
+from gflags import *
 # arguments name definition
 POPULATION_EXPOSURE = 'population-exposure'
 COUNTRIES_EXPOSURE = 'countries-exposure'

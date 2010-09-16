@@ -14,6 +14,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * lxml
 * PyYAML
 * python-gflags
+* RabbitMQ (Installed using brew install rabbitmq)
 * SciPy
   * You will need gfortran, for os x that is at: http://r.research.att.com/gfortran-4.2.3.dmg 
   * After that `pip install scipy` should work.
@@ -22,6 +23,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * Shapely
   * requires geos (c library, also called libgeos)
 * Sphinx (for building documentation only)
+* Guppy (http://guppy-pe.sourceforge.net)
 
 
 Running Tests
@@ -64,7 +66,7 @@ Tools / Services
     ln -s /path/to/git-cl/upload.py /usr/bin/upload.py
 
 * GitHub (http://github.com/gem/opengem)
-* Rietveld (http://gemreview.appspot.com)
+* Rietveld (http://gemreview.appspot.com) - requires a google account
 * PivotalTracker (http://pivotaltracker.com)
 
 Troubleshooting
@@ -73,9 +75,20 @@ Troubleshooting
 SciPy can be a real pain to install on OS X. These steps should work if the
 procedure mentioned above does not.
 
+Make sure you have installed numpy >= 1.4, if you have installed GDAL you 
+might have an older version of numpy that may be loaded by Python before your
+new installation on numpy. To resolve this, change the python module loading 
+order by editing /Python/2.6/site-packages/dgal.pth
+from:
+import sys; sys.path.insert(0,'/Library/Frameworks/GDAL.framework/Versions/1.7/
+Python/site-packages')
+to:
+import sys; sys.path.append('/Library/Frameworks/GDAL.framework/Versions/1.7/
+Python/site-packages')
+
 ::
 
-    svn co http://svn.scipy.org/svn/numpy/trunk numpy
+    svn co http://svn.scipy.org/svn/numpy/trunk numpy 
     svn co http://svn.scipy.org/svn/scipy/trunk scipy
     
     cd numpy

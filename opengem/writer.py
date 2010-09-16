@@ -14,7 +14,7 @@ class FileWriter(object):
         self.file = tpool.Proxy(open(self.path, 'w'))
 
     def write(self, cell, value):
-        raise NotImplemented
+        raise NotImplementedError
 
     def close(self):
         self.file.close()
