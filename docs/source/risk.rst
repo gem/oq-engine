@@ -1,6 +1,7 @@
 ..
       License Header goes here
 
+<<<<<<< HEAD
 GEM Computational Risk Engine
 ====================
 The :mod:`Risk` Sub-package
@@ -16,22 +17,53 @@ The risk sub package includes:
 
 The :mod:`engines` Module
 ------------------
+=======
+Risk Calculators
+====================
+
+Summarize risk modules here.
+
+
+The :mod:`risk` Module
+-------------------------
+
+.. automodule:: opengem.risk
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+
+The :mod:`engines` Module
+-------------------------
+>>>>>>> master
 
 .. automodule:: opengem.risk.engines
     :members:
     :undoc-members:
     :show-inheritance:
 
+<<<<<<< HEAD
 The :mod:`probabilistic_scenario` Module
 ------------------
+=======
+
+The :mod:`probabilistic_scenario` Module
+-------------------------
+>>>>>>> master
 
 .. automodule:: opengem.risk.probabilistic_scenario
     :members:
     :undoc-members:
     :show-inheritance:
 
+<<<<<<< HEAD
 The :mod:`tasks` Module
 ------------------
+=======
+
+The :mod:`tasks` Module
+-------------------------
+>>>>>>> master
 
 .. automodule:: opengem.risk.tasks
     :members:
