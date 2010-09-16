@@ -1,6 +1,5 @@
 gdal
 eventlet
-jpype
 lxml
 PyYAML
 python-gflags
