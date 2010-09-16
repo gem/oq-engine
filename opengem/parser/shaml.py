@@ -3,11 +3,10 @@
 from lxml import etree
 
 from opengem import producer
-from opengem import region
-from opengem import test
+from opengem import shapes
 
 
-GML='http://www.opengis.net/gml'
+GML = 'http://www.opengis.net/gml'
 
 
 class ShamlFile(producer.FileProducer):
@@ -34,16 +33,16 @@ class ShamlFile(producer.FileProducer):
         self._current_branch = branch_label
 
     def _to_region(self, element):
-        posList = element.find('.//{%s}posList' % GML)
+        pos_list = element.find('.//{%s}posList' % GML)
         
         # build up the region for this element
         # for now we assume we are getting lat-long, not lat-long-depth.
-        parts = posList.text.strip().split()
+        parts = pos_list.text.strip().split()
         coords = []
         while parts:
             coords.append((float(parts.pop(0)), float(parts.pop(0))))
 
-        linestring = region.LineString(coords)
+        linestring = shapes.LineString(coords)
         return linestring
 
     def _to_source(self, element):

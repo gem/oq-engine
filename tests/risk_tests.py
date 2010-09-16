@@ -13,13 +13,11 @@ from shapely import geometry
 from opengem import logs
 from opengem.risk import engines
 from opengem.output import risk as risk_output
-from opengem import grid
-from opengem import region
 from opengem import test
 from opengem.risk import engines
 from opengem import shapes
 
-log = logs.risk_log
+log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
