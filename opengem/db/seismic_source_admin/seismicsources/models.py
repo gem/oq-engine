@@ -1,6 +1,9 @@
 from django.contrib.gis.db import models
 from datetime import datetime
 
+# Used to display html 'help text' links within Admin App
+from django.utils.safestring import mark_safe
+
 # Create your models here.
 class SourceGeometryCatalog(models.Model):
     SOURCEGEOMCATTYPE_CHOICES = ( 
@@ -11,11 +14,11 @@ class SourceGeometryCatalog(models.Model):
         (u'O', u'Others'),
     )
     ORIGFORMATTYPE_CHOICES = (
-        (u'A', u'Ascii Text'),
-        (u'E', u'Excel File Format'),
-        (u'C', u'Comma Separated Value Format'),
-        (u'S', u'ESRI Shapefile'),
-        (u'O', u'Others'),
+        ( 1, u'Ascii Text'),
+        ( 2, u'Excel File Format'),
+        ( 3, u'Comma Separated Value Format'),
+        ( 4, u'ESRI Shapefile'),
+        ( 5, u'Others'),
     )
     #Regular django fields to correspond to attributes in srcgeomcat shapefile
     scid = models.AutoField("Source Geometry Catalog Id", primary_key=True)
@@ -25,19 +28,23 @@ class SourceGeometryCatalog(models.Model):
     scdesc = models.CharField(max_length=100,blank = True)
     sctypecode = models.CharField("Seismic Source Catalog Types", max_length=5, 
                       choices=SOURCEGEOMCATTYPE_CHOICES, default='I')
+    scareapolygon = models.CharField("Polygon WKT", max_length=5120)
+    scareamultipolygon = models.CharField("Multipolygon WKT", max_length=5120)
     scstartdate = models.DateTimeField("Catalog Start Date", blank=True)
     scenddate = models.DateTimeField("Catalog End Date", blank=True)
     scsources = models.CharField("Sources of data", max_length=255, blank=True) 
-    scorigformatid = models.CharField("Original Format Type", max_length=1,
+    scorigformatid = models.IntegerField("Original Format Type",
                      choices=ORIGFORMATTYPE_CHOICES,default=u'O')
     scremarks = models.CharField("Remarks", max_length=255, blank=True)
-    scadddate = models.DateTimeField("Catalog Add Date", default=datetime.now())
+    #scadddate = models.DateTimeField("Catalog Add Date", default=datetime.now())
 
     #Geodjango-specific: a geometry field, 
     #and overriding the default manager with a GeoManager instance.
     scpgareapolygon = models.PolygonField(blank=True)
     scpgareamultipolygon = models.MultiPolygonField(blank=True)
     objects = models.GeoManager()
+    class Meta:
+        db_table = u'sourcegeometrycatalog'
 
     #Returns the string representation of the model.
     def __unicode__(self):
@@ -46,9 +53,10 @@ class SourceGeometryCatalog(models.Model):
 class SeismicSource(models.Model):
     SEISMICSOURCETYPE_CHOICES = (
         (1, 'Simple Fault'),
-        (2, 'Complex/Subduction Fault'),
-        (3, 'Area Zone'),
-        (4, 'Gridded Seismicity'),
+        (5, 'Complex/Subduction Fault'),
+        (2, 'Area Source Zone'),
+        (3, 'Gridded Seismicity Point'),
+        (4, 'Seismic Point'),
     )
     GEOMTYPE_CHOICES = (
         (1, 'Point'),
@@ -56,11 +64,11 @@ class SeismicSource(models.Model):
         (3, 'Polygon'),
         (4, 'Multipolygon'),
    )
-    scid = models.ForeignKey(SourceGeometryCatalog)
+    scid = models.ForeignKey(SourceGeometryCatalog, db_column = 'scid')
     ssid = models.AutoField("Seismic Source Id", primary_key=True)
-    sssrctype = models.IntegerField("Seismic Source Type Code", 
+    sssrctypecode = models.IntegerField("Seismic Source Type Code", 
                 choices=SEISMICSOURCETYPE_CHOICES)
-    ssgeomtype = models.IntegerField("Geometry Type Code",
+    ssgeomtypecode = models.IntegerField("Geometry Type Code",
                 choices=GEOMTYPE_CHOICES)
     ssgrdefaulttag = models.BooleanField("Gutenberg-Richter Default?")
     ssorigid = models.CharField("Original Seismic Source Id", max_length=50)
@@ -73,7 +81,14 @@ class SeismicSource(models.Model):
     ssdepth = models.FloatField("Depth")
     ssbackgrdzonetag = models.BooleanField("Background Zone?")
     sserrorcode = models.IntegerField("Error Code")
-    
+    ssmultilinestring = models.CharField(max_length = 5120)
+    sstopmultilinestring = models.CharField(max_length = 5120)
+    ssbottommultilinestring = models.CharField(max_length = 5120)
+    sspolygon = models.CharField(max_length = 5120)
+    ssmultipolygon = models.CharField(max_length = 5120)
+    sspoint = models.CharField(max_length = 255)
+
+   
     #Geodjango-specific: several geometry fields-is this possible?
     #overrideing the default manager with a GeoManager instance
 
@@ -85,9 +100,10 @@ class SeismicSource(models.Model):
     sspgpoint = models.PointField()
 
     objects = models.GeoManager()
+    class Meta:
+        db_table = u'seismicsource'
     
     #Returns string representation of the model.
     def __unicode__(self):
-        return self.scname
-
+        return self.ssname
 
