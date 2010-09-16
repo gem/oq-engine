@@ -7,6 +7,7 @@ as shaml-style XML.
 
 import lxml
 import lxml.etree
+from lxml.builder import ElementMaker
 
 from opengem.logs import RISK_LOG
 from opengem import writer
@@ -18,6 +19,10 @@ GML = "{%s}" % GML_NS
 NSMAP = {None : SHAML_NS, "gml" : GML_NS}
 
 class RiskXMLWriter(writer.FileWriter):
+    pass
+
+
+class LossCurveXMLWriter(RiskXMLWriter):
     """Simple serialization of loss curves and loss ratio curves"""
     
     def write(self, point, value):
@@ -25,7 +30,7 @@ class RiskXMLWriter(writer.FileWriter):
             point = point.site.point
         if isinstance(point, shapes.Site):
             point = point.point
-        node = lxml.etree.Element(SHAML + "cell", nsmap=NSMAP)
+        node = lxml.etree.SubElement(self.root_node, SHAML + "cell", nsmap=NSMAP)
         node.attrib[SHAML + 'latitude'] = str(point.y)
         node.attrib[SHAML + 'longitude'] = str(point.x)
         RISK_LOG.debug("Writing loss xml, value is %s", value)
@@ -34,8 +39,14 @@ class RiskXMLWriter(writer.FileWriter):
         subnode_loss = lxml.etree.SubElement(node, SHAML + "CurvePointLoss")
         subnode_loss.text = " "
         for key, val in value.values.items():
-            subnode_loss.text += " %s" % (val)
-            subnode_pe.text += " %s" % (key)
-        et = lxml.etree.ElementTree(node)
-        et.write(self.file, pretty_print=True)
+            subnode_loss.text += " %s" % (key)
+            subnode_pe.text += " %s" % (val)
     
+    def write_header(self):
+	"""Write out the file header"""
+        self.root_node = lxml.etree.Element(SHAML + "LossCurveList", nsmap=NSMAP)
+
+    def write_footer(self):
+	"""Write out the file footer"""
+        et = lxml.etree.ElementTree(self.root_node)
+        et.write(self.file, pretty_print=True)
