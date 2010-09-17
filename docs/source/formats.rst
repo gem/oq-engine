@@ -17,7 +17,7 @@ The parser_vulnerability_model
 	- Calls root elements 
 	- Considers all attributes of Vulnerability Function
 
-The :mod:`parser` Module
+The :mod:`parser` Sub-package
 -------------------------
 
 .. automodule:: opengem.parser.shaml_output
@@ -26,7 +26,12 @@ The :mod:`parser` Module
     :show-inheritance:
 
 
-.. automodule:: opengem.parser.parser_exposure_portfolio
+.. automodule:: opengem.parser.exposure
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: opengem.parser.vulnerability
     :members:
     :undoc-members:
     :show-inheritance:

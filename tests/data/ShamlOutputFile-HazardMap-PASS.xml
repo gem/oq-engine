@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<shaml:HazardResultList xmlns:shaml="http://shaml.org/xmlns/shaml/0.1" 
+<shaml:HazardResultList xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" 
                         xmlns:gml="http://www.opengis.net/gml">
     <shaml:Result timeSpanDuration="50.0" IDmodel="PGA_1_1" IMT="PGA">
         <shaml:Descriptor>

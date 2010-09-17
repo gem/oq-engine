@@ -14,6 +14,8 @@ Contents:
    architecture
    output
    formats
+   hazard
+   risk
 
 Indices and tables
 ==================
