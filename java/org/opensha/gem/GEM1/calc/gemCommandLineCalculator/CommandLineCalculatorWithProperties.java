@@ -1,5 +1,5 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
-//calcConfig.getProperty(defaultConfigItems..name())
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -649,13 +649,15 @@ public class CommandLineCalculatorWithProperties {
         }
 	} // saveFractiles()
 	
-	private static ArrayList<Site> createSiteList(Properties calcConfig){
+	private ArrayList<Site> createSiteList(Properties calcConfig){
 	    // arraylist of sites storing locations where hazard curves must be calculated
 	    ArrayList<Site> sites = new ArrayList<Site>();
 	    // create gridded region from borders coordinates and grid spacing
 	    // GriddedRegion gridReg = new GriddedRegion(calcConfig.getRegionBoundary(),BorderType.MERCATOR_LINEAR,calcConfig.getGridSpacing(),null);
 	    LocationList locations = CalculatorConfigHelper.makeRegionboundary(calcConfig);
-	    double gridSpacing = Double.parseDouble(calcConfig.getProperty(ConfigItems.REGION_GRID_SPACING.name()));
+		// old style: "properties" - going to be deleted
+	    // double gridSpacing = Double.parseDouble(calcConfig.getProperty(ConfigItems.REGION_GRID_SPACING.name()));
+	    double gridSpacing = config.getDouble(ConfigItems.REGION_GRID_SPACING.name());
 	    GriddedRegion gridReg = new GriddedRegion(locations, BorderType.MERCATOR_LINEAR, gridSpacing, null);
 	    // get list of locations in the region
 	    LocationList locList = gridReg.getNodeList();
@@ -666,7 +668,7 @@ public class CommandLineCalculatorWithProperties {
 		return sites;
 	} // createSiteList()
 	
-	private static GEM1ERF sampleGemLogicTreeERF(GemLogicTree<ArrayList<GEMSourceData>> ltERF, Properties calcConfig) {
+	private  GEM1ERF sampleGemLogicTreeERF(GemLogicTree<ArrayList<GEMSourceData>> ltERF, Properties calcConfig) {
 		// erf to be returned
 		GEM1ERF erf = null;
 		// array list of sources that will contain the samples sources
@@ -680,9 +682,12 @@ public class CommandLineCalculatorWithProperties {
 		GemLogicTreeBranch branch = ltERF.getBranchingLevel(0).getBranch(branchNumber-1);
 		if(branch.getNameInputFile()!=null) {
 			// read input file model
-			//InputModelData inputModelData = new InputModelData(branch.getNameInputFile(),calcConfig.getMfdBinWidth());
+			// next line shows how to read from a Properties object (will be deleted soon).
+			//InputModelData inputModelData = new InputModelData(branch.getNameInputFile(),
+			//                                                   Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
+			// new here is the apache Configuration object
 			InputModelData inputModelData = new InputModelData(branch.getNameInputFile(),
-			                                                   Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
+			                                                   config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()));
 			// load sources
 			srcList = inputModelData.getSourceList();
 		}
@@ -1065,77 +1070,74 @@ public class CommandLineCalculatorWithProperties {
 	 * @param calcConfig: calculator configuration obejct containing parameters
 	 * for the ERF
 	 */
-	private static void setGEM1ERFParams(GEM1ERF erf, Properties calcConfig) {
+	private void setGEM1ERFParams(GEM1ERF erf, Properties calcConfig) {
 		// set minimum magnitude
-		// xxr: TODO: !!!type safety!!!   !!!type safety!!!   !!!type safety!!!
-		erf.setParameter(GEM1ERF.MIN_MAG_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.MINIMUM_MAGNITUDE.name())));
+		/*
+		 * xxr: TODO: !!!type safety!!!
+		 * apache's Configuration interface handles a similar problem this way:
+		 * Instead of defining one single method like
+		 * public void setParameter(String key, Object value) {...}
+		 * there is one method per type defined: setString(), setDouble(), setInt(), ...
+		 */
+		// old style: "properties" - going to be deleted
+		//erf.setParameter(GEM1ERF.MIN_MAG_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.MINIMUM_MAGNITUDE.name())));
+		erf.setParameter(GEM1ERF.MIN_MAG_NAME, config.getDouble(ConfigItems.MINIMUM_MAGNITUDE.name()));
 		// set time span
 		TimeSpan timeSpan = new TimeSpan(TimeSpan.NONE,TimeSpan.YEARS);
-		timeSpan.setDuration(Double.parseDouble(calcConfig.getProperty(ConfigItems.INVESTIGATION_TIME.name())));
+		// old style: "properties" - going to be deleted
+		// timeSpan.setDuration(Double.parseDouble(calcConfig.getProperty(ConfigItems.INVESTIGATION_TIME.name())));
+		timeSpan.setDuration(config.getDouble(ConfigItems.INVESTIGATION_TIME.name()));
 		erf.setTimeSpan(timeSpan);
 
 		// params for area source
 		// set inclusion of area sources in the calculation
-		erf.setParameter(GEM1ERF.INCLUDE_AREA_SRC_PARAM_NAME, Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INCLUDE_AREA_SOURCES.name())));
+		erf.setParameter(GEM1ERF.INCLUDE_AREA_SRC_PARAM_NAME, config.getBoolean(ConfigItems.INCLUDE_AREA_SOURCES.name()));
 		// set rupture type ("area source rupture model / area_source_rupture_model / AreaSourceRuptureModel) 
-		erf.setParameter(GEM1ERF.AREA_SRC_RUP_TYPE_NAME, calcConfig.getProperty(ConfigItems.TREAT_AREA_SOURCE_AS.name()));
+		erf.setParameter(GEM1ERF.AREA_SRC_RUP_TYPE_NAME, config.getString(ConfigItems.TREAT_AREA_SOURCE_AS.name()));
 		// set area discretization
-		erf.setParameter(GEM1ERF.AREA_SRC_DISCR_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.AREA_SOURCE_DISCRETIZATION.name())));
+		erf.setParameter(GEM1ERF.AREA_SRC_DISCR_PARAM_NAME, config.getDouble(ConfigItems.AREA_SOURCE_DISCRETIZATION.name()));
 		// set mag-scaling relationship
-		erf.setParameter(GEM1ERF.AREA_SRC_MAG_SCALING_REL_PARAM_NAME, calcConfig.getProperty(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP.name()));
+		erf.setParameter(GEM1ERF.AREA_SRC_MAG_SCALING_REL_PARAM_NAME, config.getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP.name()));
 		// params for grid source
 		// inclusion of grid sources in the calculation
-		erf.setParameter(GEM1ERF.INCLUDE_GRIDDED_SEIS_PARAM_NAME, Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INCLUDE_GRID_SOURCES.name())));
+		erf.setParameter(GEM1ERF.INCLUDE_GRIDDED_SEIS_PARAM_NAME, config.getBoolean(ConfigItems.INCLUDE_GRID_SOURCES.name()));
 		// rupture model
-		erf.setParameter(GEM1ERF.GRIDDED_SEIS_RUP_TYPE_NAME, calcConfig.getProperty(ConfigItems.TREAT_GRID_SOURCE_AS.name()));
+		erf.setParameter(GEM1ERF.GRIDDED_SEIS_RUP_TYPE_NAME, config.getString(ConfigItems.TREAT_GRID_SOURCE_AS.name()));
 		// mag-scaling relationship
-		erf.setParameter(GEM1ERF.GRIDDED_SEIS_MAG_SCALING_REL_PARAM_NAME, calcConfig.getProperty(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP.name()));
+		erf.setParameter(GEM1ERF.GRIDDED_SEIS_MAG_SCALING_REL_PARAM_NAME, config.getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP.name()));
 
 		// params for fault source
 		// inclusion of fault sources in the calculation
-		//erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME, calcConfig.getIncludeFaultSource());
-		erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME, Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INCLUDE_FAULT_SOURCE.name())));
+		erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME, config.getBoolean(ConfigItems.INCLUDE_FAULT_SOURCE.name()));
 		// rupture offset
-		erf.setParameter(GEM1ERF.FAULT_RUP_OFFSET_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.FAULT_RUPTURE_OFFSET.name())));
+		erf.setParameter(GEM1ERF.FAULT_RUP_OFFSET_PARAM_NAME, config.getDouble(ConfigItems.FAULT_RUPTURE_OFFSET.name()));
 		// surface discretization
-		//erf.setParameter(GEM1ERF.FAULT_DISCR_PARAM_NAME, calcConfig.getFaultSourceSurfaceDiscretization());
-		erf.setParameter(GEM1ERF.FAULT_DISCR_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.FAULT_SURFACE_DISCRETIZATION.name())));
+		erf.setParameter(GEM1ERF.FAULT_DISCR_PARAM_NAME, config.getDouble(ConfigItems.FAULT_SURFACE_DISCRETIZATION.name()));
 		// mag-scaling relationship
-		//erf.setParameter(GEM1ERF.FAULT_MAG_SCALING_REL_PARAM_NAME, calcConfig.getFaultSourceMagAreaRel());
-		erf.setParameter(GEM1ERF.FAULT_MAG_SCALING_REL_PARAM_NAME, calcConfig.getProperty(ConfigItems.FAULT_MAGNITUDE_SCALING_RELATIONSHIP.name()));
+		erf.setParameter(GEM1ERF.FAULT_MAG_SCALING_REL_PARAM_NAME, config.getString(ConfigItems.FAULT_MAGNITUDE_SCALING_RELATIONSHIP.name()));
 
 		// mag-scaling sigma
-		// erf.setParameter(GEM1ERF.FAULT_SCALING_SIGMA_PARAM_NAME, calcConfig.getFaultSourceMagSigma());
-		erf.setParameter(GEM1ERF.FAULT_SCALING_SIGMA_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.FAULT_MAGNITUDE_SCALING_SIGMA.name())));
+		erf.setParameter(GEM1ERF.FAULT_SCALING_SIGMA_PARAM_NAME, config.getDouble(ConfigItems.FAULT_MAGNITUDE_SCALING_SIGMA.name()));
 		// rupture aspect ratio
-		//erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME, calcConfig.getFaultSourceRuptureAspectRatio());
-		erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.RUPTURE_ASPECT_RATIO.name())));
+		erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME, config.getDouble(ConfigItems.RUPTURE_ASPECT_RATIO.name()));
 		// rupture floating type
-		//erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME, calcConfig.getFaultSourceRuptureFloatingType());
-		erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME, calcConfig.getProperty(ConfigItems.RUPTURE_FLOATING_TYPE.name()));
+		erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME, config.getString(ConfigItems.RUPTURE_FLOATING_TYPE.name()));
 		
 		// params for subduction fault
 		// inclusion of fault sources in the calculation
-		// erf.setParameter(GEM1ERF.INCLUDE_SUBDUCTION_SOURCES_PARAM_NAME, calcConfig.getIncludeSubductionFaultSource());
-		erf.setParameter(GEM1ERF.INCLUDE_SUBDUCTION_SOURCES_PARAM_NAME, Boolean.parseBoolean(calcConfig.getProperty(ConfigItems.INCLUDE_SUBDUCTION_FAULT_SOURCE.name())));
+		erf.setParameter(GEM1ERF.INCLUDE_SUBDUCTION_SOURCES_PARAM_NAME, config.getBoolean(ConfigItems.INCLUDE_SUBDUCTION_FAULT_SOURCE.name()));
 		// rupture offset
-		// erf.setParameter(GEM1ERF.SUB_RUP_OFFSET_PARAM_NAME, calcConfig.getSubductionFaultSourceRuptureOffset());
-		erf.setParameter(GEM1ERF.SUB_RUP_OFFSET_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.SUBDUCTION_FAULT_RUPTURE_OFFSET.name())));
+		erf.setParameter(GEM1ERF.SUB_RUP_OFFSET_PARAM_NAME, config.getDouble(ConfigItems.SUBDUCTION_FAULT_RUPTURE_OFFSET.name()));
 		// surface discretization
-		// erf.setParameter(GEM1ERF.SUB_DISCR_PARAM_NAME, calcConfig.getSubductionFaultSourceSurfaceDiscretization());
-		erf.setParameter(GEM1ERF.SUB_DISCR_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.SUBDUCTION_FAULT_SURFACE_DISCRETIZATION.name())));
+		erf.setParameter(GEM1ERF.SUB_DISCR_PARAM_NAME, config.getDouble(ConfigItems.SUBDUCTION_FAULT_SURFACE_DISCRETIZATION.name()));
 		// mag-scaling relationship
-		// erf.setParameter(GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME, calcConfig.getSubductionFaultSourceMagAreaRel());
-		erf.setParameter(GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME, calcConfig.getProperty(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP.name()));
+		erf.setParameter(GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME, config.getString(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP.name()));
 		// mag-scaling sigma
-		// erf.setParameter(GEM1ERF.SUB_SCALING_SIGMA_PARAM_NAME, calcConfig.getSubductionFaultSourceMagSigma());
-		erf.setParameter(GEM1ERF.SUB_SCALING_SIGMA_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA.name())));
+		erf.setParameter(GEM1ERF.SUB_SCALING_SIGMA_PARAM_NAME, config.getDouble(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA.name()));
 		// rupture aspect ratio
-		// erf.setParameter(GEM1ERF.SUB_RUP_ASPECT_RATIO_PARAM_NAME, calcConfig.getSubductionFaultSourceRuptureAspectRatio());
-		erf.setParameter(GEM1ERF.SUB_RUP_ASPECT_RATIO_PARAM_NAME, Double.parseDouble(calcConfig.getProperty(ConfigItems.SUBDUCTION_RUPTURE_ASPECT_RATIO.name())));
+		erf.setParameter(GEM1ERF.SUB_RUP_ASPECT_RATIO_PARAM_NAME, config.getDouble(ConfigItems.SUBDUCTION_RUPTURE_ASPECT_RATIO.name()));
 		// rupture floating type
-		//erf.setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, calcConfig.getSubductionFaultSourceRuptureFloatingType());
-		erf.setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, calcConfig.getProperty(ConfigItems.SUBDUCTION_RUPTURE_FLOATING_TYPE.name()));
+		erf.setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, config.getString(ConfigItems.SUBDUCTION_RUPTURE_FLOATING_TYPE.name()));
 		
 		// update
 		erf.updateForecast();
