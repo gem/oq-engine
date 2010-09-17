@@ -21,7 +21,7 @@
 {% for field in object.fields %}
 <tr class="{% cycle 'odd' 'even' %}">
 <th>{{ field.field.verbose_name|capfirst }}
-{% ifequal field.field.name "geometry" %}
+{% ifequal field.field.name "scpgareapolygon" %}
 
 <br />
 <br />
@@ -51,7 +51,8 @@ Select Feature to see geometry:<br />
 {% if field.urls %}
 {% for value, url in field.urls %}
 
-{% ifequal field.field.name "geometry" %}
+
+{% ifequal field.field.name "scpgareapolygon" %}
 <script type="text/javascript">
 //<![CDATA[
        var map, layer, wkt, features, options, formats;
