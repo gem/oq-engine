@@ -1,1 +1,4 @@
 java files go under this directory
+To run the tests, try this:
+> ant junit-tests-with-coverage
+
