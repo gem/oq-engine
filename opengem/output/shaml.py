@@ -2,6 +2,13 @@
 # encoding: utf-8
 """
 This modules serializes hazard curves in Shaml format.
+
+It currently takes all the lxml object model in memory
+due to the fact that curves can be grouped by IDmodel and
+IML. Coudn't find a way to do so writing an object at a
+time without making a restriction to the order on which
+objects are received.
+
 """
 
 from lxml import etree
@@ -69,6 +76,14 @@ class ShamlWriter(writer.FileWriter):
         vs30_tag.text = str(values["vs30"])
 
     def write(self, point, values):
+        """Writes an hazard curve.
+        
+        point must be of type shapes.Site
+        values is a dictionary that matches the one produced by the
+        parser shaml_output.ShamlOutputFile
+        
+        """
+        
         try:
             values_tag = self.curves_per_model_id[values["IDmodel"]]
         except KeyError:

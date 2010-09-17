@@ -26,11 +26,6 @@ class OutputShamlTestCase(unittest.TestCase):
         except OSError:
             pass
 
-    # quick learning test
-    def test_string_matching(self):
-        self.assertTrue("<test>" in "<a><test></a>")
-        self.assertFalse("#test>" in "<a><test></a>")
-    
     def test_writes_the_file_when_closed(self):
         self.writer.close()
     
