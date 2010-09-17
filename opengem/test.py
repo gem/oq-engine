@@ -4,11 +4,11 @@
 Helper functions for our unit and smoke tests.
 """
 
-import logging
+from opengem.logs import LOG as log
 import os
+import time
 import subprocess
 
-from opengem import computation
 from opengem import producer
 from opengem import flags
 
@@ -19,16 +19,6 @@ flags.DEFINE_boolean('download_test_data', True,
         
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
-
-
-class ConcatComputation(computation.Computation):
-    """Simple computation step that concatenates args"""
-    def __init__(self, pool, cell):
-        keys = ['shake', 'roll']
-        super(ConcatComputation, self).__init__(pool, cell, keys)
-
-    def _compute(self, **kw):
-        return ':'.join(str(x) for x in sorted(kw.values()))
 
 
 class WordProducer(producer.FileProducer):
@@ -45,8 +35,35 @@ def guarantee_file(path, url):
     if not os.path.isfile(path):
         if not FLAGS.download_test_data:
             raise Exception("Test data does not exist")
-        logging.info("Downloading test data for %s", path)
+        log.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
-            
+
+
+def timeit(method):
+    """Decorator for timing methods"""
+    def _timed(*args, **kw):
+        """Wrapped function for timed methods"""
+        timestart = time.time()
+        result = method(*args, **kw)
+        timeend = time.time()
+
+        print '%r (%r, %r) %2.2f sec' % \
+              (method.__name__, args, kw, timeend-timestart)
+        return result
+
+    return _timed    
+
+
+def skipit(_method):
+    """Decorator for skipping tests"""
+    def _skipme(*_args, **_kw):
+        """The skipped method"""
+        pass
+    return _skipme
+
+
+def measureit(method):
+    """Decorator that profiles memory usage"""
+    return method
