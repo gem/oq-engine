@@ -24,7 +24,8 @@ class ShamlWriter(writer.FileWriter):
     
     def __init__(self, path):
         super(ShamlWriter, self).__init__(path)
-        self.result_list_tag = etree.Element(SHAML + "HazardResultList", nsmap=NSMAP)
+        self.result_list_tag = etree.Element(
+                SHAML + "HazardResultList", nsmap=NSMAP)
 
         self.curves_per_iml = {}
         self.curves_per_model_id = {}
@@ -41,7 +42,8 @@ class ShamlWriter(writer.FileWriter):
         try:
             list_tag = self.curves_per_iml[str(values["IML"])]
         except KeyError:
-            curve_list_tag = etree.SubElement(values_tag, SHAML + "HazardCurveList")
+            curve_list_tag = etree.SubElement(
+                    values_tag, SHAML + "HazardCurveList")
             
             # <shaml:IML />
             iml_tag = etree.SubElement(curve_list_tag, SHAML + "IML")
@@ -88,9 +90,12 @@ class ShamlWriter(writer.FileWriter):
             values_tag = self.curves_per_model_id[values["IDmodel"]]
         except KeyError:
             # <shaml:Result />
-            result_tag = etree.SubElement(self.result_list_tag, SHAML + "Result")
+            result_tag = etree.SubElement(
+                    self.result_list_tag, SHAML + "Result")
   
-            result_tag.attrib["timeSpanDuration"] = str(values["timeSpanDuration"])
+            result_tag.attrib["timeSpanDuration"] = \
+                    str(values["timeSpanDuration"])
+
             result_tag.attrib["IDmodel"] = str(values["IDmodel"])
             result_tag.attrib["IMT"] = str(values["IMT"])
 
@@ -98,7 +103,9 @@ class ShamlWriter(writer.FileWriter):
             descriptor_tag = etree.SubElement(result_tag, SHAML + "Descriptor")
         
             # <shaml:endBranchLabel />
-            end_branch_label_tag = etree.SubElement(descriptor_tag, SHAML + "endBranchLabel")
+            end_branch_label_tag = etree.SubElement(
+                    descriptor_tag, SHAML + "endBranchLabel")
+
             end_branch_label_tag.text = str(values["endBranchLabel"])
 
             # <shaml:Values />
