@@ -9,26 +9,71 @@ from lxml import etree
 from opengem import writer
 from opengem.xml import SHAML_NS, GML_NS
 
-XML_METADATA = '<?xml version="1.0" encoding="UTF-8"?>'
-
-HEADER = """
-<shaml:HazardResultList xmlns:shaml="%s" xmlns:gml="%s">
-""" % (SHAML_NS, GML_NS)
-
-FOOTER = """</shaml:HazardResultList>
-"""
+GML = "{%s}" % GML_NS
+SHAML = "{%s}" % SHAML_NS
+NSMAP = {"shaml" : SHAML_NS, "gml" : GML_NS}
 
 class ShamlWriter(writer.FileWriter):
     
     def __init__(self, path):
         super(ShamlWriter, self).__init__(path)
-
-    def init_file(self):
-        super(ShamlWriter, self).init_file()
-        
-        self.file.write(XML_METADATA)
-        self.file.write(HEADER)
+        self.result_list_tag = etree.Element(SHAML + "HazardResultList", nsmap=NSMAP)
 
     def close(self):
-        self.file.write(FOOTER)
+        self.file.write(etree.tostring(self.result_list_tag, 
+                pretty_print=True,
+                xml_declaration=True,
+                encoding="UTF-8"))
+                
         super(ShamlWriter, self).close()
+
+    def write(self, point, values):
+        result_tag = etree.SubElement(self.result_list_tag, SHAML + "Result")
+  
+        # <shaml:Result />
+        result_tag.attrib["timeSpanDuration"] = str(values["timeSpanDuration"])
+        result_tag.attrib["IDmodel"] = str(values["IDmodel"])
+        result_tag.attrib["IMT"] = str(values["IMT"])
+
+        # <shaml:Descriptor />
+        descriptor_tag = etree.SubElement(result_tag, SHAML + "Descriptor")
+        
+        # <shaml:endBranchLabel />
+        end_branch_label_tag = etree.SubElement(descriptor_tag, SHAML + "endBranchLabel")
+        end_branch_label_tag.text = str(values["endBranchLabel"])
+
+        # <shaml:Values />
+        values_tag = etree.SubElement(result_tag, SHAML + "Values")
+        
+        # <shaml:HazardCurveList />
+        curve_list_tag = etree.SubElement(values_tag, SHAML + "HazardCurveList")
+
+        # <shaml:IML />
+        iml_tag = etree.SubElement(curve_list_tag, SHAML + "IML")
+        iml_tag.text = " ".join(map(str, values["IML"]))
+        
+        # <shaml:List />
+        list_tag = etree.SubElement(curve_list_tag, SHAML + "List")
+        
+        # <shaml:Curve />
+        curve_tag = etree.SubElement(list_tag, SHAML + "Curve")
+        curve_tag.attrib["maxProb"] = str(values["maxProb"])
+        curve_tag.attrib["minProb"] = str(values["minProb"])
+        
+        # <shaml:Site />
+        site_tag = etree.SubElement(curve_tag, SHAML + "Site")
+        
+        # <shaml:Site />
+        inner_site_tag = etree.SubElement(site_tag, SHAML + "Site")
+        
+        # <gml:pos />
+        gml_tag = etree.SubElement(inner_site_tag, GML + "pos")
+        gml_tag.text = " ".join(map(str, (point.longitude, point.latitude)))
+        
+        # <shaml:Values />
+        curve_values_tag = etree.SubElement(site_tag, SHAML + "Values")
+        curve_values_tag.text = " ".join(map(str, values["Values"]))
+        
+        # <shaml:vs30 />
+        vs30_tag = etree.SubElement(site_tag, SHAML + "vs30")
+        vs30_tag.text = str(values["vs30"])

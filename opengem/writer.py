@@ -7,12 +7,12 @@ class FileWriter(object):
     def __init__(self, path):
         self.finished = event.Event()
         self.path = path
-        self.init_file()
+        self._init_file()
 
-    def init_file(self):
+    def _init_file(self):
         # file i/o will tend to block, wrap it in a thread so it will
         # play nice with ohters
-        self.file = tpool.Proxy(open(self.path, 'w'))
+        self.file = tpool.Proxy(open(self.path, "w"))
 
     def write(self, cell, value):
         raise NotImplementedError
