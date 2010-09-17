@@ -2,6 +2,7 @@ package org.opensha.sha.imr.attenRelImpl;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 
 import junit.framework.TestCase;
 
@@ -16,6 +17,7 @@ public class BW_1997_AttenRelTest extends TestCase {
 	@After
 	public void tearDown() {}
 	
+	@Test
 	public void testCallMethods() {
 		int magnitude = 5;
 		int epicentralDistance = 1;
