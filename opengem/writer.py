@@ -1,6 +1,5 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-
 from eventlet import event
 from eventlet import tpool
 
@@ -8,9 +7,9 @@ class FileWriter(object):
     def __init__(self, path):
         self.finished = event.Event()
         self.path = path
-        self._init_file()
-    
-    def _init_file(self):
+        self.init_file()
+
+    def init_file(self):
         # file i/o will tend to block, wrap it in a thread so it will
         # play nice with ohters
         self.file = tpool.Proxy(open(self.path, 'w'))
