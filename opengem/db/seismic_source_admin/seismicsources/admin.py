@@ -36,16 +36,16 @@ USE_GOOGLE_TERRAIN_TILES = False
 
 class SourceGeometryCatalogAdmin(OSMGeoAdmin):
     """
-    
     The class that determines the display of the SourceGeometryCatalog model
     within the Admin App.
-    
+   
     This class uses some sample options and provides a bunch more in commented
-    form below to show the various options GeoDjango provides to customize OpenLayers.
+    form below to show the various options GeoDjango provides to customize 
+    OpenLayers.
     
-    For a look at all the GeoDjango options dive into the source code available at:
-    
-    http://code.djangoproject.com/browser/django/trunk/django/contrib/gis/admin/options.py
+    For a look at all the GeoDjango options dive into the source code available
+    at:  http://code.djangoproject.com/browser/django/trunk/django/contrib/gis/
+         admin/options.py
     
     """
     # Standard Django Admin Options
@@ -57,15 +57,21 @@ class SourceGeometryCatalogAdmin(OSMGeoAdmin):
     search_fields = ['scname','scshortname']
     list_select_related = True
     fieldsets = (
-      ('Source Geometry Catalog Attributes', {'fields': (('scname','scshortname')), 'classes': ('collapse',)}),
-      ('Source Geometry Catalog Codes', {'fields': ('sctypecode',), 'classes': ('collapse',)}),
-      ('Edit Dates', {'fields': ('scstartdate','scenddate',), 'classes': ('collapse', 'wide')}),
-      ('Editable Map View', {'fields': ('scpgareapolygon',), 'classes': ('show', 'wide')}),
+      ('Source Geometry Catalog Attributes', 
+        {'fields': (('scname','scshortname')), 'classes': ('collapse',)}),
+      ('Source Geometry Catalog Codes', 
+        {'fields': ('sctypecode',), 'classes': ('collapse',)}),
+      ('Edit Dates', {'fields': ('scstartdate','scenddate',), 
+        'classes': ('collapse', 'wide')}),
+      ('Editable Map View', 
+        {'fields': ('scpgareapolygon',), 'classes': ('show', 'wide')}),
     )
 
     if USE_GOOGLE_TERRAIN_TILES:
       map_template = 'gis/admin/google.html'
-      extra_js = ['http://openstreetmap.org/openlayers/OpenStreetMap.js', 'http://maps.google.com/maps?file=api&amp;v=2&amp;key=%s' % settings.GOOGLE_MAPS_API_KEY]
+      extra_js = ['http://openstreetmap.org/openlayers/OpenStreetMap.js', \
+               'http://maps.google.com/maps?file=api&amp;v=2&amp;key=%s'\
+                % settings.GOOGLE_MAPS_API_KEY]
     else:
       pass # defaults to OSMGeoAdmin presets of OpenStreetMap tiles
     # Default GeoDjango OpenLayers map options
@@ -109,12 +115,13 @@ class SeismicSourceAdmin(OSMGeoAdmin):
     within the Admin App.
     
     This class uses some sample options and provides a bunch more in commented
-    form below to show the various options GeoDjango provides to customize OpenLayers.
+    form below to show the various options GeoDjango provides to customize 
+    OpenLayers.
     
-    For a look at all the GeoDjango options dive into the source code available at:
-    
-    http://code.djangoproject.com/browser/django/trunk/django/contrib/gis/admin/options.py
-    
+    For a look at all the GeoDjango options dive into the source code available
+    at:  http://code.djangoproject.com/browser/django/trunk/django/contrib/gis/
+         admin/options.py
+ 
     """
     # Standard Django Admin Options
     list_display = ('ssname','scid','sssrctypecode','ssgeomtypecode',)
@@ -125,15 +132,24 @@ class SeismicSourceAdmin(OSMGeoAdmin):
     search_fields = ['ssname','ssshortname']
     list_select_related = True
     fieldsets = (
-      ('Seismic Source Attributes', {'fields': (('ssname','ssshortname')), 'classes': ('collapse',)}),
-      ('Seismic Source Type Codes', {'fields': ('sssrctypecode','ssgeomtypecode'), 'classes': ('collapse',)}),
-      ('Seismic Source Values', {'fields': ('ssbackgrdzonetag','ssarea','ssanormalized','ssdepth'), 'classes': ('collapse',)}), 
-      ('Editable Map View', {'fields': ('sspgpolygon','sspgmultipolygon','sspgmultilinestring','sspgpoint','sspgtopmultilinestring','sspgbottommultilinestring'), 'classes': ('show', 'wide')}),
+      ('Seismic Source Attributes', {'fields': (('ssname','ssshortname')), 
+          'classes': ('collapse',)}),
+      ('Seismic Source Type Codes', {'fields': 
+          ('sssrctypecode','ssgeomtypecode'), 'classes': ('collapse',)}),
+      ('Seismic Source Values', {'fields': 
+          ('ssbackgrdzonetag','ssarea','ssanormalized','ssdepth'), 
+          'classes': ('collapse',)}), 
+      ('Editable Map View', {'fields': 
+          ('sspgpolygon','sspgmultipolygon','sspgmultilinestring','sspgpoint',
+           'sspgtopmultilinestring','sspgbottommultilinestring'), 
+          'classes': ('show', 'wide')}),
     )
 
     if USE_GOOGLE_TERRAIN_TILES:
       map_template = 'gis/admin/google.html'
-      extra_js = ['http://openstreetmap.org/openlayers/OpenStreetMap.js', 'http://maps.google.com/maps?file=api&amp;v=2&amp;key=%s' % settings.GOOGLE_MAPS_API_KEY]
+      extra_js = ['http://openstreetmap.org/openlayers/OpenStreetMap.js',\
+          'http://maps.google.com/maps?file=api&amp;v=2&amp;key=%s'\
+           % settings.GOOGLE_MAPS_API_KEY]
     else:
       pass # defaults to OSMGeoAdmin presets of OpenStreetMap tiles
     # Default GeoDjango OpenLayers map options

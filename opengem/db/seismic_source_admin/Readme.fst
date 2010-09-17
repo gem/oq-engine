@@ -1,81 +1,84 @@
 Opengem Seismic Source Administration (Django/GeoDjango)
 =======================================================
-Aurea Moemke, 16 Sep 2010
+Aurea Moemke, 17 Sep 2010
 
 This distribution arose from the user story: Basic Rest Interface (on
-Datastores). It is basically a test on how to integrate the current Opengemdb
-Postgis backend and provide this data via RESTful interfaces.  The web
-framework of choice is the Django/GeoDjango using Python code. 
-For projects where you need to get a robust database driven application online in a timely manner, Django can be an exceptional tool.  
+Datastores). This download provides a project called 'seismic_source_admin' 
+with an application called 'seismicsources'. It is currently on test status
+and far from complete. However, I believe it is enough to show the basic 
+concepts that can be used to provide a complete solution.
 
-This download provides a project called 'seismic_source_admin' with an 
-application called 'seismicsources'. It is currently on test status.
-It is based on the geographic admin application at 
-http://code.google.com/p/geodjango-basic-apps/
+The goal of this story is to illustrate how we can use the Django/GeoDjango
+web framework with Opengem's spatially-enabled database to provide basic 
+RESTful interfaces.  This test makes use of a portion of the Opengemdb Ver 1.4 
+to illustrate the concept. This test borrows heavily from an opensource 
+tutorial application available at http://code.google.com/geodjango-basic apps/
+ 
+In particular, the Admin and Databrowse contrib applications with OpenLayers 
+map interface and OpenStreetMap basedata were used to show the Source Geometry
+Catalog area of interest and Seismic Source geometries.
 
+The database table structures and data are recreated with the sql files that
+come with this distribution.  Loading of data from other formats (i.e. ASCII
+text, Shapefiles), if deemed necessary,  will be covered in the next 
+distribution. 
 
-The dataset covered by the project is a portion of the Opengemdb Ver 1.4
-covering source geometry catalogs and seismic sources.  These database 
-table structures and data may be recreated with the sql files that come 
-with this distribution.  Loading of data from various sources (i.e. ASCII
-text, Shapefiles) will be covered in the next distribution. 
+This distribution is tested on PostgreSQL/Postgis, an opensource
+relational dbms with geospatial extensions.
 
-This distribution is tested on a PostgreSQL/Postgis database.  It is necessary
-to use a relational database with geospatial extensions.
-
-The seismicsourcedb consists of two tables: the SourceGeometryCatalog table
-and the SeismicSource table.  Each Source Geometry Catalog can have one or more
-seismic sources (either Simple Fault, Complex/Subduction Fault, Area Source or
-Gridded Seismicity Point. They may have any of the following geometry types: 
-(multi)point, (multi)linestring, (multi)polygon.
-
-This project code uses the Admin and Databrowse contrib applications
-with an OpenLayers map interface and OpenStreetMap basedata.  
-
-This distribution is testedbased on the 
+Here are the steps for installing this distribution:
 
 (1) Check out the seismic_source_admin branch from the opengem github.
-The project is in opengem/db/seismic_source_admin/
+    The project is in opengem/db/seismic_source_admin/.
+         $ git checkout seismic_source_admin
 
 (2) Load all necessary dependencies:
-o Django 1.1 (see www.djangoproject.com for installation instructions)
-o PostgreSQL/PostGIS
-o Psycopg2
-o GEOS
-o Proj 4
-o GDAL
-o OpenLayers
-For installing 
+    o Django 1.1 (see www.djangoproject.com for installation instructions)
+    o PostgreSQL/PostGIS
+    o Psycopg2
+    o GEOS
+    o Proj 4
+    o GDAL
 
-Test if you have what you need:
-To check if your system is setup correctly with above dependencies, start the
-python interpreter and type:
->>>import django
->>>print django.VERSION
-(1, 1, 1, 'final', 0)
->>> from django.contrib.gis.gdal import HAS_GDAL
->>> HAS_GDAL
-True
+    To check if your system is set up correctly, start the python interpreter
+    and enter the following:
+    >>>import django
+    >>>print django.VERSION
+    (1, 1, 1, 'final', 0)
+    >>> from django.contrib.gis.gdal import HAS_GDAL
+    >>> HAS_GDAL
+    True
 
-(3) Create the database. The following instructions are for postgresql:
-(a) If you have not yet done so, create a postgis template called 
-    template_postgis.  For instructions, refer to:
-    http://docs.djangoproject.com/en/dev/ref/contrib/gis/install/
-         #spatialdb-template  
-    (under the GeoDjango Installation, Post Installation, Creating a Spatial
-    Database Template for PostGIS)
-(b) Create the database.
-        createdb -T template_postgis -U postgres seismicsourcedb
-        python manage.py syncdb  
+(3) Create the database and load with data. 
+    The following instructions are for postgresql.
+    (a) If you have not yet done so, create a postgis template called 
+        template_postgis.  For complete instructions, refer to:
+             http://docs.djangoproject.com/en/dev/ref/contrib/gis/install/
+                  #spatialdb-template  
+    (b) Create the database.
+            $ createdb -T template_postgis -U yourusername seismicsourcedb
+    (c) Load sql files. This will create 2 tables (sourcegeometrycatalog and
+        seismic source) and load them with data.
+            $ psql seismicsourcedb postgres < ssdump.sql
    
+(4) Modify the settings.py file. Set your postgres user name and password.
+    DATABASE_ENGINE = 'postgresql_psycopg2' # setting for Postgresql
+    DATABASE_NAME = 'seismicsourcedb'       # the database name
+    DATABASE_USER = ''                      # add your user name
+    DATABASE_PASSWORD = ''                  # add your password
+    DATABASE_PORT = '5432'                  # port used by PostgreSQL    
 
-(4) Modify the following settings.py in the project:
-    DATABASE_ENGINE = 'postgresql_psycopg2' #This is the setting for postgresql
-    DATABASE_NAME = 'seismicsourcedb'
-    DATABASE_USER = ''
-    DATABASE_PASSWORD = ''
-    DATABASE_PORT = ''
+(5) Start the server.
+         $ python manage.py runserver
 
-This project is based on the application code found at:
-http://code.google.com/p/geodjango-basic-apps/wiki/GeographicAdminQuickStart
+(6) Synchronize the database. Type yes when prompted for a superuser.
+    This will be your login to the Admin panel.
+         $ python manage.py syncdb
+
+(7) View project in your browser. Go to to http://localhost:8080/admin/
+
+References:
+http://docs.djangoproject.com/
+http://geodjango.org/
+http://code.google.com/geodjango-basic-apps/
  
