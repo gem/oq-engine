@@ -2,6 +2,7 @@
 *.DS_Store
 local_settings.py
 docs/build/**/*
+build
 build/**/*
 build-stamp
 dist/**/*
