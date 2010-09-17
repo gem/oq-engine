@@ -15,23 +15,19 @@ XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 EMPTY_RESULT = '<shaml:HazardResultList xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml"/>'
 
 # TODO (ac): Test validation against the schema!
-class OutputShamlTestCase(unittest.TestCase):
+class HazardCurveWriterTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.writer = shaml.ShamlWriter(os.path.join(test.DATA_DIR, TEST_FILE))
+        self._delete_test_file()
+        self.writer = shaml.HazardCurveWriter(
+                os.path.join(test.DATA_DIR, TEST_FILE))
 
     def tearDown(self):
-        try:
-            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
-        except OSError:
-            pass
+        self._delete_test_file()
 
     def test_writes_the_file_when_closed(self):
         self.writer.close()
-    
-        # with no written file we would have an IOError
-        result = open(os.path.join(test.DATA_DIR, TEST_FILE))
-        result.close()
+        self.assertTrue(os.path.exists(os.path.join(test.DATA_DIR, TEST_FILE)))
 
     def test_writes_the_xml_metadata(self):
         self.writer.close()
@@ -133,16 +129,22 @@ class OutputShamlTestCase(unittest.TestCase):
         curves = self._read_curves_inside_region((16.0, 49.0), (18.0, 38.0))
         self._count_and_check_readed_data(data, curves, 2)
 
+    def _delete_test_file(self):
+        try:
+            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
+        except OSError:
+            pass
+
     def _count_and_check_readed_data(self, data, curves, expected_number):
-        counter = 0
+        number_of_curves = 0
         
         for shaml_point, shaml_values in curves:
-            counter = counter + 1
+            number_of_curves = number_of_curves + 1
 
             self.assertTrue(shaml_point in data.keys())
             self.assertTrue(shaml_values in data.values())
 
-        self.assertEqual(expected_number, counter,
+        self.assertEqual(expected_number, number_of_curves,
                 "the number of readed curves is not as expected!")
 
     def _read_curves_inside_region(self, upper_left_cor, lower_right_cor):

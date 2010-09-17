@@ -1,11 +1,11 @@
-#!/usr/bin/env python
-# encoding: utf-8
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
-This modules serializes hazard curves in Shaml format.
+This modules serializes objects in shaml format.
 
 It currently takes all the lxml object model in memory
 due to the fact that curves can be grouped by IDmodel and
-IML. Coudn't find a way to do so writing an object at a
+IML. Couldn't find a way to do so writing an object at a
 time without making a restriction to the order on which
 objects are received.
 
@@ -14,16 +14,13 @@ objects are received.
 from lxml import etree
 
 from opengem import writer
-from opengem.xml import SHAML_NS, GML_NS
+from opengem.xml import SHAML_NS, GML_NS, NSMAP, SHAML, GML
 
-GML = "{%s}" % GML_NS
-SHAML = "{%s}" % SHAML_NS
-NSMAP = {"shaml" : SHAML_NS, "gml" : GML_NS}
+class HazardCurveWriter(writer.FileWriter):
+    """This class writes an hazard curve into the shaml format."""
 
-class ShamlWriter(writer.FileWriter):
-    
     def __init__(self, path):
-        super(ShamlWriter, self).__init__(path)
+        super(HazardCurveWriter, self).__init__(path)
         self.result_list_tag = etree.Element(
                 SHAML + "HazardResultList", nsmap=NSMAP)
 
@@ -36,7 +33,7 @@ class ShamlWriter(writer.FileWriter):
                 xml_declaration=True,
                 encoding="UTF-8"))
                 
-        super(ShamlWriter, self).close()
+        super(HazardCurveWriter, self).close()
 
     def _add_curve_to_proper_IML_list(self, point, values, values_tag):
         try:
