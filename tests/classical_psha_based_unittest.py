@@ -96,22 +96,22 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         loss_ratio_curve = compute_loss_ratio_curve(self.vuln_curve_code,
                                 hazard_curve)
         
-        lr_curve_expected = shapes.FastCurve([(0.0, 0.640), 
-                                              (0.05, 0.625),
-                                              (0.10, 0.598),
-                                              (0.15, 0.553),
-                                              (0.20, 0.490),
-                                              (0.25, 0.414),
-                                              (0.28, 0.365),
-                                              (0.31, 0.316),
-                                              (0.34, 0.270),
-                                              (0.37, 0.227),
-                                              (0.40, 0.189),
-                                              (0.44, 0.147),
-                                              (0.48, 0.112),
+        lr_curve_expected = shapes.FastCurve([(0.0, 0.650), 
+                                              (0.05, 0.650),
+                                              (0.10, 0.632),
+                                              (0.15, 0.569),
+                                              (0.20, 0.477),
+                                              (0.25, 0.382),
+                                              (0.28, 0.330),
+                                              (0.31, 0.283),
+                                              (0.34, 0.241),
+                                              (0.37, 0.205),
+                                              (0.40, 0.173),
+                                              (0.44, 0.137),
+                                              (0.48, 0.108),
                                               (0.52, 0.085),
-                                              (0.56, 0.064),
-                                              (0.60, 0.047)])
+                                              (0.56, 0.066),
+                                              (0.60, 0.051)])
         for key, val in lr_curve_expected.values.items():
             self.assertAlmostEqual(val, loss_ratio_curve.get_for(key), 3)
     
