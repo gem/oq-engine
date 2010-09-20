@@ -11,7 +11,8 @@ The shaML format was developed during GEM1 and never went through a "formal"
 review process. We would like to now begin a review/restructure process. To
 design schemas effectively we would like to begin by defining high level
 documentation that describes each schema. From the documentation we can then
-produce detailed schemas.
+produce detailed schemas. Please contribute by providing your input, suggestions
+recommendations, ect. 
 
 We would also like to rename the ML, in this document we are using for an 
 example nrML (Natural Risk Mark up Language), please provide your ideas.
