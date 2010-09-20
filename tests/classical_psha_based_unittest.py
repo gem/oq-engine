@@ -11,8 +11,8 @@ from decimal import *
 from ordereddict import *
 
 from opengem.parser import vulnerability
-from opengem.risk.probabilistic_scenario import *
-from opengem.risk.probabilistic_scenario import _compute_lrem_po, \
+from opengem.risk.classical_psha_based import *
+from opengem.risk.classical_psha_based import _compute_lrem_po, \
     _compute_lrem, _split_loss_ratios, _generate_loss_ratios, \
     _compute_loss_ratio_curve_from_lrem_po
 from opengem import shapes
@@ -27,7 +27,7 @@ HAZARD_CURVE = shapes.FastCurve(
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
 
-class ProbabilisticScenarioTestCase(unittest.TestCase):
+class ClassicalPshaBasedTestCase(unittest.TestCase):
 
     # loss curve tests
     def setUp(self):
