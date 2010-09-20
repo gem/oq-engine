@@ -22,8 +22,6 @@ public class BW_1997_AttenRelTest extends TestCase {
 	
 	@Test
 	public void testCallMethods() {
-		int magnitude = 5;
-		int epicentralDistance = 1;
 //		assertTrue("Results must be congruent with Damiano's spread sheet",
 //				9.52 == bw_1997_AttenRel.getMean(magnitude, epicentralDistance));
 		int[] magnitudes = { 5, 6, 7, 8, 9 };
@@ -50,14 +48,18 @@ public class BW_1997_AttenRelTest extends TestCase {
 								7.97, 7.82, 7.69, 7.57, 7.46, 7.35, 7.26, 7.17, 
 								7.08, 7.01, 6.93, 6.86}
 		}; // double[][]
-		for(int i = 0; i < results.length; i++) {
-			for(int j = 0; j < results.length; j++) {
+		for(int i = 0; i < magnitudes.length; i++) {
+			for(int j = 0; j < epicentralDistances.length; j++) {
+				int magnitude = magnitudes[i];
+				int epicentralDistance = epicentralDistances[j];
 				double expected = results[i][j];
+				double tolerance = 0.01;
 				assertEquals(
-						"mag = " + magnitude + "distance = "
+						"mag = " + magnitude + " distance = "
 								+ epicentralDistance + " expected result = "
-								+ expected, expected == bw_1997_AttenRel
-								.getMean(magnitude, epicentralDistance));
+								+ expected,
+								expected, bw_1997_AttenRel
+								.getMean(magnitude, epicentralDistance), tolerance);
 			} // for
 		} // for
 	} // testCallMethods
