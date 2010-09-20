@@ -31,7 +31,7 @@ DATABASE_PORT = ''             # Set to empty string for default. Not used with 
 # OpenLayers maps
 GOOGLE_MAPS_API_KEY='abcdefg'
 
-GIS_DATA_DIR = os.path.join(GEOGRAPHIC_ADMIN_DIR, 'data')
+GIS_DATA_DIR = os.path.join(GEOGRAPHIC_ADMIN_DIR, '../tests/data')
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -52,7 +52,7 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = os.path.join(GEOGRAPHIC_ADMIN_DIR, 'media')
+MEDIA_ROOT = os.path.join(GEOGRAPHIC_ADMIN_DIR, '../media')
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
@@ -83,7 +83,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'urls'
 
 TEMPLATE_DIRS = (
-    os.path.join(GEOGRAPHIC_ADMIN_DIR, 'templates'),
+    os.path.join(GEOGRAPHIC_ADMIN_DIR, '../templates'),
     # Don't forget to use absolute paths, not relative paths.
 )
 
