@@ -27,7 +27,7 @@ HAZARD_CURVE = shapes.FastCurve(
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
 
-class ClassicalPshaBasedTestCase(unittest.TestCase):
+class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     # loss curve tests
     def setUp(self):
