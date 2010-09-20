@@ -40,6 +40,7 @@ if __name__ == '__main__':
     from tests.producer_unittest import *
     from tests.risk_tests import *
     from tests.probabilistic_scenario_unittest import *
+    from tests.output_shaml_unittest import *
     
     if FLAGS.speed_tests:
         from tests.xml_speedtests import *
