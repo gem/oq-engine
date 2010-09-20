@@ -77,7 +77,7 @@ class ShamlOutputFile(producer.FileProducer):
                 % SHAML_NS:
                 error_str = "parsing of HazardMap elements is not yet " \
                     "implemented"
-                raise NotImplementedError()
+                raise NotImplementedError(error_str)
             elif event == 'end' and element.tag == '{%s}IML' % SHAML_NS:
                 self._set_curvelist_iml(element)
             elif event == 'end' and element.tag == '{%s}Curve' % SHAML_NS:

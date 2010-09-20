@@ -37,9 +37,7 @@ class ProbabilisticLossRatioCalculator(object):
             loss_ratio_curve, asset['AssetValue'])
         
 def compute_loss(loss_curve, pe_interval):
-    loss = probabilistic_scenario.compute_conditional_loss(loss_curve, pe_interval)
+    """Interpolate loss for a specific probability of exceedence interval"""
+    loss = probabilistic_scenario.compute_conditional_loss(
+                loss_curve, pe_interval)
     return loss
-
-
-def loss_from_curve(curve, interval):
-    return 0.4
