@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""
-reader.py
 
-Created by Joshua McKenty on 2010-07-30.
-Copyright (c) 2010 __MyCompanyName__. All rights reserved.
+"""This module contains classes to parse ESRI stuff ported from
+the Java version of the risk engine.
+
+This module is not currently used and there isn't any test coverage.
 """
 
 import math
 import struct
 
-
-
 class Grid:
-    """ESRIGrid format as per http://en.wikipedia.org/wiki/ESRI_grid"""
+    """ESRIGrid format as per http://en.wikipedia.org/wiki/ESRI_grid."""
     def __init__(self, rows, columns, no_data_value=9999):
         self.columns = columns
         self.rows = rows
@@ -31,29 +29,30 @@ class Grid:
             raise Exception("Point is not on the Grid")
 
 class Point:
-    """Simple (trivial) point class"""
+    """Simple (trivial) point class."""
     def __init__(self, row, column):
         self.column = column
         self.row = row
 
 class Site:
-    """Site has lat and long"""
+    """Site has lat and long."""
     def __init__(self, latitude, longitude):
         self.latitude = latitude
         self.longitude = longitude
 
 class BaseExposureReader:
-    """Base class for reading exposure data from file formats"""
+    """Base class for reading exposure data from file formats."""
     def __init__(self, filename, exposure_definition):
         self.filename = filename
         self.definition = exposure_definition
         self.exposure_file = open(filename, "rb")
 
 class ESRIBinaryFileExposureReader(BaseExposureReader):
-    """Parses and loads ESRI formatted exposure data from files"""
+    """Parses and loads ESRI formatted exposure data from files."""
     
-   def __init__(self, filename, exposure_definition):
-       super(ESRIBinaryFileExposureReader, self).__init__(filename, exposure_definition)
+    def __init__(self, filename, exposure_definition):
+        super(ESRIBinaryFileExposureReader, self).__init__(
+                filename, exposure_definition)
     
     def read_at(self, site):
         point = self.definition.point_at(site)
@@ -73,7 +72,7 @@ class AsciiFileHazardIMLReader(BaseExposureReader):
     pass
 
 class ESRIRasterMetadata():
-    """Object loaded from (various) ESRI header files"""
+    """Object loaded from (various) ESRI header files."""
     def __init__(self, cell_size, grid, lower_left_corner):
         self.cell_size = cell_size
         self.grid = grid
@@ -111,13 +110,13 @@ class ESRIRasterMetadata():
         return cls(cell_size, grid, lower_left_corner)
 
     def _latitude_to_row(self, latitude):
-        """Calculate row from latitude value"""
+        """Calculate row from latitude value."""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
         print "lat offset = %s" % latitude_offset
         return int(self.grid.rows - (latitude_offset / self.cell_size)) + 1
 
     def _longitude_to_column(self, longitude):
-        """Calculate column from longitude value"""
+        """Calculate column from longitude value."""
         longitude_offset = longitude - self.lower_left_corner.longitude
         print "long offset = %s" % longitude_offset
         return int((longitude_offset / self.cell_size) + 1)
