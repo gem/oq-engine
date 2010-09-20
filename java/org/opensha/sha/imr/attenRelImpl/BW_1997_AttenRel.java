@@ -17,14 +17,14 @@ NamedObjectAPI, ParameterChangeListener {
 	 * Immi = 3.67 + 1.17 magnitude - 3.19 log(epicentralDistance)
 	 * @param magnitude
 	 * @param epicentralDistance
-	 * @return Immi
+	 * @return I_mmi "Intensity mercalli_modified_intensity"
 	 */
 	public double getMean(double magnitude, double epicentralDistance) {
 		double result = 0.0;
 		final float offset = 3.67f;
 		final float coefficient1 = 1.17f;
 		final float coefficient2 = 3.19f;
-		// Immi = 3.67 + 1.17 magnitude - 3.19 log(epicentralDistance) 
+		// I_mmi = 3.67 + 1.17 magnitude - 3.19 log(epicentralDistance) 
 		result = offset + coefficient1 * magnitude - coefficient2 * Math.log10(epicentralDistance); 
 		return result;
 	} // getMean()
