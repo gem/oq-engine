@@ -8,3 +8,5 @@ dist/**/*
 tests/data/test.tiff
 tests/data/*.fake
 *.tiff
+opengem.db
+
