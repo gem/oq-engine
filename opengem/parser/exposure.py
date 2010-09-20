@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+"""Parsers to read exposure files, including exposure portfolios.
+These can include building, population, critical infrastructure,
+and other asset classes."""
 
 from lxml import etree
 
 from opengem import producer
 from opengem import shapes
 
-
 # do not use namespace for now
-RISKML_NS=''
+RISKML_NS = ''
 
 class ExposurePortfolioFile(producer.FileProducer):
     """ This class parses an ExposurePortfolio XML (part of riskML?) file.
@@ -31,35 +33,27 @@ class ExposurePortfolioFile(producer.FileProducer):
 
     Note: at the time of writing this class the author has no access to the
     XML Schema, so all XML attributes from the example instance documents are
-    assumed to be mandatory
+    assumed to be mandatory.
+
     """
+
+    REQUIRED_ATTRIBUTES = (('PortfolioID', str), ('PortfolioDescription', str))
+
+    def __init__(self, path):
+        super(ExposurePortfolioFile, self).__init__(path)
+
     def _parse(self):
-        for event, element in etree.iterparse(self.file,
-                                              events=('start', 'end')):
+        for event, element in etree.iterparse(
+                self.file, events=('start', 'end')):
 
             if event == 'start' and element.tag == 'ExposurePortfolio':
-                self._set_portfolio_meta(element)
+                self._set_meta(element)
             elif event == 'end' and element.tag == 'AssetInstance':
                 yield (self._to_site(element), 
                        self._to_site_attributes(element))
 
-    def _set_portfolio_meta(self, portfolio_element):
-
-        self._current_portfolio_meta = {}
-
-        for required_attribute in (('PortfolioID', str), 
-                                   ('PortfolioDescription', str)):
-            attr_value = portfolio_element.get(required_attribute[0])
-            if attr_value is not None:
-                self._current_portfolio_meta[required_attribute[0]] = \
-                    required_attribute[1](attr_value)
-            else:
-                error_str = "element ExposurePortfolio: missing required " \
-                    "attribute %s" % required_attribute[0]
-                raise ValueError(error_str) 
-
     def _to_site(self, element):
-
+        """Convert current GML attributes to Site object"""
         # lon/lat are in XML attributes 'Longitude' and 'Latitude'
         # consider them as mandatory
         try:
@@ -71,7 +65,7 @@ class ExposurePortfolioFile(producer.FileProducer):
             raise ValueError(error_str)
 
     def _to_site_attributes(self, element):
-
+        """Build a dict of all node attributes"""
         site_attributes = {}
 
         # consider all attributes of AssetInstance element as mandatory
@@ -89,37 +83,9 @@ class ExposurePortfolioFile(producer.FileProducer):
                 raise ValueError(error_str) 
 
         try:
-            site_attributes.update(self._current_portfolio_meta)
+            site_attributes.update(self._current_meta)
         except Exception:
             error_str = "root element (ExposurePortfolio) is missing"
             raise ValueError(error_str)
 
         return site_attributes
-
-    def filter(self, region_constraint, attribute_constraint=None):
-        for next in iter(self):
-            if (attribute_constraint is not None and \
-                    region_constraint.match(next[0]) and \
-                    attribute_constraint.match(next[1])) or \
-               (attribute_constraint is None and \
-                    region_constraint.match(next[0])):
-                yield next
-
-class ExposurePortfolioConstraint(object):
-    """ This class represents a constraint that can be used to filter
-    AssetInstance elements from an ExposurePortfolio XML instance document
-    based on their site attributes. The constructor requires a dictionary as
-    argument. Items in this dictionary have to match the corresponding ones
-    in the checked site attribute object.
-    """
-    def __init__(self, attribute):
-        self.attribute = attribute
-
-    def match(self, compared_attribute):
-        for k, v in self.attribute.items():
-            if not ( k in compared_attribute and compared_attribute[k] == v ):
-                return False
-        return True
-
-
-	

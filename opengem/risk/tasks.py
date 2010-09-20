@@ -9,29 +9,22 @@ Tasks in the risk engine include the following:
  
 """
 
-import os
-import sys
-
-from ordereddict import *
-
-
-from opengem.logs import *
+from opengem.logs import HAZARD_LOG, RISK_LOG
 from opengem.risk import engines
-from opengem import output
 import opengem.output.risk
 from opengem import shapes
 from opengem.output import geotiff
+from opengem import producer
 from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
-
 
 from opengem import flags
 FLAGS = flags.FLAGS
     
 
-# TODO(jmc): rather than passing files in here, determine the right parser to 
-# use or create in the binary, and pass in loaded parsers.
+# TODO(jmc): rather than passing files in here, determine the right 
+# parser to use or create in the binary, and pass in loaded parsers.
 # This will support config setting of cell_size, etc.
 
 def main(vulnerability_model_file, hazard_curve_file, 
@@ -49,23 +42,27 @@ def main(vulnerability_model_file, hazard_curve_file,
     hazard_curves = {}
     shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
     attribute_constraint = \
-        shaml_output.ShamlOutputConstraint({'IMT' : 'MMI'})
+        producer.AttributeConstraint({'IMT' : 'MMI'})
     
-    hazard_log.debug("Going to parse hazard curves")
-    for site, hazard_curve_data in shaml_parser.filter(region_constraint, attribute_constraint):
+    HAZARD_LOG.debug("Going to parse hazard curves")
+    for site, hazard_curve_data in shaml_parser.filter(
+            region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
-        hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], hazard_curve_data['Values']))
+        hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
+                                hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
-        hazard_log.debug("Loading hazard curve %s at %s: %s", hazard_curve, site.latitude,  site.longitude)
+        HAZARD_LOG.debug("Loading hazard curve %s at %s: %s", 
+                    hazard_curve, site.latitude,  site.longitude)
     
-    vulnerability.ingest_vulnerability(vulnerability_model_file)
+    vulnerability.load_vulnerability_model(vulnerability_model_file)
     
     exposure_portfolio = {}
     exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
     for site, asset in exposure_parser.filter(region_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         exposure_portfolio[gridpoint] = asset
-        risk_log.debug("Loading asset at %s: %s - %s", site.latitude,  site.longitude, asset)
+        RISK_LOG.debug("Loading asset at %s: %s - %s", 
+                        site.latitude,  site.longitude, asset)
     
     risk_engine = engines.ProbabilisticLossRatioCalculator(
             hazard_curves, exposure_portfolio)
@@ -82,11 +79,13 @@ def main(vulnerability_model_file, hazard_curve_file,
         val = risk_engine.compute_loss_ratio_curve(gridpoint)
         if val:
             ratio_results[gridpoint] = val
-            loss_curve = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])
+            loss_curve = risk_engine.compute_loss_curve(
+                            gridpoint, ratio_results[gridpoint])
             print loss_curve
             loss_curves[gridpoint] = loss_curve
             print loss_curve
-            losses_one_perc[gridpoint] = engines.loss_from_curve(loss_curve, interval)
+            losses_one_perc[gridpoint] = engines.compute_loss(
+                                    loss_curve, interval)
     
     # TODO(jmc): Pick output generator from config or cli flags
     output_generator = opengem.output.risk.RiskXMLWriter("loss-curves.xml")
