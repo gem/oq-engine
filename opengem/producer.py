@@ -100,7 +100,7 @@ class FileProducer(object):
     def _parse(self):
         """Parse one logical item from the file.
 
-        Should return a (cell, data) tuple.
+        Should return a (point, data) tuple.
         
         """
 
