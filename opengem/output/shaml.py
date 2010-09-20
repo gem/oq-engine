@@ -14,7 +14,7 @@ objects are received.
 from lxml import etree
 
 from opengem import writer
-from opengem.xml import SHAML_NS, GML_NS, NSMAP, SHAML, GML
+from opengem.xml import NSMAP, SHAML, GML
 
 class HazardCurveWriter(writer.FileWriter):
     """This class writes an hazard curve into the shaml format."""
@@ -28,6 +28,9 @@ class HazardCurveWriter(writer.FileWriter):
         self.curves_per_model_id = {}
 
     def close(self):
+        """Overrides the default implementation writing all the
+        collected lxml object model to the stream."""
+
         self.file.write(etree.tostring(self.result_list_tag, 
                 pretty_print=True,
                 xml_declaration=True,
@@ -35,7 +38,9 @@ class HazardCurveWriter(writer.FileWriter):
                 
         super(HazardCurveWriter, self).close()
 
-    def _add_curve_to_proper_IML_list(self, point, values, values_tag):
+    def _add_curve_to_proper_set(self, point, values, values_tag):
+        """Adds the curve to the proper set depending on the IML values."""
+        
         try:
             list_tag = self.curves_per_iml[str(values["IML"])]
         except KeyError:
@@ -110,4 +115,4 @@ class HazardCurveWriter(writer.FileWriter):
             
             self.curves_per_model_id[values["IDmodel"]] = values_tag
         
-        self._add_curve_to_proper_IML_list(point, values, values_tag)
+        self._add_curve_to_proper_set(point, values, values_tag)
