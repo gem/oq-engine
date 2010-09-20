@@ -8,7 +8,7 @@ as shaml-style XML.
 import lxml
 import lxml.etree
 
-from opengem.logs import *
+from opengem.logs import RISK_LOG
 from opengem import writer
 from opengem.xml import SHAML_NS, GML_NS
 from opengem import shapes
@@ -18,6 +18,8 @@ GML = "{%s}" % GML_NS
 NSMAP = {None : SHAML_NS, "gml" : GML_NS}
 
 class RiskXMLWriter(writer.FileWriter):
+    """Simple serialization of loss curves and loss ratio curves"""
+    
     def write(self, point, value):
         if isinstance(point, shapes.GridPoint):
             point = point.site.point
@@ -26,7 +28,7 @@ class RiskXMLWriter(writer.FileWriter):
         node = lxml.etree.Element(SHAML + "cell", nsmap=NSMAP)
         node.attrib[SHAML + 'latitude'] = str(point.y)
         node.attrib[SHAML + 'longitude'] = str(point.x)
-        risk_log.debug("Writing loss xml, value is %s", value)
+        RISK_LOG.debug("Writing loss xml, value is %s", value)
         subnode_pe = lxml.etree.SubElement(node, SHAML + "CurvePointPE")
         subnode_pe.text = " "
         subnode_loss = lxml.etree.SubElement(node, SHAML + "CurvePointLoss")

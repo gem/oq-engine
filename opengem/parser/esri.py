@@ -7,9 +7,6 @@ the Java version of the risk engine.
 This module is not currently used and there isn't any test coverage.
 """
 
-import sys
-import os
-import unittest
 import math
 import struct
 
@@ -52,10 +49,11 @@ class BaseExposureReader:
 
 class ESRIBinaryFileExposureReader(BaseExposureReader):
     """Parses and loads ESRI formatted exposure data from files."""
-# def __init__(self, filename, exposure_definition):
-# super(ESRIBinaryFileExposureReader, self).__init__(
-# filename, exposure_definition)
-
+    
+    def __init__(self, filename, exposure_definition):
+        super(ESRIBinaryFileExposureReader, self).__init__(
+                filename, exposure_definition)
+    
     def read_at(self, site):
         point = self.definition.point_at(site)
         position = self.position_of(point)
@@ -133,16 +131,3 @@ class ESRIRasterMetadata():
         self.grid.check_row(result)
         self.grid.check_column(result)
         return result
-
-# 
-# 
-# class AsciiFileHazardIMLReader(BaseExposureReader):
-#     """Parses and loads IML data from Ascii files in standard format"""
-#     def __init__(self, filename, exposure_definition):
-#         super(AsciiFileHazardIMLReader, self).__init__(
-#         filename, exposure_definition)
-# 
-# 
-# class HazardIMLESRIRasterFileDefinitionReader(ESRIHeaderFileReader):
-#     """Parser for ESRI IML Header Files"""
-#     pass
