@@ -139,7 +139,7 @@ class HazardCurveWriterTestCase(unittest.TestCase):
         number_of_curves = 0
         
         for shaml_point, shaml_values in curves:
-            number_of_curves = number_of_curves + 1
+            number_of_curves += 1
 
             self.assertTrue(shaml_point in data.keys())
             self.assertTrue(shaml_values in data.values())
