@@ -65,17 +65,21 @@ implements WarningParameterAPI
 	 * No-Arg constructor that just calls init() with null constraints.
 	 * All value are allowed.
 	 */
-	public DistanceEpicentralParameter() { init(); }
+	public DistanceEpicentralParameter() {
+		init();
+	} // constructor
 	
-	/** This constructor sets the default value.  */
+	/**
+	 * This constructor sets the default value. 
+	 */
 	public DistanceEpicentralParameter(double defaultValue) { 
 		init(); 
 		this.setDefaultValue(defaultValue);
-	}
+	} // constructor
 
-
-
-	/** Constructor that sets up constraints. This is a constrained parameter. */
+	/**
+	 * Constructor that sets up constraints. This is a constrained parameter.
+	 */
 	public DistanceEpicentralParameter(ParameterConstraintAPI warningConstraint)
 	throws ConstraintException
 	{
@@ -86,7 +90,7 @@ implements WarningParameterAPI
 			);
 		}
 		init( (DoubleConstraint)warningConstraint );
-	}
+	} // constructor
 	
     /** Constructor that sets up constraints & the default value. This is a constrained parameter. */
     public DistanceEpicentralParameter(ParameterConstraintAPI warningConstraint, double defaultValue)
@@ -100,7 +104,7 @@ implements WarningParameterAPI
         }
         init( (DoubleConstraint)warningConstraint );
         setDefaultValue(defaultValue);
-    }
+    } // constructor
 
 	/** Initializes the constraints, name, etc. for this parameter */
 	protected void init( DoubleConstraint warningConstraint){
@@ -112,7 +116,7 @@ implements WarningParameterAPI
 		this.units = UNITS;
 		this.info = INFO;
 		//setNonEditable();
-	}
+	} // init()
 
 	/** Initializes the constraints, name, etc. for this parameter */
 	protected void init(){ init( null ); }
@@ -120,7 +124,7 @@ implements WarningParameterAPI
 	/**
 	 * Note that this does not throw a warning
 	 */
-	protected void calcValueFromSiteAndEqkRup(){
+	protected void calcValueFromSiteAndEqkRup() {
 		if( ( this.site != null ) && ( this.eqkRupture != null ) ){
 			Location loc1 = site.getLocation();
 			double distance = Double.NaN;
@@ -135,32 +139,30 @@ implements WarningParameterAPI
 			if(numRows==1 && numColumns==1){
 				// point source
 				distance = LocationUtils.horzDistance(loc1, rupSurf.get(indexRow, indexColumn));
-			} 
-			else if(numRows==1 && numColumns>1){
+			} else if(numRows==1 && numColumns>1){
 				// line source
 				indexColumn = numColumns/2;
 				distance = LocationUtils.horzDistance(loc1, rupSurf.get(indexRow, indexColumn));
-			}
-			else{
+			} else {
 				// 3D surface
 				indexRow = numRows/2;
 				indexColumn = numColumns/2;
 				distance = LocationUtils.horzDistance(loc1, rupSurf.get(indexRow, indexColumn));
 			}
 			this.setValueIgnoreWarning( new Double( distance ) );
-		}
-		else this.setValue(null);
-	}
+		} else this.setValue(null);
+	} // calcValueFromSiteAndEqkRup()
 
-	/** This is used to determine what widget editor to use in GUI Applets.  */
+	/**
+	 *  This is used to determine what widget editor to use in GUI Applets.  
+	 */
 	public String getType() {
 		String type = "DoubleParameter";
 		// Modify if constrained
 		ParameterConstraintAPI constraint = this.constraint;
 		if (constraint != null) type = "Constrained" + type;
 		return type;
-	}
-
+	} // getType()
 
 	/**
 	 *  Returns a copy so you can't edit or damage the origial.<P>
@@ -176,19 +178,20 @@ implements WarningParameterAPI
 	 * @return    Exact copy of this object's state
 	 */
 	public Object clone() {
-
 		DoubleConstraint c1 = null;
 		DoubleConstraint c2 = null;
-
-		if( constraint != null ) c1 = ( DoubleConstraint ) constraint.clone();
-		if( warningConstraint != null ) c2 = ( DoubleConstraint ) warningConstraint.clone();
-
-		Double val = null, val2 = null;
+		if( constraint != null ) {
+			c1 = ( DoubleConstraint ) constraint.clone(); 
+		}
+		if( warningConstraint != null ) {
+			c2 = ( DoubleConstraint ) warningConstraint.clone(); 
+		}
+		Double val = null;
+		Double val2 = null;
 		if( value != null ) {
 			val = ( Double ) this.value;
 			val2 = new Double( val.doubleValue() );
 		}
-
 		DistanceEpicentralParameter param = new DistanceEpicentralParameter(  );
 		param.info = info;
 		param.value = val2;
@@ -198,16 +201,17 @@ implements WarningParameterAPI
 		param.info = info;
 		param.site = site;
 		param.eqkRupture = eqkRupture;
-		if( !this.editable ) param.setNonEditable();
-
+		if( !this.editable ) {
+			param.setNonEditable(); 
+		}
 		return param;
-
-	}
-
+	} // clone()
 
 	public boolean setIndividualParamValueFromXML(Element el) {
-		// TODO Auto-generated method stub
+		// TODO
+		// This is copied from class "DistanceJBParameter" (...correct?)
+		// Auto-generated method stub
 		return false;
-	}
-
-}
+	} // setIndividualParamValueFromXML()
+	
+} // class DistanceEpicentralParameter
