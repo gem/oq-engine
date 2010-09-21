@@ -46,9 +46,11 @@ class RiskXMLWriter(writer.FileWriter):
         
         pe_values = _curve_pe_as_gmldoublelist(curve_object)
         
-        subnode_pe = self.root_node.findall(".//" + self.abcissa_tag)
-        if len(subnode_pe):
-            if subnode_pe[0].text != pe_values:
+        # This use of not None is b/c of the trap w/ ElementTree find
+        # for nodes that have no child nodes.
+        subnode_pe = self.root_node.find(self.abcissa_tag)
+        if subnode_pe is not None:
+            if subnode_pe.text != pe_values:
                 raise Exception("Curves must share the same Abcissa!")
         else:
             subnode_pe = etree.SubElement(self.root_node, 
