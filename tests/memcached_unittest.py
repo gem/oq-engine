@@ -8,7 +8,7 @@ To run these tests you need to:
 
 * Install Pylibmc
 * Install Jpype
-* A memcached server running somewhere.
+* A memcached server running somewhere
 
 """
 
