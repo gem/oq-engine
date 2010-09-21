@@ -14,10 +14,10 @@ from opengem.risk import engines
 import opengem.output.risk
 from opengem import shapes
 from opengem.output import geotiff
+from opengem import producer
 from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
-
 
 from opengem import flags
 FLAGS = flags.FLAGS
@@ -42,7 +42,7 @@ def main(vulnerability_model_file, hazard_curve_file,
     hazard_curves = {}
     shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
     attribute_constraint = \
-        shaml_output.ShamlOutputConstraint({'IMT' : 'MMI'})
+        producer.AttributeConstraint({'IMT' : 'MMI'})
     
     HAZARD_LOG.debug("Going to parse hazard curves")
     for site, hazard_curve_data in shaml_parser.filter(
@@ -54,7 +54,7 @@ def main(vulnerability_model_file, hazard_curve_file,
         HAZARD_LOG.debug("Loading hazard curve %s at %s: %s", 
                     hazard_curve, site.latitude,  site.longitude)
     
-    vulnerability.ingest_vulnerability(vulnerability_model_file)
+    vulnerability.load_vulnerability_model(vulnerability_model_file)
     
     exposure_portfolio = {}
     exposure_parser = exposure.ExposurePortfolioFile(exposure_file)
