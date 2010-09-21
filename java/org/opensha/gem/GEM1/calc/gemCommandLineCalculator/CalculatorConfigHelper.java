@@ -92,7 +92,9 @@ public class CalculatorConfigHelper {
 	
 	/**
 	 * This method is the same like "makeArbitrarilyDiscretizedFunc()".
-	 * This method just exists to be consistent with terminology.
+	 * This method just exists to be consistent with terminology, i.e.
+	 * the programer can use "makeImlList()" instead of "makeArbitrarilyDiscretizedFunc()"
+	 * which may the code make more understandable (to scientists).
 	 * @param calcConfig
 	 * @return
 	 */
