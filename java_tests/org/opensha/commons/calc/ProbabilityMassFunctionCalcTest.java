@@ -29,20 +29,17 @@ public class ProbabilityMassFunctionCalcTest {
 		 * for a Gaussian distribution obtained with the same method
 		 * GaussianDistCalc.getExceedProb
 		 */
+		 
 		// POE parameters
 		double minX = -9.0;
 		double maxX = 9.0;
 		int numVal = 19;
 
-		// get POE for Gaussian distribution
-		// using the GaussianDistCalc.getExceedProb method
 		EvenlyDiscretizedFunc poe = getGaussianPOE(minX, maxX, numVal);
-		// get PMF using the getPMFfromPOE method
 		EvenlyDiscretizedFunc pmf1 = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(poe);
+				.getPMF(poe);
 
-		// compute PMF directly from
-		// the GaussianDistCalc.getExceedProb method
+		// compute PMF directly via GaussianDistCalc.getExceedProb method
 		// the PMF values are calculated for the bins' middle points.
 		// that's why the minimum is shifted by half delta
 		// and the number of values is reduced by a factor of 1
@@ -71,7 +68,7 @@ public class ProbabilityMassFunctionCalcTest {
 		EvenlyDiscretizedFunc poe = getGaussianPOE(minX, maxX, numVal);
 		// compute PMF using the getPMFfromPOE method
 		EvenlyDiscretizedFunc pmf1 = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(poe);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -83,7 +80,7 @@ public class ProbabilityMassFunctionCalcTest {
 		EvenlyDiscretizedFunc poe = new EvenlyDiscretizedFunc(0.0, 0.0, 1);
 		poe.set(0, 1.0);
 		EvenlyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(poe);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -93,7 +90,7 @@ public class ProbabilityMassFunctionCalcTest {
 		 * poe is passed
 		 */
 		EvenlyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(null);
+				.getPMF(null);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -108,7 +105,7 @@ public class ProbabilityMassFunctionCalcTest {
 		poe.set(2, 0.7);
 		poe.set(3, 0.8);
 		EvenlyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(poe);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -123,7 +120,7 @@ public class ProbabilityMassFunctionCalcTest {
 		poe.set(2, 0.8);
 		poe.set(3, -0.7);
 		EvenlyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(poe);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -138,89 +135,85 @@ public class ProbabilityMassFunctionCalcTest {
 		poe.set(2, 0.8);
 		poe.set(3, 0.7);
 		EvenlyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromPOE(poe);
+				.getPMF(poe);
 	}
-
+	
+	/**
+	 * This test compares the PMF values obtained by using the
+	 * getArbitrarilyDiscretizedGaussianPOE method with POE values obtained
+	 * from a Gaussian Distribution and the PMF values calculated explicitly
+	 * using the method GaussianDistCalc.getExceedProb and the formula
+	 * PMF((I1+I2)/2) = POE(I1) - POE(I2)
+	 */
 	@Test
 	public void arbitrarilyDiscretizedPOEfromGaussianDist() {
-		/**
-		 * This test compares the PMF values obtained by using the
-		 * getArbitrarilyDiscretizedGaussianPOE method with POE values obtained
-		 * from a Gaussian Distribution and the PMF values calculated explicitly
-		 * using the method GaussianDistCalc.getExceedProb and the formula
-		 * PMF((I1+I2)/2) = POE(I1) - POE(I2)
-		 */
 		// define Gaussian POE values for not-evenly spaced values
 		double[] xVals = { -10, -5, -2.5, -0.5, 0.5, 2.5, 5, 10 };
-		ArbitrarilyDiscretizedFunc poe = getArbitrarilyDiscretizedGaussianPOE(xVals);
+		ArbitrarilyDiscretizedFunc poe = 
+		    getArbitrarilyDiscretizedGaussianPOE(xVals);
 
-		// calculate PMF from
-		// ProbabilityMassFunctionCalc.getPMFfromArbitrarilyDiscretizedPOE
 		ArbitrarilyDiscretizedFunc pmf1 = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(poe);
+				.getPMF(poe);
 
-		// calculate Gaussian PMF explictly using GaussianDistCalc.getExceedProb
-		// method
-		ArbitrarilyDiscretizedFunc pmf2 = getArbitrarilyDiscretizedGaussianPMF(xVals);
+		ArbitrarilyDiscretizedFunc pmf2 = 
+		        getArbitrarilyDiscretizedGaussianPMF(xVals);
 
-		// compare
 		comparePMFs(pmf1, pmf2);
 	}
-
+	
+	/**
+	 * This test performs a similar test of
+	 * probabilityMassFunctionCalcWithArbitraryDiscretizedPOE but
+	 * considering an ArbitrarilyDiscretizedFunc POE with only 2 values
+	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void arbitrarilyDiscretizedPOEWith2Values() {
-		/**
-		 * This test performs a similar test of
-		 * probabilityMassFunctionCalcWithArbitraryDiscretizedPOE but
-		 * considering an ArbitrarilyDiscretizedFunc POE with only 2 values
-		 */
 		// define Gaussian POE values for not-evenly spaced values
 		double[] xVals = { -0.5, 0.5 };
-		ArbitrarilyDiscretizedFunc poe = getArbitrarilyDiscretizedGaussianPOE(xVals);
+		ArbitrarilyDiscretizedFunc poe = 
+		        getArbitrarilyDiscretizedGaussianPOE(xVals);
 
-		// calculate PMF from
-		// ProbabilityMassFunctionCalc.getPMFfromArbitrarilyDiscretizedPOE
 		ArbitrarilyDiscretizedFunc pmf1 = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(poe);
+				.getPMF(poe);
 	}
-
+	
+	/**
+	 * This test check the behaviour of the
+	 * getPMFfromArbitrarilyDiscretizedPOE method when a POE function with
+	 * only one values is passed
+	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void arbitrarilyDiscretizedPOEWith1Value() {
-		/**
-		 * This test check the behaviour of the
-		 * getPMFfromArbitrarilyDiscretizedPOE method when a POE function with
-		 * only one values is passed
-		 */
 		ArbitrarilyDiscretizedFunc poe = new ArbitrarilyDiscretizedFunc();
 		poe.set(0.0, 1.0);
 		ArbitrarilyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(poe);
+				.getPMF(poe);
 	}
-
+	
+	/**
+	 * This test check the behaviour of the
+	 * getPMFfromArbitrarilyDiscretizedPOE method when a null poe is passed
+	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void nullArbitrarilyDiscretizedPOE() {
-		/**
-		 * This test check the behaviour of the
-		 * getPMFfromArbitrarilyDiscretizedPOE method when a null poe is passed
-		 */
 		ArbitrarilyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(null);
+				.getPMF(null);
 	}
-
+	
+	/**
+	 * This test check the behavior of the
+	 * getPMFfromArbitrarilyDiscretizedPOE method when non decreasing POE
+	 * values are passed.
+	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void arbitrarilyDiscretizedPOEWithNonDecreasingValues() {
-		/**
-		 * This test check the behavior of the
-		 * getPMFfromArbitrarilyDiscretizedPOE method when non decreasing POE
-		 * values are passed.
-		 */
 		ArbitrarilyDiscretizedFunc poe = new ArbitrarilyDiscretizedFunc();
 		poe.set(0.0, 1.0);
 		poe.set(1.0, 0.9);
 		poe.set(2.0, 0.7);
 		poe.set(3.0, 0.8);
 		ArbitrarilyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(poe);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -236,7 +229,7 @@ public class ProbabilityMassFunctionCalcTest {
 		poe.set(2.0, 0.8);
 		poe.set(3.0, -0.7);
 		ArbitrarilyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(poe);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -252,7 +245,7 @@ public class ProbabilityMassFunctionCalcTest {
 		poe.set(2.0, 0.8);
 		poe.set(3.0, 0.7);
 		ArbitrarilyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMFfromArbitrarilyDiscretizedPOE(poe);
+				.getPMF(poe);
 	}
 
 	/**
@@ -318,7 +311,7 @@ public class ProbabilityMassFunctionCalcTest {
 			double x1 = pmf.getX(i) - delta / 2;
 			double x2 = pmf.getX(i) + delta / 2;
 			double val = GaussianDistCalc.getExceedProb(x1)
-					- GaussianDistCalc.getExceedProb(x2);
+					    - GaussianDistCalc.getExceedProb(x2);
 			pmf.set(i, val);
 		}
 		return pmf;
@@ -360,12 +353,8 @@ public class ProbabilityMassFunctionCalcTest {
 		int numVal2 = pmf2.getNum();
 		assertEquals(numVal1, numVal2, 0.0);
 		for (int i = 0; i < numVal1; i++) {
-			double x1 = pmf1.getX(i);
-			double x2 = pmf2.getX(i);
-			assertEquals(x1, x2, tolerance);
-			double y1 = pmf1.getY(i);
-			double y2 = pmf2.getY(i);
-			assertEquals(y1, y2, tolerance);
+			assertEquals(pmf1.getX(i), pmf2.getX(i), tolerance);
+			assertEquals(pmf1.getY(i), pmf2.getY(i), tolerance);
 		}
 	}
 }
