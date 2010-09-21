@@ -162,23 +162,10 @@ public final class ProbabilityMassFunctionCalc {
 	 * @return
 	 */
 	private static Boolean poeValuesAreInDescendingOrder(DiscretizedFuncAPI poe) {
-		Comparator comparator = Collections.reverseOrder();
-		ArrayList<Double> val1 = new ArrayList<Double>();
-		ArrayList<Double> val2 = new ArrayList<Double>();
-		ListIterator<Double> valIter = poe.getYValuesIterator();
-		int index = 0;
-		while (valIter.hasNext()) {
-			double val = valIter.next();
-			val1.add(index, val);
-			val2.add(index, val);
-			index = index + 1;
+		for(int i=0;i<poe.getNum()-1;i++){
+			if(poe.getY(i+1)>poe.getY(i)) return false;
 		}
-		// sort array in descending order
-		Collections.sort(val1, comparator);
-		// check if the sorted array is equal to the original array
-		// if yes, this means that the original array is in descending order
-		// (return true) otherwose return false.
-		return Arrays.equals(val1.toArray(), val2.toArray());
+		return true;
 	}
 
 	/**
