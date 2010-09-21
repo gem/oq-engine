@@ -91,12 +91,12 @@ class RiskEngineTestCase(unittest.TestCase):
                 loss_value = engines.compute_loss(loss_curves[site], interval)
                 losses[gridpoint.column-1][gridpoint.row-1] = loss_value
                 
-        print '%s= losses' % losses        
-        print '%s = loss_value' % loss_value
-        print '%s = gridpoint' % gridpoint
-        print '%s = interval'% interval
-        print '%s = loss_value' % loss_value
-        print '%s = loss_curves' % loss_curves[site]  
+        log.debug('%s= losses', losses)
+        log.debug('%s = loss_value', loss_value)
+        log.debug('%s = gridpoint', gridpoint)
+        log.debug('%s = interval', interval)
+        log.debug('%s = loss_value', loss_value)
+        log.debug('%s = loss_curves', loss_curves[site])
         
     def test_zero_curve_produces_zero_loss(self):
         # check that curves of zero produce zero loss (and no error)

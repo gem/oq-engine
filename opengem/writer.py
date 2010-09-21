@@ -14,7 +14,8 @@ class FileWriter(object):
         self.path = path
         self.file = None
         self._init_file()
-
+        self.root_node = None
+    
     def _init_file(self):
         """Get the file handle open for writing"""
         # file i/o will tend to block, wrap it in a thread so it will
@@ -25,6 +26,15 @@ class FileWriter(object):
        """Write out an individual point (unimplemented)"""
        raise NotImplementedError
 
+    def write_header(self):
+        """Write out the file header"""
+        pass
+
+    def write_footer(self):
+        """Write out the file footer"""
+        pass
+
+
     def close(self):
         """Close and flush the file. Send finished messages."""
         self.file.close()
@@ -32,8 +42,10 @@ class FileWriter(object):
 
     def serialize(self, iterable):
         """Wrapper for writing all items in an iterable object."""
-        
-        for key, val in iterable.items():
+        if isinstance(iterable, dict):
+            iterable = iterable.items()
+        self.write_header()
+        for key, val in iterable:
             self.write(key, val)
-
+        self.write_footer()
         self.close()
