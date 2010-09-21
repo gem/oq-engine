@@ -26,6 +26,9 @@
 		<pathelement location="${lib.dir}/lombok.jar" />
 		<pathelement location="${lib.dir}/emma_ant.jar" />
 		<pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
+		<pathelement location="${lib.dir}/dom4j.jar" />
+		<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
+		
 	</path>
 
 	<target name="clean">
@@ -83,6 +86,9 @@
 				<pathelement location="${lib.dir}/lombok.jar" />
 				<pathelement location="${lib.dir}/emma_ant.jar" />
 				<pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
+				<pathelement location="${lib.dir}/dom4j.jar" />
+				<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
+				
 			</classpath>
 
 			<formatter type="xml" />
