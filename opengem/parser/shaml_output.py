@@ -21,7 +21,7 @@ class ShamlOutputFile(producer.FileProducer):
     file is meant to be used as input for the risk engine. The class is
     implemented as a generator. For each 'Curve' element in the parsed 
     instance document, it yields a pair of objects, of which the
-    first one is a shapely.geometry object of type Point (representing a
+    first one is a shapes object of type Site (representing a
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with hazard-related attribute values for this site.
     
