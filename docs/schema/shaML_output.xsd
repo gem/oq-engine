@@ -127,6 +127,7 @@
 	</xs:complexType>
 	<xs:element name="Curve" type="shaml:CurveType"/>
 	<xs:element name="LossCurve" type="shaml:CurveType"/>
+	<xs:element name="LossCurvePE" type="shaml:CurveType"/>
 	<xs:element name="LossRatioCurve" type="shaml:CurveType"/>
 	<xs:complexType name="CurveListType">
 		<xs:sequence minOccurs="0">

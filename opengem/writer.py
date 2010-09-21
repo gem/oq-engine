@@ -27,12 +27,12 @@ class FileWriter(object):
        raise NotImplementedError
 
     def write_header(self):
-	"""Write out the file header"""
-	raise NotImplementedError
+        """Write out the file header"""
+        pass
 
     def write_footer(self):
-	"""Write out the file footer"""
-	raise NotImplementedError
+        """Write out the file footer"""
+        pass
 
 
     def close(self):
@@ -42,8 +42,10 @@ class FileWriter(object):
 
     def serialize(self, iterable):
         """Wrapper for writing all items in an iterable object."""
-	    self.write_header()
-        for (key, val) in iterable:
+        if isinstance(iterable, dict):
+            iterable = iterable.items()
+        self.write_header()
+        for key, val in iterable:
             self.write(key, val)
         self.write_footer()
         self.close()
