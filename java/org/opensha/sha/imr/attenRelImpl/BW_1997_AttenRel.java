@@ -10,6 +10,11 @@ public class BW_1997_AttenRel extends AttenuationRelationship implements
 ScalarIntensityMeasureRelationshipAPI,
 NamedObjectAPI, ParameterChangeListener {
 	
+	// Info by Damiano:
+	// In case of this equation the standard deviation is not provided 
+	// and therefore the method getStandardDeviation() should return 0
+	private final double standardDeviation = 0.0d; 
+	
 	/**
 	 * Name of equation:
 	 * Bakun and Wentworth (1997) [Subduction zones]
@@ -19,7 +24,7 @@ NamedObjectAPI, ParameterChangeListener {
 	 * @param epicentralDistance
 	 * @return I_mmi "Intensity mercalli_modified_intensity"
 	 */
-	public double getMean(double magnitude, double epicentralDistance) {
+	private double getMean(double magnitude, double epicentralDistance) {
 		double result = 0.0;
 		final float offset = 3.67f;
 		final float coefficient1 = 1.17f;
@@ -28,6 +33,14 @@ NamedObjectAPI, ParameterChangeListener {
 		result = offset + coefficient1 * magnitude - coefficient2 * Math.log10(epicentralDistance); 
 		return result;
 	} // getMean()
+	
+	/**
+	 * @return    The standard deviation value
+	 */
+	@Override
+	public double getStdDev() {
+		return standardDeviation;
+	} // getStdDev()
 
 	@Override
 	protected void initEqkRuptureParams() {
@@ -61,15 +74,9 @@ NamedObjectAPI, ParameterChangeListener {
 
 	@Override
 	public double getMean() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-
-	@Override
-	public double getStdDev() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+		double epicentralDistance = distanceEpiCentralParameter.getValue();
+		return getMean(magParam.getValue(), epicentralDistance);
+	} // getMean()
 
 	@Override
 	public String getShortName() {
