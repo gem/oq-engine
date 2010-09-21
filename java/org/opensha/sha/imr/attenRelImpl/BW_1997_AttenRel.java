@@ -5,6 +5,7 @@ import org.opensha.commons.param.event.ParameterChangeEvent;
 import org.opensha.commons.param.event.ParameterChangeListener;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceEpicentralParameter;
 
 public class BW_1997_AttenRel extends AttenuationRelationship implements
 ScalarIntensityMeasureRelationshipAPI,
@@ -13,7 +14,8 @@ NamedObjectAPI, ParameterChangeListener {
 	// Info by Damiano:
 	// In case of this equation the standard deviation is not provided 
 	// and therefore the method getStandardDeviation() should return 0
-	private final double standardDeviation = 0.0d; 
+	private final double standardDeviation = 0.0d;
+	private DistanceEpicentralParameter distanceEpicentralParameter = new DistanceEpicentralParameter();
 	
 	/**
 	 * Name of equation:
@@ -74,7 +76,7 @@ NamedObjectAPI, ParameterChangeListener {
 
 	@Override
 	public double getMean() {
-		double epicentralDistance = distanceEpiCentralParameter.getValue();
+		double epicentralDistance = (Double)distanceEpicentralParameter.getValue();
 		return getMean(magParam.getValue(), epicentralDistance);
 	} // getMean()
 
