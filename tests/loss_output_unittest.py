@@ -15,8 +15,6 @@ from opengem import test
 from opengem import shapes
 from opengem import xml
 
-SHAML = "{%s}" % xml.SHAML_NS
-
 log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
@@ -52,6 +50,7 @@ class LossOutputTestCase(unittest.TestCase):
     
     def setUp(self):
         self.path = os.path.join(data_dir, LOSS_XML_OUTPUT_FILE)
+        self.ratio_path = os.path.join(data_dir, LOSS_RATIO_XML_OUTPUT_FILE)
         self.schema_path = os.path.join(schema_dir, LOSS_SCHEMA_FILE)
 
         # Build up some sample loss curves here
@@ -66,6 +65,9 @@ class LossOutputTestCase(unittest.TestCase):
 
         xml_writer = risk_output.LossCurveXMLWriter(self.path)
         xml_writer.serialize(loss_curves)
+        
+        xml_writer = risk_output.LossRatioCurveXMLWriter(self.ratio_path)
+        xml_writer.serialize(loss_curves)
 
     # http://www.devcomments.com/error-restricting-complexType-list-parsing-official-GML-schema-at108628.htm
     @test.skipit
@@ -78,20 +80,40 @@ class LossOutputTestCase(unittest.TestCase):
         xmlschema = etree.XMLSchema(etree.parse(self.schema_path))
         self.assertTrue(xmlschema.validate(xml_doc))
     
-    def test_xml_is_correct(self):
+    def test_loss_xml_is_correct(self):
         xml_doc = etree.parse(self.path)
         loaded_xml = xml_doc.getroot()
 
-        xml_first_curve_pe = map(float, loaded_xml[0].find(
-                SHAML + "CurvePointPE").text.strip().split())
-        xml_first_curve_value = loaded_xml[0].find(
-                SHAML + "CurvePointLoss").text.strip().split()
+        xml_curve_pe = map(float, loaded_xml.find(".//"
+                + xml.SHAML + "LossCurvePE").text.strip().split())
+        xml_first_curve_value = loaded_xml.find(
+                xml.SHAML + "LossCurveList//" 
+                + xml.SHAML + "LossCurve//"
+                + xml.SHAML + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.codomain):
-            self.assertAlmostEqual(val, xml_first_curve_pe[idx], 6)
+            self.assertAlmostEqual(val, xml_curve_pe[idx], 6)
         for idx, val in enumerate(TEST_CURVE.domain):
             self.assertEqual(val, xml_first_curve_value[idx])
 
 
         # TODO(jmc): Test that the lat and lon are correct for each curve
         # Optionally, compare it to another XML file.
+
+        def test_ratio_xml_is_correct(self):
+            xml_doc = etree.parse(self.ratio_path)
+            loaded_xml = xml_doc.getroot()
+
+            xml_curve_pe = map(float, loaded_xml.find(".//"
+                    + xml.SHAML + "LossRatioCurvePE").text.strip().split())
+            xml_first_curve_value = loaded_xml.find(
+                    xml.SHAML + "LossRatioCurveList//" 
+                    + xml.SHAML + "LossRatioCurve//"
+                    + xml.SHAML + "Values").text.strip().split()
+
+            for idx, val in enumerate(TEST_CURVE.codomain):
+                self.assertAlmostEqual(val, xml_curve_pe[idx], 6)
+            for idx, val in enumerate(TEST_CURVE.domain):
+                self.assertEqual(val, xml_first_curve_value[idx])
+
+
