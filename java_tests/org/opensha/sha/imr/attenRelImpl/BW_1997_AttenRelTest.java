@@ -8,9 +8,19 @@ import junit.framework.TestCase;
 
 public class BW_1997_AttenRelTest extends TestCase {
 	private BW_1997_AttenRel bw_1997_AttenRel;
+	// the OpenSha way to pass in data: hard code a file
+	private static final String RESULT_SET_PATH = "org/opensha/sha/imr/attenRelImpl/test/AttenRelResultSetFiles/NGA_ModelsTestFiles/BA08/";
+	
+	/**
+	 * constructor
+	 */
+	public BW_1997_AttenRelTest() {
+		super(RESULT_SET_PATH);
+	} // constructor
 	
 	@Before
 	public void setUp() {
+		
 		bw_1997_AttenRel = new BW_1997_AttenRel();	
 	} // setUp()
 
@@ -22,8 +32,6 @@ public class BW_1997_AttenRelTest extends TestCase {
 	
 	@Test
 	public void testCallMethods() {
-//		assertTrue("Results must be congruent with Damiano's spread sheet",
-//				9.52 == bw_1997_AttenRel.getMean(magnitude, epicentralDistance));
 		int[] magnitudes = { 5, 6, 7, 8, 9 };
 		int[] epicentralDistances = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 
 				10, 20, 30, 40, 50,	60, 70, 80, 90, 
