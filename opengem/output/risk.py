@@ -11,12 +11,8 @@ from lxml.builder import ElementMaker
 
 from opengem.logs import RISK_LOG
 from opengem import writer
-from opengem.xml import SHAML_NS, GML_NS
+from opengem.xml import SHAML_NS, GML_NS, NSMAP
 from opengem import shapes
-
-SHAML = "{%s}" % SHAML_NS
-GML = "{%s}" % GML_NS
-NSMAP = {None : SHAML_NS, "gml" : GML_NS}
 
 class RiskXMLWriter(writer.FileWriter):
     pass
