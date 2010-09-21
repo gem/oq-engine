@@ -14,7 +14,7 @@
 	<property name="tests.report.dir" value="${dist.dir}/tests_result" />
 
 	<path id="libraries">
-		<!-- TODO Understand which jar from OpenSHA causes java.util.zip.ZipException: error in opening zip file -->
+		<!-- TODO Find out which jar from OpenSHA causes java.util.zip.ZipException: error in opening zip file -->
 
 		<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
 		<pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
@@ -28,6 +28,7 @@
 		<pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
 		<pathelement location="${lib.dir}/dom4j.jar" />
 		<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
+		<pathelement location="${lib.dir}/memcached-2.5.jar" />
 		
 	</path>
 
@@ -75,7 +76,7 @@
 
 				<pathelement path="${instrumented.dir}/classes" />
 
-				<!-- TODO Understand why referencing the defined path with an id gets a java.lang.NullPointerException  -->
+				<!-- TODO Find out why referencing the defined path with an id gets a java.lang.NullPointerException  -->
 				<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
 				<pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
 				<pathelement location="${lib.dir}/commons-math-2.1.jar" />
@@ -88,6 +89,7 @@
 				<pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
 				<pathelement location="${lib.dir}/dom4j.jar" />
 				<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
+				<pathelement location="${lib.dir}/memcached-2.5.jar" />
 				
 			</classpath>
 
