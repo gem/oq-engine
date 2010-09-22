@@ -50,29 +50,29 @@ public class HazardCurveSerializerTest
     @Test
     public void serializesASingleCurve() throws Exception
     {
-        new HazardCurveSerializer("CURVE", new Cache(LOCALHOST, PORT)).serialize(aCurveOnSite(1.0, 2.0));
+        new HazardCurveSerializer("CURVE", new Cache(LOCALHOST, PORT)).serialize(sampleCurveAtSite(1.0, 2.0));
 
-        assertThat(cachedCurveAtKey("CURVE"), is(aCurveOnSite(1.0, 2.0)));
+        assertThat(cachedCurveAtKey("CURVE"), is(sampleCurveAtSite(1.0, 2.0)));
     }
 
     @Test
     public void serializesMultipleCurves() throws Exception
     {
         List<HazardCurveDTO> curves = new ArrayList<HazardCurveDTO>();
-        curves.add(aCurveOnSite(1.0, 2.0));
-        curves.add(aCurveOnSite(2.0, 3.0));
-        curves.add(aCurveOnSite(3.0, 4.0));
+        curves.add(sampleCurveAtSite(1.0, 2.0));
+        curves.add(sampleCurveAtSite(2.0, 3.0));
+        curves.add(sampleCurveAtSite(3.0, 4.0));
 
         Cache cache = mock(Cache.class);
         new HazardCurveSerializer("CURVE", cache).serialize(curves);
 
         // testing with a mock that the serializer serializes all the curves
-        verify(cache).set("CURVE", aCurveOnSite(1.0, 2.0).toJSON());
-        verify(cache).set("CURVE", aCurveOnSite(2.0, 3.0).toJSON());
-        verify(cache).set("CURVE", aCurveOnSite(3.0, 4.0).toJSON());
+        verify(cache).set("CURVE", sampleCurveAtSite(1.0, 2.0).toJSON());
+        verify(cache).set("CURVE", sampleCurveAtSite(2.0, 3.0).toJSON());
+        verify(cache).set("CURVE", sampleCurveAtSite(3.0, 4.0).toJSON());
     }
 
-    private HazardCurveDTO aCurveOnSite(Double lon, Double lat)
+    private HazardCurveDTO sampleCurveAtSite(Double lon, Double lat)
     {
         // X sample values
         List<Double> groundMotionLevels = new ArrayList<Double>();
