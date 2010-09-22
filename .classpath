@@ -18,5 +18,6 @@
 	<classpathentry kind="lib" path="lib/mockito-all-1.8.2.jar"/>
 	<classpathentry kind="lib" path="lib/oscache-2.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/memcached-2.5.jar"/>
+	<classpathentry kind="lib" path="lib/gson-1.5.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

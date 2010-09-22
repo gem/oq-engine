@@ -12,7 +12,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 /**
- * Sample JavaToJava memcache tests (probably useless in our context)
+ * Sample JavaToJava memcached tests (probably useless in our context)
  * just to verify how the API works.
  * 
  * @author Andrea Cerisara
