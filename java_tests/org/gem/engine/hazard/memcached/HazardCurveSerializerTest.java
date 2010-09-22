@@ -15,6 +15,9 @@ import net.spy.memcached.MemcachedClient;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.Location;
+import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -70,6 +73,46 @@ public class HazardCurveSerializerTest
         verify(cache).set("CURVE", sampleCurveAtSite(1.0, 2.0).toJSON());
         verify(cache).set("CURVE", sampleCurveAtSite(2.0, 3.0).toJSON());
         verify(cache).set("CURVE", sampleCurveAtSite(3.0, 4.0).toJSON());
+    }
+
+    @Test
+    public void serializesMultipleCurvesUsingGEMHazardCurveRepository() throws Exception
+    {
+        // Hazard engine API
+        GEMHazardCurveRepository repository = new GEMHazardCurveRepository();
+
+        // sites where the curves are defined
+        ArrayList<Site> nodes = new ArrayList<Site>();
+        nodes.add(new Site(new Location(2.0, 1.0)));
+        nodes.add(new Site(new Location(4.0, 4.0)));
+
+        repository.setGridNode(nodes);
+
+        // X values
+        ArrayList<Double> groundMotionLevels = new ArrayList<Double>();
+        groundMotionLevels.add(1.0);
+        groundMotionLevels.add(2.0);
+        groundMotionLevels.add(3.0);
+        groundMotionLevels.add(4.0);
+
+        repository.setGmLevels(groundMotionLevels);
+
+        // Y values
+        Double[] values = { 1.0, 2.0, 3.0, 4.0 };
+        ArrayList<Double[]> probabilitiesOfExc = new ArrayList<Double[]>();
+
+        probabilitiesOfExc.add(values);
+        probabilitiesOfExc.add(values);
+        probabilitiesOfExc.add(values);
+
+        repository.setProbExList(probabilitiesOfExc);
+
+        Cache cache = mock(Cache.class);
+        new HazardCurveSerializer("CURVE", cache).serialize(repository);
+
+        // testing with a mock that the serializer serializes all the curves
+        verify(cache).set("CURVE", sampleCurveAtSite(1.0, 2.0).toJSON());
+        verify(cache).set("CURVE", sampleCurveAtSite(4.0, 4.0).toJSON());
     }
 
     private HazardCurveDTO sampleCurveAtSite(Double lon, Double lat)
