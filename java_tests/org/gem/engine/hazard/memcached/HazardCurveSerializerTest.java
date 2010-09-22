@@ -136,9 +136,9 @@ public class HazardCurveSerializerTest
         return new HazardCurveDTO(lon, lat, groundMotionLevels, probabilitiesOfExc);
     }
 
-    private HazardCurveDTO cachedCurveAtKey(String string)
+    private HazardCurveDTO cachedCurveAtKey(String key)
     {
-        return new Gson().fromJson((String) client.get(string), HazardCurveDTO.class);
+        return new Gson().fromJson((String) client.get(key), HazardCurveDTO.class);
     }
 
 }
