@@ -89,8 +89,9 @@ public class ProbabilityMassFunctionCalcTest {
 		 * This test check the behaviour of the getPMFfromPOE method when a null
 		 * poe is passed
 		 */
+		EvenlyDiscretizedFunc poe = null;
 		EvenlyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMF(null);
+				.getPMF(poe);
 	}
 
 	@Test(expected = IllegalArgumentException.class)
@@ -196,8 +197,9 @@ public class ProbabilityMassFunctionCalcTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void nullArbitrarilyDiscretizedPOE() {
+		ArbitrarilyDiscretizedFunc poe = null;
 		ArbitrarilyDiscretizedFunc pmf = ProbabilityMassFunctionCalc
-				.getPMF(null);
+				.getPMF(poe);
 	}
 	
 	/**
