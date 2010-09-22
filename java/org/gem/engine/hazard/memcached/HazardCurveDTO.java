@@ -10,7 +10,7 @@ import com.google.gson.Gson;
  * I created a new object because:
  * 
  * - didn't want to modify the hazard engine API
- * - dint't want to serialize all the data present in the hazard engine API objects
+ * - didnt't want to serialize all the data present in the hazard engine API objects
  * - the conversion cost should be low
  * - made testing easier
  * 
