@@ -1,9 +1,18 @@
 package org.gem.engine.hazard.memcached;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 import net.spy.memcached.MemcachedClient;
 
+/**
+ * Represents an object that is capable of storing values.
+ * <p>
+ * Eventually could be an interface with different implementations, but now is just a wrapper around the
+ * memcached client library.
+ * 
+ * @author Andrea Cerisara
+ */
 public class Cache
 {
 
@@ -11,21 +20,50 @@ public class Cache
 
     private MemcachedClient client;
 
-    public Cache(String host, int port) throws Exception
+    /**
+     * Main constructor.
+     * 
+     * @param host the memcached remote server to use
+     * @param port the memcached port to use
+     */
+    public Cache(String host, int port)
     {
-        client = new MemcachedClient(new InetSocketAddress(host, port));
+        try
+        {
+            client = new MemcachedClient(new InetSocketAddress(host, port));
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
+    /**
+     * Saves the object with the given key.
+     * 
+     * @param key the key to use
+     * @param obj the object to save
+     */
     public void set(String key, Object obj)
     {
         client.set(key, EXPIRE_TIME, obj);
     }
 
+    /**
+     * Cleans the cache.
+     */
     public void flush()
     {
         client.flush();
     }
 
+    /**
+     * Retrieves the object identified by the given key.
+     * 
+     * @param key the key to use
+     * @return the object identified by the given key, or <code>null</code> if there is no object identified
+     * by the given key
+     */
     public Object get(String key)
     {
         return client.get(key);

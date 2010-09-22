@@ -4,6 +4,22 @@ import java.util.List;
 
 import com.google.gson.Gson;
 
+/**
+ * A simple data transfer object that contains the hazard curve data used in the serialization process.
+ * 
+ * I created a new object because:
+ * 
+ * - didn't want to modify the hazard engine API
+ * - dint't want to serialize all the data present in the hazard engine API objects
+ * - the conversion cost should be low
+ * - made testing easier
+ * 
+ * This object resizes in this little serialization layer and it is not part of the hazard engine object model.
+ * 
+ * Any feedback about designing this stuff is welcome :-)
+ * 
+ * @author Andrea Cerisara
+ */
 public class HazardCurveDTO
 {
 
