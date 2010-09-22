@@ -14,18 +14,15 @@ import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 public class HazardCurveSerializer
 {
 
-    private final String key;
     private final Cache cache;
 
     /**
      * Main constructor.
      * 
-     * @param key the key used to store data in cache
-     * @param cache the cache used
+     * @param cache the cache used to store data
      */
-    public HazardCurveSerializer(String key, Cache cache)
+    public HazardCurveSerializer(Cache cache)
     {
-        this.key = key;
         this.cache = cache;
     }
 
@@ -36,7 +33,13 @@ public class HazardCurveSerializer
      */
     public void serialize(HazardCurveDTO hazardCurve)
     {
-        cache.set(key, hazardCurve.toJSON());
+        cache.set(generateKey(hazardCurve), hazardCurve.toJSON());
+    }
+
+    private String generateKey(HazardCurveDTO hazardCurve)
+    {
+        return new StringBuilder(hazardCurve.getLongitude().toString()).append(
+                "+").append(hazardCurve.getLatitude()).toString();
     }
 
     /**
@@ -64,8 +67,10 @@ public class HazardCurveSerializer
             Site site = repository.getGridNode().get(i);
 
             // extracting needed values from the repository
-            HazardCurveDTO hazardCurve = new HazardCurveDTO(site.getLocation().getLongitude(), site.getLocation()
-                    .getLatitude(), repository.getGmLevels(), Arrays.asList(repository.getProbExceedanceList(i)));
+            HazardCurveDTO hazardCurve = new HazardCurveDTO(site.getLocation()
+                    .getLongitude(), site.getLocation().getLatitude(),
+                    repository.getGmLevels(), Arrays.asList(repository
+                    .getProbExceedanceList(i)));
 
             serialize(hazardCurve);
         }

@@ -25,8 +25,6 @@ import com.google.gson.reflect.TypeToken;
 public class HazardCurveSerializerTest
 {
 
-    private static final String CACHE_KEY = "CURVE";
-
     private static final int PORT = 11211;
     private static final String LOCALHOST = "localhost";
 
@@ -49,15 +47,18 @@ public class HazardCurveSerializerTest
         data.add(3.0);
 
         Type listType = new TypeToken<List<Double>>(){}.getType();
-        assertEquals(data, new Gson().fromJson(new Gson().toJson(data), listType));
+
+        assertEquals(data, new Gson().fromJson(new Gson().toJson(data),
+                listType));
     }
 
     @Test
     public void serializesASingleCurve() throws Exception
     {
-        new HazardCurveSerializer(CACHE_KEY, new Cache(LOCALHOST, PORT)).serialize(sampleCurveAtSite(1.0, 2.0));
+        new HazardCurveSerializer(new Cache(LOCALHOST, PORT))
+                .serialize(sampleCurveAtSite(1.0, 2.0));
 
-        assertThat(cachedCurveAtKey(CACHE_KEY), is(sampleCurveAtSite(1.0, 2.0)));
+        assertThat(cachedCurveAtKey("1.0+2.0"), is(sampleCurveAtSite(1.0, 2.0)));
     }
 
     @Test
@@ -69,16 +70,17 @@ public class HazardCurveSerializerTest
         curves.add(sampleCurveAtSite(3.0, 4.0));
 
         Cache cache = mock(Cache.class);
-        new HazardCurveSerializer(CACHE_KEY, cache).serialize(curves);
+        new HazardCurveSerializer(cache).serialize(curves);
 
         // testing with a mock that the serializer serializes all the curves
-        verify(cache).set(CACHE_KEY, sampleCurveAtSite(1.0, 2.0).toJSON());
-        verify(cache).set(CACHE_KEY, sampleCurveAtSite(2.0, 3.0).toJSON());
-        verify(cache).set(CACHE_KEY, sampleCurveAtSite(3.0, 4.0).toJSON());
+        verify(cache).set("1.0+2.0", sampleCurveAtSite(1.0, 2.0).toJSON());
+        verify(cache).set("2.0+3.0", sampleCurveAtSite(2.0, 3.0).toJSON());
+        verify(cache).set("3.0+4.0", sampleCurveAtSite(3.0, 4.0).toJSON());
     }
 
     @Test
-    public void serializesMultipleCurvesUsingGEMHazardCurveRepository() throws Exception
+    public void serializesMultipleCurvesUsingGEMHazardCurveRepository()
+            throws Exception
     {
         // Hazard engine API
         GEMHazardCurveRepository repository = new GEMHazardCurveRepository();
@@ -110,11 +112,11 @@ public class HazardCurveSerializerTest
         repository.setProbExList(probabilitiesOfExc);
 
         Cache cache = mock(Cache.class);
-        new HazardCurveSerializer(CACHE_KEY, cache).serialize(repository);
+        new HazardCurveSerializer(cache).serialize(repository);
 
         // testing with a mock that the serializer serializes all the curves
-        verify(cache).set(CACHE_KEY, sampleCurveAtSite(1.0, 2.0).toJSON());
-        verify(cache).set(CACHE_KEY, sampleCurveAtSite(4.0, 4.0).toJSON());
+        verify(cache).set("1.0+2.0", sampleCurveAtSite(1.0, 2.0).toJSON());
+        verify(cache).set("4.0+4.0", sampleCurveAtSite(4.0, 4.0).toJSON());
     }
 
     private HazardCurveDTO sampleCurveAtSite(Double lon, Double lat)
@@ -133,12 +135,14 @@ public class HazardCurveSerializerTest
         probabilitiesOfExc.add(3.0);
         probabilitiesOfExc.add(4.0);
 
-        return new HazardCurveDTO(lon, lat, groundMotionLevels, probabilitiesOfExc);
+        return new HazardCurveDTO(lon, lat, groundMotionLevels,
+                probabilitiesOfExc);
     }
 
     private HazardCurveDTO cachedCurveAtKey(String key)
     {
-        return new Gson().fromJson((String) client.get(key), HazardCurveDTO.class);
+        return new Gson().fromJson((String) client.get(key),
+                HazardCurveDTO.class);
     }
 
 }
