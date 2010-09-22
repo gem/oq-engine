@@ -8,8 +8,8 @@ import net.spy.memcached.MemcachedClient;
 /**
  * Represents an object that is capable of storing values.
  * <p>
- * Eventually could be an interface with different implementations, but now is just a wrapper around the
- * memcached client library.
+ * Eventually could be an interface with different implementations,
+ * but now is just a wrapper around the memcached client library.
  * 
  * @author Andrea Cerisara
  */
@@ -61,8 +61,8 @@ public class Cache
      * Retrieves the object identified by the given key.
      * 
      * @param key the key to use
-     * @return the object identified by the given key, or <code>null</code> if there is no object identified
-     * by the given key
+     * @return the object identified by the given key,
+     * or <code>null</code> if there is no object identified by the given key
      */
     public Object get(String key)
     {

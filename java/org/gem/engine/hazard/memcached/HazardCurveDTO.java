@@ -5,16 +5,18 @@ import java.util.List;
 import com.google.gson.Gson;
 
 /**
- * A simple data transfer object that contains the hazard curve data used in the serialization process.
+ * A simple data transfer object that contains the hazard curve
+ * data used in the serialization process.
  * 
  * I created a new object because:
  * 
  * - didn't want to modify the hazard engine API
- * - didnt't want to serialize all the data present in the hazard engine API objects
+ * - didnt't want to serialize all the data in the hazard engine API objects
  * - the conversion cost should be low
  * - made testing easier
  * 
- * This object resizes in this little serialization layer and it is not part of the hazard engine object model.
+ * This object resizes in this little serialization layer and
+ * it is not part of the hazard engine object model.
  * 
  * Any feedback about designing this stuff is welcome :-)
  * 
@@ -29,7 +31,8 @@ public class HazardCurveDTO
     private List<Double> groundMotionLevels;
     private List<Double> probabilitiesOfExc;
 
-    public HazardCurveDTO(Double lon, Double lat, List<Double> groundMotionLevels, List<Double> probabilitiesOfExc)
+    public HazardCurveDTO(Double lon, Double lat,
+            List<Double> groundMotionLevels, List<Double> probabilitiesOfExc)
     {
         this.lon = lon;
         this.lat = lat;
@@ -40,7 +43,17 @@ public class HazardCurveDTO
 
     public HazardCurveDTO()
     {
-        // TODO Auto-generated constructor stub
+        // TODO Needed by JSON library
+    }
+
+    public Double getLongitude()
+    {
+        return lon;
+    }
+
+    public Double getLatitude()
+    {
+        return lat;
     }
 
     public String toJSON()
