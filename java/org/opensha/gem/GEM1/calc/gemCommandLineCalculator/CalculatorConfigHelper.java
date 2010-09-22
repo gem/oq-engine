@@ -1,8 +1,11 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
+import java.util.Iterator;
+import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
 
+import org.apache.commons.configuration.Configuration;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -40,7 +43,7 @@ public class CalculatorConfigHelper {
 		SUBDUCTION_RUPTURE_ASPECT_RATIO,
 		TREAT_AREA_SOURCE_AS,
 		REFERENCE_VS30_VALUE,
-		REGION,
+		REGION_VERTEX,
 		REGION_GRID_SPACING,
 		CALCULATION_MODE,
 		FAULT_SURFACE_DISCRETIZATION,
@@ -72,9 +75,10 @@ public class CalculatorConfigHelper {
 	 * -> pair indexes mean longitude
 	 * @param calcConfig
 	 * @return
+	 * @deprecated
 	 */
-	public static LocationList makeRegionboundary(Properties calcConfig) {
-		String region = calcConfig.getProperty(ConfigItems.REGION.name());
+	public static LocationList makeRegionboundary_not_multiple_values(Properties calcConfig) {
+		String region = calcConfig.getProperty(ConfigItems.REGION_VERTEX.name());
 		StringTokenizer st = new StringTokenizer(region);
         LocationList regionBoundary = new LocationList();
         Location tmpLoc = null;
@@ -89,17 +93,44 @@ public class CalculatorConfigHelper {
         } // while
         return regionBoundary;
 	} // makeRegionBoundary()
-	
+
+	/**
+	 * This helper method is necessary if the REGION property is saved like this:
+	 * REGION_VERTEX = -78.0, 0.0, -77.0, 0.0, -77.0, 1.0, -78.0, 1.0
+	 * -> comma separated list of doubles according to documentation of
+	 * -> implicitly they are pairs of coordinates,
+	 * -> odd indexes mean latitude
+	 * -> pair indexes mean longitude
+	 * @param calcConfig
+	 * @return
+	 */
+	public static LocationList makeRegionboundary(Configuration config) {
+		List<String> vertices = config.getList(ConfigItems.REGION_VERTEX.name());
+        LocationList regionBoundary = new LocationList();
+        Location tmpLoc = null;
+        Iterator<String> iterator = vertices.iterator();
+        while(iterator.hasNext()) {
+        	double lat = Double.parseDouble(iterator.next());
+        	if(iterator.hasNext()) {
+        		// if there is an odd number of coordinates, the last one is ignored
+	            double lon = Double.parseDouble(iterator.next());
+	            tmpLoc = new Location(lat, lon);
+	            regionBoundary.add(tmpLoc);
+            }
+        } // while
+        return regionBoundary;
+	} // makeRegionBoundary()
+
 	/**
 	 * This method is the same like "makeArbitrarilyDiscretizedFunc()".
 	 * This method just exists to be consistent with terminology, i.e.
-	 * the programer can use "makeImlList()" instead of "makeArbitrarilyDiscretizedFunc()"
+	 * the programmer can use "makeImlList()" instead of "makeArbitrarilyDiscretizedFunc()"
 	 * which may the code make more understandable (to scientists).
 	 * @param calcConfig
 	 * @return
 	 */
-	public static ArbitrarilyDiscretizedFunc makeImlList(Properties calcConfig) {
-		return makeArbitrarilyDiscretizedFunc(calcConfig);
+	public static ArbitrarilyDiscretizedFunc makeImlList(Configuration config) {
+		return makeArbitrarilyDiscretizedFunc(config);
 	}
 
 	/**
@@ -108,9 +139,9 @@ public class CalculatorConfigHelper {
 	 * @param calcConfig
 	 * @return
 	 */
-	public static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(Properties calcConfig) { 
+	public static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(Configuration config) { 
 		// read intensity measure levels
-		String imlProp = calcConfig.getProperty(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
+		String imlProp = config.getString(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
 		StringTokenizer st = new StringTokenizer(imlProp);
 		int numGMV = st.countTokens();
 		ArbitrarilyDiscretizedFunc adf = new ArbitrarilyDiscretizedFunc();
