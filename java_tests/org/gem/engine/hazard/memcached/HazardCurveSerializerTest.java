@@ -25,6 +25,8 @@ import com.google.gson.reflect.TypeToken;
 public class HazardCurveSerializerTest
 {
 
+    private static final String CACHE_KEY = "CURVE";
+
     private static final int PORT = 11211;
     private static final String LOCALHOST = "localhost";
 
@@ -53,9 +55,9 @@ public class HazardCurveSerializerTest
     @Test
     public void serializesASingleCurve() throws Exception
     {
-        new HazardCurveSerializer("CURVE", new Cache(LOCALHOST, PORT)).serialize(sampleCurveAtSite(1.0, 2.0));
+        new HazardCurveSerializer(CACHE_KEY, new Cache(LOCALHOST, PORT)).serialize(sampleCurveAtSite(1.0, 2.0));
 
-        assertThat(cachedCurveAtKey("CURVE"), is(sampleCurveAtSite(1.0, 2.0)));
+        assertThat(cachedCurveAtKey(CACHE_KEY), is(sampleCurveAtSite(1.0, 2.0)));
     }
 
     @Test
@@ -67,12 +69,12 @@ public class HazardCurveSerializerTest
         curves.add(sampleCurveAtSite(3.0, 4.0));
 
         Cache cache = mock(Cache.class);
-        new HazardCurveSerializer("CURVE", cache).serialize(curves);
+        new HazardCurveSerializer(CACHE_KEY, cache).serialize(curves);
 
         // testing with a mock that the serializer serializes all the curves
-        verify(cache).set("CURVE", sampleCurveAtSite(1.0, 2.0).toJSON());
-        verify(cache).set("CURVE", sampleCurveAtSite(2.0, 3.0).toJSON());
-        verify(cache).set("CURVE", sampleCurveAtSite(3.0, 4.0).toJSON());
+        verify(cache).set(CACHE_KEY, sampleCurveAtSite(1.0, 2.0).toJSON());
+        verify(cache).set(CACHE_KEY, sampleCurveAtSite(2.0, 3.0).toJSON());
+        verify(cache).set(CACHE_KEY, sampleCurveAtSite(3.0, 4.0).toJSON());
     }
 
     @Test
@@ -108,11 +110,11 @@ public class HazardCurveSerializerTest
         repository.setProbExList(probabilitiesOfExc);
 
         Cache cache = mock(Cache.class);
-        new HazardCurveSerializer("CURVE", cache).serialize(repository);
+        new HazardCurveSerializer(CACHE_KEY, cache).serialize(repository);
 
         // testing with a mock that the serializer serializes all the curves
-        verify(cache).set("CURVE", sampleCurveAtSite(1.0, 2.0).toJSON());
-        verify(cache).set("CURVE", sampleCurveAtSite(4.0, 4.0).toJSON());
+        verify(cache).set(CACHE_KEY, sampleCurveAtSite(1.0, 2.0).toJSON());
+        verify(cache).set(CACHE_KEY, sampleCurveAtSite(4.0, 4.0).toJSON());
     }
 
     private HazardCurveDTO sampleCurveAtSite(Double lon, Double lat)
