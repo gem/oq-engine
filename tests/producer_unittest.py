@@ -9,7 +9,7 @@ from eventlet import greenpool
 from eventlet import timeout
 
 from opengem import producer
-from opengem import region
+from opengem import shapes
 from opengem import test
 
 
@@ -47,14 +47,13 @@ class FileProducerTestCase(unittest.TestCase):
             self.assertEqual(data, 'test%s' % int(cell_x))
 
     def test_filter(self):
-        constraint = region.RegionConstraint.from_simple((10, 10), (100, 100))
+        constraint = shapes.RegionConstraint.from_simple((10, 10), (100, 100))
 
         path = self._make_data_file('test')
         prod = test.WordProducer(path)
 
         # TODO(termie): Right now the bound
-        expected = dict(zip(range(11, 100), range(11, 100)))
-
+        expected = dict(zip(range(10, 101), range(10, 101)))
         for ((cell_x, cell_y), data) in prod.filter(constraint):
             test_cell = expected.pop(int(cell_x))
             self.assertEqual(data, 'test%s' % int(test_cell))
