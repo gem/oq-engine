@@ -7,7 +7,7 @@
 
     <!-- include common types-->
     <xs:annotation>
-        <xs:documentation xml:lang="english">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
+        <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
         </xs:documentation>
         <xs:appinfo>
             <jaxb:globalBindings enableJavaNamingConventions="true" underscoreBinding="asCharInWord">
