@@ -2,6 +2,7 @@ package org.gem.engine.hazard.memcached;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.Future;
 
 import net.spy.memcached.MemcachedClient;
 
@@ -46,7 +47,19 @@ public class Cache
      */
     public void set(String key, Object obj)
     {
-        client.set(key, EXPIRE_TIME, obj);
+        Future<Boolean> result = client.set(key, EXPIRE_TIME, obj);
+
+        try
+        {
+            // shouldn't be necessary, just a patch waiting to find a better
+            // way to do so (when this call returns the value is really set
+            // on the server)
+            result.get();
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
