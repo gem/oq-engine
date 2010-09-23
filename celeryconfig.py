@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Config for all installed OpenGEM binaries and modules.
@@ -7,10 +8,13 @@ eventually.
 
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
-BROKER_USER = "myuser"
-BROKER_PASSWORD = "mypassword"
-BROKER_VHOST = "myvhost"
+BROKER_USER = "celeryuser"
+BROKER_PASSWORD = "celery"
+BROKER_VHOST = "celeryvhost"
 
 CELERY_RESULT_BACKEND = "amqp"
 
-CELERY_IMPORTS = ("opengem.tasks", "opengem.risk.tasks", "opengem.hazard.tasks")
+CELERY_IMPORTS = ("opengem.tasks", 
+                  "opengem.risk.tasks", 
+                  "opengem.hazard.tasks",
+                  "tests.tasks")
