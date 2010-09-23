@@ -24,9 +24,12 @@ if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'opengem')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+from opengem import converter
 from opengem import flags
 from opengem import logs
 
+FLAGS = flags.FLAGS
+log = logs.LOG
 
 flags.DEFINE_string('convert_input', None, 'Input file path for Conversion')
 flags.DEFINE_string('convert_type', 'NSHMP',
@@ -35,13 +38,11 @@ flags.DEFINE_string('convert_output', None, 'Output file path for Conversion')
 flags.DEFINE_string('target_type', 'NRML',
                     'Format of output data')
 
-def convert(input_path, input_type, output_path, output_type):
-    pass
-
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
     logs.init_logs()
-    
-    convert(FLAGS.convert_input, FLAGS.convert_type, 
-            FLAGS.convert_output, FLAGS.target_type)
+    input_module = converter.PARSERS[FLAGS.convert_type]
+    output_module = converter.PARSERS[FLAGS.target_type]
+    converter.convert(FLAGS.convert_input, input_module, 
+            FLAGS.convert_output, output_module)

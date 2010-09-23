@@ -47,7 +47,7 @@
 	</target>
 
     <target name="compile" depends="compile-sources">
-        <jar  destfile="${build.dir}/opengem-minimal.jar"
+        <jar  destfile="${lib.dir}/opengem-minimal.jar"
                  basedir="${classes.dir}"
                  includes="**/*.class" />
     </target>
