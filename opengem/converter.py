@@ -27,10 +27,10 @@ def convert(input_path, input_module, output_path, output_module):
     jarpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib")
     jpype.startJVM(jpype.getDefaultJVMPath(), "-Djava.ext.dirs=%s" % jarpath)
     
+    input_module.init_paths(input_path, jpype)
+    
     # TODO(JMC): Make this support non-Java input parsers, too
     java_class = jpype.JClass(input_module.JAVA_CLASS)
-    
-    
     
     # All the GEM1 parsers take a bounding box for the ctor
     (latmin, latmax, lonmin, lonmax) = input_module.BOUNDING_BOX
