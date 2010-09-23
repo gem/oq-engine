@@ -8,7 +8,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * 
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -71,9 +71,9 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * sheet
  * </p>
  * 
- * @author 	Aurea Moemke, Damiano Monelli
- * @created 22 September 20100, Additional AW_2010 implementation
- * @version 1.0
+ * @authors		Aurea Moemke, Damiano Monelli
+ * @created 	22 September 2010, Additional AW_2010 implementation
+ * @version 	1.0
  */
 
 public class AW_2010_AttenRel extends AttenuationRelationship implements
@@ -90,26 +90,26 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	public final static String NAME = "Allen & Wald (2010)";
 
 	// Equation constants for finite rupture
-	private double c0Finite = 3.154;
-	private double c1Finite = 1.03;
-	private double c2Finite = -1.113;
-	private double c3Finite = 0.722;
-	private double s1Finite = 0.66;
-	private double s2Finite = 0.31;
-	private double s3Finite = 39;
-	private double sigma2Finite = 0.21;
-	
+	private static final double c0FiniteRup = 3.154;
+	private static final double c1FiniteRup = 1.03;
+	private static final double c2FiniteRup = -1.113;
+	private static final double c3FiniteRup = 0.722;
+	private static final double s1FiniteRup = 0.66;
+	private static final double s2FiniteRup = 0.31;
+	private static final double s3FiniteRup = 39;
+	private static final double sigma2FiniteRup = 0.21;
+
 	// Equation constants for point rupture
-	private double c0Point = 3.471;
-	private double c1Point = 1.392;
-	private double c2Point = -1.77;
-	private double c4Point = 0.3699;
-	private double m1Point = 2.389;
-	private double m2Point = 1.508;
-	private double s1Point = 0.75;
-	private double s2Point = 0.43;
-	private double s3Point = 29.6;
-	private double sigma2Point = 0.4;
+	private static final double c0PointRup = 3.471;
+	private static final double c1PointRup = 1.392;
+	private static final double c2PointRup = -1.77;
+	private static final double c4PointRup = 0.3699;
+	private static final double m1PointRup = 2.389;
+	private static final double m2PointRup = 1.508;
+	private static final double s1PointRup = 0.75;
+	private static final double s2PointRup = 0.43;
+	private static final double s3PointRup = 29.6;
+	private static final double sigma2PointRup = 0.4;
 
 	// closest distance to rupture
 	private double rRup;
@@ -146,7 +146,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		initOtherParams();
 		initIndependentParamLists(); // This must be called after the above
 		initParameterEventListeners(); // add the change listeners to the
-										// parameters
+		// parameters
 	}
 
 	/**
@@ -188,7 +188,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		distanceRupParam.setNonEditable();
 
 		propagationEffectParams.addParameter(distanceRupParam);
-		
+
 		distanceHypoParam = new DistanceHypoParameter(0.0);
 		warn = new DoubleConstraint(DISTANCE_RUP_WARN_MIN,
 				DISTANCE_RUP_WARN_MAX);
@@ -199,7 +199,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
 		propagationEffectParams.addParameter(distanceHypoParam);
 	}
-	
+
 	/**
 	 * Creates the Site-Type parameter and adds it to the siteParams list. Makes
 	 * the parameters noneditable.
@@ -219,7 +219,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		// the stdDevType Parameter
 		StringConstraint stdDevTypeConstraint = new StringConstraint();
 		// the total std is the only one supported
-		stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);	
+		stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);
 		stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
 		stdDevTypeConstraint.setNonEditable();
 		stdDevTypeParam = new StdDevTypeParam(stdDevTypeConstraint);
@@ -265,7 +265,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	 */
 	protected void initParameterEventListeners() {
 		distanceRupParam.addParameterChangeListener(this);
-		distanceHypoParam.addParameterChangeListener(this);	
+		distanceHypoParam.addParameterChangeListener(this);
 		magParam.addParameterChangeListener(this);
 		stdDevTypeParam.addParameterChangeListener(this);
 	}
@@ -276,7 +276,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		distanceHypoParam.setValueAsDefault();
 		mmiParam.setValueAsDefault();
 		stdDevTypeParam.setValueAsDefault();
-		
+
 		rRup = ((Double) distanceRupParam.getValue()).doubleValue();
 		rHypo = ((Double) distanceHypoParam.getValue()).doubleValue();
 		mag = ((Double) magParam.getValue()).doubleValue();
@@ -329,66 +329,67 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	 */
 
 	public double getMean() {
-		
+
 		double mean = Double.NaN;
-		
+
 		EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
-		
-		if (eqkSurf.getNumCols()==1 && eqkSurf.getNumRows()==1){
-			// point rupture to be completed
-			mean =  getMeanForPointRup(mag, rHypo, this.c0Point, this.c1Point,
-					this.c2Point, this.c4Point, this.m1Point, this.m2Point);
-		}
-		else{
+
+		if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
+			// point rupture 
+			mean = getMeanForPointRup(mag, rHypo, this.c0PointRup,
+					this.c1PointRup, this.c2PointRup, this.c4PointRup,
+					this.m1PointRup, this.m2PointRup);
+		} else {
 			// finite rupture
-			mean = getMeanForFiniteRup(mag, rRup, this.c0Finite, this.c1Finite, 
-					this.c2Finite, this.c3Finite);
+			mean = getMeanForFiniteRup(mag, rRup, this.c0FiniteRup,
+					this.c1FiniteRup, this.c2FiniteRup, this.c3FiniteRup);
 		}
-		
 		return mean;
 	}
-	
-	public double getStdDev(){
-		
-		double stdDev = Double.NaN;
-		
-	    if (stdDevType.equals(StdDevTypeParam.STD_DEV_TYPE_NONE)) {
-	        stdDev = 0.0;
-	      }
-	    else{
-			EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
-			
-			if (eqkSurf.getNumCols()==1 && eqkSurf.getNumRows()==1){
-				// point source
-				stdDev =  getStdDev(rHypo, this.s1Point, this.s2Point, 
-						this.s3Point, this.sigma2Point);
-			}
-			else{
-				// finite source
-				stdDev = getStdDev(rRup, this.s1Finite,  this.s2Finite, 
-						this.s3Finite, this.sigma2Finite);
-			}
-	    }
-		return stdDev;
-		
-	}
-	
-
 
 	/**
+	 * This returns the standard deviation value
+	 * which depends on the rupture type finite or point source
 	 * 
+	 * @return The standard deviation value
+	 */
+
+	public double getStdDev() {
+
+		double stdDev = Double.NaN;
+
+		if (stdDevType.equals(StdDevTypeParam.STD_DEV_TYPE_NONE)) {
+			stdDev = 0.0;
+		} else {
+			EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
+
+			if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
+				// point source
+				stdDev = getStdDev(rHypo, this.s1PointRup, this.s2PointRup,
+						this.s3PointRup, this.sigma2PointRup);
+			} else {
+				// finite source
+				stdDev = getStdDev(rRup, this.s1FiniteRup, this.s2FiniteRup,
+						this.s3FiniteRup, this.sigma2FiniteRup);
+			}
+		}
+		return stdDev;
+	}
+
+	/**
+	 * Returns the Mean MMI Value for finite ruptures given a
+	 * set of parameters.
+	 * 
+	 * @param Mw
+	 * @param Rrup
 	 * @param c0
 	 * @param c1
 	 * @param c2
 	 * @param c3
-	 * @param s1
-	 * @param s2
-	 * @param s3
-	 * @param sigma2
 	 * @return
 	 */
-	public double getMeanForFiniteRup(double Mw, double Rrup, double c0, double c1,
-			double c2, double c3) {
+	public double getMeanForFiniteRup(double Mw, double Rrup, double c0,
+			double c1, double c2, double c3) {
 
 		double mmi = 0;
 		mmi = c0
@@ -400,53 +401,51 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
 		return mmi;
 	}
+
 	/**
+	 * Returns the Mean MMI Value for point ruptures given a
+	 * set of parameters.
 	 * 
+	 * @param Mw
+	 * @param Rhypo
 	 * @param c0
 	 * @param c1
 	 * @param c2
 	 * @param c4
 	 * @param m1
 	 * @param m2
-	 * @param s1
-	 * @param s2
-	 * @param s3
-	 * @param sigma2
 	 * @return
 	 */
-	public double getMeanForPointRup(double Mw, double Rhypo, double c0, double c1,
-			double c2, double c4, double m1, double m2) {
+	public double getMeanForPointRup(double Mw, double Rhypo, double c0,
+			double c1, double c2, double c4, double m1, double m2) {
 
 		double mmi = 0;
 		double rm = 0;
 		rm = m1 + m2 * Math.exp(Mw - 5);
-		if (Rhypo <= 20){
-			mmi = c0
-				+ c1
-				* Mw
-				+ c2
-				* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)));
+		if (Rhypo <= 20) {
+			mmi = c0 + c1 * Mw + c2
+					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)));
+		} else {
+			mmi = c0 + c1 * Mw + c2
+					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)))
+					+ c4 * Math.log(Rhypo / 20);
 		}
-		else{
-			mmi = c0
-			+ c1
-			* Mw
-			+ c2
-			* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2))) + c4 * Math.log(Rhypo/20);
-		}
-
 		return mmi;
+
 	}
+
 	/**
+	 * Returns the Standard deviation for a set of parameters.
 	 * 
 	 * @param R (either Rrup for finite rupture OR Rhypo for Point rupture)
 	 * @param s1
 	 * @param s2
 	 * @param s3
 	 * @param sigma2
-	 * @return
+	 * @return double
 	 */
-	public double getStdDev(double R, double s1, double s2, double s3,double sigma2) {
+	public double getStdDev(double R, double s1, double s2, double s3,
+			double sigma2) {
 
 		double sigma1 = s1 + (s2 / (1 + Math.pow((R / s3), 2)));
 		double sigma = Math.sqrt(Math.pow(sigma1, 2) + Math.pow(sigma2, 2));
@@ -454,10 +453,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
 	}
 
-
-
 	/**
-	 * get the name of this IMR
+	 * Get the name of this IMR
 	 * 
 	 * @returns the name of this IMR
 	 */
@@ -491,7 +488,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		parameterChange = true;
 		if (pName.equals(DistanceRupParameter.NAME)) {
 			rRup = ((Double) val).doubleValue();
-		} else if (pName.equals(magParam.NAME)) {
+		} else if (pName.equals(MagParam.NAME)) {
 			mag = ((Double) val).doubleValue();
 		} else if (pName.equals(StdDevTypeParam.NAME)) {
 			stdDevType = (String) val;
@@ -509,54 +506,56 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
 		this.initParameterEventListeners();
 	}
-	
+
 	public double getMeanForFiniteRup(double Mw, double Rrup) {
 
 		double mmi = 0;
-		mmi = this.c0Finite
-				+ this.c1Finite
+		mmi = this.c0FiniteRup
+				+ this.c1FiniteRup
 				* Mw
-				+ this.c2Finite
+				+ this.c2FiniteRup
 				* Math.log(Math.sqrt((Math.pow(Rrup, 2))
-						+ Math.pow((1 + (this.c3Finite * Math.exp(Mw - 5))), 2)));
+						+ Math.pow((1 + (this.c3FiniteRup * Math.exp(Mw - 5))),
+								2)));
 
 		return mmi;
 	}
+
 	public double getMeanForPointRup(double Mw, double Rhypo) {
 
 		double mmi = 0;
 		double rm = 0;
-		rm = this.m1Point + this.m2Point * Math.exp(Mw - 5);
-		if (Rhypo <= 20){
-		mmi = this.c0Point
-				+ this.c1Point
-				* Mw
-				+ this.c2Point
-				* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)));
-		} else{
-			mmi = this.c0Point
-			+ this.c1Point
-			* Mw
-			+ this.c2Point
-			* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2))) + this.c4Point * Math.log(Rhypo/20);
+		rm = this.m1PointRup + this.m2PointRup * Math.exp(Mw - 5);
+		if (Rhypo <= 20) {
+			mmi = this.c0PointRup + this.c1PointRup * Mw + this.c2PointRup
+					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)));
+		} else {
+			mmi = this.c0PointRup + this.c1PointRup * Mw + this.c2PointRup
+					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)))
+					+ this.c4PointRup * Math.log(Rhypo / 20);
 		}
 
 		return mmi;
 	}
+
 	public double getStdDevForFiniteRup(double R) {
 
-		double sigma1 = s1Finite + (s2Finite / (1 + Math.pow((R / s3Finite), 2)));
-		double sigma = Math.sqrt(Math.pow(sigma1, 2) + Math.pow(sigma2Finite, 2));
+		double sigma1 = this.s1FiniteRup
+				+ (this.s2FiniteRup / (1 + Math.pow((R / this.s3FiniteRup), 2)));
+		double sigma = Math.sqrt(Math.pow(sigma1, 2)
+				+ Math.pow(this.sigma2FiniteRup, 2));
 		return sigma;
 
 	}
-	
+
 	public double getStdDevForPointRup(double R) {
 
-		double sigma1 = s1Point + (s2Point / (1 + Math.pow((R / s3Point), 2)));
-		double sigma = Math.sqrt(Math.pow(sigma1, 2) + Math.pow(sigma2Point, 2));
+		double sigma1 = this.s1PointRup
+				+ (this.s2PointRup / (1 + Math.pow((R / this.s3PointRup), 2)));
+		double sigma = Math.sqrt(Math.pow(sigma1, 2)
+				+ Math.pow(this.sigma2PointRup, 2));
 		return sigma;
 
 	}
-	
+
 }
