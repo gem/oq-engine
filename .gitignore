@@ -2,9 +2,14 @@
 *.DS_Store
 local_settings.py
 docs/build/**/*
+build
 build/**/*
 build-stamp
 dist/**/*
 tests/data/test.tiff
 tests/data/*.fake
+tests/data/loss-curves.xml
+tests/data/loss-ratio-curves.xml
+*.tiff
+opengem.db
 

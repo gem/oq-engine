@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExposurePortfolio PortfolioID="PAV01" PortfolioDescription="Collection of existing building in downtown Pavia">
+    <AssetInstance AssetID="06" AssetDescription="Moment-resisting ductile concrete frame high rise" AssetValue="320000" VulnerabilityFunction="RC/ND-FR-D/HR"
+         Latitude="41.9" Longitude="12.45"/>  
+</ExposurePortfolio>

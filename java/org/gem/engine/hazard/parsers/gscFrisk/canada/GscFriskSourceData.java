@@ -35,7 +35,7 @@ public class GscFriskSourceData extends GemFileParser {
 		GscFriskInputHeader head = gscif.getHeader();
 		
 		// Info: number of global alternatives contained in the input file 
-		System.out.printf("Number of global alternatives: %d\n",+head.nGloAlt);
+		System.out.printf("Number of global alternatives: %d\n",+head.nGloAlt);
 		
 		// -----------------------------------------------------------------------------------------
 		//                                                            Processing global alternatives

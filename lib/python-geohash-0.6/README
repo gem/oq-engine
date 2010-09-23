@@ -1,0 +1,10 @@
+* python-geohash
+python-geohash is a fast, accurate python geohashing library.
+
+python-geohash 0.3 can create C extension. If you want to use python-geohash
+without C extension, simply copy geohash.py into your system. geohash.py will
+work fine without C extension.
+
+** LICENSE
+Code is licensed under Apache License 2.0, MIT Licence and NEW BSD License.
+You can choose one of the licences above.
