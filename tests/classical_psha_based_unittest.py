@@ -27,6 +27,45 @@ HAZARD_CURVE = shapes.FastCurve(
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
 
+class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
+    # Step One
+    def setUp(self):
+        # construct a loss_ratio_poe_curve with loss ratio values of
+        # [0, 0.0600, 0.1200, 0.1800, 0.2400, 0.3000, 0.4500]  
+        # and poe of : [0.3460, 0.1200, 0.0570, 0.0400, 0.0190, 0.0090,  0]
+        # 
+        self.loss_ratio_poe_curve = shapes.FastCurve([
+            (0, 0.3460), (0.06, 0.12), (0.12, 0.057), (0.18, 0.04), 
+            (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
+        
+
+    # Step four
+    # convert this to a loss_ratio_poo_curve
+    # Assert that the PoO values match: [0.1445, 0.0400, 0.0190, 0.0155, 0.0095] 
+    def test_loss_ratio_poo_curve_computation(self):
+        loss_ratio_poo_curve = convert_to_poo(self.loss_ratio_poe_curve)
+        # loss_ratio_mid_values = loss_ratio_poo_curve.domain
+                
+        # self.assertEqual([0.0300, 0.0900, 0.1500, 0.2100, 0.2700, 0.3750], 
+        #     loss_ratio_poo_curve.domain)        
+        #         self.assertEqual([0.2330, 0.0885, 0.0485, 0.0295, 0.0140, 0.0045], 
+        #     loss_ratio_poo_curve.codomain)
+    	    
+    	self.assertEqual([0.1445, 0.0400, 0.0190, 0.0155, 0.0095], 
+    	    loss_ratio_poo_curve)
+        
+    # Step five
+    # compute the mean loss using loss ratio vrs PoO 
+    # Assert that the mean loss ratio =  0.02346
+    def test_mean_loss_ratio_computation(self):
+    	loss_ratio_poo_curve = shapes.FastCurve([(0.0600, 0.1445),
+    	(0.1200, 0.0400), (0.1800, 0.0190), (0.2300, 0.0155), 
+    	(0.300, 0.0095)])
+    	mean_loss_ratio = compute_mean_loss_ratio(loss_ratio_poo_curve)
+
+    	self.assertEqual(0.02346, mean_loss_ratio)
+    
+
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     # loss curve tests
@@ -45,7 +84,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertEqual(compute_loss_curve(
                 shapes.EMPTY_CURVE, None),
                 shapes.EMPTY_CURVE)
-    
+
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
         self.assertEqual(compute_loss_curve(
                 shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
