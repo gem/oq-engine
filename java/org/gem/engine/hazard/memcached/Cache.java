@@ -17,6 +17,9 @@ import net.spy.memcached.MemcachedClient;
 public class Cache
 {
 
+    /**
+     * The lifetime of the values stored on the server (in seconds)
+     */
     private static final int EXPIRE_TIME = 3600;
 
     private MemcachedClient client;
@@ -41,6 +44,9 @@ public class Cache
 
     /**
      * Saves the object with the given key.
+     * <p>
+     * If a value with the same key is already present,
+     * it will be overwritten.
      * 
      * @param key the key to use
      * @param obj the object to save
