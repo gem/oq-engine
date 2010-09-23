@@ -34,7 +34,7 @@ log = logs.LOG
 flags.DEFINE_string('convert_input', 'tests/data/nshmp', 'Input file path for Conversion')
 flags.DEFINE_string('convert_type', 'NSHMP',
                     'Format of input data')
-flags.DEFINE_string('convert_output', None, 'Output file path for Conversion')
+flags.DEFINE_string('convert_output', "./", 'Output file path for Conversion')
 flags.DEFINE_string('target_type', 'NRML',
                     'Format of output data')
 

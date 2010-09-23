@@ -30,9 +30,12 @@ def convert(input_path, input_module, output_path, output_module):
     input_module.init_paths(input_path, jpype)
     
     # TODO(JMC): Make this support non-Java input parsers, too
-    java_class = jpype.JClass(input_module.JAVA_CLASS)
     
     # All the GEM1 parsers take a bounding box for the ctor
     (latmin, latmax, lonmin, lonmax) = input_module.BOUNDING_BOX
-    input_parser = java_class(latmin, latmax, lonmin, lonmax)
-    
+    for model, _subdir in input_module.JAVA_MODELS:
+        java_class = jpype.JClass(model)
+        input_parser = java_class(latmin, latmax, lonmin, lonmax)
+        print "Got a %s parser with %s sources" % (model, input_parser.getNumSources())
+        file_writer_class = jpype.JClass("java.io.FileWriter")
+        input_parser.writeSources2KMLfile(file_writer_class(output_path + model+"-foo.xml"))
