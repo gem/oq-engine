@@ -4,11 +4,12 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
 
 import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.spy.memcached.MemcachedClient;
@@ -29,12 +30,19 @@ public class HazardCurveSerializerTest
     private static final String LOCALHOST = "localhost";
 
     private MemcachedClient client;
+    private HazardCurveSerializer serializer;
+    private GEMHazardCurveRepository repository;
 
     @Before
     public void setUp() throws Exception
     {
         client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         client.flush(); // clear the server side cache
+
+        repository = new GEMHazardCurveRepository();
+        repository.setGmLevels(groundMotionLevels());
+
+        serializer = new HazardCurveSerializer(new Cache(LOCALHOST, PORT));
     }
 
     @Test
@@ -46,97 +54,101 @@ public class HazardCurveSerializerTest
         data.add(2.0);
         data.add(3.0);
 
-        Type listType = new TypeToken<List<Double>>(){}.getType();
+        Type listType = new TypeToken<List<Double>>()
+        {
+
+        }.getType();
 
         assertEquals(data, new Gson().fromJson(new Gson().toJson(data),
                 listType));
     }
 
     @Test
+    public void noSerializationWhenNoCurvesDefined()
+    {
+        // empty repository
+        repository = new GEMHazardCurveRepository();
+
+        Cache cache = mock(Cache.class);
+        serializer = new HazardCurveSerializer(cache);
+
+        serializeRepository();
+
+        verifyZeroInteractions(cache);
+    }
+
+    @Test
     public void serializesASingleCurve() throws Exception
     {
-        new HazardCurveSerializer(new Cache(LOCALHOST, PORT))
-                .serialize(sampleCurveAtSite(1.0, 2.0));
+        Location[] locations = { new Location(2.0, 1.0) };
+        setDataFor(locations);
 
-        assertThat(cachedCurveAtKey("1.0+2.0"), is(sampleCurveAtSite(1.0, 2.0)));
+        serializeRepository();
+
+        assertThat(cachedCurveAtKey("1.0+2.0"), is(sampleCurveAt(1.0, 2.0)));
     }
 
     @Test
     public void serializesMultipleCurves() throws Exception
     {
-        List<HazardCurveDTO> curves = new ArrayList<HazardCurveDTO>();
-        curves.add(sampleCurveAtSite(1.0, 2.0));
-        curves.add(sampleCurveAtSite(2.0, 3.0));
-        curves.add(sampleCurveAtSite(3.0, 4.0));
+        Location[] locations = { new Location(2.0, 1.0), new Location(4.0, 4.0) };
+        setDataFor(locations);
 
-        Cache cache = mock(Cache.class);
-        new HazardCurveSerializer(cache).serialize(curves);
+        serializeRepository();
 
-        // testing with a mock that the serializer serializes all the curves
-        verify(cache).set("1.0+2.0", sampleCurveAtSite(1.0, 2.0).toJSON());
-        verify(cache).set("2.0+3.0", sampleCurveAtSite(2.0, 3.0).toJSON());
-        verify(cache).set("3.0+4.0", sampleCurveAtSite(3.0, 4.0).toJSON());
+        assertThat(cachedCurveAtKey("1.0+2.0"), is(sampleCurveAt(1.0, 2.0)));
+        assertThat(cachedCurveAtKey("4.0+4.0"), is(sampleCurveAt(4.0, 4.0)));
     }
 
-    @Test
-    public void serializesMultipleCurvesUsingGEMHazardCurveRepository()
-            throws Exception
+    private void serializeRepository()
     {
-        // Hazard engine API
-        GEMHazardCurveRepository repository = new GEMHazardCurveRepository();
+        serializer.serialize(repository);
+    }
 
-        // sites where the curves are defined
-        ArrayList<Site> nodes = new ArrayList<Site>();
-        nodes.add(new Site(new Location(2.0, 1.0)));
-        nodes.add(new Site(new Location(4.0, 4.0)));
+    private void setDataFor(Location[] locations)
+    {
+        ArrayList<Site> sites = new ArrayList<Site>();
 
-        repository.setGridNode(nodes);
+        for (Location location : locations)
+        {
+            sites.add(new Site(location));
+        }
 
-        // X values
-        ArrayList<Double> groundMotionLevels = new ArrayList<Double>();
-        groundMotionLevels.add(1.0);
-        groundMotionLevels.add(2.0);
-        groundMotionLevels.add(3.0);
-        groundMotionLevels.add(4.0);
+        repository.setGridNode(sites);
+        repository.setProbExList(probabilitiesOfExc(locations.length));
+    }
 
-        repository.setGmLevels(groundMotionLevels);
-
-        // Y values
+    // Y sample values
+    private ArrayList<Double[]> probabilitiesOfExc(Integer numberOfSites)
+    {
         Double[] values = { 1.0, 2.0, 3.0, 4.0 };
         ArrayList<Double[]> probabilitiesOfExc = new ArrayList<Double[]>();
 
-        probabilitiesOfExc.add(values);
-        probabilitiesOfExc.add(values);
-        probabilitiesOfExc.add(values);
+        for (int i = 0; i < numberOfSites; i++)
+        {
+            probabilitiesOfExc.add(values);
+        }
 
-        repository.setProbExList(probabilitiesOfExc);
-
-        Cache cache = mock(Cache.class);
-        new HazardCurveSerializer(cache).serialize(repository);
-
-        // testing with a mock that the serializer serializes all the curves
-        verify(cache).set("1.0+2.0", sampleCurveAtSite(1.0, 2.0).toJSON());
-        verify(cache).set("4.0+4.0", sampleCurveAtSite(4.0, 4.0).toJSON());
+        return probabilitiesOfExc;
     }
 
-    private HazardCurveDTO sampleCurveAtSite(Double lon, Double lat)
+    // X sample values
+    private ArrayList<Double> groundMotionLevels()
     {
-        // X sample values
-        List<Double> groundMotionLevels = new ArrayList<Double>();
+        ArrayList<Double> groundMotionLevels = new ArrayList<Double>();
+
         groundMotionLevels.add(1.0);
         groundMotionLevels.add(2.0);
         groundMotionLevels.add(3.0);
         groundMotionLevels.add(4.0);
 
-        // Y values
-        List<Double> probabilitiesOfExc = new ArrayList<Double>();
-        probabilitiesOfExc.add(1.0);
-        probabilitiesOfExc.add(2.0);
-        probabilitiesOfExc.add(3.0);
-        probabilitiesOfExc.add(4.0);
+        return groundMotionLevels;
+    }
 
-        return new HazardCurveDTO(lon, lat, groundMotionLevels,
-                probabilitiesOfExc);
+    private HazardCurveDTO sampleCurveAt(Double lon, Double lat)
+    {
+        return new HazardCurveDTO(lon, lat, groundMotionLevels(), Arrays
+                .asList(probabilitiesOfExc(1).get(0))); // weird API...
     }
 
     private HazardCurveDTO cachedCurveAtKey(String key)

@@ -1,7 +1,6 @@
 package org.gem.engine.hazard.memcached;
 
 import java.util.Arrays;
-import java.util.List;
 
 import org.opensha.commons.data.Site;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
@@ -31,7 +30,7 @@ public class HazardCurveSerializer
      * 
      * @param hazardCurve the curve to serialize
      */
-    public void serialize(HazardCurveDTO hazardCurve)
+    private void serialize(HazardCurveDTO hazardCurve)
     {
         cache.set(generateKey(hazardCurve), hazardCurve.toJSON());
     }
@@ -40,19 +39,6 @@ public class HazardCurveSerializer
     {
         return new StringBuilder(hazardCurve.getLongitude().toString()).append(
                 "+").append(hazardCurve.getLatitude()).toString();
-    }
-
-    /**
-     * Serializes the list of hazard curves.
-     * 
-     * @param hazardCurves the list of curves to serialize
-     */
-    public void serialize(List<HazardCurveDTO> hazardCurves)
-    {
-        for (HazardCurveDTO hazardCurve : hazardCurves)
-        {
-            serialize(hazardCurve);
-        }
     }
 
     /**
