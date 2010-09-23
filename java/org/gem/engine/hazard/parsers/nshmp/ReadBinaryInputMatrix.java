@@ -26,8 +26,8 @@ public class ReadBinaryInputMatrix {
 	public ReadBinaryInputMatrix(String filename, boolean bigEndian2LittleEndian) throws IOException{
 
         val = new ArrayList<Double>();
-        
-		DataInputStream data_in    = new DataInputStream (new FileInputStream(this.getClass().getClassLoader().getResource(filename).getPath()));
+        // filename MUST BE absolute path!!
+		DataInputStream data_in    = new DataInputStream (new FileInputStream(filename));
 
 
 	      int index = 0;
