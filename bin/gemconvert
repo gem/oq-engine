@@ -32,17 +32,19 @@ FLAGS = flags.FLAGS
 log = logs.LOG
 
 flags.DEFINE_string('convert_input', 'tests/data/nshmp', 'Input file path for Conversion')
-flags.DEFINE_string('convert_type', 'NSHMP',
+flags.DEFINE_string('convert_type', 'opengem.parser.nshmp',
                     'Format of input data')
 flags.DEFINE_string('convert_output', "./", 'Output file path for Conversion')
-flags.DEFINE_string('target_type', 'NRML',
+flags.DEFINE_string('target_type', 'opengem.parser.nrml',
                     'Format of output data')
 
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
     logs.init_logs()
-    input_module = converter.PARSERS[FLAGS.convert_type]
-    output_module = converter.PARSERS[FLAGS.target_type]
-    converter.convert(FLAGS.convert_input, input_module, 
-            FLAGS.convert_output, output_module)
+    __import__(FLAGS.convert_type)
+    __import__(FLAGS.target_type)
+    input_module = sys.modules[FLAGS.convert_type]
+    output_module = sys.modules[FLAGS.target_type]
+    converter.convert(os.path.abspath(FLAGS.convert_input), input_module, 
+            os.path.abspath(FLAGS.convert_output), output_module)

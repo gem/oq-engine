@@ -14,7 +14,7 @@ JAVA_MODELS = [(JAVA_NAMESPACE +"NshmpWusFaultData", "WUS/WUSfaults"),
                 (JAVA_NAMESPACE +"NshmpCascadiaSubductionData", "Cascadia"),
                 (JAVA_NAMESPACE +"NshmpCeusFaultData", "CEUS/CEUS.faults"),
                 (JAVA_NAMESPACE +"NewNshmpWusGridData", "WUS/WUSmap"),
-                (JAVA_NAMESPACE +"NewNshmpCaliforniaGridData", "CA/CA_maps"),
+                (JAVA_NAMESPACE +"NewNshmpCaliforniaGridData", "CA/CA_map"),
                 (JAVA_NAMESPACE +"NewNshmpCeusGridData", "CEUS/CEUS.map.input"),
                 ]
 
