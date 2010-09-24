@@ -33,6 +33,7 @@ import org.opensha.commons.param.event.ParameterChangeListener;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.earthquake.griddedForecast.HypoMagFreqDistAtLoc;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
@@ -46,8 +47,16 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * <b>Title:</b> AW_2010_AttenRel
  * <p>
  * 
- * <b>Description:</b> This implements the Attenuation Relationship published by
- * Allen & Wald in 2010 TODO: Add correct equation reference (2010, "...
+ * <b>Description:</b> This class implements the Allen and Wald 2010 intensity
+ * prediction equation (IPE): "Prediction of macroseismic intensities for global
+ * active crustal earthquakes", J.Seismol. At the time of the implementation the
+ * paper was not published. The current implementation is based on the Perl
+ * module that implements this equation in the ShakeMap software (the module was
+ * provided by Georgia Cua to Damiano Monelli). Verification tables have been
+ * provided by Damiano Monelli as an Excel spreadsheet. According to Georgia's
+ * comments the IPE is technically designed for 5<M<7.9, intensity>2, and R<300
+ * km. TODO: once the paper is published, revise the implementation and maybe
+ * ask for verification tables directly to the original authors.
  * <p>
  * 
  * Supported Intensity-Measure Parameters:
@@ -65,28 +74,23 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * </UL>
  * </p>
  * <p>
- * NOTES:
- * <p>
- * Verification : Verification tables provided by Damiano using Excel spread
- * sheet
  * </p>
  * 
- * @authors		Aurea Moemke, Damiano Monelli
- * @created 	22 September 2010, Additional AW_2010 implementation
- * @version 	1.0
+ * @authors Aurea Moemke, Damiano Monelli
+ * @created 22 September 2010
+ * @version 1.0
  */
 
 public class AW_2010_AttenRel extends AttenuationRelationship implements
 		ScalarIntensityMeasureRelationshipAPI, NamedObjectAPI,
 		ParameterChangeListener {
 
-	// Debugging stuff
 	private final static String C = "AW_2010_AttenRel";
 	private final static boolean D = false;
 	public final static String SHORT_NAME = "AW2010";
 	private static final long serialVersionUID = 1234567890987654358L;
 
-	// Name of IMR
+	// IPE full name
 	public final static String NAME = "Allen & Wald (2010)";
 
 	// Equation constants for finite rupture
@@ -165,8 +169,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	}
 
 	/**
-	 * Creates the single Potential Earthquake parameter (magParam) and and adds
-	 * it to the eqkRuptureParams list. Makes the parameter noneditable.
+	 * Creates magnitude parameter and adds it to the eqkRuptureParams list.
+	 * Makes the parameter noneditable.
 	 */
 	protected void initEqkRuptureParams() {
 		magParam = new MagParam(MAG_WARN_MIN, MAG_WARN_MAX);
@@ -179,6 +183,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	 * propagationEffectParams list. Makes the parameters noneditable.
 	 */
 	protected void initPropagationEffectParams() {
+		// closest distance to rupture (used for finite ruptures)
 		distanceRupParam = new DistanceRupParameter(0.0);
 		DoubleConstraint warn = new DoubleConstraint(DISTANCE_RUP_WARN_MIN,
 				DISTANCE_RUP_WARN_MAX);
@@ -186,9 +191,9 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		distanceRupParam.setWarningConstraint(warn);
 		distanceRupParam.addParameterChangeWarningListener(warningListener);
 		distanceRupParam.setNonEditable();
-
 		propagationEffectParams.addParameter(distanceRupParam);
 
+		// hypocentral distance (used for point ruptures)
 		distanceHypoParam = new DistanceHypoParameter(0.0);
 		warn = new DoubleConstraint(DISTANCE_RUP_WARN_MIN,
 				DISTANCE_RUP_WARN_MAX);
@@ -196,7 +201,6 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		distanceHypoParam.setWarningConstraint(warn);
 		distanceHypoParam.addParameterChangeWarningListener(warningListener);
 		distanceHypoParam.setNonEditable();
-
 		propagationEffectParams.addParameter(distanceHypoParam);
 	}
 
@@ -276,11 +280,6 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		distanceHypoParam.setValueAsDefault();
 		mmiParam.setValueAsDefault();
 		stdDevTypeParam.setValueAsDefault();
-
-		rRup = ((Double) distanceRupParam.getValue()).doubleValue();
-		rHypo = ((Double) distanceHypoParam.getValue()).doubleValue();
-		mag = ((Double) magParam.getValue()).doubleValue();
-		stdDevType = (String) stdDevTypeParam.getValue();
 	}
 
 	/**
@@ -322,8 +321,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	}
 
 	/**
-	 * This returns the mean MMI value
-	 * which depends on the rupture type finite or point source
+	 * This returns the mean MMI value which depends on the rupture type (finite
+	 * or point)
 	 * 
 	 * @return The mean value
 	 */
@@ -335,21 +334,18 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
 
 		if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
-			// point rupture 
-			mean = getMeanForPointRup(mag, rHypo, this.c0PointRup,
-					this.c1PointRup, this.c2PointRup, this.c4PointRup,
-					this.m1PointRup, this.m2PointRup);
+			// point rupture
+			mean = getMeanForPointRup(mag, rHypo);
 		} else {
 			// finite rupture
-			mean = getMeanForFiniteRup(mag, rRup, this.c0FiniteRup,
-					this.c1FiniteRup, this.c2FiniteRup, this.c3FiniteRup);
+			mean = getMeanForFiniteRup(mag, rRup);
 		}
 		return mean;
 	}
 
 	/**
-	 * This returns the standard deviation value
-	 * which depends on the rupture type finite or point source
+	 * This returns the standard deviation value which depends on the rupture
+	 * type finite or point source
 	 * 
 	 * @return The standard deviation value
 	 */
@@ -365,92 +361,13 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
 			if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
 				// point source
-				stdDev = getStdDev(rHypo, this.s1PointRup, this.s2PointRup,
-						this.s3PointRup, this.sigma2PointRup);
+				stdDev = getStdDevForPointRup(rHypo);
 			} else {
 				// finite source
-				stdDev = getStdDev(rRup, this.s1FiniteRup, this.s2FiniteRup,
-						this.s3FiniteRup, this.sigma2FiniteRup);
+				stdDev = getStdDevForFiniteRup(rRup);
 			}
 		}
 		return stdDev;
-	}
-
-	/**
-	 * Returns the Mean MMI Value for finite ruptures given a
-	 * set of parameters.
-	 * 
-	 * @param Mw
-	 * @param Rrup
-	 * @param c0
-	 * @param c1
-	 * @param c2
-	 * @param c3
-	 * @return
-	 */
-	public double getMeanForFiniteRup(double Mw, double Rrup, double c0,
-			double c1, double c2, double c3) {
-
-		double mmi = 0;
-		mmi = c0
-				+ c1
-				* Mw
-				+ c2
-				* Math.log(Math.sqrt((Math.pow(Rrup, 2))
-						+ Math.pow((1 + (c3 * Math.exp(Mw - 5))), 2)));
-
-		return mmi;
-	}
-
-	/**
-	 * Returns the Mean MMI Value for point ruptures given a
-	 * set of parameters.
-	 * 
-	 * @param Mw
-	 * @param Rhypo
-	 * @param c0
-	 * @param c1
-	 * @param c2
-	 * @param c4
-	 * @param m1
-	 * @param m2
-	 * @return
-	 */
-	public double getMeanForPointRup(double Mw, double Rhypo, double c0,
-			double c1, double c2, double c4, double m1, double m2) {
-
-		double mmi = 0;
-		double rm = 0;
-		rm = m1 + m2 * Math.exp(Mw - 5);
-		if (Rhypo <= 20) {
-			mmi = c0 + c1 * Mw + c2
-					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)));
-		} else {
-			mmi = c0 + c1 * Mw + c2
-					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)))
-					+ c4 * Math.log(Rhypo / 20);
-		}
-		return mmi;
-
-	}
-
-	/**
-	 * Returns the Standard deviation for a set of parameters.
-	 * 
-	 * @param R (either Rrup for finite rupture OR Rhypo for Point rupture)
-	 * @param s1
-	 * @param s2
-	 * @param s3
-	 * @param sigma2
-	 * @return double
-	 */
-	public double getStdDev(double R, double s1, double s2, double s3,
-			double sigma2) {
-
-		double sigma1 = s1 + (s2 / (1 + Math.pow((R / s3), 2)));
-		double sigma = Math.sqrt(Math.pow(sigma1, 2) + Math.pow(sigma2, 2));
-		return sigma;
-
 	}
 
 	/**
@@ -488,6 +405,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		parameterChange = true;
 		if (pName.equals(DistanceRupParameter.NAME)) {
 			rRup = ((Double) val).doubleValue();
+		} else if (pName.equals(DistanceHypoParameter.NAME)) {
+			rHypo = ((Double) val).doubleValue();
 		} else if (pName.equals(MagParam.NAME)) {
 			mag = ((Double) val).doubleValue();
 		} else if (pName.equals(StdDevTypeParam.NAME)) {
@@ -501,12 +420,18 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	 */
 	public void resetParameterEventListeners() {
 		distanceRupParam.removeParameterChangeListener(this);
+		distanceHypoParam.removeParameterChangeListener(this);
 		magParam.removeParameterChangeListener(this);
 		stdDevTypeParam.removeParameterChangeListener(this);
-
 		this.initParameterEventListeners();
 	}
 
+	/**
+	 * Calculate mean MMI for finte ruptures
+	 * @param Mw : moment magnitude
+	 * @param Rrup : closest distance to rupture (km)
+	 * @return double
+	 */
 	public double getMeanForFiniteRup(double Mw, double Rrup) {
 
 		double mmi = 0;
@@ -521,6 +446,12 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		return mmi;
 	}
 
+	/**
+	 * Calculate mean MMI for point rupture
+	 * @param Mw : moment magnitude
+	 * @param Rhypo : hypocentral distance (km)
+	 * @return double
+	 */
 	public double getMeanForPointRup(double Mw, double Rhypo) {
 
 		double mmi = 0;
@@ -538,20 +469,30 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 		return mmi;
 	}
 
-	public double getStdDevForFiniteRup(double R) {
+	/**
+	 * Calculate standard deviation for finite ruptures
+	 * @param Rrup : closest distance to rupture (km)
+	 * @return
+	 */
+	public double getStdDevForFiniteRup(double Rrup) {
 
 		double sigma1 = this.s1FiniteRup
-				+ (this.s2FiniteRup / (1 + Math.pow((R / this.s3FiniteRup), 2)));
+				+ (this.s2FiniteRup / (1 + Math.pow((Rrup / this.s3FiniteRup), 2)));
 		double sigma = Math.sqrt(Math.pow(sigma1, 2)
 				+ Math.pow(this.sigma2FiniteRup, 2));
 		return sigma;
 
 	}
 
-	public double getStdDevForPointRup(double R) {
+	/**
+	 * Calculate standard deviation for point rupture
+	 * @param Rhypo : hypocentral distance
+	 * @return
+	 */
+	public double getStdDevForPointRup(double Rhypo) {
 
 		double sigma1 = this.s1PointRup
-				+ (this.s2PointRup / (1 + Math.pow((R / this.s3PointRup), 2)));
+				+ (this.s2PointRup / (1 + Math.pow((Rhypo / this.s3PointRup), 2)));
 		double sigma = Math.sqrt(Math.pow(sigma1, 2)
 				+ Math.pow(this.sigma2PointRup, 2));
 		return sigma;
