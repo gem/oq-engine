@@ -264,14 +264,16 @@ def compute_conditional_loss(loss_curve, probability):
     return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
 
 def compute_mean_pe(loss_ratio_pe_curve):
-    # compute mean PoE values
-    loss_ratio_pe_curve = [] 
-    # This function needs to take the first two values and compute the mean,
-    # then iterate to the next two, and so on
-    for index in range(len(loss_ratio_pe_curve.codomain)):
+    # compute mean PE values 
+    # This function needs to take the first two values of the LR and compute 
+    # the mean, then iterate to the next two, and so on
+    loss_ratio_pe_mid_curve = []
+    
+    for index, mean in enumerate(loss_ratio_pe_curve.codomain):
         loss_ratio_pe_mid_curve = np.mean(loss_ratio_po_curve.codomain[0], 
             loss_ratio_po_curve.codomain[1] +1) / 2
             
+  
           
 def compute_po(loss_ratio_po_curve):
     # compute the PO values
@@ -283,7 +285,8 @@ def compute_po(loss_ratio_po_curve):
         
 def compute_mean_loss(self):
     # compute sum of every PO and LR
-    mean_loss = (loss_ratio_po_curve[0]+[-1]) * (loss_ratio_pe_curve.domain[1][-1])
+    mean_loss = ((loss_ratio_po_curve[0]+[-1]) * 
+        (loss_ratio_pe_curve.domain[1][-1]))
     
     
     
