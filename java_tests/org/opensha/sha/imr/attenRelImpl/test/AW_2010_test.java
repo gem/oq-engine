@@ -26,7 +26,7 @@
  * 				AttenuationRelationship.java
  * 						(in org.opensha.sha.imr)
  * 
- * @author 		Aurea Moemke
+ * @author 		Aurea Moemke, Damiano Monelli
  * @created 	22 September 2010
  * @version 	1.0
  * 
@@ -85,7 +85,6 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 
 	@Test
 	public void pointRuptureEquation() {
-
 		/**
 		 * This test validate the getMean(m,r) and getStdDev(r) methods for
 		 * point ruptures against a verification table obtained using an Excel
@@ -94,11 +93,10 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 
 		boolean isFiniteRupture = false;
 
-		// GET CORRECT DIR PATH
+		// Get Current Directory Path
 		File dir1 = new File(".");
 		String dirPath = null;
 		try {
-			System.out.println("Current dir : " + dir1.getCanonicalPath());
 			dirPath = dir1.getCanonicalPath();
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -107,17 +105,14 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 		// TEST POINT RUPTURES
 		File inFile = new File(dirPath + inputFilePath + inputFileNamePoint);
 		int numlines = countFileLines(inFile);
-		System.out.println("Num of lines in Point ruptures file: " + numlines);
 		doTest(isFiniteRupture, tolerance, numlines, inFile);
-
-		System.out.println("End AW_2010 Attenuation Relationship test...");
 	}
 
 	@Test
 	public void finiteRuptureEquation() {
 
 		/**
-		 * This test validate the getMean(m,r) and getStdDev(r) methods for
+		 * This test validates the getMean(m,r) and getStdDev(r) methods for
 		 * finite ruptures against a verification table obtained using an Excel
 		 * spreadsheet
 		 */
@@ -128,8 +123,7 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 		File dir1 = new File(".");
 		String dirPath = null;
 		try {
-			System.out.println("Current dir : " + dir1.getCanonicalPath());
-			dirPath = dir1.getCanonicalPath();
+			dirPath = dir1.getCanonicalPath(); 
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -137,15 +131,11 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 		// TEST FINITE RUPTURES
 		File inFile = new File(dirPath + inputFilePath + inputFileNameFinite);
 		int numlines = countFileLines(inFile);
-		System.out.println("Num of lines in Finite ruptures file: " + numlines);
 		doTest(isFiniteRupture, tolerance, numlines, inFile);
-
-		System.out.println("End AW_2010 Attenuation Relationship test...");
 	}
 
 	@Test
 	public void pointEqkRupture() {
-
 		/**
 		 * This test compares the results of the getMean() and getStdDev()
 		 * methods when setting a Site and a point EqkRupture object with the
@@ -199,7 +189,6 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 		assertEquals(meanMMI_pointRupture, meanMMI, tolerance);
 		// compare standard deviation values
 		assertEquals(std_pointRupture, std, tolerance);
-
 	}
 
 	@Test
@@ -298,7 +287,7 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 		// get earthquake rupture object
 		EqkRupture rup = getPointEqkRupture(mag, hypo, aveRake);
 
-		aw_2010_AttenRel.setEqkRupture(rup);
+		aw_2010_AttenRel.setEqkRupture(rup);		
 	}
 
 	@Test(expected = org.opensha.commons.exceptions.WarningException.class)
@@ -370,7 +359,6 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 				while (ln.readLine() != null) {
 					count++;
 				}
-				System.out.println("Total line no: " + count);
 				ln.close();
 			} else {
 				System.out.println("File does not exist!");
@@ -392,27 +380,19 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 		}
 
 		// Load data per line in ASCII Text format using Scanner to get each
-		// line
-		// NOTE that first line in file contains a description in this case
+		// line. NOTE: first line in file contains a description in this case
 		String lineContent = scanner.nextLine();
-
 		int i = 0;
-
 		StringTokenizer st;
-
 		while (scanner.hasNextLine()) {
 			lineContent = scanner.nextLine();
-			System.out.println("line read " + lineContent);
 			st = new StringTokenizer(lineContent, ",");
 			rRup[i] = Double.parseDouble(st.nextToken());
 			for (int j = 0; j < numMags + 1; j++) {
 				if (j < numMags) {
 					vals[i][j] = Double.parseDouble(st.nextToken());
-					System.out.println("vals[" + i + "]" + "[" + (j) + "]="
-							+ vals[i][j]);
 				} else {
 					sigma[i] = Double.parseDouble(st.nextToken());
-					System.out.println("sigma[" + i + "]=" + sigma[i]);
 				}
 			}
 			i++;
@@ -426,7 +406,6 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 			int numlines, File inFile) {
 		int[] mw = { 5, 6, 7, 8 };
 		int numMags = 0;
-
 		if (isFiniteRupture)
 			numMags = 4; // for finite rupture, magnitudes 5, 6, 7, 8
 		else
@@ -463,10 +442,6 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 					computedstddev = aw_2010_AttenRel
 							.getStdDevForPointRup(r[i]);
 				}
-				System.out.println("mag = " + mw[j] + " rupture = " + r[i]
-						+ " mean: expected = " + expectedmean + ", computed= "
-						+ computedmean + "; stddev: expected = "
-						+ expectedstddev + ", computed = " + computedstddev);
 				assertEquals(expectedmean, computedmean, tolerance);
 				assertEquals(expectedstddev, computedstddev, tolerance);
 			}

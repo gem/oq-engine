@@ -415,12 +415,12 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	public double getMeanForFiniteRup(double Mw, double Rrup) {
 
 		double mmi = 0;
-		mmi = this.c0FiniteRup
-				+ this.c1FiniteRup
+		mmi = c0FiniteRup
+				+ c1FiniteRup
 				* Mw
-				+ this.c2FiniteRup
+				+ c2FiniteRup
 				* Math.log(Math.sqrt((Math.pow(Rrup, 2))
-						+ Math.pow((1 + (this.c3FiniteRup * Math.exp(Mw - 5))),
+						+ Math.pow((1 + (c3FiniteRup * Math.exp(Mw - 5))),
 								2)));
 
 		return mmi;
@@ -436,14 +436,14 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
 		double mmi = 0;
 		double rm = 0;
-		rm = this.m1PointRup + this.m2PointRup * Math.exp(Mw - 5);
+		rm = m1PointRup + m2PointRup * Math.exp(Mw - 5);
 		if (Rhypo <= 20) {
-			mmi = this.c0PointRup + this.c1PointRup * Mw + this.c2PointRup
+			mmi = c0PointRup + c1PointRup * Mw + c2PointRup
 					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)));
 		} else {
-			mmi = this.c0PointRup + this.c1PointRup * Mw + this.c2PointRup
+			mmi = c0PointRup + c1PointRup * Mw + c2PointRup
 					* Math.log(Math.sqrt(Math.pow(Rhypo, 2) + Math.pow(rm, 2)))
-					+ this.c4PointRup * Math.log(Rhypo / 20);
+					+ c4PointRup * Math.log(Rhypo / 20);
 		}
 
 		return mmi;
@@ -456,10 +456,10 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	 */
 	public double getStdDevForFiniteRup(double Rrup) {
 
-		double sigma1 = this.s1FiniteRup
-				+ (this.s2FiniteRup / (1 + Math.pow((Rrup / this.s3FiniteRup), 2)));
+		double sigma1 = s1FiniteRup
+				+ (s2FiniteRup / (1 + Math.pow((Rrup / s3FiniteRup), 2)));
 		double sigma = Math.sqrt(Math.pow(sigma1, 2)
-				+ Math.pow(this.sigma2FiniteRup, 2));
+				+ Math.pow(sigma2FiniteRup, 2));
 		return sigma;
 
 	}
@@ -471,10 +471,10 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 	 */
 	public double getStdDevForPointRup(double Rhypo) {
 
-		double sigma1 = this.s1PointRup
-				+ (this.s2PointRup / (1 + Math.pow((Rhypo / this.s3PointRup), 2)));
+		double sigma1 = s1PointRup
+				+ (s2PointRup / (1 + Math.pow((Rhypo / s3PointRup), 2)));
 		double sigma = Math.sqrt(Math.pow(sigma1, 2)
-				+ Math.pow(this.sigma2PointRup, 2));
+				+ Math.pow(sigma2PointRup, 2));
 		return sigma;
 
 	}
