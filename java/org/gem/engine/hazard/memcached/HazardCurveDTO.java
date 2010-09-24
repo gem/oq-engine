@@ -31,8 +31,8 @@ public class HazardCurveDTO
     private Double maxProbExc;
 
     // values fixed for now
-    private Double vs30 = 50.0;
-    private String idModel = "FIXED";
+    private final Double vs30 = 50.0;
+    private final String idModel = "FIXED";
 
     /**
      * Main constructor.
