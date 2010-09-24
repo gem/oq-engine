@@ -70,7 +70,7 @@ class LossOutputTestCase(unittest.TestCase):
         xml_writer.serialize(loss_curves)
 
     # http://www.devcomments.com/error-restricting-complexType-list-parsing-official-GML-schema-at108628.htm
-    @test.skipit
+    # @test.skipit
     def test_xml_is_valid(self):
         # save the xml, and run schema validation on it
         xml_doc = etree.parse(self.path)
@@ -78,7 +78,7 @@ class LossOutputTestCase(unittest.TestCase):
 
         # Test that the doc matches the schema
         xmlschema = etree.XMLSchema(etree.parse(self.schema_path))
-        self.assertTrue(xmlschema.validate(xml_doc))
+        xmlschema.assertValid(xml_doc)
     
     def test_loss_xml_is_correct(self):
         xml_doc = etree.parse(self.path)
@@ -97,23 +97,23 @@ class LossOutputTestCase(unittest.TestCase):
             self.assertEqual(val, xml_first_curve_value[idx])
 
 
-        # TODO(jmc): Test that the lat and lon are correct for each curve
-        # Optionally, compare it to another XML file.
+    # TODO(jmc): Test that the lat and lon are correct for each curve
+    # Optionally, compare it to another XML file.
 
-        def test_ratio_xml_is_correct(self):
-            xml_doc = etree.parse(self.ratio_path)
-            loaded_xml = xml_doc.getroot()
+    def test_ratio_xml_is_correct(self):
+        xml_doc = etree.parse(self.ratio_path)
+        loaded_xml = xml_doc.getroot()
 
-            xml_curve_pe = map(float, loaded_xml.find(".//"
-                    + xml.SHAML + "LossRatioCurvePE").text.strip().split())
-            xml_first_curve_value = loaded_xml.find(
-                    xml.SHAML + "LossRatioCurveList//" 
-                    + xml.SHAML + "LossRatioCurve//"
-                    + xml.SHAML + "Values").text.strip().split()
+        xml_curve_pe = map(float, loaded_xml.find(".//"
+                + xml.SHAML + "LossRatioCurvePE").text.strip().split())
+        xml_first_curve_value = loaded_xml.find(
+                xml.SHAML + "LossRatioCurveList//" 
+                + xml.SHAML + "LossRatioCurve//"
+                + xml.SHAML + "Values").text.strip().split()
 
-            for idx, val in enumerate(TEST_CURVE.codomain):
-                self.assertAlmostEqual(val, xml_curve_pe[idx], 6)
-            for idx, val in enumerate(TEST_CURVE.domain):
-                self.assertEqual(val, xml_first_curve_value[idx])
+        for idx, val in enumerate(TEST_CURVE.codomain):
+            self.assertAlmostEqual(val, xml_curve_pe[idx], 6)
+        for idx, val in enumerate(TEST_CURVE.domain):
+            self.assertEqual(val, xml_first_curve_value[idx])
 
 
