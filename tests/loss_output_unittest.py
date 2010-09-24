@@ -85,7 +85,8 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.SHAML + "LossCurvePE").text.strip().split())
+                + xml.SHAML + "LossCurvePE//"
+                + xml.SHAML + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
                 xml.SHAML + "LossCurveList//" 
                 + xml.SHAML + "LossCurve//"
@@ -105,7 +106,8 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.SHAML + "LossRatioCurvePE").text.strip().split())
+                + xml.SHAML + "LossRatioCurvePE//"
+                + xml.SHAML + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
                 xml.SHAML + "LossRatioCurveList//" 
                 + xml.SHAML + "LossRatioCurve//"

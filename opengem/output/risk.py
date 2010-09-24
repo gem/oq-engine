@@ -41,8 +41,7 @@ class RiskXMLWriter(writer.FileWriter):
     def _append_curve_node(self, point, curve_object, parent_node):
         node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP)    
         pos = etree.SubElement(node, GML + "pos", nsmap=NSMAP)
-        pos.attrib[GML + 'lat'] = str(point.y)
-        pos.attrib[GML + 'lon'] = str(point.x)
+        pos.text = "%s %s" % (str(point.y), str(point.x))
         
         pe_values = _curve_pe_as_gmldoublelist(curve_object)
         
@@ -50,12 +49,13 @@ class RiskXMLWriter(writer.FileWriter):
         # for nodes that have no child nodes.
         subnode_pe = self.root_node.find(self.abcissa_tag)
         if subnode_pe is not None:
-            if subnode_pe.text != pe_values:
+            if subnode_pe.find(SHAML + "Values").text != pe_values:
                 raise Exception("Curves must share the same Abcissa!")
         else:
             subnode_pe = etree.SubElement(self.root_node, 
                             self.abcissa_tag, nsmap=NSMAP)
-            subnode_pe.text = pe_values
+            etree.SubElement(subnode_pe, 
+                    SHAML + "Values", nsmap=NSMAP).text = pe_values
         
         RISK_LOG.debug("Writing xml, object is %s", curve_object)
         subnode_loss = etree.SubElement(node, SHAML + "Values", nsmap=NSMAP)
