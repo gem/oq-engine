@@ -2,7 +2,7 @@
  * AW_2010_test
  * 
  * Description: This program tests that correct values are calculated by
- * 				the AW_2010_AttenRel Class.
+ *				the AW_2010_AttenRel Class.
  * 				Run as JUnit test.
  * 
  * Input:		Excel spreadsheet prepared by D. Monelli
