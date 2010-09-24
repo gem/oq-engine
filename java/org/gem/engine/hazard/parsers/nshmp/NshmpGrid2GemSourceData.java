@@ -670,6 +670,7 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 		}
 		
 		private String relativePath(String inputFile, String relatedFile) {
+		    System.out.println("Processing file: "+relatedFile);
 		    return inputFile.substring(0, inputFile.lastIndexOf("/")+1)+relatedFile;
 	    }
 		
