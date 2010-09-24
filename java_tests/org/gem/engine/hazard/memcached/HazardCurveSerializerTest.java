@@ -17,6 +17,7 @@ import org.junit.Test;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
+import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
 
 import com.google.gson.Gson;
 
@@ -28,10 +29,11 @@ public class HazardCurveSerializerTest
 
     private static final String IMT = "IMT";
     private static final Double TIMESPAN = 50.0;
+    private static final String END_BRANCH_LABEL = "EBL";
 
     private MemcachedClient client;
     private HazardCurveSerializer serializer;
-    private GEMHazardCurveRepository repository;
+    private GEMHazardCurveRepositoryList repository;
 
     @Before
     public void setUp() throws Exception
@@ -41,10 +43,7 @@ public class HazardCurveSerializerTest
         client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         client.flush(); // clear the server side cache
 
-        repository = new GEMHazardCurveRepository();
-        repository.setGmLevels(groundMotionLevels());
-        repository.setIntensityMeasureType(IMT);
-        repository.setTimeSpan(TIMESPAN);
+        repository = new GEMHazardCurveRepositoryList();
     }
 
     @Test
@@ -59,7 +58,7 @@ public class HazardCurveSerializerTest
     public void noSerializationWhenNoCurvesDefined()
     {
         // empty repository
-        repository = new GEMHazardCurveRepository();
+        repository = new GEMHazardCurveRepositoryList();
 
         Cache cache = mock(Cache.class);
         serializer = new HazardCurveSerializer(cache);
@@ -70,7 +69,7 @@ public class HazardCurveSerializerTest
     }
 
     @Test
-    public void serializesASingleCurve() throws Exception
+    public void serializesAModelWithASingleCurve() throws Exception
     {
         Location[] locations = { new Location(2.0, 1.0) };
         setSampleDataFor(locations);
@@ -81,7 +80,7 @@ public class HazardCurveSerializerTest
     }
 
     @Test
-    public void serializesMultipleCurves() throws Exception
+    public void serializesAModelWithMultipleCurves() throws Exception
     {
         Location[] locations = { new Location(2.0, 1.0), new Location(4.0, 4.0) };
         setSampleDataFor(locations);
@@ -93,9 +92,18 @@ public class HazardCurveSerializerTest
     }
 
     @Test
-    public void serializesACompleteHazardModel() throws Exception
+    public void serializesMultipleModels() throws Exception
     {
+        Location[] locations1 = { new Location(2.0, 1.0) };
+        setSampleDataFor(locations1);
 
+        Location[] locations2 = { new Location(4.0, 4.0) };
+        setSampleDataFor(locations2);
+
+        serializeRepository();
+
+        assertThat(cachedCurveAtKey("1.0+2.0"), is(sampleCurveAt(1.0, 2.0)));
+        assertThat(cachedCurveAtKey("4.0+4.0"), is(sampleCurveAt(4.0, 4.0)));
     }
 
     private void serializeRepository()
@@ -112,8 +120,14 @@ public class HazardCurveSerializerTest
             sites.add(new Site(location));
         }
 
-        repository.setGridNode(sites);
-        repository.setProbExList(probabilitiesOfExc(locations.length));
+        GEMHazardCurveRepository set = new GEMHazardCurveRepository();
+        set.setProbExList(probabilitiesOfExc(locations.length));
+        set.setGmLevels(groundMotionLevels());
+        set.setIntensityMeasureType(IMT);
+        set.setTimeSpan(TIMESPAN);
+        set.setGridNode(sites);
+
+        repository.add(set, END_BRANCH_LABEL);
     }
 
     // Y sample values
@@ -146,7 +160,8 @@ public class HazardCurveSerializerTest
     private HazardCurveDTO sampleCurveAt(Double lon, Double lat)
     {
         return new HazardCurveDTO(lon, lat, groundMotionLevels(), Arrays
-                .asList(probabilitiesOfExc(1).get(0)), IMT, TIMESPAN);
+                .asList(probabilitiesOfExc(1).get(0)), IMT, TIMESPAN,
+                END_BRANCH_LABEL);
     }
 
     private HazardCurveDTO cachedCurveAtKey(String key)

@@ -4,6 +4,7 @@ import java.util.Arrays;
 
 import org.opensha.commons.data.Site;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
+import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
 
 /**
  * A simple JSON hazard curve serializer.
@@ -46,21 +47,27 @@ public class HazardCurveSerializer
      * 
      * @param repository the repository used as source
      */
-    public void serialize(GEMHazardCurveRepository repository)
+    public void serialize(GEMHazardCurveRepositoryList repository)
     {
-        for (int i = 0; i < repository.getGridNode().size(); i++)
+        for (int i = 0; i < repository.getHcRepList().size(); i++)
         {
-            Site site = repository.getGridNode().get(i);
+            String endBranchLabel = repository.getEndBranchLabels().get(i);
+            GEMHazardCurveRepository set = repository.getHcRepList().get(i);
 
-            // extracting needed values from the repository
-            HazardCurveDTO hazardCurve = new HazardCurveDTO(site.getLocation()
-                    .getLongitude(), site.getLocation().getLatitude(),
-                    repository.getGmLevels(), Arrays.asList(repository
-                            .getProbExceedanceList(i)), repository
-                            .getIntensityMeasureType(), repository
-                            .getTimeSpan());
+            for (int k = 0; k < set.getGridNode().size(); k++)
+            {
+                Site site = set.getGridNode().get(k);
 
-            serialize(hazardCurve);
+                // extracting needed values from the repository
+                HazardCurveDTO hazardCurve = new HazardCurveDTO(site
+                        .getLocation().getLongitude(), site.getLocation()
+                        .getLatitude(), set.getGmLevels(), Arrays.asList(set
+                        .getProbExceedanceList(k)), set
+                        .getIntensityMeasureType(), set.getTimeSpan(),
+                        endBranchLabel);
+
+                serialize(hazardCurve);
+            }
         }
     }
 

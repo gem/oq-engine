@@ -23,7 +23,7 @@ public class HazardCurveDTOTest
         probilitiesOfExc.add(0.4);
 
         hazardCurve = new HazardCurveDTO(null, null, null, probilitiesOfExc,
-                null, null);
+                null, null, null);
     }
 
     @Test

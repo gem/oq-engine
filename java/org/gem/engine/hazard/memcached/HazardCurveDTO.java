@@ -24,6 +24,7 @@ public class HazardCurveDTO
 
     private String IMT;
     private Double timeSpan;
+    private String endBranchLabel;
 
     // sounds like I need this for the Gson library
     // check better the doc (GsonBuilder)
@@ -47,10 +48,11 @@ public class HazardCurveDTO
      * of this curve (Y values)
      * @param IMT intensity measure type of this curve
      * @param timeSpan time span duration of this curve
+     * @param endBranchLabel // TODO document this!
      */
     public HazardCurveDTO(Double longitude, Double latitude,
             List<Double> groundMotionLevels, List<Double> probabilitiesOfExc,
-            String IMT, Double timeSpan)
+            String IMT, Double timeSpan, String endBranchLabel)
     {
         this.latitude = latitude;
         this.longitude = longitude;
@@ -59,6 +61,7 @@ public class HazardCurveDTO
         this.timeSpan = timeSpan;
         this.groundMotionLevels = groundMotionLevels;
         this.probabilitiesOfExc = probabilitiesOfExc;
+        this.endBranchLabel = endBranchLabel;
 
         // can do this because values are already sorted
         minProbExc = probabilitiesOfExc.get(0);
@@ -119,15 +122,16 @@ public class HazardCurveDTO
     private boolean sameSite(HazardCurveDTO other)
     {
         return other.longitude.equals(longitude)
-                && other.latitude.equals(latitude) && other.IMT.equals(IMT)
-                && other.timeSpan.equals(timeSpan)
-                && other.idModel.equals(idModel) && other.vs30.equals(vs30);
+                && other.latitude.equals(latitude);
     }
 
     private boolean sameValues(HazardCurveDTO other)
     {
         return other.groundMotionLevels.equals(groundMotionLevels)
-                && other.probabilitiesOfExc.equals(probabilitiesOfExc);
+                && other.probabilitiesOfExc.equals(probabilitiesOfExc)
+                && other.IMT.equals(IMT) && other.timeSpan.equals(timeSpan)
+                && other.idModel.equals(idModel) && other.vs30.equals(vs30)
+                && other.endBranchLabel.equals(endBranchLabel);
     }
 
     /**
