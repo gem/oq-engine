@@ -25,6 +25,11 @@ public class HazardCurveDTO
     private String IMT;
     private Double timeSpan;
 
+    // sounds like I need this for the Gson library
+    // check better the doc (GsonBuilder)
+    private Double minProbExc;
+    private Double maxProbExc;
+
     /**
      * Main constructor.
      * <p>
@@ -50,6 +55,10 @@ public class HazardCurveDTO
         this.timeSpan = timeSpan;
         this.groundMotionLevels = groundMotionLevels;
         this.probabilitiesOfExc = probabilitiesOfExc;
+
+        // can do this because values are already sorted
+        minProbExc = probabilitiesOfExc.get(0);
+        maxProbExc = probabilitiesOfExc.get(probabilitiesOfExc.size() - 1);
     }
 
     /**
@@ -114,6 +123,26 @@ public class HazardCurveDTO
     {
         return other.groundMotionLevels.equals(groundMotionLevels)
                 && other.probabilitiesOfExc.equals(probabilitiesOfExc);
+    }
+
+    /**
+     * Returns the lowest probability of exceedance defined by this curve.
+     * 
+     * @return the lowest probability of exceedance defined by this curve
+     */
+    public Double getMinProbOfExc()
+    {
+        return minProbExc;
+    }
+
+    /**
+     * Returns the greatest probability of exceedance defined by this curve.
+     * 
+     * @return the greatest probability of exceedance defined by this curve
+     */
+    public Double getMaxProbOfExc()
+    {
+        return maxProbExc;
     }
 
 }
