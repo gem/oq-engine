@@ -30,6 +30,10 @@ public class HazardCurveDTO
     private Double minProbExc;
     private Double maxProbExc;
 
+    // values fixed for now
+    private Double vs30 = 50.0;
+    private String idModel = "FIXED";
+
     /**
      * Main constructor.
      * <p>
@@ -116,7 +120,8 @@ public class HazardCurveDTO
     {
         return other.longitude.equals(longitude)
                 && other.latitude.equals(latitude) && other.IMT.equals(IMT)
-                && other.timeSpan.equals(timeSpan);
+                && other.timeSpan.equals(timeSpan)
+                && other.idModel.equals(idModel) && other.vs30.equals(vs30);
     }
 
     private boolean sameValues(HazardCurveDTO other)
