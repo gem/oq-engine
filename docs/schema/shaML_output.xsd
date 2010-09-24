@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://shaml.org/xmlns/shaml/0.1"
-	xmlns:shaml="http://shaml.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml" elementFormDefault="qualified">
+	targetNamespace="http://opengem.org/xmlns/shaml/0.1"
+	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
 
 	<!-- import -->
-	<xs:import namespace="http://www.opengis.net/gml"
-		schemaLocation="http://schemas.opengis.net/gml/3.1.1/base/gml.xsd"/>
+	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+		<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="shaML_common.xsd"/>
 	<!-- -->
 	<xs:complexType name="HazardCurveListType">
@@ -15,7 +16,7 @@
 			<xs:element name="List">
 				<xs:complexType>
 					<xs:sequence maxOccurs="unbounded">
-						<xs:element name="Curve" type="shaml:HazardCurveType" maxOccurs="1"/>
+						<xs:element name="::any::" type="shaml:HazardCurveType" maxOccurs="1"/>
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
@@ -140,10 +141,13 @@
 	<xs:element name="LossRatioCurveList" type="shaml:CurveListType"/>
 	<xs:element name="RiskResult">
 		<xs:complexType>
-			<xs:choice>
-				<xs:element ref="shaml:LossCurveList"/>
-				<xs:element ref="shaml:LossRatioCurveList"/>
-			</xs:choice>
+		    <xs:sequence minOccurs="1">
+    		    <xs:element name="Config"/>
+    			<xs:choice>
+    				<xs:element ref="shaml:LossCurveList"/>
+    				<xs:element ref="shaml:LossRatioCurveList"/>
+    			</xs:choice>
+    		</xs:sequence>
 		</xs:complexType>
 	</xs:element>
 </xs:schema>
