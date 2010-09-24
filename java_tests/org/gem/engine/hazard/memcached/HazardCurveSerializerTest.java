@@ -86,7 +86,7 @@ public class HazardCurveSerializerTest
     public void serializesASingleCurve() throws Exception
     {
         Location[] locations = { new Location(2.0, 1.0) };
-        setDataFor(locations);
+        setSampleDataFor(locations);
 
         serializeRepository();
 
@@ -97,7 +97,7 @@ public class HazardCurveSerializerTest
     public void serializesMultipleCurves() throws Exception
     {
         Location[] locations = { new Location(2.0, 1.0), new Location(4.0, 4.0) };
-        setDataFor(locations);
+        setSampleDataFor(locations);
 
         serializeRepository();
 
@@ -116,7 +116,7 @@ public class HazardCurveSerializerTest
         serializer.serialize(repository);
     }
 
-    private void setDataFor(Location[] locations)
+    private void setSampleDataFor(Location[] locations)
     {
         ArrayList<Site> sites = new ArrayList<Site>();
 
