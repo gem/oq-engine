@@ -16,7 +16,7 @@
 			<xs:element name="List">
 				<xs:complexType>
 					<xs:sequence maxOccurs="unbounded">
-						<xs:element name="::any::" type="shaml:HazardCurveType" maxOccurs="1"/>
+						<xs:element name="Curve" type="shaml:HazardCurveType" maxOccurs="1"/>
 					</xs:sequence>
 				</xs:complexType>
 			</xs:element>
@@ -131,10 +131,12 @@
 	<xs:element name="LossCurvePE" type="shaml:CurveType"/>
 	<xs:element name="LossRatioCurve" type="shaml:CurveType"/>
 	<xs:complexType name="CurveListType">
-		<xs:sequence minOccurs="0">
-				<xs:element ref="shaml:Curve"/>
-				<xs:element ref="shaml:LossCurve"/>
-				<xs:element ref="shaml:LossRatioCurve"/>
+		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    			<xs:choice>
+    				<xs:element ref="shaml:Curve"/>
+    				<xs:element ref="shaml:LossCurve"/>
+    				<xs:element ref="shaml:LossRatioCurve"/>
+    			</xs:choice>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:element name="LossCurveList" type="shaml:CurveListType"/>
@@ -146,6 +148,10 @@
     			<xs:choice>
     				<xs:element ref="shaml:LossCurveList"/>
     				<xs:element ref="shaml:LossRatioCurveList"/>
+    			</xs:choice>
+    			<xs:choice>
+    	            <xs:element name="LossCurvePE" type="shaml:CurveType"/>
+    	            <xs:element name="LossRatioCurvePE" type="shaml:CurveType"/>
     			</xs:choice>
     		</xs:sequence>
 		</xs:complexType>
