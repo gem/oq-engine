@@ -6,11 +6,9 @@ import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
-import java.lang.reflect.Type;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 import net.spy.memcached.MemcachedClient;
 
@@ -21,7 +19,6 @@ import org.opensha.commons.geo.Location;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 
 public class HazardCurveSerializerTest
 {
@@ -54,18 +51,8 @@ public class HazardCurveSerializerTest
     // learning test for http://sites.google.com/site/gson
     public void canSerializeAndDeserializeData()
     {
-        List<Double> data = new ArrayList<Double>();
-        data.add(1.0);
-        data.add(2.0);
-        data.add(3.0);
-
-        Type listType = new TypeToken<List<Double>>()
-        {
-
-        }.getType();
-
-        assertEquals(data, new Gson().fromJson(new Gson().toJson(data),
-                listType));
+        assertEquals("TEST", new Gson().fromJson(new Gson().toJson("TEST"),
+                String.class));
     }
 
     @Test
