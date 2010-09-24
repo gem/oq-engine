@@ -143,10 +143,10 @@ implements WarningParameterAPI
 			horzDist = LocationUtils.horzDistance(loc1, hypo);
 			vertDist = LocationUtils.vertDistance(loc1, hypo);
 			totalDist = horzDist * horzDist + vertDist * vertDist;
-			this.setValueIgnoreWarning( new Double( Math.pow ( totalDist , 0.5 ) ));
+			this.setValue( new Double( Math.pow ( totalDist , 0.5 ) ));
 
 		}
-		else this.value = null;
+		else this.setValue(null);
 
 
 	}
