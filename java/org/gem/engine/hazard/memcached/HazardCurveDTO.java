@@ -22,6 +22,9 @@ public class HazardCurveDTO
     private List<Double> groundMotionLevels;
     private List<Double> probabilitiesOfExc;
 
+    private String IMT;
+    private Double timeSpan;
+
     /**
      * Main constructor.
      * <p>
@@ -33,13 +36,18 @@ public class HazardCurveDTO
      * @param groundMotionLevels ground motion values of this curve (X values)
      * @param probabilitiesOfExc probabilities of exceedance
      * of this curve (Y values)
+     * @param IMT intensity measure type of this curve
+     * @param timeSpan time span duration of this curve
      */
     public HazardCurveDTO(Double longitude, Double latitude,
-            List<Double> groundMotionLevels, List<Double> probabilitiesOfExc)
+            List<Double> groundMotionLevels, List<Double> probabilitiesOfExc,
+            String IMT, Double timeSpan)
     {
         this.latitude = latitude;
         this.longitude = longitude;
 
+        this.IMT = IMT;
+        this.timeSpan = timeSpan;
         this.groundMotionLevels = groundMotionLevels;
         this.probabilitiesOfExc = probabilitiesOfExc;
     }
@@ -98,7 +106,8 @@ public class HazardCurveDTO
     private boolean sameSite(HazardCurveDTO other)
     {
         return other.longitude.equals(longitude)
-                && other.latitude.equals(latitude);
+                && other.latitude.equals(latitude) && other.IMT.equals(IMT)
+                && other.timeSpan.equals(timeSpan);
     }
 
     private boolean sameValues(HazardCurveDTO other)

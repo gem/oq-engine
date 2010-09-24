@@ -29,6 +29,9 @@ public class HazardCurveSerializerTest
     private static final int PORT = 11211;
     private static final String LOCALHOST = "localhost";
 
+    private static final String IMT = "IMT";
+    private static final Double TIMESPAN = 50.0;
+
     private MemcachedClient client;
     private HazardCurveSerializer serializer;
     private GEMHazardCurveRepository repository;
@@ -36,13 +39,15 @@ public class HazardCurveSerializerTest
     @Before
     public void setUp() throws Exception
     {
+        serializer = new HazardCurveSerializer(new Cache(LOCALHOST, PORT));
+
         client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         client.flush(); // clear the server side cache
 
         repository = new GEMHazardCurveRepository();
         repository.setGmLevels(groundMotionLevels());
-
-        serializer = new HazardCurveSerializer(new Cache(LOCALHOST, PORT));
+        repository.setIntensityMeasureType(IMT);
+        repository.setTimeSpan(TIMESPAN);
     }
 
     @Test
@@ -100,6 +105,12 @@ public class HazardCurveSerializerTest
         assertThat(cachedCurveAtKey("4.0+4.0"), is(sampleCurveAt(4.0, 4.0)));
     }
 
+    @Test
+    public void serializesACompleteHazardModel() throws Exception
+    {
+
+    }
+
     private void serializeRepository()
     {
         serializer.serialize(repository);
@@ -148,7 +159,7 @@ public class HazardCurveSerializerTest
     private HazardCurveDTO sampleCurveAt(Double lon, Double lat)
     {
         return new HazardCurveDTO(lon, lat, groundMotionLevels(), Arrays
-                .asList(probabilitiesOfExc(1).get(0))); // weird API...
+                .asList(probabilitiesOfExc(1).get(0)), IMT, TIMESPAN);
     }
 
     private HazardCurveDTO cachedCurveAtKey(String key)

@@ -56,7 +56,9 @@ public class HazardCurveSerializer
             HazardCurveDTO hazardCurve = new HazardCurveDTO(site.getLocation()
                     .getLongitude(), site.getLocation().getLatitude(),
                     repository.getGmLevels(), Arrays.asList(repository
-                    .getProbExceedanceList(i)));
+                            .getProbExceedanceList(i)), repository
+                            .getIntensityMeasureType(), repository
+                            .getTimeSpan());
 
             serialize(hazardCurve);
         }
