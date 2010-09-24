@@ -269,11 +269,14 @@ def compute_mean_pe(loss_ratio_pe_curve):
     # the mean, then iterate to the next two, and so on
     loss_ratio_pe_mid_curve = []
     
-    for index, mean in enumerate(loss_ratio_pe_curve.codomain):
-        loss_ratio_pe_mid_curve = np.mean(loss_ratio_po_curve.codomain[0], 
-            loss_ratio_po_curve.codomain[1] +1) / 2
+    #for index, mean in enumerate(loss_ratio_pe_curve.codomain):
+     #   loss_ratio_pe_mid_curve[0] = np.mean(loss_ratio_po_curve.codomain[0], 
+     #       loss_ratio_po_curve.codomain[1] +1) / 2
             
-  
+    for i in xrange(len(loss_ratio_po_curve.codomain)[-1]):
+        current_value = loss_ratio_po_curve.codomain[i]
+        next_value = loss_ratio_po_curve.codomain[i + 1]
+        # do stuff
           
 def compute_po(loss_ratio_po_curve):
     # compute the PO values
