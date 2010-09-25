@@ -71,8 +71,7 @@ public class HazardCurveSerializerTest
     @Test
     public void serializesAModelWithASingleCurve() throws Exception
     {
-        Location[] locations = { new Location(2.0, 1.0) };
-        setSampleDataFor(locations);
+        buildSampleCurvesFor(new Location(2.0, 1.0));
 
         serializeRepository();
 
@@ -82,8 +81,7 @@ public class HazardCurveSerializerTest
     @Test
     public void serializesAModelWithMultipleCurves() throws Exception
     {
-        Location[] locations = { new Location(2.0, 1.0), new Location(4.0, 4.0) };
-        setSampleDataFor(locations);
+        buildSampleCurvesFor(new Location(2.0, 1.0), new Location(4.0, 4.0));
 
         serializeRepository();
 
@@ -94,11 +92,8 @@ public class HazardCurveSerializerTest
     @Test
     public void serializesMultipleModels() throws Exception
     {
-        Location[] locations1 = { new Location(2.0, 1.0) };
-        setSampleDataFor(locations1);
-
-        Location[] locations2 = { new Location(4.0, 4.0) };
-        setSampleDataFor(locations2);
+        buildSampleCurvesFor(new Location(2.0, 1.0));
+        buildSampleCurvesFor(new Location(4.0, 4.0));
 
         serializeRepository();
 
@@ -111,7 +106,7 @@ public class HazardCurveSerializerTest
         serializer.serialize(repository);
     }
 
-    private void setSampleDataFor(Location[] locations)
+    private void buildSampleCurvesFor(Location... locations)
     {
         ArrayList<Site> sites = new ArrayList<Site>();
 
@@ -130,7 +125,7 @@ public class HazardCurveSerializerTest
         repository.add(set, END_BRANCH_LABEL);
     }
 
-    // Y sample values
+    // fixed Y sample values
     private ArrayList<Double[]> probabilitiesOfExc(Integer numberOfSites)
     {
         Double[] values = { 1.0, 2.0, 3.0, 4.0 };
@@ -144,7 +139,7 @@ public class HazardCurveSerializerTest
         return probabilitiesOfExc;
     }
 
-    // X sample values
+    // fixed X sample values
     private ArrayList<Double> groundMotionLevels()
     {
         ArrayList<Double> groundMotionLevels = new ArrayList<Double>();
