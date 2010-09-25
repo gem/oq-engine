@@ -6,6 +6,8 @@ import org.opensha.commons.data.Site;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
 
+import com.google.gson.Gson;
+
 /**
  * A simple JSON hazard curve serializer.
  * 
@@ -49,6 +51,8 @@ public class HazardCurveSerializer
      */
     public void serialize(GEMHazardCurveRepositoryList repository)
     {
+        System.out.println(new Gson().toJson(repository));
+        
         for (int i = 0; i < repository.getHcRepList().size(); i++)
         {
             String endBranchLabel = repository.getEndBranchLabels().get(i);
@@ -66,6 +70,8 @@ public class HazardCurveSerializer
                         .getIntensityMeasureType(), set.getTimeSpan(),
                         endBranchLabel);
 
+                System.out.println(hazardCurve.toJSON());
+                
                 serialize(hazardCurve);
             }
         }
