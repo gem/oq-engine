@@ -421,15 +421,17 @@ public class GEMHazardCurveRepositoryList
      * 
      * @param cache the cache used to store the serialized
      * version of this model
+     * @return the key used to store this model in cache
      */
-    public void serialize(Cache cache)
+    public String serialize(Cache cache)
     {
         // TODO Change with the model ID later on!
         // the hashCode method defined by class Object
         // does return distinct integers for distinct objects
-        String hashcode = new Integer(this.hashCode()).toString();
-
-        cache.set(hashcode, new Gson().toJson(this));
+        String key = new Integer(this.hashCode()).toString();
+        cache.set(key, new Gson().toJson(this));
+        
+        return key;
     }
 
 }
