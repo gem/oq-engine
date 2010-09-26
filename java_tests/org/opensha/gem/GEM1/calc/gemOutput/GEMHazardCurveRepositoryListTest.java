@@ -34,10 +34,8 @@ public class GEMHazardCurveRepositoryListTest
     public void canStoreTheModelInCache()
     {
         GEMHazardCurveRepositoryList model = sampleModel();
-        String hashcode = new Integer(model.hashCode()).toString();
-        model.serialize(new Cache(LOCALHOST, PORT));
-
-        assertEquals(new Gson().toJson(sampleModel()), client.get(hashcode));
+        String key = model.serialize(new Cache(LOCALHOST, PORT));
+        assertEquals(new Gson().toJson(sampleModel()), client.get(key));
     }
 
     private GEMHazardCurveRepositoryList sampleModel()
