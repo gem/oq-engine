@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import net.spy.memcached.MemcachedClient;
 
 import org.gem.engine.hazard.memcached.Cache;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
@@ -28,6 +29,12 @@ public class GEMHazardCurveRepositoryListTest
     {
         client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         client.flush(); // clear the server side cache
+    }
+
+    @After
+    public void tearDown()
+    {
+        client.shutdown();
     }
 
     @Test
