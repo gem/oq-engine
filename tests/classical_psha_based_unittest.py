@@ -57,21 +57,13 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         
         loss_ratio_pe_mid_curve = compute_mid_mean_pe(self.loss_ratio_pe_curve)
                     
-        self.assertEquals([0.2330, 0.0885, 0.0485, 0.0295, 0.0140,
-            0.0045], loss_ratio_pe_mid_curve)
-
-        intervals = [0.2330, 0.0885, 0.0485, 0.0295, 0.0140, 0.0045]
-        for interval in intervals:
-            for gridpoint in grid:
-                loss_ratio_pe_mid_curve = compute_mid_mean_pe(loss_curves[site], interval)
-                losses[gridpoint.column-1][gridpoint.row-1] = loss_value    
-        
+        #self.assertEquals([0.2330, 0.0885, 0.0485, 0.0295, 0.0140,
+         #   0.0045], loss_ratio_pe_mid_curve)
             
-        intervals = [0.2330, 0.0885, 0.0485, 0.0295, 0.0140, 0.0045]
-        for interval in intervals:
-            for gridpoint in grid:
-                loss_value = engines.compute_loss(loss_curves[site], interval)
-                losses[gridpoint.column-1][gridpoint.row-1] = loss_value
+        
+        for idx, val in enumerate(self.loss_ratio_pe_mid_codomain):
+            self.assertEqual(val, loss_ratio_pe_mid_curve[idx])        
+
     # todo BW itarate these test values one by one
       
     # Step three	
