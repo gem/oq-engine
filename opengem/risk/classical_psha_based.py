@@ -291,18 +291,18 @@ def compute_mid_po(loss_ratio_pe_mid_codomain):
         
         loss_ratio_po_mid_codomain.append(current_value - next_value)
         
-    return loss_ratio_po_mid_codomain.domain
+    return loss_ratio_po_mid_codomain
         
 def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_codomain):
     # compute sum of every PO and LR
     #
-    mean_loss_ratio = [] 
+    mean_loss_ratio = []
   
     loss_ratio_pe_curve_float = map(float, loss_ratio_pe_curve.domain)
 
     mean_loss_ratio = sum(i*j for i, j in zip(loss_ratio_pe_curve_float, 
         loss_ratio_po_mid_codomain))
-    # this can alos be do using:
+    # this can alos be done using:
     #prod = lambda a, b: a*b
     #mean_loss_ratio = sum(map(prod, loss_ratio_pe_curve_float, 
         #loss_ratio_po_mid_codomain))
