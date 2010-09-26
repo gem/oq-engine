@@ -48,7 +48,6 @@ public class GEMHazardCurveRepositoryListTest
     private GEMHazardCurveRepositoryList sampleModel()
     {
         GEMHazardCurveRepositoryList model = new GEMHazardCurveRepositoryList();
-        model.setModelName("NAME");
 
         ArrayList<Site> sites = new ArrayList<Site>();
         sites.add(new Site(new Location(1.0, 2.0)));
@@ -75,6 +74,7 @@ public class GEMHazardCurveRepositoryListTest
         set.setProbExList(probabilitiesOfExc);
         set.setGmLevels(groundMotionLevels);
 
+        model.setModelName("NAME");
         model.add(set, "END_BRANCH_LABEL");
 
         return model;
