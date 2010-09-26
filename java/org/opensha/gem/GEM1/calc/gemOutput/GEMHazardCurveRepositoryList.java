@@ -421,7 +421,7 @@ public class GEMHazardCurveRepositoryList
      * 
      * @param cache the cache used to store the serialized
      * version of this model
-     * @return the key used to store this model in cache
+     * @return the key used as index in cache
      */
     public String serialize(Cache cache)
     {
