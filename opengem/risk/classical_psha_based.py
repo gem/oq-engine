@@ -59,6 +59,7 @@ loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 
 
 import scipy # pylint: disable=F0401
+import numpy
 from numpy import isnan # pylint: disable=F0401,E0611
 from scipy import stats # pylint: disable=F0401,E0611
 from scipy import sqrt # pylint: disable=F0401,E0611
@@ -66,7 +67,7 @@ from scipy import log # pylint: disable=F0401,E0611
 
 from opengem import logs
 from opengem import shapes
-from opengem import state
+from opengem import state   
 
 STEPS_PER_INTERVAL = 5
 
@@ -262,3 +263,43 @@ def compute_conditional_loss(loss_curve, probability):
     
     return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
 
+def compute_mid_mean_pe(loss_ratio_pe_curve):
+    # compute mean PE values 
+    # This function needs to take the first two values of the LR and compute 
+    # the mean, then iterate to the next two, and so on
+    loss_ratio_pe_mid_curve = []
+            
+    for i in xrange(len(loss_ratio_pe_curve.codomain)-1):
+
+        current_value = loss_ratio_pe_curve.codomain[i]
+        next_value = loss_ratio_pe_curve.codomain[i + 1]
+        
+        loss_ratio_pe_mid_curve.append(
+            numpy.mean([current_value, next_value]))
+          
+    return loss_ratio_pe_mid_curve
+          
+def compute_mid_po(loss_ratio_pe_mid_curve):
+    # compute the PO values
+    #
+    loss_ratio_po_mid_curve = []
+    
+    for j in xrange(len(loss_ratio_pe_mid_curve)-1):
+        current_value = loss_ratio_pe_mid_curve[j]
+        next_value = loss_ratio_pe_mid_curve[j + 1]
+        
+        loss_ratio_po_mid_curve.append(current_value - next_value)
+
+    return loss_ratio_po_mid_curve
+        
+def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_curve):
+    # compute sum of every PO and LR
+    #
+    mean_loss_ratio = []
+  
+    loss_ratio_pe_curve_float = map(float, loss_ratio_pe_curve.domain)
+
+    mean_loss_ratio = sum(i*j for i, j in zip(loss_ratio_pe_curve_float, 
+        loss_ratio_po_mid_curve))
+
+    log.debug('%s= mean_loss_ratio', mean_loss_ratio)
