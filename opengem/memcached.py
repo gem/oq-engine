@@ -19,16 +19,18 @@ class Reader(object):
     def __init__(self, client):
         self.client = client
     
-    def as_curve(self, name):
+    def _check_key_in_cache(self, key):
+        if not self.client.get(key):
+            raise ValueError("There's no value for key %s!" % key)
+        
+    def as_curve(self, key):
         """Read serialized versions of hazard curves
         and produce shapes.FastCurve objects.
         
         TODO (ac): How should we handle other metadata?
         """
-        value = self.client.get(name)
-        
-        if not value:
-            raise ValueError("There's no value for key %s!" % name)
+        self._check_key_in_cache(key)
+        value = self.client.get(key)
         
         decoder = json.JSONDecoder()
         decoded_model = decoder.decode(value)
@@ -40,4 +42,44 @@ class Reader(object):
                 curves.append(shapes.FastCurve(
                         zip(raw_curves["gmLevels"], curve)))
         
+        return curves
+    
+    def for_shaml(self, key):
+        """Read serialized versions of hazard curves
+        and produce a dictionary as expected by the shaml writer.
+        
+        """
+        self._check_key_in_cache(key)
+        value = self.client.get(key)
+        
+        decoder = json.JSONDecoder()
+        decoded_model = decoder.decode(value)
+        
+        curves = {}
+        set_counter = 0
+        
+        for raw_curve in decoded_model["hcRepList"]:
+            curve_counter = 0
+            
+            for curve in raw_curve["probExList"]:
+                data = {}
+                
+                data["IDmodel"] = "FIXED" # fixed, not yet implemented
+                data["vs30"] = 0.0 # fixed, not yet implemented
+                data["timeSpanDuration"] = raw_curve["timeSpan"]
+                data["IMT"] = raw_curve["intensityMeasureType"]
+                data["Values"] = curve
+                data["IML"] = raw_curve["gmLevels"]
+                data["maxProb"] = curve[-1]
+                data["minProb"] = curve[0]
+                data["endBranchLabel"] = decoded_model["endBranchLabels"][set_counter]
+                
+                lon = raw_curve["gridNode"][curve_counter]["location"]["lon"]
+                lat = raw_curve["gridNode"][curve_counter]["location"]["lat"]
+                
+                curves[shapes.Site(lon, lat)] = data
+                curve_counter += 1
+
+            set_counter += 1
+
         return curves
