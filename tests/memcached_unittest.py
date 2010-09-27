@@ -1,16 +1,5 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-"""
-Quick tests to demonstrate that we can serialize into
-memcached in Python and deserialize in Java and viceversa.
-
-To run these tests you need to:
-
-* Install Pylibmc
-* Install Jpype
-* A memcached server running somewhere
-
-"""
 
 import os
 import time
