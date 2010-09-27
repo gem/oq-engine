@@ -19,7 +19,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
     def setUp(self):
         self._delete_test_file()
-        self.writer = shaml.HazardCurveWriter(
+        self.writer = shaml.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
 
     def tearDown(self):
