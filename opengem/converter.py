@@ -21,6 +21,7 @@ def convert(input_path, input_module, output_path, output_module):
     
     log.info("Starting conversion run...")
     jarpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib")
+    log.debug("Jarpath is %s", jarpath)
     jpype.startJVM(jpype.getDefaultJVMPath(), "-Djava.ext.dirs=%s" % jarpath)
     input_module.init_paths(input_path, jpype)
     
