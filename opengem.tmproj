@@ -10,7 +10,7 @@
 			<key>name</key>
 			<string>opengem</string>
 			<key>regexFileFilter</key>
-			<string>!.*large\.xml$</string>
+			<string>!.*(large\.xml|\.pyc)$</string>
 			<key>regexFolderFilter</key>
 			<string>!.*/(\.[^/]*|CVS|lib|java|java_tests|.*\.xml|_darcs|_MTN|\{arch\}|blib|.*~\.nib|.*\.(framework|app|pbproj|pbxproj|xcode(proj)?|bundle))$</string>
 			<key>sourceDirectory</key>
