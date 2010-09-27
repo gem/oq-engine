@@ -49,16 +49,26 @@ class MemcachedTestCase(unittest.TestCase):
         
         self.reader = memcached.Reader(self.python_client)
         
-    def NORUN_test_can_wrap_the_java_client(self):
+    def test_can_wrap_the_java_client(self):
         self.java_client.set("KEY", "VALUE")
+        
+        # TODO (ac): I know, it's weird. Looking for something better...
+        time.sleep(0.3)
+        
         self.assertEqual("VALUE", self.java_client.get("KEY"))
 
-    def NORUN_test_can_write_in_java_and_read_in_python(self):
+    def test_can_write_in_java_and_read_in_python(self):
         self.java_client.set("KEY", "VALUE")
+        
+        time.sleep(0.3)
+        
         self.assertEqual("VALUE", self.python_client.get("KEY"))
     
-    def NORUN_test_can_write_in_python_and_read_in_java(self):
+    def test_can_write_in_python_and_read_in_java(self):
         self.python_client.set("KEY", "VALUE")
+        
+        time.sleep(0.3)
+        
         self.assertEqual("VALUE", self.java_client.get("KEY"))
     
     def test_an_empty_model_produces_an_empty_curve_set(self):
@@ -95,8 +105,7 @@ class MemcachedTestCase(unittest.TestCase):
         # Hazard object model serialization in JSON is tested in the Java side
         self.java_client.set("KEY", ONE_CURVE_MODEL)
         
-        # TODO (ac): I know, it's weird. Looking for something better...
-        time.sleep(0.5)
+        time.sleep(0.3)
         
         curves = self.reader.as_curve("KEY")
         
