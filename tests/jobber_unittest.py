@@ -11,8 +11,6 @@ import tests.tasks as test_tasks
 
 TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 
-JOBBER_CONFIG_FILE = 'basic-job.yml'
-
 MEMCACHED_PORT = 11211
 MEMCACHED_HOST = "localhost"
 
@@ -66,8 +64,3 @@ class JobberTestCase(unittest.TestCase):
         result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
         self.assertEqual(sorted(TASK_NAME_SIMPLE), 
                          sorted(result_values.values()))
-
-    #def test_parses_job_config(self):
-        ## Load config file
-        #config_path = os.path.join(data_dir, JOBBER_CONFIG_FILE)
-        
