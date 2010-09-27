@@ -50,17 +50,56 @@ class JobberTestCase(unittest.TestCase):
                 test_tasks.simple_task_return_name_to_memcache.apply_async(
                     args=[curr_task_name]))
 
-        # if a task has not yet finished, wait for a second
-        # then check again
-        counter = 0
-        while (False in [result.ready() for result in results]):
-            counter += 1
-
-            if counter > MAX_WAIT_LOOPS:
-                raise RuntimeError, "wait too long for celery worker threads"
-
-            time.sleep(WAIT_TIME_STEP_FOR_TASK_SECS)
+        wait_for_celery_tasks(results)
 
         result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
         self.assertEqual(sorted(TASK_NAME_SIMPLE), 
                          sorted(result_values.values()))
+
+    def test_async_memcache_serialize_list_and_dict(self):
+
+        # spawn four tasks that return lists and dicts
+        # tasks write their results to memcached
+        # check if lists and dicts are serialized/deserialized correctly
+        results = []
+        for curr_task_name in TASK_NAME_SIMPLE:
+            results.append(
+                test_tasks.simple_task_list_dict_to_memcache.apply_async(
+                    args=[curr_task_name]))
+
+        wait_for_celery_tasks(results)
+
+        expected_keys = []
+        for name in TASK_NAME_SIMPLE:
+            expected_keys.extend(["list.%s" % name, "dict.%s" % name])
+
+        result_values = self.memcache_client.get_multi(expected_keys)
+
+        expected_dict = {}
+        for curr_key in sorted(expected_keys):
+            if curr_key.startswith('list.'):
+                expected_dict[curr_key] = [curr_key[5:], curr_key[5:]]
+            elif curr_key.startswith('dict.'):
+                expected_dict[curr_key] = {curr_key[5:]: curr_key[5:]}
+
+        self.assertEqual(expected_dict, result_values)
+
+        # clean up memcache
+        self.memcache_client.delete_multi(expected_keys)
+
+def wait_for_celery_tasks(celery_results):
+    """celery_results is a list of celery task result objects.
+    This function waits until all tasks have finished.
+    """
+
+    # if a celery task has not yet finished, wait for a second
+    # then check again
+    counter = 0
+    while (False in [result.ready() for result in celery_results]):
+        counter += 1
+
+        if counter > MAX_WAIT_LOOPS:
+            raise RuntimeError, "wait too long for celery worker threads"
+
+        time.sleep(WAIT_TIME_STEP_FOR_TASK_SECS)
+    
