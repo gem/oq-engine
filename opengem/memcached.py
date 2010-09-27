@@ -20,6 +20,8 @@ class Reader(object):
         self.client = client
     
     def _check_key_in_cache(self, key):
+        """Raise an error if the given key is not in memcached."""
+        
         if not self.client.get(key):
             raise ValueError("There's no value for key %s!" % key)
         
@@ -72,7 +74,8 @@ class Reader(object):
                 data["IML"] = raw_curve["gmLevels"]
                 data["maxProb"] = curve[-1]
                 data["minProb"] = curve[0]
-                data["endBranchLabel"] = decoded_model["endBranchLabels"][set_counter]
+                data["endBranchLabel"] = \
+                        decoded_model["endBranchLabels"][set_counter]
                 
                 lon = raw_curve["gridNode"][curve_counter]["location"]["lon"]
                 lat = raw_curve["gridNode"][curve_counter]["location"]["lat"]
