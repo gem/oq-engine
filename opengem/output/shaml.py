@@ -16,7 +16,7 @@ from lxml import etree
 from opengem import writer
 from opengem.xml import NSMAP, SHAML, GML
 
-class HazardCurveWriter(writer.FileWriter):
+class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the shaml format."""
 
     def __init__(self, path):
