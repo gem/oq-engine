@@ -217,7 +217,7 @@ class MemcachedTestCase(unittest.TestCase):
         shamls = self.reader.for_shaml("KEY")
         
         # writing result
-        writer = shaml.HazardCurveWriter(
+        writer = shaml.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
 
         writer.serialize(shamls)
