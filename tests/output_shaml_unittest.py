@@ -15,7 +15,7 @@ XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 EMPTY_RESULT = '<HazardResultList xmlns:gml="http://www.opengis.net/gml" xmlns="http://opengem.org/xmlns/shaml/0.1"/>'
 
 # TODO (ac): Test validation against the schema!
-class HazardCurveWriterTestCase(unittest.TestCase):
+class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
     def setUp(self):
         self._delete_test_file()
