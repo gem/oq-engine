@@ -42,7 +42,7 @@ flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
 flags.DEFINE_string('vulnerability', 'vulnerability.xml',
                     'vulnerability input')
 flags.DEFINE_string('filter_region', None, 'region to filter input')                    
-flags.DEFINE_string('output_region', None, 'region to generate outpu')
+flags.DEFINE_string('output_region', None, 'region to generate output')
 flags.DEFINE_string('hazard_curves', 'hazard_curves.xml', 
                     'hazard curves')
 
@@ -79,4 +79,5 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.filter_region, FLAGS.exposure, FLAGS.loss_map)
+        tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, 
+            FLAGS.filter_region, FLAGS.exposure, FLAGS.loss_map)

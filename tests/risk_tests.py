@@ -180,22 +180,3 @@ class RiskEngineTestCase(unittest.TestCase):
         # No exposure at second site, so no loss results
         self.assertEqual(loss_results[second_gp], None)
         # self.assertNotEqual(loss_results[fourth_gp], None)
-
-
-class RiskOutputTestCase(unittest.TestCase):
-    """Confirm that XML output from risk engine is valid against schema,
-    as well as correct given the inputs."""
-    
-    def setUp(self):
-        pass
-    
-    # def test_xml_is_valid(self):
-    #     xml_writer = risk_output.RiskXMLWriter(
-    #         os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
-    #     first_site = shapes.Site(10.0, 10.0)
-    #     
-    #     loss_ratio_curves = {}
-    #     loss_ratio_curves[first_gp] = shapes.FastCurve([(0.0, 0.1), (1.0, 0.9)])
-    #     
-    #     xml_writer.write(first_site, loss_ratio_curves[first_gp])
-    #     xml_writer.close()
