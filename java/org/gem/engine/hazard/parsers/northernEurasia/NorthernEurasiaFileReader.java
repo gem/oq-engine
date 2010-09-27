@@ -1,29 +1,18 @@
 package org.gem.engine.hazard.parsers.northernEurasia;
 
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.gem.engine.hazard.parsers.GemFileParser;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
-import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
-import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
-import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
-
-import com.sun.jdi.DoubleValue;
 
 public class NorthernEurasiaFileReader extends GemFileParser {
 	

@@ -5,17 +5,15 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.gem.engine.hazard.parsers.GemFileParser;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.geo.Region;
-import org.opensha.commons.geo.LocationList;
 import org.opensha.sha.earthquake.FocalMechanism;
 import org.opensha.sha.earthquake.griddedForecast.MagFreqDistsForFocalMechs;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
-
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -45,7 +43,7 @@ public class GscFriskSourceData03 extends GemFileParser {
 		GscFriskInputHeader head = gscif.getHeader();
 		
 		// Info: number of global alternatives contained in the input file 
-		System.out.printf("Number of global alternatives: %d\n",+head.nGloAlt);
+		System.out.printf("Number of global alternatives: %d\n",+head.nGloAlt);
 		
 		// -----------------------------------------------------------------------------------------
 		//                                                            Processing global alternatives

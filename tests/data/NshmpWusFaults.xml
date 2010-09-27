@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<shaml:LogicTree xmlns:shaml="http://shaml.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml" xmlns:ns4="http://www.w3.org/1999/xlink" xmlns:ns5="http://www.w3.org/2001/SMIL20/" xmlns:ns6="http://www.w3.org/2001/SMIL20/Language" modelID="org.opengem.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" description="">
+<shaml:LogicTree xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns:ns4="http://www.w3.org/1999/xlink" xmlns:ns5="http://www.w3.org/2001/SMIL20/" xmlns:ns6="http://www.w3.org/2001/SMIL20/Language" modelID="org.opengem.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" description="">
     <shaml:BranchingLevelList>
         <shaml:BranchingLevel appliesTo="-1" branchingLabel="SourceModel" level="1">
             <shaml:Branch value="org.opengem.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" id="1" weight="1.0"/>

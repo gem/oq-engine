@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://shaml.org/xmlns/shaml/0.1" xmlns:shaml="http://shaml.org/xmlns/shaml/0.1"
-	xmlns:gml="http://www.opengis.net/gml" xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
-	xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc" jaxb:extensionBindingPrefixes="xjc"
-	elementFormDefault="qualified" jaxb:version="2.0">
+	targetNamespace="http://opengem.org/xmlns/shaml/0.1"
+	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
 
 	<!-- import -->
-	<xs:import namespace="http://www.opengis.net/gml"
-		schemaLocation="http://schemas.opengis.net/gml/3.1.1/base/gml.xsd"/>
+	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+		<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="shaML_common.xsd"/>
 	<!-- -->
 	<xs:complexType name="HazardCurveListType">
@@ -121,4 +120,40 @@
 		</xs:all>
 	</xs:complexType>
 	<xs:element name="HazardResultList" type="shaml:HazardResultListType"/>
+	<xs:complexType name="CurveType">
+		<xs:all>
+			<xs:element name="Values" type="gml:doubleList"/>
+			<xs:element minOccurs="0" ref="gml:pos"/>
+		</xs:all>
+	</xs:complexType>
+	<xs:element name="Curve" type="shaml:CurveType"/>
+	<xs:element name="LossCurve" type="shaml:CurveType"/>
+	<xs:element name="LossCurvePE" type="shaml:CurveType"/>
+	<xs:element name="LossRatioCurve" type="shaml:CurveType"/>
+	<xs:complexType name="CurveListType">
+		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    			<xs:choice>
+    				<xs:element ref="shaml:Curve"/>
+    				<xs:element ref="shaml:LossCurve"/>
+    				<xs:element ref="shaml:LossRatioCurve"/>
+    			</xs:choice>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="LossCurveList" type="shaml:CurveListType"/>
+	<xs:element name="LossRatioCurveList" type="shaml:CurveListType"/>
+	<xs:element name="RiskResult">
+		<xs:complexType>
+		    <xs:sequence minOccurs="1">
+    		    <xs:element name="Config"/>
+    			<xs:choice>
+    				<xs:element ref="shaml:LossCurveList"/>
+    				<xs:element ref="shaml:LossRatioCurveList"/>
+    			</xs:choice>
+    			<xs:choice>
+    	            <xs:element name="LossCurvePE" type="shaml:CurveType"/>
+    	            <xs:element name="LossRatioCurvePE" type="shaml:CurveType"/>
+    			</xs:choice>
+    		</xs:sequence>
+		</xs:complexType>
+	</xs:element>
 </xs:schema>
