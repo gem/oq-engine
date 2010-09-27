@@ -10,6 +10,7 @@ import unittest
 from decimal import *
 from ordereddict import *
 
+from opengem import test
 from opengem.parser import vulnerability
 from opengem.risk.classical_psha_based import *
 from opengem.risk.classical_psha_based import _compute_lrem_po, \
@@ -26,6 +27,75 @@ HAZARD_CURVE = shapes.FastCurve(
 
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
         [0.266, 0.510, 0.841, 0.999]]
+
+class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
+    # Step One
+    def setUp(self):
+        # construct a loss_ratio_pe_curve with loss ratio values of
+        # [0, 0.0600, 0.1200, 0.1800, 0.2400, 0.3000, 0.4500]  
+        # and pe of : [0.3460, 0.1200, 0.0570, 0.0400, 0.0190, 0.0090,  0]
+        # 
+        self.loss_ratio_pe_curve = shapes.FastCurve([
+            (0, 0.3460), (0.06, 0.12), (0.12, 0.057), (0.18, 0.04), 
+            (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
+        
+        self.loss_ratio_pe_mid_curve = shapes.FastCurve([(0.0300, 0.2330), 
+            (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295), 
+            (0.2700, 0.0140), (0.3750, 0.0045)])
+            
+        self.loss_ratio_po_curve = shapes.FastCurve([(0.0600, 0.1445),
+        	(0.1200, 0.0400), (0.1800, 0.0190), (0.2300, 0.0155), 
+        	(0.300, 0.0095)])
+        
+        self.loss_ratio_po_mid_curve = ([(0.0600, 0.1445), (0.1200, 0.0400), 
+            (0.1800, 0.0190), (0.2400, 0.0155), (0.3000, 0.0095)])
+        
+    # Step Two
+    # compute mean pe (PE1 + PE0 /2)
+    #
+    #@test.skipit
+    def test_loss_ratio_pe_mid_curve_computation(self):
+        
+        loss_ratio_pe_mid_curve = compute_mid_mean_pe(self.loss_ratio_pe_curve)
+            
+        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.codomain):
+            self.assertAlmostEqual(val, loss_ratio_pe_mid_curve[idx])        
+
+    # todo BW itarate these test values one by one
+      
+    # Step three	
+    # Compute the PO (PE1 - PE2)
+    # assert that the PO values match: [0.1445, 0.0400, 0.0190, 0.0155, 0.0095]
+    # 
+    #@test.skipit
+    def test_loss_ratio_po_computation(self):
+        
+        loss_ratio_po_mid_curve = compute_mid_po(
+            self.loss_ratio_pe_mid_curve.codomain)
+        
+        self.loss_ratio_po_curve_codomain = [0.1445, 0.0400, 0.0190, 0.0155, 
+            0.0095]
+            
+        for idx, val in enumerate(self.loss_ratio_po_curve_codomain):
+            self.assertAlmostEqual(val, loss_ratio_po_mid_curve[idx])
+            
+    # todo BW itarate these test values one by one
+        
+    # Step four
+    # compute mean loss (POn*LRn)
+    # assert that the mean loss ratio =  0.023305
+    #
+    @test.skipit
+    def test_mean_loss_ratio_computation(self):
+
+    	mean_loss_ratio = compute_mean_loss(self.loss_ratio_po_curve, 
+    	    self.loss_ratio_po_mid_curve)
+    	    
+    	self.mean_loss = [0.023305]
+    	
+    	for idx, val in enumerate(self.mean_loss):
+            self.assertAlmostEqual(val, mean_loss_ratio[idx])
+
 
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
@@ -45,7 +115,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertEqual(compute_loss_curve(
                 shapes.EMPTY_CURVE, None),
                 shapes.EMPTY_CURVE)
-    
+
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
         self.assertEqual(compute_loss_curve(
                 shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
