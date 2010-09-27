@@ -39,15 +39,16 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
             (0, 0.3460), (0.06, 0.12), (0.12, 0.057), (0.18, 0.04), 
             (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
         
-        self.loss_ratio_pe_mid_codomain = [0.2330, 0.0885, 0.0485, 0.0295, 
-            0.0140, 0.0045]
+        self.loss_ratio_pe_mid_curve = shapes.FastCurve([(0.0300, 0.2330), 
+            (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295), 
+            (0.2700, 0.0140), (0.3750, 0.0045)])
             
         self.loss_ratio_po_curve = shapes.FastCurve([(0.0600, 0.1445),
         	(0.1200, 0.0400), (0.1800, 0.0190), (0.2300, 0.0155), 
         	(0.300, 0.0095)])
         
-        self.loss_ratio_po_mid_codomain = [0.1445, 0.0400, 0.0190, 0.0155,
-            0.0095]
+        self.loss_ratio_po_mid_curve = ([(0.0600, 0.1445), (0.1200, 0.0400), 
+            (0.1800, 0.0190), (0.2400, 0.0155), (0.3000, 0.0095)])
         
     # Step Two
     # compute mean pe (PE1 + PE0 /2)
@@ -57,7 +58,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         
         loss_ratio_pe_mid_curve = compute_mid_mean_pe(self.loss_ratio_pe_curve)
             
-        for idx, val in enumerate(self.loss_ratio_pe_mid_codomain):
+        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.codomain):
             self.assertAlmostEqual(val, loss_ratio_pe_mid_curve[idx])        
 
     # todo BW itarate these test values one by one
@@ -69,14 +70,14 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
     #@test.skipit
     def test_loss_ratio_po_computation(self):
         
-        loss_ratio_po_mid_codomain = compute_mid_po(
-            self.loss_ratio_pe_mid_codomain)
+        loss_ratio_po_mid_curve = compute_mid_po(
+            self.loss_ratio_pe_mid_curve.codomain)
         
         self.loss_ratio_po_curve_codomain = [0.1445, 0.0400, 0.0190, 0.0155, 
             0.0095]
             
         for idx, val in enumerate(self.loss_ratio_po_curve_codomain):
-            self.assertAlmostEqual(val, loss_ratio_po_mid_codomain[idx])
+            self.assertAlmostEqual(val, loss_ratio_po_mid_curve[idx])
             
     # todo BW itarate these test values one by one
         
@@ -88,7 +89,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
     def test_mean_loss_ratio_computation(self):
 
     	mean_loss_ratio = compute_mean_loss(self.loss_ratio_po_curve, 
-    	    self.loss_ratio_po_mid_codomain)
+    	    self.loss_ratio_po_mid_curve)
     	    
     	self.mean_loss = [0.023305]
     	

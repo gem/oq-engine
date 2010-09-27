@@ -59,7 +59,7 @@ loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 
 
 import scipy # pylint: disable=F0401
-import numpy as np
+import numpy
 from numpy import isnan # pylint: disable=F0401,E0611
 from scipy import stats # pylint: disable=F0401,E0611
 from scipy import sqrt # pylint: disable=F0401,E0611
@@ -67,8 +67,7 @@ from scipy import log # pylint: disable=F0401,E0611
 
 from opengem import logs
 from opengem import shapes
-from opengem import state
-from operator import add    
+from opengem import state   
 
 STEPS_PER_INTERVAL = 5
 
@@ -276,24 +275,24 @@ def compute_mid_mean_pe(loss_ratio_pe_curve):
         next_value = loss_ratio_pe_curve.codomain[i + 1]
         
         loss_ratio_pe_mid_curve.append(
-            np.mean([current_value, next_value]))
+            numpy.mean([current_value, next_value]))
           
     return loss_ratio_pe_mid_curve
           
-def compute_mid_po(loss_ratio_pe_mid_codomain):
+def compute_mid_po(loss_ratio_pe_mid_curve):
     # compute the PO values
     #
-    loss_ratio_po_mid_codomain = []
+    loss_ratio_po_mid_curve = []
     
-    for j in xrange(len(loss_ratio_pe_mid_codomain)-1):
-        current_value = loss_ratio_pe_mid_codomain[j]
-        next_value = loss_ratio_pe_mid_codomain[j + 1]
+    for j in xrange(len(loss_ratio_pe_mid_curve)-1):
+        current_value = loss_ratio_pe_mid_curve[j]
+        next_value = loss_ratio_pe_mid_curve[j + 1]
         
-        loss_ratio_po_mid_codomain.append(current_value - next_value)
+        loss_ratio_po_mid_curve.append(current_value - next_value)
+
+    return loss_ratio_po_mid_curve
         
-    return loss_ratio_po_mid_codomain
-        
-def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_codomain):
+def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_curve):
     # compute sum of every PO and LR
     #
     mean_loss_ratio = []
@@ -301,10 +300,6 @@ def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_codomain):
     loss_ratio_pe_curve_float = map(float, loss_ratio_pe_curve.domain)
 
     mean_loss_ratio = sum(i*j for i, j in zip(loss_ratio_pe_curve_float, 
-        loss_ratio_po_mid_codomain))
-    # this can alos be done using:
-    #prod = lambda a, b: a*b
-    #mean_loss_ratio = sum(map(prod, loss_ratio_pe_curve_float, 
-        #loss_ratio_po_mid_codomain))
+        loss_ratio_po_mid_curve))
 
-    print 'mean_loss_ratio is %s' % (mean_loss_ratio)
+    log.debug('%s= mean_loss_ratio', mean_loss_ratio)
