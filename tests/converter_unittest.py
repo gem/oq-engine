@@ -24,7 +24,7 @@ class ConverterTestCase(unittest.TestCase):
         self.dir = os.path.join(test.DATA_DIR, NSHML_DIR)
         self.file = os.path.join(test.DATA_DIR, OUTPUT_DIR)
         if not os.path.exists(self.file):
-            os.path.mkdir(self.file)
+            os.makedirs(self.file)
         #test.guarantee_file(self.file, TEST_FILE_URL)
     
     # For coverage of the converter, please run demo_converter.sh
