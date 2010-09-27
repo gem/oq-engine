@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://shaml.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml"
-	xmlns:shaml="http://shaml.org/xmlns/shaml/0.1">
+	targetNamespace="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
+	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1">
 
 	<!-- -->
-	<xs:import namespace="http://www.opengis.net/gml"
-		schemaLocation="http://schemas.opengis.net/gml/3.1.1/base/gml.xsd"/>
+	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 	<!-- -->
 
 	<xs:complexType name="EvenlyDiscretizedDistType">

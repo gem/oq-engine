@@ -57,7 +57,7 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 
 			srcDataList = new ArrayList<GEMSourceData>();
 
-	        BufferedReader oReader = new BufferedReader(new FileReader(this.getClass().getClassLoader().getResource(inputFile).getPath()));
+	        BufferedReader oReader = new BufferedReader(new FileReader(inputFile));
 	        
 	        
 	        String sRecord = null;
@@ -215,7 +215,7 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 					sRecord = oReader.readLine();
 					st = new StringTokenizer(sRecord);
 					// read b file name
-					bValFileName = st.nextToken();
+					bValFileName = relativePath(inputFile, st.nextToken());
 					System.out.println("b value matrix: "+bValFileName);
 					// read b value matrix
 					bValMat = new ReadBinaryInputMatrix(bValFileName, bigEndian2LittleEndian);
@@ -226,7 +226,7 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 					sRecord = oReader.readLine();
 					st = new StringTokenizer(sRecord);
 					// read maximum magnitude file name
-					maxMagFileName = st.nextToken();
+					maxMagFileName = relativePath(inputFile, st.nextToken());
 					System.out.println("Maximum magnitude matrix: "+maxMagFileName);
 					// read maximum magnitude matrix
 					maxMagMat = new ReadBinaryInputMatrix(maxMagFileName, bigEndian2LittleEndian);
@@ -239,7 +239,7 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 					sRecord = oReader.readLine();
 					st = new StringTokenizer(sRecord);
 					// read maximum magnitude file name
-					weightMTaperFileName = st.nextToken();
+					weightMTaperFileName = relativePath(inputFile, st.nextToken());
 					System.out.println("Tapering magnitude weights matrix: "+weightMTaperFileName);
 					// read weights file
 					weightMTaperMat = new ReadBinaryInputMatrix(weightMTaperFileName, bigEndian2LittleEndian);
@@ -255,7 +255,7 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 				sRecord = oReader.readLine();
 				st = new StringTokenizer(sRecord);
 				// read a value file name
-				aValFileName = st.nextToken();
+				aValFileName = relativePath(inputFile, st.nextToken());
 				
 				System.out.println("a value file name: "+aValFileName);
 				
@@ -668,6 +668,11 @@ public class NshmpGrid2GemSourceData extends GemFileParser {
 			
 			
 		}
+		
+		private String relativePath(String inputFile, String relatedFile) {
+		    System.out.println("Processing file: "+relatedFile);
+		    return inputFile.substring(0, inputFile.lastIndexOf("/")+1)+relatedFile;
+	    }
 		
 		
 		/** compute total moment rate as done by NSHMP code
