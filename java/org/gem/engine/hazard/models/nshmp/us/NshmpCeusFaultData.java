@@ -14,7 +14,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class NshmpCeusFaultData extends GemFileParser {
 	
-	private String inDir = "../../data/nshmp/ceus_fault/";
+	public static String inDir = "../../data/nshmp/ceus_fault/";
 
 	// constructor
 	public NshmpCeusFaultData(double latmin, double latmax, double lonmin, double lonmax) throws FileNotFoundException{
