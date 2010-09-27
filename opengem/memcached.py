@@ -11,7 +11,7 @@ import shapes
 
 
 class Reader(object):
-    """Read objects from memcached and translate them in
+    """Read objects from memcached and translate them into
     our object model.
     
     """
@@ -35,8 +35,9 @@ class Reader(object):
         
         curves = []
         
-        for set in decoded_model["hcRepList"]:
-            for curve in set["probExList"]:
-                curves.append(shapes.FastCurve(zip(set["gmLevels"], curve)))
+        for raw_curves in decoded_model["hcRepList"]:
+            for curve in raw_curves["probExList"]:
+                curves.append(shapes.FastCurve(
+                        zip(raw_curves["gmLevels"], curve)))
         
         return curves

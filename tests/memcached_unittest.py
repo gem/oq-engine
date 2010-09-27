@@ -71,23 +71,30 @@ class MemcachedTestCase(unittest.TestCase):
         curves = self.reader.as_curve("KEY")
         
         self.assertEqual(1, len(curves))
-        self.assertEqual(shapes.FastCurve(((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
+        self.assertEqual(shapes.FastCurve(
+                ((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
     
     def test_reads_multiple_curves_in_one_branch(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_ONE_BRANCH)
         curves = self.reader.as_curve("KEY")
 
         self.assertEqual(2, len(curves))
-        self.assertEqual(shapes.FastCurve(((1.0, 5.1), (2.0, 5.2), (3.0, 5.3))), curves[0])
-        self.assertEqual(shapes.FastCurve(((1.0, 6.1), (2.0, 6.2), (3.0, 6.3))), curves[1])
+        self.assertEqual(shapes.FastCurve(
+                ((1.0, 5.1), (2.0, 5.2), (3.0, 5.3))), curves[0])
+                
+        self.assertEqual(shapes.FastCurve(
+                ((1.0, 6.1), (2.0, 6.2), (3.0, 6.3))), curves[1])
     
     def test_reads_multiple_curves_in_multiple_branches(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_MULTIPLE_BRANCHES)
         curves = self.reader.as_curve("KEY")
         
         self.assertEqual(2, len(curves))
-        self.assertEqual(shapes.FastCurve(((1.0, 1.8), (2.0, 2.8), (3.0, 3.8))), curves[0])
-        self.assertEqual(shapes.FastCurve(((1.0, 1.5), (2.0, 2.5), (3.0, 3.5))), curves[1])
+        self.assertEqual(shapes.FastCurve(
+                ((1.0, 1.8), (2.0, 2.8), (3.0, 3.8))), curves[0])
+        
+        self.assertEqual(shapes.FastCurve(
+                ((1.0, 1.5), (2.0, 2.5), (3.0, 3.5))), curves[1])
 
     def test_end_to_end_curves_reading(self):
         # Hazard object model serialization in JSON is tested in the Java side
@@ -98,4 +105,5 @@ class MemcachedTestCase(unittest.TestCase):
         curves = self.reader.as_curve("KEY")
         
         self.assertEqual(1, len(curves))
-        self.assertEqual(shapes.FastCurve(((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
+        self.assertEqual(shapes.FastCurve(
+                ((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
