@@ -73,7 +73,7 @@ public class CommandLineCalculator {
 	// configuration data
 	private Properties props;
 	//
-	// Apache commons logging, not log4j
+	// Apache commons logging, not log4j specifically
 	// Note that for application code, declaring the log member as "static" is 
 	// more efficient as one Log object is created per class, and is 
 	// recommended. However this is not safe to do for a class which may be

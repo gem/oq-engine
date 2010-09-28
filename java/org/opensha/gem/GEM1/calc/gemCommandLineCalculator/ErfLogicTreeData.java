@@ -9,6 +9,8 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeBranch;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeBranchingLevel;
@@ -22,7 +24,14 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
  *
  */
 public class ErfLogicTreeData {
-	
+	//
+	// Apache commons logging, not log4j specifically
+	// declaring the logger static here is more efficient as one Log object is
+	// created per class 
+	// (This is not safe  for a class which may be deployed via a "shared" 
+	// classloader in a servlet or j2ee container or similar environment. 
+	private static Log logger = LogFactory.getLog(ErfLogicTreeData.class);
+
 	// ERF logic tree
 	private GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree;
 	
@@ -34,7 +43,17 @@ public class ErfLogicTreeData {
 	private static String BRANCH_SET = "BranchSet";
 	
 	// for debugging
+	// TODO:
+	// Refactor this all over OpenSha: Connect this debug flag to the debug
+	// level of the logger.
+	// -> D = logger.isDebugEnabled()
+	// Then, to avoid the calculation time to construct unnecessary debug
+	// messages, construct it only after the check of the flag D:
+	// if(D) {
+    //    logger.debug("Entry number: " + i + " is " + String.valueOf(entry[i]));
+    // }
 	private static Boolean D = false;
+
 	
 	/**
 	 * Constructor taking as input the file describing the ERF logic tree
@@ -42,6 +61,7 @@ public class ErfLogicTreeData {
 	 * @throws IOException 
 	 */
 	public ErfLogicTreeData(String erfInputFile) {
+		D = logger.isDebugEnabled();
 		try {
 		// instantiate logic tree
 		erfLogicTree = new GemLogicTree<ArrayList<GEMSourceData>>();
@@ -96,10 +116,14 @@ public class ErfLogicTreeData {
                 	continue;
                 }
                 String appliesTo = sRecord.trim();
-                
-                if(D) System.out.println("\n\n");
-                if(D) System.out.println("//----------------------------------------------------------------------------------------//");
-                if(D) System.out.println("Branching level: "+branchingLevelNumber+", label: "+branchingLabel+", applies to: "+appliesTo);
+                if(D) {
+                	logger.debug("\n\n"
+                    + "//----------------------------------------------------------------------------------------//\n"
+                    + "Branching level: "+branchingLevelNumber+", label: "+branchingLabel+", applies to: "+appliesTo + "\n");
+                }
+//                if(D) System.out.println("\n\n");
+//                if(D) System.out.println("//----------------------------------------------------------------------------------------//");
+//                if(D) System.out.println("Branching level: "+branchingLevelNumber+", label: "+branchingLabel+", applies to: "+appliesTo);
                 
                 // instantiate branching level
                 if(appliesTo.equalsIgnoreCase("ALL")){
@@ -111,8 +135,10 @@ public class ErfLogicTreeData {
                 	branchingLevel = new GemLogicTreeBranchingLevel(branchingLevelNumber,branchingLabel,-1);
                 }
                 else{
-                	System.out.println("At the moment a branching level can be applied to NONE or ALL. No other options are available!");
-                	System.out.println("Execution stopped!");
+                	logger.info("At the moment a branching level can be applied to NONE or ALL. No other options are available!\n"
+                	+"Execution stopped!\n");
+//                	System.out.println("At the moment a branching level can be applied to NONE or ALL. No other options are available!");
+//                	System.out.println("Execution stopped!");
                 	System.exit(0);
                 }
                 
@@ -161,11 +187,16 @@ public class ErfLogicTreeData {
                     String fileWeights = sRecord;
                     StringTokenizer fileWeightsToken = new StringTokenizer(fileWeights);
                     
-                    if(D) System.out.println("BranchSet. Definition through: "+branchModel);
-                    if(D) System.out.println("Input files: "+fileNames);
-                    if(D) System.out.println("Input files labels: "+fileLabels);
-                    if(D) System.out.println("File weights: "+fileWeights);
-                    
+                    if(D) {
+                    	logger.debug("BranchSet. Definition through: "+ branchModel +"\n"
+                    	             +"Input files: "+ fileNames + "\n"
+                    	             + "Input files labels: "+ fileLabels +"\n"
+                    	             + "File weights: " + fileWeights + "\n");
+                    }
+//                    if(D) System.out.println("BranchSet. Definition through: "+branchModel);
+//                    if(D) System.out.println("Input files: "+fileNames);
+//                    if(D) System.out.println("Input files labels: "+fileLabels);
+//                    if(D) System.out.println("File weights: "+fileWeights);
                     // instantiate branches
                     // number of branches
                     int numBra = fileNameToken.countTokens();
@@ -210,10 +241,16 @@ public class ErfLogicTreeData {
                     String uncertaintyWeights = sRecord;
                     StringTokenizer uncertaintyWeightsToken = new StringTokenizer(uncertaintyWeights);
                     
-                    if(D) System.out.println("BranchSet. Definition through: "+branchModel);
-                    if(D) System.out.println("Rule: "+ruleName);
-                    if(D) System.out.println("Uncertainty values: "+uncertaintyValues);
-                    if(D) System.out.println("Uncertainty weights: "+uncertaintyWeights);
+                    if(D) {
+                    	System.out.println("BranchSet. Definition through: " + branchModel + "\n"
+                    	                   + "Rule: "+ruleName+ "\n"
+                    	                   + "Uncertainty values: " + uncertaintyValues + "\n"
+                    	                   + "Uncertainty weights: " + uncertaintyWeights + "\n");
+                    }
+//                    if(D) System.out.println("BranchSet. Definition through: "+branchModel);
+//                    if(D) System.out.println("Rule: "+ruleName);
+//                    if(D) System.out.println("Uncertainty values: "+uncertaintyValues);
+//                    if(D) System.out.println("Uncertainty weights: "+uncertaintyWeights);
                     
                     // instantiate branches
                     // number of branches
