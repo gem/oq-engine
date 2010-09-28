@@ -72,7 +72,16 @@ import org.opensha.sha.util.TectonicRegionType;
 public class CommandLineCalculator {
 	// configuration data
 	private Properties props;
-	// apache commons logging, not log4j
+	//
+	// Apache commons logging, not log4j
+	// Note that for application code, declaring the log member as "static" is 
+	// more efficient as one Log object is created per class, and is 
+	// recommended. However this is not safe to do for a class which may be
+	// deployed via a "shared" classloader in a servlet or j2ee container or
+	// similar environment. If the class may end up invoked with different
+	// thread-context-classloader values set then the member must not be 
+	// declared static. The use of "static" should therefore be avoided in
+	// code within any "library" type project. 
 	private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
 	private Configuration config;
 	private PropertiesConfiguration propsConfig;
@@ -164,8 +173,10 @@ public class CommandLineCalculator {
 			// do calculation for each end branch model
 			doFullCalculation();
 		} else {
-			logMsg.append("Calculation mode: " + config.getString(ConfigItems.CALCULATION_MODE.name())
-			              + " not recognized. Check the configuration file!\n" + "Execution stops!");
+			logMsg.append("Calculation mode: " 
+			              + config.getString(ConfigItems.CALCULATION_MODE.name())
+			              + " not recognized. Check the configuration file!\n" 
+			              + "Execution stops!");
 			logger.info(logMsg);
 //			System.out.println("Calculation mode: " + config.getString(ConfigItems.CALCULATION_MODE.name())
 //			                   + " not recognized. Check the configuration file!\n" + "Execution stops!");
@@ -213,7 +224,9 @@ public class CommandLineCalculator {
 		ArbitrarilyDiscretizedFunc imlList = CalculatorConfigHelper.makeImlList(config);
 		double maxDistance = config.getDouble(ConfigItems.MAXIMUM_DISTANCE.name());
 		for(int i = 0; i < numHazCurves; i++) {
-			logger.info("Realization number: " + (i + 1) + ", of: " + numHazCurves);
+			logger.info("Realization number: " 
+			            + (i + 1) + ", of: " 
+			            + numHazCurves);
 //			System.out.println("Realization number: " + (i + 1) + ", of: " + numHazCurves);
 			// do calculation
 			// TODO: Damiano: is it necessary to run sampleGemLogicTreeERF() and
@@ -242,9 +255,11 @@ public class CommandLineCalculator {
 			ArrayList<Double> meanGroundMotionMap = hcRepList.getMeanGrounMotionMap(config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()));
 			// save mean ground motion map
 			// as an example: here we read from Configuration object
-			String outfile = config.getString((String)(ConfigItems.OUTPUT_DIR.name())) + "meanGroundMotionMap_"
+			String outfile = config.getString((String)(ConfigItems.OUTPUT_DIR.name())) 
+							 + "meanGroundMotionMap_"
 			                 + config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()) * 100 + "%"
-			                 + config.getString(ConfigItems.INVESTIGATION_TIME.name()) + "yr.dat";
+			                 + config.getString(ConfigItems.INVESTIGATION_TIME.name()) 
+			                 + "yr.dat";
 			saveGroundMotionMapToAsciiFile(outfile, meanGroundMotionMap, hcRepList.getHcRepList().get(0).getGridNode());
 		}
 		if(config.getBoolean(ConfigItems.INDIVIDUAL_GROUND_MOTION_MAP.name())) {
@@ -254,21 +269,25 @@ public class CommandLineCalculator {
 				// calculate ground motion map
 				ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()));
 				// define file name
-				String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) + "groundMotionMap_"
+				String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) 
+								 + "groundMotionMap_"
 				                 + hcRepList.getEndBranchLabels().get(indexLabel) + "_"
 				                 + config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()) * 100 + "%"
-				                 + config.getString(ConfigItems.INVESTIGATION_TIME.name()) + "yr.dat";
+				                 + config.getString(ConfigItems.INVESTIGATION_TIME.name())
+				                 + "yr.dat";
 				saveGroundMotionMapToAsciiFile(outfile, groundMotionMap, hcRepList.getHcRepList().get(0).getGridNode());
 				indexLabel = indexLabel + 1;
 			}
 		}
 		if(config.getBoolean(ConfigItems.MEAN_HAZARD_CURVES.name())) {
 			GEMHazardCurveRepository meanHazardCurves = hcRepList.getMeanHazardCurves();
-			String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) + "meanHazardCurves.dat";
+			String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) 
+							 + "meanHazardCurves.dat";
 			saveHazardCurveRepositoryToAsciiFile(outfile, meanHazardCurves);
 		}
 		if(config.getBoolean(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name())) {
-			String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) + "individualHazardCurves.dat";
+			String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) 
+							 + "individualHazardCurves.dat";
 			saveHazardCurveRepositoryListToAsciiFile(outfile, hcRepList);
 		}
 
@@ -296,8 +315,8 @@ public class CommandLineCalculator {
 		HashMap<String, ArrayList<GEMSourceData>> endBranchModels = computeErfLogicTreeEndBrancheModels(erfLogicTree.getErfLogicTree());
 		// log info
 		logger.info("ERF logic tree end branch models (total number: "
-		                   + endBranchModels.keySet().size()
-		                   + ").\n");
+		            + endBranchModels.keySet().size()
+		            + ").\n");
 //		System.out.println("ERF logic tree end branch models (total number: "
 //		                   + endBranchModels.keySet().size()
 //		                   + ").\n");
