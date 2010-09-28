@@ -14,6 +14,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -28,6 +29,8 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.FileConfiguration;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.configuration.PropertyConverter;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -69,11 +72,8 @@ import org.opensha.sha.util.TectonicRegionType;
 public class CommandLineCalculator {
 	// configuration data
 	private Properties props;
-	/*
-	 * TODO: O.K. this prepares the use of the apache Configuration API. Tedious
-	 * work to replace all Properties.getProperty() calls with
-	 * Configuration.getProperty() calls is left for later.
-	 */
+	// apache commons logging, not log4j
+	private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
 	private Configuration config;
 	private PropertiesConfiguration propsConfig;
 	// keyword
@@ -152,6 +152,7 @@ public class CommandLineCalculator {
 	 * calculations.
 	 */
 	public void doCalculation() {
+		StringBuffer logMsg = new StringBuffer();
 		// start chronometer
 		long startTimeMs = System.currentTimeMillis();
 		// get calculation mode
@@ -163,44 +164,41 @@ public class CommandLineCalculator {
 			// do calculation for each end branch model
 			doFullCalculation();
 		} else {
-			System.out.println("Calculation mode: " + config.getString(ConfigItems.CALCULATION_MODE.name())
-			                   + " not recognized. Check the configuration file!\n" + "Execution stops!");
+			logMsg.append("Calculation mode: " + config.getString(ConfigItems.CALCULATION_MODE.name())
+			              + " not recognized. Check the configuration file!\n" + "Execution stops!");
+			logger.info(logMsg);
+//			System.out.println("Calculation mode: " + config.getString(ConfigItems.CALCULATION_MODE.name())
+//			                   + " not recognized. Check the configuration file!\n" + "Execution stops!");
 			System.exit(0);
 		}
 		// calculate elapsed time
 		long taskTimeMs = System.currentTimeMillis() - startTimeMs;
-		System.out.println("Wall clock time (including time for saving output files)");
+		logMsg.append("Wall clock time (including time for saving output files)\n");
+//		System.out.println("Wall clock time (including time for saving output files)");
 		// 1h = 60*60*10^3 ms
-		System.out.printf("hours  : %6.3f\n", taskTimeMs / (60 * 60 * Math.pow(10, 3)));
+		logMsg.append(String.format("hours  : %6.3f\n", taskTimeMs / (60 * 60 * Math.pow(10, 3))));
+//		System.out.printf("hours  : %6.3f\n", taskTimeMs / (60 * 60 * Math.pow(10, 3)));
 		// 1 min = 60*10^3 ms
-		System.out.printf("minutes: %6.3f\n", taskTimeMs / (60 * Math.pow(10, 3)));
-	}
+		logMsg.append(String.format("minutes: %6.3f\n", taskTimeMs / (60 * Math.pow(10, 3))));
+//		System.out.printf("minutes: %6.3f\n", taskTimeMs / (60 * Math.pow(10, 3)));
+		logger.info(logMsg);
+	} // doCalculation()
 
 	private void doCalculationThroughMonteCarloApproach() {
-		System.out.println("Performing calculation through Monte Carlo Approach.\n");
+		logger.info("Performing calculation through Monte Carlo Approach.\n");
+//		System.out.println("Performing calculation through Monte Carlo Approach.\n");
 		// load ERF logic tree data
 		ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(config.getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
 		// load GMPE logic tree data
-		GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(
-		                                                        config
-		                                                              .getString(ConfigItems.GMPE_LOGIC_TREE_FILE
-		                                                                                                         .name()),
+		GmpeLogicTreeData gmpeLogicTree = new GmpeLogicTreeData(config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
 		                                                        config.getString(ConfigItems.COMPONENT.name()),
-		                                                        config
-		                                                              .getString(ConfigItems.INTENSITY_MEASURE_TYPE
-		                                                                                                           .name()),
+		                                                        config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name()),
 		                                                        config.getDouble(ConfigItems.PERIOD.name()),
 		                                                        config.getDouble(ConfigItems.DAMPING.name()),
-		                                                        config
-		                                                              .getString(ConfigItems.GMPE_TRUNCATION_TYPE
-		                                                                                                         .name()),
+		                                                        config.getString(ConfigItems.GMPE_TRUNCATION_TYPE.name()),
 		                                                        config.getDouble(ConfigItems.TRUNCATION_LEVEL.name()),
-		                                                        config
-		                                                              .getString(ConfigItems.STANDARD_DEVIATION_TYPE
-		                                                                                                            .name()),
-		                                                        config
-		                                                              .getDouble(ConfigItems.REFERENCE_VS30_VALUE
-		                                                                                                         .name()));
+		                                                        config.getString(ConfigItems.STANDARD_DEVIATION_TYPE.name()),
+		                                                        config.getDouble(ConfigItems.REFERENCE_VS30_VALUE.name()));
 		// instantiate the repository for the results
 		GEMHazardCurveRepositoryList hcRepList = new GEMHazardCurveRepositoryList();
 		// sites for calculation
@@ -215,7 +213,8 @@ public class CommandLineCalculator {
 		ArbitrarilyDiscretizedFunc imlList = CalculatorConfigHelper.makeImlList(config);
 		double maxDistance = config.getDouble(ConfigItems.MAXIMUM_DISTANCE.name());
 		for(int i = 0; i < numHazCurves; i++) {
-			System.out.println("Realization number: " + (i + 1) + ", of: " + numHazCurves);
+			logger.info("Realization number: " + (i + 1) + ", of: " + numHazCurves);
+//			System.out.println("Realization number: " + (i + 1) + ", of: " + numHazCurves);
 			// do calculation
 			// TODO: Damiano: is it necessary to run sampleGemLogicTreeERF() and
 			// sampleGemLogicTreeGMPE() for every iteration?
@@ -223,14 +222,14 @@ public class CommandLineCalculator {
 			// the next...
 			// Damiano: yes because at each iteration both the ERF and GMPEs
 			// changes, because they are randomly sampled
-			GemComputeHazard compHaz = new GemComputeHazard(
-			                                                numOfThreads,
+			GemComputeHazard compHaz = new GemComputeHazard(numOfThreads,
 			                                                sites,
 			                                                sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
 			                                                                      config),
-			                                                sampleGemLogicTreeGMPE(gmpeLogicTree
-			                                                                                    .getGmpeLogicTreeHashMap()),
-			                                                imlList, maxDistance);
+			                                                sampleGemLogicTreeGMPE(gmpeLogicTree.getGmpeLogicTreeHashMap()),
+			                                                						imlList,
+			                                                						maxDistance
+															);
 			// store results
 			hcRepList.add(compHaz.getValues(), Integer.toString(i));
 		} // for
@@ -276,7 +275,8 @@ public class CommandLineCalculator {
 	} // doCalculationThroughMonteCarloApproach()
 
 	private void doFullCalculation() {
-		System.out.println("Performing full calculation. \n");
+		logger.info("Performing full calculation. \n");
+//		System.out.println("Performing full calculation. \n");
 		// load ERF logic tree data
 		ErfLogicTreeData erfLogicTree = new ErfLogicTreeData(config.getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
 		// load GMPE logic tree data
@@ -293,33 +293,54 @@ public class CommandLineCalculator {
 		                                                        period, damping, truncationType, truncationLevel,
 		                                                        standardDeviationType, vs30Reference);
 		// compute ERF logic tree end-branch models
-		HashMap<String, ArrayList<GEMSourceData>> endBranchModels = computeErfLogicTreeEndBrancheModels(erfLogicTree
-		                                                                                                            .getErfLogicTree());
-		// print info
-		System.out.println("ERF logic tree end branch models (total number: " + endBranchModels.keySet().size()
+		HashMap<String, ArrayList<GEMSourceData>> endBranchModels = computeErfLogicTreeEndBrancheModels(erfLogicTree.getErfLogicTree());
+		// log info
+		logger.info("ERF logic tree end branch models (total number: "
+		                   + endBranchModels.keySet().size()
 		                   + ").\n");
+//		System.out.println("ERF logic tree end branch models (total number: "
+//		                   + endBranchModels.keySet().size()
+//		                   + ").\n");
 		Iterator<String> erfEndBranchLabelIter = endBranchModels.keySet().iterator();
 		while(erfEndBranchLabelIter.hasNext()) {
 			String erfEndBranchLabel = erfEndBranchLabelIter.next();
-			System.out.println("End branch label: " + erfEndBranchLabel + "\n");
-		}
+			logger.info("End branch label: " + erfEndBranchLabel + "\n");
+//			System.out.println("End branch label: " + erfEndBranchLabel + "\n");
+		} // while
 		// compute gmpe logic tree end-branch models
-		HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModel = computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree
-		                                                                                                                                                           .getGmpeLogicTreeHashMap());
-		// print info
-		System.out.println("GMPE logic tree end branch models (total number: " + gmpeEndBranchModel.keySet().size()
-		                   + ").\n");
+		HashMap<String,
+			HashMap<TectonicRegionType,
+				ScalarIntensityMeasureRelationshipAPI>>
+					gmpeEndBranchModel 
+						= computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree.
+				                                       getGmpeLogicTreeHashMap());
+		// log info
+		logger.info("GMPE logic tree end branch models (total number: "
+		            + gmpeEndBranchModel.keySet().size()
+		            + ").\n");
+//		System.out.println("GMPE logic tree end branch models (total number: "
+//		                   + gmpeEndBranchModel.keySet().size()
+//		                   + ").\n");
 		Iterator<String> gmpeEndBranchLabelIter = gmpeEndBranchModel.keySet().iterator();
 		while(gmpeEndBranchLabelIter.hasNext()) {
 			String gmpeEndBranchLabel = gmpeEndBranchLabelIter.next();
-			System.out.println("End branch label: " + gmpeEndBranchLabel);
+			logger.info("End branch label: " + gmpeEndBranchLabel);
+//			System.out.println("End branch label: " + gmpeEndBranchLabel);
 			Iterator<TectonicRegionType> trtIter = gmpeEndBranchModel.get(gmpeEndBranchLabel).keySet().iterator();
 			while(trtIter.hasNext()) {
 				TectonicRegionType trt = trtIter.next();
-				System.out.println("                  Tectonic region type: " + trt.toString() + " --> GMPE: "
-				                   + gmpeEndBranchModel.get(gmpeEndBranchLabel).get(trt).getName());
+				logger.info("                  Tectonic region type: "
+				            + trt.toString() 
+				            + " --> GMPE: "
+				            + gmpeEndBranchModel.get(gmpeEndBranchLabel).get(trt).getName());
+//				System.out.println("                  Tectonic region type: " + trt.toString() + " --> GMPE: "
+//				                   + gmpeEndBranchModel.get(gmpeEndBranchLabel).get(trt).getName());
 			} // while
-			System.out.println("\n");
+			// TODO:
+			// O.k., here, the intention is to insert a one line gap after
+			// a "block" logging messages. But is this the way?
+			logger.info("\n");
+//			System.out.println("\n");
 		} // while gmpeEndBranchLabelIter
 		// instantiate the repository for the results
 		GEMHazardCurveRepositoryList hcRepList = new GEMHazardCurveRepositoryList();
@@ -336,7 +357,8 @@ public class CommandLineCalculator {
 		while(endBranchLabels.hasNext()) {
 			// current erf end-branch model label
 			String erfLabel = endBranchLabels.next();
-			System.out.println("Processing end-branch model: " + erfLabel);
+			logger.info("Processing end-branch model: " + erfLabel);
+//			System.out.println("Processing end-branch model: " + erfLabel);
 			// instantiate GEM1ERF with the source model corresponding
 			// to the current label
 			GEM1ERF erf = new GEM1ERF(endBranchModels.get(erfLabel));
@@ -346,7 +368,8 @@ public class CommandLineCalculator {
 			Iterator<String> gmpeEndBranchLabels = gmpeEndBranchModel.keySet().iterator();
 			while(gmpeEndBranchLabels.hasNext()) {
 				String gmpeLabel = gmpeEndBranchLabels.next();
-				System.out.println("Processing gmpe end-branch model: " + gmpeLabel);
+				logger.info("Processing gmpe end-branch model: " + gmpeLabel);
+//				System.out.println("Processing gmpe end-branch model: " + gmpeLabel);
 				// do calculation
 				GemComputeHazard compHaz = new GemComputeHazard(numThreads, sites, erf,
 				                                                gmpeEndBranchModel.get(gmpeLabel), imlList, maxDist);
@@ -419,9 +442,8 @@ public class CommandLineCalculator {
 	 *         assumption in this method is that the logic tree for the Gmpes
 	 *         contains only one branching level.
 	 */
-	private HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> computeGmpeLogicTreeEndBrancheModels(
-	                                                                                                                                 HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap) {
-
+	private HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> computeGmpeLogicTreeEndBrancheModels(HashMap<TectonicRegionType, 
+	                                                                                                                                 GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap) {
 		// make deep copy
 		HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMapCopy = (HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>)UnoptimizedDeepCopy
 		                                                                                                                                                                                                                 .copy(gmpeLogicTreeHashMap);
@@ -430,8 +452,9 @@ public class CommandLineCalculator {
 		// tectonic region types
 		Iterator<TectonicRegionType> trtIter = gmpeLogicTreeHashMapCopy.keySet().iterator();
 		ArrayList<TectonicRegionType> trtList = new ArrayList<TectonicRegionType>();
-		while(trtIter.hasNext())
+		while(trtIter.hasNext()) {
 			trtList.add(trtIter.next());
+		}
 		// load gmpe models from first tectonic region type
 		if(endBranchModels.isEmpty()) {
 			// number of branches for the first tectonic region type
@@ -688,7 +711,7 @@ public class CommandLineCalculator {
 		}
 	} // saveFractiles()
 
-	private ArrayList<Site> createSiteList(Configuration calcConfig) {
+	private static ArrayList<Site> createSiteList(Configuration calcConfig) {
 		// arraylist of sites storing locations where hazard curves must be
 		// calculated
 		ArrayList<Site> sites = new ArrayList<Site>();
@@ -699,7 +722,7 @@ public class CommandLineCalculator {
 		// old style: "properties" - going to be deleted
 		// double gridSpacing =
 		// Double.parseDouble(calcConfig.getProperty(ConfigItems.REGION_GRID_SPACING.name()));
-		double gridSpacing = config.getDouble(ConfigItems.REGION_GRID_SPACING.name());
+		double gridSpacing = calcConfig.getDouble(ConfigItems.REGION_GRID_SPACING.name());
 		GriddedRegion gridReg = new GriddedRegion(locations, BorderType.MERCATOR_LINEAR, gridSpacing, null);
 		// get list of locations in the region
 		LocationList locList = gridReg.getNodeList();
@@ -739,9 +762,12 @@ public class CommandLineCalculator {
 			// load sources
 			srcList = inputModelData.getSourceList();
 		} else {
-			System.out.println("The first branching level of the ERF logic tree does not contain a source model!!");
-			System.out.println("Please correct your input!");
-			System.out.println("Execution stopped!");
+			logger.info("The first branching level of the ERF logic tree does not contain a source model!!\n"
+			            + "Please correct your input!\n"
+			            + "Execution stopped!");
+//			System.out.println("The first branching level of the ERF logic tree does not contain a source model!!");
+//			System.out.println("Please correct your input!");
+//			System.out.println("Execution stopped!");
 			System.exit(0);
 		}
 		// loop over sources
@@ -785,11 +811,15 @@ public class CommandLineCalculator {
 						srcList.set(sourceIndex, applyRuleToSubductionFaultSource((GEMSubductionFaultSourceData)src,
 						                                                          branch.getRule()));
 					}
-				} // end if rule is defined
-				else {
-					System.out.println("No rule is defined at branching level: " + i);
-					System.out.println("Please correct your input!");
-					System.out.println("Execution stopped!");
+				} else {
+					// rule is not defined:
+					logger.info("No rule is defined at branching level: "
+					            + i + "\n"
+					            + "Please correct your input!\n"
+					            + "Execution stopped!");
+//					System.out.println("No rule is defined at branching level: " + i);
+//					System.out.println("Please correct your input!");
+//					System.out.println("Execution stopped!");
 					System.exit(0);
 				} // end if no rule is defined
 			} // end loop over branching levels
@@ -826,27 +856,29 @@ public class CommandLineCalculator {
 				if(mfd instanceof GutenbergRichterMagFreqDist) {
 					// new mfd
 					GutenbergRichterMagFreqDist newMfdGr = null;
-					// uncertainties on Mmax
 					if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
+						// uncertainties on Mmax
 						newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)mfd, rule.getVal(),
 						                               areaSrc.getName());
-					}
-					// uncertainties on b value
-					else if(rule.getRuleName().toString()
-					            .equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())) {
+					} else if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())) {
+						// uncertainties on b value
 						newMfdGr = applybGrRelative((GutenbergRichterMagFreqDist)mfd, rule.getVal(), areaSrc.getName());
 					}
 					// substitute old mfd with new mfd
 					newAreaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] = newMfdGr;
 				} // end if mfd is GR
 				mfdIndex = mfdIndex + 1;
-			} // end loop over mfds
+			} // for (loop over mfds)
 			// return new area source
 			return newAreaSrc;
-		} // end if rule == mMaxGRRelative || == bGRRelative
-		else {
-			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
-			System.out.println("Check your input. Execution is stopped.");
+		} else {
+			// not(rule == mMaxGRRelative || == bGRRelative)
+			logger.info("Rule: " 
+			            + rule.getRuleName().toString() 
+			            + " not supported.\n"
+			            + "Check your input. Execution is stopped.");
+//			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
+//			System.out.println("Check your input. Execution is stopped.");
 			System.exit(0);
 		}
 		return null;
@@ -864,23 +896,17 @@ public class CommandLineCalculator {
 	 *          is not recognized an error is thrown and execution stops
 	 */
 	private static GEMPointSourceData applyRuleToPointSource(GEMPointSourceData pntSrc, GemLogicTreeRule rule) {
-
 		// new point source
 		GEMPointSourceData newPntSource = pntSrc;
-
 		// if uncertainties on GR Mmax or GR b value
 		if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.mMaxGRRelative.toString())
 		   || rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())) {
-
 			// loop over mfds
 			// mfd index
 			int mfdIndex = 0;
 			for(IncrementalMagFreqDist mfd : pntSrc.getHypoMagFreqDistAtLoc().getMagFreqDistList()) {
-
 				if(mfd instanceof GutenbergRichterMagFreqDist) {
-
 					GutenbergRichterMagFreqDist newMfdGr = null;
-
 					// create new mfd by applying rule
 					if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
 						newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)mfd, rule.getVal(),
@@ -889,26 +915,24 @@ public class CommandLineCalculator {
 					              .equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())) {
 						newMfdGr = applybGrRelative((GutenbergRichterMagFreqDist)mfd, rule.getVal(), pntSrc.getName());
 					}
-
 					// substitute old mfd with new mfd
 					newPntSource.getHypoMagFreqDistAtLoc().getMagFreqDistList()[mfdIndex] = newMfdGr;
-
-				} // end if mfd is GR
-
+				} // if mfd is GR
 				mfdIndex = mfdIndex + 1;
-			} // end loop over mfd
-
+			} // for (loop over mfd)
 			return newPntSource;
-
-		} // end if rule == mMaxGRRelative || == bGRRelative
-		else {
-			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
-			System.out.println("Check your input. Execution is stopped.");
+		} else {
+			// not(rule == mMaxGRRelative || == bGRRelative)
+			logger.info("Rule: " 
+			            + rule.getRuleName().toString() 
+			            + " not supported.\n"
+			            + "Check your input. Execution is stopped.");
+//			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
+//			System.out.println("Check your input. Execution is stopped.");
 			System.exit(0);
 		}
-
 		return null;
-	}
+	} // applyRuleToPointSource()
 
 	/**
 	 * This method applies an "uncertainty" rule to a fault source data object
@@ -922,46 +946,47 @@ public class CommandLineCalculator {
 	 *          is not recognized an error is thrown and execution stops
 	 */
 	private static GEMFaultSourceData applyRuleToFaultSource(GEMFaultSourceData faultSrc, GemLogicTreeRule rule) {
-
 		// if uncertainties on GR Mmax or GR b value
 		if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.mMaxGRRelative.toString())
 		   || rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())) {
-
 			// mfd
 			IncrementalMagFreqDist mfd = faultSrc.getMfd();
-
 			if(mfd instanceof GutenbergRichterMagFreqDist) {
-
 				GutenbergRichterMagFreqDist newMfdGr = null;
-
 				// create new mfd by applying rule
 				if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
 					newMfdGr = applyMmaxGrRelative((GutenbergRichterMagFreqDist)mfd, rule.getVal(), faultSrc.getName());
 				} else if(rule.getRuleName().toString().equalsIgnoreCase(GemLogicTreeRuleParam.bGRRelative.toString())) {
 					newMfdGr = applybGrRelative((GutenbergRichterMagFreqDist)mfd, rule.getVal(), faultSrc.getName());
 				}
-
 				// return new fault source with new mfd
-				return new GEMFaultSourceData(faultSrc.getID(), faultSrc.getName(), faultSrc.getTectReg(), newMfdGr,
-				                              faultSrc.getTrace(), faultSrc.getDip(), faultSrc.getDip(),
-				                              faultSrc.getSeismDepthLow(), faultSrc.getSeismDepthUpp(),
+				return new GEMFaultSourceData(faultSrc.getID(), 
+				                              faultSrc.getName(), 
+				                              faultSrc.getTectReg(), 
+				                              newMfdGr,
+				                              faultSrc.getTrace(), 
+				                              faultSrc.getDip(), 
+				                              faultSrc.getDip(),
+				                              faultSrc.getSeismDepthLow(), 
+				                              faultSrc.getSeismDepthUpp(),
 				                              faultSrc.getFloatRuptureFlag());
-
-			}// end if mfd is GR
-			// if the uncertainty do not apply return the unchanged object
-			else {
+			} else {
+				// mfd is not GR
+				// if the uncertainty do not apply return the unchanged object
 				return faultSrc;
 			}
-
-		} // end if rule == mMaxGRRelative || == bGRRelative
-		else {
-			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
-			System.out.println("Check your input. Execution is stopped.");
+		} else {
+			// not(rule == mMaxGRRelative || == bGRRelative)
+			logger.info("Rule: "
+			            + rule.getRuleName().toString() 
+			            + " not supported.\n"
+			            + "Check your input. Execution is stopped.");
+//			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
+//			System.out.println("Check your input. Execution is stopped.");
 			System.exit(0);
 		}
-
 		return null;
-	}
+	} // applyRuleToFaultSource()
 
 	/**
 	 * This method applies an "uncertainty" rule to a subduction source data
@@ -1012,13 +1037,16 @@ public class CommandLineCalculator {
 
 		}// end if rule == mMaxGRRelative || == bGRRelative
 		else {
-			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
-			System.out.println("Check your input. Execution is stopped.");
+			logger.info("Rule: "
+			            + rule.getRuleName().toString() 
+			            + " not supported.\n"
+			            + "Check your input. Execution is stopped.");
+//			System.out.println("Rule: " + rule.getRuleName().toString() + " not supported.");
+//			System.out.println("Check your input. Execution is stopped.");
 			System.exit(0);
 		}
-
 		return null;
-	}
+	} // applyRuleToSubductionFaultSource()
 
 	private static ArrayList<GEMSourceData> applyRuleToSourceList(ArrayList<GEMSourceData> srcList,
 	                                                              GemLogicTreeRule rule) {
@@ -1091,9 +1119,15 @@ public class CommandLineCalculator {
 
 		} else {
 			// stop execution and return null
-			System.out.println("Uncertaintiy value: " + deltaMmax + " on maximum magnitude for source: " + sourceName
-			                   + " give maximum magnitude smaller than minimum magnitude!");
-			System.out.println("Check your input. Execution stopped.");
+			logger.info("Uncertaintiy value: "
+			            + deltaMmax 
+			            + " on maximum magnitude for source: " 
+			            + sourceName
+			            + " give maximum magnitude smaller than minimum magnitude!\n"
+			            + "Check your input. Execution stopped.");
+//			System.out.println("Uncertaintiy value: " + deltaMmax + " on maximum magnitude for source: " + sourceName
+//			                   + " give maximum magnitude smaller than minimum magnitude!");
+//			System.out.println("Check your input. Execution stopped.");
 			return null;
 		}
 
@@ -1129,9 +1163,13 @@ public class CommandLineCalculator {
 			return newMfdGr;
 
 		} else {
-			System.out.println("Uncertaintiy value: " + deltaB + " on b value for source: " + sourceName
-			                   + " give b value smaller than 0!");
-			System.out.println("Check your input. Execution stopped!");
+			logger.info("Uncertaintiy value: " + deltaB
+			            + " on b value for source: " + sourceName
+			            + " give b value smaller than 0!\n"
+			            + "Check your input. Execution stopped!");
+//			System.out.println("Uncertaintiy value: " + deltaB + " on b value for source: " + sourceName
+//			                   + " give b value smaller than 0!");
+//			System.out.println("Check your input. Execution stopped!");
 			System.exit(0);
 			return null;
 		}
@@ -1274,8 +1312,24 @@ public class CommandLineCalculator {
 	public static void main(String[] args) throws IOException, SecurityException, IllegalArgumentException,
 	                                      ClassNotFoundException, InstantiationException, IllegalAccessException,
 	                                      NoSuchMethodException, InvocationTargetException {
-		System.out.println("xxr: user directory to put the file CalculatorConfig.properties -> "
-		                   + System.getProperty("user.dir"));
+		// Uncomment to test the configuration of the logging appenders:
+//		String msg = "User directory to put the file CalculatorConfig.properties -> "
+//					  + System.getProperty("user.dir");
+//		URL url = Thread.currentThread().getContextClassLoader().getResource(".");
+//		String workingDirectory = "working directory is : " + url.toString();
+//		logger.trace(msg);
+//		logger.trace(url);
+//		logger.debug(msg);
+//		logger.debug(url);
+//		logger.info(msg);
+//		logger.info(url);
+//		logger.warn(msg);
+//		logger.warn(url);
+//		logger.error(msg);
+//		logger.error(url);
+//		logger.fatal(msg);
+//		logger.fatal(url);
+
 		CommandLineCalculator clc = new CommandLineCalculator("CalculatorConfig.properties");
 		clc.doCalculation();
 		// clc.doCalculationThroughMonteCarloApproach();
