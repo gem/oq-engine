@@ -17,7 +17,7 @@ from opengem import xml
 log = logs.LOG
 
 XML_TEST_DIRECTORY= "schema"
-SCHEMA_FILE = 'shaml.xsd'
+SCHEMA_FILE = 'nrml.xsd'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')
