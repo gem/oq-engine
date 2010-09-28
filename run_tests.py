@@ -41,6 +41,7 @@ if __name__ == '__main__':
     from tests.parser_vulnerability_model_unittest import *
     from tests.producer_unittest import *
     from tests.risk_tests import *
+    from tests.schema_unittest import *
     from tests.classical_psha_based_unittest import *
     from tests.output_shaml_unittest import *
     
