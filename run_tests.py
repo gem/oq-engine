@@ -43,6 +43,7 @@ if __name__ == '__main__':
     from tests.risk_tests import *
     from tests.classical_psha_based_unittest import *
     from tests.output_shaml_unittest import *
+    from tests.memcached_unittest import *
     
     if FLAGS.speed_tests:
         from tests.xml_speedtests import *

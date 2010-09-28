@@ -16,11 +16,11 @@ from lxml import etree
 from opengem import writer
 from opengem.xml import NSMAP, SHAML, GML
 
-class HazardCurveWriter(writer.FileWriter):
+class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the shaml format."""
 
     def __init__(self, path):
-        super(HazardCurveWriter, self).__init__(path)
+        super(HazardCurveXMLWriter, self).__init__(path)
         self.result_list_tag = etree.Element(
                 SHAML + "HazardResultList", nsmap=NSMAP)
 
@@ -40,7 +40,7 @@ class HazardCurveWriter(writer.FileWriter):
                 xml_declaration=True,
                 encoding="UTF-8"))
                 
-        super(HazardCurveWriter, self).close()
+        super(HazardCurveXMLWriter, self).close()
 
     def _add_curve_to_proper_set(self, point, values, values_tag):
         """Adds the curve to the proper set depending on the IML values."""

@@ -15,11 +15,11 @@ XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 
 schema_dir = os.path.join(os.path.dirname(__file__), "../docs/schema")
 
-class HazardCurveWriterTestCase(unittest.TestCase):
+class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
     def setUp(self):
         self._delete_test_file()
-        self.writer = shaml.HazardCurveWriter(
+        self.writer = shaml.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
 
     def tearDown(self):
