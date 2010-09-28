@@ -1,159 +1,69 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
 	targetNamespace="http://opengem.org/xmlns/shaml/0.1"
-	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
-
+	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1"
+	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
 	<!-- import -->
 	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
-		<!-- schemaLocation="./gml.xsd"/> -->
+		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+	<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="nrml_common.xsd"/>
 	<!-- -->
-	<xs:complexType name="HazardCurveListType">
-		<xs:all>
-
-			<xs:element name="IML" type="gml:doubleList"/>
-			<xs:element name="List">
-				<xs:complexType>
-					<xs:sequence maxOccurs="unbounded">
-						<xs:element name="Curve" type="shaml:HazardCurveType" maxOccurs="1"/>
-					</xs:sequence>
-				</xs:complexType>
-			</xs:element>
-		</xs:all>
-	</xs:complexType>
-	<xs:complexType name="HazardCurveType">
-		<xs:all>
-			<xs:element name="Site" type="shaml:SiteDataType"/>
-		</xs:all>
-		<xs:attribute name="minProb">
-			<xs:simpleType>
-				<xs:restriction base="xs:double">
-					<xs:minInclusive fixed="true" value="0"/>
-					<xs:maxInclusive fixed="true" value="1"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-		<xs:attribute name="maxProb">
-			<xs:simpleType>
-				<xs:restriction base="xs:double">
-					<xs:minInclusive fixed="true" value="0"/>
-					<xs:maxInclusive fixed="true" value="1"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-	</xs:complexType>
-	<xs:complexType name="HazardResultType">
-		<xs:all>
-			<xs:element name="Descriptor">
-				<xs:complexType>
-					<xs:choice>
-						<xs:element name="endBranchLabel" type="xs:string"/>
-						<xs:element name="aggregationType">
-							<xs:simpleType>
-								<xs:restriction base="xs:string">
-									<xs:enumeration value="mean"/>
-									<xs:enumeration value="median"/>
-								</xs:restriction>
-							</xs:simpleType>
-						</xs:element>
-					</xs:choice>
-				</xs:complexType>
-			</xs:element>
-			<xs:element name="Values">
-				<xs:complexType>
-					<xs:choice>
-						<xs:element maxOccurs="unbounded" name="HazardCurveList"
-							type="shaml:HazardCurveListType"/>
-						<xs:element name="HazardMap" type="shaml:HazardMapType"/>
-					</xs:choice>
-				</xs:complexType>
-			</xs:element>
-		</xs:all>
-		<xs:attribute name="calcSettingsID" type="xs:string"/>
-		<xs:attribute name="IMT" use="required">
-			<xs:simpleType>
-				<xs:restriction base="xs:string">
-					<xs:enumeration value="PGA"/>
-					<xs:enumeration value="Sa"/>
-					<xs:enumeration value="PGV"/>
-					<xs:enumeration value="PGD"/>
-					<xs:enumeration value="MMI"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-		<xs:attribute name="saPeriod" type="xs:double"/>
-		<xs:attribute name="saDamping" type="xs:double"/>
-		<xs:attribute name="IDmodel" type="xs:string" use="required"/>
-		<xs:attribute name="timeSpanDuration" use="required">
-			<xs:simpleType>
-				<xs:restriction base="xs:double">
-					<xs:minInclusive value="0"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-	</xs:complexType>
-	<xs:complexType name="HazardResultListType">
-		<xs:sequence maxOccurs="unbounded">
-			<xs:element name="Result" type="shaml:HazardResultType"/>
-		</xs:sequence>
-	</xs:complexType>
-	<xs:complexType name="HazardMapType">
-		<xs:sequence maxOccurs="unbounded">
-			<xs:element name="Site" type="shaml:SiteDataType"/>
-		</xs:sequence>
-		<xs:attribute name="exceedanceProb">
-			<xs:simpleType>
-				<xs:restriction base="xs:double">
-					<xs:minInclusive fixed="true" value="0.0"/>
-					<xs:maxInclusive fixed="true" value="1.0"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
-		<xs:attribute name="fixedGMLevel" type="xs:double"/>
-	</xs:complexType>
-	<xs:complexType name="SiteDataType">
-		<xs:all>
-			<xs:element name="Site" type="gml:PointType"/>
-			<xs:element name="Values" type="gml:doubleList"/>
-			<xs:element name="vs30" type="xs:double"/>
-		</xs:all>
-	</xs:complexType>
-	<xs:element name="HazardResultList" type="shaml:HazardResultListType"/>
 	<xs:complexType name="CurveType">
 		<xs:all>
 			<xs:element name="Values" type="gml:doubleList"/>
 			<xs:element minOccurs="0" ref="gml:pos"/>
 		</xs:all>
 	</xs:complexType>
+
 	<xs:element name="Curve" type="shaml:CurveType"/>
 	<xs:element name="LossCurve" type="shaml:CurveType"/>
 	<xs:element name="LossCurvePE" type="shaml:CurveType"/>
+	<xs:element name="LossRatioCurvePE" type="shaml:CurveType"/>
 	<xs:element name="LossRatioCurve" type="shaml:CurveType"/>
+	<xs:element name="HazardCurve" type="shaml:CurveType"/>
+	<xs:element name="HazardCurvePGA" type="shaml:CurveType"/>
 	<xs:complexType name="CurveListType">
 		<xs:sequence minOccurs="0" maxOccurs="unbounded">
-    			<xs:choice>
-    				<xs:element ref="shaml:Curve"/>
-    				<xs:element ref="shaml:LossCurve"/>
-    				<xs:element ref="shaml:LossRatioCurve"/>
-    			</xs:choice>
+			<xs:choice>
+				<xs:element ref="shaml:Curve"/>
+				<xs:element ref="shaml:LossCurve"/>
+				<xs:element ref="shaml:LossRatioCurve"/>
+				<xs:element ref="shaml:HazardCurve"/>
+				<xs:element ref="shaml:IMLValues"/>
+			</xs:choice>
 		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
+	<xs:element name="Config"/>
+	<xs:element name="IMLValues" type="gml:doubleList"/>
 	<xs:element name="LossCurveList" type="shaml:CurveListType"/>
 	<xs:element name="LossRatioCurveList" type="shaml:CurveListType"/>
+	<xs:element name="HazardCurveList" type="shaml:CurveListType"/>
 	<xs:element name="RiskResult">
 		<xs:complexType>
-		    <xs:sequence minOccurs="1">
-    		    <xs:element name="Config"/>
-    			<xs:choice>
-    				<xs:element ref="shaml:LossCurveList"/>
-    				<xs:element ref="shaml:LossRatioCurveList"/>
-    			</xs:choice>
-    			<xs:choice>
-    	            <xs:element name="LossCurvePE" type="shaml:CurveType"/>
-    	            <xs:element name="LossRatioCurvePE" type="shaml:CurveType"/>
-    			</xs:choice>
-    		</xs:sequence>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="shaml:Config"/>
+				<xs:choice>
+					<xs:element ref="shaml:LossCurveList"/>
+					<xs:element ref="shaml:LossRatioCurveList"/>
+				</xs:choice>
+				<xs:choice>
+					<xs:element ref="shaml:LossCurvePE"/>
+					<xs:element ref="shaml:LossRatioCurvePE"/>
+				</xs:choice>
+			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
+	<xs:element name="HazardResult">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="shaml:Config"/>
+				<xs:sequence maxOccurs="unbounded">
+					<xs:element ref="shaml:HazardCurveList"/>
+				</xs:sequence>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:attribute name="endBranchLabel" type="xs:string"/>
 </xs:schema>
