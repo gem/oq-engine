@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+import json
 import os
 import pylibmc
 import random
@@ -23,7 +24,7 @@ class JobberTestCase(unittest.TestCase):
     def setUp(self):
         self.memcache_client = pylibmc.Client(["%s:%d" % (MEMCACHED_HOST,
             MEMCACHED_PORT)], binary=False)
-        self.memcache_client.delete_multi(TASK_NAME_SIMPLE)
+        self.memcache_client.flush_all()
 
     def tearDown(self):
         pass
@@ -84,10 +85,37 @@ class JobberTestCase(unittest.TestCase):
 
         self.assertEqual(expected_dict, result_values)
 
-        # clean up memcache
-        self.memcache_client.delete_multi(expected_keys)
+    def test_async_memcache_serialize_json(self):
 
-def wait_for_celery_tasks(celery_results):
+        # spawn four tasks that return json serializations of dicts
+        # tasks write their results to memcached
+        # check if objects are serialized/deserialized to/from json correctly
+        results = []
+        for curr_task_name in TASK_NAME_SIMPLE:
+            results.append(
+                test_tasks.simple_task_json_to_memcache.apply_async(
+                    args=[curr_task_name]))
+
+        wait_for_celery_tasks(results)
+
+        result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
+
+        expected_dict = {}
+        for curr_key in TASK_NAME_SIMPLE:
+            expected_dict[curr_key] = {
+                "list.%s" % curr_key: [curr_key, curr_key], 
+                "dict.%s" % curr_key: {curr_key: curr_key}}
+
+        decoder = json.JSONDecoder()
+        result_dict = {}
+        for k, v in result_values.items():
+            result_dict[k] = decoder.decode(v)
+
+        self.assertEqual(expected_dict, result_dict)
+
+def wait_for_celery_tasks(celery_results, 
+                          max_wait_loops=MAX_WAIT_LOOPS, 
+                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
     """celery_results is a list of celery task result objects.
     This function waits until all tasks have finished.
     """
@@ -98,8 +126,8 @@ def wait_for_celery_tasks(celery_results):
     while (False in [result.ready() for result in celery_results]):
         counter += 1
 
-        if counter > MAX_WAIT_LOOPS:
+        if counter > max_wait_loops:
             raise RuntimeError, "wait too long for celery worker threads"
 
-        time.sleep(WAIT_TIME_STEP_FOR_TASK_SECS)
+        time.sleep(wait_time)
     
