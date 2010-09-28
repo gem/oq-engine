@@ -1,3 +1,4 @@
+http://downloads.sourceforge.net/project/jpype/JPype/0.5.4/JPype-0.5.4.1.zip?r=http%3A%2F%2Fsourceforge.net%2Fprojects%2Fjpype%2Ffiles%2F&ts=1285585055&use_mirror=garr
 gdal
 greenlet
 eventlet
