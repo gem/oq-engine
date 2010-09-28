@@ -62,25 +62,25 @@ class Reader(object):
         curves = {}
         set_counter = 0
         
-        for raw_curve in decoded_model["hcRepList"]:
+        for raw_curves in decoded_model["hcRepList"]:
             curve_counter = 0
             
-            for curve in raw_curve["probExList"]:
+            for curve in raw_curves["probExList"]:
                 data = {}
                 
                 data["IDmodel"] = "FIXED" # fixed, not yet implemented
                 data["vs30"] = 0.0 # fixed, not yet implemented
-                data["timeSpanDuration"] = raw_curve["timeSpan"]
-                data["IMT"] = raw_curve["intensityMeasureType"]
+                data["timeSpanDuration"] = raw_curves["timeSpan"]
+                data["IMT"] = raw_curves["intensityMeasureType"]
                 data["Values"] = curve
-                data["IML"] = raw_curve["gmLevels"]
+                data["IML"] = raw_curves["gmLevels"]
                 data["maxProb"] = curve[-1]
                 data["minProb"] = curve[0]
                 data["endBranchLabel"] = \
                         decoded_model["endBranchLabels"][set_counter]
                 
-                lon = raw_curve["gridNode"][curve_counter]["location"]["lon"]
-                lat = raw_curve["gridNode"][curve_counter]["location"]["lat"]
+                lon = raw_curves["gridNode"][curve_counter]["location"]["lon"]
+                lat = raw_curves["gridNode"][curve_counter]["location"]["lat"]
                 
                 curves[shapes.Site(lon, lat)] = data
                 curve_counter += 1
