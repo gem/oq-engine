@@ -73,10 +73,12 @@ public class NshmpFault2GemSourceData extends GemFileParser {
 	// constructor
 	public NshmpFault2GemSourceData(String inputfile, TectonicRegionType trt, double fileWeight,
 			double latmin, double latmax, double lonmin, double lonmax) throws FileNotFoundException{
-		
+			    
+		// inputfile MUST be an absolute path!!
 		srcDataList = new ArrayList<GEMSourceData>();
-
-        BufferedReader oReader = new BufferedReader(new FileReader(this.getClass().getClassLoader().getResource(inputfile).getPath()));
+        System.out.println("Going to create BufferedReader for: " + inputfile);
+        BufferedReader oReader = new BufferedReader(new FileReader(inputfile));
+        System.out.println("Created BufferedReader for: " + inputfile);
         
         String sRecord = null;
         StringTokenizer st = null;

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema 
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1"
+	targetNamespace="http://opengem.org/xmlns/shaml/0.1"> 
+  <!-- Include schemas being part of PshaML -->
+	<xs:include schemaLocation="./nrml_input.xsd"/>
+	<!--  -->
+	<xs:include schemaLocation="./nrml_output.xsd"/>
+</xs:schema>

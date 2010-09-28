@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    targetNamespace="http://shaml.org/xmlns/shaml/0.1"
-    xmlns:shaml="http://shaml.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml"
+    targetNamespace="http://opengem.org/xmlns/shaml/0.1"
+    xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
     xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
     jaxb:extensionBindingPrefixes="xjc" elementFormDefault="qualified" jaxb:version="2.0">
 
     <!-- include common types-->
     <xs:annotation>
-        <xs:documentation xml:lang="english">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
+        <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
         </xs:documentation>
         <xs:appinfo>
             <jaxb:globalBindings enableJavaNamingConventions="true" underscoreBinding="asCharInWord">
@@ -20,9 +20,9 @@
     <!-- -->
 
     <!-- import -->
-    <xs:import namespace="http://www.opengis.net/gml"
-        schemaLocation="http://schemas.opengis.net/gml/3.1.1/base/gml.xsd"/>
-    <xs:include schemaLocation="shaML_common.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> <!-- http://schemas.opengis.net/gml/3.1.1/base -->
+    <xs:include schemaLocation="nrml_common.xsd"/>
     <!-- -->
 
     <xs:complexType name="LogicTreeERFType">
