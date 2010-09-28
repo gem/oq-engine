@@ -2,6 +2,7 @@ package org.gem.engine.hazard.memcached;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,25 +23,55 @@ public class ClientAPITest
 
     private static final int EXPIRE_TIME = 3600;
 
+    private static final int PORT = 11211;
+    private static final String LOCALHOST = "localhost";
+
     private MemcachedClient client;
+
+    public static class AReallyCoolObject implements Serializable
+    {
+
+        private static final long serialVersionUID = -4185818094252288027L;
+
+        private final Double x;
+        private final Double y;
+
+        public AReallyCoolObject(Double x, Double y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public boolean equals(Object obj)
+        {
+            if (!(obj instanceof AReallyCoolObject))
+            {
+                return false;
+            }
+
+            AReallyCoolObject other = (AReallyCoolObject) obj;
+            return other.x.equals(x) && other.y.equals(y);
+        }
+
+    }
 
     @Before
     public void setUp() throws Exception
     {
-        client = new MemcachedClient(new InetSocketAddress("localhost", 11211));
+        client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         client.flush(); // clear the server side cache
     }
 
     @Test
-    public void canStoreAndGetASimpleType()
+    public void canStoreAndRetrieveASimpleType()
     {
         client.set("STRING", EXPIRE_TIME, "VALUE");
-
         assertEquals("VALUE", client.get("STRING"));
     }
 
     @Test
-    public void canStoreAndGetAList()
+    public void canStoreAndRetrieveAList()
     {
         List<Double> results = new ArrayList<Double>();
         results.add(1.0);
@@ -48,15 +79,13 @@ public class ClientAPITest
         results.add(3.0);
 
         client.set("LIST", EXPIRE_TIME, results);
-
         assertEquals(results, client.get("LIST"));
     }
 
     @Test
-    public void canStoreAndGetAComplexType()
+    public void canStoreAndRetrieveAComplexType()
     {
         client.set("OBJ", EXPIRE_TIME, new AReallyCoolObject(1.0, 2.0));
-
         assertEquals(new AReallyCoolObject(1.0, 2.0), client.get("OBJ"));
     }
 
