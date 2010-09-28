@@ -19,7 +19,7 @@ log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
-LOSS_SCHEMA_FILE = 'shaml_output.xsd'
+LOSS_SCHEMA_FILE = 'nrml.xsd'
 
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')

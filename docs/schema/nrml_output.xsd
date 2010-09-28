@@ -7,7 +7,7 @@
 	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
 	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 		<!-- schemaLocation="./gml.xsd"/> -->
-	<xs:include schemaLocation="shaML_common.xsd"/>
+	<xs:include schemaLocation="nrml_common.xsd"/>
 	<!-- -->
 	<xs:complexType name="HazardCurveListType">
 		<xs:all>

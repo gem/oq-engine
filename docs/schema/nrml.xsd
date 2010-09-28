@@ -4,7 +4,7 @@
 	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1"
 	targetNamespace="http://opengem.org/xmlns/shaml/0.1"> 
   <!-- Include schemas being part of PshaML -->
-	<xs:include schemaLocation="./shaML_input.xsd"/>
+	<xs:include schemaLocation="./nrml_input.xsd"/>
 	<!--  -->
-	<xs:include schemaLocation="./shaML_output.xsd"/>
+	<xs:include schemaLocation="./nrml_output.xsd"/>
 </xs:schema>
