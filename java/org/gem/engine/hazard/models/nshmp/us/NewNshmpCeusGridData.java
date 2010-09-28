@@ -15,7 +15,7 @@ import org.opensha.sha.util.TectonicRegionType;
 public class NewNshmpCeusGridData extends GemFileParser{
 		
 		// directory for grid seismicity files
-		private String inDir = "nshmp/ceus_grids/";
+		public static String inDir = "nshmp/ceus_grids/";
 		
 		public NewNshmpCeusGridData(double latmin, double latmax, double lonmin, double lonmax) throws FileNotFoundException{
 			
