@@ -8,15 +8,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.StringTokenizer;
 
-import lombok.patcher.scripts.ScriptBuilder.ExitEarlyBuilder;
-
-import org.opensha.commons.exceptions.ConstraintException;
-import org.opensha.commons.exceptions.ParameterException;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
@@ -24,7 +21,6 @@ import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeBranch;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeBranchingLevel;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
-import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.DampingParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
@@ -36,6 +32,12 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.util.TectonicRegionType;
 
 public class GmpeLogicTreeData {
+
+	
+	// declaring the logger static here is more efficient for application code.
+	// This is not safe  for a class which may be deployed via a "shared" 
+	// classloader 
+	private static Log logger = LogFactory.getLog(GmpeLogicTreeData.class);
 	
 	// hash map of gmpe logic tree
 	private HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap;
@@ -52,6 +54,7 @@ public class GmpeLogicTreeData {
 	public GmpeLogicTreeData(String gmpeInputFile, String component, String intensityMeasureType,
 			double period, double damping, String truncType, double truncLevel, String stdType,
 			double vs30) {
+		D = logger.isDebugEnabled();
 		try {
 			// instatiate hash map of gmpe logic tree
 			gmpeLogicTreeHashMap = new HashMap<TectonicRegionType,GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>();
@@ -76,8 +79,11 @@ public class GmpeLogicTreeData {
 			BufferedInputStream oBIS = new BufferedInputStream(oFIS);
 			BufferedReader oReader = new BufferedReader(new InputStreamReader(oBIS));
 
-			if(D) System.out.println("\n\n");
-			if(D) System.out.println("GMPE Logic Tree structure");
+			if(D) {
+				logger.debug("\n\n\nGMPE Logic Tree structure\n"); 
+			}
+//			if(D) System.out.println("\n\n");
+//			if(D) System.out.println("GMPE Logic Tree structure");
 
 			sRecord = oReader.readLine();
 			// start reading the file
@@ -100,7 +106,12 @@ public class GmpeLogicTreeData {
 					}
 					activeShallowGmpeNames = sRecord.trim();
 
-					if(D) System.out.println("Gmpes for "+TectonicRegionType.ACTIVE_SHALLOW+": "+activeShallowGmpeNames);
+					if(D) {
+						logger.debug("Gmpes for "
+						             + TectonicRegionType.ACTIVE_SHALLOW
+						             + ": "+ activeShallowGmpeNames + "\n");
+					}
+//					if(D) System.out.println("Gmpes for "+TectonicRegionType.ACTIVE_SHALLOW+": "+activeShallowGmpeNames);
 
 					// read weights
 					sRecord = oReader.readLine();
@@ -110,7 +121,11 @@ public class GmpeLogicTreeData {
 					}
 					activeShallowGmpeWeights = sRecord.trim();
 
-					if(D) System.out.println("Gmpes weights: "+activeShallowGmpeWeights);
+					if(D) {
+						logger.debug("Gmpes weights: " 
+						             + activeShallowGmpeWeights + "\n");
+					}
+//					if(D) System.out.println("Gmpes weights: "+activeShallowGmpeWeights);
 				}
 
 				// if gmpes for stable continental crust are defined
@@ -124,7 +139,12 @@ public class GmpeLogicTreeData {
 					}
 					stableShallowGmpeNames = sRecord.trim();
 
-					if(D) System.out.println("Gmpes for "+TectonicRegionType.STABLE_SHALLOW+": "+stableShallowGmpeNames);
+					if(D) {
+						logger.debug("Gmpes for " 
+						             + TectonicRegionType.STABLE_SHALLOW
+						             + ": " + stableShallowGmpeNames + "\n");
+					}
+//					if(D) System.out.println("Gmpes for "+TectonicRegionType.STABLE_SHALLOW+": "+stableShallowGmpeNames);
 
 					// read weights
 					sRecord = oReader.readLine();
@@ -134,7 +154,11 @@ public class GmpeLogicTreeData {
 					}
 					stableShallowGmpeWeights = sRecord.trim();
 
-					if(D) System.out.println("Gmpes weights: "+stableShallowGmpeWeights);
+					if(D) {
+						logger.debug("Gmpes weights: "
+						             + stableShallowGmpeWeights + "\n");
+					}
+//					if(D) System.out.println("Gmpes weights: "+stableShallowGmpeWeights);
 				}
 
 				// if gmpes for subduction interface are defined
@@ -148,7 +172,12 @@ public class GmpeLogicTreeData {
 					}
 					subductionInterfaceGmpeNames = sRecord.trim();
 
-					if(D) System.out.println("Gmpes for "+TectonicRegionType.SUBDUCTION_INTERFACE+": "+subductionInterfaceGmpeNames);
+					if(D) {
+						logger.debug("Gmpes for "
+						             + TectonicRegionType.SUBDUCTION_INTERFACE + ": "
+						             + subductionInterfaceGmpeNames + "\n");
+					}
+//					if(D) System.out.println("Gmpes for "+TectonicRegionType.SUBDUCTION_INTERFACE+": "+subductionInterfaceGmpeNames);
 
 					// read weights
 					sRecord = oReader.readLine();
@@ -158,8 +187,11 @@ public class GmpeLogicTreeData {
 					}
 					subductionInterfaceGmpeWeights = sRecord.trim();
 
-					if(D) System.out.println("Gmpes weights: "+subductionInterfaceGmpeWeights);
-
+					if(D) { 
+						logger.debug("Gmpes weights: " 
+						             + subductionInterfaceGmpeWeights);
+					}
+//					if(D) System.out.println("Gmpes weights: "+subductionInterfaceGmpeWeights);
 				}
 
 				// if gmpes for subduction intraslab are defined
@@ -173,7 +205,12 @@ public class GmpeLogicTreeData {
 					}
 					subductionIntraSlabGmpeNames = sRecord.trim();
 
-					if(D) System.out.println("Gmpes for "+TectonicRegionType.SUBDUCTION_SLAB+": "+subductionIntraSlabGmpeNames);
+					if(D) {
+						logger.debug("Gmpes for " 
+						             + TectonicRegionType.SUBDUCTION_SLAB + ": " 
+						             + subductionIntraSlabGmpeNames);
+					}
+//					if(D) System.out.println("Gmpes for "+TectonicRegionType.SUBDUCTION_SLAB+": "+subductionIntraSlabGmpeNames);
 
 					// read weights
 					sRecord = oReader.readLine();
@@ -183,7 +220,11 @@ public class GmpeLogicTreeData {
 					}
 					subductionIntraSlabGmpeWeights = sRecord.trim();
 
-					if(D) System.out.println("Gmpes weights: "+subductionIntraSlabGmpeWeights);
+					if(D) {
+						logger.debug("Gmpes weights: "
+						             + subductionIntraSlabGmpeWeights);
+					}
+//					if(D) System.out.println("Gmpes weights: "+subductionIntraSlabGmpeWeights);
 
 				}
 
@@ -245,9 +286,12 @@ public class GmpeLogicTreeData {
 		StringTokenizer weight = new StringTokenizer(gmpeWeights);
     	
     	if(name.countTokens()!=weight.countTokens()){
-    		System.out.println("Number of gmpes do not corresponds to number of weights!");
-    		System.out.println("Check your input!");
-    		System.out.println("Execution stopped!");
+    		logger.info("Number of gmpes do not corresponds to number of weights!\n"
+    		            + "Check your input!\n"
+    		            + "Execution stopped!\n");
+//    		System.out.println("Number of gmpes do not corresponds to number of weights!");
+//    		System.out.println("Check your input!");
+//    		System.out.println("Execution stopped!");
     		System.exit(0);
     	}
     	
@@ -308,7 +352,8 @@ public class GmpeLogicTreeData {
             } catch(NoSuchMethodException e) {
             	// Should never happen. If yes:
 	            // TODO: use log4j
-            	System.out.println("Strange error. Stop of program:");
+            	logger.fatal("Strange error. Stop of program:");
+//            	System.out.println("Strange error. Stop of program:");
 	            e.printStackTrace();
 	            System.exit(-1);
             }
@@ -319,23 +364,23 @@ public class GmpeLogicTreeData {
 	            ar = (AttenuationRelationship) cstr.newInstance(ParameterChangeWarningListener(event));
             } catch(IllegalAccessException e) {
             	// Should never happen. If yes:
-	            // TODO: use log4j
-            	System.out.println("Strange error. Stop of program:");
+            	logger.fatal("Strange error. Stop of program:");
+//            	System.out.println("Strange error. Stop of program:");
 	            e.printStackTrace();
 	            System.exit(-1);
             } catch(InstantiationException e) {
-	            // TODO: use log4j
-            	System.out.println("Correct this or report this error to the OpenGEM group. Stop of program:");
+            	logger.fatal("Correct this or report this error to the OpenGEM group. Stop of program:");
+//            	System.out.println("Correct this or report this error to the OpenGEM group. Stop of program:");
 	            e.printStackTrace();
 	            System.exit(-1);
             } catch(InvocationTargetException e) {
-	            // TODO: use log4j
-            	System.out.println("Correct this or report this error to the OpenGEM group. Stop of program:");
+            	logger.fatal("Correct this or report this error to the OpenGEM group. Stop of program:");
+//            	System.out.println("Correct this or report this error to the OpenGEM group. Stop of program:");
 	            e.printStackTrace();
 	            System.exit(-1);
             } catch(IllegalArgumentException e) {
-	            // TODO: use log4j
-            	System.out.println("Correct this or report this error to the OpenGEM group. Stop of program:");
+            	logger.fatal("Correct this or report this error to the OpenGEM group. Stop of program:");
+//            	System.out.println("Correct this or report this error to the OpenGEM group. Stop of program:");
 	            e.printStackTrace();
 	            System.exit(-1);            	
             }
@@ -348,21 +393,19 @@ public class GmpeLogicTreeData {
     		// first check if the chosen component is allowed
     		if(ar.getParameter(ComponentParam.NAME).isAllowed(component)){
     			ar.getParameter(ComponentParam.NAME).setValue(component);
-    		}
-    		else{
-    	        System.out.println("The chosen component: "+component+" is not supported by "+gmpeName);
-    	        System.out.println("The supported components are the following: ");
-    	        System.out.println(ar.getParameter(ComponentParam.NAME).getConstraint());
-    	        System.out.println("Check your input file!");
-    	        System.out.println("Execution stopped.");
+    		} else {
+    	        logger.error("The chosen component: " + component 
+    	                    + " is not supported by " + gmpeName + "\n"
+    	                    + "The supported components are the following:\n"
+    	                    + ar.getParameter(ComponentParam.NAME).getConstraint() + "\n"
+    	                    + "Check your input file!\n"
+    	                    + "Execution stopped.");
+//    	        System.out.println("The chosen component: "+component+" is not supported by "+gmpeName);
+//    	        System.out.println("The supported components are the following: ");
+//    	        System.out.println(ar.getParameter(ComponentParam.NAME).getConstraint());
+//    	        System.out.println("Check your input file!");
+//    	        System.out.println("Execution stopped.");
     	        System.exit(0);
-//    	        InputStreamReader inp = new InputStreamReader(System.in);
-//    	        BufferedReader br = new BufferedReader(inp);
-//    			System.out.println("The chosen component: "+component+" is not allowed for "+gmpeName);
-//    			System.out.println("The component param has the following constrains:");
-//    			System.out.println(ar.getParameter(ComponentParam.NAME).getConstraint());
-//    			System.out.println("Type one of the allowed values:");
-//    			ar.getParameter(ComponentParam.NAME).setValue(br.readLine());
     		}
     		
     		// set intensity measure type
@@ -370,11 +413,18 @@ public class GmpeLogicTreeData {
     			ar.setIntensityMeasure(intensityMeasureType);
     		}
     		else{
-    	        System.out.println("The chosen intensity measure type: "+intensityMeasureType+" is not supported by "+gmpeName);
-    	        System.out.println("The supported types are the following: ");
-    	        System.out.println(ar.getSupportedIntensityMeasuresList().toString());
-    	        System.out.println("Check your input file!");
-    	        System.out.println("Execution stopped.");
+    	        logger.error("The chosen intensity measure type: "
+    	                    + intensityMeasureType + " is not supported by "
+    	                    + gmpeName + "\n"
+    	                    + "The supported types are the following:\n"
+    	                    + ar.getSupportedIntensityMeasuresList().toString() + "\n"
+    	                    + "Check your input file!\n"
+    	                    + "Execution stopped.");
+//    	        System.out.println("The chosen intensity measure type: "+intensityMeasureType+" is not supported by "+gmpeName);
+//    	        System.out.println("The supported types are the following: ");
+//    	        System.out.println(ar.getSupportedIntensityMeasuresList().toString());
+//    	        System.out.println("Check your input file!");
+//    	        System.out.println("Execution stopped.");
     	        System.exit(0);
     		}
     		
@@ -386,11 +436,17 @@ public class GmpeLogicTreeData {
     				ar.getParameter(PeriodParam.NAME).setValue(period);
     			}
         		else{
-        			System.out.println("The chosen period: "+period+" is not supported by "+gmpeName);
-        			System.out.println("The allowed values are the following: ");
-        			System.out.println(ar.getParameter(PeriodParam.NAME).getConstraint());
-        			System.out.println("Check your input file");
-        			System.out.println("Execution stopped.");
+        			logger.error("The chosen period: " + period
+        			            + " is not supported by " + gmpeName + "\n"
+        			            + "The allowed values are the following:\n"
+        			            + ar.getParameter(PeriodParam.NAME).getConstraint() + "\n"
+        			            + "Check your input file\n"
+        			            + "Execution stopped.");
+//        			System.out.println("The chosen period: "+period+" is not supported by "+gmpeName);
+//        			System.out.println("The allowed values are the following: ");
+//        			System.out.println(ar.getParameter(PeriodParam.NAME).getConstraint());
+//        			System.out.println("Check your input file");
+//        			System.out.println("Execution stopped.");
         			System.exit(0);
         		}
     			
@@ -399,11 +455,17 @@ public class GmpeLogicTreeData {
     				ar.getParameter(DampingParam.NAME).setValue(damping);
     			}
         		else{
-        			System.out.println("The chosen damping: "+damping+" is not supported by "+gmpeName);
-        			System.out.println("The allowed values are the following: ");
-        			System.out.println(ar.getParameter(DampingParam.NAME).getConstraint());
-        			System.out.println("Check your input file");
-        			System.out.println("Execution stopped.");
+        			logger.error("The chosen damping: " + damping
+        			            +" is not supported by " + gmpeName + "\n"
+        			            + "The allowed values are the following:\n"
+        			            + ar.getParameter(DampingParam.NAME).getConstraint() + "\n"
+        			            + "Check your input file\n"
+        			            + "Execution stopped.");
+//        			System.out.println("The chosen damping: "+damping+" is not supported by "+gmpeName);
+//        			System.out.println("The allowed values are the following: ");
+//        			System.out.println(ar.getParameter(DampingParam.NAME).getConstraint());
+//        			System.out.println("Check your input file");
+//        			System.out.println("Execution stopped.");
         			System.exit(0);
         		}
     			
@@ -414,11 +476,17 @@ public class GmpeLogicTreeData {
 				ar.getParameter(SigmaTruncTypeParam.NAME).setValue(truncType);
 			}
     		else{
-    			System.out.println("The chosen truncation type: "+truncType+" is not supported.");
-    			System.out.println("The allowed values are the following: ");
-    			System.out.println(ar.getParameter(SigmaTruncTypeParam.NAME).getConstraint());
-    			System.out.println("Check your input file");
-    			System.out.println("Execution stopped.");
+    			logger.error("The chosen truncation type: " + truncType
+    			             + " is not supported.\n"
+    			             + "The allowed values are the following:\n"
+    			             + ar.getParameter(SigmaTruncTypeParam.NAME).getConstraint() + "\n"
+    			             + "Check your input file\n"
+    			             + "Execution stopped.");
+//    			System.out.println("The chosen truncation type: "+truncType+" is not supported.");
+//    			System.out.println("The allowed values are the following: ");
+//    			System.out.println(ar.getParameter(SigmaTruncTypeParam.NAME).getConstraint());
+//    			System.out.println("Check your input file");
+//    			System.out.println("Execution stopped.");
     			System.exit(0);
     		}
 			
@@ -427,11 +495,17 @@ public class GmpeLogicTreeData {
 				ar.getParameter(SigmaTruncLevelParam.NAME).setValue(truncLevel);
 			}
     		else{
-    			System.out.println("The chosen truncation level: "+truncLevel+" is not supported.");
-    			System.out.println("The allowed values are the following: ");
-    			System.out.println(ar.getParameter(SigmaTruncLevelParam.NAME).getConstraint());
-    			System.out.println("Check your input file");
-    			System.out.println("Execution stopped.");
+    			logger.error("The chosen truncation level: " + truncLevel
+    			             +" is not supported.\n"
+    			             + "The allowed values are the following: \n"
+    			             + ar.getParameter(SigmaTruncLevelParam.NAME).getConstraint()+ "\n"
+    			             + "Check your input file\n"
+    			             + "Execution stopped.");
+//    			System.out.println("The chosen truncation level: "+truncLevel+" is not supported.");
+//    			System.out.println("The allowed values are the following: ");
+//    			System.out.println(ar.getParameter(SigmaTruncLevelParam.NAME).getConstraint());
+//    			System.out.println("Check your input file");
+//    			System.out.println("Execution stopped.");
     			System.exit(0);
     		}
 			
@@ -440,11 +514,17 @@ public class GmpeLogicTreeData {
 				ar.getParameter(StdDevTypeParam.NAME).setValue(stdType);
 			}
     		else{
-    			System.out.println("The chosen standard deviation type: "+stdType+" is not supported by "+gmpeName);
-    			System.out.println("The allowed values are the following: ");
-    			System.out.println(ar.getParameter(StdDevTypeParam.NAME).getConstraint());
-    			System.out.println("Check your input file");
-    			System.out.println("Execution stopped.");
+    			logger.error("The chosen standard deviation type: " + stdType
+    			             + " is not supported by " + gmpeName + "\n"
+    			             + "The allowed values are the following: \n"
+    			             + ar.getParameter(StdDevTypeParam.NAME).getConstraint() + "\n"
+    			             + "Check your input file\n"
+    			             + "Execution stopped.");
+//    			System.out.println("The chosen standard deviation type: "+stdType+" is not supported by "+gmpeName);
+//    			System.out.println("The allowed values are the following: ");
+//    			System.out.println(ar.getParameter(StdDevTypeParam.NAME).getConstraint());
+//    			System.out.println("Check your input file");
+//    			System.out.println("Execution stopped.");
     			System.exit(0);
     		}
     		
@@ -453,11 +533,17 @@ public class GmpeLogicTreeData {
 				ar.getParameter(Vs30_Param.NAME).setValue(vs30);
 			}
     		else{
-    			System.out.println("The chosen vs30 value: "+vs30+" is not valid");
-    			System.out.println("The allowed values are the following: ");
-    			System.out.println(ar.getParameter(Vs30_Param.NAME).getConstraint());
-    			System.out.println("Check your input file");
-    			System.out.println("Execution stopped.");
+    			logger.error("The chosen vs30 value: " + vs30
+    			             + " is not valid\n"
+    			             + "The allowed values are the following: \n"
+    			             + ar.getParameter(Vs30_Param.NAME).getConstraint() + "\n"
+    			             + "Check your input file\n"
+    			             + "Execution stopped.");
+//    			System.out.println("The chosen vs30 value: "+vs30+" is not valid");
+//    			System.out.println("The allowed values are the following: ");
+//    			System.out.println(ar.getParameter(Vs30_Param.NAME).getConstraint());
+//    			System.out.println("Check your input file");
+//    			System.out.println("Execution stopped.");
     			System.exit(0);
     		}
 			
