@@ -12,7 +12,7 @@ from opengem.parser import shaml_output
 TEST_FILE = "shaml_test_result.xml"
 
 XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
-EMPTY_RESULT = '<HazardResultList xmlns:gml="http://www.opengis.net/gml" xmlns="http://opengem.org/xmlns/shaml/0.1"/>'
+EMPTY_RESULT = '<HazardResultList xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/shaml/0.1"/>'
 
 # TODO (ac): Test validation against the schema!
 class HazardCurveXMLWriterTestCase(unittest.TestCase):

@@ -34,6 +34,8 @@ import org.opensha.sha.util.TectonicRegionType;
  */
 
 public class NshmpWusFaultData extends GemFileParser{
+    
+	public static String inDir = "tests/data/nshmp/WUS/WUSfaults/";
 
 	// constructor
 	public NshmpWusFaultData(double latmin, double latmax, double lonmin, double lonmax) throws FileNotFoundException{
@@ -50,31 +52,30 @@ public class NshmpWusFaultData extends GemFileParser{
 		// DIP 40 -> 0.2
 		// DIP 50 -> 0.6
 		// DIP 60 -> 0.2
-		String inDir = "nshmp/nevada/";
 		faultFile.put(inDir+"nv.d40.gr",0.0667);
 		faultFile.put(inDir+"nv.gr",0.2);
 		faultFile.put(inDir+"nv.d60.gr",0.0667);
 		faultFile.put(inDir+"nv.d40.char",0.1333);
 		faultFile.put(inDir+"nv.char",0.4);
 		faultFile.put(inDir+"nv.d60.char",0.1333);
+
 		// Utah Long Faults model
-		inDir = "nshmp/utah/";
 		faultFile.put(inDir+"ut.d40.gr",0.0667);
 		faultFile.put(inDir+"ut.gr",0.2);
 		faultFile.put(inDir+"ut.d60.gr",0.0667);
 		faultFile.put(inDir+"ut.d40.char",0.1333);
 		faultFile.put(inDir+"ut.char",0.4);
 		faultFile.put(inDir+"ut.d60.char",0.1333);
+
 		// Basin&Range States Long Faults model
-		inDir = "nshmp/basin_range_states/";
 		faultFile.put(inDir+"brange.d40.gr",0.0667);
 		faultFile.put(inDir+"brange.gr",0.2);
 		faultFile.put(inDir+"brange.d60.gr",0.0667);
 		faultFile.put(inDir+"brange.d40.char",0.1333);
 		faultFile.put(inDir+"brange.char",0.4);
 		faultFile.put(inDir+"brange.d60.char",0.1333);
+
 		// Pacific North West Normal Faults models
-		inDir = "nshmp/pacific_north_west/";
 		faultFile.put(inDir+"orwa_n.d40.gr",0.0667);
 		faultFile.put(inDir+"orwa_n.gr",0.2);
 		faultFile.put(inDir+"orwa_n.d60.gr",0.0667);
@@ -86,55 +87,21 @@ public class NshmpWusFaultData extends GemFileParser{
 		// DIP 40 -> 0.2
 		// DIP 50 -> 0.6
 		// DIP 60 -> 0.2
+		
 		// Nevada Short Faults
-		inDir = "nshmp/nevada/";
 		faultFile.put(inDir+"nv.d40.65",0.2);
 		faultFile.put(inDir+"nv.65",0.6);
 		faultFile.put(inDir+"nv.d60.65",0.2);
+
 		// Utah Short Faults
-		inDir = "nshmp/utah/";
 		faultFile.put(inDir+"ut.d40.65",0.2);
 		faultFile.put(inDir+"ut.65",0.6);
 		faultFile.put(inDir+"ut.d60.65",0.2);
+
 		// Basin and Range States Short Faults
-		inDir = "nshmp/basin_range_states/";
 		faultFile.put(inDir+"brange.d40.65",0.2);
 		faultFile.put(inDir+"brange.65",0.6);
 		faultFile.put(inDir+"brange.d60.65",0.2);
-		
-		// California B Fault model
-		// Deformation model D2.1 -> 0.5
-		// Deformation model D2.4 -> 0.5
-		// Stiched -> 0.5
-		// Unstiched -> 0.5
-		// CHAR -> 0.6667
-		// GR -> 0.3334
-		inDir = "nshmp/california/";
-		faultFile.put(inDir+"bFault_stitched_D2.1_Char.in",0.166675); // 0.5*0.5*0.6667 = 0.166675
-		faultFile.put(inDir+"bFault_stitched_D2.1_GR0.in",0.08335); // 0.5*0.5*0.3334 = 0.08335
-		faultFile.put(inDir+"bFault_unstitched_D2.1_Char.in",0.166675);
-		faultFile.put(inDir+"bFault_unstitched_D2.1_GR0.in",0.08335);
-		faultFile.put(inDir+"bFault_stitched_D2.4_Char.in",0.166675);
-		faultFile.put(inDir+"bFault_stitched_D2.4_GR0.in",0.08335);
-		faultFile.put(inDir+"bFault_unstitched_D2.4_Char.in",0.166675);
-		faultFile.put(inDir+"bFault_unstitched_D2.4_GR0.in",0.08335);
-		
-		// California A Fault model
-		inDir = "nshmp/california/";
-		// aPriori_D2.1 -> 0.45
-		// MoBal_EllB -> 0.225
-		// MoBal.HB -> 0.225
-		// unseg_HB -> 0.05
-		// unseg_Ell -> 0.05
-		faultFile.put(inDir+"aFault_aPriori_D2.1.in",0.45);
-		faultFile.put(inDir+"aFault_MoBal_EllB.in",0.225);
-		faultFile.put(inDir+"aFault_MoBal.HB.in",0.225);
-		faultFile.put(inDir+"aFault_unseg_HB.in",0.05);
-		faultFile.put(inDir+"aFault_unsegEll.in",0.05);
-		
-		// California Creeping Fault model
-		inDir = "nshmp/california/";
-		faultFile.put(inDir+"creepflt.new.in",1.0);
 		
 		// Wasatch Fault model
 		// CHAR -> 0.72
@@ -143,7 +110,6 @@ public class NshmpWusFaultData extends GemFileParser{
 		// DIP 40 -> 0.2
 		// DIP 50 -> 0.6
 		// DIP 60 -> 0.2
-		inDir = "nshmp/wasatch/";
 		faultFile.put(inDir+"wasatch.d40.char",0.144); // 0.72*0.2
 		faultFile.put(inDir+"wasatch.char",0.432); // 0.72*0.6
 		faultFile.put(inDir+"wasatch.d60.char",0.144); // 0.72*0.2
@@ -157,16 +123,13 @@ public class NshmpWusFaultData extends GemFileParser{
 		// Pacific North West Fault model
 		// CHAR -> 0.5
 		// GR -> 0.5	
-		inDir = "nshmp/pacific_north_west/";
 		faultFile.put(inDir+"orwa_c.char",0.5); 
 		faultFile.put(inDir+"orwa_c.gr",0.5);
 		
 		// Pacific North West Short Faults model
-		inDir = "nshmp/pacific_north_west/";
 		faultFile.put(inDir+"orwa.65",1.0); 
 		
 		// Seattle Fault Zone model
-		inDir = "nshmp/pacific_north_west/";
 		faultFile.put(inDir+"seattleFZ.in",1.0); 
 		
 		// iterator over files
@@ -174,14 +137,16 @@ public class NshmpWusFaultData extends GemFileParser{
 		Iterator<String> iterFileName = fileName.iterator();
 		while(iterFileName.hasNext()){
 			String key = iterFileName.next();
-			System.out.println("Processing file: "+key+", weight: "+faultFile.get(key));
+			System.out.println("Processing file: " + key
+			                  + ", weight: "+faultFile.get(key));
 			// read NSHMP input file
-			NshmpFault2GemSourceData fm = new NshmpFault2GemSourceData(key,TectonicRegionType.ACTIVE_SHALLOW,faultFile.get(key),
+			NshmpFault2GemSourceData fm = new NshmpFault2GemSourceData(key,
+			        TectonicRegionType.ACTIVE_SHALLOW, faultFile.get(key),
 					latmin, latmax, lonmin, lonmax);
-			for(int i=0;i<fm.getList().size();i++) srcDataList.add(fm.getList().get(i));
+			for(int i=0;i<fm.getList().size();i++) {
+			    srcDataList.add(fm.getList().get(i));
+		    }
 		}
-		
-		
 	}
 	
 	// for testing
@@ -197,8 +162,6 @@ public class NshmpWusFaultData extends GemFileParser{
 			System.out.println(((GEMFaultSourceData)model.getList().get(i)).getMfd());
 			
 		}
-		
 	}
-	
 
 }
