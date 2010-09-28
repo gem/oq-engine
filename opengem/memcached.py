@@ -6,10 +6,10 @@ A simple memcached reader.
 """
 
 import json
+import math
 
 import shapes
 
-TO_DEG = 57.29577951308232
 
 class Reader(object):
     """Read objects from memcached and translate them into
@@ -87,6 +87,6 @@ class Reader(object):
                 lon = raw_curves["gridNode"][curve_counter]["location"]["lon"]
                 lat = raw_curves["gridNode"][curve_counter]["location"]["lat"]
                 
-                curves[shapes.Site(lon * TO_DEG, lat * TO_DEG)] = data
+                curves[shapes.Site(math.degrees(lon), math.degrees(lat))] = data
 
         return curves
