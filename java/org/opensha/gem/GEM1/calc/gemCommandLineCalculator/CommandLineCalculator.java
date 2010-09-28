@@ -1,7 +1,6 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -9,26 +8,18 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Properties;
-import java.util.StringTokenizer;
 
-import org.apache.commons.configuration.AbstractFileConfiguration;
-import org.apache.commons.configuration.CompositeConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationConverter;
 import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.FileConfiguration;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.apache.commons.configuration.PropertyConverter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
@@ -38,32 +29,21 @@ import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
-import org.opensha.commons.geo.Region;
 import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.ConfigItems;
 import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeHazard;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeBranch;
-import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeBranchingLevel;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeRule;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeRuleParam;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
 import org.opensha.gem.GEM1.commons.UnoptimizedDeepCopy;
-import org.opensha.gem.GEM1.util.CpuParams;
-import org.opensha.gem.GEM1.util.DistanceParams;
-import org.opensha.gem.GEM1.util.IMLListParams;
-import org.opensha.gem.GEM1.util.SiteParams;
-import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.earthquake.griddedForecast.MagFreqDistsForFocalMechs;
-import org.opensha.sha.earthquake.rupForecastImpl.GriddedRegionPoissonEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
-import org.opensha.sha.faultSurface.FaultTrace;
-import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -229,12 +209,9 @@ public class CommandLineCalculator {
 			            + numHazCurves);
 //			System.out.println("Realization number: " + (i + 1) + ", of: " + numHazCurves);
 			// do calculation
-			// TODO: Damiano: is it necessary to run sampleGemLogicTreeERF() and
-			// sampleGemLogicTreeGMPE() for every iteration?
-			// (it is necessary if their result changes from one iteration to
-			// the next...
-			// Damiano: yes because at each iteration both the ERF and GMPEs
-			// changes, because they are randomly sampled
+			// run sampleGemLogicTreeERF() and sampleGemLogicTreeGMPE() for 
+			// every iteration. This is necessary because both, ERF and GMPEs
+			// change because they are randomly sampled 
 			GemComputeHazard compHaz = new GemComputeHazard(numOfThreads,
 			                                                sites,
 			                                                sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),

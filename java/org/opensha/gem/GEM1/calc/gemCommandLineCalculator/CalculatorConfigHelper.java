@@ -68,36 +68,9 @@ public class CalculatorConfigHelper {
 
 	/**
 	 * This helper method is necessary if the REGION property is saved like this:
-	 * REGION = -78.0 0.0 -77.0 0.0 -77.0 1.0 -78.0 1.0
-	 * -> pair number of doubles
-	 * -> implicitly they are pairs of coordinates,
-	 * -> odd indexes mean latitude
-	 * -> pair indexes mean longitude
-	 * @param calcConfig
-	 * @return
-	 * @deprecated
-	 */
-	public static LocationList makeRegionboundary_not_multiple_values(Properties calcConfig) {
-		String region = calcConfig.getProperty(ConfigItems.REGION_VERTEX.name());
-		StringTokenizer st = new StringTokenizer(region);
-        LocationList regionBoundary = new LocationList();
-        Location tmpLoc = null;
-        while(st.hasMoreTokens()) {
-        	double lat = Double.parseDouble(st.nextToken());
-        	if (st.hasMoreTokens()) {
-        		// if there is an odd number of coordinates, the last one is ignored
-	            double lon = Double.parseDouble(st.nextToken());
-	            tmpLoc = new Location(lat, lon);
-	            regionBoundary.add(tmpLoc);
-            }
-        } // while
-        return regionBoundary;
-	} // makeRegionBoundary()
-
-	/**
-	 * This helper method is necessary if the REGION property is saved like this:
 	 * REGION_VERTEX = -78.0, 0.0, -77.0, 0.0, -77.0, 1.0, -78.0, 1.0
-	 * -> comma separated list of doubles according to documentation of
+	 * -> comma separated list of doubles according to documentation of 
+	 *    Apache commons configuration.
 	 * -> implicitly they are pairs of coordinates,
 	 * -> odd indexes mean latitude
 	 * -> pair indexes mean longitude
