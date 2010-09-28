@@ -124,18 +124,18 @@ class MemcachedTestCase(unittest.TestCase):
     
     # input compatible to the shaml writer
     
-    def test_an_empty_model_produces_an_empty_curve_set(self):
+    def test_an_empty_model_produces_an_empty_curve_set_shaml(self):
         self.python_client.set("KEY", EMPTY_MODEL)
         self.assertEqual(0, len(self.reader.for_shaml("KEY")))
     
-    def test_an_error_is_raised_if_no_model_cached(self):
+    def test_an_error_is_raised_if_no_model_cached_shaml(self):
         self.assertRaises(ValueError, self.reader.for_shaml, "KEY")
     
-    def test_reads_one_curve(self):
+    def test_reads_one_curve_shaml(self):
         self.python_client.set("KEY", ONE_CURVE_MODEL)
         shamls = self.reader.for_shaml("KEY")
 
-        data = {shapes.Site(0.03490658503988659, 0.017453292519943295): {
+        data = {shapes.Site(2.0, 1.0): {
                     "IMT": "IMT",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
@@ -149,11 +149,11 @@ class MemcachedTestCase(unittest.TestCase):
         self.assertEqual(1, len(shamls.items()))
         self.assertEquals(data, shamls)
 
-    def test_reads_multiple_curves_in_one_branch(self):
+    def test_reads_multiple_curves_in_one_branch_shaml(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_ONE_BRANCH)
         shamls = self.reader.for_shaml("KEY")
 
-        data = {shapes.Site(0.03490658503988659, 0.017453292519943295): {
+        data = {shapes.Site(2.0, 1.0): {
                     "IMT": "IMT",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
@@ -163,7 +163,7 @@ class MemcachedTestCase(unittest.TestCase):
                     "minProb": 5.1,
                     "Values": [5.1,5.2,5.3],
                     "vs30": 0.0},
-                shapes.Site(0.06981317007977318, 0.06981317007977318): {
+                shapes.Site(4.0, 4.0): {
                     "IMT": "IMT",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
@@ -178,11 +178,11 @@ class MemcachedTestCase(unittest.TestCase):
         self.assertEqual(2, len(shamls.items()))
         self.assertEquals(data, shamls)
 
-    def test_reads_multiple_curves_in_one_branch(self):
+    def test_reads_multiple_curves_in_multiple_branches_shaml(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_MULTIPLE_BRANCHES)
         shamls = self.reader.for_shaml("KEY")
 
-        data = {shapes.Site(0.06981317007977318, 0.06981317007977318): {
+        data = {shapes.Site(4.0, 4.0): {
                     "IMT": "IMT",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
@@ -192,7 +192,7 @@ class MemcachedTestCase(unittest.TestCase):
                     "minProb": 1.8,
                     "Values": [1.8,2.8,3.8],
                     "vs30": 0.0},
-                shapes.Site(0.06981317007977318, 0.017453292519943295): {
+                shapes.Site(4.0, 1.0): {
                     "IMT": "IMT",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
@@ -224,14 +224,14 @@ class MemcachedTestCase(unittest.TestCase):
         
         # reading and checking
         constraint = shapes.RegionConstraint.from_simple(
-                (0.01, 0.02), (0.04, 0.01))
+                (1.5, 1.5), (2.5, 0.5))
 
         reader = shaml_output.ShamlOutputFile(
                 os.path.join(test.DATA_DIR, TEST_FILE))
         
         number_of_curves = 0
 
-        data = {shapes.Site(0.03490658503988659, 0.017453292519943295): {
+        data = {shapes.Site(2.0, 1.0): {
             "IMT": "IMT",
             "IDmodel": "FIXED",
             "timeSpanDuration": 50.0,

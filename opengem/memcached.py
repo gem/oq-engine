@@ -9,6 +9,7 @@ import json
 
 import shapes
 
+TO_DEG = 57.29577951308232
 
 class Reader(object):
     """Read objects from memcached and translate them into
@@ -77,9 +78,15 @@ class Reader(object):
                 data["endBranchLabel"] = \
                         decoded_model["endBranchLabels"][set_counter]
                 
+                """
+                Longitude and latitude and stored internally in the Java side
+                in radians. That object (org.opensha.commons.geo.Location) is
+                heavily used in the hazard engine and we don't have unit
+                tests, so I prefer to convert to decimal degrees here.
+                """
                 lon = raw_curves["gridNode"][curve_counter]["location"]["lon"]
                 lat = raw_curves["gridNode"][curve_counter]["location"]["lat"]
                 
-                curves[shapes.Site(lon, lat)] = data
+                curves[shapes.Site(lon * TO_DEG, lat * TO_DEG)] = data
 
         return curves
