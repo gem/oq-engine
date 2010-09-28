@@ -3,6 +3,7 @@
 Celery tasks for jobber unit tests
 """
 
+import json
 import pylibmc
 import random
 import time
@@ -53,6 +54,24 @@ def simple_task_list_dict_to_memcache(name, **kwargs):
     memcache_client.set("list.%s" % name, [name, name])
     memcache_client.set("dict.%s" % name, {name: name})
     logger.info("wrote to list/dict for memcache key %s" % (name))
+
+@task
+def simple_task_json_to_memcache(name, **kwargs):
+
+    logger = simple_task_json_to_memcache.get_logger(**kwargs)
+
+    memcache_client = pylibmc.Client(["%s:%d" % (MEMCACHED_HOST, 
+        MEMCACHED_PORT)], binary=False)
+
+    wait_time = _wait_a_bit()
+    logger.info("processing json.%s, waited %s seconds" % (name, wait_time))
+
+    test_dict = {"list.%s" % name: [name, name], 
+                 "dict.%s" % name: {name: name}}
+    test_dict_serialized = json.JSONEncoder().encode(test_dict)
+
+    memcache_client.set(name, test_dict_serialized)
+    logger.info("wrote to json for memcache key %s" % (name))
 
 def _wait_a_bit():
     wait_time = random.randrange(MAX_WAIT_TIME_SECS)
