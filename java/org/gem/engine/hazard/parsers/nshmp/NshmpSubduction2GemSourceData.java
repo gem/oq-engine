@@ -62,7 +62,7 @@ public class NshmpSubduction2GemSourceData extends GemFileParser {
 		// and for cascadia faults with minimumaMag>=8.8
 		boolean floatRuptureFlag = true;
 
-        BufferedReader oReader = new BufferedReader(new FileReader(this.getClass().getClassLoader().getResource(inputfile).getPath()));
+        BufferedReader oReader = new BufferedReader(new FileReader(inputfile));
         
         
         String sRecord = null;
