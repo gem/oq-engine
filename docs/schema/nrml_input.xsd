@@ -22,7 +22,7 @@
     <!-- import -->
     <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
 	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> <!-- http://schemas.opengis.net/gml/3.1.1/base -->
-    <xs:include schemaLocation="shaML_common.xsd"/>
+    <xs:include schemaLocation="nrml_common.xsd"/>
     <!-- -->
 
     <xs:complexType name="LogicTreeERFType">
