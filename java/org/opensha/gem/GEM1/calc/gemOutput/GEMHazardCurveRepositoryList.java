@@ -3,10 +3,13 @@ package org.opensha.gem.GEM1.calc.gemOutput;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import org.gem.engine.hazard.memcached.Cache;
+import org.opensha.commons.calc.ProbabilityMassFunctionCalc;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
 import org.opensha.gem.GEM1.commons.UnoptimizedDeepCopy;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
@@ -434,4 +437,28 @@ public class GEMHazardCurveRepositoryList
         return key;
     }
 
+    public List<ArbitrarilyDiscretizedFunc> computePMFs()
+    {
+        List<ArbitrarilyDiscretizedFunc> PMFs = 
+                new ArrayList<ArbitrarilyDiscretizedFunc>();
+        
+        for (GEMHazardCurveRepository set : hcRepList)
+        {
+            for (Double[] probs : set.getProbExList())
+            {
+                ArbitrarilyDiscretizedFunc function = 
+                        new ArbitrarilyDiscretizedFunc();
+                
+                for (int i = 0; i < probs.length; i++)
+                {
+                    function.set(set.getGmLevels().get(i), probs[i]);
+                }
+                
+                PMFs.add(ProbabilityMassFunctionCalc.getPMF(function));
+            }
+        }
+        
+        return PMFs;
+    }
+    
 }
