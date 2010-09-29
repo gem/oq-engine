@@ -19,6 +19,7 @@ public class NshmpUsData  extends GemFileParser{
 		
 		// Western United States fault model (active shallow tectonics)
 		NshmpWusFaultData wusFault =  new NshmpWusFaultData(latmin,latmax,lonmin,lonmax);
+		NshmpCaliforniaFaultData caliFault = new NshmpCaliforniaFaultData(latmin,latmax,lonmin,lonmax);
 		
 		// Western United States Cascadia subduction model (subduction interface)
 		NshmpCascadiaSubductionData cascadiaSub = new NshmpCascadiaSubductionData(latmin,latmax,lonmin,lonmax);
@@ -27,6 +28,7 @@ public class NshmpUsData  extends GemFileParser{
 		NshmpCeusFaultData ceusFault = new NshmpCeusFaultData(latmin,latmax,lonmin,lonmax);
 		
 		srcDataList.addAll(wusFault.getList());
+		srcDataList.addAll(caliFault.getList());
 		srcDataList.addAll(cascadiaSub.getList());
 		srcDataList.addAll(ceusFault.getList());
 		
@@ -51,7 +53,7 @@ public class NshmpUsData  extends GemFileParser{
 		
 		//System.out.println(model.getNumSources());
 		//System.exit(0);
-		
+		// TODO(JMC): Fix this path!
 		model.writeSources2KMLfile(new FileWriter("/Users/damianomonelli/Desktop/NshmpUsSources.kml"));
 	}
 

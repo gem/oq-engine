@@ -14,7 +14,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class NshmpCascadiaSubductionData extends GemFileParser{
 	
-	private String inDir = "nshmp/cascadia/";
+	public static String inDir = "nshmp/cascadia/";
 	
 	public NshmpCascadiaSubductionData(double latmin, double latmax, double lonmin, double lonmax){
 		
