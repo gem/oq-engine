@@ -49,7 +49,7 @@ import org.opensha.sha.imr.PropagationEffect;
  * based on the PropagationEffectParam input parameters imr, site and eqkRupforecast</p>
  * This class has been modified by Damiano Monelli (28/09/2010) by replacing the SitesInGriddedRegion
  * with an ArrayList<Site> and by deleting the getScenarioShakeMapDataUsingServer method.
- * @author : Nitin Gupta
+ * @author : Nitin Gupta, Damiano Monelli
  * @created May 19,2004
  * @version 1.0
  */
@@ -95,7 +95,7 @@ public class ScenarioShakeMapCalculator {
    * The computed  data in the form of X, Y and Z is place XYZ_DataSetAPI object.
    * @param selectedAttenRels : ArrayList for the selected AttenuationRelationships
    * @param attenRelWts : Relative Wts for all the selected AttenuationRelationship models.
-   * @param griddedRegionSites : Gridded Region Object
+   * @param sites : array list of sites objects
    * @param rupture : selected EarthquakeRupture Object.
    * @param isProbAtIML : if true the prob at the specified IML value (next param) will
    * be computed; if false the IML at the specified Prob value (next param) will be computed.

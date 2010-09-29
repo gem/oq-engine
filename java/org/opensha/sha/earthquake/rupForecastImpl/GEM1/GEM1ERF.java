@@ -2,6 +2,7 @@ package org.opensha.sha.earthquake.rupForecastImpl.GEM1;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.MagScalingRelationship;
@@ -17,6 +18,7 @@ import org.opensha.commons.param.event.ParameterChangeEvent;
 import org.opensha.gem.GEM1.commons.CalculationSettings;
 import org.opensha.gem.GEM1.util.SourceType;
 import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.FloatingPoissonFaultSource;
 import org.opensha.sha.earthquake.rupForecastImpl.PointEqkSource;
@@ -1104,6 +1106,28 @@ public class GEM1ERF extends EqkRupForecast {
 	@Override
 	public ArrayList<TectonicRegionType> getIncludedTectonicRegionTypes() {
 		return tectonicRegionTypes;
+	}
+	
+	/**
+	 * This method provides a list of ruptures for source sourceId with a magnitude 
+	 * comprised between a lower and an upper threshold 
+	 *
+	 * @param sourceId			Index of the source
+	 * @param mMin				Minimum value of magnitude
+	 * @return rupList			List of ruptures with magnitude in a given interval
+	 */		
+	public ArrayList<ProbEqkRupture> getRupturesMag(int sourceId,double mMin, double mMax) {
+		ProbEqkSource prbSrc = (ProbEqkSource) this.getSource(sourceId);
+		ArrayList<ProbEqkRupture> rupList = new ArrayList<ProbEqkRupture>();
+		
+		Iterator<ProbEqkRupture> iter = prbSrc.getRupturesIterator(); 
+		while (iter.hasNext()) {
+			// Get rupture
+			ProbEqkRupture rup = iter.next();
+			// Add the rupture to the list 
+			if (rup.getMag() >= mMin && rup.getMag() < mMax) rupList.add(rup);
+		}
+		return rupList;
 	}
 
 }
