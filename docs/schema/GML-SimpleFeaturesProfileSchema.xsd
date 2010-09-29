@@ -50,7 +50,7 @@ abstract="true" substitutionGroup="gml:_Object"/>
 <sequence>
 <group ref="gml:StandardObjectProperties"/>
 </sequence>
-<attribute ref="gml:id" use="required"/>
+<attribute ref="gml:id" use="optional"/>
 </complexType>
 <group name="StandardObjectProperties">
 <sequence>
