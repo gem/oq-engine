@@ -1,0 +1,9 @@
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scdesc DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scdesc DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scstartdate DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scenddate DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scsources DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scorigformatid DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scremarks DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scpgareapolygon DROP NOT NULL;
+ALTER TABLE seismicsources_sourcegeometrycatalog ALTER COLUMN scpgareamultipolygon DROP NOT NULL;

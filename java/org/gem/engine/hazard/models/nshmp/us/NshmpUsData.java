@@ -1,20 +1,10 @@
 package org.gem.engine.hazard.models.nshmp.us;
 
 
-import java.awt.Point;
-import java.awt.image.ColorModel;
-import java.awt.image.DataBuffer;
-import java.awt.image.Raster;
-import java.awt.image.SampleModel;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-
-import javax.media.jai.JAI;
-import javax.media.jai.PlanarImage;
-import javax.media.jai.RasterFactory;
-import javax.media.jai.TiledImage;
 
 import org.gem.engine.hazard.parsers.GemFileParser;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
@@ -29,6 +19,7 @@ public class NshmpUsData  extends GemFileParser{
 		
 		// Western United States fault model (active shallow tectonics)
 		NshmpWusFaultData wusFault =  new NshmpWusFaultData(latmin,latmax,lonmin,lonmax);
+		NshmpCaliforniaFaultData caliFault = new NshmpCaliforniaFaultData(latmin,latmax,lonmin,lonmax);
 		
 		// Western United States Cascadia subduction model (subduction interface)
 		NshmpCascadiaSubductionData cascadiaSub = new NshmpCascadiaSubductionData(latmin,latmax,lonmin,lonmax);
@@ -37,6 +28,7 @@ public class NshmpUsData  extends GemFileParser{
 		NshmpCeusFaultData ceusFault = new NshmpCeusFaultData(latmin,latmax,lonmin,lonmax);
 		
 		srcDataList.addAll(wusFault.getList());
+		srcDataList.addAll(caliFault.getList());
 		srcDataList.addAll(cascadiaSub.getList());
 		srcDataList.addAll(ceusFault.getList());
 		
@@ -61,7 +53,7 @@ public class NshmpUsData  extends GemFileParser{
 		
 		//System.out.println(model.getNumSources());
 		//System.exit(0);
-		
+		// TODO(JMC): Fix this path!
 		model.writeSources2KMLfile(new FileWriter("/Users/damianomonelli/Desktop/NshmpUsSources.kml"));
 	}
 

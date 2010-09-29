@@ -9,6 +9,8 @@ import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 
@@ -20,14 +22,27 @@ import java.util.ArrayList;
 
 public class ReadBinaryInputMatrix {
 	
+	public static Map<String, ArrayList<Double>> oldVals;
+	
     ArrayList<Double> val;
 	
 	// constructor
 	public ReadBinaryInputMatrix(String filename, boolean bigEndian2LittleEndian) throws IOException{
+	    
+	    if (oldVals == null) {
+	        oldVals = new HashMap<String, ArrayList<Double>>();
+        } else {
+            ArrayList<Double> cachedVal = oldVals.get(filename);
+            if (cachedVal != null) {
+               val = cachedVal;
+               System.out.println ("Using cached binary file data...");
+               return;
+            }
+        }
 
         val = new ArrayList<Double>();
-        
-		DataInputStream data_in    = new DataInputStream (new FileInputStream(this.getClass().getClassLoader().getResource(filename).getPath()));
+        // filename MUST BE absolute path!!
+		DataInputStream data_in    = new DataInputStream (new FileInputStream(filename));
 
 
 	      int index = 0;
@@ -52,7 +67,7 @@ public class ReadBinaryInputMatrix {
 	        }
 	      }
 	      data_in.close();
-        
+          oldVals.put(filename, val);
 	}
 	
 	public ArrayList<Double> getVal(){

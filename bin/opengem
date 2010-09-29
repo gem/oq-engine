@@ -33,13 +33,11 @@ from opengem import flags
 from opengem import logs
 from opengem.output import geotiff
 from opengem.parser import exposure
-from opengem.parser import shakemap
 from opengem.parser import vulnerability
 from opengem.risk import tasks
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('shakemap', 'shakemap.data', 'shakemap input')
 flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
 flags.DEFINE_string('vulnerability', 'vulnerability.xml',
                     'vulnerability input')
