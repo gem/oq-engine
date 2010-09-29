@@ -45,6 +45,16 @@ public class GEMHazardCurveRepositoryListTest
         assertEquals(new Gson().toJson(sampleModel()), client.get(key));
     }
 
+    @Test
+    public void canStoreTheComputedPMFsInCache()
+    {
+        GEMHazardCurveRepositoryList model = sampleModel();
+        String key = model.serializePMFs(new Cache(LOCALHOST, PORT));
+        
+        assertEquals(new Gson().toJson(
+                sampleModel().computePMFs()), client.get(key));
+    }
+
     private GEMHazardCurveRepositoryList sampleModel()
     {
         GEMHazardCurveRepositoryList model = new GEMHazardCurveRepositoryList();
@@ -60,7 +70,7 @@ public class GEMHazardCurveRepositoryListTest
         groundMotionLevels.add(3.0);
         groundMotionLevels.add(4.0);
 
-        Double[] values = { 1.0, 2.0, 3.0, 4.0 };
+        Double[] values = { 0.4, 0.3, 0.2, 0.1 };
         ArrayList<Double[]> probabilitiesOfExc = new ArrayList<Double[]>();
 
         probabilitiesOfExc.add(values);
