@@ -24,7 +24,7 @@ import org.opensha.commons.param.DoubleParameter;
 import org.opensha.commons.param.WarningDoubleParameter;
 
 /**
- * This constitutes the natural-log Peak Ground Acceleration intensity measure
+ * This constitutes the MMI intensity measure
  * parameter.  
  * See constructors for info on editability and default values.
  * @author field
@@ -33,7 +33,8 @@ import org.opensha.commons.param.WarningDoubleParameter;
 public class MMI_Param extends DoubleParameter {
 
 	public final static String NAME = "MMI";
-	public final static String INFO = "Peak Ground Acceleration";
+	public final static String UNITS = "degree";
+	public final static String INFO = "Modified Mercalli Intensity";
 	public final static Double MIN = new Double(Math.log(1.0));
 	public final static Double MAX = new Double(Math.log(10.0));
 	public final static Double DEFAULT = new Double(Math.log(5.0));
@@ -63,3 +64,4 @@ public class MMI_Param extends DoubleParameter {
 	    setNonEditable();
 	}
 }
+
