@@ -25,8 +25,11 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.opensha.commons.data.DataPoint2D;
@@ -849,6 +852,19 @@ public static void main( String[] args ) {
 }
 
 */
+
+    public Map<Double, Double> asMap()
+    {
+        Map<Double, Double> result = new HashMap<Double, Double>();
+        
+        for (Object obj : points.keySet())
+        {
+            DataPoint2D point = (DataPoint2D) obj;
+            result.put(point.getX(), point.getY());
+        }
+        
+        return result;
+    }
 
     /*
     public void rebuild(){
