@@ -10,8 +10,7 @@ import time
 
 from celery.decorators import task
 
-MEMCACHED_PORT = 11211
-MEMCACHED_HOST = "localhost"
+from opengem.memcached import MEMCACHED_PORT, MEMCACHED_HOST
 
 MAX_WAIT_TIME_SECS = 3
 

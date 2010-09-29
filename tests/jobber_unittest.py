@@ -8,12 +8,13 @@ import random
 import time
 import unittest
 
+from opengem.memcached import MEMCACHED_PORT, MEMCACHED_HOST
 import tests.tasks as test_tasks
 
 TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 
-MEMCACHED_PORT = 11211
-MEMCACHED_HOST = "localhost"
+#MEMCACHED_PORT = 11211
+#MEMCACHED_HOST = "localhost"
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 1
 MAX_WAIT_LOOPS = 10

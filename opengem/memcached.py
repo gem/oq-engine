@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # encoding: utf-8
 """
 A simple memcached reader.
@@ -10,6 +11,8 @@ import math
 
 import shapes
 
+MEMCACHED_PORT = 11211
+MEMCACHED_HOST = "localhost"
 
 class Reader(object):
     """Read objects from memcached and translate them into
