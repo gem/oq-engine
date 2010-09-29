@@ -46,32 +46,32 @@ NamedObjectAPI, ParameterChangeListener {
 
 	@Override
 	protected void initEqkRuptureParams() {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 	@Override
 	protected void initPropagationEffectParams() {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 	@Override
 	protected void initSiteParams() {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 	@Override
 	protected void initSupportedIntensityMeasureParams() {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 	@Override
 	protected void setPropagationEffectParams() {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 	@Override
@@ -82,20 +82,19 @@ NamedObjectAPI, ParameterChangeListener {
 
 	@Override
 	public String getShortName() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public void setParamDefaults() {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 	@Override
 	public void parameterChange(ParameterChangeEvent event) {
-		// TODO Auto-generated method stub
-		
+		// TODO:
+		// Implement this method in an Adapter class.
 	}
 
 } // class BW_1997_AttenRel()
