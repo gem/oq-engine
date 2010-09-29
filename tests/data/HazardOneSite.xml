@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <shaml:HazardResultList xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" 
-                        xmlns:gml="http://www.opengis.net/gml">
+                        xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
     <shaml:Result timeSpanDuration="50.0" IDmodel="MMI_3_1" IMT="MMI">
         <shaml:Descriptor>
             <shaml:endBranchLabel>3_1</shaml:endBranchLabel>
