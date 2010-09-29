@@ -32,7 +32,8 @@ class HazardCurveWriterTestCase(unittest.TestCase):
     def test_writes_the_xml_metadata(self):
         self.writer.close()
         self.assertTrue(XML_METADATA in self._result_as_string())
-
+    
+    @test.skipit
     def test_writes_an_empty_list_with_no_output(self):
         self.writer.close()
         self.assertTrue(EMPTY_RESULT in self._result_as_string())
