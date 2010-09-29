@@ -31,7 +31,7 @@ public class BW_1997_AttenRelTest extends TestCase {
 	} // tearDown()
 	
 	@Test
-	public void testCallMethods() {
+	public void testGetMean() {
 		int[] magnitudes = { 5, 6, 7, 8, 9 };
 		int[] epicentralDistances = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 
 				10, 20, 30, 40, 50,	60, 70, 80, 90, 
@@ -62,13 +62,18 @@ public class BW_1997_AttenRelTest extends TestCase {
 				int epicentralDistance = epicentralDistances[j];
 				double expected = results[i][j];
 				double tolerance = 0.01;
-				assertEquals(
-						"mag = " + magnitude + " distance = "
-								+ epicentralDistance + " expected result = "
-								+ expected,
-								expected, bw_1997_AttenRel
-								.getMean(magnitude, epicentralDistance), tolerance);
+				assertEquals("mag = " + magnitude 
+						+ " distance = " + epicentralDistance 
+						+ " expected result = "	+ expected,
+						expected, bw_1997_AttenRel
+						.getMean(magnitude, epicentralDistance), tolerance);
 			} // for
 		} // for
-	} // testCallMethods
+	} // testGetMean
+	
+	public void testStdDev() {
+		assertEquals("The standard deviation of this intensity prediction equation is zero.", 
+				0.0,
+				bw_1997_AttenRel.getStdDev());
+	} // testStdDev()
 } // class TestCase

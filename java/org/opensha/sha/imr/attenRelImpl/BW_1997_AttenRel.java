@@ -26,7 +26,7 @@ NamedObjectAPI, ParameterChangeListener {
 	 * @param epicentralDistance
 	 * @return I_mmi "Intensity mercalli_modified_intensity"
 	 */
-	private double getMean(double magnitude, double epicentralDistance) {
+	public double getMean(double magnitude, double epicentralDistance) {
 		double result = 0.0;
 		final float offset = 3.67f;
 		final float coefficient1 = 1.17f;
