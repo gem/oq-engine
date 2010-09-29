@@ -292,7 +292,7 @@ public class NorthernEurasiaFileReader01 extends GemFileParser {
 			    				if (dip01str.matches("\\d+\\.*\\d*")) dip01 =
 			    					Double.valueOf(dip01str).doubleValue();
 
-			    				// Reverse the fault trace for dip angles greater then 90¡
+			    				// Reverse the fault trace for dip angles greater then 90
 			    				if (dip01 > 90) {
 			    					dip01 = 180 - dip01;
 			    					fltTrc.reverse();
