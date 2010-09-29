@@ -56,6 +56,7 @@ import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.OtherParams.TectonicRegionTypeParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistRupMinusDistX_OverRupParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistRupMinusJB_OverRupParameter;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceEpicentralParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceSeisParameter;
@@ -267,6 +268,7 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 	protected DistRupMinusJB_OverRupParameter distRupMinusJB_OverRupParam = null;
 	protected DistRupMinusDistX_OverRupParam distRupMinusDistX_OverRupParam = null;  // not a subclass of PropagationEffectParameter
 	protected HangingWallFlagParam hangingWallFlagParam = null;  	// not a subclass of PropagationEffectParameter
+	protected DistanceEpicentralParameter distanceEpicentralParameter = null;
 
 	/**
 	 * Site related parameters
