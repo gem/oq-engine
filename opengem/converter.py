@@ -22,8 +22,18 @@ def convert(input_path, input_module, output_path, output_module):
     log.info("Starting conversion run...")
     jarpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib")
     log.debug("Jarpath is %s", jarpath)
-    jpype.startJVM(jpype.getDefaultJVMPath(), " -Xms2048m -Xmx2048m ", "-Djava.ext.dirs=%s" % jarpath)
+    
+    # " -Xms2048m -Xmx2048m ", 
+    jpype.startJVM(jpype.getDefaultJVMPath(), "-Djava.ext.dirs=%s" % jarpath)
     input_module.init_paths(input_path, jpype)
+    
+    SOURCE_NAMESPACE = "org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData."
+    fault_source_class = jpype.JClass(SOURCE_NAMESPACE + "GEMFaultSourceData")
+    point_source_class = jpype.JClass(SOURCE_NAMESPACE + "GEMPointSourceData")
+    subduction_source_class = jpype.JClass(
+                            SOURCE_NAMESPACE + "GEMSubductionFaultSourceData")
+    area_source_class = jpype.JClass(SOURCE_NAMESPACE + "GEMAreaSourceData")
+    
     
     # All the GEM1 parsers take a bounding box for the ctor
     (latmin, latmax, lonmin, lonmax) = input_module.BOUNDING_BOX
@@ -38,18 +48,28 @@ def convert(input_path, input_module, output_path, output_module):
         input_parser = java_class(latmin, latmax, lonmin, lonmax)
         log.debug("Loaded a %s parser with %s sources", 
                     model, input_parser.getNumSources())
+        print(dir(input_parser))
+        print dir(input_parser.srcDataList[0])
+        for source in input_parser.srcDataList[1:2]:
+            print source.__class__
+            print fault_source_class
+            print isinstance(source, fault_source_class)
+            for prop in ['dip', 'floatRuptureFlag', 'hashCode', 
+                         'iD', 'id', 'mfd', 'name', 'rake', 'seismDepthLow', 
+                         'seismDepthUpp', 'tectReg.name']:
+                thing = eval('source.' + prop)
+                try:
+                    thing()
+                    thing = thing()
+                except Exception, _e:
+                    pass
+                print "%s(%s) : %s" % (prop, type(thing), thing)
+        
+            print "mfd: %s" % (dir(source.mfd))
+            return
         log.debug("Writing output to %s", outfile)
         file_writer_class = jpype.JClass("java.io.FileWriter")
         input_parser.writeSources2KMLfile(
                     file_writer_class(outfile))
-                    
-        log.debug("\nHeap before cleanup: \n%s", 
-                        guppy.hpy().heap())
-        del input_parser
-        del java_class
-        jpype.JClass("java.lang.System").gc()
-        
-        log.debug("\nHeap after cleanup: \n%s", 
-                        guppy.hpy().heap())
     
     log.info("Finished conversion run.")
