@@ -16,11 +16,11 @@ from lxml import etree
 from opengem import writer
 from opengem.xml import NSMAP, SHAML, GML
 
-class HazardCurveWriter(writer.FileWriter):
+class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the shaml format."""
 
     def __init__(self, path):
-        super(HazardCurveWriter, self).__init__(path)
+        super(HazardCurveXMLWriter, self).__init__(path)
         self.result_list_tag = etree.Element(
                 SHAML + "HazardResultList", nsmap=NSMAP)
 
@@ -31,12 +31,16 @@ class HazardCurveWriter(writer.FileWriter):
         """Overrides the default implementation writing all the
         collected lxml object model to the stream."""
 
+        if not len(self.result_list_tag):
+            error = "You need to add at least a curve to build a valid output!"
+            raise RuntimeError(error)
+
         self.file.write(etree.tostring(self.result_list_tag, 
                 pretty_print=True,
                 xml_declaration=True,
                 encoding="UTF-8"))
                 
-        super(HazardCurveWriter, self).close()
+        super(HazardCurveXMLWriter, self).close()
 
     def _add_curve_to_proper_set(self, point, values, values_tag):
         """Adds the curve to the proper set depending on the IML values."""
@@ -66,7 +70,7 @@ class HazardCurveWriter(writer.FileWriter):
 
         # <shaml:Site />
         inner_site_tag = etree.SubElement(site_tag, SHAML + "Site")
-
+        
         # <gml:pos />
         gml_tag = etree.SubElement(inner_site_tag, GML + "pos")
         gml_tag.text = " ".join(map(str, (point.longitude, point.latitude)))

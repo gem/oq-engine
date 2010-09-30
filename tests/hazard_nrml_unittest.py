@@ -1,122 +1,170 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-"""
-This modules serializes objects in shaml format.
 
-It currently takes all the lxml object model in memory
-due to the fact that curves can be grouped by IDmodel and
-IML. Couldn't find a way to do so writing an object at a
-time without making a restriction to the order on which
-objects are received.
-
-"""
-
+import os
+import unittest
 from lxml import etree
 
-from opengem import writer
-from opengem.xml import NSMAP, SHAML, GML
+from opengem import test
+from opengem import shapes
+from opengem.output import shaml
+from opengem.parser import shaml_output
 
-class HazardCurveXMLWriter(writer.FileWriter):
-    """This class writes an hazard curve into the shaml format."""
+TEST_FILE = "shaml_test_result.xml"
+XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 
-    def __init__(self, path):
-        super(HazardCurveXMLWriter, self).__init__(path)
-        self.result_list_tag = etree.Element(
-                SHAML + "HazardResultList", nsmap=NSMAP)
+schema_dir = os.path.join(os.path.dirname(__file__), "../docs/schema")
 
-        self.curves_per_iml = {}
-        self.curves_per_model_id = {}
+class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
-    def close(self):
-        """Overrides the default implementation writing all the
-        collected lxml object model to the stream."""
+    def setUp(self):
+        self._delete_test_file()
+        self.writer = shaml.HazardCurveXMLWriter(
+                os.path.join(test.DATA_DIR, TEST_FILE))
 
-        if not len(self.result_list_tag):
-            error = "You need to add at least a curve to build a valid output!"
-            raise RuntimeError(error)
+    def tearDown(self):
+        self._delete_test_file()
 
-        self.file.write(etree.tostring(self.result_list_tag, 
-                pretty_print=True,
-                xml_declaration=True,
-                encoding="UTF-8"))
-                
-        super(HazardCurveXMLWriter, self).close()
+    def _is_xml_valid(self):
+        xml_doc = etree.parse(os.path.join(test.DATA_DIR, TEST_FILE))
 
-    def _add_curve_to_proper_set(self, point, values, values_tag):
-        """Adds the curve to the proper set depending on the IML values."""
+        # test that the doc matches the schema
+        schema_path = os.path.join(schema_dir, "nrml.xsd")
+        xmlschema = etree.XMLSchema(etree.parse(schema_path))
+        xmlschema.assertValid(xml_doc)
+
+    def test_raises_an_error_if_no_curve_is_serialized(self):
+        # invalid schema <shaml:Result> [1..*]
+        self.assertRaises(RuntimeError, self.writer.close)
         
+    def test_writes_a_single_result_in_a_single_model(self):
+        data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
+                    "IDmodel": "MMI_3_1",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [10.0, 20.0, 30.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [0.005, 0.007, 0.009],
+                    "vs30": 760.0}}
+
+        self.writer.serialize(data)
+        
+        self._is_xml_valid()
+        self.assertTrue(XML_METADATA in self._result_as_string())
+        
+        # reading
+        curves = self._read_curves_inside_region((16.0, 49.0), (17.0, 48.0))
+        self._count_and_check_readed_data(data, curves, 1)
+
+    def test_writes_multiple_results_in_a_single_model_with_same_IML(self):
+        data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
+                    "IDmodel": "MMI_3_1",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [10.0, 20.0, 30.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [0.005, 0.007, 0.009],
+                    "vs30": 760.0},
+                shapes.Site(17.35, 38.25): {"IMT": "MMI",
+                    "IDmodel": "MMI_3_1",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [10.0, 20.0, 30.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [1.005, 1.007, 1.009],
+                    "vs30": 760.0}}
+
+        self.writer.serialize(data)
+        self._is_xml_valid()
+
+        curves = self._read_curves_inside_region((16.0, 49.0), (18.0, 38.0))
+        self._count_and_check_readed_data(data, curves, 2)
+
+    def test_writes_multiple_results_in_a_single_model_with_different_IML(self):
+        data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
+                    "IDmodel": "MMI_3_1",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [10.0, 20.0, 30.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [0.005, 0.007, 0.009],
+                    "vs30": 760.0},
+                shapes.Site(17.35, 38.25): {"IMT": "MMI",
+                    "IDmodel": "MMI_3_1",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [30.0, 40.0, 50.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [1.005, 1.007, 1.009],
+                    "vs30": 760.0}}
+
+        self.writer.serialize(data)
+        self._is_xml_valid()
+
+        curves = self._read_curves_inside_region((16.0, 49.0), (18.0, 38.0))
+        self._count_and_check_readed_data(data, curves, 2)
+
+    def test_writes_multiple_results_in_multiple_model(self):
+        data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
+                    "IDmodel": "A_MODEL",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [10.0, 20.0, 30.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [0.005, 0.007, 0.009],
+                    "vs30": 760.0},
+                shapes.Site(17.35, 38.25): {"IMT": "MMI",
+                    "IDmodel": "A_DIFFERENT_MODEL",
+                    "timeSpanDuration": 50.0,
+                    "endBranchLabel": "3_1",
+                    "IML": [30.0, 40.0, 50.0],
+                    "maxProb": 0.9,
+                    "minProb": 0.1,
+                    "Values": [1.005, 1.007, 1.009],
+                    "vs30": 760.0}}
+
+        self.writer.serialize(data)
+        self._is_xml_valid()
+
+        curves = self._read_curves_inside_region((16.0, 49.0), (18.0, 38.0))
+        self._count_and_check_readed_data(data, curves, 2)
+
+    def _delete_test_file(self):
         try:
-            list_tag = self.curves_per_iml[str(values["IML"])]
-        except KeyError:
-            curve_list_tag = etree.SubElement(
-                    values_tag, SHAML + "HazardCurveList")
-            
-            # <shaml:IML />
-            iml_tag = etree.SubElement(curve_list_tag, SHAML + "IML")
-            iml_tag.text = " ".join(map(str, values["IML"]))
-            
-            # <shaml:List />
-            list_tag = etree.SubElement(curve_list_tag, SHAML + "List")
-            
-            self.curves_per_iml[str(values["IML"])] = list_tag
+            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
+        except OSError:
+            pass
 
-        # <shaml:Curve />
-        curve_tag = etree.SubElement(list_tag, SHAML + "Curve")
-        curve_tag.attrib["maxProb"] = str(values["maxProb"])
-        curve_tag.attrib["minProb"] = str(values["minProb"])
-
-        # <shaml:Site />
-        site_tag = etree.SubElement(curve_tag, SHAML + "Site")
-
-        # <shaml:Site />
-        inner_site_tag = etree.SubElement(site_tag, SHAML + "Site")
+    def _count_and_check_readed_data(self, data, curves, expected_number):
+        number_of_curves = 0
         
-        # <gml:pos />
-        gml_tag = etree.SubElement(inner_site_tag, GML + "pos")
-        gml_tag.text = " ".join(map(str, (point.longitude, point.latitude)))
+        for shaml_point, shaml_values in curves:
+            number_of_curves += 1
 
-        # <shaml:Values />
-        curve_values_tag = etree.SubElement(site_tag, SHAML + "Values")
-        curve_values_tag.text = " ".join(map(str, values["Values"]))
+            self.assertTrue(shaml_point in data.keys())
+            self.assertTrue(shaml_values in data.values())
 
-        # <shaml:vs30 />
-        vs30_tag = etree.SubElement(site_tag, SHAML + "vs30")
-        vs30_tag.text = str(values["vs30"])
+        self.assertEqual(expected_number, number_of_curves,
+                "the number of readed curves is not as expected!")
 
-    def write(self, point, values):
-        """Writes an hazard curve.
+    def _read_curves_inside_region(self, upper_left_cor, lower_right_cor):
+        constraint = shapes.RegionConstraint.from_simple(
+                upper_left_cor, lower_right_cor)
+
+        reader = shaml_output.ShamlOutputFile(
+                os.path.join(test.DATA_DIR, TEST_FILE))
         
-        point must be of type shapes.Site
-        values is a dictionary that matches the one produced by the
-        parser shaml_output.ShamlOutputFile
-        
-        """
-        
+        return reader.filter(constraint)
+
+    def _result_as_string(self):
         try:
-            values_tag = self.curves_per_model_id[values["IDmodel"]]
-        except KeyError:
-            # <shaml:Result />
-            result_tag = etree.SubElement(
-                    self.result_list_tag, SHAML + "Result")
-  
-            result_tag.attrib["timeSpanDuration"] = \
-                    str(values["timeSpanDuration"])
-
-            result_tag.attrib["IDmodel"] = str(values["IDmodel"])
-            result_tag.attrib["IMT"] = str(values["IMT"])
-
-            # <shaml:Descriptor />
-            descriptor_tag = etree.SubElement(result_tag, SHAML + "Descriptor")
-        
-            # <shaml:endBranchLabel />
-            end_branch_label_tag = etree.SubElement(
-                    descriptor_tag, SHAML + "endBranchLabel")
-
-            end_branch_label_tag.text = str(values["endBranchLabel"])
-
-            # <shaml:Values />
-            values_tag = etree.SubElement(result_tag, SHAML + "Values")
-            
-            self.curves_per_model_id[values["IDmodel"]] = values_tag
-        
-        self._add_curve_to_proper_set(point, values, values_tag)
+            result = open(os.path.join(test.DATA_DIR, TEST_FILE))
+            return result.read()
+        finally:
+            result.close()
