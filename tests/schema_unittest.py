@@ -10,6 +10,7 @@ import unittest
 import lxml
 from lxml import etree
 
+from opengem import test
 from opengem import logs
 from opengem import test
 from opengem import xml
@@ -29,7 +30,7 @@ class SchemaValidationTestCase(unittest.TestCase):
     def setUp(self):
         self.example_dir = os.path.join(data_dir, XML_TEST_DIRECTORY)
         self.schema_path = os.path.join(schema_dir, SCHEMA_FILE)
-
+        
     def test_xml_is_valid(self):
         # Test that the doc matches the schema
         xmlschema = etree.XMLSchema(etree.parse(self.schema_path))
