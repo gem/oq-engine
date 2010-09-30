@@ -33,6 +33,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         xmlschema = etree.XMLSchema(etree.parse(schema_path))
         xmlschema.assertValid(xml_doc)
 
+
     def test_raises_an_error_if_no_curve_is_serialized(self):
         # invalid schema <shaml:Result> [1..*]
         self.assertRaises(RuntimeError, self.writer.close)
