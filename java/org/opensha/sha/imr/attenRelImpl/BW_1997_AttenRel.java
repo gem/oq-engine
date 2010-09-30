@@ -22,13 +22,52 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceHypoParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 
+/**
+ * <b>Title:</b> BW_1997_AttenRel<p>
+ *
+ * <b>Description:</b> This implements the Attenuation Relationship published
+ * by Bakun and Wentworth (1997, "Intensity Prediction Equations For subduction
+ * Zones")
+ * The equation returns the mean MMI ("Intensity mercalli_modified_intensity")
+ * predicted by the equation.
+ * The Formula is:
+ * Immi = 3.67 + 1.17 magnitude - 3.19 log(epicentralDistance)
+ * 
+ * Verification tables have been provided by Damiano Monelli as an Excel
+ * spreadsheet.
+ *
+ * Note:
+ * In case of this equation the standard deviation is not provided 
+ * and therefore the method getStandardDeviation() returns 0.
+ *
+ * Supported Intensity-Measure Parameters:<p>
+ * <UL>
+ * <LI>pgaParam - Peak Ground Acceleration
+ * <LI>pgaParam - Peak Ground Velocity
+ * <LI>saParam - Response Spectral Acceleration
+ * </UL><p>
+ * Other Independent Parameters:<p>
+ * <UL>
+ * <LI>magParam - moment Magnitude
+ * <LI>distanceEpiParam - closest distance to epicenter
+ * <LI>stdDevTypeParam - The type of standard deviation
+ * </UL></p>
+ * 
+ *<p>
+ * Verification - This model has been tested against:
+ * Verification table implemented in the JUnit test BW_1997_AttenRelTest.
+ * 
+ *</p>
+ *
+ *
+ * @author     Roland Siegert, Damiano Monelli
+ * @created    September, 2010
+ * @version    0.1
+ */
 public class BW_1997_AttenRel extends AttenuationRelationship implements
 ScalarIntensityMeasureRelationshipAPI,
 NamedObjectAPI, ParameterChangeListener
 {
-	// Note:
-	// In case of this equation the standard deviation is not provided 
-	// and therefore the method getStandardDeviation() should return 0
 	private final double standardDeviation = 0.0d;
 	private static final Double DISTANCE_EPI_WARN_MIN = 0.0;
 	private static final Double DISTANCE_EPI_WARN_MAX = 500.0;
@@ -222,7 +261,8 @@ NamedObjectAPI, ParameterChangeListener
 	 * Immi = 3.67 + 1.17 magnitude - 3.19 log(epicentralDistance)
 	 * @param magnitude
 	 * @param epicentralDistance
-	 * @return I_mmi "Intensity mercalli_modified_intensity"
+	 * @return mean MMI predicted by the equation
+	 * ("Intensity mercalli_modified_intensity")
 	 */
 	public double getMean(double magnitude, double epicentralDistance) {
 		double result = 0.0;
