@@ -44,6 +44,7 @@ import org.opensha.sha.imr.param.EqkRuptureParams.RakeParam;
 import org.opensha.sha.imr.param.EqkRuptureParams.RupTopDepthParam;
 import org.opensha.sha.imr.param.EqkRuptureParams.RupWidthParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.DampingParam;
+import org.opensha.sha.imr.param.IntensityMeasureParams.MMI_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGD_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGV_Param;
@@ -57,6 +58,7 @@ import org.opensha.sha.imr.param.OtherParams.TectonicRegionTypeParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistRupMinusDistX_OverRupParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistRupMinusJB_OverRupParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceEpicentralParameter;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceHypoParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceSeisParameter;
@@ -235,7 +237,7 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 	protected SA_Param saParam = null;
 	protected PeriodParam saPeriodParam = null;
 	protected DampingParam saDampingParam = null;
-
+	protected MMI_Param mmiParam = null;
 	/**
 	 * Other Parameters
 	 * (see classes for exact definitions)
@@ -263,6 +265,7 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 	 * (see classes for exact definitions)
 	 */
 	protected DistanceRupParameter distanceRupParam = null;
+	protected DistanceHypoParameter distanceHypoParam = null;
 	protected DistanceJBParameter distanceJBParam = null;
 	protected DistanceSeisParameter distanceSeisParam = null;
 	protected DistRupMinusJB_OverRupParameter distRupMinusJB_OverRupParam = null;
