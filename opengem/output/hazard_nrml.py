@@ -14,15 +14,14 @@ objects are received.
 from lxml import etree
 
 from opengem import writer
-from opengem.xml import NSMAP, SHAML, GML
+from opengem.xml import NSMAP, SHAML, GML, NRML
 
 class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the shaml format."""
 
     def __init__(self, path):
         super(HazardCurveXMLWriter, self).__init__(path)
-        self.result_list_tag = etree.Element(
-                SHAML + "HazardResultList", nsmap=NSMAP)
+        self.result_list_tag = etree.Element("HazardResult", nsmap=NSMAP)
 
         self.curves_per_iml = {}
         self.curves_per_model_id = {}
