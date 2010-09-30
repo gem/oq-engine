@@ -241,6 +241,17 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 	/**
 	 * Other Parameters
 	 * (see classes for exact definitions)
+	 * 
+	 * TODO:
+	 * This can be a problem:
+	 * The protected member e.g. "magParam" or "sigmaTruncLevelParam"
+	 * is initialised by the subclass but it is accessed here, in the
+	 * super class in a public method.
+	 * Refactor:
+	 * Set them private and provide protected setters and getters and
+	 * let the getter do a lazy initialisation or make it null proof 
+	 * or pass "magParam" in as parameter or...
+	 *
 	 */
 	protected StdDevTypeParam stdDevTypeParam = null;
 	protected SigmaTruncTypeParam sigmaTruncTypeParam = null;
@@ -605,6 +616,14 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 		//now loop over ruptures changing only the magnitude parameter.
 		for (int i = 0; i < ptSrc.getNumRuptures(); i++) {
 			tempRup = ptSrc.getRupture(i);
+			/*
+			 *  TODO:
+			 * This can be a problem:
+			 * The protected member "magParam" is initialised by the subclass
+			 * but it is used here, in the super class in a public method.
+			 * Refactor:
+			 * Make it null proof or pass "magParam" in as parameter or...
+			 */
 			magParam.setValueIgnoreWarning(new Double(tempRup.getMag()));
 			qkProb = tempRup.getProbability();
 
