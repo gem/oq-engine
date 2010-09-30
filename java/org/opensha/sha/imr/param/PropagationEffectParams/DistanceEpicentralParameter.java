@@ -31,15 +31,13 @@ import org.opensha.commons.param.WarningParameterAPI;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 
 /**
- * <b>Title:</b> DistanceJBParameter<p>
+ * <b>Title:</b> DistanceEpicentralParameter<p>
  *
  * <b>Description:</b> Special subclass of PropagationEffectParameter.
- * This finds the shortest distance to the surface projection of the fault.
+ * This is the distance to the epicentre.
  * <p>
  *
- * @see DistanceRupParameter
- * @see DistanceSeisParameter
- * @author Steven W. Rock
+ * @author Damiano Monelli
  * @version 1.0
  */
 public class DistanceEpicentralParameter
