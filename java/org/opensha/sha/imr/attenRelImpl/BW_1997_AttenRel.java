@@ -1,5 +1,7 @@
 package org.opensha.sha.imr.attenRelImpl;
 
+import java.util.TreeMap;
+
 import org.opensha.commons.data.NamedObjectAPI;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.exceptions.InvalidRangeException;
@@ -43,20 +45,53 @@ NamedObjectAPI, ParameterChangeListener
     // See above: unused UI stuff
     private boolean parameterChange;
     
+    public BW_1997_AttenRel(ParameterChangeWarningListener wl) {
+        super();
+        this.warningListener = wl;
+        initSupportedIntensityMeasureParams();
+        initEqkRuptureParams();
+        initPropagationEffectParams();
+        initSiteParams();
+        initOtherParams();
+        initParameterEventListeners();
+    } // constructor
+    
 	@Override
 	protected void initSupportedIntensityMeasureParams() {
 		mmiParam = new MMI_Param();
 	    mmiParam.setNonEditable();
 	    mmiParam.addParameterChangeWarningListener(warningListener);
-	    supportedIMParams.clear();
-	    supportedIMParams.addParameter(mmiParam);
+	    /* 
+	     * "supportedIMParams" is defined and initialised in class
+	     * IntensityMeasureRelationship.
+	     * -> It is save to use it here.
+	     * Suggestion for an OpenSha refactoring:
+	     * TODO: Avoid uncontrolled access by the subclasses.
+	     * Set these members private in the super class and provide
+	     * access via getters and setters and let the lazy init!.
+	     */
+	    getSupportedIntensityMeasuresList().clear();
+	    // supportedIMParams.clear();
+	    getSupportedIntensityMeasuresList().addParameter(mmiParam);
+	    // supportedIMParams.addParameter(mmiParam);
 	}
 
 	@Override
 	protected void initEqkRuptureParams() {
 		magParam = new MagParam(MAG_WARN_MIN, MAG_WARN_MAX);
-        eqkRuptureParams.clear();
-        eqkRuptureParams.addParameter(magParam);
+		/*
+		 * eqkRuptureParams is defined and initialised 
+		 * in class IntensityMeasureRelationship.
+		 * -> It is save to use it here.
+		 * Suggestion for an OpenSha refactoring:
+		 * TODO: Avoid uncontrolled access by the subclasses.
+		 * Set these members private in the super class and provide
+		 * access via getters and setters and let the lazy init!.
+	     */
+        getEqkRuptureParamsList().clear();
+        //eqkRuptureParams.clear();
+        getEqkRupture().addParameter(magParam);
+        //eqkRuptureParams.addParameter(magParam);
 	}
 
 	@Override
@@ -69,22 +104,40 @@ NamedObjectAPI, ParameterChangeListener
 	    warn.setNonEditable();
 	    distanceEpicentralParameter.setWarningConstraint(warn);
 	    distanceEpicentralParameter.setNonEditable();
-	    propagationEffectParams.addParameter(distanceEpicentralParameter);
+		/*
+		 * "propagationEffectParams" is defined and initialised 
+		 * in class IntensityMeasureRelationship.
+		 * -> It is save to use it here.
+		 * Suggestion for an OpenSha refactoring:
+		 * TODO: Avoid uncontrolled access by the subclasses.
+		 * Set these members private in the super class and provide
+		 * access via getters and setters and let the lazy init!.
+	     */
+	    getPropagationEffectParamsList().addParameter(distanceEpicentralParameter);
 	 } // initPropagationEffectParams()
 
 	@Override
 	protected void initSiteParams() {
-		siteParams.clear();
+		getSiteParamsList().clear();
+		// siteParams.clear();
 	}
 
 	@Override
 	protected void initOtherParams() {
         super.initOtherParams();
+        stdDevTypeParam = createStdDevTypeParam();
+//      StringConstraint stdDevTypeConstraint = new StringConstraint();
+//      stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);
+//      stdDevTypeConstraint.setNonEditable();
+//      stdDevTypeParam = new StdDevTypeParam(stdDevTypeConstraint);
+        otherParams.addParameter(stdDevTypeParam);
+	}
+
+	private StdDevTypeParam createStdDevTypeParam() {
         StringConstraint stdDevTypeConstraint = new StringConstraint();
         stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);
         stdDevTypeConstraint.setNonEditable();
-        stdDevTypeParam = new StdDevTypeParam(stdDevTypeConstraint);
-        otherParams.addParameter(stdDevTypeParam);
+        return  new StdDevTypeParam(stdDevTypeConstraint);
 	}
 	
 	@Override
@@ -137,9 +190,17 @@ NamedObjectAPI, ParameterChangeListener
         magParam.setValueAsDefault();
         distanceEpicentralParameter.setValueAsDefault();
         mmiParam.setValueAsDefault();
-        stdDevTypeParam.setValueAsDefault();
+		/*
+		 * Lazy init. This method (setParamDefaults()) is public.
+		 * The init method for stdDevTypeParam is called in the
+		 * constructor though...
+		 */
+        getStdDevTypeParam().setValueAsDefault();
 	}
 
+	/**
+	 * Method to be implemented of Listeners of ParameterChangeEvents.
+	 */
 	@Override
 	public void parameterChange(ParameterChangeEvent event) {
         String pName = event.getParameterName();
@@ -174,11 +235,18 @@ NamedObjectAPI, ParameterChangeListener
 	} // getMean()
 	
 	/**
-	 * @return    The standard deviation value
+	 * @return The standard deviation value
 	 */
 	@Override
 	public double getStdDev() {
 		return standardDeviation;
 	} // getStdDev()
+	
+	private StdDevTypeParam getStdDevTypeParam() {
+		if(stdDevTypeParam == null) {
+			stdDevTypeParam = createStdDevTypeParam();
+		}
+		return stdDevTypeParam;
+	}
 
 } // class BW_1997_AttenRel()
