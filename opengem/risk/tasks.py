@@ -6,7 +6,6 @@ Tasks in the risk engine include the following:
  * Input parsing
  * Various calculation steps
  * Output generation
- 
 """
 
 import json
@@ -18,6 +17,7 @@ from celery.decorators import task
 from opengem import flags
 from opengem import memcached
 from opengem import identifiers
+
 from opengem.logs import HAZARD_LOG, RISK_LOG
 from opengem.risk import engines
 
@@ -51,20 +51,23 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
     # loop over sites for this block
     # assumes that hazard, assets, and risk grid are the same
     # (no nearest-neighbour search)
-    memcache_key_sites = identifiers.get_product_key(
-        job_id, block_id, None, identifiers.SITES_KEY_TOKEN)
+    #memcache_key_sites = identifiers.get_product_key(
+        #job_id, block_id, None, identifiers.SITES_KEY_TOKEN)
 
-    memcache_result = memcache_client.get(memcache_key_sites)
-    decoder = json.JSONDecoder()
+    #memcache_result = memcache_client.get(memcache_key_sites)
+    #decoder = json.JSONDecoder()
 
-    # assume that memcache has a JSON-serialized list of sites 
-    sites_list = decoder.decode(memcache_result)
+    ## assume that memcache has a JSON-serialized list of sites 
+    #sites_list = decoder.decode(memcache_result)
+
+    sites_list = memcached.get_sites_from_memcache(memcache_client,
+                                                job_id, block_id)
 
     print sites_list
 
-    for gridpoint in sites_list:
+    for (gridpoint, site) in sites_list:
 
-        logger.info("processing gridpoint %s" % (gridpoint))
+        logger.info("processing gridpoint %s, site %s" % (gridpoint, site))
         loss_ratio_curve = risk_engine.compute_loss_ratio_curve(gridpoint)
 
         if loss_ratio_curve is not None:
@@ -74,7 +77,6 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
                 block_id, gridpoint,identifiers.LOSS_RATIO_CURVE_KEY_TOKEN)
 
             memcache_client.set(key, loss_ratio_curve)
-            #ratio_results[gridpoint] = val
             logger.info("wrote loss ratio curve to key %s" % (key))
 
             print "RESULT: loss ratio curve is %s" % loss_ratio_curve
@@ -86,8 +88,6 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
                 block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
 
             memcache_client.set(key, loss_curve)
-            #loss_curves[gridpoint] = loss_curve
-            #print loss_curve
             logger.info("wrote loss curve to key %s" % (key))
 
             print "RESULT: loss curve is %s" % loss_curve
@@ -99,7 +99,6 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
                 block_id, gridpoint, identifiers.CONDITIONAL_LOSS_KEY_TOKEN)
 
             memcache_client.set(key, loss_conditional)
-            #losses_one_perc[gridpoint] = 
             logger.info("wrote conditional loss to key %s" % (key))
 
             print "RESULT: conditional loss is %s" % loss_conditional

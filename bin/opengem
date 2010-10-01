@@ -41,8 +41,6 @@ from opengem.parser import vulnerability
 
 FLAGS = flags.FLAGS
 
-#flags.DEFINE_string('debug', 'debug', 'logging level')
-
 flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
 flags.DEFINE_string('vulnerability', 'vulnerability.xml',
                     'vulnerability input')

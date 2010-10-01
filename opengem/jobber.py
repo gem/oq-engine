@@ -5,31 +5,29 @@ Main jobber module
 
 import json
 import os
-#import pylibmc
 import random
 import time
 import unittest
 
-#from celery.decorators import task
-
 from opengem import identifiers
+from opengem import memcached
 from opengem import producer
 from opengem import shapes
 
 from opengem.logs import HAZARD_LOG, RISK_LOG
-#from opengem.memcached import MEMCACHED_PORT, MEMCACHED_HOST
-from opengem import memcached
-#from opengem.risk import engines
-
 from opengem.risk import tasks
 
-#from opengem.output import geotiff
+from opengem.output import geotiff
+from opengem.output.risk import RiskXMLWriter
+
 from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
 
 from opengem import flags
 FLAGS = flags.FLAGS
+
+LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 
 class Jobber(object):
 
@@ -50,8 +48,6 @@ class Jobber(object):
         self.job_id_generator = identifiers.get_id('job')
         self.block_id_generator = identifiers.get_id('block')
 
-        #print FLAGS
-
         self._init()
 
     def run(self):
@@ -59,14 +55,13 @@ class Jobber(object):
         job_id = self.job_id_generator.next()
         print "we are inside jobber.run, job_id = %s" % job_id
 
-        #_init()
-        
         if self.partition is True:
             self._partition(job_id)
         else:
             block_id = self.block_id_generator.next()
             self._preload(job_id, block_id)
             self._execute(job_id, block_id)
+            self._write_output_for_block(job_id, block_id)
 
         print "Jobber run ended, bye bye"
 
@@ -80,8 +75,33 @@ class Jobber(object):
 
         result = tasks.compute_risk.apply_async(args=[job_id, block_id])
         result.get()
-        
+
         print "task finished"
+
+    def _write_output_for_block(self, job_id, block_id):
+        """note: this is usable only for one block"""
+        
+        # produce output for one block
+        loss_curves = []
+
+        for (gridpoint, (site_lon, site_lat)) in memcached.get_sites_from_memcache(
+            self.memcache_client, job_id, block_id):
+
+            key = identifiers.get_product_key(job_id, 
+                block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
+            loss_curve = self.memcache_client.get(key)
+            loss_curves.append((shapes.Site(site_lon, site_lat), 
+                                loss_curve))
+
+        print "serializing loss_curves: %s" % loss_curves
+        output_generator = RiskXMLWriter(LOSS_CURVES_OUTPUT_FILE)
+        output_generator.serialize(loss_curves)
+        
+        #output_generator = output.SimpleOutput()
+        #output_generator.serialize(ratio_results)
+        
+        #output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
+        #output_generator.serialize(losses_one_perc)
 
     def _init(self):
         
@@ -114,7 +134,11 @@ class Jobber(object):
 
             # store site hashes in memcache
             # TODO(fab): separate this from hazard curves
-            sites_hash_list.append(str(gridpoint))
+            # TODO(fab): make sure that Shapely representation is available
+            sites_hash_list.append((str(gridpoint), 
+                                   (site.longitude, site.latitude)))
+            #sites_hash_list.append((str(gridpoint), 
+                                    #str(site)))
 
             hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
                                                 hazard_curve_data['Values']))
@@ -144,6 +168,7 @@ class Jobber(object):
         
         # load assets and write to memcache
         print "loading assets"
+        
         exposure_parser = exposure.ExposurePortfolioFile(self.exposure_file)
         for site, asset in exposure_parser.filter(region_constraint):
             gridpoint = region_constraint.grid.point_at(site)
@@ -156,12 +181,15 @@ class Jobber(object):
                 raise ValueError(
                     "jobber: cannot write asset to memcache")
 
-            print "Loading asset %s at %s, %s" % (asset,
-                site.latitude,  site.longitude)
+            #print "Loading asset %s at %s, %s" % (asset,
+                #site.longitude,  site.latitude)
             RISK_LOG.debug("Loading asset %s at %s, %s" % (asset,
-                site.latitude,  site.longitude))
+                site.longitude,  site.latitude))
 
         # load vulnerability and write to memcache
         print "loading vulnerability"
         vulnerability.load_vulnerability_model(job_id,
             self.vulnerability_model_file)
+
+
+

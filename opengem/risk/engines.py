@@ -102,7 +102,7 @@ class ProbabilisticLossRatioCalculator(object):
 
 
 def compute_loss(loss_curve, pe_interval):
-    """Interpolate loss for a specific probability of exceedence interval"""
-    loss = classical_psha_based.compute_conditional_loss(
-                loss_curve, pe_interval)
+    """Interpolate loss for a specific probability of exceedance interval"""
+    loss = classical_psha_based.compute_conditional_loss(loss_curve, 
+                                                         pe_interval)
     return loss
