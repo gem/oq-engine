@@ -163,15 +163,16 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	{
 	    List<Double[]> probOccs = new ArrayList<Double[]>();
         
+	    ArbitrarilyDiscretizedFunc PMF = null;
+	    
         for (int i = 0; i < getProbList().size(); i++)
         {
-            ArbitrarilyDiscretizedFunc PMF = 
-                    ProbabilityMassFunctionCalc.getPMF(discretizedFunctionAt(i));
-            
-            setGmLevels(PMF.getXVals());
+            PMF = ProbabilityMassFunctionCalc.getPMF(discretizedFunctionAt(i));
             probOccs.add(PMF.getYVals());
         }
         
+        // gm levels are always the same, get the last one
+        setGmLevels(PMF.getXVals());
         setProbList(probOccs);
 	}
 	
