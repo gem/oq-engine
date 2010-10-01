@@ -770,7 +770,6 @@ public class GEM1ERF extends EqkRupForecast {
 	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                faultFloaterTypeValue,				// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                12.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
-			
 		}
 		else{
 			
@@ -786,7 +785,6 @@ public class GEM1ERF extends EqkRupForecast {
 	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                faultFloaterTypeValue,				// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                0.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
-			
 		}
 		
 
