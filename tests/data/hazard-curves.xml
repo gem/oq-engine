@@ -1,19 +1,13 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
   <Config>
-    <HazardProcessing timeSpanDuration="50.0" IDmodel="MMI_3_1" saPeriod="Foo" saDamping="Bar">
-      <IMT/>
-    </HazardProcessing>
-    <Values>
-      <HazardCurveList>
-        <HazardCurve/>
-      </HazardCurveList>
-    </Values>
+    <HazardProcessing timeSpanDuration="50.0" IDmodel="MMI_3_1" saPeriod="Foo" saDamping="Bar"/>
   </Config>
   <HazardCurveList endBranchLabel="3_1">
     <HazardCurve>
       <gml:pos>16.35 48.25</gml:pos>
       <Values>0.005 0.007 0.009</Values>
     </HazardCurve>
+    <IMLValues>10.0 20.0 30.0</IMLValues>
   </HazardCurveList>
 </HazardResult>
