@@ -4,13 +4,12 @@ Celery tasks for jobber unit tests
 """
 
 import json
-import pylibmc
 import random
 import time
 
 from celery.decorators import task
 
-from opengem.memcached import MEMCACHED_PORT, MEMCACHED_HOST
+from opengem import memcached
 
 MAX_WAIT_TIME_SECS = 3
 
@@ -30,8 +29,7 @@ def simple_task_return_name_to_memcache(name, **kwargs):
 
     logger = simple_task_return_name_to_memcache.get_logger(**kwargs)
 
-    memcache_client = pylibmc.Client(["%s:%d" % (MEMCACHED_HOST, 
-        MEMCACHED_PORT)], binary=False)
+    memcache_client = memcached.get_client(binary=False)
 
     wait_time = _wait_a_bit()
     logger.info("processing %s, waited %s seconds" % (name, wait_time))
@@ -44,8 +42,7 @@ def simple_task_list_dict_to_memcache(name, **kwargs):
 
     logger = simple_task_list_dict_to_memcache.get_logger(**kwargs)
 
-    memcache_client = pylibmc.Client(["%s:%d" % (MEMCACHED_HOST, 
-        MEMCACHED_PORT)], binary=False)
+    memcache_client = memcached.get_client(binary=False)
 
     wait_time = _wait_a_bit()
     logger.info("processing list/dict.%s, waited %s seconds" % (name, wait_time))
@@ -59,8 +56,7 @@ def simple_task_json_to_memcache(name, **kwargs):
 
     logger = simple_task_json_to_memcache.get_logger(**kwargs)
 
-    memcache_client = pylibmc.Client(["%s:%d" % (MEMCACHED_HOST, 
-        MEMCACHED_PORT)], binary=False)
+    memcache_client = memcached.get_client(binary=False)
 
     wait_time = _wait_a_bit()
     logger.info("processing json.%s, waited %s seconds" % (name, wait_time))

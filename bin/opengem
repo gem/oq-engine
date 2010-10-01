@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 """Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
@@ -31,18 +32,22 @@ if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
 
 from opengem import flags
 from opengem import logs
+
+from opengem import jobber
+
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import vulnerability
-from opengem.risk import tasks
-
 
 FLAGS = flags.FLAGS
+
+#flags.DEFINE_string('debug', 'debug', 'logging level')
+
 flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
 flags.DEFINE_string('vulnerability', 'vulnerability.xml',
                     'vulnerability input')
 flags.DEFINE_string('filter_region', None, 'region to filter input')                    
-flags.DEFINE_string('output_region', None, 'region to generate outpu')
+flags.DEFINE_string('output_region', None, 'region to generate output')
 flags.DEFINE_string('hazard_curves', 'hazard_curves.xml', 
                     'hazard curves')
 
@@ -53,6 +58,8 @@ flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
 flags.DEFINE_boolean('profile', False, 'Run profiler?')
 flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
 flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
+
+flags.DEFINE_boolean('partition', False, 'Partition job?')
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
@@ -79,4 +86,12 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.filter_region, FLAGS.exposure, FLAGS.loss_map)
+        #tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.filter_region, FLAGS.exposure, FLAGS.loss_map)
+
+        the_jobber = jobber.Jobber(FLAGS.vulnerability, 
+                                   FLAGS.hazard_curves, 
+                                   FLAGS.filter_region, 
+                                   FLAGS.exposure, 
+                                   FLAGS.loss_map,
+                                   FLAGS.partition)
+        the_jobber.run()
