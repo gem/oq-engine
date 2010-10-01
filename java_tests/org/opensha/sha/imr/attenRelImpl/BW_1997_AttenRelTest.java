@@ -3,6 +3,8 @@ package org.opensha.sha.imr.attenRelImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.opensha.commons.param.event.ParameterChangeWarningEvent;
+import org.opensha.commons.param.event.ParameterChangeWarningListener;
 
 import junit.framework.TestCase;
 
@@ -20,8 +22,17 @@ public class BW_1997_AttenRelTest extends TestCase {
 	
 	@Before
 	public void setUp() {
-		
-		bw_1997_AttenRel = new BW_1997_AttenRel();	
+		/*
+		 * The ParameterChangeWarningListener is a nuisance and a dummy.
+		 * Other tests implement the interface just to be able to create
+		 * the prediction equation class. That can not be the way either! 
+		 */
+		bw_1997_AttenRel = new BW_1997_AttenRel(new ParameterChangeWarningListener() {
+			@Override
+			public void parameterChangeWarning(ParameterChangeWarningEvent event) {
+				return;
+			}
+		});	
 	} // setUp()
 
 	@After

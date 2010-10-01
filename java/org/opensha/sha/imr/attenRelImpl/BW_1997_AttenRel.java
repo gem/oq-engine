@@ -129,7 +129,7 @@ NamedObjectAPI, ParameterChangeListener
 	     */
         getEqkRuptureParamsList().clear();
         //eqkRuptureParams.clear();
-        getEqkRupture().addParameter(magParam);
+        getEqkRuptureParamsList().addParameter(magParam);
         //eqkRuptureParams.addParameter(magParam);
 	}
 
