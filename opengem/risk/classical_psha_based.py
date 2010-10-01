@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 This module defines the computations used in the
 probabilistic scenario. For more information, take a look at the
@@ -67,21 +66,27 @@ from scipy import log # pylint: disable=F0401,E0611
 
 from opengem import logs
 from opengem import shapes
-from opengem import state   
+
+from opengem import identifiers
+from opengem import memcached
+
+#from opengem.parser import vulnerability
+# from opengem import state   
 
 STEPS_PER_INTERVAL = 5
 
-
-def compute_loss_ratio_curve(vuln_function_code, hazard_curve):
+# NOTE: vuln changed
+def compute_loss_ratio_curve(vuln_function, hazard_curve):
     """One of the two main public functions, this produces
     a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function."""
     
-    if vuln_function_code is None:
-        vuln_function_code = "EMPTY"
-    lrem = _compute_lrem(vuln_function_code)
-    lrem_po = _compute_lrem_po(vuln_function_code, lrem, hazard_curve)
-    loss_ratios = _generate_loss_ratios(vuln_function_code)
+    if vuln_function is None:
+        vuln_function = shapes.EMPTY_CURVE
+
+    lrem = _compute_lrem(vuln_function)
+    lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
+    loss_ratios = _generate_loss_ratios(vuln_function)
     loss_ratio_curve = _compute_loss_ratio_curve_from_lrem_po(
                             loss_ratios, lrem_po)
     return loss_ratio_curve
@@ -96,21 +101,24 @@ def compute_loss_curve(loss_ratio_curve, asset):
     loss_curve_values = []
     for loss_ratio, probability_occurrence \
             in loss_ratio_curve.values.iteritems():
-        logs.RISK_LOG.debug("Loss ratio is %s, PO is %s",
-                (loss_ratio, probability_occurrence))
+        logs.RISK_LOG.debug("Loss ratio is %s, PO is %s" % (
+            loss_ratio, probability_occurrence))
         key = "%s" % (float(loss_ratio) * asset)
         loss_curve_values.append((key, probability_occurrence))
 
     return shapes.FastCurve(loss_curve_values)
 
-
-def _compute_lrem_po(vuln_function_code, lrem, hazard_curve):
+# NOTE: vuln changed
+def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     """Computes the loss ratio * probability of occurrence matrix.""" 
     
     current_column = 0
     lrem_po = [None] * len(lrem)
     
-    vuln_function = state.get_vuln_function(vuln_function_code)
+    # TODO obsolete
+    # key = vulnerability.get_memcache_key()
+    # vuln_function = state.get_vuln_function(vuln_function_code)
+
     # we need to process intensity measure levels in ascending order
     imls = list(vuln_function.domain)
     imls.sort()
@@ -141,11 +149,14 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     # print loss_ratio_curve_values
     return shapes.FastCurve(loss_ratio_curve_values)
     
-@state.memoize
-def _generate_loss_ratios(vuln_function_code):
+# NOTE: vuln changed
+#@state.memoize
+def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
     
-    vuln_function = state.get_vuln_function(vuln_function_code)
+    # TODO obsolete
+    # vuln_function = state.get_vuln_function(vuln_function_code)
+    
     loss_ratios = [value[0] for value in vuln_function.codomain] 
         # get the means
     loss_ratios.insert(0, 0.0)
@@ -153,16 +164,18 @@ def _generate_loss_ratios(vuln_function_code):
     splitted = _split_loss_ratios(loss_ratios)  
     return splitted
 
+# NOTE: vuln changed
 # @state.memoize
-def _compute_lrem(vuln_function_code, distribution=None):
+def _compute_lrem(vuln_function, distribution=None):
     """Computes the loss ratio exceedance matrix."""
     
     if not distribution:
         distribution = stats.lognorm
         # This is so we can memoize the thing
     
-    vuln_function = state.get_vuln_function(vuln_function_code)
-    loss_ratios = _generate_loss_ratios(vuln_function_code)
+    # TODO obsolete
+    # vuln_function = state.get_vuln_function(vuln_function_code)
+    loss_ratios = _generate_loss_ratios(vuln_function)
     
     current_column = 0
     lrem = [None] * (len(loss_ratios)+1)

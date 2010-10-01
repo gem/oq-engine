@@ -3,18 +3,14 @@
 
 import json
 import os
-import pylibmc
 import random
 import time
 import unittest
 
-from opengem.memcached import MEMCACHED_PORT, MEMCACHED_HOST
+from opengem import memcached
 import tests.tasks as test_tasks
 
 TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
-
-#MEMCACHED_PORT = 11211
-#MEMCACHED_HOST = "localhost"
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 1
 MAX_WAIT_LOOPS = 10
@@ -23,8 +19,7 @@ data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 class JobberTestCase(unittest.TestCase):
     def setUp(self):
-        self.memcache_client = pylibmc.Client(["%s:%d" % (MEMCACHED_HOST,
-            MEMCACHED_PORT)], binary=False)
+        self.memcache_client = memcached.get_client(binary=False)
         self.memcache_client.flush_all()
 
     def tearDown(self):

@@ -1,13 +1,11 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# encoding: utf-8
 """
 A simple memcached reader.
-
 """
 
 import json
 import math
+import pylibmc
 
 import shapes
 
@@ -17,7 +15,6 @@ MEMCACHED_HOST = "localhost"
 class Reader(object):
     """Read objects from memcached and translate them into
     our object model.
-    
     """
     
     def __init__(self, client):
@@ -93,3 +90,36 @@ class Reader(object):
                 curves[shapes.Site(math.degrees(lon), math.degrees(lat))] = data
 
         return curves
+
+
+def get_client(memcached_host=MEMCACHED_HOST, memcached_port=MEMCACHED_PORT,
+               **kwargs):
+    """possible kwargs:
+        binary
+    """
+    return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
+                          **kwargs)
+
+def get_value_json_decoded(memcache_client, key):
+    value = memcache_client.get(key)
+    decoder = json.JSONDecoder()
+    try:
+        return decoder.decode(value)
+    except Exception:
+        return None
+
+def set_value_json_encoded(memcache_client, key, value):
+    encoder = json.JSONEncoder()
+
+    try:
+        encoded_value = encoder.encode(value)
+    except Exception:
+        raise ValueError("cannot encode value %s to JSON" % value)
+
+    try:
+        memcache_client.set(key, encoded_value)
+    except Exception:
+        raise RuntimeError("cannot write key %s to memcache" % key)
+
+    return True
+    
