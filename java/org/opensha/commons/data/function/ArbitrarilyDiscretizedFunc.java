@@ -819,8 +819,8 @@ if(debug) {
 		return d;
 	}
 
-	public double[] getYVals() {
-		double[] d = new double[points.size()];
+	public Double[] getYVals() {
+	    Double[] d = new Double[points.size()];
 		for (int i = 0; i < points.size(); ++i) {
 			d[i] = getY(i);
 		}
@@ -852,19 +852,6 @@ public static void main( String[] args ) {
 }
 
 */
-
-    public Map<Double, Double> asMap()
-    {
-        Map<Double, Double> result = new HashMap<Double, Double>();
-        
-        for (Object obj : points.keySet())
-        {
-            DataPoint2D point = (DataPoint2D) obj;
-            result.put(point.getX(), point.getY());
-        }
-        
-        return result;
-    }
 
     /*
     public void rebuild(){
