@@ -50,17 +50,24 @@ class HazardCurveXMLWriter(writer.FileWriter):
         """Adds the curve to the proper set depending on the IML values."""
         
         try:
-            iml_tag = self.curves_per_iml[str(values["IMLValues"])]
+            list_tag = self.curves_per_iml[str(values["IMLValues"])]
         except KeyError:
-            curve_list_tag = etree.SubElement(
-                    values_tag, SHAML + "HazardCurveList")
 
-            
-            # <shaml:IML />
-            iml_tag = etree.SubElement(curve_list_tag, SHAML + "HazardCurve")
+            # <shaml:Hazard Curve />
+            list_tag = etree.SubElement(values_tag, SHAML + "HazardCurve")
 
+            # <gml:pos />
+            gml_tag = etree.SubElement(list_tag, GML + "pos")
+            gml_tag.text = " ".join(map(str, (point.longitude, point.latitude)))
             
-            self.curves_per_iml[str(values["IMLValues"])] = iml_tag
+            # <shaml:values />
+            iml_values_tag = etree.SubElement(list_tag, SHAML + "Values")
+            iml_values_tag.text = " ".join(map(str, values["Values"]))
+            
+            # <shaml:IML values />
+            iml_values_tag = etree.SubElement(values_tag, SHAML + "IMLValues")
+            iml_values_tag.text = " ".join(map(str, values["IMLValues"]))
+            
 
     def write(self, point, values):
         """Writes an hazard curve.
@@ -75,35 +82,22 @@ class HazardCurveXMLWriter(writer.FileWriter):
             values_tag = self.curves_per_model_id[values["IDmodel"]]
         except KeyError:
             # <shaml:Result />
-            result_tag = etree.SubElement(
+            config_tag = etree.SubElement(
                     self.result_list_tag, SHAML + "Config")
+                    
+            list_tag = etree.SubElement(
+                    self.result_list_tag, SHAML + "HazardCurveList")
+            list_tag.attrib["endBranchLabel"] = str(values["endBranchLabel"])
 
             # <shaml:HazardProcessing />
-            descriptor_tag = etree.SubElement(result_tag, SHAML + "HazardProcessing")
+            descriptor_tag = etree.SubElement(config_tag, SHAML + "HazardProcessing")
             descriptor_tag.attrib["timeSpanDuration"] = str(values
                 ["timeSpanDuration"])
             descriptor_tag.attrib["IDmodel"] = str(values["IDmodel"])
             descriptor_tag.attrib["saPeriod"] = str(values["saPeriod"])
             descriptor_tag.attrib["saDamping"] = str(values["saDamping"])
-            
-            
-            curve_list_tag = etree.SubElement(self.result_list_tag, SHAML + "HazardCurveList")
-            curve_list_tag.attrib["endBranchLabel"] = str(values["endBranchLabel"])
-            # <shaml:IML />
-            iml_tag = etree.SubElement(curve_list_tag, SHAML + "HazardCurve")
-            
-            # <gml:pos />
-            gml_tag = etree.SubElement(iml_tag, GML + "pos")
-            gml_tag.text = " ".join(map(str, (point.longitude, point.latitude)))
-            
-            # <shaml:Values />
-            curve_values_tag = etree.SubElement(iml_tag, SHAML + "Values")
-            curve_values_tag.text = " ".join(map(str, values["Values"]))
-            
-            imt_tag = etree.SubElement(descriptor_tag, SHAML + "IMT")
-            
-            values_tag = etree.SubElement(result_tag, SHAML + "Values")
-            
-            self.curves_per_model_id[values["IDmodel"]] = values_tag
+
+
+            self.curves_per_model_id[values["IDmodel"]] = list_tag
         
-        self._add_curve_to_proper_set(point, values, values_tag)
+        self._add_curve_to_proper_set(point, values, list_tag)
