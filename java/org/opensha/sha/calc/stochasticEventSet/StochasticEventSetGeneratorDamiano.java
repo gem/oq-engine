@@ -1,19 +1,9 @@
 package org.opensha.sha.calc.stochasticEventSet;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
-import org.opensha.commons.geo.Location;
-import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -21,15 +11,14 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 /**
  * 
  * This class provide methods for the creation of a stochastic event set (given
- * as an array list of ProbEqkRupture objects) representative of a given
- * Earthquake Rupture Forecast.
+ * as an array list of EqkRupture objects) representative of a given Earthquake
+ * Rupture Forecast.
  * 
  * @author Damiano Monelli
  * 
@@ -50,15 +39,19 @@ public class StochasticEventSetGeneratorDamiano {
 	 *            {@link Random} random number generator
 	 * @return
 	 */
-	public static ArrayList<ProbEqkRupture> getStochasticEvenSetFromPoissonianERF(
+	public static ArrayList<EqkRupture> getStochasticEvenSetFromPoissonianERF(
 			EqkRupForecast erf, Random rn) {
 
-		ArrayList<ProbEqkRupture> stochasticEventSet = new ArrayList<ProbEqkRupture>();
+		isErfPoissonian(erf);
+
+		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
 		for (int is = 0; is < erf.getNumSources(); is++) {
 			ProbEqkSource src = erf.getSource(is);
 			for (int ir = 0; ir < src.getNumRuptures(); ir++) {
-				ProbEqkRupture rup = src.getRuptureClone(ir);
+				ProbEqkRupture rup = src.getRupture(ir);
 				double numExpectedRup = -Math.log(1 - rup.getProbability());
+				EqkRupture eqk = new EqkRupture(rup.getMag(), rup.getAveRake(),
+						rup.getRuptureSurface(), rup.getHypocenterLocation());
 				// sample Poisson distribution
 				// that is get number of rupture realizations given
 				// numExpectedRup
@@ -79,16 +72,28 @@ public class StochasticEventSetGeneratorDamiano {
 					}
 				}
 				for (int j = 0; j < nRup; j++)
-					stochasticEventSet.add(rup);
+					stochasticEventSet.add(eqk);
 			}
 		}
 		return stochasticEventSet;
 	}
 
-	public static ArrayList<ArrayList<ProbEqkRupture>> getMultipleStochasticEvenSetsFromPoissonianERF(
+	/**
+	 * Generate multiple stochastic event sets by calling the
+	 * getStochasticEvenSetFromPoissonianERF method.
+	 * 
+	 * @param erf
+	 *            {@link EqkRupForecast} earthquake rupture forecast
+	 * @param num
+	 *            number of stachastic event sets
+	 * @param rn
+	 *            {@link Random} random number generator
+	 * @return
+	 */
+	public static ArrayList<ArrayList<EqkRupture>> getMultipleStochasticEvenSetsFromPoissonianERF(
 			EqkRupForecast erf, int num, Random rn) {
 
-		ArrayList<ArrayList<ProbEqkRupture>> multiStocEventSet = new ArrayList<ArrayList<ProbEqkRupture>>();
+		ArrayList<ArrayList<EqkRupture>> multiStocEventSet = new ArrayList<ArrayList<EqkRupture>>();
 		for (int i = 0; i < num; i++) {
 			multiStocEventSet
 					.add(getStochasticEvenSetFromPoissonianERF(erf, rn));
@@ -108,7 +113,7 @@ public class StochasticEventSetGeneratorDamiano {
 	 * @throws IOException
 	 */
 
-	public static ArrayList<ProbEqkRupture> getStochasticEventSetFromGEM1ERF(
+	public static ArrayList<EqkRupture> getStochasticEventSetFromGEM1ERF(
 			GEM1ERF erf, Random rn) {
 
 		ArrayList<Double> prbMag;
@@ -171,7 +176,7 @@ public class StochasticEventSetGeneratorDamiano {
 		int cev = 0;
 
 		// Create an array list where we collect all the ruptures
-		ArrayList<ProbEqkRupture> rupl = new ArrayList<ProbEqkRupture>();
+		ArrayList<EqkRupture> rupl = new ArrayList<EqkRupture>();
 
 		// For each source randomly select one rupture and create seismicity
 		// histories
@@ -279,19 +284,27 @@ public class StochasticEventSetGeneratorDamiano {
 				ProbEqkRupture rpt = new ProbEqkRupture();
 				rpt = rupList.get(idxRup);
 
-				rupl.add(rpt);
+				EqkRupture eqk = new EqkRupture(rpt.getMag(), rpt.getAveRake(),
+						rpt.getRuptureSurface(), rpt.getHypocenterLocation());
+				rupl.add(eqk);
 			}
 		}
 		return rupl;
 	}
 
-	public static ArrayList<ArrayList<ProbEqkRupture>> getMultipleStochasticEvenSetsFromGEM1ERF(
+	public static ArrayList<ArrayList<EqkRupture>> getMultipleStochasticEvenSetsFromGEM1ERF(
 			GEM1ERF erf, int num, Random rn) {
 
-		ArrayList<ArrayList<ProbEqkRupture>> multiStocEventSet = new ArrayList<ArrayList<ProbEqkRupture>>();
+		ArrayList<ArrayList<EqkRupture>> multiStocEventSet = new ArrayList<ArrayList<EqkRupture>>();
 		for (int i = 0; i < num; i++) {
 			multiStocEventSet.add(getStochasticEventSetFromGEM1ERF(erf, rn));
 		}
 		return multiStocEventSet;
+	}
+
+	private static void isErfPoissonian(EqkRupForecast erf) {
+		for (ProbEqkSource src : (ArrayList<ProbEqkSource>) erf.getSourceList())
+			if (src.isSourcePoissonian() == false)
+				throw new IllegalArgumentException("Sources must be Poissonian");
 	}
 }

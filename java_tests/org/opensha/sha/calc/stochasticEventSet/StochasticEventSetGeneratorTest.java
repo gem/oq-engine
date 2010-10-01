@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
@@ -55,11 +56,11 @@ public class StochasticEventSetGeneratorTest {
 
 		// Calculate stochastic event sets
 		Random rn = new Random(seed);
-		ArrayList<ArrayList<ProbEqkRupture>> multiStochasticEventSets = StochasticEventSetGeneratorDamiano
+		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = StochasticEventSetGeneratorDamiano
 				.getMultipleStochasticEvenSetsFromPoissonianERF(erf,
 						numStochasticEventSets, rn);
-		ArrayList<ProbEqkRupture> stochasticEventSet = new ArrayList<ProbEqkRupture>();
-		for (ArrayList<ProbEqkRupture> ses : multiStochasticEventSets)
+		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
+		for (ArrayList<EqkRupture> ses : multiStochasticEventSets)
 			stochasticEventSet.addAll(ses);
 
 		// Compare rates
@@ -70,7 +71,7 @@ public class StochasticEventSetGeneratorTest {
 	}
 	
 	@Test
-	public void compareOccurrenceRatesWithGetStochasticEvenSetFromGEM1ERF() {
+	public void compareOccurrenceRatesWithGetStochasticEventSetFromGEM1ERF() {
 
 		/**
 		 * This test compares the occurrence rates calculated from a set of
@@ -98,11 +99,11 @@ public class StochasticEventSetGeneratorTest {
 
 		// Calculate stochastic event sets
 		Random rn = new Random(seed);
-		ArrayList<ArrayList<ProbEqkRupture>> multiStochasticEventSets = StochasticEventSetGeneratorDamiano
+		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = StochasticEventSetGeneratorDamiano
 				.getMultipleStochasticEvenSetsFromGEM1ERF(erf,
 						numStochasticEventSets, rn);
-		ArrayList<ProbEqkRupture> stochasticEventSet = new ArrayList<ProbEqkRupture>();
-		for (ArrayList<ProbEqkRupture> ses : multiStochasticEventSets)
+		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
+		for (ArrayList<EqkRupture> ses : multiStochasticEventSets)
 			stochasticEventSet.addAll(ses);
 
 		// Compare rates
@@ -219,7 +220,7 @@ public class StochasticEventSetGeneratorTest {
 	 *            number of stochastic even sets generated
 	 */
 	private void compareOccurrenceRates(IncrementalMagFreqDist mfd,
-			ArrayList<ProbEqkRupture> stochasticEventSet, double timeSpan,
+			ArrayList<EqkRupture> stochasticEventSet, double timeSpan,
 			int numStochasticEventSets) {
 		// Compare rates
 		double mag = Double.NaN;
@@ -240,8 +241,8 @@ public class StochasticEventSetGeneratorTest {
 			System.out.println("Expected: " + stochasticRateExpected
 					+ ", calculated: " + stochasticRate
 					+ ", percentage difference: " + percentageDifference);
-			//assertEquals(100, (stochasticRate / stochasticRateExpected) * 100,
-				//	tolerance);
+			assertEquals(100, (stochasticRate / stochasticRateExpected) * 100,
+					tolerance);
 		}
 	}
 
