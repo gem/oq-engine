@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Output risk data (loss ratio curves, loss curves, and loss values)
@@ -41,7 +42,7 @@ class RiskXMLWriter(writer.FileWriter):
     def _append_curve_node(self, point, curve_object, parent_node):
         node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP)    
         pos = etree.SubElement(node, GML + "pos", nsmap=NSMAP)
-        pos.text = "%s %s" % (str(point.y), str(point.x))
+        pos.text = "%s %s" % (str(point.x), str(point.y))
         
         pe_values = _curve_pe_as_gmldoublelist(curve_object)
         
@@ -77,8 +78,7 @@ class LossRatioCurveXMLWriter(RiskXMLWriter):
 
 
 def _curve_pe_as_gmldoublelist(curve_object):
-    return " ".join(map(str, curve_object.values.values()))
-    
+    return " ".join(map(str, curve_object.codomain))
 
 def _curve_vals_as_gmldoublelist(curve_object):
-    return " ".join(map(str, curve_object.values.keys()))
+    return " ".join(map(str, curve_object.domain))

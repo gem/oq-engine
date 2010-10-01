@@ -7,7 +7,8 @@ import json
 import math
 import pylibmc
 
-import shapes
+from opengem import identifiers
+from opengem import shapes
 
 MEMCACHED_PORT = 11211
 MEMCACHED_HOST = "localhost"
@@ -122,4 +123,11 @@ def set_value_json_encoded(memcache_client, key, value):
         raise RuntimeError("cannot write key %s to memcache" % key)
 
     return True
+
+def get_sites_from_memcache(memcache_client, job_id, block_id):
+
+    memcache_key_sites = identifiers.get_product_key(
+        job_id, block_id, None, identifiers.SITES_KEY_TOKEN)
+
+    return get_value_json_decoded(memcache_client, memcache_key_sites)
     
