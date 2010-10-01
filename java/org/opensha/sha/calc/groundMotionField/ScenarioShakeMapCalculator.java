@@ -49,7 +49,7 @@ import org.opensha.sha.imr.PropagationEffect;
  * based on the PropagationEffectParam input parameters imr, site and eqkRupforecast</p>
  * This class has been modified by Damiano Monelli (28/09/2010) by replacing the SitesInGriddedRegion
  * with an ArrayList<Site> and by deleting the getScenarioShakeMapDataUsingServer method.
- * @author : Nitin Gupta, Damiano Monelli
+ * @author : Nitin Gupta
  * @created May 19,2004
  * @version 1.0
  */
