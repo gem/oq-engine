@@ -176,7 +176,13 @@ NamedObjectAPI, ParameterChangeListener
         StringConstraint stdDevTypeConstraint = new StringConstraint();
         stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);
         stdDevTypeConstraint.setNonEditable();
-        return  new StdDevTypeParam(stdDevTypeConstraint);
+        /* 
+         * Note:
+         * This results in an error, becaus the constructor
+         * sets different default value:
+         * StdDevTypeParam stdDev = new StdDevTypeParam(stdDevTypeConstraint);
+         */
+        return  new StdDevTypeParam(stdDevTypeConstraint, StdDevTypeParam.STD_DEV_TYPE_NONE);
 	}
 	
 	@Override
