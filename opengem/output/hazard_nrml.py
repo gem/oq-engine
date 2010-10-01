@@ -78,6 +78,35 @@ class HazardCurveXMLWriter(writer.FileWriter):
         
         """
         
+        """
+        (assuming that we are writing just one model)
+        
+        if the Config tag has not yet been appended to result_list_tag,
+            create the Config tag as child of the HazardResult tag
+            create the HazardProcessing tag as child of the Config tag
+            append the attributes to the HazardProcessing tag
+        otherwise
+            do nothing, because we just need a Config tag in the document
+            
+        now we need to find to which HazardCurveList tag we have to attach
+        the curve on, so we can keep a dictionary that as the endBranchLabel
+        as key and the HazardCurveList tag as value
+        
+        Example:
+        
+        try:
+            hazard_curve_list_tag = self.curve_list_tags[values["endBranchLabel"]]
+        except KeyError:
+            in this case we haven't create the tag yet, because it is the first
+            time we receive a curve with that label, so
+            
+            create the HazardCurveList tag as child of the HazardResult tag
+            save the newly created HazardCurveList tag in the dictionary for future use
+        
+        now that we have the instance of HazardCurveList, we can create the HazardCurve
+        tag (children)
+        """
+        
         try:
             values_tag = self.curves_per_model_id[values["IDmodel"]]
         except KeyError:
