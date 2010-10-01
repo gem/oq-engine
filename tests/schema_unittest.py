@@ -1,5 +1,5 @@
 """
-Test the output of Loss Curve and Loss Ratio Curve as XML.
+Test the output of Loss Curve, Loss Ratio Curve and Hazard Curves as XML.
 
 """
 
@@ -36,6 +36,8 @@ class SchemaValidationTestCase(unittest.TestCase):
         xmlschema = etree.XMLSchema(etree.parse(self.schema_path))
         filenames = os.listdir(self.example_dir)
         for xml_example in filenames:
+            if xml_example[:1] == ".":
+                continue
             example_path = os.path.join(self.example_dir, xml_example)
             xml_doc = etree.parse(example_path)
             loaded_xml = xml_doc.getroot()
