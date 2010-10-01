@@ -426,43 +426,45 @@ public abstract class ProbEqkSource implements EqkSourceAPI, NamedObjectAPI {
 	public void setTectonicRegionType(TectonicRegionType tectonicRegionType) {
 		this.tectonicRegionType = tectonicRegionType;
 	}
-	
-/** Ê
-	 Ê * 
-	 Ê * @return
-	 Ê */
-public IncrementalMagFreqDist computeMagProbDist() {
 
-	ArbDiscrEmpiricalDistFunc distFunc = new ArbDiscrEmpiricalDistFunc();
-ArbitrarilyDiscretizedFunc tempFunc = new ArbitrarilyDiscretizedFunc();
-IncrementalMagFreqDist magFreqDist = null;
-ProbEqkRupture qkRup;
+	/**
+	 * Ê Ê * Ê * @return Ê
+	 */
+	public IncrementalMagFreqDist computeMagProbDist() {
 
-// Create an Incremental MFD by reading all the ruptures Ê
-for(int i=0; i<getNumRuptures(); i++) {
-qkRup = getRupture(i);
-distFunc.set(qkRup.getMag(),qkRup.getProbability());
-}
+		ArbDiscrEmpiricalDistFunc distFunc = new ArbDiscrEmpiricalDistFunc();
+		ArbitrarilyDiscretizedFunc tempFunc = new ArbitrarilyDiscretizedFunc();
+		IncrementalMagFreqDist magFreqDist = null;
+		ProbEqkRupture qkRup;
 
-// Now we duplicate the MFD in order to create the cumulative 
-for(int i = 0; i < distFunc.getNum(); i++) tempFunc.set(distFunc.get(i));
+		// Create an Incremental MFD by reading all the ruptures Ê
+		for (int i = 0; i < getNumRuptures(); i++) {
+			qkRup = getRupture(i);
+			distFunc.set(qkRup.getMag(), qkRup.getProbability());
+		}
 
-// Calculate the complementary cumulative distribution
-for(int i=tempFunc.getNum()-2; i >=0; i--)
-tempFunc.set(tempFunc.getX(i),tempFunc.getY(i)+tempFunc.getY(i+1));
+		// Now we duplicate the MFD in order to create the cumulative
+		for (int i = 0; i < distFunc.getNum(); i++)
+			tempFunc.set(distFunc.get(i));
 
-// Instantiate an incremental magnitude frequency distribution 
-IncrementalMagFreqDist magFrq = new IncrementalMagFreqDist(distFunc.getMinX(),distFunc.getNum(),0.1);
+		// Calculate the complementary cumulative distribution
+		for (int i = tempFunc.getNum() - 2; i >= 0; i--)
+			tempFunc.set(tempFunc.getX(i),
+					tempFunc.getY(i) + tempFunc.getY(i + 1));
 
-// Now make the evenly discretized distribution
-//System.out.println("min:"+distFunc.getMinX()+" max:"+distFunc.getMaxX());
-for (int i = 0; i < distFunc.getNum(); i++){
-//System.out.println((float)distFunc.getX(i)+" Ê"+(float)tempFunc.getX(i)+" Ê"+(float)distFunc.getY(i)+" Ê"+(float)tempFunc.getY(i));
-magFrq.set(distFunc.getX(i),distFunc.getY(i));
-}
-return magFrq;
-}
-	
+		// Instantiate an incremental magnitude frequency distribution
+		IncrementalMagFreqDist magFrq = new IncrementalMagFreqDist(
+				distFunc.getMinX(), distFunc.getNum(), 0.1);
+
+		// Now make the evenly discretized distribution
+		// System.out.println("min:"+distFunc.getMinX()+" max:"+distFunc.getMaxX());
+		for (int i = 0; i < distFunc.getNum(); i++) {
+			// System.out.println((float)distFunc.getX(i)+" Ê"+(float)tempFunc.getX(i)+" Ê"+(float)distFunc.getY(i)+" Ê"+(float)tempFunc.getY(i));
+			magFrq.set(distFunc.getX(i), distFunc.getY(i));
+		}
+		return magFrq;
+	}
+
 	/*
 	 * public IncrementalMagFreqDist computeMagProbDist() {
 	 * 
