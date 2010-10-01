@@ -40,7 +40,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         # invalid schema <shaml:Result> [1..*]
         self.assertRaises(RuntimeError, self.writer.close)
     
-    @test.skipit
+    #@test.skipit
     def test_writes_a_single_result_in_a_single_model(self):
         data = {shapes.Site(-122.5000, 37.5000): {"IMT": "MMI",
                     "IDmodel": "MMI_3_1",
@@ -69,7 +69,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         curves = self._read_curves_inside_region((16.0, 49.0), (17.0, 48.0))
         self._count_and_check_readed_data(data, curves, 1)
     
-    # @test.skipit
+    #@test.skipit
     def test_writes_multiple_results_in_a_single_model_with_same_IML(self):
         data = {shapes.Site(-122.5000, 37.5000): {"IMT": "MMI",
                     "IDmodel": "MMI_3_1",
