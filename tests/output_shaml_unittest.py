@@ -19,14 +19,13 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     
     def setUp(self):
         self._delete_test_file()
-        self.writer = nrml.HazardCurveXMLWriter(
+        self.writer = shaml_output.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
 
     @test.skipit
     def tearDown(self):
         self._delete_test_file()
 
-    @test.skipit
     def _is_xml_valid(self):
         xml_doc = etree.parse(os.path.join(test.DATA_DIR, TEST_FILE))
 
@@ -35,13 +34,10 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         xmlschema = etree.XMLSchema(etree.parse(schema_path))
         xmlschema.assertValid(xml_doc)
 
-
-    @test.skipit
     def test_raises_an_error_if_no_curve_is_serialized(self):
         # invalid schema <shaml:Result> [1..*]
         self.assertRaises(RuntimeError, self.writer.close)
-    
-    @test.skipit
+
     def test_writes_a_single_result_in_a_single_model(self):
         data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
                     "IDmodel": "MMI_3_1",
@@ -61,8 +57,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         # reading
         curves = self._read_curves_inside_region((16.0, 49.0), (17.0, 48.0))
         self._count_and_check_readed_data(data, curves, 1)
-    
-    @test.skipit
+
     def test_writes_multiple_results_in_a_single_model_with_same_IML(self):
         data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
                     "IDmodel": "MMI_3_1",
@@ -89,7 +84,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         curves = self._read_curves_inside_region((16.0, 49.0), (18.0, 38.0))
         self._count_and_check_readed_data(data, curves, 2)
     
-    @test.skipit
+
     def test_writes_multiple_results_in_a_single_model_with_different_IML(self):
         data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
                     "IDmodel": "MMI_3_1",
@@ -115,8 +110,8 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
         curves = self._read_curves_inside_region((16.0, 49.0), (18.0, 38.0))
         self._count_and_check_readed_data(data, curves, 2)
-    
-    @test.skipit
+
+
     def test_writes_multiple_results_in_multiple_model(self):
         data = {shapes.Site(16.35, 48.25): {"IMT": "MMI",
                     "IDmodel": "A_MODEL",
@@ -150,7 +145,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         except OSError:
             pass
     
-    @test.skipit
+
     def _count_and_check_readed_data(self, data, curves, expected_number):
         number_of_curves = 0
         
@@ -163,7 +158,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         self.assertEqual(expected_number, number_of_curves,
                 "the number of readed curves is not as expected!")
     
-    @test.skipit
+
     def _read_curves_inside_region(self, upper_left_cor, lower_right_cor):
         constraint = shapes.RegionConstraint.from_simple(
                 upper_left_cor, lower_right_cor)
@@ -173,7 +168,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         
         return reader.filter(constraint)
     
-    @test.skipit
+
     def _result_as_string(self):
         try:
             result = open(os.path.join(test.DATA_DIR, TEST_FILE))

@@ -34,7 +34,7 @@ if __name__ == '__main__':
     from tests.example_unittest import *
     from tests.flags_unittest import *
     from tests.geo_unittest import *
-    #from tests.hazard_nrml_unittest import *
+    from tests.hazard_nrml_unittest import *
     from tests.loss_output_unittest import *
     from tests.output_unittest import *
     from tests.parser_exposure_portfolio_unittest import *
@@ -42,7 +42,7 @@ if __name__ == '__main__':
     from tests.parser_vulnerability_model_unittest import *
     from tests.producer_unittest import *
     from tests.risk_tests import *
-    from tests.schema_unittest import *
+    #from tests.schema_unittest import *
     from tests.classical_psha_based_unittest import *
     #from tests.output_shaml_unittest import *
     from tests.memcached_unittest import *
