@@ -67,7 +67,7 @@ class NrmlFile(producer.FileProducer):
                 self._to_site(element)
             elif event == 'end' and element.tag == 'IMLValues':
                 yield (self._curvelist_iml(element))
-                          
+                
     def _set_curvelist_iml(self, iml_element):
         try:
             self._current_curvelist_iml = {
@@ -86,6 +86,7 @@ class NrmlFile(producer.FileProducer):
             error_str = "nrml point coordinate error: %s" % \
                 ( pos_el[0].text )
             raise ValueError(error_str)
+       
 
     def _to_site_attributes(self, element):
 
@@ -93,7 +94,6 @@ class NrmlFile(producer.FileProducer):
 
         value_el = element.xpath('HazardCurve/Values')
         
-
         try:
             site_attributes['Values'] = map(float, 
                 value_el[0].text.strip().split())
@@ -102,8 +102,7 @@ class NrmlFile(producer.FileProducer):
             raise ValueError(error_str)
 
         for (attribute_chunk, ref_string) in (
-            (self._current_meta, "HazardResult"),
-            (self._current_result_config, "Result/Config"),
+            (self._current_result_config, "HazardResult/Config"),
             (self._current_curvelist_iml, "HazardCurveList/IMLValues")):
 
             try:
@@ -112,6 +111,6 @@ class NrmlFile(producer.FileProducer):
                 error_str = "missing nrml element: %s" % ref_string
                 raise ValueError(error_str)
                 
-        print "site attributes is %s" % (site_attributes)
+        #print "site attributes is %s" % (site_attributes)
 
         return site_attributes
