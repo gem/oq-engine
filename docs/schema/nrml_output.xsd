@@ -19,20 +19,75 @@
 		<xs:all>
 			<xs:element name="source" type="gml:PointType"/>
 		</xs:all>
+		<xs:attribute name="averageRake">
+			<xs:simpleType>
+				<xs:restriction base="xs:double">
+					<xs:minInclusive fixed="true" value="0.0"/>
+					<xs:maxInclusive fixed="true" value="+360.0"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
 		<xs:attribute name="magnitude" type="xs:double"/>
 	</xs:complexType>
 
-	<!-- Wait for metadata clarification -->
-	<xs:complexType name="IMRDataType"/>
+	<!-- TODO Type of equation? -->
+	<xs:complexType name="IMRDataType">
+		<xs:attribute name="component">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="Average Horizontal"/>
+					<xs:enumeration value="GMRotI50"/>
+					<xs:enumeration value="Random Horizontal"/>
+					<xs:enumeration value="Greater of Two Horz"/>
+					<xs:enumeration value="Vertical"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="IMT">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="PGA"/>
+					<xs:enumeration value="PGD"/>
+					<xs:enumeration value="PGV"/>
+					<xs:enumeration value="SA"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="period" type="xs:double"/>
+		<xs:attribute name="damping" type="xs:double"/>
+		<xs:attribute name="truncationType">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="None"/>
+					<xs:enumeration value="1 Sided"/>
+					<xs:enumeration value="2 Sided"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="truncationLevel" type="xs:int"/>
+		<xs:attribute name="stdType">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="Total"/>
+					<xs:enumeration value="Inter-Event"/>
+					<xs:enumeration value="Intra-Event"/>
+					<xs:enumeration value="None"/>
+					<xs:enumeration value="Total (Mag Dependent)"/>
+					<xs:enumeration value="Total (PGA Dependent)"/>
+					<xs:enumeration value="Total"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="vs30" type="xs:double"/>
+	</xs:complexType>
 	
 	<xs:complexType name="HazardGroundMotionSiteType">
 		<xs:all>
 			<xs:element name="site" type="gml:PointType"/>
 		</xs:all>
-		<xs:attribute name="gmotion" type="xs:double"/>
+		<xs:attribute name="groundMotion" type="xs:double"/>
 	</xs:complexType>
 	
-	<!-- TODO Check if we can (re)use metadata already defined -->
 	<xs:complexType name="HazardGroundMotionFieldType">
 		<xs:sequence>
 			<xs:element maxOccurs="unbounded" name="site" type="shaml:HazardGroundMotionSiteType"/>
