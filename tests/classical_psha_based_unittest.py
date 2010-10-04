@@ -7,12 +7,12 @@ the documentation you can find at <http://to_be_defined>.
 """
 
 import unittest
-import uuid
 
 from decimal import *
 from ordereddict import *
 
 from opengem import identifiers
+from opengem import logs
 from opengem import memcached
 from opengem import shapes
 from opengem import test
@@ -23,6 +23,7 @@ from opengem.risk.classical_psha_based import _compute_lrem_po, \
     _compute_lrem, _split_loss_ratios, _generate_loss_ratios, \
     _compute_loss_ratio_curve_from_lrem_po
 
+logger = logs.RISK_LOG
 
 # input test values
 ASSET_VALUE = 5.0
@@ -78,8 +79,8 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         loss_ratio_po_mid_curve = compute_mid_po(
             self.loss_ratio_pe_mid_curve.codomain)
         
-        self.loss_ratio_po_curve_codomain = [0.1445, 0.0400, 0.0190, 0.0155, 
-            0.0095]
+        self.loss_ratio_po_curve_codomain = \
+            [0.1445, 0.0400, 0.0190, 0.0155, 0.0095]
             
         for idx, val in enumerate(self.loss_ratio_po_curve_codomain):
             self.assertAlmostEqual(val, loss_ratio_po_mid_curve[idx])

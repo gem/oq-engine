@@ -60,19 +60,20 @@ Step 5: build the loss curve
 loss_curve = compute_loss_curve(loss_ratio_curve, asset)
 """
 
-
-import scipy # pylint: disable=F0401
 import numpy
+import scipy # pylint: disable=F0401
+
 from numpy import isnan # pylint: disable=F0401,E0611
-from scipy import stats # pylint: disable=F0401,E0611
 from scipy import sqrt # pylint: disable=F0401,E0611
+from scipy import stats # pylint: disable=F0401,E0611
 from scipy import log # pylint: disable=F0401,E0611
 
+from opengem import identifiers
 from opengem import logs
+from opengem import memcached
 from opengem import shapes
 
-from opengem import identifiers
-from opengem import memcached
+logger = logs.RISK_LOG
 
 STEPS_PER_INTERVAL = 5
 
@@ -101,7 +102,7 @@ def compute_loss_curve(loss_ratio_curve, asset):
     loss_curve_values = []
     for loss_ratio, probability_occurrence \
             in loss_ratio_curve.values.iteritems():
-        logs.RISK_LOG.debug("Loss ratio is %s, PO is %s" % (
+        logger.debug("Loss ratio is %s, PO is %s" % (
             loss_ratio, probability_occurrence))
         key = "%s" % (float(loss_ratio) * asset)
         loss_curve_values.append((key, probability_occurrence))
@@ -126,8 +127,6 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
             lrem_po[row][current_column] = lrem[row][current_column] * prob_occ
         current_column += 1
     
-    #print "LREM_PO: \n\n"
-    #print lrem_po
     return lrem_po
 
 
@@ -141,7 +140,6 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
             prob_occ += lrem_po[row][column]
         loss_ratio_curve_values.append(("%s" % loss_ratios[row], prob_occ))
 
-    # print loss_ratio_curve_values
     return shapes.FastCurve(loss_ratio_curve_values)
 
 #@state.memoize
@@ -303,4 +301,4 @@ def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_curve):
     mean_loss_ratio = sum(i*j for i, j in zip(loss_ratio_pe_curve_float, 
         loss_ratio_po_mid_curve))
 
-    log.debug('%s= mean_loss_ratio', mean_loss_ratio)
+    logger.debug('%s= mean_loss_ratio', mean_loss_ratio)

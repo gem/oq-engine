@@ -31,9 +31,8 @@ if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from opengem import flags
-from opengem import logs
-
 from opengem import jobber
+from opengem import logs
 
 from opengem.output import geotiff
 from opengem.parser import exposure
@@ -84,8 +83,6 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        #tasks.main(FLAGS.vulnerability, FLAGS.hazard_curves, FLAGS.filter_region, FLAGS.exposure, FLAGS.loss_map)
-
         the_jobber = jobber.Jobber(FLAGS.vulnerability, 
                                    FLAGS.hazard_curves, 
                                    FLAGS.filter_region, 

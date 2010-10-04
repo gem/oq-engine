@@ -9,12 +9,13 @@ import random
 import time
 import unittest
 
+from opengem import flags
 from opengem import identifiers
+from opengem import logs
 from opengem import memcached
 from opengem import producer
 from opengem import shapes
 
-from opengem.logs import HAZARD_LOG, RISK_LOG
 from opengem.risk import tasks
 
 from opengem.output import geotiff
@@ -24,17 +25,17 @@ from opengem.parser import exposure
 from opengem.parser import shaml_output
 from opengem.parser import vulnerability
 
-from opengem import flags
+
 FLAGS = flags.FLAGS
+logger = logs.LOG
 
 LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 
 class Jobber(object):
 
+    # TODO(fab): pass in loaded parsers instead of files
     def __init__(self, vulnerability_model_file, hazard_curve_file,
                  region_file, exposure_file, output_file, partition):
-
-        print "Jobber.constructor"
 
         self.vulnerability_model_file = vulnerability_model_file
         self.hazard_curve_file = hazard_curve_file
@@ -53,7 +54,7 @@ class Jobber(object):
     def run(self):
 
         job_id = self.job_id_generator.next()
-        print "we are inside jobber.run, job_id = %s" % job_id
+        logger.debug("running jobber, job_id = %s" % job_id)
 
         if self.partition is True:
             self._partition(job_id)
@@ -63,7 +64,7 @@ class Jobber(object):
             self._execute(job_id, block_id)
             self._write_output_for_block(job_id, block_id)
 
-        print "Jobber run ended, bye bye"
+        logger.debug("Jobber run ended")
 
     def _partition(self, job_id):
         pass
@@ -71,12 +72,10 @@ class Jobber(object):
     def _execute(self, job_id, block_id):
         
         # execute celery task for risk, for given block with sites
-        print "starting task block, block_id = %s" % block_id
+        logger.debug("starting task block, block_id = %s" % block_id)
 
         result = tasks.compute_risk.apply_async(args=[job_id, block_id])
         result.get()
-
-        print "task finished"
 
     def _write_output_for_block(self, job_id, block_id):
         """note: this is usable only for one block"""
@@ -93,7 +92,7 @@ class Jobber(object):
             loss_curves.append((shapes.Site(site_lon, site_lat), 
                                 loss_curve))
 
-        print "serializing loss_curves: %s" % loss_curves
+        logger.debug("serializing loss_curves")
         output_generator = RiskXMLWriter(LOSS_CURVES_OUTPUT_FILE)
         output_generator.serialize(loss_curves)
         
@@ -105,7 +104,6 @@ class Jobber(object):
 
     def _init(self):
         
-        # memcached
         # TODO(fab): find out why this works only with binary=False
         self.memcache_client = memcached.get_client(binary=False)
         self.memcache_client.flush_all()
@@ -113,19 +111,15 @@ class Jobber(object):
     def _preload(self, job_id, block_id):
 
         # set region
-        print "setting region"
         region_constraint = shapes.RegionConstraint.from_file(self.region_file)
         region_constraint.cell_size = 1.0
 
         # load hazard curve file and write to memcache_client
-        print "loading hazard curves"
         shaml_parser = shaml_output.ShamlOutputFile(self.hazard_curve_file)
         attribute_constraint = \
             producer.AttributeConstraint({'IMT' : 'MMI'})
 
         sites_hash_list = []
-
-        HAZARD_LOG.debug("Going to parse hazard curves")
 
         for site, hazard_curve_data in shaml_parser.filter(
                 region_constraint, attribute_constraint):
@@ -134,11 +128,8 @@ class Jobber(object):
 
             # store site hashes in memcache
             # TODO(fab): separate this from hazard curves
-            # TODO(fab): make sure that Shapely representation is available
             sites_hash_list.append((str(gridpoint), 
                                    (site.longitude, site.latitude)))
-            #sites_hash_list.append((str(gridpoint), 
-                                    #str(site)))
 
             hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
                                                 hazard_curve_data['Values']))
@@ -153,9 +144,8 @@ class Jobber(object):
                 raise ValueError(
                     "jobber: cannot write hazard curve to memcache")
             
-            HAZARD_LOG.debug("Loading hazard curve %s at %s, %s" % (
+            logger.debug("Loading hazard curve %s at %s, %s" % (
                         hazard_curve, site.latitude,  site.longitude))
-            #print "wrote hazard curve for site %s" % gridpoint
 
         # write site hashes to memcache (JSON)
         memcache_key_sites = identifiers.get_product_key(
@@ -167,8 +157,6 @@ class Jobber(object):
                 "jobber: cannot write sites to memcache")
         
         # load assets and write to memcache
-        print "loading assets"
-        
         exposure_parser = exposure.ExposurePortfolioFile(self.exposure_file)
         for site, asset in exposure_parser.filter(region_constraint):
             gridpoint = region_constraint.grid.point_at(site)
@@ -181,13 +169,10 @@ class Jobber(object):
                 raise ValueError(
                     "jobber: cannot write asset to memcache")
 
-            #print "Loading asset %s at %s, %s" % (asset,
-                #site.longitude,  site.latitude)
-            RISK_LOG.debug("Loading asset %s at %s, %s" % (asset,
+            logger.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))
 
         # load vulnerability and write to memcache
-        print "loading vulnerability"
         vulnerability.load_vulnerability_model(job_id,
             self.vulnerability_model_file)
 
