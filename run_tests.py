@@ -38,11 +38,12 @@ if __name__ == '__main__':
     from tests.loss_output_unittest import *
     from tests.output_unittest import *
     from tests.parser_exposure_portfolio_unittest import *
+    from tests.parser_hazard_curve_unittest import *
     from tests.parser_shaml_output_unittest import *
     from tests.parser_vulnerability_model_unittest import *
     from tests.producer_unittest import *
     from tests.risk_tests import *
-    #from tests.schema_unittest import *
+    from tests.schema_unittest import *
     from tests.classical_psha_based_unittest import *
     #from tests.output_shaml_unittest import *
     from tests.memcached_unittest import *

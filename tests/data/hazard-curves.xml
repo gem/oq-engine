@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
+  <Config>
+    <HazardProcessing timeSpanDuration="50.0" IDmodel="MMI_3_1" saPeriod="foo" saDamping="bar">
+      <IMT>PGA</IMT>
+    </HazardProcessing>
+  </Config>
+  <HazardCurveList endBranchLabel="3_1">
+    <HazardCurve>
+      <gml:pos>-122.5 37.5</gml:pos>
+      <Values>0.98728 0.98266 0.94957 0.90326 0.81956 0.69192 0.52866 0.36143 0.24231 0.22452 0.12831 0.070352 0.03606 0.016579 0.0064213 0.0020244 0.00048605 8.1752e-05 7.3425e-06</Values>
+    </HazardCurve>
+    <IMLValues>0.005 0.007 0.0137 0.0192 0.0269 0.0376 0.0527 0.0738 0.098 0.103 0.145 0.203 0.284 0.397 0.556 0.778 1.09 1.52 2.13</IMLValues>
+    <HazardCurve>
+      <gml:pos>-122.4 37.5</gml:pos>
+      <Values>0.98784 0.98405 0.95719 0.91955 0.85019 0.74038 0.59153 0.42626 0.29755 0.27731 0.16218 0.088035 0.043499 0.019065 0.0070442 0.00213 0.00049498 8.1768e-05 7.3425e-06</Values>
+    </HazardCurve>
+    <IMLValues>0.005 0.007 0.0137 0.0192 0.0269 0.0376 0.0527 0.0738 0.098 0.103 0.145 0.203 0.284 0.397 0.556 0.778 1.09 1.52 2.13</IMLValues>
+  </HazardCurveList>
+</HazardResult>
