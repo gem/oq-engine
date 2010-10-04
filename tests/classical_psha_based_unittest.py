@@ -12,6 +12,7 @@ import uuid
 from decimal import *
 from ordereddict import *
 
+from opengem import identifiers
 from opengem import memcached
 from opengem import shapes
 from opengem import test
@@ -21,7 +22,6 @@ from opengem.risk.classical_psha_based import *
 from opengem.risk.classical_psha_based import _compute_lrem_po, \
     _compute_lrem, _split_loss_ratios, _generate_loss_ratios, \
     _compute_loss_ratio_curve_from_lrem_po
-
 
 
 # input test values
@@ -110,8 +110,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.memcache_client = memcached.get_client(binary=False)
 
         # get random ID as job_id
-        self.job_id = str(uuid.uuid4())
-        print "created job_id: %s" % self.job_id
+        self.job_id = identifiers.get_random_id()
 
         self.vuln_curve_code_test = "TEST"
         vuln_curve_test = shapes.FastCurve(
@@ -122,7 +121,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # make this a function that adds a given vuln curve dict
         # to vuln curves in memcached
         self.vulnerability_curves = vulnerability.register_vuln_curves(
-            {self.vuln_curve_code_test: vuln_curve_test}, self.job_id, 
+            {self.vuln_curve_code_test: vuln_curve_test,
+             vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE}, 
+            self.job_id, 
             self.memcache_client)
 
     def tearDown(self):

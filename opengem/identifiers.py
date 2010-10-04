@@ -4,6 +4,11 @@ In this module, we collect functions that are used in the context
 of identifiers used in opengem (e.g., memcached keys).
 """
 
+import uuid
+
+DEFAULT_LENGTH_RANDOM_ID = 8
+MAX_LENGTH_RANDOM_ID = 36
+
 # using '!' as separator in keys, because it is not used in numbers
 MEMCACHE_KEY_SEPARATOR = '!'
 INTERNAL_ID_SEPARATOR = ':'
@@ -40,4 +45,15 @@ def get_product_key(job_id, block_id, site, product):
     else:
         return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
                                             str(product)))
+
+def get_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
+    """This function returns a random ID by using the uuid4 method. In order
+    to have reasonably short IDs, the ID returned from uuid4() is truncated.
+    This is not optimized for being collision-free. See documentation of uuid:
+    http://docs.python.org/library/uuid.html
+    http://en.wikipedia.org/wiki/Universally_unique_identifier
+    """
+    if length > MAX_LENGTH_RANDOM_ID:
+        length = MAX_LENGTH_RANDOM_ID
+    return str(uuid.uuid4())[0:length]
 
