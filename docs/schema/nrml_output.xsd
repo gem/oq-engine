@@ -8,12 +8,43 @@
 		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 	<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="nrml_common.xsd"/>
-	<!-- -->
 	<xs:complexType name="CurveType">
 		<xs:all>
 			<xs:element name="Values" type="gml:doubleList"/>
 			<xs:element minOccurs="0" ref="gml:pos"/>
 		</xs:all>
+	</xs:complexType>
+
+	<xs:complexType name="HazardEventType">
+		<xs:all>
+			<xs:element name="source" type="gml:PointType"/>
+		</xs:all>
+		<xs:attribute name="magnitude" type="xs:double"/>
+	</xs:complexType>
+
+	<!-- Wait for metadata clarification -->
+	<xs:complexType name="IMRDataType"/>
+	
+	<xs:complexType name="HazardGroundMotionSiteType">
+		<xs:all>
+			<xs:element name="site" type="gml:PointType"/>
+		</xs:all>
+		<xs:attribute name="gmotion" type="xs:double"/>
+	</xs:complexType>
+	
+	<!-- TODO Check if we can (re)use metadata already defined -->
+	<xs:complexType name="HazardGroundMotionFieldType">
+		<xs:sequence>
+			<xs:element maxOccurs="unbounded" name="site" type="shaml:HazardGroundMotionSiteType"/>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="HazardShakeMapType">
+		<xs:sequence>
+			<xs:element name="event" type="shaml:HazardEventType"/>
+			<xs:element name="IMR" type="shaml:IMRDataType"/>
+			<xs:element name="field" type="shaml:HazardGroundMotionFieldType"/>
+		</xs:sequence>
 	</xs:complexType>
 
 	<xs:element name="Curve" type="shaml:CurveType"/>
@@ -23,6 +54,7 @@
 	<xs:element name="LossRatioCurve" type="shaml:CurveType"/>
 	<xs:element name="HazardCurve" type="shaml:CurveType"/>
 	<xs:element name="HazardCurvePGA" type="shaml:CurveType"/>
+	<xs:element name="HazardShakeMap" type="shaml:HazardShakeMapType"/>
 	<xs:complexType name="CurveListType">
 		<xs:sequence minOccurs="0" maxOccurs="unbounded">
 			<xs:choice>
@@ -59,9 +91,13 @@
 		<xs:complexType>
 			<xs:sequence minOccurs="1">
 				<xs:element ref="shaml:Config"/>
-				<xs:sequence maxOccurs="unbounded">
-					<xs:element ref="shaml:HazardCurveList"/>
-				</xs:sequence>
+				<xs:choice>
+					<xs:sequence maxOccurs="unbounded">
+						<xs:element ref="shaml:HazardCurveList"/>
+					</xs:sequence>
+					<!-- TODO Is it correct to have one shakemap per document? -->
+					<xs:element ref="shaml:HazardShakeMap"/>
+				</xs:choice>
 			</xs:sequence>
 		</xs:complexType>
 	</xs:element>
