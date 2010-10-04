@@ -5,13 +5,17 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.StringTokenizer;
 
 import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
+
+import com.vladium.emma.report.SrcFileItem;
 
 public class GroundMotionFieldCalculator {
 
@@ -50,18 +54,19 @@ public class GroundMotionFieldCalculator {
 			ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
 			List<Site> sites, Random rn) {
 		Map<Site, Double> stochasticGroundMotionField = new HashMap<Site, Double>();
-		Map<Site, Double> meanGroundMotion = getMeanGroundMotionField(
+		Map<Site, Double> meanGroundMotionField = getMeanGroundMotionField(
 				attenRel, rup, sites);
-		double standardDeviation = (Double) attenRel.getParameter(
-				StdDevTypeParam.NAME).getValue();
+		attenRel.setEqkRupture(rup);
+		double standardDeviation = Double.NaN;
 		double truncationLevel = (Double) attenRel.getParameter(
 				SigmaTruncLevelParam.NAME).getValue();
 		String truncationType = (String) attenRel.getParameter(
 				SigmaTruncTypeParam.NAME).getValue();
-		Iterator<Site> iter = meanGroundMotion.keySet().iterator();
-		while (iter.hasNext()) {
-			Site site = iter.next();
-			Double val = meanGroundMotion.get(site);
+		Iterator<Site> iter = meanGroundMotionField.keySet().iterator();
+		for (Site site : sites) {
+			attenRel.setSite(site);
+			standardDeviation = attenRel.getStdDev();
+			Double val = meanGroundMotionField.get(site);
 			double deviate = getGaussianDeviate(standardDeviation,
 					truncationLevel, truncationType, rn);
 			val = val + deviate;
