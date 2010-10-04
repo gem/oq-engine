@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 This is a basic set of tests for risk engine,
 specifically file formats.
@@ -5,34 +6,39 @@ specifically file formats.
 """
 
 import os
+import numpy
 import unittest
 
-import numpy.core.multiarray as ncm
 from shapely import geometry
 
+from opengem import identifiers
 from opengem import logs
+from opengem import memcached
+from opengem import shapes
+from opengem import test
+
 from opengem.risk import engines
 from opengem.output import risk as risk_output
-from opengem import test
-from opengem.risk import engines
-from opengem import shapes
 
 log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
+EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
+VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
 
+data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
-    
+
     def test_loss_map_generation(self):
         # get grid of columns and rows from region of coordinates
         loss_map_region = shapes.Region.from_coordinates(
             [(10, 20), (20, 20), (20, 10), (10, 10)])
         loss_map_region.cell_size = 1.0
+
         # Fill the region up with loss curve sites
         loss_curves = {}
         for site in loss_map_region:
@@ -75,7 +81,10 @@ class RiskEngineTestCase(unittest.TestCase):
                 ('243200.0', 0.00046282828510792824)])
             
         grid = loss_map_region.grid
-        losses = ncm.zeros((grid.columns, grid.rows))
+
+        # NOTE(fab): in numpy, the order of axes in a 2-dim array 
+        # is (rows, columns)
+        losses = numpy.zeros((grid.rows, grid.columns), dtype=float)
         probability = 0.01
         
         # check that the loss is the expected value
@@ -89,15 +98,15 @@ class RiskEngineTestCase(unittest.TestCase):
         for interval in intervals:
             for gridpoint in grid:
                 loss_value = engines.compute_loss(loss_curves[site], interval)
-                losses[gridpoint.column-1][gridpoint.row-1] = loss_value
-                
+                losses[gridpoint.row-1][gridpoint.column-1] = loss_value
+
         log.debug('%s= losses', losses)
         log.debug('%s = loss_value', loss_value)
         log.debug('%s = gridpoint', gridpoint)
         log.debug('%s = interval', interval)
         log.debug('%s = loss_value', loss_value)
         log.debug('%s = loss_curves', loss_curves[site])
-        
+
     def test_zero_curve_produces_zero_loss(self):
         # check that curves of zero produce zero loss (and no error)
         zero_curve = shapes.FastCurve([('0.0', 0.0), ('0.0', 0.0),])        
@@ -114,6 +123,7 @@ class RiskEngineTestCase(unittest.TestCase):
     
         # check that curves with no point < 5 don't throw an error
             
+    @test.skipit
     def test_site_intersections(self):
         """Loss ratios and loss curves can only be computed when we have:
         
@@ -121,22 +131,33 @@ class RiskEngineTestCase(unittest.TestCase):
          2. An exposed asset for the site
          3. The vulnerability curve for the asset
          4. A region of interest that includes the site
-        
+
+        TODO(fab): This test should be split, and the fragments should be
+        assigned to tests for other modules:
+        1) The first part that asserts that the first point is not contained 
+           in the convex hull of the three other points should be moved to 
+           the tests for the 'shapes' module.
+        2) The second part that asserts that exceptions are raised if hazard
+           and exposure are not given for the same sites should be moved to
+           tests for the 'jobber' module.
         """
+
+        # NOTE(fab): these points are all on a line, so the convex hull of
+        # their union will be a LINESTRING
         first_site = shapes.Site(10.0, 10.0)
         second_site = shapes.Site(11.0, 11.0)
         third_site = shapes.Site(12.0, 12.0)
         fourth_site = shapes.Site(13.0, 13.0)
         
-        region_of_interest = shapes.Region(geometry.MultiPoint(
-                        [second_site.point,
-                         third_site.point,
-                         fourth_site.point]).convex_hull)
+        multi_point = \
+            second_site.point.union(third_site.point).union(fourth_site.point)
+        region_of_interest = shapes.Region(multi_point.convex_hull)
         
         log.debug("Region of interest bounds are %s", 
             str(region_of_interest.bounds))
         
         self.assertRaises(Exception, region_of_interest.grid.point_at, first_site)
+
         second_gp = region_of_interest.grid.point_at(second_site)
         third_gp = region_of_interest.grid.point_at(third_site)
         fourth_gp = region_of_interest.grid.point_at(fourth_site)
@@ -152,24 +173,30 @@ class RiskEngineTestCase(unittest.TestCase):
         ratio_results = {}
         loss_results = {}
         
+        # TODO(fab): use vulnerability file for tests, 
         vulnerability_curves = {}
         vulnerability_curves['RC/ND-FR-D/HR'] = shapes.FastCurve(
             [(5.0, (0.25, 0.5)),
              (6.0, (0.4, 0.4)),
              (7.0, (0.6, 0.3))])
         
+        # TODO(fab): use exposure file for tests
         exposure_portfolio = {}
         exposure_portfolio[fourth_gp] = {'AssetValue': 320000.0, 'PortfolioID': 'PAV01', 
             'VulnerabilityFunction': 'RC/ND-FR-D/HR', 'AssetID': '06', 
             'PortfolioDescription': 'Collection of existing building in downtown Pavia', 
             'AssetDescription': 'Moment-resisting ductile concrete frame high rise'}
         
+        # TODO(fab): use memcached-enabled engine, through jobber
         risk_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, 
                                 exposure_portfolio)
                                   
         for gridpoint in region_of_interest.grid:
-            ratio_results[gridpoint] = risk_engine.compute_loss_ratio_curve(gridpoint)
-            loss_results[gridpoint] = risk_engine.compute_loss_curve(gridpoint, ratio_results[gridpoint])
+            ratio_results[gridpoint] = \
+                risk_engine.compute_loss_ratio_curve(gridpoint)
+            loss_results[gridpoint] = \
+                risk_engine.compute_loss_curve(gridpoint, 
+                                               ratio_results[gridpoint])
         
         log.debug("Ratio Results keys are %s" % ratio_results.keys())
         
