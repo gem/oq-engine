@@ -8,10 +8,112 @@
 	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 		<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="nrml_common.xsd"/>
-	<!-- -->
+	
+	<!-- Hazard shakemap definition -->
+	<xs:complexType name="HazardEventType">
+		<xs:annotation>
+			<xs:documentation>Describe an earthquake event (for the moment a point source)</xs:documentation>
+		</xs:annotation>
+		<xs:all>
+			<xs:element name="source" type="gml:PointType"/>
+		</xs:all>
+		<xs:attribute name="averageRake">
+			<xs:simpleType>
+				<xs:restriction base="xs:double">
+					<xs:minInclusive fixed="true" value="0.0"/>
+					<xs:maxInclusive fixed="true" value="360.0"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="magnitude" type="xs:double"/>
+	</xs:complexType>
+	
+	<!-- Type of equation seems missing in the config file defined in OpenSHA -->
+	<xs:complexType name="IMRDataType">
+		<xs:annotation>
+			<xs:documentation>Describe the IMR related information</xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="component">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="Average Horizontal"/>
+					<xs:enumeration value="GMRotI50"/>
+					<xs:enumeration value="Random Horizontal"/>
+					<xs:enumeration value="Greater of Two Horz"/>
+					<xs:enumeration value="Vertical"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="IMT">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="PGA"/>
+					<xs:enumeration value="PGD"/>
+					<xs:enumeration value="PGV"/>
+					<xs:enumeration value="SA"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="period" type="xs:double"/>
+		<xs:attribute name="damping" type="xs:double"/>
+		<xs:attribute name="truncationType">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="None"/>
+					<xs:enumeration value="1 Sided"/>
+					<xs:enumeration value="2 Sided"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="truncationLevel" type="xs:int"/>
+		<xs:attribute name="stdType">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="Total"/>
+					<xs:enumeration value="Inter-Event"/>
+					<xs:enumeration value="Intra-Event"/>
+					<xs:enumeration value="None"/>
+					<xs:enumeration value="Total (Mag Dependent)"/>
+					<xs:enumeration value="Total (PGA Dependent)"/>
+					<xs:enumeration value="Total"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="vs30" type="xs:double"/>
+	</xs:complexType>
+	
+	<xs:complexType name="HazardGroundMotionSiteType">
+		<xs:annotation>
+			<xs:documentation>Describe a ground motion value for a single site</xs:documentation>
+		</xs:annotation>
+		<xs:all>
+			<xs:element name="site" type="gml:PointType"/>
+		</xs:all>
+		<xs:attribute name="groundMotion" type="xs:double"/>
+	</xs:complexType>
+	
+	<xs:complexType name="HazardGroundMotionFieldType">
+		<xs:annotation>
+			<xs:documentation>Describe a ground motion field (ground motion values for a set of sites)</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element maxOccurs="unbounded" name="site" type="shaml:HazardGroundMotionSiteType"/>
+		</xs:sequence>
+	</xs:complexType>
+	
+	<xs:complexType name="HazardShakeMapType">
+		<xs:annotation>
+			<xs:documentation>Describe an hazard shake map</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element name="event" type="shaml:HazardEventType"/>
+			<xs:element name="IMR" type="shaml:IMRDataType"/>
+			<xs:element name="field" type="shaml:HazardGroundMotionFieldType"/>
+		</xs:sequence>
+	</xs:complexType>
+	
 	<xs:complexType name="HazardCurveListType">
 		<xs:all>
-
 			<xs:element name="IML" type="gml:doubleList"/>
 			<xs:element name="List">
 				<xs:complexType>
@@ -66,6 +168,7 @@
 						<xs:element maxOccurs="unbounded" name="HazardCurveList"
 							type="shaml:HazardCurveListType"/>
 						<xs:element name="HazardMap" type="shaml:HazardMapType"/>
+						<xs:element name="HazardShakeMap" type="shaml:HazardShakeMapType"/>
 					</xs:choice>
 				</xs:complexType>
 			</xs:element>
