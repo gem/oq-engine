@@ -1,8 +1,8 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Properties;
 import java.util.StringTokenizer;
 
 import org.apache.commons.configuration.Configuration;
@@ -11,7 +11,9 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 
 public class CalculatorConfigHelper {
-	
+	// for internal use only
+	private final static String INTENSITY_MEASURE_CODE_PGA = "pga";
+	private final static String INTENSITY_MEASURE_CODE_MMI = "mmi";
 	// There may be additional/customizable properties
 	// -> does an enum type make sense? ...no.
 	// ...and yes: For the programmer to know at least how to access the defaults.
@@ -95,33 +97,78 @@ public class CalculatorConfigHelper {
 	} // makeRegionBoundary()
 
 	/**
+	 * This method retrieves the configuration items</br>
+	 * 1) INTENSITY_MEASURE_TYPE</br>
+	 * 2) INTENSITY_MEASURE_LEVELS</br>
+	 * 
+	 * Valid values for INTENSITY_MEASURE_TYPE are "PGA" and "MMI".</br>
+	 * 
+	 * The value of INTENSITY_MEASURE_LEVLES is a comma separated list of
+	 * doubles or a multiple value property of doubles according to 
+	 * documentation of the org.apache.commons.configuration package.
+	 * 
+	 * From the Configuration object passed by as a parameter.
 	 * This method is the same like "makeArbitrarilyDiscretizedFunc()".
 	 * This method just exists to be consistent with terminology, i.e.
 	 * the programmer can use "makeImlList()" instead of "makeArbitrarilyDiscretizedFunc()"
 	 * which may the code make more understandable (to scientists).
-	 * @param calcConfig
-	 * @return
+	 * @param calcConfig A Configuration object, usually loaded from a config
+	 * file.
+	 * @return An arbitrarily discretized function.
 	 */
 	public static ArbitrarilyDiscretizedFunc makeImlList(Configuration config) {
-		return makeArbitrarilyDiscretizedFunc(config);
-	}
+		String intensityMeasureType = config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name());
+		String[] imlArray = config.getStringArray(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
+		Double[] imls = StringArrToDoubleArr(imlArray);
+		return makeArbitrarilyDiscretizedFunc(imls, intensityMeasureType);
+	} // makeImlList()
 
 	/**
-	 * The result or this method is also called "iml List" where "iml" means
-	 * "intensity measure levels"
-	 * @param calcConfig
-	 * @return
+	 * More direct access. Allows a more explicit call for the PGA case.
+	 * @param config A Configuration object, usually loaded from a config
+	 * file.
+	 * @return An arbitrarily discretized function.
 	 */
-	public static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(Configuration config) { 
-		// read intensity measure levels
-		String imlProp = config.getString(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
-		StringTokenizer st = new StringTokenizer(imlProp);
-		int numGMV = st.countTokens();
+	public static ArbitrarilyDiscretizedFunc makeImlListForPGA(Configuration config) {
+		String[] imlArray = config.getStringArray(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
+		Double[] imls = StringArrToDoubleArr(imlArray);
+		return makeArbitrarilyDiscretizedFunc(imls, INTENSITY_MEASURE_CODE_PGA);
+	} // makeImlListForPGA()
+
+	/**
+	 * More direct access. Allows a more explicit call for the MMI case.
+	 * @param config A Configuration object, usually loaded from a config
+	 * file.
+	 * @return An arbitrarily discretized function.
+	 */
+	public static ArbitrarilyDiscretizedFunc makeImlListForMMI(Configuration config) {
+		String[] imlArray = config.getStringArray(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
+		Double[] imls = StringArrToDoubleArr(imlArray);
+		return makeArbitrarilyDiscretizedFunc(imls, INTENSITY_MEASURE_CODE_MMI);
+	} // makeImlListForMMI()
+
+	private static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(Double[] intensityMeasureLevels, String intensityMeasureCode) { 
 		ArbitrarilyDiscretizedFunc adf = new ArbitrarilyDiscretizedFunc();
-		while(st.hasMoreTokens()) {
-			adf.set(Math.log(Double.parseDouble(st.nextToken())), 1.0);
-		}
+		for(double iml : intensityMeasureLevels) {
+			if(intensityMeasureCode.equalsIgnoreCase(INTENSITY_MEASURE_CODE_PGA)) {
+			adf.set(Math.log(iml), 1.0);
+			} else if(intensityMeasureCode.equalsIgnoreCase(INTENSITY_MEASURE_CODE_MMI)) {
+				adf.set(iml, 1.0);
+			} else {
+				throw new IllegalArgumentException("Unknown intensity measure type : \"" 
+				                                   + intensityMeasureCode + "\"");
+			}
+		} // for
 		return adf;
 	} // makeArbitrarilyDiscretizedFunc()
+	
+	private static Double[] StringArrToDoubleArr(String[] strings) {
+		Double[] doubles = new Double[strings.length];
+		int index = 0;
+		for(String s : strings) {
+			doubles[index] = Double.parseDouble(s);
+		}
+		return doubles;
+	} // StringArrToDoubleArr()
 
 } // class
