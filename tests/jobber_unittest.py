@@ -7,8 +7,12 @@ import random
 import time
 import unittest
 
+from opengem import logs
 from opengem import memcached
+
 import tests.tasks as test_tasks
+
+logger = logs.LOG
 
 TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 

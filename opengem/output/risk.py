@@ -8,10 +8,13 @@ as shaml-style XML.
 
 from lxml import etree
 
-from opengem.logs import RISK_LOG
-from opengem import writer
-from opengem.xml import SHAML, GML, NSMAP
+from opengem import logs
 from opengem import shapes
+from opengem import writer
+
+from opengem.xml import SHAML, GML, NSMAP
+
+logger = logs.RISK_LOG
 
 class RiskXMLWriter(writer.FileWriter):
     curve_tag = SHAML + "Curve"
@@ -58,7 +61,7 @@ class RiskXMLWriter(writer.FileWriter):
             etree.SubElement(subnode_pe, 
                     SHAML + "Values", nsmap=NSMAP).text = pe_values
         
-        RISK_LOG.debug("Writing xml, object is %s", curve_object)
+        logger.debug("Writing xml, object is %s", curve_object)
         subnode_loss = etree.SubElement(node, SHAML + "Values", nsmap=NSMAP)
         subnode_loss.text = _curve_vals_as_gmldoublelist(curve_object)
 

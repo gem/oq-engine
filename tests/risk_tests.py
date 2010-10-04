@@ -20,7 +20,7 @@ from opengem import test
 from opengem.risk import engines
 from opengem.output import risk as risk_output
 
-log = logs.RISK_LOG
+logger = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
@@ -100,12 +100,12 @@ class RiskEngineTestCase(unittest.TestCase):
                 loss_value = engines.compute_loss(loss_curves[site], interval)
                 losses[gridpoint.row-1][gridpoint.column-1] = loss_value
 
-        log.debug('%s= losses', losses)
-        log.debug('%s = loss_value', loss_value)
-        log.debug('%s = gridpoint', gridpoint)
-        log.debug('%s = interval', interval)
-        log.debug('%s = loss_value', loss_value)
-        log.debug('%s = loss_curves', loss_curves[site])
+        logger.debug('%s= losses', losses)
+        logger.debug('%s = loss_value', loss_value)
+        logger.debug('%s = gridpoint', gridpoint)
+        logger.debug('%s = interval', interval)
+        logger.debug('%s = loss_value', loss_value)
+        logger.debug('%s = loss_curves', loss_curves[site])
 
     def test_zero_curve_produces_zero_loss(self):
         # check that curves of zero produce zero loss (and no error)
@@ -153,7 +153,7 @@ class RiskEngineTestCase(unittest.TestCase):
             second_site.point.union(third_site.point).union(fourth_site.point)
         region_of_interest = shapes.Region(multi_point.convex_hull)
         
-        log.debug("Region of interest bounds are %s", 
+        logger.debug("Region of interest bounds are %s", 
             str(region_of_interest.bounds))
         
         self.assertRaises(Exception, region_of_interest.grid.point_at, first_site)
@@ -162,7 +162,7 @@ class RiskEngineTestCase(unittest.TestCase):
         third_gp = region_of_interest.grid.point_at(third_site)
         fourth_gp = region_of_interest.grid.point_at(fourth_site)
         
-        log.debug("Second GP is at %s: %s, %s", 
+        logger.debug("Second GP is at %s: %s, %s", 
             str(second_gp), second_gp.row, second_gp.column)
         
         hazard_curves = {}
@@ -198,7 +198,7 @@ class RiskEngineTestCase(unittest.TestCase):
                 risk_engine.compute_loss_curve(gridpoint, 
                                                ratio_results[gridpoint])
         
-        log.debug("Ratio Results keys are %s" % ratio_results.keys())
+        logger.debug("Ratio Results keys are %s" % ratio_results.keys())
         
         #self.assertFalse(first_gp in ratio_results.keys())
         self.assertEqual(ratio_results[third_gp], None)
