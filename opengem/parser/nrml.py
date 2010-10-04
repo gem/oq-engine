@@ -45,11 +45,9 @@ class NrmlFile(producer.FileProducer):
 
     """
 
-   # REQUIRED_ATTRIBUTES = (('IMLValues', str), ('IDmodel', str),
-    #        ('timeSpanDuration', float))
+    REQUIRED_ATTRIBUTES = (('IDmodel', str), ('timeSpanDuration', float))
             
-   # OPTIONAL_ATTRIBUTES = (('saPeriod', float),
-  #          ('saDamping', float))
+    OPTIONAL_ATTRIBUTES = (('saPeriod', float), ('saDamping', float))
 
     def __init__(self, path):
         super(NrmlFile, self).__init__(path)
@@ -57,17 +55,17 @@ class NrmlFile(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-                
-            if event == 'start' and element.tag == 'HazardResult':
+
+            if event == 'start' and element.tag == '{%s}HazardProcessing'  % NRML_NS:
                 self._set_meta(element)
-            elif event == 'end' and element.tag == 'Config':
-                self._set_config(element)
-            elif event == 'end' and element.tag == 'HazardCurveList':
-                self._to_site_attributes(element),
-                self._to_site(element)
-            elif event == 'end' and element.tag == 'IMLValues':
-                yield (self._curvelist_iml(element))
-                
+            elif event == 'start' and element.tag == '{%s}IMT'  % NRML_NS:
+                self._current_meta['IMT'] = str(element.text.strip())
+            elif event == 'start' and element.tag == '{%s}HazardCurveList'  % NRML_NS:
+                self._current_meta['endBranchLabel'] = str(element.get('endBranchLabel'))
+            elif event == 'start' and element.tag == '{%s}IMLValues'  % NRML_NS:
+                self._current_meta['IMT'] = str(element.text.strip())
+
+
     def _set_curvelist_iml(self, iml_element):
         try:
             self._current_curvelist_iml = {
@@ -75,10 +73,10 @@ class NrmlFile(producer.FileProducer):
         except Exception:
             error_str = "invalid nrml HazardCurveList IML array"
             raise ValueError(error_str)
-
+    
     def _to_site(self, element):
-        pos_el = element.xpath('HazardCurve/gml:pos',
-            namespaces={'gml': GML_NS})
+        pos_el = element.xpath('shaml:Site/shaml:Site/gml:pos',
+            namespaces={'shaml': SHAML_NS, 'gml': GML_NS})
         try:
             coord = map(float, pos_el[0].text.strip().split())
             return shapes.Site(coord[0], coord[1])
