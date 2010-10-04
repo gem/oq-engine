@@ -32,15 +32,14 @@ class NrmlFileTestCase(unittest.TestCase):
         self.assertTrue(ctr is None, 
             "filter yielded item(s) although no items were expected")
             
-    #@test.skipit
     def test_filter_region_constraint_one_site(self):
 
         # look for sites within specified rectangle
         # constraint is met by one and only one site in the example file 
         # -122.5000, 37.5000
         region_constraint = shapes.RegionConstraint.from_simple(
-            (-122.4500, 37.0000), (-122.5500, 37.7000))
-           
+            (-122.5500, 37.7), (-122.4500, 37.0))
+
         nrml_element = nrml.NrmlFile(os.path.join(data_dir, TEST_FILE))
         
         expected_result = [(shapes.Point(-122.5000, 37.5000),
