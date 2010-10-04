@@ -50,7 +50,30 @@ class NrmlFileTestCase(unittest.TestCase):
                 2.2452e-01, 1.2831e-01, 7.0352e-02, 3.6060e-02, 1.6579e-02, 
                 6.4213e-03, 2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]
             })]
+       
+        ctr = None
+        for ctr, (nrml_point, nrml_attr) in enumerate(
+            nrml_element.filter(region_constraint)):
 
+            # check topological equality for points
+            self.assertTrue(nrml_point.equals(expected_result[ctr][0]),
+                "filter yielded unexpected point at position %s: %s, %s" % (
+                ctr, nrml_point, expected_result[ctr][0]))
+
+            self.assertTrue(nrml_attr == expected_result[ctr][1],
+                "filter yielded unexpected attribute values at position " \
+                "%s: %s, %s" % (ctr, nrml_attr, expected_result[ctr][1]))
+        
+        # ensure that generator yielded at least one item
+        self.assertTrue(ctr is not None, 
+            "filter yielded nothing although %s item(s) were expected" % \
+            len(expected_result))
+
+        # ensure that generator returns exactly the number of items of the
+        # expected result list
+        self.assertTrue(ctr == len(expected_result)-1, 
+            "filter yielded wrong number of items (%s), expected were %s" % (
+                ctr+1, len(expected_result)))
     @test.skipit
     def test_filter_region_constraint_all_sites(self):
 

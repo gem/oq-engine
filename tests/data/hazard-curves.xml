@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
   <Config>
-    <HazardProcessing timeSpanDuration="50.0" IDmodel="MMI_3_1" saPeriod="foo" saDamping="bar">
+    <HazardProcessing timeSpanDuration="50.0" IDmodel="MMI_3_1" saPeriod="1.0" saDamping="2.0">
       <IMT>PGA</IMT>
     </HazardProcessing>
   </Config>
