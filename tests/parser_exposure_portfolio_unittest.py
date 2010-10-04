@@ -86,7 +86,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         ep = exposure.ExposurePortfolioFile(
             os.path.join(data_dir, TEST_FILE))
 
-        expected_result_ctr = 6
+        expected_result_ctr = 2
         ctr = None
 
         # just loop through iterator in order to count items

@@ -32,25 +32,25 @@ class NrmlFileTestCase(unittest.TestCase):
         self.assertTrue(ctr is None, 
             "filter yielded item(s) although no items were expected")
             
-    @test.skipit
+    #@test.skipit
     def test_filter_region_constraint_one_site(self):
 
         # look for sites within specified rectangle
         # constraint is met by one and only one site in the example file 
         # -122.5000, 37.5000
         region_constraint = shapes.RegionConstraint.from_simple(
-            (-122.4500, 37.5000), (-122.5500, 37.5000))
+            (-122.4500, 37.0000), (-122.5500, 37.7000))
            
         nrml_element = nrml.NrmlFile(os.path.join(data_dir, TEST_FILE))
         
-        expected_result = [
-            (shapes.Point(-122.5000, 37.5000),
-            {'Values': [9.8728e-01, 9.8266e-01, 9.4957e-01, 9.0326e-01, 
+        expected_result = [(shapes.Point(-122.5000, 37.5000),
+                {'endBranchLabel': '3_1',
+                'Values': [9.8728e-01, 9.8266e-01, 9.4957e-01, 9.0326e-01, 
                 8.1956e-01, 6.9192e-01, 5.2866e-01, 3.6143e-01, 2.4231e-01, 
                 2.2452e-01, 1.2831e-01, 7.0352e-02, 3.6060e-02, 1.6579e-02, 
                 6.4213e-03, 2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]
             })]
-
+       
         ctr = None
         for ctr, (nrml_point, nrml_attr) in enumerate(
             nrml_element.filter(region_constraint)):
@@ -63,7 +63,7 @@ class NrmlFileTestCase(unittest.TestCase):
             self.assertTrue(nrml_attr == expected_result[ctr][1],
                 "filter yielded unexpected attribute values at position " \
                 "%s: %s, %s" % (ctr, nrml_attr, expected_result[ctr][1]))
-
+        
         # ensure that generator yielded at least one item
         self.assertTrue(ctr is not None, 
             "filter yielded nothing although %s item(s) were expected" % \
@@ -82,7 +82,7 @@ class NrmlFileTestCase(unittest.TestCase):
                                                                 (-123, 38))
         nrml_element = nrml.NrmlFile(os.path.join(data_dir, TEST_FILE))
 
-        expected_result_ctr = 6
+        expected_result_ctr = 2
         ctr = None
 
         # just loop through iterator in order to count items
