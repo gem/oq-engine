@@ -31,6 +31,10 @@ class HazardCurveXMLWriter(writer.FileWriter):
         """Overrides the default implementation writing all the
         collected lxml object model to the stream."""
 
+        if not len(self.result_list_tag):
+            error = "You need to add at least a curve to build a valid output!"
+            raise RuntimeError(error)
+
         self.file.write(etree.tostring(self.result_list_tag, 
                 pretty_print=True,
                 xml_declaration=True,
@@ -66,7 +70,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
         # <shaml:Site />
         inner_site_tag = etree.SubElement(site_tag, SHAML + "Site")
-
+        
         # <gml:pos />
         gml_tag = etree.SubElement(inner_site_tag, GML + "pos")
         gml_tag.text = " ".join(map(str, (point.longitude, point.latitude)))
