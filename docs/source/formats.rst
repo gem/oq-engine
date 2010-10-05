@@ -20,7 +20,7 @@ The parser_vulnerability_model
 The :mod:`parser` Sub-package
 -------------------------
 
-.. automodule:: opengem.parser.shaml_output
+.. automodule:: opengem.parser.nrml_output
     :members:
     :undoc-members:
     :show-inheritance:

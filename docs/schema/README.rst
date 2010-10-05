@@ -75,8 +75,6 @@ NRML risk
 Tools / Links
 -------------
 
-* 'shaML schema documentation <http://mercalli.ethz.ch/~fab/out/joshmckenty>'_
-
 * 'XML Design Patterns Journey <http://www.xmlpatterns.com/intro5.shtml>'_
 
 * 'W3C XML Schema: DOs and DON'Ts <http://kohsuke.org/xmlschema/XMLSchemaDOsAndDONTs.html>'_

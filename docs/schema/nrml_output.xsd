@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://opengem.org/xmlns/shaml/0.1"
-	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1"
+	targetNamespace="http://opengem.org/xmlns/nrml/0.1"
+	xmlns:nrml="http://opengem.org/xmlns/nrml/0.1"
 	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
 	<!-- import -->
 	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
@@ -90,54 +90,54 @@
 	
 	<xs:complexType name="HazardGroundMotionFieldType">
 		<xs:sequence>
-			<xs:element maxOccurs="unbounded" name="site" type="shaml:HazardGroundMotionSiteType"/>
+			<xs:element maxOccurs="unbounded" name="site" type="nrml:HazardGroundMotionSiteType"/>
 		</xs:sequence>
 	</xs:complexType>
 
 	<xs:complexType name="HazardShakeMapType">
 		<xs:sequence>
-			<xs:element name="event" type="shaml:HazardEventType"/>
-			<xs:element name="IMR" type="shaml:IMRDataType"/>
-			<xs:element name="field" type="shaml:HazardGroundMotionFieldType"/>
+			<xs:element name="event" type="nrml:HazardEventType"/>
+			<xs:element name="IMR" type="nrml:IMRDataType"/>
+			<xs:element name="field" type="nrml:HazardGroundMotionFieldType"/>
 		</xs:sequence>
 	</xs:complexType>
 
-	<xs:element name="Curve" type="shaml:CurveType"/>
-	<xs:element name="LossCurve" type="shaml:CurveType"/>
-	<xs:element name="LossCurvePE" type="shaml:CurveType"/>
-	<xs:element name="LossRatioCurvePE" type="shaml:CurveType"/>
-	<xs:element name="LossRatioCurve" type="shaml:CurveType"/>
-	<xs:element name="HazardCurve" type="shaml:CurveType"/>
-	<xs:element name="HazardCurvePGA" type="shaml:CurveType"/>
-	<xs:element name="HazardShakeMap" type="shaml:HazardShakeMapType"/>
+	<xs:element name="Curve" type="nrml:CurveType"/>
+	<xs:element name="LossCurve" type="nrml:CurveType"/>
+	<xs:element name="LossCurvePE" type="nrml:CurveType"/>
+	<xs:element name="LossRatioCurvePE" type="nrml:CurveType"/>
+	<xs:element name="LossRatioCurve" type="nrml:CurveType"/>
+	<xs:element name="HazardCurve" type="nrml:CurveType"/>
+	<xs:element name="HazardCurvePGA" type="nrml:CurveType"/>
+	<xs:element name="HazardShakeMap" type="nrml:HazardShakeMapType"/>
 	<xs:complexType name="CurveListType">
 		<xs:sequence minOccurs="0" maxOccurs="unbounded">
 			<xs:choice>
-				<xs:element ref="shaml:Curve"/>
-				<xs:element ref="shaml:LossCurve"/>
-				<xs:element ref="shaml:LossRatioCurve"/>
-				<xs:element ref="shaml:HazardCurve"/>
-				<xs:element ref="shaml:IMLValues"/>
+				<xs:element ref="nrml:Curve"/>
+				<xs:element ref="nrml:LossCurve"/>
+				<xs:element ref="nrml:LossRatioCurve"/>
+				<xs:element ref="nrml:HazardCurve"/>
+				<xs:element ref="nrml:IMLValues"/>
 			</xs:choice>
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	<xs:element name="Config"/>
 	<xs:element name="IMLValues" type="gml:doubleList"/>
-	<xs:element name="LossCurveList" type="shaml:CurveListType"/>
-	<xs:element name="LossRatioCurveList" type="shaml:CurveListType"/>
-	<xs:element name="HazardCurveList" type="shaml:CurveListType"/>
+	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
+	<xs:element name="LossRatioCurveList" type="nrml:CurveListType"/>
+	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>
 	<xs:element name="RiskResult">
 		<xs:complexType>
 			<xs:sequence minOccurs="1">
-				<xs:element ref="shaml:Config"/>
+				<xs:element ref="nrml:Config"/>
 				<xs:choice>
-					<xs:element ref="shaml:LossCurveList"/>
-					<xs:element ref="shaml:LossRatioCurveList"/>
+					<xs:element ref="nrml:LossCurveList"/>
+					<xs:element ref="nrml:LossRatioCurveList"/>
 				</xs:choice>
 				<xs:choice>
-					<xs:element ref="shaml:LossCurvePE"/>
-					<xs:element ref="shaml:LossRatioCurvePE"/>
+					<xs:element ref="nrml:LossCurvePE"/>
+					<xs:element ref="nrml:LossRatioCurvePE"/>
 				</xs:choice>
 			</xs:sequence>
 		</xs:complexType>
@@ -145,13 +145,13 @@
 	<xs:element name="HazardResult">
 		<xs:complexType>
 			<xs:sequence minOccurs="1">
-				<xs:element ref="shaml:Config"/>
+				<xs:element ref="nrml:Config"/>
 				<xs:choice>
 					<xs:sequence maxOccurs="unbounded">
-						<xs:element ref="shaml:HazardCurveList"/>
+						<xs:element ref="nrml:HazardCurveList"/>
 					</xs:sequence>
 					<!-- TODO Is it correct to have one shakemap per document? -->
-					<xs:element ref="shaml:HazardShakeMap"/>
+					<xs:element ref="nrml:HazardShakeMap"/>
 				</xs:choice>
 			</xs:sequence>
 		</xs:complexType>

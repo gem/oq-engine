@@ -1,4 +1,4 @@
-<HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/shaml/0.1">
+<HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
   	<Config>
 		<HazardProcessing timeSpanDuration="50.0" IDmodel="PGA_1_1" saPeriod="foo" saDamping="bar">
 			 <IMT>PGA</IMT>

@@ -37,7 +37,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
     @test.skipit
     def test_raises_an_error_if_no_curve_is_serialized(self):
-        # invalid schema <shaml:Result> [1..*]
+        # invalid schema <nrml:Result> [1..*]
         self.assertRaises(RuntimeError, self.writer.close)
     
     #@test.skipit
@@ -194,11 +194,11 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     def _count_and_check_readed_data(self, data, curves, expected_number):
         number_of_curves = 0
         
-        for shaml_point, shaml_values in curves:
+        for nrml_point, nrml_values in curves:
             number_of_curves += 1
 
-            self.assertTrue(shaml_point in data.keys())
-            self.assertTrue(shaml_values in data.values())
+            self.assertTrue(nrml_point in data.keys())
+            self.assertTrue(nrml_values in data.values())
 
         self.assertEqual(expected_number, number_of_curves,
                 "the number of readed curves is not as expected!")

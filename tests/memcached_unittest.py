@@ -7,16 +7,19 @@ import jpype
 import pylibmc
 import unittest
 
+from opengem import logs
 from opengem import memcached
 from opengem import shapes
 from opengem import test
-from opengem.output import shaml
-from opengem.parser import shaml_output
+from opengem.output import hazard_nrml
+from opengem.parser import nrml
+
+LOG = logs.LOG
 
 MEMCACHED_PORT = 11211
 MEMCACHED_HOST = "localhost"
 
-TEST_FILE = "shaml_test_result.xml"
+TEST_FILE = "nrml_test_result.xml"
 
 # starting the jvm...
 jarpath = os.path.join(os.path.abspath("."), "lib")
@@ -46,10 +49,11 @@ class MemcachedTestCase(unittest.TestCase):
         self._delete_test_file()
     
     def _delete_test_file(self):
-        try:
-            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
-        except OSError:
-            pass
+        pass
+        # try:
+        #     os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
+        # except OSError:
+        #     pass
     
     def test_can_wrap_the_java_client(self):
         self.java_client.set("KEY", "VALUE")
@@ -122,18 +126,18 @@ class MemcachedTestCase(unittest.TestCase):
         self.assertEqual(shapes.FastCurve(
                 ((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
     
-    # input compatible to the shaml writer
+    # input compatible to the nrml writer
     
-    def test_an_empty_model_produces_an_empty_curve_set_shaml(self):
+    def test_an_empty_model_produces_an_empty_curve_set_nrml(self):
         self.python_client.set("KEY", EMPTY_MODEL)
-        self.assertEqual(0, len(self.reader.for_shaml("KEY")))
+        self.assertEqual(0, len(self.reader.for_nrml("KEY")))
     
-    def test_an_error_is_raised_if_no_model_cached_shaml(self):
-        self.assertRaises(ValueError, self.reader.for_shaml, "KEY")
+    def test_an_error_is_raised_if_no_model_cached_nrml(self):
+        self.assertRaises(ValueError, self.reader.for_nrml, "KEY")
     
-    def test_reads_one_curve_shaml(self):
+    def test_reads_one_curve_nrml(self):
         self.python_client.set("KEY", ONE_CURVE_MODEL)
-        shamls = self.reader.for_shaml("KEY")
+        nrmls = self.reader.for_nrml("KEY")
 
         data = {shapes.Site(2.0, 1.0): {
                     "IMT": "IMT",
@@ -146,12 +150,12 @@ class MemcachedTestCase(unittest.TestCase):
                     "Values": [0.1,0.2,0.3],
                     "vs30": 0.0}}
 
-        self.assertEqual(1, len(shamls.items()))
-        self.assertEquals(data, shamls)
+        self.assertEqual(1, len(nrmls.items()))
+        self.assertEquals(data, nrmls)
 
-    def test_reads_multiple_curves_in_one_branch_shaml(self):
+    def test_reads_multiple_curves_in_one_branch_nrml(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_ONE_BRANCH)
-        shamls = self.reader.for_shaml("KEY")
+        nrmls = self.reader.for_nrml("KEY")
 
         data = {shapes.Site(2.0, 1.0): {
                     "IMT": "IMT",
@@ -175,12 +179,12 @@ class MemcachedTestCase(unittest.TestCase):
                     "vs30": 0.0} 
                 }
 
-        self.assertEqual(2, len(shamls.items()))
-        self.assertEquals(data, shamls)
+        self.assertEqual(2, len(nrmls.items()))
+        self.assertEquals(data, nrmls)
 
-    def test_reads_multiple_curves_in_multiple_branches_shaml(self):
+    def test_reads_multiple_curves_in_multiple_branches_nrml(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_MULTIPLE_BRANCHES)
-        shamls = self.reader.for_shaml("KEY")
+        nrmls = self.reader.for_nrml("KEY")
 
         data = {shapes.Site(4.0, 4.0): {
                     "IMT": "IMT",
@@ -204,29 +208,31 @@ class MemcachedTestCase(unittest.TestCase):
                     "vs30": 0.0} 
                 }
 
-        self.assertEqual(2, len(shamls.items()))
-        self.assertEquals(data, shamls)
+        self.assertEqual(2, len(nrmls.items()))
+        self.assertEquals(data, nrmls)
 
-    def test_end_to_end_from_memcached_to_shaml(self):
+    def test_end_to_end_from_memcached_to_nrml(self):
         # storing in memcached from java side
         self.java_client.set("KEY", ONE_CURVE_MODEL)
         
         time.sleep(0.3)
         
         # reading in python side
-        shamls = self.reader.for_shaml("KEY")
+        nrmls = self.reader.for_nrml("KEY")
+        
+        LOG.debug("Nrmls are %s", nrmls)
         
         # writing result
-        writer = shaml.HazardCurveXMLWriter(
+        writer = hazard_nrml.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
 
-        writer.serialize(shamls)
+        writer.serialize(nrmls)
         
         # reading and checking
         constraint = shapes.RegionConstraint.from_simple(
                 (1.5, 1.5), (2.5, 0.5))
 
-        reader = shaml_output.ShamlOutputFile(
+        reader = nrml.NrmlFile(
                 os.path.join(test.DATA_DIR, TEST_FILE))
         
         number_of_curves = 0
@@ -236,16 +242,18 @@ class MemcachedTestCase(unittest.TestCase):
             "IDmodel": "FIXED",
             "timeSpanDuration": 50.0,
             "endBranchLabel": "label",
-            "IML": [1.0, 2.0, 3.0],
+            "IMLValues": [1.0, 2.0, 3.0],
             "maxProb": 0.3,
             "minProb": 0.1,
             "Values": [0.1,0.2,0.3],
             "vs30": 0.0}}
 
-        for shaml_point, shaml_values in reader.filter(constraint):
+        for nrml_point, nrml_values in reader.filter(constraint):
             number_of_curves += 1
 
-            self.assertTrue(shaml_point in data.keys())
-            self.assertTrue(shaml_values in data.values())
+
+            self.assertTrue(nrml_point in data.keys())
+            for key, val in nrml_values.items():
+                self.assertEqual(val, data.values()[0][key])
 
         self.assertEqual(1, number_of_curves)

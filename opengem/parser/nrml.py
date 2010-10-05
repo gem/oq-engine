@@ -11,10 +11,9 @@ from lxml import etree
 
 from opengem import producer
 from opengem import shapes
-from opengem.xml import SHAML_NS, GML_NS, NRML_NS #### REMOVE SHAML_NS°°####
+from opengem.xml import NRML_NS, GML_NS, NRML, GML, NSMAP
 
 class NrmlFile(producer.FileProducer):
-    #° was ShamlOutputFile
     """ This class parses a NRML hazard curve file. The contents of a NRML
     file is meant to be used as input for the risk engine. The class is
     implemented as a generator. For each 'Curve' element in the parsed 
@@ -34,13 +33,13 @@ class NrmlFile(producer.FileProducer):
 
     Notes:
     1) TODO(fab): require that attribute values of 'IMT' are from list
-       of allowed values (see shaML XML Schema)
+       of allowed values (see NRML XML Schema)
     2) 'endBranchLabel' can be replaced by 'aggregationType'
     3) TODO(fab): require that value of 'aggregationType' element is from a
-       list of allowed values (see shaML XML Schema)
+       list of allowed values (see NRML XML Schema)
     4) 'saPeriod', 'saDamping', 'calcSettingsID', 'maxProb' and 'minProb' are
        optional
-    5) shaML output can also contain hazard maps, parsing of those is not yet
+    5) NRML output can also contain hazard maps, parsing of those is not yet
        implemented
 
     """
@@ -55,52 +54,61 @@ class NrmlFile(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-
-            if event == 'start' and element.tag == 'HazardProcessing':
-                self._hazard_curve_meta(element)
-            elif event == 'end' and element.tag == 'HazardCurveList':
-                yield (self._to_attributes(element))
+            if event == 'start' and element.tag == NRML + 'HazardProcessing':
+                self._hazard_curve_meta(element)            
+            elif event == 'end' and element.tag == NRML + 'HazardCurve':
+                yield (self._to_site(element), 
+                            self._to_attributes(element))
+                
+    def _to_site(self, element):
+        """Convert current GML attributes to Site object"""
+        # lon/lat are in XML attributes 'Longitude' and 'Latitude'
+        # consider them as mandatory
+        pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
+        coord = map(float, pos_el[0].text.strip().split())
+        return shapes.Site(coord[0], coord[1])
         
-    def _hazard_curve_meta(self, hazard_element):
-
+    def _hazard_curve_meta(self, element):
         self._current_hazard_meta = {}
-            
-        for required_attribute in (('IDmodel', str)):
-            
-            id_model_value = hazard_element.get(required_attribute[0])
+        for (required_attribute, attrib_type) in [('IDmodel', str)]:
+            id_model_value = element.get(required_attribute)
             if id_model_value is not None:
-                self._current_hazard_meta[required_attribute[0]]\
-                = required_attribute[1](id_model_value)
+                self._current_hazard_meta[required_attribute]\
+                = attrib_type(id_model_value)
             else:
                 error_str = "element Hazard Curve metadata: missing required " \
-                    "attribute %s" % required_attribute[0]
+                    "attribute %s" % required_attribute
                 raise ValueError(error_str)
 
     def _to_attributes(self, element):
-
+        
+        print "Gonna get me some attributes of this %s element" % element
         attributes = {}
         
-        for child_el in ('gml:pos', 'Values',
-        'IMLValues'):
-           child_node = element.xpath(child_el)
+        # TODO(JMC): This is hardly efficient, but it's simple for the moment...
+        for (child_el, child_key) in (('nrml:Values','Values'),
+            ('//following-sibling::nrml:IMLValues','IMLValues')):
+           child_node = element.xpath(child_el, 
+                namespaces={"gml":GML_NS,"nrml":NRML_NS})
 
            try:
-               attributes[child_el] = map(float, 
+               attributes[child_key] = map(float, 
                    child_node[0].text.strip().split())
            except Exception:
-               error_str = "invalid or missing %s value" % child_el
+               error_str = "invalid or missing %s value" % child_key
                raise ValueError(error_str) 
 
         # consider all attributes of HazardProcessing element as mandatory 
-        for required_attribute in ('endBranchLabel', str):
-
-           attr_value = element.get(required_attribute[0])
-           if attr_value is not None:
-               attributes[required_attribute[0]] = \
-                   required_attribute[1](attr_value)
-           else:
+        for (required_attribute, attrib_type) in [('endBranchLabel', str)]:
+            (haz_list_element,) = element.xpath("..", 
+                namespaces={"gml":GML_NS,"nrml":NRML_NS})
+            attr_value = haz_list_element.get(required_attribute)
+            if attr_value is not None:
+               attributes[required_attribute] = \
+                   attrib_type(attr_value)
+            else:
                error_str = "element endBranchLabel: missing required "\
-                   "attribute %s" % required_attribute[0]
+                   "attribute %s" % required_attribute
                raise ValueError(error_str) 
 
         try:
@@ -110,12 +118,12 @@ class NrmlFile(producer.FileProducer):
            raise ValueError(error_str) 
         
         return attributes
-
-    def filter(self, attribute_constraint=None):
-       for next in iter(self):
-           if (attribute_constraint is not None and \
-                   attribute_constraint.match(next)):
-               yield next
+    # 
+    # def filter(self, attribute_constraint=None):
+    #    for next in iter(self):
+    #        if (attribute_constraint is not None and \
+    #                attribute_constraint.match(next)):
+    #            yield next
 
         
 class HazardConstraint(object):
