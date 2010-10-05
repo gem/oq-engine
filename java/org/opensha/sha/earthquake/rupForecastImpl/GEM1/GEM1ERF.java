@@ -2,7 +2,6 @@ package org.opensha.sha.earthquake.rupForecastImpl.GEM1;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.MagScalingRelationship;
@@ -18,7 +17,6 @@ import org.opensha.commons.param.event.ParameterChangeEvent;
 import org.opensha.gem.GEM1.commons.CalculationSettings;
 import org.opensha.gem.GEM1.util.SourceType;
 import org.opensha.sha.earthquake.EqkRupForecast;
-import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.FloatingPoissonFaultSource;
 import org.opensha.sha.earthquake.rupForecastImpl.PointEqkSource;
@@ -770,6 +768,7 @@ public class GEM1ERF extends EqkRupForecast {
 	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                faultFloaterTypeValue,				// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                12.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
+			
 		}
 		else{
 			
@@ -785,6 +784,7 @@ public class GEM1ERF extends EqkRupForecast {
 	                minMagValue,							// minimum mag considered (probs of those lower set to zero regardless of MFD)
 	                faultFloaterTypeValue,				// type of floater (0 for full DDW, 1 for floating both ways, and 2 for floating down center)
 	                0.0);  						// mags >= to this forced to be full fault ruptures (set as high value for now)
+			
 		}
 		
 
