@@ -9,7 +9,6 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Random;
 
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
@@ -17,7 +16,6 @@ import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.param.DoubleParameter;
-import org.opensha.commons.param.ParameterAPI;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.gem.GEM1.scratch.HazardCurveCalculator;
@@ -38,22 +36,109 @@ public class GroundMotionFieldCalculatorTest implements
 	private Site site;
 	private ScalarIntensityMeasureRelationshipAPI imr;
 	private EqkRupture rupture;
-	
-	// in percentage
-	double tolerance = 1;
 
-	@Test
-	public void compareHazardCurvesForSingleEarthquakeRupture() {
+	double tolerance = 1e-2;
 
-		long seed = 123456789;
-		int numRealizations = 50000;
-		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
-		double truncationLevel = 1.0;
-
+	@Before
+	public void setUp() {
 		setIml();
 		setSite();
-		setImr(truncationType, truncationLevel);
 		setEqkRup();
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void nullArrayOfSites() {
+
+		ArrayList<Site> sites = null;
+
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+		double truncationLevel = 1.0;
+		setImr(truncationType, truncationLevel);
+
+		Random rn = new Random();
+		GroundMotionFieldCalculator.getStochasticGroundMotionField(imr,
+				rupture, sites, rn);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void emptyArrayOfSites() {
+
+		ArrayList<Site> sites = new ArrayList<Site>();
+
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+		double truncationLevel = 1.0;
+		setImr(truncationType, truncationLevel);
+
+		Random rn = new Random();
+		GroundMotionFieldCalculator.getStochasticGroundMotionField(imr,
+				rupture, sites, rn);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void nullImr() {
+
+		BA_2008_AttenRel attenRel = null;
+
+		ArrayList<Site> sites = new ArrayList<Site>();
+		sites.add(site);
+
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+		double truncationLevel = 1.0;
+		setImr(truncationType, truncationLevel);
+
+		Random rn = new Random();
+		GroundMotionFieldCalculator.getStochasticGroundMotionField(attenRel,
+				rupture, sites, rn);
+
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void nullEqkRupture() {
+
+		EqkRupture rup = null;
+
+		ArrayList<Site> sites = new ArrayList<Site>();
+		sites.add(site);
+
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+		double truncationLevel = 1.0;
+		setImr(truncationType, truncationLevel);
+
+		Random rn = new Random();
+		GroundMotionFieldCalculator.getStochasticGroundMotionField(imr, rup,
+				sites, rn);
+	}
+
+	@Test(expected = IllegalArgumentException.class)
+	public void nullRandomNumberGenerator() {
+
+		Random rn = null;
+
+		ArrayList<Site> sites = new ArrayList<Site>();
+		sites.add(site);
+
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+		double truncationLevel = 1.0;
+		setImr(truncationType, truncationLevel);
+
+		GroundMotionFieldCalculator.getStochasticGroundMotionField(imr,
+				rupture, sites, rn);
+	}
+
+	@Test
+	public void compareHazardCurvesForSingleEarthquakeRuptureWithNoTruncation() {
+
+		/**
+		 * This test compares hazard curves calculated with the classical
+		 * approach and by generating multiple ground motion fields. No
+		 * truncation is assumed for the GMPE.
+		 */
+
+		long seed = 123456789;
+		int numRealizations = 200000;
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+		double truncationLevel = 2.0;
+		setImr(truncationType, truncationLevel);
 
 		// calculate hazard curve following classical approach
 		try {
@@ -65,38 +150,91 @@ public class GroundMotionFieldCalculatorTest implements
 
 		// calculate hazard curve by generating multiple ground motion fields
 		Random rn = new Random(seed);
-		ArrayList<Site> sites = new ArrayList<Site>();
-		sites.add(site);
-		ArrayList<Double> groundMotionValues = new ArrayList<Double>();
-		for (int i = 0; i < numRealizations; i++)
-			groundMotionValues.add(GroundMotionFieldCalculator
-					.getStochasticGroundMotionField(imr, rupture, sites, rn)
-					.get(site));
-		Comparator comparator = Collections.reverseOrder();
-		Collections.sort(groundMotionValues,comparator);
-		double[] probabilityOfExceedenceVals = new double[iml.getNum()];
-		for (int i = 0; i < iml.getNum(); i++)
-			probabilityOfExceedenceVals[i] = 0.0;
-		Iterator<Double> iterGMV = iml.getXValuesIterator();
-		int indexGMV = 0;
-		while (iterGMV.hasNext()) {
-			double groundMotionValue = iterGMV.next();
-			for (int i = 0; i < groundMotionValues.size(); i++)
-				if (groundMotionValues.get(i) > groundMotionValue)
-					probabilityOfExceedenceVals[indexGMV] = probabilityOfExceedenceVals[indexGMV] + 1;
-				else break;
-			indexGMV = indexGMV + 1;
-		}
-		for (int i = 0; i < iml.getNum(); i++)
-			probabilityOfExceedenceVals[i] = probabilityOfExceedenceVals[i]
-					/ numRealizations;
-		
-		for (int i = 0; i < iml.getNum(); i++){
+		double[] probabilityOfExceedenceVals = getHazardCurveFromMultipleGroundMotionFields(
+				numRealizations, rn);
+
+		for (int i = 0; i < iml.getNum(); i++) {
 			double expected = iml.getY(i);
 			double computed = probabilityOfExceedenceVals[i];
-			System.out.println("Expected: "+expected+" "+", computed: "+computed+", percentage difference: "+Math.abs((computed-expected)/expected)*100);
-			//assertEquals(100, (computed / expected) * 100,
-				//	tolerance);
+			System.out.println("Expected: " + expected + " " + ", computed: "
+					+ computed);
+			assertEquals(expected, computed, tolerance);
+		}
+
+	}
+
+	@Test
+	public void compareHazardCurvesForSingleEarthquakeRuptureWith2SidedTruncation() {
+
+		/**
+		 * This test compares hazard curves calculated with the classical
+		 * approach and by generating multiple ground motion fields. No
+		 * truncation is assumed for the GMPE.
+		 */
+
+		long seed = 123456789;
+		int numRealizations = 200000;
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+		double truncationLevel = 2.0;
+		setImr(truncationType, truncationLevel);
+
+		// calculate hazard curve following classical approach
+		try {
+			HazardCurveCalculator hcc = new HazardCurveCalculator();
+			hcc.getHazardCurve(iml, site, imr, rupture);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+
+		// calculate hazard curve by generating multiple ground motion fields
+		Random rn = new Random(seed);
+		double[] probabilityOfExceedenceVals = getHazardCurveFromMultipleGroundMotionFields(
+				numRealizations, rn);
+
+		for (int i = 0; i < iml.getNum(); i++) {
+			double expected = iml.getY(i);
+			double computed = probabilityOfExceedenceVals[i];
+			System.out.println("Expected: " + expected + " " + ", computed: "
+					+ computed);
+			assertEquals(expected, computed, tolerance);
+		}
+
+	}
+
+	@Test
+	public void compareHazardCurvesForSingleEarthquakeRuptureWith1SidedTruncation() {
+
+		/**
+		 * This test compares hazard curves calculated with the classical
+		 * approach and by generating multiple ground motion fields. 1 sided
+		 * truncation is assumed for the GMPE.
+		 */
+
+		long seed = 123456789;
+		int numRealizations = 200000;
+		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED;
+		double truncationLevel = 2.0;
+		setImr(truncationType, truncationLevel);
+
+		// calculate hazard curve following classical approach
+		try {
+			HazardCurveCalculator hcc = new HazardCurveCalculator();
+			hcc.getHazardCurve(iml, site, imr, rupture);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+
+		// calculate hazard curve by generating multiple ground motion fields
+		Random rn = new Random(seed);
+		double[] probabilityOfExceedenceVals = getHazardCurveFromMultipleGroundMotionFields(
+				numRealizations, rn);
+
+		for (int i = 0; i < iml.getNum(); i++) {
+			double expected = iml.getY(i);
+			double computed = probabilityOfExceedenceVals[i];
+			System.out.println("Expected: " + expected + " " + ", computed: "
+					+ computed);
+			assertEquals(expected, computed, tolerance);
 		}
 
 	}
@@ -120,8 +258,8 @@ public class GroundMotionFieldCalculatorTest implements
 		this.iml.set(Math.log(0.556), 1.0);
 		this.iml.set(Math.log(0.778), 1.0);
 		this.iml.set(Math.log(1.09), 1.0);
-		this.iml.set(Math.log(1.52), 1.0);
-		this.iml.set(Math.log(2.13), 1.0);
+		// this.iml.set(Math.log(1.52), 1.0);
+		// this.iml.set(Math.log(2.13), 1.0);
 	}
 
 	private void setSite() {
@@ -159,6 +297,37 @@ public class GroundMotionFieldCalculatorTest implements
 		Location hypo = new Location(33.73183, -117.44568, 6.5);
 		this.rupture = getFiniteEqkRupture(aveDip, lowerSeisDepth,
 				upperSeisDepth, trace, gridSpacing, mag, hypo, aveRake);
+	}
+
+	private double[] getHazardCurveFromMultipleGroundMotionFields(
+			int numRealizations, Random rn) {
+		double[] probabilityOfExceedenceVals = new double[iml.getNum()];
+		ArrayList<Site> sites = new ArrayList<Site>();
+		sites.add(site);
+		ArrayList<Double> groundMotionValues = new ArrayList<Double>();
+		for (int i = 0; i < numRealizations; i++)
+			groundMotionValues.add(GroundMotionFieldCalculator
+					.getStochasticGroundMotionField(imr, rupture, sites, rn)
+					.get(site));
+		Comparator comparator = Collections.reverseOrder();
+		Collections.sort(groundMotionValues, comparator);
+		for (int i = 0; i < iml.getNum(); i++)
+			probabilityOfExceedenceVals[i] = 0.0;
+		Iterator<Double> iterGMV = iml.getXValuesIterator();
+		int indexGMV = 0;
+		while (iterGMV.hasNext()) {
+			double groundMotionValue = iterGMV.next();
+			for (int i = 0; i < groundMotionValues.size(); i++)
+				if (groundMotionValues.get(i) > groundMotionValue)
+					probabilityOfExceedenceVals[indexGMV] = probabilityOfExceedenceVals[indexGMV] + 1;
+				else
+					break;
+			indexGMV = indexGMV + 1;
+		}
+		for (int i = 0; i < iml.getNum(); i++)
+			probabilityOfExceedenceVals[i] = probabilityOfExceedenceVals[i]
+					/ numRealizations;
+		return probabilityOfExceedenceVals;
 	}
 
 	/*

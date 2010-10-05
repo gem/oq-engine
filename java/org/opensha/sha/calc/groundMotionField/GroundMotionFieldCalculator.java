@@ -32,6 +32,7 @@ public class GroundMotionFieldCalculator {
 	public static Map<Site, Double> getMeanGroundMotionField(
 			ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
 			List<Site> sites) {
+		validateInput(attenRel, rup, sites);
 		Map<Site, Double> groundMotionMap = new HashMap<Site, Double>();
 		double meanGroundMotion = Double.NaN;
 		attenRel.setEqkRupture(rup);
@@ -66,6 +67,9 @@ public class GroundMotionFieldCalculator {
 	public static Map<Site, Double> getStochasticGroundMotionField(
 			ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
 			List<Site> sites, Random rn) {
+		if (rn == null)
+			throw new IllegalArgumentException(
+					"Random number generator cannot be null");
 		Map<Site, Double> stochasticGroundMotionField = new HashMap<Site, Double>();
 		Map<Site, Double> meanGroundMotionField = getMeanGroundMotionField(
 				attenRel, rup, sites);
@@ -125,6 +129,32 @@ public class GroundMotionFieldCalculator {
 			dev = dev * standardDeviation;
 		}
 		return dev;
+	}
+
+	private static Boolean validateInput(
+			ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
+			List<Site> sites) {
+		if (attenRel == null) {
+			throw new IllegalArgumentException(
+					"Attenuation relationship cannot be null");
+		}
+
+		if (rup == null) {
+			throw new IllegalArgumentException(
+					"Earthquake rupture cannot be null");
+		}
+
+		if (sites == null) {
+			throw new IllegalArgumentException(
+					"Array list of sites cannot be null");
+		}
+
+		if (sites.isEmpty()) {
+			throw new IllegalArgumentException(
+					"Array list of sites must contain at least one site");
+		}
+
+		return true;
 	}
 
 }
