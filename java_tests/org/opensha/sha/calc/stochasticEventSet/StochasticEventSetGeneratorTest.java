@@ -69,49 +69,6 @@ public class StochasticEventSetGeneratorTest {
 				numStochasticEventSets);
 
 	}
-	
-	@Test
-	public void compareOccurrenceRatesWithGetStochasticEventSetFromGEM1ERF() {
-
-		/**
-		 * This test compares the occurrence rates calculated from a set of
-		 * stochastic events (each generated using the method
-		 * getStochasticEvenSetFromGEM1ERF() called by the method
-		 * getMultipleStochasticEvenSetsFromGEM1ERF()) with those given in
-		 * input in the definition of the ERF. The outcome of the test depends
-		 * on the number of stochastic sets generated (if the generator is
-		 * correctly implemented, greater is the number of sets, better will be
-		 * the consistency between expected and computed results) and on the
-		 * seed number for the random number generator.
-		 */
-
-		int numStochasticEventSets = 10;//50000;
-		long seed = 123456789;
-
-		// Define source
-		GEMFaultSourceData src = getExampleFaultSource();
-
-		// Define ERF
-		double timeSpan = 50.0;
-		ArrayList<GEMSourceData> faultSourceDataList = new ArrayList<GEMSourceData>();
-		faultSourceDataList.add(src);
-		GEM1ERF erf = getGEM1ERF(faultSourceDataList, timeSpan);
-
-		// Calculate stochastic event sets
-		Random rn = new Random(seed);
-		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = StochasticEventSetGeneratorDamiano
-				.getMultipleStochasticEvenSetsFromGEM1ERF(erf,
-						numStochasticEventSets, rn);
-		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
-		for (ArrayList<EqkRupture> ses : multiStochasticEventSets)
-			stochasticEventSet.addAll(ses);
-
-		// Compare rates
-		IncrementalMagFreqDist mfd = src.getMfd();
-		compareOccurrenceRates(mfd, stochasticEventSet, timeSpan,
-				numStochasticEventSets);
-
-	}
 
 	/**
 	 * This method return an example of fault source (taken from California
