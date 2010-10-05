@@ -19,11 +19,11 @@
 
 package org.opensha.sha.imr.attenRelImpl.test;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
-
-import static org.junit.Assert.*;
 
 import org.junit.After;
 import org.junit.Before;
@@ -35,10 +35,11 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 
 	public static double tolerance = 0.5;
 
-	private String dir;
+	private final String dir;
 
 	public NGATest(String dir) {
-		this.dir = "java_tests" + File.separator + dir;
+		this.dir = "java_tests" + File.separator + "data" + File.separator
+				+ dir;
 	}
 
 	@Before
@@ -53,6 +54,7 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 
 	/**
 	 * Tests a single file
+	 * 
 	 * @param filePath
 	 * @return discrepancy, or negative number for failure
 	 */
@@ -68,11 +70,12 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 
 		ArrayList<File> files = new ArrayList<File>();
 
-		for(int i=0;i<fileList.length;++i) {
+		for (int i = 0; i < fileList.length; ++i) {
 
 			String fileName = fileList[i].getName();
 
-			if(fileName.contains("README") || fileName.contains("COEF")
+			if (fileName.contains("README")
+					|| fileName.contains("COEF")
 					|| !(fileName.contains(".OUT") || fileName.contains(".TXT")))
 				continue; // skip the README/COEF/Fortran files
 
@@ -85,7 +88,7 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 	@Test
 	public void testAll() {
 		double maxDisc = 0;
-		for(File file : getTestFiles()) {
+		for (File file : getTestFiles()) {
 			double discrep = doSingleFileTest(file);
 			assertTrue(discrep >= 0);
 			if (discrep > maxDisc)
@@ -98,7 +101,7 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 		this.setUp();
 		double maxDisc = 0;
 		String summary = "";
-		for(File file : getTestFiles()) {
+		for (File file : getTestFiles()) {
 			double discrep = doSingleFileTest(file);
 			if (discrep > maxDisc)
 				maxDisc = discrep;
@@ -106,8 +109,9 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 			if (discrep < 0) { // fail
 				summary += "\n" + file.getName() + ": FAILED for line:";
 				summary += "\n" + this.getLastFailLine();
-			} else {	// good
-				summary += "\n" + file.getName() + ": PASSED for discrepancey: " + discrep;
+			} else { // good
+				summary += "\n" + file.getName()
+						+ ": PASSED for discrepancey: " + discrep;
 			}
 		}
 		System.out.println(summary);
@@ -118,7 +122,7 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 		StringTokenizer tok = new StringTokenizer(line);
 
 		// skip the first 9
-		for (int i=0; i<9; i++) {
+		for (int i = 0; i < 9; i++) {
 			tok.nextToken();
 		}
 
@@ -136,7 +140,7 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 
 		String str = "";
 
-		for (int i=0; i<periodList.size(); i++) {
+		for (int i = 0; i < periodList.size(); i++) {
 			periods[i] = periodList.get(i);
 			str += " " + periods[i];
 		}
@@ -146,7 +150,8 @@ public abstract class NGATest implements ParameterChangeWarningListener {
 		return periods;
 	}
 
-	public void parameterChangeWarning(ParameterChangeWarningEvent e){
+	@Override
+	public void parameterChangeWarning(ParameterChangeWarningEvent e) {
 		System.err.println("Parameter change warning!");
 		System.err.flush();
 		return;

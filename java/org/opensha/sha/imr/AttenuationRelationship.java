@@ -651,17 +651,17 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 		}
 		else {
 			if (sigTrType.equals(SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE)) {
-				stRndVar = GaussianDistCalc.getStandRandVar(exceedProb, 0, 0, 1e-6);
+				stRndVar = GaussianDistCalc.getStdRndVariable(exceedProb, 0, 0, 1e-6);
 			}
 			else {
 				double numSig = ( (Double) ( (ParameterAPI) sigmaTruncLevelParam).
 						getValue()).doubleValue();
 				if (sigTrType.equals(SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED)) {
-					stRndVar = GaussianDistCalc.getStandRandVar(exceedProb, 1, numSig,
+					stRndVar = GaussianDistCalc.getStdRndVariable(exceedProb, 1, numSig,
 							1e-6);
 				}
 				else {
-					stRndVar = GaussianDistCalc.getStandRandVar(exceedProb, 2, numSig,
+					stRndVar = GaussianDistCalc.getStdRndVariable(exceedProb, 2, numSig,
 							1e-6);
 				}
 			}
