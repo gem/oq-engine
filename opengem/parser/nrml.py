@@ -60,8 +60,7 @@ class NrmlFile(producer.FileProducer):
                 self._hazard_curve_meta(element)
             elif event == 'end' and element.tag == 'HazardCurveList':
                 yield (self._to_attributes(element))
-                
-
+        
     def _hazard_curve_meta(self, hazard_element):
 
         self._current_hazard_meta = {}
@@ -77,11 +76,10 @@ class NrmlFile(producer.FileProducer):
                     "attribute %s" % required_attribute[0]
                 raise ValueError(error_str)
 
-
     def _to_attributes(self, element):
 
         attributes = {}
-
+        
         for child_el in ('gml:pos', 'Values',
         'IMLValues'):
            child_node = element.xpath(child_el)
