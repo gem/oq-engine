@@ -10,22 +10,28 @@
 	<xs:include schemaLocation="nrml_common.xsd"/>
 	
 	<!-- Hazard shakemap definition -->
-	<xs:complexType name="RuptureForecastType">
+	<xs:complexType name="MagnitudeValue">
+		<xs:attribute name="value" use="required" type="xs:double"/>
+		<xs:attribute name="type" use="required"  type="xs:string"/>
+		<xs:attribute name="units" type="xs:string"/>
+	</xs:complexType>
+	
+	<xs:complexType name="RuptureType">
 		<xs:annotation>
 			<xs:documentation>Describe an earthquake event (for the moment a point source)</xs:documentation>
 		</xs:annotation>
 		<xs:all>
-			<xs:element name="source" type="gml:PointType"/>
+			<xs:element name="hypocenterLocation" type="gml:PointType"/>
+			<xs:element name="magnitude" type="shaml:MagnitudeValue"/>
 		</xs:all>
 		<xs:attribute name="averageRake" use="required">
 			<xs:simpleType>
 				<xs:restriction base="xs:double">
-					<xs:minInclusive fixed="true" value="0.0"/>
-					<xs:maxInclusive fixed="true" value="360.0"/>
+					<xs:minInclusive fixed="true" value="-180.0"/>
+					<xs:maxInclusive fixed="true" value="+180.0"/>
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-		<xs:attribute name="magnitude" use="required" type="xs:double"/>
 	</xs:complexType>
 	
 	<xs:simpleType name="IMT">
@@ -42,15 +48,13 @@
 	</xs:simpleType>
 	
 	<xs:simpleType name="GroundMotionValue">
-		<xs:annotation>
-			<xs:documentation>Describe a ground motion value</xs:documentation>
-		</xs:annotation>
 		<xs:restriction base="xs:double"/>
 	</xs:simpleType>
 	
-	<xs:simpleType name="vs30Method">
-		<xs:restriction base="xs:string"/>
-	</xs:simpleType>
+	<xs:complexType name="Vs30Method">
+		<xs:attribute name="value" use="required" type="xs:double"/>
+		<xs:attribute name="units" type="xs:string"/>
+	</xs:complexType>
 	
 	<!-- Type of equation seems missing in the config file defined in OpenSHA -->
 	<xs:complexType name="IMRDataType">
@@ -80,7 +84,7 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-		<xs:attribute name="truncationLevel" use="required" type="xs:int"/>
+		<xs:attribute name="truncationLevel" use="required" type="xs:double"/>
 		<xs:attribute name="stdDevType" use="required">
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
@@ -94,7 +98,6 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-		<xs:attribute name="vs30" use="required" type="shaml:vs30Method"/>
 	</xs:complexType>
 	
 	<xs:complexType name="HazardGroundMotionSiteType">
@@ -103,6 +106,7 @@
 		</xs:annotation>
 		<xs:all>
 			<xs:element name="site" type="gml:PointType"/>
+			<xs:element name="vs30" type="shaml:Vs30Method"/>
 		</xs:all>
 		<xs:attribute name="groundMotion" use="required" type="shaml:GroundMotionValue"/>
 	</xs:complexType>
@@ -114,17 +118,18 @@
 		<xs:sequence>
 			<xs:element maxOccurs="unbounded" name="site" type="shaml:HazardGroundMotionSiteType"/>
 		</xs:sequence>
+		<xs:attribute name="description" type="xs:string"/>
 	</xs:complexType>
 	
 	<xs:complexType name="HazardShakeMapType">
 		<xs:annotation>
 			<xs:documentation>Describe an hazard shake map</xs:documentation>
 		</xs:annotation>
-		<xs:all>
-			<xs:element name="event" type="shaml:RuptureForecastType"/>
+		<xs:sequence>
+			<xs:element name="event" type="shaml:RuptureType"/>
 			<xs:element name="IMR" type="shaml:IMRDataType"/>
-			<xs:element name="field" type="shaml:HazardGroundMotionFieldType"/>
-		</xs:all>
+			<xs:element maxOccurs="unbounded" name="field" type="shaml:HazardGroundMotionFieldType"/>
+		</xs:sequence>
 	</xs:complexType>
 	
 	<xs:complexType name="HazardCurveListType">
