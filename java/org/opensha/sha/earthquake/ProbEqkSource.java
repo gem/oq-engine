@@ -24,7 +24,6 @@ import java.util.Iterator;
 
 import org.opensha.commons.data.NamedObjectAPI;
 import org.opensha.commons.data.Site;
-import org.opensha.commons.data.function.ArbDiscrEmpiricalDistFunc;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.Region;
