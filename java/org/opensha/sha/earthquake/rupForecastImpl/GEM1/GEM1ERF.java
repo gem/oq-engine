@@ -1105,28 +1105,6 @@ public class GEM1ERF extends EqkRupForecast {
 	public ArrayList<TectonicRegionType> getIncludedTectonicRegionTypes() {
 		return tectonicRegionTypes;
 	}
-	
-	/**
-	 * This method provides a list of ruptures for source sourceId with a magnitude 
-	 * comprised between a lower and an upper threshold 
-	 *
-	 * @param sourceId			Index of the source
-	 * @param mMin				Minimum value of magnitude
-	 * @return rupList			List of ruptures with magnitude in a given interval
-	 */		
-	public ArrayList<ProbEqkRupture> getRupturesMag(int sourceId,double mMin, double mMax) {
-		ProbEqkSource prbSrc = (ProbEqkSource) this.getSource(sourceId);
-		ArrayList<ProbEqkRupture> rupList = new ArrayList<ProbEqkRupture>();
-		
-		Iterator<ProbEqkRupture> iter = prbSrc.getRupturesIterator(); 
-		while (iter.hasNext()) {
-			// Get rupture
-			ProbEqkRupture rup = iter.next();
-			// Add the rupture to the list 
-			if (rup.getMag() >= mMin && rup.getMag() < mMax) rupList.add(rup);
-		}
-		return rupList;
-	}
 
 }
 
