@@ -105,11 +105,11 @@
 		<xs:annotation>
 			<xs:documentation>Describe an hazard shake map</xs:documentation>
 		</xs:annotation>
-		<xs:sequence>
+		<xs:all>
 			<xs:element name="event" type="shaml:HazardEventType"/>
 			<xs:element name="IMR" type="shaml:IMRDataType"/>
 			<xs:element name="field" type="shaml:HazardGroundMotionFieldType"/>
-		</xs:sequence>
+		</xs:all>
 	</xs:complexType>
 	
 	<xs:complexType name="HazardCurveListType">
