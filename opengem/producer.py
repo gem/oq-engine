@@ -70,7 +70,7 @@ class FileProducer(object):
 
         self.finished.send(True)
 
-    def filter(self, region_constraint, attribute_constraint=None):
+    def filter(self, region_constraint=None, attribute_constraint=None):
         """Filters the elements readed by this producer.
         
         region_constraint has to be of type shapes.RegionConstraint and
@@ -83,10 +83,12 @@ class FileProducer(object):
         """
         for next_val in iter(self):
             if (attribute_constraint is not None and
-                    region_constraint.match(next_val[0]) and
+                    (region_constraint is None 
+                        or region_constraint.match(next_val[0])) and
                     attribute_constraint.match(next_val[1])) or \
                (attribute_constraint is None and
-                    region_constraint.match(next_val[0])):
+                    (region_constraint is None 
+                        or region_constraint.match(next_val[0]))):
                 
                 yield next_val
 

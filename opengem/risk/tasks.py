@@ -16,7 +16,7 @@ from opengem import shapes
 from opengem.output import geotiff
 from opengem import producer
 from opengem.parser import exposure
-from opengem.parser import shaml_output
+from opengem.parser import nrml
 from opengem.parser import vulnerability
 
 from opengem import flags
@@ -40,12 +40,12 @@ def main(vulnerability_model_file, hazard_curve_file,
     region_constraint.cell_size = 1.0
                                                             
     hazard_curves = {}
-    shaml_parser = shaml_output.ShamlOutputFile(hazard_curve_file)
+    nrml_parser = nrml.NrmlFile(hazard_curve_file)
     attribute_constraint = \
         producer.AttributeConstraint({'IMT' : 'MMI'})
     
     HAZARD_LOG.debug("Going to parse hazard curves")
-    for site, hazard_curve_data in shaml_parser.filter(
+    for site, hazard_curve_data in nrml_parser.filter(
             region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
         hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
-This modules serializes objects in shaml format.
+This modules serializes objects in nrml format.
 
 It currently takes all the lxml object model in memory
 due to the fact that curves can be grouped by IDmodel and
@@ -14,15 +14,15 @@ objects are received.
 from lxml import etree
 
 from opengem import writer
-from opengem.xml import NSMAP, SHAML, GML
+from opengem.xml import NSMAP, NRML, GML
 
 class HazardCurveXMLWriter(writer.FileWriter):
-    """This class writes an hazard curve into the shaml format."""
+    """This class writes an hazard curve into the nrml format."""
 
     def __init__(self, path):
         super(HazardCurveXMLWriter, self).__init__(path)
         self.result_list_tag = etree.Element(
-                SHAML + "HazardResult", nsmap=NSMAP)
+                NRML + "HazardResult", nsmap=NSMAP)
 
         self.curves_per_iml = {}
         self.curves_per_model_id = {}
@@ -46,22 +46,22 @@ class HazardCurveXMLWriter(writer.FileWriter):
         """Adds the curve to the proper set depending on the IML values."""
         
         try:
-            list_tag = self.curves_per_iml[str(values["IMLValues"])]
+            list_tag = self.curves_per_iml[str(values["IML"])]
         except KeyError:
-            curve_list_tag = etree.SubElement(hazard_curve_list_tag, SHAML + "HazardCurve")
+            curve_list_tag = etree.SubElement(hazard_curve_list_tag, NRML + "HazardCurve")
         
         # <gml:pos />
         gml_tag = etree.SubElement(curve_list_tag, GML + "pos")
         gml_tag.text = " ".join(map(str, (point.longitude, 
             point.latitude)))
             
-        # <shaml:Values />
-        curve_values_tag = etree.SubElement(curve_list_tag, SHAML + "Values")
+        # <nrml:Values />
+        curve_values_tag = etree.SubElement(curve_list_tag, NRML + "Values")
         curve_values_tag.text = " ".join(map(str, values["Values"]))
             
-        # <shaml:IML />
-        iml_tag = etree.SubElement(hazard_curve_list_tag, SHAML + "IMLValues")
-        iml_tag.text = " ".join(map(str, values["IMLValues"]))
+        # <nrml:IML />
+        iml_tag = etree.SubElement(hazard_curve_list_tag, NRML + "IMLValues")
+        iml_tag.text = " ".join(map(str, values.get("IML","")))
             
 
     def write(self, point, values):
@@ -69,31 +69,31 @@ class HazardCurveXMLWriter(writer.FileWriter):
         
         point must be of type shapes.Site
         values is a dictionary that matches the one produced by the
-        parser shaml_output.ShamlOutputFile
+        parser nrml.NrmlFile
         
         """
         
         try:
             hazard_curve_list_tag = self.curves_per_model_id[values["endBranchLabel"]]
         except KeyError:
-            # <shaml:Result />
-            result_tag = etree.SubElement(self.result_list_tag, SHAML + "Config")
+            # <nrml:Result />
+            result_tag = etree.SubElement(self.result_list_tag, NRML + "Config")
 
-            # <shaml:HazardProcessing />
-            HazardProcessing_tag = etree.SubElement(result_tag, SHAML + 
+            # <nrml:HazardProcessing />
+            HazardProcessing_tag = etree.SubElement(result_tag, NRML + 
                 "HazardProcessing")
             HazardProcessing_tag.attrib["timeSpanDuration"] = str(values
                 ["timeSpanDuration"])
             HazardProcessing_tag.attrib["IDmodel"] = str(values["IDmodel"])
-            HazardProcessing_tag.attrib["saPeriod"] = str(values["saPeriod"])
-            HazardProcessing_tag.attrib["saDamping"] = str(values["saDamping"])
+            HazardProcessing_tag.attrib["saPeriod"] = str(values.get("saPeriod",""))
+            HazardProcessing_tag.attrib["saDamping"] = str(values.get("saDamping",""))
             
-             # <shaml:IML values />
-            imt_tag = etree.SubElement(HazardProcessing_tag, SHAML + "IMT")
+             # <nrml:IML values />
+            imt_tag = etree.SubElement(HazardProcessing_tag, NRML + "IMT")
             imt_tag.text = str(values["IMT"])
             
-            # <shaml:Values />
-            hazard_curve_list_tag = etree.SubElement(self.result_list_tag, SHAML + "HazardCurveList")
+            # <nrml:Values />
+            hazard_curve_list_tag = etree.SubElement(self.result_list_tag, NRML + "HazardCurveList")
             hazard_curve_list_tag.attrib["endBranchLabel"] = str(values["endBranchLabel"])
 
             

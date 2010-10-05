@@ -1,4 +1,4 @@
-<RiskResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/shaml/0.1">
+<RiskResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
   <Config>Config file details go here.</Config>
   <LossRatioCurveList>
     <LossRatioCurve>
