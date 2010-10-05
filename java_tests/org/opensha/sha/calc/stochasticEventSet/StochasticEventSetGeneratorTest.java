@@ -25,10 +25,30 @@ import org.opensha.sha.util.TectonicRegionType;
 public class StochasticEventSetGeneratorTest {
 
 	// in percent
-	double tolerance = 5;
+	double tolerance = 1e-4;
+
+	@Test(expected = IllegalArgumentException.class)
+	public void nullERF() {
+		GEM1ERF erf = null;
+		Random rn = new Random();
+		StochasticEventSetGenerator.getStochasticEvenSetFromPoissonianERF(erf,
+				rn);
+	}
+	
+	@Test(expected = IllegalArgumentException.class)
+	public void nullRandomNumberGenerator() {
+		GEMFaultSourceData src = getExampleFaultSource();
+		double timeSpan = 50.0;
+		ArrayList<GEMSourceData> faultSourceDataList = new ArrayList<GEMSourceData>();
+		faultSourceDataList.add(src);
+		GEM1ERF erf = getGEM1ERF(faultSourceDataList, timeSpan);
+		Random rn = null;
+		StochasticEventSetGenerator.getStochasticEvenSetFromPoissonianERF(erf,
+				rn);
+	}
 
 	@Test
-	public void compareOccurrenceRatesWithGetStochasticEvenSetFromPoissonianERF() {
+	public void compareOccurrenceRates() {
 
 		/**
 		 * This test compares the occurrence rates calculated from a set of
@@ -56,7 +76,7 @@ public class StochasticEventSetGeneratorTest {
 
 		// Calculate stochastic event sets
 		Random rn = new Random(seed);
-		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = StochasticEventSetGeneratorDamiano
+		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = StochasticEventSetGenerator
 				.getMultipleStochasticEvenSetsFromPoissonianERF(erf,
 						numStochasticEventSets, rn);
 		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
@@ -71,7 +91,7 @@ public class StochasticEventSetGeneratorTest {
 	}
 
 	/**
-	 * This method return an example of fault source (taken from California
+	 * This method returns an example of fault source (taken from California
 	 * NSHMP Model, bFault_stitched_D2.1_GR0.in)
 	 * 
 	 * @return
@@ -117,7 +137,7 @@ public class StochasticEventSetGeneratorTest {
 	}
 
 	/**
-	 * This test provide a GEM1ERF given an array list of GEMSourceData
+	 * This method provides a GEM1ERF given an array list of GEMSourceData
 	 * 
 	 * @param sourceDataList
 	 * @param timeSpan
@@ -183,7 +203,6 @@ public class StochasticEventSetGeneratorTest {
 		double mag = Double.NaN;
 		double stochasticRate = Double.NaN;
 		double stochasticRateExpected = Double.NaN;
-		double percentageDifference = Double.NaN;
 		for (int i = 0; i < mfd.getNum(); i++) {
 			mag = mfd.getX(i);
 			stochasticRate = 0;
@@ -193,13 +212,9 @@ public class StochasticEventSetGeneratorTest {
 			stochasticRate = stochasticRate
 					/ (timeSpan * numStochasticEventSets);
 			stochasticRateExpected = mfd.getY(i);
-			percentageDifference = Math
-					.abs(((stochasticRateExpected - stochasticRate) / stochasticRateExpected) * 100);
 			System.out.println("Expected: " + stochasticRateExpected
-					+ ", calculated: " + stochasticRate
-					+ ", percentage difference: " + percentageDifference);
-			assertEquals(100, (stochasticRate / stochasticRateExpected) * 100,
-					tolerance);
+					+ ", calculated: " + stochasticRate);
+			assertEquals(stochasticRateExpected, stochasticRate, tolerance);
 		}
 	}
 

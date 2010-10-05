@@ -16,14 +16,14 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 /**
  * 
- * This class provide methods for the creation of a stochastic event set (given
- * as an array list of EqkRupture objects) representative of a given Earthquake
- * Rupture Forecast.
+ * This class provide methods for the creation of stochastic event sets (each
+ * given as an array list of EqkRupture objects) representative of a given
+ * Earthquake Rupture Forecast.
  * 
  * @author Damiano Monelli
  * 
  */
-public class StochasticEventSetGeneratorDamiano {
+public class StochasticEventSetGenerator {
 
 	private static boolean D = true;
 
@@ -37,11 +37,13 @@ public class StochasticEventSetGeneratorDamiano {
 	 *            {@link EqkRupForecast} earthquake rupture forecast
 	 * @param rn
 	 *            {@link Random} random number generator
-	 * @return
+	 * @return:
+	 * {@link ArrayList} of {@link EqkRupture} representing the sampled events.
 	 */
 	public static ArrayList<EqkRupture> getStochasticEvenSetFromPoissonianERF(
 			EqkRupForecast erf, Random rn) {
 
+		validateInput(erf,rn);
 		isErfPoissonian(erf);
 
 		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
@@ -88,7 +90,7 @@ public class StochasticEventSetGeneratorDamiano {
 	 *            number of stachastic event sets
 	 * @param rn
 	 *            {@link Random} random number generator
-	 * @return
+	 * @return {@link ArrayList} of {@link ArrayList} of {@link EqkRupture}.
 	 */
 	public static ArrayList<ArrayList<EqkRupture>> getMultipleStochasticEvenSetsFromPoissonianERF(
 			EqkRupForecast erf, int num, Random rn) {
@@ -101,9 +103,27 @@ public class StochasticEventSetGeneratorDamiano {
 		return multiStocEventSet;
 	}
 
-	private static void isErfPoissonian(EqkRupForecast erf) {
+	/**
+	 * Check if the ERF contains only Poissonian sources
+	 * @param erf
+	 */
+	private static Boolean isErfPoissonian(EqkRupForecast erf) {
 		for (ProbEqkSource src : (ArrayList<ProbEqkSource>) erf.getSourceList())
 			if (src.isSourcePoissonian() == false)
 				throw new IllegalArgumentException("Sources must be Poissonian");
+		return true;
+	}
+
+	private static Boolean validateInput(EqkRupForecast erf, Random rn){
+		if (erf == null) {
+			throw new IllegalArgumentException(
+					"Earthquake rupture forecast cannot be null");
+		}
+
+		if (rn == null) {
+			throw new IllegalArgumentException(
+					"Random number generator cannot be null");
+		}
+		return true;
 	}
 }
