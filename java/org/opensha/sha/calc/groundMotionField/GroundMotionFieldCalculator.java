@@ -5,27 +5,29 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.StringTokenizer;
 
 import org.opensha.commons.data.Site;
-import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
-import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
-
-import com.vladium.emma.report.SrcFileItem;
 
 public class GroundMotionFieldCalculator {
 
 	/**
-	 * Computes mean ground motion
+	 * Computes mean ground motion for a list of sites.
 	 * 
 	 * @param attenRel
+	 *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
+	 *            relationship used for ground motion field calculation
 	 * @param rup
+	 *            : {@link EqkRupture} earthquake rupture generating the ground
+	 *            motion field
 	 * @param sites
-	 * @return
+	 *            : array list of {@link Site} where ground motion values have
+	 *            to be computed
+	 * @return : {@link Map} associating sites ({@link Site}) and ground motion
+	 *         values {@link Double}
 	 */
 	public static Map<Site, Double> getMeanGroundMotionField(
 			ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
@@ -42,13 +44,24 @@ public class GroundMotionFieldCalculator {
 	}
 
 	/**
-	 * Compute stochastic ground motion field
+	 * Compute stochastic ground motion field by adding to the mean ground
+	 * motion field Gaussian deviates which takes into account the truncation
+	 * level and the truncation type.
 	 * 
 	 * @param attenRel
+	 *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
+	 *            relationship used for ground motion field calculation
 	 * @param rup
+	 *            : {@link EqkRupture} earthquake rupture generating the ground
+	 *            motion field
 	 * @param sites
+	 *            : array list of {@link Site} where ground motion values have
+	 *            to be computed
 	 * @param rn
-	 * @return
+	 *            : {@link Random} random number generator for Gaussian deviate
+	 *            calculation
+	 * @return: {@link Map} associating sites ({@link Site}) and ground motion
+	 *          values {@link Double}
 	 */
 	public static Map<Site, Double> getStochasticGroundMotionField(
 			ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
@@ -75,6 +88,21 @@ public class GroundMotionFieldCalculator {
 		return stochasticGroundMotionField;
 	}
 
+	/**
+	 * Generate Gaussian deviate (mean zero, standard deviation =
+	 * standardDeviation)
+	 * 
+	 * @param standardDeviation
+	 *            : double standard deviation
+	 * @param truncationLevel
+	 *            : double truncation level (in units of standard deviation)
+	 * @param truncationType
+	 *            : String type of truncation defined by the
+	 *            {@link SigmaTruncTypeParam}
+	 * @param rn
+	 *            : random number generator
+	 * @return : double
+	 */
 	private static double getGaussianDeviate(double standardDeviation,
 			double truncationLevel, String truncationType, Random rn) {
 		double dev = Double.NaN;
