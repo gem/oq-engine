@@ -145,14 +145,14 @@ public class TestGaussianDistCalc {
 		prob = 0.2;
 		double d1 = GaussianDistCalc.getStandRandVar(prob, lowerTruncLevel, upperTruncLevel,
 				tolerance);
-		double d2 = GaussianDistCalc.getStandRandVar(prob, truncType, truncLevel, tolerance );
+		double d2 = GaussianDistCalc.getStdRndVariable(prob, truncType, truncLevel, tolerance );
 		assertEquals(d1,d2,tolerance);
 
 		//if ( exceedProb > 0.5 && exceedProb < 1.0 )
 		prob = 0.7;
 		d1 = GaussianDistCalc.getStandRandVar(prob, lowerTruncLevel, upperTruncLevel,
 				tolerance);
-		d2 = GaussianDistCalc.getStandRandVar(prob, truncType, truncLevel, tolerance );
+		d2 = GaussianDistCalc.getStdRndVariable(prob, truncType, truncLevel, tolerance );
 		assertEquals(d1,d2,tolerance);
 
 
@@ -160,7 +160,7 @@ public class TestGaussianDistCalc {
 		prob = 0.0;
 		d1 = GaussianDistCalc.getStandRandVar(prob, lowerTruncLevel, upperTruncLevel,
 				tolerance);
-		d2 = GaussianDistCalc.getStandRandVar(prob, truncType, truncLevel, tolerance );
+		d2 = GaussianDistCalc.getStdRndVariable(prob, truncType, truncLevel, tolerance );
 		assertEquals(d1,d2,tolerance);
 
 
@@ -168,7 +168,7 @@ public class TestGaussianDistCalc {
 		prob = 1.0;
 		d1 = GaussianDistCalc.getStandRandVar(prob, lowerTruncLevel, upperTruncLevel,
 				tolerance);
-		d2 = GaussianDistCalc.getStandRandVar(prob, truncType, truncLevel, tolerance );
+		d2 = GaussianDistCalc.getStdRndVariable(prob, truncType, truncLevel, tolerance );
 		assertEquals(d1,d2,tolerance);
 
 
