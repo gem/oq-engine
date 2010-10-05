@@ -56,59 +56,82 @@ class NrmlFile(producer.FileProducer):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
 
-            if event == 'start' and element.tag == '{%s}HazardProcessing'  % NRML_NS:
-                self._set_meta(element)
-            elif event == 'start' and element.tag == '{%s}IMT'  % NRML_NS:
-                self._current_meta['IMT'] = str(element.text.strip())
-            elif event == 'start' and element.tag == '{%s}HazardCurveList'  % NRML_NS:
-                self._current_meta['endBranchLabel'] = str(element.get('endBranchLabel'))
-            elif event == 'start' and element.tag == '{%s}IMLValues'  % NRML_NS:
-                self._current_meta['IMT'] = str(element.text.strip())
-
-
-    def _set_curvelist_iml(self, iml_element):
-        try:
-            self._current_curvelist_iml = {
-                'IMLValues': map(float, iml_element.text.strip().split()) }
-        except Exception:
-            error_str = "invalid nrml HazardCurveList IML array"
-            raise ValueError(error_str)
-    
-    def _to_site(self, element):
-        pos_el = element.xpath('shaml:Site/shaml:Site/gml:pos',
-            namespaces={'shaml': SHAML_NS, 'gml': GML_NS})
-        try:
-            coord = map(float, pos_el[0].text.strip().split())
-            return shapes.Site(coord[0], coord[1])
-        except Exception:
-            error_str = "nrml point coordinate error: %s" % \
-                ( pos_el[0].text )
-            raise ValueError(error_str)
-       
-
-    def _to_site_attributes(self, element):
-
-        site_attributes = {}
-
-        value_el = element.xpath('HazardCurve/Values')
-        
-        try:
-            site_attributes['Values'] = map(float, 
-                value_el[0].text.strip().split())
-        except Exception:
-            error_str = "invalid or missing nrml site values array"
-            raise ValueError(error_str)
-
-        for (attribute_chunk, ref_string) in (
-            (self._current_result_config, "HazardResult/Config"),
-            (self._current_curvelist_iml, "HazardCurveList/IMLValues")):
-
-            try:
-                site_attributes.update(attribute_chunk)
-            except Exception:
-                error_str = "missing nrml element: %s" % ref_string
-                raise ValueError(error_str)
+            if event == 'start' and element.tag == 'HazardProcessing':
+                self._hazard_curve_meta(element)
+            elif event == 'end' and element.tag == 'HazardCurveList':
+                yield (self._to_attributes(element))
                 
-        #print "site attributes is %s" % (site_attributes)
 
-        return site_attributes
+    def _hazard_curve_meta(self, hazard_element):
+
+        self._current_hazard_meta = {}
+            
+        for required_attribute in (('IDmodel', str)):
+            
+            id_model_value = hazard_element.get(required_attribute[0])
+            if id_model_value is not None:
+                self._current_hazard_meta[required_attribute[0]]\
+                = required_attribute[1](id_model_value)
+            else:
+                error_str = "element Hazard Curve metadata: missing required " \
+                    "attribute %s" % required_attribute[0]
+                raise ValueError(error_str)
+
+
+    def _to_attributes(self, element):
+
+        attributes = {}
+
+        for child_el in ('gml:pos', 'Values',
+        'IMLValues'):
+           child_node = element.xpath(child_el)
+
+           try:
+               attributes[child_el] = map(float, 
+                   child_node[0].text.strip().split())
+           except Exception:
+               error_str = "invalid or missing %s value" % child_el
+               raise ValueError(error_str) 
+
+        # consider all attributes of HazardProcessing element as mandatory 
+        for required_attribute in ('endBranchLabel', str):
+
+           attr_value = element.get(required_attribute[0])
+           if attr_value is not None:
+               attributes[required_attribute[0]] = \
+                   required_attribute[1](attr_value)
+           else:
+               error_str = "element endBranchLabel: missing required "\
+                   "attribute %s" % required_attribute[0]
+               raise ValueError(error_str) 
+
+        try:
+           attributes.update(self._current_hazard_meta)
+        except Exception:
+           error_str = "root element (HazardProcessing) is missing"
+           raise ValueError(error_str) 
+        
+        return attributes
+
+    def filter(self, attribute_constraint=None):
+       for next in iter(self):
+           if (attribute_constraint is not None and \
+                   attribute_constraint.match(next)):
+               yield next
+
+        
+class HazardConstraint(object):
+    """ This class represents a constraint that can be used to filter
+    VulnerabilityFunction elements from an VulnerabilityModel XML instance 
+    document based on their attributes. The constructor requires a dictionary
+    as argument. Items in this dictionary have to match the corresponding ones
+    in the checked attribute object.
+    """
+    def __init__(self, attribute):
+        self.attribute = attribute
+
+    def match(self, compared_attribute):
+        for k, v in self.attribute.items():
+            if not ( k in compared_attribute and compared_attribute[k] == v ):
+                return False
+        return True
