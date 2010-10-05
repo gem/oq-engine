@@ -25,8 +25,11 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Set;
 
 import org.opensha.commons.data.DataPoint2D;
@@ -816,8 +819,8 @@ if(debug) {
 		return d;
 	}
 
-	public double[] getYVals() {
-		double[] d = new double[points.size()];
+	public Double[] getYVals() {
+	    Double[] d = new Double[points.size()];
 		for (int i = 0; i < points.size(); ++i) {
 			d[i] = getY(i);
 		}

@@ -1,7 +1,9 @@
 package org.opensha.gem.GEM1.calc.gemOutput;
 
 import java.util.ArrayList;
+import java.util.List;
 
+import org.opensha.commons.calc.ProbabilityMassFunctionCalc;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
@@ -11,9 +13,9 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	// Sites on which the hazard curves have been computed
 	private ArrayList<Site> gridNode;
 	// Ground motion levels used to create the hazard curves (X values)
-	private ArrayList<Double> gmLevels;			
+	private List<Double> gmLevels;			
 	// Y values of the Hazard curves 
-	private ArrayList<Double[]> probExList; 
+	private List<Double[]> probList; 
 	// GM values unit of measure
 	private String unitsMeas;
 	// intensity measure type
@@ -28,7 +30,7 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	public GEMHazardCurveRepository(){
 		this.gridNode = new ArrayList<Site>();
 		this.gmLevels = new ArrayList<Double>();
-		this.probExList = new ArrayList<Double[]>();
+		this.probList = new ArrayList<Double[]>();
 		this.unitsMeas = "";
 		this.intensityMeasureType = "";
 	}
@@ -42,7 +44,7 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	public GEMHazardCurveRepository(ArrayList<Double> gmLev, String unit){
 		this.gridNode = new ArrayList<Site>();
 		this.gmLevels = gmLev;
-		this.probExList = new ArrayList<Double[]>();
+		this.probList = new ArrayList<Double[]>();
 		this.unitsMeas = unit;
 		this.intensityMeasureType = "";
 	}
@@ -58,7 +60,7 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	public GEMHazardCurveRepository(ArrayList<Site> nodes, ArrayList<Double> gmLev, ArrayList<Double[]> probEx, String unit){
 		this.gridNode = nodes;
 		this.gmLevels = gmLev;
-		this.probExList = probEx;
+		this.probList = probEx;
 		this.unitsMeas = unit;
 		this.intensityMeasureType = "";
 	}
@@ -79,7 +81,7 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	 * @return
 	 */
 	public Double[] getProbExceedanceList(int idx) {
-		return this.probExList.get(idx);
+		return this.probList.get(idx);
 	}
 	
 	/**
@@ -96,12 +98,12 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 //		probExList.add(idx, probEx);
 //		gridNode.add(new Site(new Location(lat,lon)));
 //		probExList.add(probEx);
-		probExList.set(idx, probEx);
+		probList.set(idx, probEx);
 	}
 	
 	public void addHazardCurveGridNode(int idx, double lat, double lon, Double[] probEx){
 		gridNode.add(idx,new Site(new Location(lat,lon)));
-		probExList.add(idx, probEx);
+		probList.add(idx, probEx);
 //		gridNode.add(new Site(new Location(lat,lon)));
 //		probExList.add(probEx);		
 		//probExList.set(idx, probEx);
@@ -114,14 +116,14 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	 */
 	public void update(int idx, Double[] pex){
 				
-		if (probExList.get(idx).length > 1){
-			Double[] tmp = probExList.get(idx);
+		if (probList.get(idx).length > 1){
+			Double[] tmp = probList.get(idx);
 			for (int i=0; i<pex.length; i++){
 				pex[i] = tmp[i] + pex[i];
 			}
 		}
 
-		probExList.set(idx, pex);
+		probList.set(idx, pex);
 	}
 	
 	/**
@@ -134,9 +136,9 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	public ArrayList<Double> getHazardMap (double probExcedance){
 		ArrayList<Double> hazardMap = new ArrayList<Double>();
 
-		for (int i=0; i<probExList.size(); i++ ){
+		for (int i=0; i<probList.size(); i++ ){
 			ArbitrarilyDiscretizedFunc fun = new ArbitrarilyDiscretizedFunc();
-			Double[] tmp = probExList.get(i);
+			Double[] tmp = probList.get(i);
 
 			for (int j = 0; j<gmLevels.size(); j++){
 				fun.set(gmLevels.get(j),tmp[j]);
@@ -155,6 +157,45 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	}
 	
 	/**
+     * Computes the PMFs and updates the current set of hazard curves.
+     */
+	public void computePMFs()
+	{
+	    List<Double[]> probOccs = new ArrayList<Double[]>();
+        
+	    ArbitrarilyDiscretizedFunc PMF = null;
+	    
+        for (int i = 0; i < getProbList().size(); i++)
+        {
+            PMF = ProbabilityMassFunctionCalc.getPMF(discretizedFunctionAt(i));
+            probOccs.add(PMF.getYVals());
+        }
+        
+        // gm levels are always the same, get the last one
+        setGmLevels(PMF.getXVals());
+        setProbList(probOccs);
+	}
+	
+	/**
+	 * Returns an hazard curve as discretized function (OpenSHA model).
+	 * 
+	 * @param index the index of the curve to lookup
+	 * @return the discretized function representing this hazard curve
+	 */
+	private ArbitrarilyDiscretizedFunc discretizedFunctionAt(int index)
+	{
+	    Double[] probs = probList.get(index);
+	    ArbitrarilyDiscretizedFunc result =  new ArbitrarilyDiscretizedFunc();
+	    
+        for (int i = 0; i < probs.length; i++)
+        {
+            result.set(getGmLevels().get(i), probs[i]);
+        }
+        
+        return result;
+	}
+	
+	/**
 	 * Return the number of nodes on which an hazard curve is available
 	 * @return
 	 */
@@ -162,31 +203,45 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 		return this.gridNode.size();
 	}
 	
-	/**
-	 * 
-	 * @return
-	 */
 	public ArrayList<Site> getGridNode() {
 		return gridNode;
 	}
+	
 	public void setGridNode(ArrayList<Site> gridNode) {
 		this.gridNode = gridNode;
 	}
-	public ArrayList<Double> getGmLevels() {
+	
+	public List<Double> getGmLevels() {
 		return gmLevels;
 	}
+	
+	private void setGmLevels(double[] gmLevels)
+	{
+        this.gmLevels = new ArrayList<Double>();
+        
+        for (double gmLevel : gmLevels)
+        {
+            this.gmLevels.add(gmLevel);
+        }
+    }
+	
 	public void setGmLevels(ArrayList<Double> gmLevels) {
 		this.gmLevels = gmLevels;
 	}
-	public ArrayList<Double[]> getProbExList() {
-		return probExList;
+	
+    public List<Double[]> getProbList() {
+		return probList;
 	}
-	public void setProbExList(ArrayList<Double[]> probEx) {
-		this.probExList = probEx;
+	
+	public void setProbList(List<Double[]> probList)
+	{
+		this.probList = probList;
 	}
+	
 	public String getUnitsMeas() {
 		return unitsMeas;
 	}
+	
 	public void setUnitsMeas(String unitsMeas) {
 		this.unitsMeas = unitsMeas;
 	} 
@@ -194,9 +249,9 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	public double getTimeSpan() {
 		return timeSpan;
 	}
+	
 	public void setTimeSpan(double timeSpan) {
 		this.timeSpan = timeSpan;
 	} 
-	
 	
 }
