@@ -15,7 +15,7 @@ from opengem.risk import classical_psha_based
 
 logger = logs.RISK_LOG
 
-class ProbabilisticLossRatioCalculator(object):
+class ClassicalPSHABasedLossRatioCalculator(object):
     """Computes loss ratio curves based on hazard curves and 
     exposure portfolios"""
 
@@ -44,7 +44,7 @@ class ProbabilisticLossRatioCalculator(object):
         """ Returns the loss ratio curve for a single gridpoint"""
 
         # check in memcache if hazard and exposure for gridpoint are there
-        memcache_key_hazard = identifiers.get_product_key(self.job_id, 
+        memcache_key_hazard = identifiers.generate_product_key(self.job_id, 
             self.block_id, gridpoint, identifiers.HAZARD_CURVE_KEY_TOKEN)
        
         hazard_curve_json = self.memcache_client.get(memcache_key_hazard)
@@ -59,7 +59,7 @@ class ProbabilisticLossRatioCalculator(object):
             logger.debug("no hazard curve found")
             return None
 
-        memcache_key_exposure = identifiers.get_product_key(self.job_id, 
+        memcache_key_exposure = identifiers.generate_product_key(self.job_id, 
             self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
         
         asset = memcached.get_value_json_decoded(self.memcache_client,
@@ -88,7 +88,7 @@ class ProbabilisticLossRatioCalculator(object):
         if loss_ratio_curve is None:
             return None
 
-        memcache_key_exposure = identifiers.get_product_key(self.job_id,
+        memcache_key_exposure = identifiers.generate_product_key(self.job_id,
             self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)

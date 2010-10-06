@@ -126,7 +126,7 @@ def set_value_json_encoded(memcache_client, key, value):
 
 def get_sites_from_memcache(memcache_client, job_id, block_id):
 
-    memcache_key_sites = identifiers.get_product_key(
+    memcache_key_sites = identifiers.generate_product_key(
         job_id, block_id, None, identifiers.SITES_KEY_TOKEN)
 
     return get_value_json_decoded(memcache_client, memcache_key_sites)

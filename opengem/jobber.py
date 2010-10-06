@@ -32,7 +32,10 @@ logger = logs.LOG
 LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 
 class Jobber(object):
-
+    """The Jobber class is responsible to evaluate the configuration settings
+    and to execute the computations in parallel tasks (using the celery
+    framework and the message queue RabbitMQ).
+    """
     def __init__(self, vulnerability_model_file, hazard_curve_file,
                  region_file, exposure_file, output_file, partition):
 
@@ -45,13 +48,15 @@ class Jobber(object):
 
         self.memcache_client = None
 
-        self.job_id_generator = identifiers.get_id('job')
-        self.block_id_generator = identifiers.get_id('block')
+        self.job_id_generator = identifiers.generate_id('job')
+        self.block_id_generator = identifiers.generate_id('block')
 
         self._init()
 
     def run(self):
-
+        """Core method of Jobber. It splits the requested computation
+        in blocks and executes these as parallel tasks.
+        """
         job_id = self.job_id_generator.next()
         logger.debug("running jobber, job_id = %s" % job_id)
 
@@ -92,10 +97,11 @@ class Jobber(object):
         # produce output for one block
         loss_curves = []
 
-        for (gridpoint, (site_lon, site_lat)) in memcached.get_sites_from_memcache(
-            self.memcache_client, job_id, block_id):
+        for (gridpoint, (site_lon, site_lat)) in \
+            memcached.get_sites_from_memcache(
+                self.memcache_client, job_id, block_id):
 
-            key = identifiers.get_product_key(job_id, 
+            key = identifiers.generate_product_key(job_id, 
                 block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
             loss_curve = self.memcache_client.get(key)
             loss_curves.append((shapes.Site(site_lon, site_lat), 
@@ -121,6 +127,8 @@ class Jobber(object):
 
         # set region
         region_constraint = shapes.RegionConstraint.from_file(self.region_file)
+
+        # TODO(fab): the cell size has to be determined from the configuration 
         region_constraint.cell_size = 1.0
 
         # load hazard curve file and write to memcache_client
@@ -145,8 +153,11 @@ class Jobber(object):
             hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
                                                 hazard_curve_data['Values']))
 
-            memcache_key_hazard = identifiers.get_product_key(
+            memcache_key_hazard = identifiers.generate_product_key(
                 job_id, block_id, gridpoint, "hazard_curve")
+
+            logger.debug("Loading hazard curve %s at %s, %s" % (
+                        hazard_curve, site.latitude,  site.longitude))
 
             success = self.memcache_client.set(memcache_key_hazard, 
                 hazard_curve.to_json())
@@ -154,12 +165,9 @@ class Jobber(object):
             if success is not True:
                 raise ValueError(
                     "jobber: cannot write hazard curve to memcache")
-            
-            logger.debug("Loading hazard curve %s at %s, %s" % (
-                        hazard_curve, site.latitude,  site.longitude))
 
         # write site hashes to memcache (JSON)
-        memcache_key_sites = identifiers.get_product_key(
+        memcache_key_sites = identifiers.generate_product_key(
                 job_id, block_id, None, "sites")
         success = memcached.set_value_json_encoded(self.memcache_client, 
                 memcache_key_sites, sites_hash_list)
@@ -172,16 +180,17 @@ class Jobber(object):
         for site, asset in exposure_parser.filter(region_constraint):
             gridpoint = region_constraint.grid.point_at(site)
 
-            memcache_key_asset = identifiers.get_product_key(
+            memcache_key_asset = identifiers.generate_product_key(
                 job_id, block_id, gridpoint, "exposure")
+
+            logger.debug("Loading asset %s at %s, %s" % (asset,
+                site.longitude,  site.latitude))
+
             success = memcached.set_value_json_encoded(self.memcache_client, 
                 memcache_key_asset, asset)
             if not success:
                 raise ValueError(
                     "jobber: cannot write asset to memcache")
-
-            logger.debug("Loading asset %s at %s, %s" % (asset,
-                site.longitude,  site.latitude))
 
         # load vulnerability and write to memcache
         vulnerability.load_vulnerability_model(job_id,
