@@ -11,7 +11,7 @@ from lxml import etree
 
 from opengem import producer
 from opengem import shapes
-from opengem.xml import NRML_NS, GML_NS, NRML, GML, NSMAP
+from opengem.xml import NRML_NS, GML_NS, NRML
 
 class NrmlFile(producer.FileProducer):
     """ This class parses a NRML hazard curve file. The contents of a NRML
@@ -67,9 +67,9 @@ class NrmlFile(producer.FileProducer):
         # lon/lat are in XML attributes 'Longitude' and 'Latitude'
         # consider them as mandatory
         pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
-        coord = map(float, pos_el[0].text.strip().split())
+        coord = [float(x) for x in pos_el[0].text.strip().split()]
         return shapes.Site(coord[0], coord[1])
-        
+    
     def _hazard_curve_meta(self, element):
         self._current_hazard_meta = {}
         for (required_attribute, attrib_type) in self.PROCESSING_ATTRIBUTES:
@@ -94,14 +94,14 @@ class NrmlFile(producer.FileProducer):
             ('nrml:Values', 'Values', float_strip),
             ('preceding-sibling::nrml:IMLValues','IMLValues', float_strip),
             ('preceding-sibling::nrml:IMT', 'IMT', string_strip)):
-           child_node = element.xpath(child_el, 
+            child_node = element.xpath(child_el, 
                 namespaces={"gml":GML_NS,"nrml":NRML_NS})
 
-           try:
-               attributes[child_key] = etl(child_node)
-           except Exception:
-               error_str = "invalid or missing %s value" % child_key
-               raise ValueError(error_str) 
+            try:
+                attributes[child_key] = etl(child_node)
+            except Exception:
+                error_str = "invalid or missing %s value" % child_key
+                raise ValueError(error_str) 
 
         # consider all attributes of HazardProcessing element as mandatory 
         for (required_attribute, attrib_type) in [('endBranchLabel', str)]:
@@ -109,18 +109,18 @@ class NrmlFile(producer.FileProducer):
                 namespaces={"gml":GML_NS,"nrml":NRML_NS})
             attr_value = haz_list_element.get(required_attribute)
             if attr_value is not None:
-               attributes[required_attribute] = \
-                   attrib_type(attr_value)
+                attributes[required_attribute] = \
+                    attrib_type(attr_value)
             else:
-               error_str = "element endBranchLabel: missing required "\
+                error_str = "element endBranchLabel: missing required "\
                    "attribute %s" % required_attribute
-               raise ValueError(error_str) 
+                raise ValueError(error_str) 
 
         try:
-           attributes.update(self._current_hazard_meta)
+            attributes.update(self._current_hazard_meta)
         except Exception:
-           error_str = "root element (HazardProcessing) is missing"
-           raise ValueError(error_str) 
+            error_str = "root element (HazardProcessing) is missing"
+            raise ValueError(error_str) 
         
         return attributes
     # 
