@@ -26,8 +26,9 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * <b>Title:</b> BW_1997_AttenRel<p>
  *
  * <b>Description:</b> This implements the Attenuation Relationship published
- * by Bakun and Wentworth (1997, "Intensity Prediction Equations For subduction
- * Zones")
+ * by Bakun, W. H. and C. M. Wentworth (1997). Estimating earthquake location
+ * and magnitude from seismic intensity data. Bull. 
+ * Seism. Soc. Am. 87, 1502-1521
  * The equation returns the mean MMI ("Intensity mercalli_modified_intensity")
  * predicted by the equation.
  * The Formula is:
@@ -42,14 +43,12 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  *
  * Supported Intensity-Measure Parameters:<p>
  * <UL>
- * <LI>pgaParam - Peak Ground Acceleration
- * <LI>pgaParam - Peak Ground Velocity
- * <LI>saParam - Response Spectral Acceleration
+ * <LI>mmiParam - Modified Mercalli Intensity
  * </UL><p>
  * Other Independent Parameters:<p>
  * <UL>
  * <LI>magParam - moment Magnitude
- * <LI>distanceEpiParam - closest distance to epicenter
+ * <LI>distanceEpiParam - epicentral distance
  * <LI>stdDevTypeParam - The type of standard deviation
  * </UL></p>
  * 
@@ -77,9 +76,14 @@ NamedObjectAPI, ParameterChangeListener
 	// By now the calculator does not observe parameter changes.
 	// So this is a UI listener that is only introduced for consistency.
 	private ParameterChangeWarningListener warningListener = null;
-   // Rupture magnitude
+	// epicentral distance - never read just defined to comply with the 
+	// "analogous" implemented classes ("parameterChange()"). -> refactor!
+	double rEpi;
+	// Rupture magnitude - never read just defined to comply with the 
+	// "analogous" implemented classes ("parameterChange()"). -> refactor!
     private double mag;
-    // Standard Dev type
+    // Standard Dev type - never read just defined to comply with the 
+	// "analogous" implemented classes ("parameterChange()"). -> refactor!
     private String stdDevType;
     // See above: unused UI stuff
     private boolean parameterChange;
@@ -135,7 +139,6 @@ NamedObjectAPI, ParameterChangeListener
 
 	@Override
 	protected void initPropagationEffectParams() {
-		distanceEpicentralParameter = new DistanceEpicentralParameter();
 		distanceEpicentralParameter = new DistanceEpicentralParameter(0.0);
 	    distanceEpicentralParameter.addParameterChangeWarningListener(warningListener);
 	    DoubleConstraint warn = new DoubleConstraint(DISTANCE_EPI_WARN_MIN,
@@ -252,7 +255,7 @@ NamedObjectAPI, ParameterChangeListener
         Object val = event.getNewValue();
         parameterChange = true;
         if(pName.equals(DistanceRupParameter.NAME)) {
-            double rEpi = ((Double) val).doubleValue();
+            rEpi = ((Double) val).doubleValue();
         } else if (pName.equals(MagParam.NAME)) {
             mag = ((Double) val).doubleValue();
         } else if (pName.equals(StdDevTypeParam.NAME)) {
