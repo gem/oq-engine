@@ -1,24 +1,22 @@
 package org.opensha.sha.imr.attenRelImpl;
 
+import static org.junit.Assert.assertEquals;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
+import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.imr.param.PropagationEffectParams.WarningDoublePropagationEffectParameter;
 
 import junit.framework.TestCase;
 
 public class BW_1997_AttenRelTest extends TestCase {
 	private BW_1997_AttenRel bw_1997_AttenRel;
-	// the OpenSha way to pass in data: hard code a file
-	private static final String RESULT_SET_PATH = "org/opensha/sha/imr/attenRelImpl/test/AttenRelResultSetFiles/NGA_ModelsTestFiles/BA08/";
-	
-	/**
-	 * constructor
-	 */
-	public BW_1997_AttenRelTest() {
-		super(RESULT_SET_PATH);
-	} // constructor
 	
 	@Before
 	public void setUp() {
@@ -72,12 +70,22 @@ public class BW_1997_AttenRelTest extends TestCase {
 				int magnitude = magnitudes[i];
 				int epicentralDistance = epicentralDistances[j];
 				double expected = results[i][j];
-				double tolerance = 0.01;
-				assertEquals("mag = " + magnitude 
-						+ " distance = " + epicentralDistance 
-						+ " expected result = "	+ expected,
-						expected, bw_1997_AttenRel
-						.getMean(magnitude, epicentralDistance), tolerance);
+				// tolerance in percent
+				double tolerance = 1.0;
+				double calculated = bw_1997_AttenRel.getMean(magnitude,
+						epicentralDistance);
+				/*
+				 * This would be a test with an absolute tolerance -> not good. 
+				 */
+				// assertEquals("mag = " + magnitude 
+				// 		+ " distance = " + epicentralDistance 
+				// 		+ " expected result = "	+ expected,
+				// 		expected, bw_1997_AttenRel
+				// 		.getMean(magnitude, epicentralDistance), 0.1);
+				/*
+				 * This tests with a tolerance in percent.
+				 */
+				assertEquals(100, (calculated / expected) * 100, tolerance); 
 			} // for
 		} // for
 	} // testGetMean
@@ -87,4 +95,62 @@ public class BW_1997_AttenRelTest extends TestCase {
 				0.0,
 				bw_1997_AttenRel.getStdDev());
 	} // testStdDev()
+	
+	/**
+	 * This tests the OpenSHA parameter mechanism of</br>
+	 * (</br>
+	 * org.opensha.sha.imr.param.
+	 * PropagationEffectParams.WarningDoublePropagationEffectParameter</br>
+	 * )</br>
+	 * respectively
+	 * (</br>
+	 * org.opensha.commons.param.Parameter</br>
+	 * )</br>
+	 * 
+	 * In the OpenSHA program flow the parameters are set to the 
+	 * AttenuationRelation subclasses when a ParameterChangeEvent is fired.
+	 * E.g. here, this happens with the call
+	 * bw_1997_AttenRel.setEqkRupture(eqkRupture). 
+	 */
+    public void testParameterClasses() {
+        double mag = 5.0;
+        double aveRake = 0.0;
+        Location hypo = new Location(0.0, 0.0, 5.0);
+        Location location = new Location(0.0, 0.1, 0.0);
+        EqkRupture eqkRupture = PredictionEquationTestHelper.getPointEqkRupture(mag, hypo, aveRake);
+        double epicentralDistance = LocationUtils.horzDistance(hypo, location);
+        /*
+         * This is what we want to test:
+         * The following call triggers a call chain that finally calls
+         * WarningDoublePropagationEffectParameter.setValue(), which then
+         * fires a ParameterChangeEvent which sets the parameters correctly in
+         * the attenuation relation equation (e.g. class BW_1997_AttenRel).
+         */
+        bw_1997_AttenRel.setSite(new Site(location));
+        /*
+         * dito
+         */
+        bw_1997_AttenRel.setEqkRupture(eqkRupture);
+        /*
+         * These are the equation's results if if parameters are 
+         * set by the parameter change event:
+         */
+        double meanParameterListener = bw_1997_AttenRel.getMean();
+        double stdDevParameterListener = bw_1997_AttenRel.getStdDev();
+        /*
+         * These are the results of the directly called calculation method(s): 
+         */
+        double meanDirect= bw_1997_AttenRel.getMean(mag, epicentralDistance);
+        double stdDevDirect = bw_1997_AttenRel.getStdDev();
+        /*
+         * If the results match, we take that as a proof that parameters
+         * have been been properly set by the ParameterChangeEvent mechanism.
+         * 
+         * They should be exactly equal, do not specify a tolerance to the
+         * assertion methods (as done in other tests).
+         */
+        assertEquals(meanParameterListener, meanDirect);
+        assertEquals(stdDevParameterListener, stdDevDirect);
+    }
+
 } // class TestCase
