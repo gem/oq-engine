@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Eventually this will manage shared system state via memcached,
@@ -11,9 +12,6 @@ __all__ = ["memoize", "STATE"]
 
 STATE = {}
 
-def get_vuln_function(vuln_function_code):
-    """Simple wrapper around lookup into global state datastore"""
-    return STATE['vulnerability_curves'][vuln_function_code]
 # 
 # def memoize(function, limit=None):
 #     return function
