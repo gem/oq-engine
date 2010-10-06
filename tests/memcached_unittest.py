@@ -49,11 +49,10 @@ class MemcachedTestCase(unittest.TestCase):
         self._delete_test_file()
     
     def _delete_test_file(self):
-        pass
-        # try:
-        #     os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
-        # except OSError:
-        #     pass
+        try:
+            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
+        except OSError:
+             pass
     
     def test_can_wrap_the_java_client(self):
         self.java_client.set("KEY", "VALUE")

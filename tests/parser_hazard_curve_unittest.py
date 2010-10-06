@@ -116,7 +116,7 @@ class NrmlFileTestCase(unittest.TestCase):
         nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
-        expected_result_counter = 3
+        expected_result_counter = 4
         counter = None
 
         # just loop through iterator in order to count items
@@ -134,7 +134,10 @@ class NrmlFileTestCase(unittest.TestCase):
         self.assertEqual(counter, expected_result_counter-1, 
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, expected_result_counter))
-                    
+    
+    def test_reads_from_different_branch_labels(self):
+        pass
+        
     def test_filter_attribute_constraint(self):
         """ This test uses the attribute constraint filter to select items
         from the input file. We assume here that the parser yields the

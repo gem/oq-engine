@@ -19,4 +19,12 @@
 	  <Values>9.8822e-01 9.8499e-01 9.6243e-01 9.3086e-01 8.7155e-01 7.7398e-01 6.3413e-01 4.6796e-01 3.3025e-01 3.0795e-01 1.7852e-01 9.4528e-02 4.5402e-02 1.9435e-02 7.0961e-03 2.1325e-03 4.9498e-04 8.1768e-05 7.3425e-06</Values>
 	</HazardCurve>
   </HazardCurveList>
+  <HazardCurveList endBranchLabel="AnotherLabel">
+    <IMLValues>5.0000e-03 7.0000e-03 1.3700e-02</IMLValues>
+	<IMT>PGD</IMT>
+	<HazardCurve>
+	  <gml:pos>-122.5000 37.5000</gml:pos>
+	  <Values>9.8728e-01 9.8266e-01 9.4957e-01</Values>
+	</HazardCurve>
+  </HazardCurveList>
 </HazardResult>
