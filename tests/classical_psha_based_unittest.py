@@ -111,7 +111,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.memcache_client = memcached.get_client(binary=False)
 
         # get random ID as job_id
-        self.job_id = identifiers.get_random_id()
+        self.job_id = identifiers.generate_random_id()
 
         self.vuln_curve_code_test = "TEST"
         vuln_curve_test = shapes.FastCurve(

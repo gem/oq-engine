@@ -23,21 +23,21 @@ LOSS_RATIO_CURVE_KEY_TOKEN = 'loss_ratio_curve'
 LOSS_CURVE_KEY_TOKEN = 'loss_curve'
 CONDITIONAL_LOSS_KEY_TOKEN = 'loss_conditional'
 
-def get_sequence():
+def generate_sequence():
     """generator for sequence IDs"""
     counter = 0
     while(True):
         counter += 1
         yield counter
 
-def get_id(prefix):
+def generate_id(prefix):
     """generator for task IDs (prefix+sequence number)"""
     counter = 0
     while(True):
         counter += 1
         yield INTERNAL_ID_SEPARATOR.join((str(prefix), str(counter)))
 
-def get_product_key(job_id, block_id, site, product):
+def generate_product_key(job_id, block_id, site, product):
     """construct memcached key from several part IDs"""
     if site is not None:
         return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
@@ -46,7 +46,7 @@ def get_product_key(job_id, block_id, site, product):
         return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
                                             str(product)))
 
-def get_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
+def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
     """This function returns a random ID by using the uuid4 method. In order
     to have reasonably short IDs, the ID returned from uuid4() is truncated.
     This is not optimized for being collision-free. See documentation of uuid:

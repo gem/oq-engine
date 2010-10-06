@@ -32,6 +32,10 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
      2) hazard curves
      3) exposure portfolio (=assets)
      4) vulnerability
+
+    TODO(fab): make conditional_loss_poe (set of probabilities of exceedance
+    for which the loss computation is done) a list of floats, and read it from
+    the job configuration.
     """
 
     logger = compute_risk.get_logger(**kwargs)
@@ -44,7 +48,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
 
     # load risk engine, make it use memcache
     # uses hazard, exposure from memcache
-    risk_engine = engines.ProbabilisticLossRatioCalculator(
+    risk_engine = engines.ClassicalPSHABasedLossRatioCalculator(
             job_id, block_id, memcache_client)
 
     # loop over sites for this block
@@ -64,36 +68,33 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
         if loss_ratio_curve is not None:
 
             # write to memcache: loss_ratio
-            key = identifiers.get_product_key(job_id,
-                block_id, gridpoint,identifiers.LOSS_RATIO_CURVE_KEY_TOKEN)
+            key = identifiers.generate_product_key(job_id,
+                block_id, gridpoint, identifiers.LOSS_RATIO_CURVE_KEY_TOKEN)
 
+            logger.debug("RESULT: loss ratio curve is %s, write to key %s" % (
+                loss_ratio_curve, key))
             memcache_client.set(key, loss_ratio_curve)
-            logger.debug("wrote loss ratio curve to key %s" % (key))
-
-            logger.debug("RESULT: loss ratio curve is %s" % loss_ratio_curve)
-
+            
             # compute loss curve
             loss_curve = risk_engine.compute_loss_curve(gridpoint, 
                                                         loss_ratio_curve)
-            key = identifiers.get_product_key(job_id, 
+            key = identifiers.generate_product_key(job_id, 
                 block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
 
+            logger.debug("RESULT: loss curve is %s, write to key %s" % (
+                loss_curve, key))
             memcache_client.set(key, loss_curve)
-            logger.debug("wrote loss curve to key %s" % (key))
-
-            logger.debug("RESULT: loss curve is %s" % loss_curve)
-
+            
             # compute conditional loss
             loss_conditional = engines.compute_loss(loss_curve, 
                                                     conditional_loss_poe)
-            key = identifiers.get_product_key(job_id, 
+            key = identifiers.generate_product_key(job_id, 
                 block_id, gridpoint, identifiers.CONDITIONAL_LOSS_KEY_TOKEN)
 
+            logger.debug("RESULT: conditional loss is %s, write to key %s" % (
+                loss_conditional, key))
             memcache_client.set(key, loss_conditional)
-            logger.debug("wrote conditional loss to key %s" % (key))
 
-            logger.debug("RESULT: conditional loss is %s" % loss_conditional)
-    
     # assembling final product needs to be done by jobber, collecting the
     # results from all tasks
     return True

@@ -28,7 +28,7 @@ LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
 VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
+data_dir = test.DATA_DIR
 
 class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
