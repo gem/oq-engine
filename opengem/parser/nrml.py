@@ -37,16 +37,14 @@ class NrmlFile(producer.FileProducer):
     2) 'endBranchLabel' can be replaced by 'aggregationType'
     3) TODO(fab): require that value of 'aggregationType' element is from a
        list of allowed values (see NRML XML Schema)
-    4) 'saPeriod', 'saDamping', 'calcSettingsID', 'maxProb' and 'minProb' are
-       optional
+    4) 'saPeriod', 'saDamping', 'calcSettingsID', are optional
     5) NRML output can also contain hazard maps, parsing of those is not yet
        implemented
 
     """
 
-    REQUIRED_ATTRIBUTES = (('IDmodel', str), ('timeSpanDuration', float))
-            
-    OPTIONAL_ATTRIBUTES = (('saPeriod', float), ('saDamping', float))
+    PROCESSING_ATTRIBUTES = (('IDmodel', str), ('timeSpanDuration', float),
+                             ('saPeriod', float), ('saDamping', float))
 
     def __init__(self, path):
         super(NrmlFile, self).__init__(path)
@@ -55,7 +53,11 @@ class NrmlFile(producer.FileProducer):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
             if event == 'start' and element.tag == NRML + 'HazardProcessing':
-                self._hazard_curve_meta(element)            
+                self._hazard_curve_meta(element)
+            # The HazardMap is not yet implemented
+            #elif event == 'start' and element.tag == NRML + 'HazardMap':
+             #error_str = "parsing of HazardMap elements is not yet implemented"
+             #raise NotImplementedError(error_str)    
             elif event == 'end' and element.tag == NRML + 'HazardCurve':
                 yield (self._to_site(element), 
                             self._to_attributes(element))
@@ -70,7 +72,7 @@ class NrmlFile(producer.FileProducer):
         
     def _hazard_curve_meta(self, element):
         self._current_hazard_meta = {}
-        for (required_attribute, attrib_type) in [('IDmodel', str)]:
+        for (required_attribute, attrib_type) in self.PROCESSING_ATTRIBUTES:
             id_model_value = element.get(required_attribute)
             if id_model_value is not None:
                 self._current_hazard_meta[required_attribute]\
@@ -82,18 +84,20 @@ class NrmlFile(producer.FileProducer):
 
     def _to_attributes(self, element):
         
-        print "Gonna get me some attributes of this %s element" % element
         attributes = {}
         
+        float_strip = lambda x: map(float, x[0].text.strip().split())
+        string_strip = lambda x: x[0].text.strip()
         # TODO(JMC): This is hardly efficient, but it's simple for the moment...
-        for (child_el, child_key) in (('nrml:Values','Values'),
-            ('//following-sibling::nrml:IMLValues','IMLValues')):
+        for (child_el, child_key, etl) in (
+            ('nrml:Values', 'Values', float_strip),
+            ('//preceding-sibling::nrml:IMLValues','IMLValues', float_strip),
+            ('//preceding-sibling::nrml:IMT', 'IMT', string_strip)):
            child_node = element.xpath(child_el, 
                 namespaces={"gml":GML_NS,"nrml":NRML_NS})
 
            try:
-               attributes[child_key] = map(float, 
-                   child_node[0].text.strip().split())
+               attributes[child_key] = etl(child_node)
            except Exception:
                error_str = "invalid or missing %s value" % child_key
                raise ValueError(error_str) 

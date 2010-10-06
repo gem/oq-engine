@@ -48,7 +48,8 @@ class HazardCurveXMLWriter(writer.FileWriter):
         try:
             list_tag = self.curves_per_iml[str(values["IML"])]
         except KeyError:
-            curve_list_tag = etree.SubElement(hazard_curve_list_tag, NRML + "HazardCurve")
+            curve_list_tag = etree.SubElement(hazard_curve_list_tag, 
+                NRML + "HazardCurve")
         
         # <gml:pos />
         gml_tag = etree.SubElement(curve_list_tag, GML + "pos")
@@ -59,11 +60,6 @@ class HazardCurveXMLWriter(writer.FileWriter):
         curve_values_tag = etree.SubElement(curve_list_tag, NRML + "Values")
         curve_values_tag.text = " ".join(map(str, values["Values"]))
             
-        # <nrml:IML />
-        iml_tag = etree.SubElement(hazard_curve_list_tag, NRML + "IMLValues")
-        iml_tag.text = " ".join(map(str, values.get("IML","")))
-            
-
     def write(self, point, values):
         """Writes an hazard curve.
         
@@ -74,7 +70,8 @@ class HazardCurveXMLWriter(writer.FileWriter):
         """
         
         try:
-            hazard_curve_list_tag = self.curves_per_model_id[values["endBranchLabel"]]
+            hazard_curve_list_tag = \
+                self.curves_per_model_id[values["endBranchLabel"]]
         except KeyError:
             # <nrml:Result />
             result_tag = etree.SubElement(self.result_list_tag, NRML + "Config")
@@ -85,18 +82,29 @@ class HazardCurveXMLWriter(writer.FileWriter):
             HazardProcessing_tag.attrib["timeSpanDuration"] = str(values
                 ["timeSpanDuration"])
             HazardProcessing_tag.attrib["IDmodel"] = str(values["IDmodel"])
-            HazardProcessing_tag.attrib["saPeriod"] = str(values.get("saPeriod",""))
-            HazardProcessing_tag.attrib["saDamping"] = str(values.get("saDamping",""))
-            
-             # <nrml:IML values />
-            imt_tag = etree.SubElement(HazardProcessing_tag, NRML + "IMT")
-            imt_tag.text = str(values["IMT"])
+            HazardProcessing_tag.attrib["saPeriod"] = \
+                str(values.get("saPeriod",""))
+            HazardProcessing_tag.attrib["saDamping"] = \
+                str(values.get("saDamping",""))
             
             # <nrml:Values />
-            hazard_curve_list_tag = etree.SubElement(self.result_list_tag, NRML + "HazardCurveList")
-            hazard_curve_list_tag.attrib["endBranchLabel"] = str(values["endBranchLabel"])
-
+            hazard_curve_list_tag = etree.SubElement(self.result_list_tag, 
+                NRML + "HazardCurveList")
+            hazard_curve_list_tag.attrib["endBranchLabel"] = \
+                str(values["endBranchLabel"])
             
-            self.curves_per_model_id[values["endBranchLabel"]] = hazard_curve_list_tag
+            self.curves_per_model_id[values["endBranchLabel"]] = \
+                hazard_curve_list_tag
+            
+             # <nrml:IMT values />
+            imt_tag = etree.Element(NRML + "IMT", nsmap=NSMAP)
+            hazard_curve_list_tag.insert(0, imt_tag)
+            imt_tag.text = str(values["IMT"])
+            
+            # <nrml:IML />
+            iml_tag = etree.Element(NRML + "IMLValues", nsmap=NSMAP)
+            hazard_curve_list_tag.insert(0, iml_tag)
+            iml_tag.text = " ".join(map(str, values.get("IMLValues","")))
+        
         
         self._add_curve_to_proper_set(point, values, hazard_curve_list_tag)
