@@ -39,24 +39,6 @@ class HazardCurveXMLWriter(writer.FileWriter):
                 encoding="UTF-8"))
                 
         super(HazardCurveXMLWriter, self).close()
-
-    def _add_curve_to_proper_set(self, point, values, hazard_curve_list_tag):
-        """Adds the curve to the proper set depending on the IML values."""
-        
-        try:
-            list_tag = self.curves_per_iml[str(values["IML"])]
-        except KeyError:
-            curve_list_tag = etree.SubElement(hazard_curve_list_tag, 
-                NRML + "HazardCurve")
-        
-        # <gml:pos />
-        gml_tag = etree.SubElement(curve_list_tag, GML + "pos")
-        gml_tag.text = " ".join(map(str, (point.longitude, 
-            point.latitude)))
-            
-        # <nrml:Values />
-        curve_values_tag = etree.SubElement(curve_list_tag, NRML + "Values")
-        curve_values_tag.text = " ".join(map(str, values["Values"]))
             
     def write(self, point, values):
         """Writes an hazard curve.
@@ -106,7 +88,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
             # <nrml:IMLValues />
             iml_tag = etree.Element(NRML + "IMLValues", nsmap=NSMAP)
             hazard_curve_list_tag.insert(0, iml_tag)
-            iml_tag.text = " ".join(map(str, values.get("IMLValues","")))
+            iml_tag.text = " ".join([str(x) for x in values.get("IMLValues")])
             
             self.curves_per_branch_label[values["endBranchLabel"]] = \
                 hazard_curve_list_tag
@@ -117,9 +99,9 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
         # <gml:pos />
         gml_tag = etree.SubElement(curve_tag, GML + "pos")
-        gml_tag.text = " ".join(map(str, (point.longitude, 
-                point.latitude)))
+        gml_tag.text = " ".join([str(x) for x in (point.longitude, 
+                point.latitude)])
 
         # <nrml:Values />
         curve_values_tag = etree.SubElement(curve_tag, NRML + "Values")
-        curve_values_tag.text = " ".join(map(str, values["Values"]))
+        curve_values_tag.text = " ".join([str(x) for x in values["Values"]])

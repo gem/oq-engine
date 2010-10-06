@@ -7,28 +7,22 @@ Test the output of Loss Curve, Loss Ratio Curve and Hazard Curves as XML.
 import os
 import unittest
 
-import lxml
 from lxml import etree
-
 from opengem import test
 from opengem import logs
-from opengem import test
-from opengem import xml
 
 log = logs.LOG
 
 XML_TEST_DIRECTORY= "schema"
 SCHEMA_FILE = 'nrml.xsd'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
 schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')
 
-    
 class SchemaValidationTestCase(unittest.TestCase):
     """Confirm that all XML examples match schema."""
     
     def setUp(self):
-        self.example_dir = os.path.join(data_dir, XML_TEST_DIRECTORY)
+        self.example_dir = os.path.join(test.DATA_DIR, XML_TEST_DIRECTORY)
         self.schema_path = os.path.join(schema_dir, SCHEMA_FILE)
         
     def test_xml_is_valid(self):
