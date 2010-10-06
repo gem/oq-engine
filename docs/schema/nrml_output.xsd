@@ -43,16 +43,6 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-		<xs:attribute name="IMT">
-			<xs:simpleType>
-				<xs:restriction base="xs:string">
-					<xs:enumeration value="PGA"/>
-					<xs:enumeration value="PGD"/>
-					<xs:enumeration value="PGV"/>
-					<xs:enumeration value="SA"/>
-				</xs:restriction>
-			</xs:simpleType>
-		</xs:attribute>
 		<xs:attribute name="period" type="xs:double"/>
 		<xs:attribute name="damping" type="xs:double"/>
 		<xs:attribute name="truncationType">
@@ -118,15 +108,26 @@
 				<xs:element ref="nrml:LossRatioCurve"/>
 				<xs:element ref="nrml:HazardCurve"/>
 				<xs:element ref="nrml:IMLValues"/>
+				<xs:element ref="nrml:IMT"/>
 			</xs:choice>
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	<xs:element name="Config"/>
-	<xs:element name="IMLValues" type="gml:doubleList"/>
 	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
 	<xs:element name="LossRatioCurveList" type="nrml:CurveListType"/>
 	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>
+	<xs:element name="IMLValues" type="gml:doubleList"/>
+	<xs:element name="IMT">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="PGA"/>
+				<xs:enumeration value="PGD"/>
+				<xs:enumeration value="PGV"/>
+				<xs:enumeration value="SA"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
 	<xs:element name="RiskResult">
 		<xs:complexType>
 			<xs:sequence minOccurs="1">

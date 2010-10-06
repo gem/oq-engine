@@ -68,13 +68,10 @@ class Reader(object):
                 data = {}
                 
                 data["IDmodel"] = "FIXED" # fixed, not yet implemented
-                data["vs30"] = 0.0 # fixed, not yet implemented
                 data["timeSpanDuration"] = raw_curves["timeSpan"]
                 data["IMT"] = raw_curves["intensityMeasureType"]
                 data["Values"] = curve
-                data["IML"] = raw_curves["gmLevels"]
-                data["maxProb"] = curve[-1]
-                data["minProb"] = curve[0]
+                data["IMLValues"] = raw_curves["gmLevels"]
                 data["endBranchLabel"] = \
                         decoded_model["endBranchLabels"][set_counter]
                 
