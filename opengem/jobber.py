@@ -33,7 +33,6 @@ LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 
 class Jobber(object):
 
-    # TODO(fab): pass in loaded parsers instead of files
     def __init__(self, vulnerability_model_file, hazard_curve_file,
                  region_file, exposure_file, output_file, partition):
 
@@ -67,6 +66,11 @@ class Jobber(object):
         logger.debug("Jobber run ended")
 
     def _partition(self, job_id):
+
+        # _partition() has to:
+        # - get the full set of sites
+        # - select a subset of these sites
+        # - write the subset of sites to memcache, prepare a computation block
         pass
 
     def _execute(self, job_id, block_id):
@@ -74,7 +78,12 @@ class Jobber(object):
         # execute celery task for risk, for given block with sites
         logger.debug("starting task block, block_id = %s" % block_id)
 
+        # task compute_risk has return value 'True' (writes its results to
+        # memcache).
         result = tasks.compute_risk.apply_async(args=[job_id, block_id])
+
+        # TODO(fab): Wait until result has been computed. This has to be
+        # changed if we run more tasks in parallel.
         result.get()
 
     def _write_output_for_block(self, job_id, block_id):
@@ -127,7 +136,9 @@ class Jobber(object):
             gridpoint = region_constraint.grid.point_at(site)
 
             # store site hashes in memcache
-            # TODO(fab): separate this from hazard curves
+            # TODO(fab): separate this from hazard curves. Regions of interest
+            # should not be taken from hazard curve input, should be 
+            # idependent from the inputs (hazard, exposure)
             sites_hash_list.append((str(gridpoint), 
                                    (site.longitude, site.latitude)))
 

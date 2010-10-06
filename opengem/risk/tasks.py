@@ -48,19 +48,10 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
             job_id, block_id, memcache_client)
 
     # loop over sites for this block
-    # assumes that hazard, assets, and risk grid are the same
-    # (no nearest-neighbour search)
-    #memcache_key_sites = identifiers.get_product_key(
-        #job_id, block_id, None, identifiers.SITES_KEY_TOKEN)
-
-    #memcache_result = memcache_client.get(memcache_key_sites)
-    #decoder = json.JSONDecoder()
-
-    ## assume that memcache has a JSON-serialized list of sites 
-    #sites_list = decoder.decode(memcache_result)
-
+    # assumes that hazard, assets, and output risk grid are the same
+    # (no nearest-neighbour search to find hazard)
     sites_list = memcached.get_sites_from_memcache(memcache_client,
-                                                job_id, block_id)
+                                                   job_id, block_id)
 
     logger.debug("sites list for this task w/ job_id %s, block_id %s:\n%s" % (
         job_id, block_id, sites_list))

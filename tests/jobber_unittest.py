@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+"""These are the unit tests for the jobber module. At the moment, they contain
+only tests for the basic underlying technologies (celery, memcached).
+A test that asserts that a given computation result can reproduced is still
+missing.
+"""
+
 import json
 import os
 import random
