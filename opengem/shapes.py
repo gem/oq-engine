@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Collection of base classes for processing 
@@ -5,8 +6,10 @@ spatially-related data."""
 
 import math
 
-import ordereddict
 import geohash
+import json
+import ordereddict
+
 from shapely import geometry
 from shapely import wkt
 
@@ -314,7 +317,7 @@ class FastCurve(object):
         """Returns the codomain values of this curve."""
         return self.values.values()
 
-# TODO (ac): Change name according to the other function
+    # TODO (ac): Change name according to the other function
     def get_for(self, x_value):
         """Returns the y value (codomain) corresponding
         to the given x value (domain)."""
@@ -332,5 +335,15 @@ class FastCurve(object):
         # TODO (bw): Test this corner case
         error_str = "%s is not contained in this function" % (y_value, )
         raise ValueError(error_str)
+
+    def to_json(self):
+        return json.JSONEncoder().encode(self.values)
+
+    def from_json(self, json_str):
+        odict = ordereddict.OrderedDict()
+        for key, value in json.JSONDecoder().decode(json_str).items():
+            odict["%s" % key] = value
+        self.values = odict
+        del odict
 
 EMPTY_CURVE = FastCurve(())
