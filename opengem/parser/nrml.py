@@ -89,10 +89,11 @@ class NrmlFile(producer.FileProducer):
         float_strip = lambda x: map(float, x[0].text.strip().split())
         string_strip = lambda x: x[0].text.strip()
         # TODO(JMC): This is hardly efficient, but it's simple for the moment...
+        
         for (child_el, child_key, etl) in (
             ('nrml:Values', 'Values', float_strip),
-            ('//preceding-sibling::nrml:IMLValues','IMLValues', float_strip),
-            ('//preceding-sibling::nrml:IMT', 'IMT', string_strip)):
+            ('preceding-sibling::nrml:IMLValues','IMLValues', float_strip),
+            ('preceding-sibling::nrml:IMT', 'IMT', string_strip)):
            child_node = element.xpath(child_el, 
                 namespaces={"gml":GML_NS,"nrml":NRML_NS})
 
