@@ -3,10 +3,16 @@ package org.opensha.gem.GEM1.calc.gemOutput;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
 import org.gem.engine.hazard.memcached.Cache;
+import org.opensha.commons.calc.ProbabilityMassFunctionCalc;
+import org.opensha.commons.data.DataPoint2D;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
 import org.opensha.gem.GEM1.commons.UnoptimizedDeepCopy;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
@@ -70,7 +76,7 @@ public class GEMHazardCurveRepositoryList
                 (ArrayList<Site>) udp.copy(hcRepList.get(0).getGridNode()),
                 (ArrayList<Double>) udp.copy(hcRepList.get(0).getGmLevels()),
                 (ArrayList<Double[]>) udp
-                        .copy(hcRepList.get(0).getProbExList()), hcRepList.get(
+                        .copy(hcRepList.get(0).getProbList()), hcRepList.get(
                         0).getUnitsMeas());
 
         // initialize ProbExList to 0 for all nodes
@@ -121,7 +127,7 @@ public class GEMHazardCurveRepositoryList
                 // loop over prob values
                 for (int k = 0; k < hcTmp.getProbExceedanceList(j).length; k++)
                 {
-                    meanhc.getProbExList().get(j)[k] = meanhc
+                    meanhc.getProbList().get(j)[k] = meanhc
                             .getProbExceedanceList(j)[k]
                             + hcTmp.getProbExceedanceList(j)[k] * wei;
                 }
@@ -142,7 +148,7 @@ public class GEMHazardCurveRepositoryList
                 (ArrayList<Site>) udp.copy(hcRepList.get(0).getGridNode()),
                 (ArrayList<Double>) udp.copy(hcRepList.get(0).getGmLevels()),
                 (ArrayList<Double[]>) udp
-                        .copy(hcRepList.get(0).getProbExList()), hcRepList.get(
+                        .copy(hcRepList.get(0).getProbList()), hcRepList.get(
                         0).getUnitsMeas());
 
         // loop over sites
@@ -432,6 +438,17 @@ public class GEMHazardCurveRepositoryList
         cache.set(key, new Gson().toJson(this));
         
         return key;
+    }
+
+    /**
+     * Computes the PMFs and updates the current model.
+     */
+    public void computePMFs()
+    {
+        for (GEMHazardCurveRepository curves : hcRepList)
+        {
+            curves.computePMFs();
+        }
     }
 
 }
