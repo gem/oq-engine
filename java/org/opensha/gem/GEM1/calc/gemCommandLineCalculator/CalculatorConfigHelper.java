@@ -1,6 +1,7 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
@@ -11,9 +12,38 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 
 public class CalculatorConfigHelper {
+	private enum IntensityMeasure  {
+		PGA("pga"),
+		MMI("mmi"),
+		PGV("pgv"),
+		PGD("pgd"),
+		SA("sa");
+		private static HashMap<String, IntensityMeasure> intensityMeasures = null;
+		private String type;
+		IntensityMeasure(String name) {
+			type = name;
+		}
+		public String type() {
+			return type;
+		}
+		public static IntensityMeasure get(String key) {
+			if(intensityMeasures == null) {
+				intensityMeasures = new HashMap<String, IntensityMeasure>();
+				for(IntensityMeasure im : values()) {
+					intensityMeasures.put(im.name(), im);
+				}
+			}
+			return intensityMeasures.get(key);
+		} // get
+	} // enum IntensityMeasure
+	
 	// for internal use only
-	private final static String INTENSITY_MEASURE_CODE_PGA = "pga";
-	private final static String INTENSITY_MEASURE_CODE_MMI = "mmi";
+//	private final static String INTENSITY_MEASURE_CODE_PGA = "pga";
+//	private final static String INTENSITY_MEASURE_CODE_MMI = "mmi";
+//	private final static String PGV = "pgv";
+//	private final static String PGD = "pgd";
+//	private final static String SA = "sa";
+	
 	// There may be additional/customizable properties
 	// -> does an enum type make sense? ...no.
 	// ...and yes: For the programmer to know at least how to access the defaults.
@@ -118,46 +148,37 @@ public class CalculatorConfigHelper {
 	 */
 	public static ArbitrarilyDiscretizedFunc makeImlList(Configuration config) {
 		String intensityMeasureType = config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name());
+		IntensityMeasure imt = IntensityMeasure.get(intensityMeasureType);
 		String[] imlArray = config.getStringArray(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
 		Double[] imls = StringArrToDoubleArr(imlArray);
-		return makeArbitrarilyDiscretizedFunc(imls, intensityMeasureType);
+		return makeArbitrarilyDiscretizedFunc(imls, imt);
 	} // makeImlList()
 
-	/**
-	 * More direct access. Allows a more explicit call for the PGA case.
-	 * @param config A Configuration object, usually loaded from a config
-	 * file.
-	 * @return An arbitrarily discretized function.
-	 */
-	public static ArbitrarilyDiscretizedFunc makeImlListForPGA(Configuration config) {
-		String[] imlArray = config.getStringArray(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
-		Double[] imls = StringArrToDoubleArr(imlArray);
-		return makeArbitrarilyDiscretizedFunc(imls, INTENSITY_MEASURE_CODE_PGA);
-	} // makeImlListForPGA()
-
-	/**
-	 * More direct access. Allows a more explicit call for the MMI case.
-	 * @param config A Configuration object, usually loaded from a config
-	 * file.
-	 * @return An arbitrarily discretized function.
-	 */
-	public static ArbitrarilyDiscretizedFunc makeImlListForMMI(Configuration config) {
-		String[] imlArray = config.getStringArray(ConfigItems.INTENSITY_MEASURE_LEVELS.name());
-		Double[] imls = StringArrToDoubleArr(imlArray);
-		return makeArbitrarilyDiscretizedFunc(imls, INTENSITY_MEASURE_CODE_MMI);
-	} // makeImlListForMMI()
-
-	private static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(Double[] intensityMeasureLevels, String intensityMeasureCode) { 
+	private static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc
+	(Double[] intensityMeasureLevels, IntensityMeasure imt)
+	{ 
 		ArbitrarilyDiscretizedFunc adf = new ArbitrarilyDiscretizedFunc();
 		for(double iml : intensityMeasureLevels) {
-			if(intensityMeasureCode.equalsIgnoreCase(INTENSITY_MEASURE_CODE_PGA)) {
-			adf.set(Math.log(iml), 1.0);
-			} else if(intensityMeasureCode.equalsIgnoreCase(INTENSITY_MEASURE_CODE_MMI)) {
+			switch(imt) {
+			case PGA:
+				adf.set(Math.log(iml), 1.0);
+				break;
+			case MMI:
 				adf.set(iml, 1.0);
-			} else {
+				break;
+			case PGV:
+				adf.set(Math.log(iml), 1.0);
+				break;
+			case PGD:
+				adf.set(Math.log(iml), 1.0);
+				break;
+			case SA:
+				adf.set(Math.log(iml), 1.0);
+				break;
+			default:
 				throw new IllegalArgumentException("Unknown intensity measure type : \"" 
-				                                   + intensityMeasureCode + "\"");
-			}
+				                                   + imt.toString() + "\"");
+			} // switch
 		} // for
 		return adf;
 	} // makeArbitrarilyDiscretizedFunc()
@@ -167,6 +188,7 @@ public class CalculatorConfigHelper {
 		int index = 0;
 		for(String s : strings) {
 			doubles[index] = Double.parseDouble(s);
+			++index;
 		}
 		return doubles;
 	} // StringArrToDoubleArr()
