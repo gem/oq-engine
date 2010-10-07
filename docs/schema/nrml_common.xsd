@@ -11,7 +11,7 @@
 	
 	<xs:complexType name="CurveType">
 		<xs:all>
-			<xs:element name="Values" type="gml:doubleList"/>
+			<xs:element ref="nrml:Values"/>
 			<xs:element minOccurs="0" ref="gml:pos"/>
 		</xs:all>
 	</xs:complexType>
@@ -33,6 +33,7 @@
 	</xs:complexType>
 	<xs:element name="Config"/>
 
+	<xs:element name="Values" type="gml:doubleList"/>
 	<xs:element name="IMLValues" type="gml:doubleList"/>
 	<xs:element name="IMT">
 		<xs:simpleType>
