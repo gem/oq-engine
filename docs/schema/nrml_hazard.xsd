@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://opengem.org/xmlns/nrml/0.1"
+	xmlns:nrml="http://opengem.org/xmlns/nrml/0.1"
+	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
+	<!-- import -->
+	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+		
+	<xs:include schemaLocation="nrml_common.xsd"/>
+
+	<xs:element name="HazardCurve" type="nrml:CurveType"/>
+	<xs:element name="HazardCurvePGA" type="nrml:CurveType"/>
+	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>
+	<xs:element name="HazardResult">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="nrml:Config"/>
+				<xs:choice>
+					<xs:sequence maxOccurs="unbounded">
+						<xs:element ref="nrml:HazardCurveList"/>
+					</xs:sequence>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:attribute name="endBranchLabel" type="xs:string"/>
+</xs:schema>

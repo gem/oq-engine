@@ -1,27 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
     targetNamespace="http://opengem.org/xmlns/nrml/0.1"
-    xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
-    xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
-    jaxb:extensionBindingPrefixes="xjc" elementFormDefault="qualified" jaxb:version="2.0">
+    xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
 
     <!-- include common types-->
     <xs:annotation>
         <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
         </xs:documentation>
-        <xs:appinfo>
-            <jaxb:globalBindings enableJavaNamingConventions="true" underscoreBinding="asCharInWord">
-            </jaxb:globalBindings>
-            <jaxb:schemaBindings>
-                <jaxb:package name="org.opengem.nrml"/>
-            </jaxb:schemaBindings>
-        </xs:appinfo>
     </xs:annotation>
     <!-- -->
 
     <!-- import -->
     <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> <!-- http://schemas.opengis.net/gml/3.1.1/base -->
+	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
     <xs:include schemaLocation="nrml_common.xsd"/>
     <!-- -->
 

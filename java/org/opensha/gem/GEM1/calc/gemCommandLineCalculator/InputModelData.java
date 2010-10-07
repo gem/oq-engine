@@ -4,6 +4,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -49,125 +50,136 @@ public class InputModelData {
 	private static Boolean D = false;
 	
 	// contructor
-	public InputModelData(String inputModelFile,double deltaMFD) throws IOException{
+	public InputModelData(String inputModelFile,double deltaMFD) {
 		
-		sourceList = new ArrayList<GEMSourceData>();
-		
-		// common variables
-        // source id
-        String sourceID = null;
-        // source name
-        String sourceName = null;    
-        // tectonic region type
-        TectonicRegionType trt = null;
-		
-        String sRecord = null;
-        StringTokenizer st = null;
-        
-		// open file
-		File file = new File(inputModelFile);
-        FileInputStream oFIS = new FileInputStream(file.getPath());
-        BufferedInputStream oBIS = new BufferedInputStream(oFIS);
-        BufferedReader oReader = new BufferedReader(new InputStreamReader(oBIS));
-        
-        // start reading the file
-        sRecord = oReader.readLine();
-        while(sRecord!=null){
-        	
-        	// skip comments or empty lines
-            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
-            	sRecord = oReader.readLine();
-            	continue;
-            }
-            // if keyword newsource is found
-            if(sRecord.trim().equalsIgnoreCase(NEW_SOURCE)){
-            	
-            	// read source id
-            	sRecord = oReader.readLine();
-                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
-                	sRecord = oReader.readLine();
-                	continue;
-                }
-                sourceID = sRecord.trim();
-                if(D) System.out.println("Source id: "+sourceID);
-                
-                // read source name
-                sRecord = oReader.readLine();
-                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
-                	sRecord = oReader.readLine();
-                	continue;
-                }
-                sourceName = sRecord.trim();
-                if(D) System.out.println("Source name: "+sourceName);
-                
-                // read tectonic region type
-                sRecord = oReader.readLine();
-                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
-                	sRecord = oReader.readLine();
-                	continue;
-                }
-                trt = TectonicRegionType.getTypeForName(sRecord.trim());
-                if(D) System.out.println("Tectonic region type: "+trt.toString());
-                
-                // continue reading
-                sRecord = oReader.readLine();
-                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
-                	sRecord = oReader.readLine();
-                	continue;
-                }
-                
-                // area source definition
-                if(sRecord.trim().equalsIgnoreCase(AREA_SOURCE)){
-                	
-                	if(D) System.out.println("Source typology: "+sRecord.trim());
-                	
-                	readAreaSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
-                    
-                } // end if area
-                
-                // point source definition
-                if(sRecord.trim().equalsIgnoreCase(POINT_SOURCE)){
-                	
-                	if(D) System.out.println("Source typology: "+sRecord);
-                	
-                	readPointSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
-                    
-                } // end if point
-                
-                // fault source definition
-                if(sRecord.trim().equalsIgnoreCase(FAULT_SOURCE)){
-                	
-                	if(D) System.out.println("Source typology: "+sRecord);
-                	
-                	readFaultSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
-                    
-                } // end if fault
-                
-                // subduction fault source definition
-                if(sRecord.trim().equalsIgnoreCase(SUBDUCTION_SOURCE)){
-                	
-                	if(D) System.out.println("Source typology: "+sRecord);
-                	
-                	readSubductionFaultSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
-                    
-                } // end if subduction
-                
-            } // end if new source
-            
-            // continue reading until next newsource is found or end of file
-        	// skip comments or empty lines
-            while((sRecord = oReader.readLine())!=null){
-            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
-            	else if(sRecord.trim().equalsIgnoreCase(NEW_SOURCE)) break;
-            }
-            
-        } // end if sRecord!=null
-        
-        oFIS.close();
-        oBIS.close();
-        oReader.close();
-		
-	}
+		try {
+	        sourceList = new ArrayList<GEMSourceData>();
+	        
+	        // common variables
+	        // source id
+	        String sourceID = null;
+	        // source name
+	        String sourceName = null;    
+	        // tectonic region type
+	        TectonicRegionType trt = null;
+	        
+	        String sRecord = null;
+	        StringTokenizer st = null;
+	        
+	        // open file
+	        File file = new File(inputModelFile);
+	        FileInputStream oFIS = new FileInputStream(file.getPath());
+	        BufferedInputStream oBIS = new BufferedInputStream(oFIS);
+	        BufferedReader oReader = new BufferedReader(new InputStreamReader(oBIS));
+	        
+	        // start reading the file
+	        sRecord = oReader.readLine();
+	        while(sRecord!=null){
+	        	
+	        	// skip comments or empty lines
+	            while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
+	            	sRecord = oReader.readLine();
+	            	continue;
+	            }
+	            // if keyword newsource is found
+	            if(sRecord.trim().equalsIgnoreCase(NEW_SOURCE)){
+	            	
+	            	// read source id
+	            	sRecord = oReader.readLine();
+	                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
+	                	sRecord = oReader.readLine();
+	                	continue;
+	                }
+	                sourceID = sRecord.trim();
+	                if(D) System.out.println("Source id: "+sourceID);
+	                
+	                // read source name
+	                sRecord = oReader.readLine();
+	                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
+	                	sRecord = oReader.readLine();
+	                	continue;
+	                }
+	                sourceName = sRecord.trim();
+	                if(D) System.out.println("Source name: "+sourceName);
+	                
+	                // read tectonic region type
+	                sRecord = oReader.readLine();
+	                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
+	                	sRecord = oReader.readLine();
+	                	continue;
+	                }
+	                trt = TectonicRegionType.getTypeForName(sRecord.trim());
+	                if(D) System.out.println("Tectonic region type: "+trt.toString());
+	                
+	                // continue reading
+	                sRecord = oReader.readLine();
+	                while(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()){
+	                	sRecord = oReader.readLine();
+	                	continue;
+	                }
+	                
+	                // area source definition
+	                if(sRecord.trim().equalsIgnoreCase(AREA_SOURCE)){
+	                	
+	                	if(D) System.out.println("Source typology: "+sRecord.trim());
+	                	
+	                	readAreaSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
+	                    
+	                } // end if area
+	                
+	                // point source definition
+	                if(sRecord.trim().equalsIgnoreCase(POINT_SOURCE)){
+	                	
+	                	if(D) System.out.println("Source typology: "+sRecord);
+	                	
+	                	readPointSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
+	                    
+	                } // end if point
+	                
+	                // fault source definition
+	                if(sRecord.trim().equalsIgnoreCase(FAULT_SOURCE)){
+	                	
+	                	if(D) System.out.println("Source typology: "+sRecord);
+	                	
+	                	readFaultSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
+	                    
+	                } // end if fault
+	                
+	                // subduction fault source definition
+	                if(sRecord.trim().equalsIgnoreCase(SUBDUCTION_SOURCE)){
+	                	
+	                	if(D) System.out.println("Source typology: "+sRecord);
+	                	
+	                	readSubductionFaultSourceData(oReader, deltaMFD, sourceID, sourceName, trt);
+	                    
+	                } // end if subduction
+	                
+	            } // end if new source
+	            
+	            // continue reading until next newsource is found or end of file
+	        	// skip comments or empty lines
+	            while((sRecord = oReader.readLine())!=null){
+	            	if(sRecord.trim().startsWith(comment) || sRecord.replaceAll(" ","").isEmpty()) continue;
+	            	else if(sRecord.trim().equalsIgnoreCase(NEW_SOURCE)) break;
+	            }
+	            
+	        } // end if sRecord!=null
+	        
+	        oFIS.close();
+	        oBIS.close();
+	        oReader.close();
+        } catch(FileNotFoundException e) {
+	        // TODO log4j
+        	IOException ioe = new IOException("Source model file not found. Program stops.", e);
+			ioe.printStackTrace();
+			System.exit(-1);
+        } catch(IOException e) {
+	        // TODO log4j
+        	IOException ioe = new IOException("Source model file not found. Program stops.", e);
+			ioe.printStackTrace();
+			System.exit(-1);
+        } // catch
+	} // constructor
 	
 	private void readAreaSourceData(BufferedReader oReader, double deltaMFD, String sourceID, String sourceName, TectonicRegionType trt) throws IOException{
     	

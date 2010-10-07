@@ -7,7 +7,7 @@ import unittest
 from opengem import shapes
 from opengem import test
 from opengem import producer
-from opengem.parser import nrml
+from opengem.parser import hazard as hazard_parser
 
 FILES_KNOWN_TO_FAIL = ['Nrml-fail-missing_required_attribute.xml',
                        'Nrml-fail-attribute_type_mismatch.xml',
@@ -24,7 +24,7 @@ class NrmlFileTestCase(unittest.TestCase):
 
     def test_nrml_files_known_to_fail(self):
         for testfile in FILES_KNOWN_TO_FAIL:
-            nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, 
+            nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
                                                               testfile))
 
             self.assertRaises(ValueError, map, None, nrml_element)
@@ -32,7 +32,7 @@ class NrmlFileTestCase(unittest.TestCase):
     @test.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
-        nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, 
+        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
             FILE_FLAVOUR_NOT_IMPLEMENTED))
 
         self.assertRaises(NotImplementedError, map, None, nrml_element)
@@ -41,7 +41,7 @@ class NrmlFileTestCase(unittest.TestCase):
         # set region in which no site is found in input file
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
-        nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, TEST_FILE))
+        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, TEST_FILE))
 
         counter = None
 
@@ -62,7 +62,7 @@ class NrmlFileTestCase(unittest.TestCase):
         # (lon=16.35/lat=48.25)
         region_constraint = shapes.RegionConstraint.from_simple((-122.45, 38.0),
                                                                 (-122.35, 37.0))
-        nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, 
+        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         expected_result = [(shapes.Point(-122.40, 37.50),
@@ -113,7 +113,7 @@ class NrmlFileTestCase(unittest.TestCase):
         # specified rectangle contains all sites in example file 
         region_constraint = shapes.RegionConstraint.from_simple((-125.0, 40.0),
                                                                 (-120.0, 20.0))
-        nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, 
+        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
                                                           TEST_FILE))
 
         expected_result_counter = 4
@@ -288,7 +288,7 @@ class NrmlFileTestCase(unittest.TestCase):
             attribute_constraint = producer.AttributeConstraint(
                     curr_attribute_dict)
             
-            nrml_element = nrml.NrmlFile(os.path.join(test.DATA_DIR, 
+            nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
                                                               TEST_FILE))
 
             counter = None
