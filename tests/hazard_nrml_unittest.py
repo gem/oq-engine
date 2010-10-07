@@ -7,8 +7,8 @@ from lxml import etree
 
 from opengem import test
 from opengem import shapes
-from opengem.output import hazard_nrml
-from opengem.parser import nrml
+from opengem.output import hazard as hazard_output
+from opengem.parser import hazard as hazard_parser
 
 TEST_FILE = "hazard-curves.xml"
 XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
@@ -19,7 +19,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     
     def setUp(self):
         self._delete_test_file()
-        self.writer = hazard_nrml.HazardCurveXMLWriter(
+        self.writer = hazard_output.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
     @test.skipit
     def tearDown(self):
@@ -180,7 +180,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         constraint = shapes.RegionConstraint.from_simple(
                 upper_left_cor, lower_right_cor)
 
-        reader = nrml.NrmlFile(
+        reader = hazard_parser.NrmlFile(
                 os.path.join(test.DATA_DIR, TEST_FILE))
         
         return reader.filter(constraint)

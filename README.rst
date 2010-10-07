@@ -49,7 +49,7 @@ Running Tests
 To run the python tests use:
 
 ::
-
+    celeryd &
     python runtests.py
 
 To run the java tests use:
