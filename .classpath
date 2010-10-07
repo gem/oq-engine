@@ -20,4 +20,7 @@
 	<classpathentry kind="lib" path="lib/memcached-2.5.jar"/>
 	<classpathentry kind="lib" path="lib/gson-1.5.jar"/>
 	<classpathentry kind="output" path="build"/>
+	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar"/>
+	<classpathentry kind="lib" path="lib/commons-configuration-1.6.jar"/>
+	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
 </classpath>
