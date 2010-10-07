@@ -21,7 +21,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         self._delete_test_file()
         self.writer = hazard_nrml.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
-
+    @test.skipit
     def tearDown(self):
         self._delete_test_file()
 
