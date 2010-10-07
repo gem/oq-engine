@@ -22,10 +22,8 @@ logger = logs.LOG
 
 TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 
-WAIT_TIME_STEP_FOR_TASK_SECS = 1
+WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
-
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 class JobberTestCase(unittest.TestCase):
     def setUp(self):

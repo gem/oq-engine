@@ -92,8 +92,8 @@ class NrmlFile(producer.FileProducer):
         
         for (child_el, child_key, etl) in (
             ('nrml:Values', 'Values', float_strip),
-            ('preceding-sibling::nrml:IMLValues','IMLValues', float_strip),
-            ('preceding-sibling::nrml:IMT', 'IMT', string_strip)):
+            ('../nrml:Common/nrml:IMLValues','IMLValues', float_strip),
+            ('../nrml:Common/nrml:IMT', 'IMT', string_strip)):
             child_node = element.xpath(child_el, 
                 namespaces={"gml":GML_NS,"nrml":NRML_NS})
 

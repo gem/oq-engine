@@ -9,13 +9,13 @@
 	<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="nrml_common.xsd"/>
 
-	<xs:element name="DiscreteVulnerabilitySet" type="nrml:CurveListType"/>
-	<xs:element name="ContinuousVulnerabilitySet" type="nrml:CurveListType"/>
-	<xs:element name="LossCurve" type="nrml:CurveType"/>
+	<xs:element name="DiscreteVulnerabilitySet" type="nrml:ModelType" substitutionGroup="nrml:Model"/>
+	<xs:element name="ContinuousVulnerabilitySet" type="nrml:ModelType" substitutionGroup="nrml:Model"/>
+	<xs:element name="LossCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="LossCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="LossRatioCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="LossRatioCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
 	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
-	<xs:element name="LossCurvePE" type="nrml:CurveType"/>
-	<xs:element name="LossRatioCurvePE" type="nrml:CurveType"/>
-	<xs:element name="LossRatioCurve" type="nrml:CurveType"/>
 	<xs:element name="LossRatioCurveList" type="nrml:CurveListType"/>
 	<xs:element name="VulnerabilityModel">
 		<xs:complexType>
@@ -37,10 +37,6 @@
 				<xs:choice>
 					<xs:element ref="nrml:LossCurveList"/>
 					<xs:element ref="nrml:LossRatioCurveList"/>
-				</xs:choice>
-				<xs:choice>
-					<xs:element ref="nrml:LossCurvePE"/>
-					<xs:element ref="nrml:LossRatioCurvePE"/>
 				</xs:choice>
 			</xs:sequence>
 		</xs:complexType>

@@ -79,15 +79,16 @@ class HazardCurveXMLWriter(writer.FileWriter):
                 NRML + "HazardCurveList")
             hazard_curve_list_tag.attrib["endBranchLabel"] = \
                 str(values["endBranchLabel"])
-            
+                
+             # <nrml:IMT />
+            common_tag = etree.Element(NRML + "Common", nsmap=NSMAP)
+            hazard_curve_list_tag.insert(0, common_tag)    
             # <nrml:IMT />
-            imt_tag = etree.Element(NRML + "IMT", nsmap=NSMAP)
-            hazard_curve_list_tag.insert(0, imt_tag)
+            imt_tag = etree.SubElement(common_tag, NRML + "IMT")
             imt_tag.text = str(values["IMT"])
             
             # <nrml:IMLValues />
-            iml_tag = etree.Element(NRML + "IMLValues", nsmap=NSMAP)
-            hazard_curve_list_tag.insert(0, iml_tag)
+            iml_tag = etree.SubElement(common_tag, NRML + "IMLValues")
             iml_tag.text = " ".join([str(x) for x in values.get("IMLValues")])
             
             self.curves_per_branch_label[values["endBranchLabel"]] = \

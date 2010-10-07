@@ -28,8 +28,6 @@ LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
 VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
 
-data_dir = test.DATA_DIR
-
 class RiskEngineTestCase(unittest.TestCase):
     """Basic unit tests of the Risk Engine"""
 
@@ -215,14 +213,3 @@ class RiskOutputTestCase(unittest.TestCase):
     
     def setUp(self):
         pass
-    
-    # def test_xml_is_valid(self):
-    #     xml_writer = risk_output.RiskXMLWriter(
-    #         os.path.join(data_dir, LOSS_XML_OUTPUT_FILE))
-    #     first_site = shapes.Site(10.0, 10.0)
-    #     
-    #     loss_ratio_curves = {}
-    #     loss_ratio_curves[first_gp] = shapes.FastCurve([(0.0, 0.1), (1.0, 0.9)])
-    #     
-    #     xml_writer.write(first_site, loss_ratio_curves[first_gp])
-    #     xml_writer.close()
