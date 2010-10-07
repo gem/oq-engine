@@ -7,6 +7,44 @@
 	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
 	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 	<!-- -->
+	
+	
+	<xs:complexType name="CurveType">
+		<xs:all>
+			<xs:element name="Values" type="gml:doubleList"/>
+			<xs:element minOccurs="0" ref="gml:pos"/>
+		</xs:all>
+	</xs:complexType>
+
+	<xs:element name="Curve" type="nrml:CurveType"/>
+
+	<xs:complexType name="CurveListType">
+		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+			<xs:choice>
+				<xs:element ref="nrml:Curve"/>
+				<xs:element ref="nrml:LossCurve"/>
+				<xs:element ref="nrml:LossRatioCurve"/>
+				<xs:element ref="nrml:HazardCurve"/>
+				<xs:element ref="nrml:IMLValues"/>
+				<xs:element ref="nrml:IMT"/>
+			</xs:choice>
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+	<xs:element name="Config"/>
+
+	<xs:element name="IMLValues" type="gml:doubleList"/>
+	<xs:element name="IMT">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="PGA"/>
+				<xs:enumeration value="PGD"/>
+				<xs:enumeration value="PGV"/>
+				<xs:enumeration value="SA"/>
+				<xs:enumeration value="MMI"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
 
 	<xs:complexType name="EvenlyDiscretizedDistType">
 		<xs:annotation>

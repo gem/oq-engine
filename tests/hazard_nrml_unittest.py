@@ -156,7 +156,8 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
         curves = self._read_curves_inside_region((-123, 38.0), (-120, 35.0))
         self._count_and_check_readed_data(data, curves, 2)
-
+        
+    @test.skipit
     def _delete_test_file(self):
         try:
             os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
