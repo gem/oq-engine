@@ -1127,7 +1127,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
 	 * @return
 	 */
 	
-	private double totMoRate(double minMag, int numMag, double deltaMag,double aVal, double bVal){
+	public static double totMoRate(double minMag, int numMag, double deltaMag,double aVal, double bVal){
 		double moRate = 0;
 		double mag;
 		for(int imag = 0; imag <numMag; imag++) {
