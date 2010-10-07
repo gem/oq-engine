@@ -13,17 +13,16 @@ from opengem import logs
 
 log = logs.LOG
 
-XML_TEST_DIRECTORY= "schema"
+XML_TEST_DIRECTORY= "examples"
 SCHEMA_FILE = 'nrml.xsd'
 
-schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')
 
 class SchemaValidationTestCase(unittest.TestCase):
     """Confirm that all XML examples match schema."""
     
     def setUp(self):
-        self.example_dir = os.path.join(test.DATA_DIR, XML_TEST_DIRECTORY)
-        self.schema_path = os.path.join(schema_dir, SCHEMA_FILE)
+        self.example_dir = os.path.join(test.SCHEMA_DIR, XML_TEST_DIRECTORY)
+        self.schema_path = os.path.join(test.SCHEMA_DIR, SCHEMA_FILE)
         
     def test_xml_is_valid(self):
         # Test that the doc matches the schema
@@ -33,6 +32,8 @@ class SchemaValidationTestCase(unittest.TestCase):
             if xml_example[:1] == ".":
                 continue
             example_path = os.path.join(self.example_dir, xml_example)
+            if os.path.isdir(example_path):
+                continue
             xml_doc = etree.parse(example_path)
             loaded_xml = xml_doc.getroot()
             try:
