@@ -38,6 +38,8 @@ public class GroundMotionFieldCalculatorTest implements
 	private EqkRupture rupture;
 
 	double tolerance = 1e-2;
+	long seed = 123456789;
+	int numRealizations = 200000;
 
 	@Before
 	public void setUp() {
@@ -126,94 +128,48 @@ public class GroundMotionFieldCalculatorTest implements
 	}
 
 	@Test
-	public void compareHazardCurvesForSingleEarthquakeRuptureWithNoTruncation() {
+	public void compareHazCurvesForSingleEqkRuptureWithNoTruncation() 
+	{
 
 		/**
 		 * This test compares hazard curves calculated with the classical
 		 * approach and by generating multiple ground motion fields. No
 		 * truncation is assumed for the GMPE.
 		 */
-
-		long seed = 123456789;
-		int numRealizations = 200000;
 		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
 		double truncationLevel = 2.0;
-		setImr(truncationType, truncationLevel);
-
-		// calculate hazard curve following classical approach
-		try {
-			HazardCurveCalculator hcc = new HazardCurveCalculator();
-			hcc.getHazardCurve(iml, site, imr, rupture);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-
-		// calculate hazard curve by generating multiple ground motion fields
-		Random rn = new Random(seed);
-		double[] probabilityOfExceedenceVals = getHazardCurveFromMultipleGroundMotionFields(
-				numRealizations, rn);
-
-		for (int i = 0; i < iml.getNum(); i++) {
-			double expected = iml.getY(i);
-			double computed = probabilityOfExceedenceVals[i];
-			System.out.println("Expected: " + expected + " " + ", computed: "
-					+ computed);
-			assertEquals(expected, computed, tolerance);
-		}
-
+		compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
 	}
 
 	@Test
-	public void compareHazardCurvesForSingleEarthquakeRuptureWith2SidedTruncation() {
+	public void compareHazCurvesForSingleEqkRuptureWith2SidedTruncation() {
 
 		/**
 		 * This test compares hazard curves calculated with the classical
 		 * approach and by generating multiple ground motion fields. No
 		 * truncation is assumed for the GMPE.
 		 */
-
-		long seed = 123456789;
-		int numRealizations = 200000;
 		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
 		double truncationLevel = 2.0;
-		setImr(truncationType, truncationLevel);
-
-		// calculate hazard curve following classical approach
-		try {
-			HazardCurveCalculator hcc = new HazardCurveCalculator();
-			hcc.getHazardCurve(iml, site, imr, rupture);
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
-
-		// calculate hazard curve by generating multiple ground motion fields
-		Random rn = new Random(seed);
-		double[] probabilityOfExceedenceVals = getHazardCurveFromMultipleGroundMotionFields(
-				numRealizations, rn);
-
-		for (int i = 0; i < iml.getNum(); i++) {
-			double expected = iml.getY(i);
-			double computed = probabilityOfExceedenceVals[i];
-			System.out.println("Expected: " + expected + " " + ", computed: "
-					+ computed);
-			assertEquals(expected, computed, tolerance);
-		}
-
+		compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
 	}
 
 	@Test
-	public void compareHazardCurvesForSingleEarthquakeRuptureWith1SidedTruncation() {
+	public void compareHazCurvesForSingleEqkRuptureWith1SidedTruncation() {
 
 		/**
 		 * This test compares hazard curves calculated with the classical
 		 * approach and by generating multiple ground motion fields. 1 sided
 		 * truncation is assumed for the GMPE.
 		 */
-
-		long seed = 123456789;
-		int numRealizations = 200000;
 		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED;
 		double truncationLevel = 2.0;
+		compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
+	}
+
+	private void compareHazardCurveForSingleEarthquake(String truncationType,
+			double truncationLevel) {
+
 		setImr(truncationType, truncationLevel);
 
 		// calculate hazard curve following classical approach
@@ -226,7 +182,8 @@ public class GroundMotionFieldCalculatorTest implements
 
 		// calculate hazard curve by generating multiple ground motion fields
 		Random rn = new Random(seed);
-		double[] probabilityOfExceedenceVals = getHazardCurveFromMultipleGroundMotionFields(
+		double[] probabilityOfExceedenceVals = 
+			getHazardCurveFromMultipleGroundMotionFields(
 				numRealizations, rn);
 
 		for (int i = 0; i < iml.getNum(); i++) {
@@ -236,7 +193,6 @@ public class GroundMotionFieldCalculatorTest implements
 					+ computed);
 			assertEquals(expected, computed, tolerance);
 		}
-
 	}
 
 	private void setIml() {
@@ -258,8 +214,6 @@ public class GroundMotionFieldCalculatorTest implements
 		this.iml.set(Math.log(0.556), 1.0);
 		this.iml.set(Math.log(0.778), 1.0);
 		this.iml.set(Math.log(1.09), 1.0);
-		// this.iml.set(Math.log(1.52), 1.0);
-		// this.iml.set(Math.log(2.13), 1.0);
 	}
 
 	private void setSite() {
@@ -279,7 +233,7 @@ public class GroundMotionFieldCalculatorTest implements
 	}
 
 	private void setEqkRup() {
-		double aveDip = 90.0;
+		double avgDip = 90.0;
 		double lowerSeisDepth = 13.0;
 		double upperSeisDepth = 0.0;
 		FaultTrace trace = new FaultTrace("Elsinore;GI");
@@ -293,10 +247,10 @@ public class GroundMotionFieldCalculatorTest implements
 		trace.add(new Location(33.62646, -117.27443));
 		double gridSpacing = 1.0;
 		double mag = 6.889;
-		double aveRake = 0.0;
+		double avgRake = 0.0;
 		Location hypo = new Location(33.73183, -117.44568, 6.5);
-		this.rupture = getFiniteEqkRupture(aveDip, lowerSeisDepth,
-				upperSeisDepth, trace, gridSpacing, mag, hypo, aveRake);
+		this.rupture = getFiniteEqkRupture(avgDip, lowerSeisDepth,
+				upperSeisDepth, trace, gridSpacing, mag, hypo, avgRake);
 	}
 
 	private double[] getHazardCurveFromMultipleGroundMotionFields(
@@ -319,7 +273,8 @@ public class GroundMotionFieldCalculatorTest implements
 			double groundMotionValue = iterGMV.next();
 			for (int i = 0; i < groundMotionValues.size(); i++)
 				if (groundMotionValues.get(i) > groundMotionValue)
-					probabilityOfExceedenceVals[indexGMV] = probabilityOfExceedenceVals[indexGMV] + 1;
+					probabilityOfExceedenceVals[indexGMV] = 
+						probabilityOfExceedenceVals[indexGMV] + 1;
 				else
 					break;
 			indexGMV = indexGMV + 1;

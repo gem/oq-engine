@@ -31,7 +31,7 @@ public class StochasticEventSetGeneratorTest {
 	public void nullERF() {
 		GEM1ERF erf = null;
 		Random rn = new Random();
-		StochasticEventSetGenerator.getStochasticEvenSetFromPoissonianERF(erf,
+		StochasticEventSetGenerator.getStochasticEventSetFromPoissonianERF(erf,
 				rn);
 	}
 	
@@ -39,11 +39,12 @@ public class StochasticEventSetGeneratorTest {
 	public void nullRandomNumberGenerator() {
 		GEMFaultSourceData src = getExampleFaultSource();
 		double timeSpan = 50.0;
-		ArrayList<GEMSourceData> faultSourceDataList = new ArrayList<GEMSourceData>();
+		ArrayList<GEMSourceData> faultSourceDataList = 
+			new ArrayList<GEMSourceData>();
 		faultSourceDataList.add(src);
 		GEM1ERF erf = getGEM1ERF(faultSourceDataList, timeSpan);
 		Random rn = null;
-		StochasticEventSetGenerator.getStochasticEvenSetFromPoissonianERF(erf,
+		StochasticEventSetGenerator.getStochasticEventSetFromPoissonianERF(erf,
 				rn);
 	}
 
@@ -70,14 +71,16 @@ public class StochasticEventSetGeneratorTest {
 
 		// Define ERF
 		double timeSpan = 50.0;
-		ArrayList<GEMSourceData> faultSourceDataList = new ArrayList<GEMSourceData>();
+		ArrayList<GEMSourceData> faultSourceDataList = 
+			new ArrayList<GEMSourceData>();
 		faultSourceDataList.add(src);
 		GEM1ERF erf = getGEM1ERF(faultSourceDataList, timeSpan);
 
 		// Calculate stochastic event sets
 		Random rn = new Random(seed);
-		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = StochasticEventSetGenerator
-				.getMultipleStochasticEvenSetsFromPoissonianERF(erf,
+		ArrayList<ArrayList<EqkRupture>> multiStochasticEventSets = 
+			StochasticEventSetGenerator
+				.getMultipleStochasticEventSetsFromPoissonianERF(erf,
 						numStochasticEventSets, rn);
 		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
 		for (ArrayList<EqkRupture> ses : multiStochasticEventSets)
@@ -157,8 +160,8 @@ public class StochasticEventSetGeneratorTest {
 	 * compute total moment rate as done by NSHMP code
 	 * 
 	 * @param minMag
-	 *            : minimum magnitude (rounded to multiple of deltaMag and moved
-	 *            to bin center)
+	 *            : minimum magnitude (rounded to multiple of deltaMag and
+	 *             moved to bin center)
 	 * @param numMag
 	 *            : number of magnitudes
 	 * @param deltaMag

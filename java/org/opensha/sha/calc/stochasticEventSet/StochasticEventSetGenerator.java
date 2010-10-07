@@ -37,26 +37,29 @@ public class StochasticEventSetGenerator {
 	 *            {@link EqkRupForecast} earthquake rupture forecast
 	 * @param rn
 	 *            {@link Random} random number generator
-	 * @return:
-	 * {@link ArrayList} of {@link EqkRupture} representing the sampled events.
+	 * @return: {@link ArrayList} of {@link EqkRupture} representing the sampled
+	 *          events.
 	 */
-	public static ArrayList<EqkRupture> getStochasticEvenSetFromPoissonianERF(
+	public static ArrayList<EqkRupture> getStochasticEventSetFromPoissonianERF(
 			EqkRupForecast erf, Random rn) {
 
-		validateInput(erf,rn);
-		isErfPoissonian(erf);
+		validateInput(erf, rn);
 
 		ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
-		for (int is = 0; is < erf.getNumSources(); is++) {
-			ProbEqkSource src = erf.getSource(is);
-			for (int ir = 0; ir < src.getNumRuptures(); ir++) {
-				ProbEqkRupture rup = src.getRupture(ir);
+		for (int sourceIdx = 0; sourceIdx < erf.getNumSources(); sourceIdx++) {
+			ProbEqkSource src = erf.getSource(sourceIdx);
+			for (int ruptureIdx = 0; ruptureIdx < src.getNumRuptures(); 
+			     ruptureIdx++) {
+				ProbEqkRupture rup = src.getRupture(ruptureIdx);
 				double numExpectedRup = -Math.log(1 - rup.getProbability());
 				EqkRupture eqk = new EqkRupture(rup.getMag(), rup.getAveRake(),
 						rup.getRuptureSurface(), rup.getHypocenterLocation());
-				// sample Poisson distribution
-				// that is get number of rupture realizations given
-				// numExpectedRup
+				// sample Poisson distribution using inverse transfom method
+				// p is the Poisson probability
+				// F is the cumulative distribution function
+				// get number of rupture realizations (nRup) given
+				// number of expected ruptures (numExpectedRup). nRup copies of
+				// the same rupture are then added to the stochastic event set.
 				int nRup = 0;
 				boolean flag = true;
 				double u = rn.nextDouble();
@@ -87,34 +90,38 @@ public class StochasticEventSetGenerator {
 	 * @param erf
 	 *            {@link EqkRupForecast} earthquake rupture forecast
 	 * @param num
-	 *            number of stachastic event sets
+	 *            number of stochastic event sets
 	 * @param rn
 	 *            {@link Random} random number generator
 	 * @return {@link ArrayList} of {@link ArrayList} of {@link EqkRupture}.
 	 */
-	public static ArrayList<ArrayList<EqkRupture>> getMultipleStochasticEvenSetsFromPoissonianERF(
+	public static ArrayList<ArrayList<EqkRupture>> 
+	        getMultipleStochasticEventSetsFromPoissonianERF(
 			EqkRupForecast erf, int num, Random rn) {
 
-		ArrayList<ArrayList<EqkRupture>> multiStocEventSet = new ArrayList<ArrayList<EqkRupture>>();
+		ArrayList<ArrayList<EqkRupture>> multiStocEventSet = 
+			new ArrayList<ArrayList<EqkRupture>>();
 		for (int i = 0; i < num; i++) {
-			multiStocEventSet
-					.add(getStochasticEvenSetFromPoissonianERF(erf, rn));
+			multiStocEventSet.add(getStochasticEventSetFromPoissonianERF(erf,
+					rn));
 		}
 		return multiStocEventSet;
 	}
 
 	/**
 	 * Check if the ERF contains only Poissonian sources
+	 * 
 	 * @param erf
 	 */
-	private static Boolean isErfPoissonian(EqkRupForecast erf) {
+	private static Boolean ensurePoissonian(EqkRupForecast erf) {
 		for (ProbEqkSource src : (ArrayList<ProbEqkSource>) erf.getSourceList())
 			if (src.isSourcePoissonian() == false)
-				throw new IllegalArgumentException("Sources must be Poissonian");
+				throw new IllegalArgumentException("Sources must be Poissonian"
+						);
 		return true;
 	}
 
-	private static Boolean validateInput(EqkRupForecast erf, Random rn){
+	private static Boolean validateInput(EqkRupForecast erf, Random rn) {
 		if (erf == null) {
 			throw new IllegalArgumentException(
 					"Earthquake rupture forecast cannot be null");
@@ -124,6 +131,9 @@ public class StochasticEventSetGenerator {
 			throw new IllegalArgumentException(
 					"Random number generator cannot be null");
 		}
+
+		ensurePoissonian(erf);
+
 		return true;
 	}
 }
