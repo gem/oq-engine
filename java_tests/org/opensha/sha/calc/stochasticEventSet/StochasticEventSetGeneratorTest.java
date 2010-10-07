@@ -5,15 +5,12 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.junit.After;
-import org.junit.Before;
+import org.gem.engine.hazard.parsers.nshmp.NshmpFault2GemSourceData;
 import org.junit.Test;
-import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.geo.Location;
-import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.gem.GEM1.util.GEM1ERFCreator;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
-import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
@@ -42,7 +39,8 @@ public class StochasticEventSetGeneratorTest {
 		ArrayList<GEMSourceData> faultSourceDataList = 
 			new ArrayList<GEMSourceData>();
 		faultSourceDataList.add(src);
-		GEM1ERF erf = getGEM1ERF(faultSourceDataList, timeSpan);
+		GEM1ERF erf = new GEM1ERFCreator(faultSourceDataList, timeSpan)
+        .getErf();
 		Random rn = null;
 		StochasticEventSetGenerator.getStochasticEventSetFromPoissonianERF(erf,
 				rn);
@@ -74,7 +72,8 @@ public class StochasticEventSetGeneratorTest {
 		ArrayList<GEMSourceData> faultSourceDataList = 
 			new ArrayList<GEMSourceData>();
 		faultSourceDataList.add(src);
-		GEM1ERF erf = getGEM1ERF(faultSourceDataList, timeSpan);
+		GEM1ERF erf = new GEM1ERFCreator(faultSourceDataList, timeSpan)
+		                  .getErf();
 
 		// Calculate stochastic event sets
 		Random rn = new Random(seed);
@@ -111,7 +110,7 @@ public class StochasticEventSetGeneratorTest {
 		mMin = mMin + dM / 2;
 		mMax = mMax - dM / 2;
 		int numMag = (int) ((mMax - mMin) / dM + 1);
-		double tmr = totMoRate(mMin, numMag, dM, aVal, bVal);
+		double tmr = NshmpFault2GemSourceData.totMoRate(mMin, numMag, dM, aVal, bVal);
 		GutenbergRichterMagFreqDist mfd = new GutenbergRichterMagFreqDist(mMin,
 				numMag, dM);
 		mfd.setAllButTotCumRate(mMin, mMax, tmr, bVal);
@@ -137,51 +136,6 @@ public class StochasticEventSetGeneratorTest {
 		GEMFaultSourceData src = new GEMFaultSourceData(id, name, tectReg, mfd,
 				trc, dip, rake, seismDepthLow, seismDepthUpp, floatRuptureFlag);
 		return src;
-	}
-
-	/**
-	 * This method provides a GEM1ERF given an array list of GEMSourceData
-	 * 
-	 * @param sourceDataList
-	 * @param timeSpan
-	 * @return
-	 */
-	private GEM1ERF getGEM1ERF(ArrayList<GEMSourceData> sourceDataList,
-			double timeSpan) {
-		TimeSpan tms = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
-		tms.setDuration(timeSpan);
-		GEM1ERF erf = new GEM1ERF(sourceDataList);
-		erf.setTimeSpan(tms);
-		erf.updateForecast();
-		return erf;
-	}
-
-	/**
-	 * compute total moment rate as done by NSHMP code
-	 * 
-	 * @param minMag
-	 *            : minimum magnitude (rounded to multiple of deltaMag and
-	 *             moved to bin center)
-	 * @param numMag
-	 *            : number of magnitudes
-	 * @param deltaMag
-	 *            : magnitude bin width
-	 * @param aVal
-	 *            : incremental a value (defined with respect to deltaMag)
-	 * @param bVal
-	 *            : b value
-	 * @return
-	 */
-
-	private double totMoRate(double minMag, int numMag, double deltaMag,
-			double aVal, double bVal) {
-		double moRate = 0;
-		double mag;
-		for (int imag = 0; imag < numMag; imag++) {
-			mag = minMag + imag * deltaMag;
-			moRate += Math.pow(10, aVal - bVal * mag + 1.5 * mag + 9.05);
-		}
-		return moRate;
 	}
 
 	/**
