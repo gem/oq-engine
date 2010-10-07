@@ -18,13 +18,17 @@ FILES_KNOWN_TO_FAIL = ['Nrml-fail-missing_required_attribute.xml',
 
 FILE_FLAVOUR_NOT_IMPLEMENTED = 'Nrml-HazardMap-PASS.xml'
 
-TEST_FILE = 'schema/hazard-curves.xml'
+EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples/failures')
+TEST_FILE = os.path.join(test.SCHEMA_DIR, 'examples/hazard-curves.xml')
 
 class NrmlFileTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE)
 
     def test_nrml_files_known_to_fail(self):
         for testfile in FILES_KNOWN_TO_FAIL:
-            nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
+            nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR, 
                                                               testfile))
 
             self.assertRaises(ValueError, map, None, nrml_element)
@@ -32,7 +36,7 @@ class NrmlFileTestCase(unittest.TestCase):
     @test.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
-        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
+        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR, 
             FILE_FLAVOUR_NOT_IMPLEMENTED))
 
         self.assertRaises(NotImplementedError, map, None, nrml_element)
@@ -41,13 +45,11 @@ class NrmlFileTestCase(unittest.TestCase):
         # set region in which no site is found in input file
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
-        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, TEST_FILE))
-
         counter = None
 
         # this loop is not expected to be entered - generator should
         # not yield any item
-        for counter, nrml_item in enumerate(nrml_element.filter
+        for counter, nrml_item in enumerate(self.nrml_element.filter
             (region_constraint)):
             pass
 
@@ -62,9 +64,6 @@ class NrmlFileTestCase(unittest.TestCase):
         # (lon=16.35/lat=48.25)
         region_constraint = shapes.RegionConstraint.from_simple((-122.45, 38.0),
                                                                 (-122.35, 37.0))
-        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
-                                                          TEST_FILE))
-
         expected_result = [(shapes.Point(-122.40, 37.50),
                            {'IMT': 'PGA',
                             'IDmodel': 'PGA_1_1',
@@ -85,7 +84,7 @@ class NrmlFileTestCase(unittest.TestCase):
 
         counter = None
         for counter, (nrml_point, nrml_attr) in enumerate(
-            nrml_element.filter(region_constraint)):
+            self.nrml_element.filter(region_constraint)):
 
             # check topological equality for points
             self.assertTrue(nrml_point.equals(expected_result[counter][0]),
@@ -113,15 +112,13 @@ class NrmlFileTestCase(unittest.TestCase):
         # specified rectangle contains all sites in example file 
         region_constraint = shapes.RegionConstraint.from_simple((-125.0, 40.0),
                                                                 (-120.0, 20.0))
-        nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
-                                                          TEST_FILE))
 
         expected_result_counter = 4
         counter = None
 
         # just loop through iterator in order to count items
         for counter, (nrml_point, nrml_attr) in enumerate(
-            nrml_element.filter(region_constraint)):
+            self.nrml_element.filter(region_constraint)):
             pass
 
         # ensure that generator yielded at least one item
@@ -287,13 +284,11 @@ class NrmlFileTestCase(unittest.TestCase):
             test_attribute_dicts):
             attribute_constraint = producer.AttributeConstraint(
                     curr_attribute_dict)
-            
-            nrml_element = hazard_parser.NrmlFile(os.path.join(test.DATA_DIR, 
-                                                              TEST_FILE))
 
             counter = None
             for counter, (nrml_point, nrml_attr) in enumerate(
-                nrml_element.filter(region_constraint, attribute_constraint)):
+                            self.nrml_element.filter(region_constraint, 
+                                    attribute_constraint)):
 
                 # check topological equality for points
                 self.assertTrue(nrml_point.equals(
@@ -307,7 +302,7 @@ class NrmlFileTestCase(unittest.TestCase):
                     "filter yielded unexpected attribute values at position" \
                     " %s: %s, %s" % (counter, nrml_attr, 
                         expected_results[attr_test_counter][counter][1]))
-
+            
             # ensure that generator yielded at least one item
             self.assertTrue(counter is not None, 
                 "filter yielded nothing although %s item(s) were expected \
@@ -321,3 +316,5 @@ class NrmlFileTestCase(unittest.TestCase):
                 len(expected_results[attr_test_counter])-1,
                 "filter yielded wrong number of items (%s), expected were %s" \
                 % (counter+1, len(expected_results[attr_test_counter])))
+            
+            self.nrml_element.reset()

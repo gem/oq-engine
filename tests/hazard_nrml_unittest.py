@@ -13,7 +13,6 @@ from opengem.parser import hazard as hazard_parser
 TEST_FILE = "hazard-curves.xml"
 XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 
-schema_dir = os.path.join(os.path.dirname(__file__), "../docs/schema")
 
 class HazardCurveXMLWriterTestCase(unittest.TestCase):
     
@@ -29,7 +28,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         xml_doc = etree.parse(os.path.join(test.DATA_DIR, TEST_FILE))
 
         # test that the doc matches the schema
-        schema_path = os.path.join(schema_dir, "nrml.xsd")
+        schema_path = os.path.join(test.SCHEMA_DIR, "nrml.xsd")
         xmlschema = etree.XMLSchema(etree.parse(schema_path))
         xmlschema.assertValid(xml_doc)
 

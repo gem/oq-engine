@@ -20,6 +20,8 @@ flags.DEFINE_boolean('download_test_data', True,
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
 
+SCHEMA_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '../docs/schema'))
 
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three 

@@ -9,6 +9,16 @@
 	<!-- -->
 	
 	
+	<xs:complexType name="ModelType">
+		<xs:all>
+			<xs:element ref="nrml:Values"/>
+			<!-- do we want ModelType to have pos (not required) eg. so that it can also be used for exposure? -->
+			<xs:element ref="gml:pos"/>
+		</xs:all>
+	</xs:complexType>
+
+	<xs:element name="Model" type="nrml:ModelType"/>
+	
 	<xs:complexType name="CurveType">
 		<xs:all>
 			<xs:element ref="nrml:Values"/>
@@ -17,22 +27,21 @@
 	</xs:complexType>
 
 	<xs:element name="Curve" type="nrml:CurveType"/>
-
+	
+    <xs:complexType name="CommonType">
+        <xs:sequence maxOccurs="unbounded" minOccurs="0">
+    		<xs:any namespace="##any"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="Common" type="nrml:CommonType"/>
+    
 	<xs:complexType name="CurveListType">
-		<xs:sequence minOccurs="0" maxOccurs="unbounded">
-			<xs:choice>
-				<xs:element ref="nrml:Curve"/>
-				<xs:element ref="nrml:DiscreteVulnerability"/>
-				<xs:element ref="nrml:HazardCurve"/>
-				<xs:element ref="nrml:IMLValues"/>
-				<xs:element ref="nrml:IMT"/>
-				<xs:element ref="nrml:IntensityMeasureLevels"/>
-				<xs:element ref="nrml:LossCurve"/>
-				<xs:element ref="nrml:LossRatioCurve"/>
-				<xs:element ref="nrml:LossRatios"/>
-
-			</xs:choice>
-		</xs:sequence>
+		<xs:sequence>
+            <xs:element ref="nrml:Common" minOccurs="0"/>
+    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    				<xs:element ref="nrml:Curve"/>
+    		</xs:sequence>
+    	</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	<xs:element name="Config"/>
