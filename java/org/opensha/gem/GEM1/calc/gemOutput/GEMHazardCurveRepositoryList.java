@@ -237,6 +237,7 @@ public class GEMHazardCurveRepositoryList
                             .getProbExceedanceList(j)[k]
                             + hcTmp.getProbExceedanceList(j)[k] * wei;
                 }
+                
             }
         }
         return meanhc;
