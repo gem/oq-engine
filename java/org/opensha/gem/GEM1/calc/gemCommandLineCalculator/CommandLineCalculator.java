@@ -244,7 +244,7 @@ public class CommandLineCalculator {
 			int indexLabel = 0;
 			for(GEMHazardCurveRepository hcRep : hcRepList.getHcRepList()) {
 				// calculate ground motion map
-				ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()));
+				ArrayList<Double> groundMotionMap = hcRep.getHazardMap(config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()));
 				// define file name
 				String outfile = config.getString(ConfigItems.OUTPUT_DIR.name()) 
 								 + "groundMotionMap_"
@@ -390,7 +390,7 @@ public class CommandLineCalculator {
 				int indexLabel = 0;
 				for(GEMHazardCurveRepository hcRep : hcRepList.getHcRepList()) {
 					// calculate ground motion map
-					ArrayList<Double> groundMotionMap = hcRep.getGroundMotionMap(config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()));
+					ArrayList<Double> groundMotionMap = hcRep.getHazardMap(config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE.name()));
 					// define file name
 					String outfile = config.getString(ConfigItems.OUTPUT_DIR.name())
 					                 + "groundMotionMap_"
