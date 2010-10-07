@@ -56,6 +56,23 @@ public class StdDevTypeParam extends StringParameter {
 	 * exception if that value is not in the options list).
 	 * The parameter is set as non editable after creation.
 	 * 
+	 * Note:
+	 * 
+	 * Using:
+	 * options.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);
+     * StdDevTypeParam stdDev = new StdDevTypeParam(options);
+     * 
+     * Results in an error:
+     * ConstraintException: Std Dev Type: setDefaultValue(): 
+     * Value is not allowed: Total
+     * 
+     * Reason:
+     * Although <code>options</code> contains a default value, this
+     * constructor sets a different one.
+     * 
+     * Workaround:
+     * Use the constructor StdDevTypeParam(StringConstraint, String).
+	 * 
 	 * @param options
 	 */
 	public StdDevTypeParam(StringConstraint options) {
