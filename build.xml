@@ -17,6 +17,8 @@
 		<!-- TODO Find out which jar from OpenSHA causes java.util.zip.ZipException: error in opening zip file -->
 
 		<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
+		<pathelement location="${lib.dir}/commons-configuration-1.6.jar" />
+		<pathelement location="${lib.dir}/commons-collections-3.2.1.jar" />
 		<pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
 		<pathelement location="${lib.dir}/commons-math-2.1.jar" />
 		<pathelement location="${lib.dir}/junit-4.8.1.jar" />
@@ -79,6 +81,8 @@
 
 				<!-- TODO Find out why referencing the defined path with an id gets a java.lang.NullPointerException  -->
 				<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
+				<pathelement location="${lib.dir}/commons-configuration-1.6.jar" />
+				<pathelement location="${lib.dir}/commons-collections-3.2.1.jar" />
 				<pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
 				<pathelement location="${lib.dir}/commons-math-2.1.jar" />
 				<pathelement location="${lib.dir}/junit-4.8.1.jar" />

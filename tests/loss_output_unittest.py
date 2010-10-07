@@ -85,12 +85,12 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.SHAML + "LossCurvePE//"
-                + xml.SHAML + "Values").text.strip().split())
+                + xml.NRML + "LossCurvePE//"
+                + xml.NRML + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
-                xml.SHAML + "LossCurveList//" 
-                + xml.SHAML + "LossCurve//"
-                + xml.SHAML + "Values").text.strip().split()
+                xml.NRML + "LossCurveList//" 
+                + xml.NRML + "LossCurve//"
+                + xml.NRML + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.codomain):
             self.assertAlmostEqual(val, xml_curve_pe[idx], 6)
@@ -106,12 +106,12 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.SHAML + "LossRatioCurvePE//"
-                + xml.SHAML + "Values").text.strip().split())
+                + xml.NRML + "LossRatioCurvePE//"
+                + xml.NRML + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
-                xml.SHAML + "LossRatioCurveList//" 
-                + xml.SHAML + "LossRatioCurve//"
-                + xml.SHAML + "Values").text.strip().split()
+                xml.NRML + "LossRatioCurveList//" 
+                + xml.NRML + "LossRatioCurve//"
+                + xml.NRML + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.codomain):
             self.assertAlmostEqual(val, xml_curve_pe[idx], 6)

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    targetNamespace="http://opengem.org/xmlns/shaml/0.1"
-    xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
+    targetNamespace="http://opengem.org/xmlns/nrml/0.1"
+    xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
     xmlns:jaxb="http://java.sun.com/xml/ns/jaxb" xmlns:xjc="http://java.sun.com/xml/ns/jaxb/xjc"
     jaxb:extensionBindingPrefixes="xjc" elementFormDefault="qualified" jaxb:version="2.0">
 
@@ -13,7 +13,7 @@
             <jaxb:globalBindings enableJavaNamingConventions="true" underscoreBinding="asCharInWord">
             </jaxb:globalBindings>
             <jaxb:schemaBindings>
-                <jaxb:package name="org.opengem.shaml"/>
+                <jaxb:package name="org.opengem.nrml"/>
             </jaxb:schemaBindings>
         </xs:appinfo>
     </xs:annotation>
@@ -30,9 +30,9 @@
             <xs:documentation>Object containing all the information necessary to implement a set of ERF using a logic tree structure</xs:documentation>
         </xs:annotation>
         <xs:all maxOccurs="1">
-            <xs:element name="BranchingLevelList" type="shaml:LogicTreeBranchingLevelListType"
+            <xs:element name="BranchingLevelList" type="nrml:LogicTreeBranchingLevelListType"
                 maxOccurs="1"/>
-            <xs:element name="EndBranchMappingList" type="shaml:LogicTreeEndBranchMappingListType"/>
+            <xs:element name="EndBranchMappingList" type="nrml:LogicTreeEndBranchMappingListType"/>
         </xs:all>
         <xs:attribute name="description" type="xs:string">
             <xs:annotation>
@@ -46,7 +46,7 @@
             <xs:documentation>This is used to describe a branching level of a LT</xs:documentation>
         </xs:annotation>
         <xs:sequence maxOccurs="unbounded">
-            <xs:element name="Branch" type="shaml:LogicTreeBranchType"/>
+            <xs:element name="Branch" type="nrml:LogicTreeBranchType"/>
         </xs:sequence>
         <xs:attribute name="level" use="required">
             <xs:annotation>
@@ -112,7 +112,7 @@
             <xs:documentation>Contains all the information necessary to create an ERF</xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element maxOccurs="1" name="SeismicSourceList" type="shaml:SeismicSourceListType"/>
+            <xs:element maxOccurs="1" name="SeismicSourceList" type="nrml:SeismicSourceListType"/>
         </xs:sequence>
         <xs:attribute name="publicID" type="xs:string"/>
         <xs:attribute name="Name" type="xs:string"/>
@@ -125,10 +125,10 @@
             <xs:documentation>Generic container for all the objects describing a seismic source</xs:documentation>
         </xs:annotation>
         <xs:choice maxOccurs="1">
-            <xs:element name="Fault" type="shaml:SeismicSourceFaultType"/>
-            <xs:element name="Area" type="shaml:SeismicSourceZoneType"/>
-            <xs:element name="Grid" type="shaml:SeismicSourceGriddedType"/>
-            <xs:element name="SubductionFault" type="shaml:SeismicSourceSubductionFaultType"/>
+            <xs:element name="Fault" type="nrml:SeismicSourceFaultType"/>
+            <xs:element name="Area" type="nrml:SeismicSourceZoneType"/>
+            <xs:element name="Grid" type="nrml:SeismicSourceGriddedType"/>
+            <xs:element name="SubductionFault" type="nrml:SeismicSourceSubductionFaultType"/>
         </xs:choice>
         <xs:attribute name="ID" type="xs:string"/>
         <xs:attribute name="name" type="xs:string"/>
@@ -149,7 +149,7 @@
                     <xs:documentation>This is a container for the geographic regions that define a seismic source zone.</xs:documentation>
                 </xs:annotation>
             </xs:element>
-            <xs:element maxOccurs="1" name="HypoRateModelList" type="shaml:HypoRateModelListType"/>
+            <xs:element maxOccurs="1" name="HypoRateModelList" type="nrml:HypoRateModelListType"/>
         </xs:all>
         <xs:attribute form="unqualified" name="tectonicSetting" type="xs:string"/>
     </xs:complexType>
@@ -158,8 +158,8 @@
             <xs:documentation>Fault source object</xs:documentation>
         </xs:annotation>
         <xs:all>
-            <xs:element name="FaultModel" type="shaml:FaultModelType"/>
-            <xs:element name="MFdist" type="shaml:MFDType"/>
+            <xs:element name="FaultModel" type="nrml:FaultModelType"/>
+            <xs:element name="MFdist" type="nrml:MFDType"/>
         </xs:all>
         <xs:attribute name="ruptureFloating" use="optional">
             <xs:simpleType>
@@ -187,7 +187,7 @@
     </xs:complexType>
     <xs:complexType name="FaultModelType">
         <xs:choice>
-            <xs:element name="SimpleFaultType" type="shaml:SimpleFaultDataType"/>
+            <xs:element name="SimpleFaultType" type="nrml:SimpleFaultDataType"/>
         </xs:choice>
     </xs:complexType>
     <xs:complexType name="SimpleFaultDataType">
@@ -224,7 +224,7 @@
         <xs:all>
             <xs:element name="TopFaultTrace" type="gml:LineStringType" form="qualified"/>
             <xs:element name="BottomFaultTrace" type="gml:LineStringType" form="qualified"/>
-            <xs:element name="MFdist" type="shaml:MFDType"/>
+            <xs:element name="MFdist" type="nrml:MFDType"/>
         </xs:all>
         <xs:attribute name="AverageRake">
             <xs:simpleType>
@@ -241,7 +241,7 @@
             <xs:documentation>Gridded seismicity object </xs:documentation>
         </xs:annotation>
         <xs:sequence maxOccurs="unbounded">
-            <xs:element name="Node" type="shaml:GridNodeType"/>
+            <xs:element name="Node" type="nrml:GridNodeType"/>
         </xs:sequence>
         <xs:attribute name="nodeCount" type="xs:int"/>
     </xs:complexType>
@@ -250,9 +250,9 @@
             <xs:documentation>This is simply a container for a set of HypoRateModels</xs:documentation>
         </xs:annotation>
         <xs:all>
-            <xs:element name="MagFreqDist" type="shaml:MFDType"/>
-            <xs:element name="FocalMech" type="shaml:FocalMechanismType"/>
-            <xs:element name="RupTopDist" type="shaml:EvenlyDiscretizedTopRuptureDepthDistType"/>
+            <xs:element name="MagFreqDist" type="nrml:MFDType"/>
+            <xs:element name="FocalMech" type="nrml:FocalMechanismType"/>
+            <xs:element name="RupTopDist" type="nrml:EvenlyDiscretizedTopRuptureDepthDistType"/>
         </xs:all>
     </xs:complexType>
     <xs:complexType name="HypoRateModelType">
@@ -260,7 +260,7 @@
             <xs:documentation>This object specifies the properties of the seismicity generated by a source using a MFD and Prevalent focal mechanism</xs:documentation>
         </xs:annotation>
         <xs:sequence>
-            <xs:element maxOccurs="1" name="Parameters" type="shaml:HypoRateParametersType"/>
+            <xs:element maxOccurs="1" name="Parameters" type="nrml:HypoRateParametersType"/>
         </xs:sequence>
         <xs:attribute form="unqualified" name="mMax" use="required" type="xs:float">
             <xs:annotation>
@@ -273,7 +273,7 @@
             <xs:documentation>This is simply a container for a set of SeismicSourcePoints</xs:documentation>
         </xs:annotation>
         <xs:sequence maxOccurs="1" minOccurs="1">
-            <xs:element name="Model" type="shaml:HypoRateModelType" maxOccurs="unbounded"/>
+            <xs:element name="Model" type="nrml:HypoRateModelType" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="FocalMechanismType">
@@ -290,9 +290,9 @@
             <xs:documentation>The complex-type describes the properties of the source seismicity magnitude-frequency distribution. The distributions allowed are the classical Gutenberg-Richter distribution (double truncated on the incremental) described in terms of  the classical aGR and bGR parameters (aGR is the intercept of the cumulative distribution).</xs:documentation>
         </xs:annotation>
         <xs:choice>
-            <xs:element name="EvenlyDiscretized" type="shaml:EvenlyDiscretizedMFDistType"/>
-            <xs:element name="GutenbergRichter" type="shaml:GutenbergRichterMFDistType"/>
-            <xs:element name="CharateristicGaussian" type="shaml:CharacteristicGaussianMFDistType"/>
+            <xs:element name="EvenlyDiscretized" type="nrml:EvenlyDiscretizedMFDistType"/>
+            <xs:element name="GutenbergRichter" type="nrml:GutenbergRichterMFDistType"/>
+            <xs:element name="CharateristicGaussian" type="nrml:CharacteristicGaussianMFDistType"/>
         </xs:choice>
     </xs:complexType>
     <xs:complexType name="EvenlyDiscretizedMFDistType">
@@ -301,7 +301,7 @@
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="shaml:EvenlyDiscretizedDistType"> </xs:extension>
+            <xs:extension base="nrml:EvenlyDiscretizedDistType"> </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     <xs:complexType name="EvenlyDiscretizedTopRuptureDepthDistType">
@@ -309,7 +309,7 @@
             <xs:documentation>This complex types allows the description of the top of rupture depth as a function of magnitude.</xs:documentation>
         </xs:annotation>
         <xs:complexContent>
-            <xs:extension base="shaml:EvenlyDiscretizedDistType"/>
+            <xs:extension base="nrml:EvenlyDiscretizedDistType"/>
         </xs:complexContent>
     </xs:complexType>
     <xs:complexType name="GutenbergRichterMFDistType">
@@ -395,17 +395,17 @@
             <xs:documentation>Generic container for all the objects describing a seismic source</xs:documentation>
         </xs:annotation>
         <xs:sequence maxOccurs="unbounded">
-            <xs:element name="Source" type="shaml:SeismicSourceType"/>
+            <xs:element name="Source" type="nrml:SeismicSourceType"/>
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="LogicTreeEndBranchMappingListType">
         <xs:sequence maxOccurs="unbounded">
-            <xs:element name="EndBranchMapping" type="shaml:LogicTreeEndBranchMappingType"/>
+            <xs:element name="EndBranchMapping" type="nrml:LogicTreeEndBranchMappingType"/>
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="LogicTreeEndBranchMappingType">
         <xs:sequence>
-            <xs:element name="SourcedataList" type="shaml:SeismicSourceListType">
+            <xs:element name="SourcedataList" type="nrml:SeismicSourceListType">
                 <xs:annotation>
                     <xs:documentation>The names adopted to define this element correspond to the short name used in OpenSHA to identify a GMPE</xs:documentation>
                 </xs:annotation>
@@ -415,22 +415,22 @@
     </xs:complexType>
     <xs:complexType name="LogicTreeBranchingLevelListType">
         <xs:sequence maxOccurs="unbounded">
-            <xs:element name="BranchingLevel" type="shaml:LogicTreeBranchingLevelType"/>
+            <xs:element name="BranchingLevel" type="nrml:LogicTreeBranchingLevelType"/>
         </xs:sequence>
     </xs:complexType>
     <xs:complexType name="GridNodeType">
         <xs:all>
             <xs:element name="Point" type="gml:PointType"/>
-            <xs:element name="HypoRateModelList" type="shaml:HypoRateModelListType"/>
+            <xs:element name="HypoRateModelList" type="nrml:HypoRateModelListType"/>
         </xs:all>
         <xs:attribute form="unqualified" name="tectonicSetting" type="xs:string"/>
     </xs:complexType>
-    <xs:element name="InputToERF" type="shaml:InputToERFType">
+    <xs:element name="InputToERF" type="nrml:InputToERFType">
         <xs:annotation>
             <xs:documentation>This object contains the set of information necessary to instantiate an ERF</xs:documentation>
         </xs:annotation>
     </xs:element>
-    <xs:element name="SeismicSource" type="shaml:SeismicSourceType">
+    <xs:element name="SeismicSource" type="nrml:SeismicSourceType">
         <xs:annotation>
             <xs:documentation>A generic container for one of the defined source typologies: fault,
 seismic zone or gridded seismicity.          
@@ -441,5 +441,5 @@ The information eventually included into the SeismicSourceObject superseeds the 
 </xs:documentation>
         </xs:annotation>
     </xs:element>
-    <xs:element name="LogicTree" type="shaml:LogicTreeERFType"/>
+    <xs:element name="LogicTree" type="nrml:LogicTreeERFType"/>
 </xs:schema>

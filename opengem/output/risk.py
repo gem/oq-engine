@@ -2,7 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Output risk data (loss ratio curves, loss curves, and loss values)
-as shaml-style XML.
+as nrml-style XML.
 
 """
 
@@ -11,15 +11,15 @@ from lxml import etree
 from opengem import logs
 from opengem import shapes
 from opengem import writer
-
-from opengem.xml import SHAML, GML, NSMAP
+from opengem.xml import GML, NRML, NSMAP
+from opengem import shapes
 
 logger = logs.RISK_LOG
 
 class RiskXMLWriter(writer.FileWriter):
-    curve_tag = SHAML + "Curve"
-    abcissa_tag = SHAML + "PE"
-    container_tag = SHAML + "RiskElementList"
+    curve_tag = NRML + "Curve"
+    abcissa_tag = NRML + "PE"
+    container_tag = NRML + "RiskElementList"
     
     def write(self, point, curve_object):
         if isinstance(point, shapes.GridPoint):
@@ -30,9 +30,9 @@ class RiskXMLWriter(writer.FileWriter):
 
     def write_header(self):
         """Write out the file header"""
-        self.root_node = etree.Element(SHAML + "RiskResult", nsmap=NSMAP)
+        self.root_node = etree.Element(NRML + "RiskResult", nsmap=NSMAP)
         config_node = etree.SubElement(self.root_node, 
-                           SHAML + "Config" , nsmap=NSMAP)
+                           NRML + "Config" , nsmap=NSMAP)
         config_node.text = "Config file details go here."
         self.parent_node = etree.SubElement(self.root_node, 
                            self.container_tag , nsmap=NSMAP)
@@ -53,31 +53,32 @@ class RiskXMLWriter(writer.FileWriter):
         # for nodes that have no child nodes.
         subnode_pe = self.root_node.find(self.abcissa_tag)
         if subnode_pe is not None:
-            if subnode_pe.find(SHAML + "Values").text != pe_values:
+            if subnode_pe.find(NRML + "Values").text != pe_values:
                 raise Exception("Curves must share the same Abcissa!")
         else:
             subnode_pe = etree.SubElement(self.root_node, 
                             self.abcissa_tag, nsmap=NSMAP)
             etree.SubElement(subnode_pe, 
-                    SHAML + "Values", nsmap=NSMAP).text = pe_values
+                    NRML + "Values", nsmap=NSMAP).text = pe_values
         
+
         logger.debug("Writing xml, object is %s", curve_object)
-        subnode_loss = etree.SubElement(node, SHAML + "Values", nsmap=NSMAP)
+        subnode_loss = etree.SubElement(node, NRML + "Values", nsmap=NSMAP)
         subnode_loss.text = _curve_vals_as_gmldoublelist(curve_object)
 
 
 class LossCurveXMLWriter(RiskXMLWriter):
     """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = SHAML + "LossCurve"
-    abcissa_tag = SHAML + "LossCurvePE"
-    container_tag = SHAML + "LossCurveList"
+    curve_tag = NRML + "LossCurve"
+    abcissa_tag = NRML + "LossCurvePE"
+    container_tag = NRML + "LossCurveList"
     
 
 class LossRatioCurveXMLWriter(RiskXMLWriter):
     """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = SHAML + "LossRatioCurve"
-    abcissa_tag = SHAML + "LossRatioCurvePE"
-    container_tag = SHAML + "LossRatioCurveList"
+    curve_tag = NRML + "LossRatioCurve"
+    abcissa_tag = NRML + "LossRatioCurvePE"
+    container_tag = NRML + "LossRatioCurveList"
 
 
 def _curve_pe_as_gmldoublelist(curve_object):
