@@ -22,11 +22,15 @@
 		<xs:sequence minOccurs="0" maxOccurs="unbounded">
 			<xs:choice>
 				<xs:element ref="nrml:Curve"/>
-				<xs:element ref="nrml:LossCurve"/>
-				<xs:element ref="nrml:LossRatioCurve"/>
+				<xs:element ref="nrml:DiscreteVulnerability"/>
 				<xs:element ref="nrml:HazardCurve"/>
 				<xs:element ref="nrml:IMLValues"/>
 				<xs:element ref="nrml:IMT"/>
+				<xs:element ref="nrml:IntensityMeasureLevels"/>
+				<xs:element ref="nrml:LossCurve"/>
+				<xs:element ref="nrml:LossRatioCurve"/>
+				<xs:element ref="nrml:LossRatios"/>
+
 			</xs:choice>
 		</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
