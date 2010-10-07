@@ -9,12 +9,27 @@
 	<!-- schemaLocation="./gml.xsd"/> -->
 	<xs:include schemaLocation="nrml_common.xsd"/>
 
+	<xs:element name="DiscreteVulnerabilitySet" type="nrml:CurveListType"/>
+	<xs:element name="ContinuousVulnerabilitySet" type="nrml:CurveListType"/>
 	<xs:element name="LossCurve" type="nrml:CurveType"/>
+	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
 	<xs:element name="LossCurvePE" type="nrml:CurveType"/>
 	<xs:element name="LossRatioCurvePE" type="nrml:CurveType"/>
 	<xs:element name="LossRatioCurve" type="nrml:CurveType"/>
-	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
 	<xs:element name="LossRatioCurveList" type="nrml:CurveListType"/>
+	<xs:element name="VulnerabilityModel">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="nrml:Config"/>
+				<xs:choice>
+					<xs:element ref="nrml:DiscreteVulnerabilitySet"/>
+					<xs:element ref="nrml:ContinuousVulnerabilitySet"/>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>		
+	</xs:element> 
+	<xs:attribute name="ID" type="xs:string"/>
+	<xs:attribute name="IntensityMeasureType" type="xs:string"/>
 	<xs:element name="RiskResult">
 		<xs:complexType>
 			<xs:sequence minOccurs="1">
