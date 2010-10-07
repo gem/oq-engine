@@ -49,6 +49,7 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+
 public class CommandLineCalculator {
 	// configuration data
 	private Properties props;
