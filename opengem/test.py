@@ -61,6 +61,7 @@ def skipit(_method):
     def _skipme(*_args, **_kw):
         """The skipped method"""
         pass
+    print "skipping method %r" % _method.__name__
     return _skipme
 
 

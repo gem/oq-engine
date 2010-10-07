@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Set up some system-wide loggers
 TODO(jmc): init_logs should take filename, or sysout

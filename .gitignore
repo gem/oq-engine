@@ -3,6 +3,7 @@
 local_settings.py
 docs/build/**/*
 build
+.metadata/
 build/**/*
 build-stamp
 dist/**/*
