@@ -134,7 +134,32 @@ public class CommandLineCalculator {
 		config = c;
 		props = ConfigurationConverter.getProperties(c);
 	}
-
+	
+	/**
+	 * If the property with given key already exists, this adds a property,
+	 * and does not replace it. So this can result in multi valued properties.
+	 * properties.
+	 * @param key
+	 * @param value
+	 */
+	public void addConfigItem(String key, String value) {
+		// the member is private and not null
+		config.addProperty(key, value);
+		props.setProperty(key, ((String)props.get(key)) + "," + value);
+	}
+	
+	/**
+	 * If the property with given key already exists, its value will be
+	 * replaced by the one passed in.
+	 * @param key
+	 * @param value
+	 */
+	public void setConfigItem(String key, String value) {
+		// the member is private and not null
+		config.setProperty(key, value);
+		props.setProperty(key, value);
+	}
+	
 	/**
 	 * This is the main method that do the calculations. According to the
 	 * specifications in the configuration file the method will do the required
