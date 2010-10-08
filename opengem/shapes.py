@@ -290,10 +290,26 @@ class Site(object):
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
-
+# TODO (ac): Change the name!
+# TODO (ac): Document!
+# TODO (ac): Constructor must take care of the order!
 class FastCurve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
+
+    @classmethod
+    def from_json(cls, json_str):
+        as_dict = json.JSONDecoder().decode(json_str)
+        return FastCurve.from_dict(as_dict)
+
+    @classmethod
+    def from_dict(cls, values):
+        data = []
+        
+        for key, val in values.items():
+            data.append((float(key), val))
+
+        return FastCurve(data)
 
     def __init__(self, values):
         """Construct a curve object with an ordered dict"""
@@ -304,24 +320,18 @@ class FastCurve(object):
 
         if elements and type(values[0][1]) in (tuple, list):
             self.y_values = numpy.empty((elements, len(values[0][1])))
-        
-        odict = ordereddict.OrderedDict()
 
-# TODO (ac): Delete ordereddict implementation!   
         for index, (key, val) in enumerate(values):
             self.x_values[index] = key
             self.y_values[index] = val
-            
-            odict["%s" % key] = val
-        
-        self.values = odict
 
-# TODO (ac): Use numpy arrays!
     def __eq__(self, other):
-        return self.values == other.values
+        return numpy.alltrue(self.x_values == other.x_values) \
+                and numpy.alltrue(self.y_values == other.y_values)
 
     def __str__(self):
-        return self.values.__str__()
+        return "X Values: %s\nY Values: %s" % (
+                self.x_values.__str__(), self.y_values.__str__())
 
     @property
     def domain(self):
@@ -363,14 +373,15 @@ class FastCurve(object):
         pass
 
     def to_json(self):
-        return json.JSONEncoder().encode(self.values)
+        as_dict = ordereddict.OrderedDict()
+        
+        for index, x_value in enumerate(self.x_values):
+            if self.y_values.ndim > 1:
+                as_dict[str(x_value)] = list(self.y_values[index])
+            else:
+                as_dict[str(x_value)] = self.y_values[index]
 
-# TODO (ac): Use numpy arrays!
-    def from_json(self, json_str):
-        odict = ordereddict.OrderedDict()
-        for key, value in json.JSONDecoder().decode(json_str).items():
-            odict["%s" % key] = value
-        self.values = odict
-        del odict
+        return json.JSONEncoder().encode(as_dict)
+
 
 EMPTY_CURVE = FastCurve(())

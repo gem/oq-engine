@@ -100,12 +100,15 @@ def compute_loss_curve(loss_ratio_curve, asset):
         return shapes.EMPTY_CURVE # invalid asset
 
     loss_curve_values = []
-    for loss_ratio, probability_occurrence \
-            in loss_ratio_curve.values.iteritems():
+
+# TODO (ac): Can be done quicker with NumPy!
+    for loss_ratio in loss_ratio_curve.domain:
+        prob_occ = loss_ratio_curve.codomain_for(loss_ratio)
+        
         logger.debug("Loss ratio is %s, PO is %s" % (
-            loss_ratio, probability_occurrence))
-        key = "%s" % (float(loss_ratio) * asset)
-        loss_curve_values.append((key, probability_occurrence))
+            loss_ratio, prob_occ))
+    
+        loss_curve_values.append((loss_ratio * asset, prob_occ))
 
     return shapes.FastCurve(loss_curve_values)
 
