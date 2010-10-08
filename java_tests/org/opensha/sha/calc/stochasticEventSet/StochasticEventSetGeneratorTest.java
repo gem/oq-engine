@@ -107,7 +107,8 @@ public class StochasticEventSetGeneratorTest {
 		mMin = mMin + dM / 2;
 		mMax = mMax - dM / 2;
 		int numMag = (int) ((mMax - mMin) / dM + 1);
-		double tmr = NshmpFault2GemSourceData.totMoRate(mMin, numMag, dM, aVal, bVal);
+		double tmr = NshmpFault2GemSourceData.totMoRate(mMin, numMag, dM, aVal,
+				bVal);
 		GutenbergRichterMagFreqDist mfd = new GutenbergRichterMagFreqDist(mMin,
 				numMag, dM);
 		mfd.setAllButTotCumRate(mMin, mMax, tmr, bVal);
