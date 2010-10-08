@@ -152,7 +152,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertEqual(shapes.FastCurve([
                 (0.1 * ASSET_VALUE, 1.0),
                 (0.2 * ASSET_VALUE, 2.0),
-                (0.3 * ASSET_VALUE, 3.0)]).values, loss_curve.values)
+                (0.3 * ASSET_VALUE, 3.0)]), loss_curve)
 
     # loss ratio exceedance matrix * po tests
     def test_empty_matrix(self):

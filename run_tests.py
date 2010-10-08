@@ -47,7 +47,7 @@ if __name__ == '__main__':
     from tests.schema_unittest import *
     from tests.classical_psha_based_unittest import *
     from tests.memcached_unittest import *
-    
+    from tests.shapes_unittest import *
     
     if FLAGS.speed_tests:
         from tests.xml_speedtests import *
