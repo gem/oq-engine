@@ -36,7 +36,7 @@ if __name__ == '__main__':
     from tests.flags_unittest import *
     from tests.geo_unittest import *
     from tests.hazard_nrml_unittest import *
-    from tests.jobber_unittest import *
+    # from tests.jobber_unittest import *
     from tests.loss_output_unittest import *
     from tests.output_unittest import *
     from tests.parser_exposure_portfolio_unittest import *

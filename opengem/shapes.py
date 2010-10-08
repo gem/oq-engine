@@ -9,6 +9,7 @@ import math
 import geohash
 import json
 import ordereddict
+import numpy
 
 from shapely import geometry
 from shapely import wkt
@@ -296,11 +297,26 @@ class FastCurve(object):
 
     def __init__(self, values):
         """Construct a curve object with an ordered dict"""
+        
+        elements = len(values)
+        self.x_values = numpy.empty(elements)
+        self.y_values = numpy.empty(elements)
+
+        if elements and type(values[0][1]) in (tuple, list):
+            self.y_values = numpy.empty((elements, len(values[0][1])))
+        
         odict = ordereddict.OrderedDict()
-        for key, val in values:
+
+# TODO (ac): Delete ordereddict implementation!   
+        for index, (key, val) in enumerate(values):
+            self.x_values[index] = key
+            self.y_values[index] = val
+            
             odict["%s" % key] = val
+        
         self.values = odict
 
+# TODO (ac): Use numpy arrays!
     def __eq__(self, other):
         return self.values == other.values
 
@@ -310,35 +326,46 @@ class FastCurve(object):
     @property
     def domain(self):
         """Returns the domain values of this curve."""
-        return self.values.keys()
+        return list(self.x_values)
 
     @property
-    def codomain(self):
+    def codomain(self, index_type=0):
         """Returns the codomain values of this curve."""
-        return self.values.values()
+        if self.y_values.ndim > 1:
+            return list(self.y_values[:,index_type])
+        else:
+            return list(self.y_values)
 
-    # TODO (ac): Change name according to the other function
-    def get_for(self, x_value):
+    def codomain_for(self, x_value, index_type=0):
         """Returns the y value (codomain) corresponding
         to the given x value (domain)."""
-        return self.values[x_value]
+        index = numpy.where(self.x_values==x_value)[0][0]
+        
+        if self.y_values.ndim > 1:
+            return self.y_values[index][index_type]
+        else:
+            return self.y_values[index]
 
+# TODO (ac): Support indexing!
     def domain_for(self, y_value):
         """Returns the x value (domain) corresponding
         to the given y value (codomain)."""
+        
+        if self.y_values.ndim > 1:
+            y_values = self.y_values[:,0]
+        else:
+            y_values = self.y_values
+        
+        index = numpy.where(y_values==y_value)[0][0]
+        return self.x_values[index]
 
-        # TODO (bw): Find out if there is a better way to do this
-        for x, y in self.values.items():
-            if y == y_value: 
-                return float(x)
-
-        # TODO (bw): Test this corner case
-        error_str = "%s is not contained in this function" % (y_value, )
-        raise ValueError(error_str)
+    def interpolate(self, value):
+        pass
 
     def to_json(self):
         return json.JSONEncoder().encode(self.values)
 
+# TODO (ac): Use numpy arrays!
     def from_json(self, json_str):
         odict = ordereddict.OrderedDict()
         for key, value in json.JSONDecoder().decode(json_str).items():
