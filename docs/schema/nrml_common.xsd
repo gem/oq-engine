@@ -8,15 +8,28 @@
 	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 	<!-- -->
 	
-	<xs:complexType name="ModelType">
-		<xs:sequence>
-			<xs:element ref="nrml:LossRatios"/>
-			<xs:element ref="nrml:CoefficientsVariation"/>
-		</xs:sequence>
+	<xs:complexType name="AssetType">
+	<xs:sequence>
+		<xs:element ref="nrml:AssetID"/>
+		<xs:element ref="nrml:StructureType"/>
+		<xs:element minOccurs="0" ref="gml:pos"/>
+		<xs:element ref="nrml:AssetValue"/>
+	</xs:sequence>
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
-
-	<xs:element name="Model" type="nrml:ModelType"/>
+	
+	<xs:element name="Asset" type="nrml:AssetType"/>
+	
+	<xs:complexType name="AssetPortfolioType">
+		<xs:sequence>
+            <xs:element ref="nrml:Common" minOccurs="0"/>
+    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    				<xs:element ref="nrml:Asset"/>
+    		</xs:sequence>
+    	</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+	
 	
 	<xs:complexType name="CurveType">
 		<xs:all>
@@ -45,6 +58,16 @@
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	
+	<xs:complexType name="ModelType">
+		<xs:sequence>
+			<xs:element ref="nrml:LossRatios"/>
+			<xs:element ref="nrml:CoefficientsVariation"/>
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+
+	<xs:element name="Model" type="nrml:ModelType"/>
+	
 	<xs:complexType name="ModelListType">
 		<xs:sequence>
             <xs:element ref="nrml:Common" minOccurs="0"/>
@@ -57,8 +80,8 @@
 	
 	<xs:element name="Config"/>
 
-	<xs:element name="Values" type="gml:doubleList"/>
-	<xs:element name="LossRatios" type="gml:doubleList"/>
+	<xs:element name="AssetID" type="xs:string"/>
+	<xs:element name="AssetValue" type="xs:double"/>
 	<xs:element name="CoefficientsVariation" type="gml:doubleList"/>
 	<xs:element name="IMLValues" type="gml:doubleList"/>
 	<xs:element name="IMT">
@@ -72,6 +95,9 @@
 			</xs:restriction>
 		</xs:simpleType>
 	</xs:element>
+	<xs:element name="LossRatios" type="gml:doubleList"/>
+	<xs:element name="StructureType" type="xs:string"/>
+	<xs:element name="Values" type="gml:doubleList"/>
 
 	<xs:complexType name="EvenlyDiscretizedDistType">
 		<xs:annotation>
