@@ -8,7 +8,6 @@ import java.util.Random;
 import org.gem.engine.hazard.parsers.nshmp.NshmpFault2GemSourceData;
 import org.junit.Test;
 import org.opensha.commons.geo.Location;
-import org.opensha.gem.GEM1.util.GEM1ERFCreator;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
@@ -39,8 +38,7 @@ public class StochasticEventSetGeneratorTest {
 		ArrayList<GEMSourceData> faultSourceDataList = 
 			new ArrayList<GEMSourceData>();
 		faultSourceDataList.add(src);
-		GEM1ERF erf = new GEM1ERFCreator(faultSourceDataList, timeSpan)
-        .getErf();
+		GEM1ERF erf = GEM1ERF.getGEM1ERF(faultSourceDataList, timeSpan);
 		Random rn = null;
 		StochasticEventSetGenerator.getStochasticEventSetFromPoissonianERF(erf,
 				rn);
@@ -72,8 +70,7 @@ public class StochasticEventSetGeneratorTest {
 		ArrayList<GEMSourceData> faultSourceDataList = 
 			new ArrayList<GEMSourceData>();
 		faultSourceDataList.add(src);
-		GEM1ERF erf = new GEM1ERFCreator(faultSourceDataList, timeSpan)
-		                  .getErf();
+		GEM1ERF erf = GEM1ERF.getGEM1ERF(faultSourceDataList, timeSpan);
 
 		// Calculate stochastic event sets
 		Random rn = new Random(seed);
