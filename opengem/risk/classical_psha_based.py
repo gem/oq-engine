@@ -120,7 +120,7 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     imls.sort()
     
     for iml in imls:
-        prob_occ = hazard_curve.get_for(iml)
+        prob_occ = hazard_curve.codomain_for(iml)
         for row in range(len(lrem_po)):
             if not lrem_po[row]: 
                 lrem_po[row] = [None] * len(vuln_function.domain)
@@ -145,13 +145,11 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
 #@state.memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
-
-    loss_ratios = [value[0] for value in vuln_function.codomain] 
-        # get the means
+    # get the means
+    loss_ratios = vuln_function.codomain
+    # we need to add 0.0 as first value
     loss_ratios.insert(0, 0.0)
-        # we need to add 0.0 as first value
-    splitted = _split_loss_ratios(loss_ratios)  
-    return splitted
+    return _split_loss_ratios(loss_ratios)  
 
 # @state.memoize
 def _compute_lrem(vuln_function, distribution=None):
@@ -183,8 +181,8 @@ def _compute_lrem(vuln_function, distribution=None):
 
     for iml in imls:
         # we need to use std deviation, but we have cov
-        cov = float(vuln_function.get_for(iml)[1])
-        mean = float(vuln_function.get_for(iml)[0])
+        mean = vuln_function.codomain_for(iml)
+        cov = vuln_function.codomain_for(iml, 1)
         stddev = cov * mean
         variance = stddev ** 2.0
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )

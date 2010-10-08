@@ -128,7 +128,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
             self.memcache_client)
 
     def tearDown(self):
-
         # flush vulnerability curves in memcache
         vulnerability.delete_vuln_curves(self.job_id, self.memcache_client)
 
@@ -206,26 +205,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                                               (0.52, 0.085),
                                               (0.56, 0.066),
                                               (0.60, 0.051)])
-        for key, val in lr_curve_expected.values.items():
-            self.assertAlmostEqual(val, loss_ratio_curve.get_for(key), 3)
+
+        for x_value in lr_curve_expected.domain:
+            self.assertAlmostEqual(lr_curve_expected.codomain_for(x_value),
+                    loss_ratio_curve.codomain_for(x_value), 3)
     
     def test_empty_matrix(self):
         """Degenerate case."""
-        #cself.assertEqual([], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
+        # cself.assertEqual([], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
         self.assertEqual([None], _compute_lrem(
             self.vulnerability_curves[vulnerability.EMPTY_CODE], 
             shapes.EMPTY_CURVE))
-
-    
-    def test_lrem_computation(self):
-        lrem = _compute_lrem(
-            self.vulnerability_curves[self.vuln_curve_code_test])
-        
-        # self.assertAlmostEquals(1.0, lrem[0][1], 4)
-        #self.assertAlmostEquals(0.5, lrem[4][0], 4)
-        #self.assertAlmostEquals(0.5, lrem[9][1], 4)
-        #self.assertAlmostEquals(0.5, lrem[14][2], 4)
-        # self.assertAlmostEquals(0.0, lrem[15][0], 4)
         
     # loss ratios splitting tests
 
