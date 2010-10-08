@@ -24,7 +24,7 @@ LOSS_SCHEMA_FILE = 'nrml.xsd'
 data_dir = os.path.join(os.path.dirname(__file__), 'data')
 schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')
 
-TEST_CURVE = shapes.FastCurve([
+TEST_CURVE = shapes.Curve([
      (0.0, 0.24105392741891271), (1280.0, 0.23487103910274165), 
      (2560.0, 0.22617525423987336), (3840.0, 0.21487350918336773), 
      (5120.0, 0.20130828974113113), (6400.0, 0.18625699583339819), 
@@ -92,11 +92,10 @@ class LossOutputTestCase(unittest.TestCase):
                 + xml.NRML + "LossCurve//"
                 + xml.NRML + "Values").text.strip().split()
 
-        for idx, val in enumerate(TEST_CURVE.codomain):
+        for idx, val in enumerate(TEST_CURVE.codomain()):
             self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
-        for idx, val in enumerate(TEST_CURVE.domain):
+        for idx, val in enumerate(TEST_CURVE.domain()):
             self.assertEqual(val, float(xml_first_curve_value[idx]))
-
 
     # TODO(jmc): Test that the lat and lon are correct for each curve
     # Optionally, compare it to another XML file.
@@ -113,8 +112,8 @@ class LossOutputTestCase(unittest.TestCase):
                 + xml.NRML + "LossRatioCurve//"
                 + xml.NRML + "Values").text.strip().split()
 
-        for idx, val in enumerate(TEST_CURVE.codomain):
+        for idx, val in enumerate(TEST_CURVE.codomain()):
             self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
-        for idx, val in enumerate(TEST_CURVE.domain):
+        for idx, val in enumerate(TEST_CURVE.domain()):
             self.assertEqual(val, float(xml_first_curve_value[idx]))
 

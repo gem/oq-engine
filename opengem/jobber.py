@@ -150,7 +150,7 @@ class Jobber(object):
             sites_hash_list.append((str(gridpoint), 
                                    (site.longitude, site.latitude)))
 
-            hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
+            hazard_curve = shapes.Curve(zip(hazard_curve_data['IML'], 
                                                 hazard_curve_data['Values']))
 
             memcache_key_hazard = identifiers.generate_product_key(
