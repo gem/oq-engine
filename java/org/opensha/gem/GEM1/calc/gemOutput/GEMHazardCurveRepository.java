@@ -127,13 +127,13 @@ public class GEMHazardCurveRepository extends GEMHazardResults {
 	}
 	
 	/**
-	 * This method computes a ground motion map for a given probability of exceedance using
+	 * This method computes a hazard map for a given probability of exceedance using
 	 * the hazard curves contained in the HazardCurveRepository
 	 * 
 	 * @param probExcedance
 	 * @return
 	 */
-	public ArrayList<Double> getGroundMotionMap (double probExcedance){
+	public ArrayList<Double> getHazardMap (double probExcedance){
 		ArrayList<Double> hazardMap = new ArrayList<Double>();
 
 		for (int i=0; i<probList.size(); i++ ){
