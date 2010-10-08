@@ -28,7 +28,7 @@ logger = logs.RISK_LOG
 # input test values
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
-HAZARD_CURVE = shapes.FastCurve(
+HAZARD_CURVE = shapes.Curve(
     [(5.0, 0.138), (6.0, 0.099), (7.0, 0.068), (8.0, 0.041)])
 
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
@@ -41,15 +41,15 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         # [0, 0.0600, 0.1200, 0.1800, 0.2400, 0.3000, 0.4500]  
         # and pe of : [0.3460, 0.1200, 0.0570, 0.0400, 0.0190, 0.0090,  0]
         # 
-        self.loss_ratio_pe_curve = shapes.FastCurve([
+        self.loss_ratio_pe_curve = shapes.Curve([
             (0, 0.3460), (0.06, 0.12), (0.12, 0.057), (0.18, 0.04), 
             (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
         
-        self.loss_ratio_pe_mid_curve = shapes.FastCurve([(0.0300, 0.2330), 
+        self.loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330), 
             (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295), 
             (0.2700, 0.0140), (0.3750, 0.0045)])
             
-        self.loss_ratio_po_curve = shapes.FastCurve([(0.0600, 0.1445),
+        self.loss_ratio_po_curve = shapes.Curve([(0.0600, 0.1445),
         	(0.1200, 0.0400), (0.1800, 0.0190), (0.2300, 0.0155), 
         	(0.300, 0.0095)])
         
@@ -64,7 +64,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         
         loss_ratio_pe_mid_curve = compute_mid_mean_pe(self.loss_ratio_pe_curve)
             
-        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.codomain):
+        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.codomain()):
             self.assertAlmostEqual(val, loss_ratio_pe_mid_curve[idx])        
 
     # todo BW itarate these test values one by one
@@ -77,7 +77,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
     def test_loss_ratio_po_computation(self):
         
         loss_ratio_po_mid_curve = compute_mid_po(
-            self.loss_ratio_pe_mid_curve.codomain)
+            self.loss_ratio_pe_mid_curve.codomain())
         
         self.loss_ratio_po_curve_codomain = \
             [0.1445, 0.0400, 0.0190, 0.0155, 0.0095]
@@ -114,7 +114,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.job_id = identifiers.generate_random_id()
 
         self.vuln_curve_code_test = "TEST"
-        vuln_curve_test = shapes.FastCurve(
+        vuln_curve_test = shapes.Curve(
             [(5.0, (0.25, 0.5)),
              (6.0, (0.4, 0.4)),
              (7.0, (0.6, 0.3))])
@@ -140,16 +140,16 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
         self.assertEqual(compute_loss_curve(
-                shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
+                shapes.Curve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
                 INVALID_ASSET_VALUE),
                 shapes.EMPTY_CURVE)
     
     def test_loss_curve_computation(self):
-        loss_ratio_curve = shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), 
+        loss_ratio_curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0), 
                                              (0.3, 3.0)])
         loss_curve = compute_loss_curve(loss_ratio_curve, ASSET_VALUE)
 
-        self.assertEqual(shapes.FastCurve([
+        self.assertEqual(shapes.Curve([
                 (0.1 * ASSET_VALUE, 1.0),
                 (0.2 * ASSET_VALUE, 2.0),
                 (0.3 * ASSET_VALUE, 3.0)]), loss_curve)
@@ -179,7 +179,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         
     def test_end_to_end(self):
         """These values were hand-computed by Vitor Silva."""
-        hazard_curve = shapes.FastCurve(
+        hazard_curve = shapes.Curve(
             [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
         
         lrem = _compute_lrem(
@@ -189,7 +189,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
             self.vulnerability_curves[self.vuln_curve_code_test], 
             hazard_curve)
         
-        lr_curve_expected = shapes.FastCurve([(0.0, 0.650), 
+        lr_curve_expected = shapes.Curve([(0.0, 0.650), 
                                               (0.05, 0.650),
                                               (0.10, 0.632),
                                               (0.15, 0.569),
@@ -206,7 +206,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                                               (0.56, 0.066),
                                               (0.60, 0.051)])
 
-        for x_value in lr_curve_expected.domain:
+        for x_value in lr_curve_expected.domain():
             self.assertAlmostEqual(lr_curve_expected.codomain_for(x_value),
                     loss_ratio_curve.codomain_for(x_value), 3)
     
@@ -280,7 +280,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     # TODO (bw): Should we check also if the curve has no values?
     def test_ratio_is_zero_if_probability_is_out_of_bounds(self):
-        loss_curve = shapes.FastCurve([(0.21, 0.131), (0.24, 0.108),
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
                 
         self.assertEqual(0.0, compute_conditional_loss(loss_curve, 0.050))
@@ -289,7 +289,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 loss_curve, 0.200))        
 
     def test_conditional_loss_computation(self):
-        loss_curve = shapes.FastCurve([(0.21, 0.131), (0.24, 0.108),
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertAlmostEqual(0.2526, 

@@ -29,7 +29,7 @@ class Reader(object):
         
     def as_curve(self, key):
         """Read serialized versions of hazard curves
-        and produce shapes.FastCurve objects.
+        and produce shapes.Curve objects.
         
         TODO (ac): How should we handle other metadata?
         """
@@ -40,7 +40,7 @@ class Reader(object):
         
         for raw_curves in decoded_model["hcRepList"]:
             for curve in raw_curves["probExList"]:
-                curves.append(shapes.FastCurve(
+                curves.append(shapes.Curve(
                         zip(raw_curves["gmLevels"], curve)))
         
         return curves

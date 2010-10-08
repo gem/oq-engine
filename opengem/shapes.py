@@ -290,29 +290,58 @@ class Site(object):
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
-# TODO (ac): Change the name!
-# TODO (ac): Document!
-# TODO (ac): Constructor must take care of the order!
-class FastCurve(object):
+
+class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
 
     @classmethod
     def from_json(cls, json_str):
+        """Construct a curve from a serialized version in
+        json format."""
         as_dict = json.JSONDecoder().decode(json_str)
-        return FastCurve.from_dict(as_dict)
+        return Curve.from_dict(as_dict)
 
     @classmethod
     def from_dict(cls, values):
+        """Construct a curve from a dictionary.
+        
+        The dictionary keys can be unordered and can be
+        whatever type can be converted to float with (float).
+
+        """
+        
         data = []
         
         for key, val in values.items():
             data.append((float(key), val))
 
-        return FastCurve(data)
+        return Curve(data)
 
     def __init__(self, values):
-        """Construct a curve object with an ordered dict"""
+        """Construct a curve from a sequence of tuples.
+        
+        The value on the first position of the tuple is the x value,
+        the value on the second position is the y value.
+        
+        This class supports multiple y values for the same
+        x value, for example:
+        
+        Curve([(0.1, 1.0), (0.2, 2.0)]) # single y value
+        Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.5))]) # multiple y values
+        
+        or, with lists:
+        
+        Curve([(0.1, [1.0, 0.5]), (0.2, [2.0, 0.5])])
+        
+        The values can be in any order, for axample:
+        
+        Curve([(0.4, 1.0), (0.2, 2.0), (0.3, 2.0)])
+        
+        """
+
+        # sort the values on x axis
+        values = sorted(values, key=lambda data: data[0])
         
         elements = len(values)
         self.x_values = numpy.empty(elements)
@@ -333,32 +362,49 @@ class FastCurve(object):
         return "X Values: %s\nY Values: %s" % (
                 self.x_values.__str__(), self.y_values.__str__())
 
-    @property
+    def __mul__(self, value) :
+        """Return a new curve with each x value multiplied
+        by the value passed as parameter."""
+        
+        result = Curve(())
+        result.x_values = self.x_values * value
+        result.y_values = self.y_values
+        
+        return result
+
     def domain(self):
-        """Returns the domain values of this curve."""
+        """Return the domain values of this curve in ascending order."""
         return list(self.x_values)
 
-    @property
-    def codomain(self, index_type=0):
-        """Returns the codomain values of this curve."""
+    def codomain(self, y_index=0, reverse=False):
+        """Return the codomain values of this curve in ascending order
+        of the corresponding domain values."""
+        
+        values = []
+        
         if self.y_values.ndim > 1:
-            return list(self.y_values[:,index_type])
+            values = list(self.y_values[:,y_index])
         else:
-            return list(self.y_values)
+            values = list(self.y_values)
 
-    def codomain_for(self, x_value, index_type=0):
-        """Returns the y value (codomain) corresponding
+        if reverse:
+            values.sort(reverse=True)
+        
+        return values
+
+    def codomain_for(self, x_value, y_index=0):
+        """Return the y value (codomain) corresponding
         to the given x value (domain)."""
         index = numpy.where(self.x_values==x_value)[0][0]
         
         if self.y_values.ndim > 1:
-            return self.y_values[index][index_type]
+            return self.y_values[index][y_index]
         else:
             return self.y_values[index]
 
 # TODO (ac): Support indexing!
     def domain_for(self, y_value):
-        """Returns the x value (domain) corresponding
+        """Return the x value (domain) corresponding
         to the given y value (codomain)."""
         
         if self.y_values.ndim > 1:
@@ -373,7 +419,8 @@ class FastCurve(object):
         pass
 
     def to_json(self):
-        as_dict = ordereddict.OrderedDict()
+        """Serialize this curve in json format."""
+        as_dict = {}
         
         for index, x_value in enumerate(self.x_values):
             if self.y_values.ndim > 1:
@@ -384,4 +431,4 @@ class FastCurve(object):
         return json.JSONEncoder().encode(as_dict)
 
 
-EMPTY_CURVE = FastCurve(())
+EMPTY_CURVE = Curve(())

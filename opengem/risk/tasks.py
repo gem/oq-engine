@@ -133,7 +133,7 @@ def main(vulnerability_model_file, hazard_curve_file,
     for site, hazard_curve_data in nrml_parser.filter(
             region_constraint, attribute_constraint):
         gridpoint = region_constraint.grid.point_at(site)
-        hazard_curve = shapes.FastCurve(zip(hazard_curve_data['IML'], 
+        hazard_curve = shapes.Curve(zip(hazard_curve_data['IML'], 
                                 hazard_curve_data['Values']))
         hazard_curves[gridpoint] = hazard_curve
         HAZARD_LOG.debug("Loading hazard curve %s at %s: %s", 
