@@ -1,5 +1,7 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
+import org.junit.Test;
+
 import com.sun.org.apache.xml.internal.security.utils.HelperNodeList;
 
 import junit.framework.TestCase;
@@ -11,6 +13,7 @@ public class CommandLineCalculatorTest extends TestCase {
 	 * intensity measure type "MMI". This tests veryfies that. It is expected
 	 * to fail.
 	 */
+	@Test(expected = RuntimeException.class)
 	public void testCalculatorConfig() {
 		boolean terminatedPrematurely = true;
 		/*
@@ -22,21 +25,16 @@ public class CommandLineCalculatorTest extends TestCase {
 		 * (state at 2010-10-07):
 		 * This would let the test end successfull 
 		 */
-		// final String intensityMeasureTypeToTest = "PGA";
+		 // final String intensityMeasureTypeToTest = "PGA";
 		CommandLineCalculator clc = new CommandLineCalculator("data/CalculatorConfig.properties");
 		clc.setConfigItem(
 				CalculatorConfigHelper.ConfigItems.INTENSITY_MEASURE_TYPE.name(),
 				intensityMeasureTypeToTest);
-		try {
-			clc.doCalculation();
-			terminatedPrematurely = false;
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		} finally {
-			if(terminatedPrematurely) {
-				fail("Calculation terminated fail prematurely.");
-			}
-		} // finally
+		clc.doCalculation();
+		terminatedPrematurely = false;
+		if(terminatedPrematurely) {
+			fail("Calculation terminated fail prematurely.");
+		}
 	} // testCalculatorConfig()
 
 } // class CommandLineCalculatorTest
