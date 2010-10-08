@@ -349,6 +349,23 @@ public class GEM1ERF extends EqkRupForecast {
 		initialize(calcSet);
 	}
 	
+	/**
+	 * This returns a GEM1ERF, with a given duration, and with default parameters
+	 * @param sourceDataList
+	 * @param timeSpan
+	 * @return
+	 */
+	public static GEM1ERF getGEM1ERF(ArrayList<GEMSourceData> sourceDataList,
+			double timeSpan){
+		TimeSpan tms = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
+		tms.setDuration(timeSpan);
+		GEM1ERF erf = new GEM1ERF(sourceDataList);
+		erf.setTimeSpan(tms);
+		erf.updateForecast();
+		return erf;
+	}
+
+	
 	protected void parseSourceListIntoDifferentTypes(ArrayList<GEMSourceData> allGemSourceDataList) {
 
 		areaSourceDataList = new ArrayList<GEMSourceData> ();
