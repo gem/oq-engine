@@ -33,19 +33,18 @@ if __name__ == '__main__':
     
     try:
         import nose
-        args = ["nosetests","tests"]
-        args.append("-q")
-        args.append("--logging-clear-handlers")
-        #if (FLAGS.debug == "debug"):
-        #    args.append("-v")
-        #else:
-        # args.append("--verbosity=0")
-#         
-# FLAGS = flags.FLAGS
-# 
-# if FLAGS.speed_tests:
-#     from xml_speedtests import *
+        args = ['nosetests']
+        if (FLAGS.debug == "debug"):
+            pass
+        else:
+            args.append("--logging-clear-handlers")
 
-        nose.run(argv=args)
+        if FLAGS.speed_tests:
+            print "Running speed tests with %s" % args
+            nose.run(defaultTest='tests.xml_speedtests', argv=args)
+        else:
+            nose.run(defaultTest='tests', argv=args)
+
     except ImportError, _e:
+        print "Couldn't find nose, using something else"
         unittest.main()
