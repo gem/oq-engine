@@ -322,7 +322,7 @@ class Curve(object):
         """Construct a curve from a sequence of tuples.
         
         The value on the first position of the tuple is the x value,
-        the value on the second position is the y value.
+        the value(s) on the second position is the y value(s).
         
         This class supports multiple y values for the same
         x value, for example:
@@ -380,12 +380,10 @@ class Curve(object):
         """Return the codomain values of this curve in ascending order
         of the corresponding domain values."""
         
-        values = []
+        values = list(self.y_values)
         
         if self.y_values.ndim > 1:
             values = list(self.y_values[:,y_index])
-        else:
-            values = list(self.y_values)
 
         if reverse:
             values.sort(reverse=True)
@@ -396,23 +394,25 @@ class Curve(object):
         """Return the y value (codomain) corresponding
         to the given x value (domain)."""
         index = numpy.where(self.x_values==x_value)[0][0]
+
+        values = self.y_values
         
         if self.y_values.ndim > 1:
-            return self.y_values[index][y_index]
-        else:
-            return self.y_values[index]
+            values = list(self.y_values[:,y_index])
+        
+        return values[index]
 
-# TODO (ac): Support indexing!
     def domain_for(self, y_value):
         """Return the x value (domain) corresponding
         to the given y value (codomain)."""
         
-        if self.y_values.ndim > 1:
-            y_values = self.y_values[:,0]
-        else:
-            y_values = self.y_values
+        values = self.y_values
         
-        index = numpy.where(y_values==y_value)[0][0]
+        if self.y_values.ndim > 1:
+            #  does not support indexing yet
+            values = self.y_values[:,0]
+        
+        index = numpy.where(values==y_value)[0][0]
         return self.x_values[index]
 
     def interpolate(self, value):
