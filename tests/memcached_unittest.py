@@ -11,8 +11,8 @@ from opengem import logs
 from opengem import memcached
 from opengem import shapes
 from opengem import test
-from opengem.output import hazard_nrml
-from opengem.parser import nrml
+from opengem.output import hazard as hazard_output
+from opengem.parser import hazard as hazard_parser
 
 LOG = logs.LOG
 
@@ -209,7 +209,7 @@ class MemcachedTestCase(unittest.TestCase):
         LOG.debug("Nrmls are %s", nrmls)
         
         # writing result
-        writer = hazard_nrml.HazardCurveXMLWriter(
+        writer = hazard_output.HazardCurveXMLWriter(
                 os.path.join(test.DATA_DIR, TEST_FILE))
 
         writer.serialize(nrmls)
@@ -218,7 +218,7 @@ class MemcachedTestCase(unittest.TestCase):
         constraint = shapes.RegionConstraint.from_simple(
                 (1.5, 1.5), (2.5, 0.5))
 
-        reader = nrml.NrmlFile(
+        reader = hazard_parser.NrmlFile(
                 os.path.join(test.DATA_DIR, TEST_FILE))
         
         number_of_curves = 0

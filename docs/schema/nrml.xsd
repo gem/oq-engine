@@ -4,7 +4,8 @@
 	xmlns:nrml="http://opengem.org/xmlns/nrml/0.1"
 	targetNamespace="http://opengem.org/xmlns/nrml/0.1"> 
   <!-- Include schemas being part of NRML -->
-	<xs:include schemaLocation="./nrml_input.xsd"/>
-	<!--  -->
-	<xs:include schemaLocation="./nrml_output.xsd"/>
+	<xs:include schemaLocation="./nrml_seismic.xsd"/>
+	<xs:include schemaLocation="./nrml_hazard.xsd"/>
+	<xs:include schemaLocation="./nrml_risk.xsd"/>
+	<xs:include schemaLocation="./nrml_common.xsd"/>
 </xs:schema>

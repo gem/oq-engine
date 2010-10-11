@@ -56,7 +56,11 @@ class RiskXMLWriter(writer.FileWriter):
             if subnode_pe.find(NRML + "Values").text != pe_values:
                 raise Exception("Curves must share the same Abcissa!")
         else:
-            subnode_pe = etree.SubElement(self.root_node, 
+            common_node = self.parent_node.find(NRML + "Common")
+            if common_node is None:
+                common_node = etree.Element(NRML + "Common", nsmap=NSMAP)
+                parent_node.insert(0, common_node)  
+            subnode_pe = etree.SubElement(common_node, 
                             self.abcissa_tag, nsmap=NSMAP)
             etree.SubElement(subnode_pe, 
                     NRML + "Values", nsmap=NSMAP).text = pe_values
