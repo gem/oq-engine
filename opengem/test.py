@@ -62,8 +62,11 @@ def skipit(_method):
     """Decorator for skipping tests"""
     def _skipme(*_args, **_kw):
         """The skipped method"""
-        pass
-    print "skipping method %r" % _method.__name__
+        try:
+            from nose.plugins.skip import SkipTest
+            raise SkipTest("skipping method %r" % _method.__name__)
+        except ImportError, _e:
+            print "Can't raise nose SkipTest error, silently skipping"
     return _skipme
 
 
