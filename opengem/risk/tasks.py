@@ -10,14 +10,6 @@ Tasks in the risk engine include the following:
 
 from celery.decorators import task
 
-from opengem.logs import HAZARD_LOG, RISK_LOG
-from opengem.risk import engines
-import opengem.output.risk
-from opengem import shapes
-from opengem.output import geotiff
-from opengem import producer
-from opengem.parser import exposure
-from opengem.parser import vulnerability
 from opengem import flags
 from opengem import identifiers
 from opengem import memcached
@@ -26,6 +18,7 @@ from opengem.risk import engines
 FLAGS = flags.FLAGS
 
 DEFAULT_conditional_loss_poe = 0.01
+
 
 @task
 def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
