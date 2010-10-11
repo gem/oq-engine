@@ -43,15 +43,17 @@ TEST_CURVE = shapes.Curve([
      (176000.0, 0.0025140588978909578), (189440.0, 0.0018158701863753069),
      (202880.0, 0.0012969740515868437), (216320.0, 0.00092183863089347865),
      (229760.0, 0.00065389822562465858), (243200.0, 0.00046282828510792824)])
+
     
 class LossOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.path = os.path.join(data_dir, LOSS_XML_OUTPUT_FILE)
-        self.ratio_path = os.path.join(data_dir, LOSS_RATIO_XML_OUTPUT_FILE)
-        self.schema_path = os.path.join(schema_dir, LOSS_SCHEMA_FILE)
+        self.path = os.path.join(test.DATA_DIR, LOSS_XML_OUTPUT_FILE)
+        self.ratio_path = os.path.join(test.DATA_DIR, 
+            LOSS_RATIO_XML_OUTPUT_FILE)
+        self.schema_path = os.path.join(test.SCHEMA_DIR, LOSS_SCHEMA_FILE)
 
         # Build up some sample loss curves here
 

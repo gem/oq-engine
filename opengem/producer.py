@@ -69,6 +69,13 @@ class FileProducer(object):
             raise
 
         self.finished.send(True)
+    
+    def reset(self):
+        """Sometimes we like to iterate the filter more than once."""
+        self.file.seek(0)
+        self.finished = event.Event()
+        # contains the metadata of the node currently parsed
+        self._current_meta = {}
 
     def filter(self, region_constraint=None, attribute_constraint=None):
         """Filters the elements readed by this producer.

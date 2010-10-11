@@ -20,6 +20,8 @@ flags.DEFINE_boolean('download_test_data', True,
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
 
+SCHEMA_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '../docs/schema'))
 
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three 
@@ -60,8 +62,11 @@ def skipit(_method):
     """Decorator for skipping tests"""
     def _skipme(*_args, **_kw):
         """The skipped method"""
-        pass
-    print "skipping method %r" % _method.__name__
+        try:
+            from nose.plugins.skip import SkipTest
+            raise SkipTest("skipping method %r" % _method.__name__)
+        except ImportError, _e:
+            print "Can't raise nose SkipTest error, silently skipping"
     return _skipme
 
 

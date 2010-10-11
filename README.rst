@@ -34,13 +34,22 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 
 You'll need to mess with PYTHONPATH (in your .bash_profile file), or add a .pth file, both for gdal and for opengem itself.
 
+To get RabbitMQ set up, execute the following:
+
+sudo rabbitmq-server &
+sudo rabbitmqctl add_user celeryuser celery
+sudo rabbitmqctl add_vhost celeryvhost
+sudo rabbitmqctl set_permissions -p celeryvhost celeryuser ".*" ".*" ".*"
+
+(Feel free to customize these settings and update celeryconfig.py)
+
 Running Tests
 -------------
 
 To run the python tests use:
 
 ::
-
+    celeryd &
     python runtests.py
 
 To run the java tests use:
