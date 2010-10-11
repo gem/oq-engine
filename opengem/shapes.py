@@ -307,7 +307,7 @@ class Curve(object):
         """Construct a curve from a dictionary.
         
         The dictionary keys can be unordered and can be
-        whatever type can be converted to float with (float).
+        whatever type can be converted to float with float().
 
         """
         
