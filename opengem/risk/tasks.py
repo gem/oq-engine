@@ -8,7 +8,6 @@ Tasks in the risk engine include the following:
  * Output generation
 """
 
-
 from celery.decorators import task
 
 from opengem.logs import HAZARD_LOG, RISK_LOG
@@ -19,11 +18,9 @@ from opengem.output import geotiff
 from opengem import producer
 from opengem.parser import exposure
 from opengem.parser import vulnerability
-
 from opengem import flags
 from opengem import identifiers
 from opengem import memcached
-
 from opengem.risk import engines
 
 FLAGS = flags.FLAGS
@@ -104,4 +101,3 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
     # assembling final product needs to be done by jobber, collecting the
     # results from all tasks
     return True
-    
