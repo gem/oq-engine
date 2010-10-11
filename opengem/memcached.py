@@ -4,11 +4,14 @@ A simple memcached reader.
 """
 
 import json
+import logging
 import math
 import pylibmc
 
 from opengem import identifiers
 from opengem import shapes
+
+logging.getLogger('jpype').setLevel(logging.ERROR)
 
 MEMCACHED_PORT = 11211
 MEMCACHED_HOST = "localhost"
