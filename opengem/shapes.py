@@ -416,6 +416,7 @@ class Curve(object):
         return self.x_values[index]
 
     def interpolate(self, value):
+        """Interpolates values."""
         pass
 
     def to_json(self):
