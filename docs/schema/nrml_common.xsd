@@ -9,12 +9,12 @@
 	<!-- -->
 	
 	<xs:complexType name="AssetType">
-	<xs:sequence>
+	<xs:all>
 		<xs:element ref="nrml:AssetID"/>
 		<xs:element ref="nrml:StructureType"/>
 		<xs:element minOccurs="0" ref="gml:pos"/>
 		<xs:element ref="nrml:AssetValue"/>
-	</xs:sequence>
+	</xs:all>
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	
