@@ -64,7 +64,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         
         loss_ratio_pe_mid_curve = compute_mid_mean_pe(self.loss_ratio_pe_curve)
             
-        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.codomain()):
+        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.ordinates):
             self.assertAlmostEqual(val, loss_ratio_pe_mid_curve[idx])        
 
     # todo BW itarate these test values one by one
@@ -77,7 +77,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
     def test_loss_ratio_po_computation(self):
         
         loss_ratio_po_mid_curve = compute_mid_po(
-            self.loss_ratio_pe_mid_curve.codomain())
+            self.loss_ratio_pe_mid_curve.ordinates)
         
         self.loss_ratio_po_curve_codomain = \
             [0.1445, 0.0400, 0.0190, 0.0155, 0.0095]
@@ -206,9 +206,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                                               (0.56, 0.066),
                                               (0.60, 0.051)])
 
-        for x_value in lr_curve_expected.domain():
-            self.assertAlmostEqual(lr_curve_expected.codomain_for(x_value),
-                    loss_ratio_curve.codomain_for(x_value), 3)
+        for x_value in lr_curve_expected.abscissae:
+            self.assertAlmostEqual(lr_curve_expected.ordinate_for(x_value),
+                    loss_ratio_curve.ordinate_for(x_value), 3)
     
     def test_empty_matrix(self):
         """Degenerate case."""

@@ -107,13 +107,13 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     
     current_column = 0
     lrem_po = [None] * len(lrem)
-    imls = vuln_function.domain()
+    imls = vuln_function.abscissae
     
     for iml in imls:
-        prob_occ = hazard_curve.codomain_for(iml)
+        prob_occ = hazard_curve.ordinate_for(iml)
         for row in range(len(lrem_po)):
             if not lrem_po[row]: 
-                lrem_po[row] = [None] * len(vuln_function.domain())
+                lrem_po[row] = [None] * len(vuln_function.abscissae)
             lrem_po[row][current_column] = lrem[row][current_column] * prob_occ
         current_column += 1
     
@@ -135,8 +135,13 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
 #@state.memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
-    # get the means
-    loss_ratios = list(vuln_function.codomain())
+
+    if vuln_function.is_multi_value:
+        # means on first position
+        loss_ratios = list(vuln_function.ordinates[:,0])
+    else:
+        loss_ratios = list(vuln_function.ordinates)
+    
     # we need to add 0.0 as first value
     loss_ratios.insert(0, 0.0)
     return _split_loss_ratios(loss_ratios)  
@@ -153,7 +158,7 @@ def _compute_lrem(vuln_function, distribution=None):
     
     current_column = 0
     lrem = [None] * (len(loss_ratios)+1)
-    imls = vuln_function.domain()
+    imls = vuln_function.abscissae
 
     def fix_value(prob):
         """Fix negative probabilities for values close to zero. 
@@ -168,8 +173,8 @@ def _compute_lrem(vuln_function, distribution=None):
 
     for iml in imls:
         # we need to use std deviation, but we have cov
-        mean = vuln_function.codomain_for(iml)
-        cov = vuln_function.codomain_for(iml, 1)
+        mean = vuln_function.ordinate_for(iml)
+        cov = vuln_function.ordinate_for(iml, 1)
         stddev = cov * mean
         variance = stddev ** 2.0
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )
@@ -177,12 +182,13 @@ def _compute_lrem(vuln_function, distribution=None):
         
         for row in range(len(loss_ratios)+1):
             if not lrem[row]: 
-                lrem[row] = [None] * len(vuln_function.domain())
+                lrem[row] = [None] * len(vuln_function.abscissae)
             # last loss ratio is fixed to be 1
             if row < len(loss_ratios): 
                 next_ratio = loss_ratios[row]
             else: 
-                next_ratio = 1.0 
+                next_ratio = 1.0
+            
             lrem[row][current_column] = fix_value(
                 distribution.sf(next_ratio, 
                         sigma, scale=scipy.exp(mu)))
@@ -225,7 +231,8 @@ def compute_conditional_loss(loss_curve, probability):
 
     """
 
-    probabilities = loss_curve.codomain(reverse=True)
+    probabilities = list(loss_curve.ordinates)
+    probabilities.sort(reverse=True)
     
     # the probability we want to use is out of bounds
     if probability > probabilities[0] or probability < probabilities[-1]:
@@ -241,9 +248,9 @@ def compute_conditional_loss(loss_curve, probability):
     # For more information about the math, check the scientific
     # model at <http://to_be_defined> (LRM chapter)
     x = probabilities[lower_bound] - probability
-    x *= loss_curve.domain_for(probabilities[upper_bound])       
+    x *= loss_curve.abscissa_for(probabilities[upper_bound])       
     y = (probability - probabilities[upper_bound]) * \
-            loss_curve.domain_for(probabilities[lower_bound])
+            loss_curve.abscissa_for(probabilities[lower_bound])
     
     return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
 
@@ -252,7 +259,7 @@ def compute_mid_mean_pe(loss_ratio_pe_curve):
     # This function needs to take the first two values of the LR and compute 
     # the mean, then iterate to the next two, and so on
     loss_ratio_pe_mid_curve = []
-    pe_values = loss_ratio_pe_curve.codomain()
+    pe_values = loss_ratio_pe_curve.ordinates
 
     for i in xrange(len(pe_values)-1):
         current_value = pe_values[i]

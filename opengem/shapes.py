@@ -319,7 +319,7 @@ class Curve(object):
 
         return Curve(data)
 
-# TODO (ac): Change the constructor
+# TODO (ac): Change the implementation with a single structure
     def __init__(self, values):
         """Construct a curve from a sequence of tuples.
         
@@ -375,29 +375,23 @@ class Curve(object):
         
         return result
 
-# TODO (ac): Switch back to properties
-    def domain(self):
-        """Return the domain values of this curve in ascending order."""
+    @property
+    def abscissae(self):
+        """Return the abscissa values of this curve in ascending order."""
         return self.x_values
 
-    def codomain(self, y_index=0, reverse=False):
-        """Return the codomain values of this curve in ascending order
-        of the corresponding domain values."""
-        
-        values = list(self.y_values)
-        
-        if self.y_values.ndim > 1:
-            values = list(self.y_values[:,y_index])
-
-        if reverse:
-            values.sort(reverse=True)
-        
-        # TODO (ac): Find out how to reverse sort in numpy
-        return numpy.array(values)
-
-    def codomain_for(self, x_value, y_index=0):
-        """Return the y value (codomain) corresponding
-        to the given x value (domain)."""
+    @property
+    def ordinates(self):
+        """Return the ordinate values of this curve in ascending order
+        of the corresponding abscissa values."""
+        return self.y_values
+    
+    @property
+    def is_multi_value(self):
+        return self.y_values.ndim > 1
+    
+    def ordinate_for(self, x_value, y_index=0):
+        """Return the y value corresponding to the given x value."""
         
         y_values = self.y_values
         
@@ -407,9 +401,8 @@ class Curve(object):
         return interp1d(self.x_values, y_values)(x_value)
 
 # TODO (ac): Improve the implementation
-    def domain_for(self, y_value):
-        """Return the x value (domain) corresponding
-        to the given y value (codomain).
+    def abscissa_for(self, y_value):
+        """Return the x value corresponding to the given y value.
         
         This method only works if this curve is strictly monotonic on the given
         abscissa values.
