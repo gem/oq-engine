@@ -1,4 +1,4 @@
-#Mon Oct 04 13:09:22 CEST 2010
+#Wed Oct 13 15:16:06 CEST 2010
 cleanup.add_default_serial_version_id=true
 cleanup.add_generated_serial_version_id=false
 cleanup.add_missing_annotations=true
@@ -54,7 +54,7 @@ cleanup_profile=org.eclipse.jdt.ui.default.eclipse_clean_up_profile
 cleanup_settings_version=2
 eclipse.preferences.version=1
 editor_save_participant_org.eclipse.jdt.ui.postsavelistener.cleanup=true
-formatter_profile=org.eclipse.jdt.ui.default.eclipse_profile
+formatter_profile=_OpenGEM Style
 formatter_settings_version=11
 org.eclipse.jdt.ui.exception.name=e
 org.eclipse.jdt.ui.gettersetter.use.is=true
