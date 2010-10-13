@@ -20,6 +20,8 @@ from distutils.core import setup
 from setuptools import find_packages
 
 scripts = ["bin/%s" % x for x in os.listdir('bin')]
+scripts.extend(
+    ["opengem/utils/%s" % x for x in os.listdir('opengem/utils')])
 libs = []
 for x in os.listdir('lib'):
     if x[-4:] == '.jar':
@@ -31,7 +33,8 @@ setup(name='opengem',
       author='gem-core',
       author_email='opengem-dev@googlegroups.com',
       url='http://www.opengem.org/',
-      packages=['opengem','opengem.hazard','opengem.risk','opengem.output','opengem.parser'],
+      packages=['opengem','opengem.hazard','opengem.risk',
+                'opengem.output','opengem.parser', 'opengem.seismicsources'],
       data_files=[('/etc/opengem', ['celeryconfig.py']),
                   ('lib', libs),],
       scripts=scripts,
