@@ -28,28 +28,24 @@ flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")
 
 if __name__ == '__main__':
     sys.argv = FLAGS(sys.argv)  
-    
+    sys.path.append("tests")
     logs.init_logs()
     
-    from tests.converter_unittest import *
-    from tests.example_unittest import *
-    from tests.flags_unittest import *
-    from tests.geo_unittest import *
-    from tests.hazard_nrml_unittest import *
-    from tests.jobber_unittest import *
-    from tests.loss_output_unittest import *
-    from tests.output_unittest import *
-    from tests.parser_exposure_portfolio_unittest import *
-    from tests.parser_hazard_curve_unittest import *
-    from tests.parser_vulnerability_model_unittest import *
-    from tests.producer_unittest import *
-    from tests.risk_tests import *
-    from tests.schema_unittest import *
-    from tests.classical_psha_based_unittest import *
-    from tests.memcached_unittest import *
-    from tests.shapes_unittest import *
-    
-    if FLAGS.speed_tests:
-        from tests.xml_speedtests import *
-    
-    unittest.main()
+    try:
+        import nose
+        args = ['nosetests']
+        if (FLAGS.debug == "debug"):
+            pass
+        else:
+            args.append("--logging-clear-handlers")
+
+        if FLAGS.speed_tests:
+            print "Running speed tests with %s" % args
+            nose.run(defaultTest='tests.xml_speedtests', argv=args)
+        else:
+            nose.run(defaultTest='tests', argv=args)
+
+    except ImportError, _e:
+        print "Couldn't find nose, using something else"
+        unittest.main()
+

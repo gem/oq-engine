@@ -6,6 +6,10 @@ Should be installed by setup.py into /etc/opengem
 eventually.
 """
 
+import sys
+
+sys.path.append('.')
+
 BROKER_HOST = "localhost"
 BROKER_PORT = 5672
 BROKER_USER = "celeryuser"
