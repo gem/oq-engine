@@ -99,7 +99,7 @@ def compute_loss_curve(loss_ratio_curve, asset):
     if not asset: 
         return shapes.EMPTY_CURVE # invalid asset
 
-    return loss_ratio_curve * asset
+    return loss_ratio_curve.times_domain(asset)
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
@@ -136,7 +136,7 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
     # get the means
-    loss_ratios = vuln_function.codomain()
+    loss_ratios = list(vuln_function.codomain())
     # we need to add 0.0 as first value
     loss_ratios.insert(0, 0.0)
     return _split_loss_ratios(loss_ratios)  
