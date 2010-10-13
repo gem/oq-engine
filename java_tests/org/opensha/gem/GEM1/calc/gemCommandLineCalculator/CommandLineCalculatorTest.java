@@ -1,10 +1,8 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
-import org.junit.Test;
-
-import com.sun.org.apache.xml.internal.security.utils.HelperNodeList;
-
 import junit.framework.TestCase;
+
+import org.junit.Test;
 
 public class CommandLineCalculatorTest extends TestCase {
 
@@ -26,15 +24,11 @@ public class CommandLineCalculatorTest extends TestCase {
          */
         // final String intensityMeasureTypeToTest = "PGA";
         CommandLineCalculator clc =
-                new CommandLineCalculator("data/CalculatorConfig.properties");
+                new CommandLineCalculator("CalculatorConfig.properties");
         clc.setConfigItem(
                 CalculatorConfigHelper.ConfigItems.INTENSITY_MEASURE_TYPE
                         .name(), intensityMeasureTypeToTest);
         clc.doCalculation();
-        terminatedPrematurely = false;
-        if (terminatedPrematurely) {
-            fail("Calculation terminated fail prematurely.");
-        }
     } // testCalculatorConfig()
 
 } // class CommandLineCalculatorTest
