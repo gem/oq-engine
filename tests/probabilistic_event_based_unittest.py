@@ -5,7 +5,9 @@ import numpy
 import unittest
 from scipy.interpolate import interp1d
 
-class propabilistic_event_based_unittest(unittest.TestCase):
+from opengem.risk.probabilist_event_based import *
+
+class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
     def test_interpolation_scipy_spike(self):
         # vulnerability function IMLs
@@ -69,8 +71,6 @@ class propabilistic_event_based_unittest(unittest.TestCase):
                 self.assertAlmostEqual(output_values[idx], f(input_values[idx]))
             except ValueError:
                 pass
-                # print "Value %f outside the range of the function!" % input_values[idx]
-        
-if __name__ == "__main__":
-    unittest.main()
-    
+
+    def test_empty_result_with_empty_function(self):
+        self.assertEqual([], shapes.EMPTY_CURVE)
