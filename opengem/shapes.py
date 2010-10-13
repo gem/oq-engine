@@ -296,8 +296,6 @@ class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
 
-    EMPTY_CURVE = Curve(())
-
     @classmethod
     def from_json(cls, json_str):
         """Construct a curve from a serialized version in
@@ -430,3 +428,6 @@ class Curve(object):
                 as_dict[str(x_value)] = self.y_values[index]
 
         return json.JSONEncoder().encode(as_dict)
+
+
+EMPTY_CURVE = Curve(())
