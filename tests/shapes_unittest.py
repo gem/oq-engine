@@ -44,6 +44,6 @@ class ShapesTestCase(unittest.TestCase):
     def test_can_construct_with_unordered_values(self):
         curve = shapes.Curve([(0.5, 1.0), (0.4, 2.0), (0.3, 2.0)])
         
-        self.assertEqual(1.0, curve.codomain_for(0.5))
-        self.assertEqual(2.0, curve.codomain_for(0.4))
-        self.assertEqual(2.0, curve.codomain_for(0.3))
+        self.assertEqual(1.0, curve.ordinate_for(0.5))
+        self.assertEqual(2.0, curve.ordinate_for(0.4))
+        self.assertEqual(2.0, curve.ordinate_for(0.3))
