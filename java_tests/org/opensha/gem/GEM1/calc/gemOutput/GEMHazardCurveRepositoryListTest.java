@@ -18,8 +18,7 @@ import org.opensha.commons.geo.Location;
 
 import com.google.gson.Gson;
 
-public class GEMHazardCurveRepositoryListTest
-{
+public class GEMHazardCurveRepositoryListTest {
 
     private static final int PORT = 11211;
     private static final String LOCALHOST = "localhost";
@@ -29,8 +28,7 @@ public class GEMHazardCurveRepositoryListTest
     private GEMHazardCurveRepositoryList model;
 
     @Before
-    public void setUp() throws Exception
-    {
+    public void setUp() throws Exception {
         client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         client.flush(); // clear the server side cache
 
@@ -80,54 +78,49 @@ public class GEMHazardCurveRepositoryListTest
     }
 
     @After
-    public void tearDown()
-    {
+    public void tearDown() {
         client.shutdown();
     }
 
     @Test
-    public void storesTheModelInCache()
-    {
+    public void storesTheModelInCache() {
         String key = model.serialize(new Cache(LOCALHOST, PORT));
         assertEquals(new Gson().toJson(model), client.get(key));
     }
 
     @Test
-    public void computesPMFs()
-    {
+    public void computesPMFs() {
         // using real values computed by D. Monelli
         model.computePMFs();
 
-        List<Double> expectedGMLevels = Arrays.asList(0.006000, 0.010350,
-                0.016450, 0.023050, 0.032250, 0.045150, 0.063250, 0.085900,
-                0.100500, 0.124000, 0.174000, 0.243500, 0.340500, 0.476500,
-                0.667000, 0.934000, 1.305000, 1.825000);
+        List<Double> expectedGMLevels =
+                Arrays.asList(0.006000, 0.010350, 0.016450, 0.023050, 0.032250,
+                        0.045150, 0.063250, 0.085900, 0.100500, 0.124000,
+                        0.174000, 0.243500, 0.340500, 0.476500, 0.667000,
+                        0.934000, 1.305000, 1.825000);
 
         assertAlmostEquals(expectedGMLevels, model.getHcRepList().get(0)
                 .getGmLevels());
 
-        Double[] expectedPOs = { 4.620000e-03, 3.309000e-02, 4.631000e-02,
-                8.370000e-02, 1.276400e-01, 1.632600e-01, 1.672300e-01,
-                1.191200e-01, 1.779000e-02, 9.621000e-02, 5.795800e-02,
-                3.429200e-02, 1.948100e-02, 1.015770e-02, 4.396900e-03,
-                1.538350e-03, 4.042980e-04, 7.440950e-05 };
+        Double[] expectedPOs =
+                { 4.620000e-03, 3.309000e-02, 4.631000e-02, 8.370000e-02,
+                        1.276400e-01, 1.632600e-01, 1.672300e-01, 1.191200e-01,
+                        1.779000e-02, 9.621000e-02, 5.795800e-02, 3.429200e-02,
+                        1.948100e-02, 1.015770e-02, 4.396900e-03, 1.538350e-03,
+                        4.042980e-04, 7.440950e-05 };
 
         assertAlmostEquals(expectedPOs, model.getHcRepList().get(0)
                 .getProbExceedanceList(0));
     }
 
-    private void assertAlmostEquals(Double[] expected, Double[] actual)
-    {
-        for (int i = 0; i < expected.length; i++)
-        {
+    private void assertAlmostEquals(Double[] expected, Double[] actual) {
+        for (int i = 0; i < expected.length; i++) {
             assertEquals(expected[i], actual[i], TOLERANCE);
         }
     }
 
-    private void assertAlmostEquals(List<Double> expected, List<Double> actual)
-    {
-        for (int i = 0; i < expected.size(); i++)
-        {
+    private void assertAlmostEquals(List<Double> expected, List<Double> actual) {
+        for (int i = 0; i < expected.size(); i++) {
             assertEquals(expected.get(i), actual.get(i), TOLERANCE);
         }
     }

@@ -29,25 +29,28 @@ public class PredictionEquationTestHelper {
             double lowerSeisDepth, double upperSeisDepth,
             FaultTrace faultTrace, double gridSpacing, double mag,
             Location hypo, double aveRake) {
-        StirlingGriddedSurface rupSurf = new StirlingGriddedSurface(faultTrace,
-                aveDip, upperSeisDepth, lowerSeisDepth, gridSpacing);
+        StirlingGriddedSurface rupSurf =
+                new StirlingGriddedSurface(faultTrace, aveDip, upperSeisDepth,
+                        lowerSeisDepth, gridSpacing);
         EqkRupture rup = new EqkRupture(mag, aveRake, rupSurf, hypo);
         return rup;
     }
-    
+
     /**
-     * Applies "Pytagoras" to the horizontal and vertical distances between
-     * hypo and location.
+     * Applies "Pytagoras" to the horizontal and vertical distances between hypo
+     * and location.
+     * 
      * @param location
      * @param hypo
      * @return
      */
-    public static double calcHypoDist(Location location,
-    		Location hypo) {
-    	double hypoDist = Math.sqrt(Math.pow(LocationUtils.horzDistance(hypo,
-                location), 2)
-                + Math.pow(LocationUtils.vertDistance(hypo, location), 2));
-    	return hypoDist;
+    public static double calcHypoDist(Location location, Location hypo) {
+        double hypoDist =
+                Math.sqrt(Math.pow(LocationUtils.horzDistance(hypo, location),
+                        2)
+                        + Math.pow(LocationUtils.vertDistance(hypo, location),
+                                2));
+        return hypoDist;
     }
 
 }
