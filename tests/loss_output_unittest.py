@@ -21,8 +21,6 @@ LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 LOSS_SCHEMA_FILE = 'nrml.xsd'
 
-schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')
-
 TEST_CURVE = shapes.Curve([
      (0.0, 0.24105392741891271), (1280.0, 0.23487103910274165), 
      (2560.0, 0.22617525423987336), (3840.0, 0.21487350918336773), 
