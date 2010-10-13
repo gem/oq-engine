@@ -365,8 +365,8 @@ class Curve(object):
         return "X Values: %s\nY Values: %s" % (
                 self.x_values.__str__(), self.y_values.__str__())
 
-    def times_domain(self, value) :
-        """Return a new curve with each domain value multiplied
+    def times_abscissae(self, value) :
+        """Return a new curve with each abscissa value multiplied
         by the value passed as parameter."""
         
         result = Curve(())
