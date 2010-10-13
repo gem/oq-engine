@@ -29,7 +29,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         """Overrides the default implementation writing all the
         collected lxml object model to the stream."""
 
-        if not self.result_tag:
+        if self.result_tag is None:
             error = "You need to add at least a curve to build a valid output!"
             raise RuntimeError(error)
 
@@ -49,7 +49,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         
         """
         
-        if not self.result_tag:
+        if self.result_tag is None:
             # <nrml:Result />
             self.result_tag = etree.Element(NRML + "HazardResult", nsmap=NSMAP)
             

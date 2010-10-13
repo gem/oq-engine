@@ -81,4 +81,3 @@ References:
 http://docs.djangoproject.com/
 http://geodjango.org/
 http://code.google.com/geodjango-basic-apps/
- 

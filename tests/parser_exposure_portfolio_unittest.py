@@ -50,9 +50,9 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
                                      'downtown Pavia',
              'AssetID': '02',
              'AssetDescription': 'Moment-resisting non-ductile concrete ' \
-                                 'frame med rise',
+                                 'frame low rise',
              'AssetValue': 250000.0,
-             'VulnerabilityFunction': 'RC/DMRF-D/MR'
+             'VulnerabilityFunction': 'RC/DMRF-D/LR'
             })]
 
         ctr = None
