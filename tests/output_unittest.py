@@ -11,6 +11,7 @@ import os
 import unittest
 
 from opengem import shapes
+from opengem import test
 from opengem.output import geotiff
 
 
@@ -18,8 +19,7 @@ class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
     def test_geotiff_output(self):
         """Generate a geotiff file with a smiley face."""
-        data_dir = os.path.join(os.path.dirname(__file__), 'data')
-        path = os.path.join(data_dir, "test.tiff")
+        path = os.path.join(test.DATA_DIR, "test.tiff")
         switzerland = shapes.Region.from_coordinates(
             [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
         image_grid = switzerland.grid
@@ -28,7 +28,7 @@ class OutputTestCase(unittest.TestCase):
             for ypoint in range(0, 320):
                 gwriter.write((xpoint, ypoint), int(xpoint*254/320))
         gwriter.close()
-        comp_path = os.path.join(data_dir, "test.tiff")
+        comp_path = os.path.join(test.DATA_DIR, "test.tiff")
         retval = subprocess.call(["tiffcmp", "-t", path, comp_path], 
             stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
         self.assertTrue(retval == 0)

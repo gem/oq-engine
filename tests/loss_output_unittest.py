@@ -21,9 +21,6 @@ LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 LOSS_SCHEMA_FILE = 'nrml.xsd'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
-schema_dir = os.path.join(os.path.dirname(__file__), '../docs/schema')
-
 TEST_CURVE = shapes.FastCurve([
      ('0.0', 0.24105392741891271), ('1280.0', 0.23487103910274165), 
      ('2560.0', 0.22617525423987336), ('3840.0', 0.21487350918336773), 
@@ -49,9 +46,10 @@ class LossOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.path = os.path.join(data_dir, LOSS_XML_OUTPUT_FILE)
-        self.ratio_path = os.path.join(data_dir, LOSS_RATIO_XML_OUTPUT_FILE)
-        self.schema_path = os.path.join(schema_dir, LOSS_SCHEMA_FILE)
+        self.path = os.path.join(test.DATA_DIR, LOSS_XML_OUTPUT_FILE)
+        self.ratio_path = os.path.join(test.DATA_DIR, 
+            LOSS_RATIO_XML_OUTPUT_FILE)
+        self.schema_path = os.path.join(test.SCHEMA_DIR, LOSS_SCHEMA_FILE)
 
         # Build up some sample loss curves here
 
@@ -85,12 +83,12 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.SHAML + "LossCurvePE//"
-                + xml.SHAML + "Values").text.strip().split())
+                + xml.NRML + "LossCurvePE//"
+                + xml.NRML + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
-                xml.SHAML + "LossCurveList//" 
-                + xml.SHAML + "LossCurve//"
-                + xml.SHAML + "Values").text.strip().split()
+                xml.NRML + "LossCurveList//" 
+                + xml.NRML + "LossCurve//"
+                + xml.NRML + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.codomain):
             self.assertAlmostEqual(val, xml_curve_pe[idx], 6)
@@ -106,12 +104,12 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.SHAML + "LossRatioCurvePE//"
-                + xml.SHAML + "Values").text.strip().split())
+                + xml.NRML + "LossRatioCurvePE//"
+                + xml.NRML + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
-                xml.SHAML + "LossRatioCurveList//" 
-                + xml.SHAML + "LossRatioCurve//"
-                + xml.SHAML + "Values").text.strip().split()
+                xml.NRML + "LossRatioCurveList//" 
+                + xml.NRML + "LossRatioCurve//"
+                + xml.NRML + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.codomain):
             self.assertAlmostEqual(val, xml_curve_pe[idx], 6)

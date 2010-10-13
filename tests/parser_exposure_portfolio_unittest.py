@@ -3,12 +3,13 @@
 
 import os
 import unittest
-from opengem import shapes
+
 from opengem.parser import exposure
+from opengem import shapes
+from opengem import test
 
 TEST_FILE = 'ExposurePortfolioFile-test.xml'
 
-data_dir = os.path.join(os.path.dirname(__file__), 'data')
 
 class ExposurePortfolioFileTestCase(unittest.TestCase):
 
@@ -18,7 +19,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(data_dir, TEST_FILE))
+            os.path.join(test.DATA_DIR, TEST_FILE))
 
         ctr = None
 
@@ -40,7 +41,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.15332, 45.12201), (9.15334, 45.12199))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(data_dir, TEST_FILE))
+            os.path.join(test.DATA_DIR, TEST_FILE))
 
         expected_result = [
             (shapes.Point(9.15333, 45.12200),
@@ -84,7 +85,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple((-20.0, 80.0),
                                                                 (40.0, 0.0))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(data_dir, TEST_FILE))
+            os.path.join(test.DATA_DIR, TEST_FILE))
 
         expected_result_ctr = 6
         ctr = None

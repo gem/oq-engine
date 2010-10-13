@@ -57,6 +57,7 @@ import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.OtherParams.TectonicRegionTypeParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistRupMinusDistX_OverRupParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistRupMinusJB_OverRupParameter;
+import org.opensha.sha.imr.param.PropagationEffectParams.DistanceEpicentralParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceHypoParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
@@ -240,6 +241,17 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 	/**
 	 * Other Parameters
 	 * (see classes for exact definitions)
+	 * 
+	 * TODO:
+	 * This can be a problem:
+	 * The protected member e.g. "magParam" or "sigmaTruncLevelParam"
+	 * is initialised by the subclass but it is accessed here, in the
+	 * super class in a public method.
+	 * Refactor:
+	 * Set them private and provide protected setters and getters and
+	 * let the getter do a lazy initialisation or make it null proof 
+	 * or pass "magParam" in as parameter or...
+	 *
 	 */
 	protected StdDevTypeParam stdDevTypeParam = null;
 	protected SigmaTruncTypeParam sigmaTruncTypeParam = null;
@@ -270,6 +282,7 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 	protected DistRupMinusJB_OverRupParameter distRupMinusJB_OverRupParam = null;
 	protected DistRupMinusDistX_OverRupParam distRupMinusDistX_OverRupParam = null;  // not a subclass of PropagationEffectParameter
 	protected HangingWallFlagParam hangingWallFlagParam = null;  	// not a subclass of PropagationEffectParameter
+	protected DistanceEpicentralParameter distanceEpicentralParameter = null;
 
 	/**
 	 * Site related parameters
@@ -603,6 +616,14 @@ extends IntensityMeasureRelationship implements ScalarIntensityMeasureRelationsh
 		//now loop over ruptures changing only the magnitude parameter.
 		for (int i = 0; i < ptSrc.getNumRuptures(); i++) {
 			tempRup = ptSrc.getRupture(i);
+			/*
+			 *  TODO:
+			 * This can be a problem:
+			 * The protected member "magParam" is initialised by the subclass
+			 * but it is used here, in the super class in a public method.
+			 * Refactor:
+			 * Make it null proof or pass "magParam" in as parameter or...
+			 */
 			magParam.setValueIgnoreWarning(new Double(tempRup.getMag()));
 			qkProb = tempRup.getProbability();
 
