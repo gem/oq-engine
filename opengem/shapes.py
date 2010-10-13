@@ -15,6 +15,7 @@ from shapely import geometry
 from shapely import wkt
 
 from opengem import flags
+from scipy.interpolate import interp1d
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('distance_precision', 12, 
@@ -318,6 +319,7 @@ class Curve(object):
 
         return Curve(data)
 
+# TODO (ac): Change the constructor
     def __init__(self, values):
         """Construct a curve from a sequence of tuples.
         
@@ -354,6 +356,7 @@ class Curve(object):
             self.x_values[index] = key
             self.y_values[index] = val
 
+# TODO (ac): Compare with an epsilon
     def __eq__(self, other):
         return numpy.alltrue(self.x_values == other.x_values) \
                 and numpy.alltrue(self.y_values == other.y_values)
@@ -362,8 +365,8 @@ class Curve(object):
         return "X Values: %s\nY Values: %s" % (
                 self.x_values.__str__(), self.y_values.__str__())
 
-    def __mul__(self, value) :
-        """Return a new curve with each x value multiplied
+    def times_domain(self, value) :
+        """Return a new curve with each domain value multiplied
         by the value passed as parameter."""
         
         result = Curve(())
@@ -372,9 +375,10 @@ class Curve(object):
         
         return result
 
+# TODO (ac): Switch back to properties
     def domain(self):
         """Return the domain values of this curve in ascending order."""
-        return list(self.x_values)
+        return self.x_values
 
     def codomain(self, y_index=0, reverse=False):
         """Return the codomain values of this curve in ascending order
@@ -388,36 +392,37 @@ class Curve(object):
         if reverse:
             values.sort(reverse=True)
         
-        return values
+        # TODO (ac): Find out how to reverse sort in numpy
+        return numpy.array(values)
 
     def codomain_for(self, x_value, y_index=0):
         """Return the y value (codomain) corresponding
         to the given x value (domain)."""
-        index = numpy.where(self.x_values==x_value)[0][0]
-
-        values = self.y_values
+        
+        y_values = self.y_values
         
         if self.y_values.ndim > 1:
-            values = list(self.y_values[:,y_index])
+            y_values = self.y_values[:,y_index]
         
-        return values[index]
+        return interp1d(self.x_values, y_values)(x_value)
 
+# TODO (ac): Improve the implementation
     def domain_for(self, y_value):
         """Return the x value (domain) corresponding
-        to the given y value (codomain)."""
+        to the given y value (codomain).
         
-        values = self.y_values
+        This method only works if this curve is strictly monotonic on the given
+        abscissa values.
+        
+        """
+        y_values = self.y_values
         
         if self.y_values.ndim > 1:
             #  does not support indexing yet
-            values = self.y_values[:,0]
+            y_values = self.y_values[:,0]
         
-        index = numpy.where(values==y_value)[0][0]
+        index = numpy.where(y_values==y_value)[0][0]
         return self.x_values[index]
-
-    def interpolate(self, value):
-        """Interpolates values."""
-        pass
 
     def to_json(self):
         """Serialize this curve in json format."""
