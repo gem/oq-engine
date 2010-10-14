@@ -34,8 +34,8 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             vulnerability.load_vulnerability_curves_from_memcache(
                 self.memcache_client, self.job_id)
 
-        # self.vulnerability_curves is a dict of {string: FastCurve},
-        # FastCurve.values is OrderedDict key: [v1, v2]
+        # self.vulnerability_curves is a dict of {string: Curve},
+        # Curve.values is OrderedDict key: [v1, v2]
         logger.debug("ProbabilisticLossRatioCalculator init: vuln curves are")
         for k,v in self.vulnerability_curves.items():
             logger.debug("%s: %s" % (k, v.values))
@@ -78,7 +78,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         vulnerability_curve = \
             self.vulnerability_curves[asset['VulnerabilityFunction']]
 
-        # selected vuln function is FastCurve
+        # selected vuln function is Curve
         return classical_psha_based.compute_loss_ratio_curve(
             vulnerability_curve, hazard_curve)
     

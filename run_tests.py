@@ -48,3 +48,4 @@ if __name__ == '__main__':
     except ImportError, _e:
         print "Couldn't find nose, using something else"
         unittest.main()
+

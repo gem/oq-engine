@@ -12,7 +12,7 @@ the asset value (if you want to compute a loss curve)
 
 NOTE(fab): These functions have been changed. They don't expect the 
 vulnerability curve code to be passed in, but the vulnerability curve 
-object (of type FastCurve) itself.
+object (of type Curve) itself.
 
 Output values: a loss ratio or loss curve
 
@@ -99,31 +99,21 @@ def compute_loss_curve(loss_ratio_curve, asset):
     if not asset: 
         return shapes.EMPTY_CURVE # invalid asset
 
-    loss_curve_values = []
-    for loss_ratio, probability_occurrence \
-            in loss_ratio_curve.values.iteritems():
-        logger.debug("Loss ratio is %s, PO is %s" % (
-            loss_ratio, probability_occurrence))
-        key = "%s" % (float(loss_ratio) * asset)
-        loss_curve_values.append((key, probability_occurrence))
+    return loss_ratio_curve.rescale_abscissae(asset)
 
-    return shapes.FastCurve(loss_curve_values)
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     """Computes the loss ratio * probability of occurrence matrix.""" 
     
     current_column = 0
     lrem_po = [None] * len(lrem)
-
-    # we need to process intensity measure levels in ascending order
-    imls = list(vuln_function.domain)
-    imls.sort()
+    imls = vuln_function.abscissae
     
     for iml in imls:
-        prob_occ = hazard_curve.get_for(iml)
+        prob_occ = hazard_curve.ordinate_for(iml)
         for row in range(len(lrem_po)):
             if not lrem_po[row]: 
-                lrem_po[row] = [None] * len(vuln_function.domain)
+                lrem_po[row] = [None] * len(vuln_function.abscissae)
             lrem_po[row][current_column] = lrem[row][current_column] * prob_occ
         current_column += 1
     
@@ -140,18 +130,21 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
             prob_occ += lrem_po[row][column]
         loss_ratio_curve_values.append(("%s" % loss_ratios[row], prob_occ))
 
-    return shapes.FastCurve(loss_ratio_curve_values)
+    return shapes.Curve(loss_ratio_curve_values)
 
 #@state.memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve"""
 
-    loss_ratios = [value[0] for value in vuln_function.codomain] 
-        # get the means
+    if vuln_function.is_multi_value:
+        # means on first position
+        loss_ratios = list(vuln_function.ordinates[:,0])
+    else:
+        loss_ratios = list(vuln_function.ordinates)
+    
+    # we need to add 0.0 as first value
     loss_ratios.insert(0, 0.0)
-        # we need to add 0.0 as first value
-    splitted = _split_loss_ratios(loss_ratios)  
-    return splitted
+    return _split_loss_ratios(loss_ratios)  
 
 # @state.memoize
 def _compute_lrem(vuln_function, distribution=None):
@@ -165,10 +158,7 @@ def _compute_lrem(vuln_function, distribution=None):
     
     current_column = 0
     lrem = [None] * (len(loss_ratios)+1)
-
-    # we need to process intensity measure levels in ascending order
-    imls = list(vuln_function.domain)
-    imls.sort()
+    imls = vuln_function.abscissae
 
     def fix_value(prob):
         """Fix negative probabilities for values close to zero. 
@@ -183,8 +173,8 @@ def _compute_lrem(vuln_function, distribution=None):
 
     for iml in imls:
         # we need to use std deviation, but we have cov
-        cov = float(vuln_function.get_for(iml)[1])
-        mean = float(vuln_function.get_for(iml)[0])
+        mean = vuln_function.ordinate_for(iml)
+        cov = vuln_function.ordinate_for(iml, 1)
         stddev = cov * mean
         variance = stddev ** 2.0
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )
@@ -192,12 +182,13 @@ def _compute_lrem(vuln_function, distribution=None):
         
         for row in range(len(loss_ratios)+1):
             if not lrem[row]: 
-                lrem[row] = [None] * len(vuln_function.domain)
+                lrem[row] = [None] * len(vuln_function.abscissae)
             # last loss ratio is fixed to be 1
             if row < len(loss_ratios): 
                 next_ratio = loss_ratios[row]
             else: 
-                next_ratio = 1.0 
+                next_ratio = 1.0
+            
             lrem[row][current_column] = fix_value(
                 distribution.sf(next_ratio, 
                         sigma, scale=scipy.exp(mu)))
@@ -237,9 +228,10 @@ def compute_conditional_loss(loss_curve, probability):
     
     This function returns zero if the probability of exceedance if out of bounds.
     The same applies for loss ratio curves.
+
     """
 
-    probabilities = loss_curve.codomain
+    probabilities = list(loss_curve.ordinates)
     probabilities.sort(reverse=True)
     
     # the probability we want to use is out of bounds
@@ -256,9 +248,9 @@ def compute_conditional_loss(loss_curve, probability):
     # For more information about the math, check the scientific
     # model at <http://to_be_defined> (LRM chapter)
     x = probabilities[lower_bound] - probability
-    x *= loss_curve.domain_for(probabilities[upper_bound])       
+    x *= loss_curve.abscissa_for(probabilities[upper_bound])       
     y = (probability - probabilities[upper_bound]) * \
-            loss_curve.domain_for(probabilities[lower_bound])
+            loss_curve.abscissa_for(probabilities[lower_bound])
     
     return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
 
@@ -267,11 +259,11 @@ def compute_mid_mean_pe(loss_ratio_pe_curve):
     # This function needs to take the first two values of the LR and compute 
     # the mean, then iterate to the next two, and so on
     loss_ratio_pe_mid_curve = []
-            
-    for i in xrange(len(loss_ratio_pe_curve.codomain)-1):
+    pe_values = loss_ratio_pe_curve.ordinates
 
-        current_value = loss_ratio_pe_curve.codomain[i]
-        next_value = loss_ratio_pe_curve.codomain[i + 1]
+    for i in xrange(len(pe_values)-1):
+        current_value = pe_values[i]
+        next_value = pe_values[i + 1]
         
         loss_ratio_pe_mid_curve.append(
             numpy.mean([current_value, next_value]))
@@ -280,7 +272,6 @@ def compute_mid_mean_pe(loss_ratio_pe_curve):
           
 def compute_mid_po(loss_ratio_pe_mid_curve):
     # compute the PO values
-    #
     loss_ratio_po_mid_curve = []
     
     for j in xrange(len(loss_ratio_pe_mid_curve)-1):
@@ -293,7 +284,6 @@ def compute_mid_po(loss_ratio_pe_mid_curve):
         
 def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_curve):
     # compute sum of every PO and LR
-    #
     mean_loss_ratio = []
   
     loss_ratio_pe_curve_float = map(float, loss_ratio_pe_curve.domain)
