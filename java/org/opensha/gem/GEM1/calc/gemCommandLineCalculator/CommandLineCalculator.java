@@ -3,7 +3,6 @@ package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -16,10 +15,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Properties;
 
+import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationConverter;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
@@ -50,8 +51,6 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 public class CommandLineCalculator {
-    // configuration data
-    private Properties props;
     //
     // Apache commons logging, not log4j specifically
     // Note that for application code, declaring the log member as "static" is
@@ -75,64 +74,37 @@ public class CommandLineCalculator {
      * 
      * @param inStream
      *            e.g. the file input stream
+     * @throws ConfigurationException
      */
-    public CommandLineCalculator(final InputStream inStream) {
-        props = new Properties();
-        try {
-            // load calculation configuration data
-            props.load(inStream);
-            config = new PropertiesConfiguration();
-            ((PropertiesConfiguration) config).load(inStream, null);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ConfigurationException e) {
-            e.printStackTrace();
-        }
+    public CommandLineCalculator(final InputStream inStream)
+            throws ConfigurationException {
+        // load calculation configuration data
+        config = new PropertiesConfiguration();
+        ((PropertiesConfiguration) config).load(inStream, null);
     } // constructor
 
-    public CommandLineCalculator(Reader reader) {
-        props = new Properties();
+    public CommandLineCalculator(Reader reader) throws ConfigurationException {
         config = new PropertiesConfiguration();
-        try {
-            // load calculation configuration data
-            props.load(reader);
-            ((PropertiesConfiguration) config).load(reader);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ConfigurationException e) {
-            e.printStackTrace();
-        }
+        // load calculation configuration data
+        ((PropertiesConfiguration) config).load(reader);
     } // constructor
 
     public CommandLineCalculator(Properties p) {
-        props = p;
-        config = ConfigurationConverter.getConfiguration(props);
+        config = ConfigurationConverter.getConfiguration(p);
     } // constructor
 
-    public CommandLineCalculator(String calcConfigFile) {
-        try {
-            FileInputStream fis = new FileInputStream(calcConfigFile);
-            props = new Properties();
-            props.load(fis);
-            config = new PropertiesConfiguration();
-            ((PropertiesConfiguration) config).load(calcConfigFile);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ConfigurationException e) {
-            e.printStackTrace();
-        }
+    public CommandLineCalculator(String calcConfigFile)
+            throws ConfigurationException {
+        config = new PropertiesConfiguration();
+        ((PropertiesConfiguration) config).load(calcConfigFile);
     } // constructor
 
     public void setConfig(Properties p) {
-        props = p;
         config = ConfigurationConverter.getConfiguration(p);
     } // setConfig()
 
     public void setConfig(Configuration c) {
         config = c;
-        props = ConfigurationConverter.getProperties(c);
     }
 
     /**
@@ -146,7 +118,6 @@ public class CommandLineCalculator {
     public void addConfigItem(String key, String value) {
         // the member is private and not null
         config.addProperty(key, value);
-        props.setProperty(key, ((String) props.get(key)) + "," + value);
     }
 
     /**
@@ -159,7 +130,11 @@ public class CommandLineCalculator {
     public void setConfigItem(String key, String value) {
         // the member is private and not null
         config.setProperty(key, value);
-        props.setProperty(key, value);
+    }
+
+    private String getRelativePath(String key) {
+        return (FilenameUtils.getFullPath(((AbstractFileConfiguration) config)
+                .getPath())) + config.getString(key);
     }
 
     /**
@@ -215,24 +190,23 @@ public class CommandLineCalculator {
         // load ERF logic tree data
         ErfLogicTreeData erfLogicTree =
                 new ErfLogicTreeData(
-                        config.getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+                        getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
         // load GMPE logic tree data
         GmpeLogicTreeData gmpeLogicTree =
                 new GmpeLogicTreeData(
-                        config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE
-                                .name()),
-                        config.getString(ConfigItems.COMPONENT.name()),
-                        config.getString(ConfigItems.INTENSITY_MEASURE_TYPE
-                                .name()), config.getDouble(ConfigItems.PERIOD
-                                .name()), config.getDouble(ConfigItems.DAMPING
-                                .name()),
-                        config.getString(ConfigItems.GMPE_TRUNCATION_TYPE
-                                .name()),
+                        getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
+                        config.getString(ConfigItems.COMPONENT.name()), config
+                                .getString(ConfigItems.INTENSITY_MEASURE_TYPE
+                                        .name()), config
+                                .getDouble(ConfigItems.PERIOD.name()), config
+                                .getDouble(ConfigItems.DAMPING.name()), config
+                                .getString(ConfigItems.GMPE_TRUNCATION_TYPE
+                                        .name()),
                         config.getDouble(ConfigItems.TRUNCATION_LEVEL.name()),
                         config.getString(ConfigItems.STANDARD_DEVIATION_TYPE
-                                .name()),
-                        config.getDouble(ConfigItems.REFERENCE_VS30_VALUE
-                                .name()));
+                                .name()), config
+                                .getDouble(ConfigItems.REFERENCE_VS30_VALUE
+                                        .name()));
         // instantiate the repository for the results
         GEMHazardCurveRepositoryList hcRepList =
                 new GEMHazardCurveRepositoryList();
@@ -1603,7 +1577,7 @@ public class CommandLineCalculator {
             SecurityException, IllegalArgumentException,
             ClassNotFoundException, InstantiationException,
             IllegalAccessException, NoSuchMethodException,
-            InvocationTargetException {
+            InvocationTargetException, ConfigurationException {
         // Uncomment to test the configuration of the logging appenders:
         // String msg =
         // "User directory to put the file CalculatorConfig.properties -> "
