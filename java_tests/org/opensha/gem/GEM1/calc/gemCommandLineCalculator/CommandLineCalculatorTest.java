@@ -21,7 +21,7 @@ public class CommandLineCalculatorTest {
          */
         final String intensityMeasureTypeToTest = "MMI";
         /*
-         * (state at 2010-10-07): This would let the test end successfull
+         * (state at 2010-10-07): This would let the test end successfully.
          */
         // final String intensityMeasureTypeToTest = "PGA";
         CommandLineCalculator clc =
