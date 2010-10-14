@@ -11,7 +11,7 @@ from celery.decorators import task
 
 from opengem import memcached
 
-MAX_WAIT_TIME_SECS = 3
+MAX_WAIT_TIME_MILLISECS = 1200
 
 @task
 def simple_task_return_name(name, **kwargs):
@@ -21,7 +21,7 @@ def simple_task_return_name(name, **kwargs):
     logger = simple_task_return_name.get_logger(**kwargs)
 
     wait_time = _wait_a_bit()
-    logger.info("processing %s, waited %s seconds" % (name, wait_time))
+    logger.info("processing %s, waited %s milliseconds" % (name, wait_time))
     return name
 
 @task
@@ -32,7 +32,7 @@ def simple_task_return_name_to_memcache(name, **kwargs):
     memcache_client = memcached.get_client(binary=False)
 
     wait_time = _wait_a_bit()
-    logger.info("processing %s, waited %s seconds" % (name, wait_time))
+    logger.info("processing %s, waited %s milliseconds" % (name, wait_time))
 
     memcache_client.set(name, name)
     logger.info("wrote to memcache key %s" % (name))
@@ -45,7 +45,7 @@ def simple_task_list_dict_to_memcache(name, **kwargs):
     memcache_client = memcached.get_client(binary=False)
 
     wait_time = _wait_a_bit()
-    logger.info("processing list/dict.%s, waited %s seconds" % (name, wait_time))
+    logger.info("processing list/dict.%s, waited %s milliseconds" % (name, wait_time))
 
     memcache_client.set("list.%s" % name, [name, name])
     memcache_client.set("dict.%s" % name, {name: name})
@@ -59,7 +59,7 @@ def simple_task_json_to_memcache(name, **kwargs):
     memcache_client = memcached.get_client(binary=False)
 
     wait_time = _wait_a_bit()
-    logger.info("processing json.%s, waited %s seconds" % (name, wait_time))
+    logger.info("processing json.%s, waited %s milliseconds" % (name, wait_time))
 
     test_dict = {"list.%s" % name: [name, name], 
                  "dict.%s" % name: {name: name}}
@@ -69,6 +69,6 @@ def simple_task_json_to_memcache(name, **kwargs):
     logger.info("wrote to json for memcache key %s" % (name))
 
 def _wait_a_bit():
-    wait_time = random.randrange(MAX_WAIT_TIME_SECS)
-    time.sleep(wait_time)
+    wait_time = random.randrange(0, MAX_WAIT_TIME_MILLISECS)
+    time.sleep(wait_time/1000)
     return wait_time

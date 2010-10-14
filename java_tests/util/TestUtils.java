@@ -14,15 +14,14 @@ import java.lang.reflect.InvocationTargetException;
  */
 public class TestUtils {
 
-	/* Private no-arg constructor invokation via reflection. */
-	public static Object callPrivateNoArgConstructor(final Class<?> cls) throws 
-			InstantiationException,
-			IllegalAccessException,
-			InvocationTargetException {
-		final Constructor<?> c = cls.getDeclaredConstructors()[0];
-		c.setAccessible(true);
-		final Object n = c.newInstance((Object[]) null);
-		return n;
-	}
+    /* Private no-arg constructor invokation via reflection. */
+    public static Object callPrivateNoArgConstructor(final Class<?> cls)
+            throws InstantiationException, IllegalAccessException,
+            InvocationTargetException {
+        final Constructor<?> c = cls.getDeclaredConstructors()[0];
+        c.setAccessible(true);
+        final Object n = c.newInstance((Object[]) null);
+        return n;
+    }
 
 }
