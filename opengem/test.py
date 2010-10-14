@@ -4,11 +4,14 @@
 Helper functions for our unit and smoke tests.
 """
 
-from opengem.logs import LOG as log
+
 import os
 import time
 import subprocess
 
+import guppy
+
+from opengem.logs import LOG
 from opengem import producer
 from opengem import flags
 
@@ -37,7 +40,7 @@ def guarantee_file(path, url):
     if not os.path.isfile(path):
         if not FLAGS.download_test_data:
             raise Exception("Test data does not exist")
-        log.info("Downloading test data for %s", path)
+        LOG.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
@@ -54,22 +57,40 @@ def timeit(method):
         print '%r (%r, %r) %2.2f sec' % \
               (method.__name__, args, kw, timeend-timestart)
         return result
-
+    try:
+        import nose
+        return nose.tools.make_decorator(method)(_timed)
+    except ImportError, _e:
+        pass
     return _timed    
 
 
-def skipit(_method):
+def skipit(method):
     """Decorator for skipping tests"""
-    def _skipme(*_args, **_kw):
+    try:
+        import nose
+        from nose.plugins.skip import SkipTest
+    except ImportError, _e:
+        def skip_me(*_args, **_kw):
+            print "Can't raise nose SkipTest error, silently skipping %r" % (
+                method.__name__)
+        return skip_me
+    def skipme(*_args, **_kw):
         """The skipped method"""
-        try:
-            from nose.plugins.skip import SkipTest
-            raise SkipTest("skipping method %r" % _method.__name__)
-        except ImportError, _e:
-            print "Can't raise nose SkipTest error, silently skipping"
-    return _skipme
+        print "Raising a nose SkipTest error"
+        raise SkipTest("skipping method %r" % method.__name__)
+    return nose.tools.make_decorator(method)(skipme)
 
 
 def measureit(method):
     """Decorator that profiles memory usage"""
-    return method
+    def _measured(*args, **kw):
+        result =  method(*args, **kw)
+        print guppy.hpy().heap()
+        return result
+    try:
+        import nose
+        return nose.tools.make_decorator(method)(_measured)
+    except ImportError, _e:
+        pass
+    return _measured  

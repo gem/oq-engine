@@ -40,7 +40,7 @@ class RiskEngineTestCase(unittest.TestCase):
         # Fill the region up with loss curve sites
         loss_curves = {}
         for site in loss_map_region:
-            loss_curves[site] = shapes.FastCurve([
+            loss_curves[site] = shapes.Curve([
                 ('0.0', 0.24105392741891271), 
                 ('1280.0', 0.23487103910274165), 
                 ('2560.0', 0.22617525423987336), 
@@ -107,7 +107,7 @@ class RiskEngineTestCase(unittest.TestCase):
 
     def test_zero_curve_produces_zero_loss(self):
         # check that curves of zero produce zero loss (and no error)
-        zero_curve = shapes.FastCurve([('0.0', 0.0), ('0.0', 0.0),])        
+        zero_curve = shapes.Curve([('0.0', 0.0), ('0.0', 0.0),])        
         loss_value = engines.compute_loss(zero_curve, 0.01)
         self.assertEqual(0.0, loss_value)
         
@@ -115,8 +115,8 @@ class RiskEngineTestCase(unittest.TestCase):
         # for a set of example loss ratio curves and a single invest. interval,
         interval = 0.01
         zero_curve = shapes.EMPTY_CURVE
-        huge_curve = shapes.FastCurve([(10.0, 10.0)])
-        normal_curve = shapes.FastCurve([(0.1, 0.2), (0.2, 0.21)])
+        huge_curve = shapes.Curve([(10.0, 10.0)])
+        normal_curve = shapes.Curve([(0.1, 0.2), (0.2, 0.21)])
         loss_curves = [zero_curve, normal_curve, huge_curve]
     
         # check that curves with no point < 5 don't throw an error
@@ -164,16 +164,16 @@ class RiskEngineTestCase(unittest.TestCase):
             str(second_gp), second_gp.row, second_gp.column)
         
         hazard_curves = {}
-        # hazard_curves[first_gp] = shapes.FastCurve([('6.0', 0.0), ('7.0', 0.0)])
-        hazard_curves[second_gp] = shapes.FastCurve([('6.0', 0.0), ('7.0', 0.0)])
-        hazard_curves[third_gp] = shapes.FastCurve([('6.0', 0.0), ('7.0', 0.0)])
+        # hazard_curves[first_gp] = shapes.Curve([('6.0', 0.0), ('7.0', 0.0)])
+        hazard_curves[second_gp] = shapes.Curve([('6.0', 0.0), ('7.0', 0.0)])
+        hazard_curves[third_gp] = shapes.Curve([('6.0', 0.0), ('7.0', 0.0)])
         
         ratio_results = {}
         loss_results = {}
         
         # TODO(fab): use vulnerability file for tests, 
         vulnerability_curves = {}
-        vulnerability_curves['RC/ND-FR-D/HR'] = shapes.FastCurve(
+        vulnerability_curves['RC/ND-FR-D/HR'] = shapes.Curve(
             [(5.0, (0.25, 0.5)),
              (6.0, (0.4, 0.4)),
              (7.0, (0.6, 0.3))])

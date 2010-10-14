@@ -86,7 +86,7 @@ class LossRatioCurveXMLWriter(RiskXMLWriter):
 
 
 def _curve_pe_as_gmldoublelist(curve_object):
-    return " ".join(map(str, curve_object.codomain))
+    return " ".join(map(str, curve_object.ordinates))
 
 def _curve_vals_as_gmldoublelist(curve_object):
-    return " ".join(map(str, curve_object.domain))
+    return " ".join(map(str, curve_object.abscissae))
