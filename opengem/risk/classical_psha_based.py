@@ -99,7 +99,7 @@ def compute_loss_curve(loss_ratio_curve, asset):
     if not asset: 
         return shapes.EMPTY_CURVE # invalid asset
 
-    return loss_ratio_curve.times_abscissae(asset)
+    return loss_ratio_curve.rescale_abscissae(asset)
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
