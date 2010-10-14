@@ -58,16 +58,21 @@ def timeit(method):
     return _timed    
 
 
-def skipit(_method):
+def skipit(method):
     """Decorator for skipping tests"""
-    def _skipme(*_args, **_kw):
+    try:
+        import nose
+        from nose.plugins.skip import SkipTest
+    except ImportError, _e:
+        def skip_me(*_args, **_kw):
+            print "Can't raise nose SkipTest error, silently skipping %r" % (
+                method.__name__)
+        return skip_me
+    def skipme(*_args, **_kw):
         """The skipped method"""
-        try:
-            from nose.plugins.skip import SkipTest
-            raise SkipTest("skipping method %r" % _method.__name__)
-        except ImportError, _e:
-            print "Can't raise nose SkipTest error, silently skipping"
-    return _skipme
+        print "Raising a nose SkipTest error"
+        raise SkipTest("skipping method %r" % method.__name__)
+    return nose.tools.make_decorator(method)(skipme)
 
 
 def measureit(method):
