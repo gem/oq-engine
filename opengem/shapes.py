@@ -8,7 +8,6 @@ import math
 
 import geohash
 import json
-import ordereddict
 import numpy
 
 from shapely import geometry
@@ -319,7 +318,6 @@ class Curve(object):
 
         return Curve(data)
 
-# TODO (ac): Change the implementation with a single structure
     def __init__(self, values):
         """Construct a curve from a sequence of tuples.
         
@@ -356,10 +354,9 @@ class Curve(object):
             self.x_values[index] = key
             self.y_values[index] = val
 
-# TODO (ac): Compare with an epsilon
     def __eq__(self, other):
-        return numpy.alltrue(self.x_values == other.x_values) \
-                and numpy.alltrue(self.y_values == other.y_values)
+        return numpy.allclose(self.x_values, other.x_values) \
+                and numpy.allclose(self.y_values, other.y_values)
 
     def __str__(self):
         return "X Values: %s\nY Values: %s" % (
@@ -388,6 +385,8 @@ class Curve(object):
     
     @property
     def is_multi_value(self):
+        """Return true if this curve describes multiple ordinate values,
+        false otherwise."""
         return self.y_values.ndim > 1
     
     def ordinate_for(self, x_value, y_index=0):
@@ -396,23 +395,22 @@ class Curve(object):
         y_values = self.y_values
         
         if self.y_values.ndim > 1:
-            y_values = self.y_values[:,y_index]
+            y_values = self.y_values[:, y_index]
         
         return interp1d(self.x_values, y_values)(x_value)
 
-# TODO (ac): Improve the implementation
     def abscissa_for(self, y_value):
         """Return the x value corresponding to the given y value.
         
         This method only works if this curve is strictly monotonic on the given
         abscissa values.
-        
+
         """
         y_values = self.y_values
         
         if self.y_values.ndim > 1:
             #  does not support indexing yet
-            y_values = self.y_values[:,0]
+            y_values = self.y_values[:, 0]
         
         index = numpy.where(y_values==y_value)[0][0]
         return self.x_values[index]
