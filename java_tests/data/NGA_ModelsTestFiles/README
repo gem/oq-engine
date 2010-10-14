@@ -1,0 +1,6 @@
+These files were e-mailed to us by Ken Campbell, and are used to verify our implementations
+of the NGAs against his.
+
+Each line contains values describing a given rupture, and the PGA, PGV, and SA values for it.
+We test each NGA with those settings for each rupture to verify that the OpenSHA values match
+those from Ken to within 0.5 %.
