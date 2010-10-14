@@ -1,19 +1,20 @@
+// package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
-import junit.framework.TestCase;
-
+import org.apache.commons.configuration.ConfigurationException;
 import org.junit.Test;
 
-public class CommandLineCalculatorTest extends TestCase {
+public class CommandLineCalculatorTest {
 
     /**
      * The calculator does not yet run if it is give to calculate for an
      * intensity measure type "MMI". This tests veryfies that. It is expected to
      * fail.
+     * 
+     * @throws ConfigurationException
      */
-    @Test(expected = RuntimeException.class)
-    public void testCalculatorConfig() {
-        boolean terminatedPrematurely = true;
+    @Test(expected = IllegalArgumentException.class)
+    public void testCalculatorConfig() throws ConfigurationException {
         /*
          * (state at 2010-10-07): This lets the test fail as expected
          * (2010-10-07)

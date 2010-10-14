@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
-	<classpathentry excluding="data/|data/" kind="src" path="java_tests"/>
+	<classpathentry excluding="data/" kind="src" path="java_tests"/>
 	<classpathentry kind="src" path="java_tests/data"/>
 	<classpathentry kind="src" path="java"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
@@ -24,5 +24,6 @@
 	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
 	<classpathentry kind="var" path="AGITAR_MOCK_OBJECTS"/>
 	<classpathentry kind="var" path="AGITAR_TEST_LIB"/>
+	<classpathentry kind="lib" path="lib/commons-io-1.4.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>
