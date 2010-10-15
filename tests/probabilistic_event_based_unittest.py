@@ -81,3 +81,17 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # the length of the result is the length of the gmf
         self.assertEqual(len(gmf), len(compute_loss_ratios(self.vuln_function, gmf)))
         self.assertTrue(numpy.allclose(expected_loss_ratios, numpy.array(compute_loss_ratios(self.vuln_function, gmf))))
+    
+    def test_loss_ratios_range_generation(self):
+        expected_range = numpy.array([0.0000, 0.0292, 0.0583, 0.0875, 0.1167, 0.1458, 0.1750, 0.2042,
+                0.2333, 0.2625, 0.2917, 0.3208, 0.3500, 0.3792, 0.4083, 0.4375, 0.4667, 0.4958, 0.5250,
+                0.5542, 0.5833, 0.6125, 0.6417, 0.6708, 0.700])
+                
+        self.assertEqual(len(expected_range), len(compute_loss_ratios_range(self.vuln_function)))
+        self.assertTrue(numpy.allclose(expected_range, numpy.array(
+                compute_loss_ratios_range(self.vuln_function)), atol=0.0001))
+    
+    def test_builds_cumulative_histogram(self):
+        pass
+        """docstring for test_builds_cumulative_histogram"""
+        pass
