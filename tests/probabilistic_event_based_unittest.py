@@ -5,8 +5,6 @@ import numpy
 import unittest
 from scipy.interpolate import interp1d
 
-from opengem.risk.probabilist_event_based import *
-
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
     def test_interpolation_scipy_spike(self):
@@ -71,6 +69,3 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.assertAlmostEqual(output_values[idx], f(input_values[idx]))
             except ValueError:
                 pass
-
-    def test_empty_result_with_empty_function(self):
-        self.assertEqual([], shapes.EMPTY_CURVE)
