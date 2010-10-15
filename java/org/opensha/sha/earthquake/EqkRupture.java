@@ -27,6 +27,7 @@ import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.util.TectonicRegionType;
 
 /**
  * 
@@ -57,6 +58,8 @@ public class EqkRupture implements java.io.Serializable {
 
     /** object to contain arbitrary parameters */
     protected ParameterList otherParams;
+
+    protected TectonicRegionType tectRegType;
 
     /* ********************* */
     /** @todo Constructors */
@@ -239,6 +242,14 @@ public class EqkRupture implements java.io.Serializable {
                                     + (float) loc4.getDepth() + "\n");
         }
         return info1 + info2;
+    }
+
+    public TectonicRegionType getTectRegType() {
+        return tectRegType;
+    }
+
+    public void setTectRegType(TectonicRegionType tectRegType) {
+        this.tectRegType = tectRegType;
     }
 
 }
