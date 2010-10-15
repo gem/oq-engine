@@ -34,6 +34,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.166192, 0.00376, 0.013216, 0.000592, 0.002832, 0.052928, 0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
                 0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104), "TSES": 900, "TimeSpan": 50}
 
+        self.cum_histogram = [216, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
     def test_an_empty_function_produces_an_empty_list(self):
         self.assertEqual([], compute_loss_ratios(shapes.EMPTY_CURVE, self.gmf))
     
@@ -92,18 +94,35 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 compute_loss_ratios_range(self.vuln_function)), atol=0.0001))
     
     def test_builds_the_cumulative_histogram(self):
-        cum_histogram = [216, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-        self.assertEqual(cum_histogram, compute_cumulative_histogram(
+        self.assertEqual(self.cum_histogram, compute_cumulative_histogram(
                 compute_loss_ratios(self.vuln_function, self.gmf), compute_loss_ratios_range(self.vuln_function)))
     
-    def test_computes_the_rate_of_exceedance(self):
-        cum_histogram = [216, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-
+    def test_computes_the_rates_of_exceedance(self):
         expected_rates = numpy.array([0.2400, 0.0344, 0.0189, 0.0133, 0.0078, 0.0078, 0.0056, 0.0044, 0.0044,
                 0.0044, 0.0011, 0.0011, 0.0011, 0.0011, 0.011, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
         self.assertTrue(numpy.allclose(expected_rates, numpy.array(
-                compute_rates_of_exceedance(cum_histogram, self.gmf)), atol=0.01))
+                compute_rates_of_exceedance(self.cum_histogram, self.gmf)), atol=0.01))
 
+    def test_computes_probs_of_exceedance(self):
+        expected_probs = [1.0000, 0.8213, 0.6111, 0.4866, 0.3222, 0.3222, 0.2425, 0.1993, 0.1993, 0.1993, 0.0540,
+                0.0540, 0.0540, 0.0540, 0.0540, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        
+        self.assertTrue(numpy.allclose(expected_probs, numpy.array(
+                compute_probs_of_exceedance(compute_rates_of_exceedance(
+                self.cum_histogram, self.gmf), self.gmf)), atol=0.0001))
+    
     def test_computes_the_loss_ratio_curve(self):
-        pass
+        expected_curve = shapes.Curve([(0.014583333333333332, 0.99999385578764666),
+                (0.043749999999999997, 0.82133133505033484), (0.072916666666666657, 0.61110443601077713),
+                (0.10208333333333333, 0.48658288096740798), (0.13124999999999998, 0.32219042199454972),
+                (0.16041666666666665, 0.32219042199454972), (0.18958333333333333, 0.24253487160303355),
+                (0.21874999999999997, 0.19926259708319194), (0.24791666666666662, 0.19926259708319194),
+                (0.27708333333333329, 0.19926259708319194), (0.30624999999999997, 0.054040531093234589),
+                (0.33541666666666664, 0.054040531093234589), (0.36458333333333331, 0.054040531093234589),
+                (0.39374999999999993, 0.054040531093234589), (0.42291666666666661, 0.054040531093234589),
+                (0.45208333333333328, 0.0), (0.48124999999999996, 0.0), (0.5395833333333333, 0.0),
+                (0.59791666666666665, 0.0), (0.51041666666666663, 0.0), (0.56874999999999987, 0.0),
+                (0.62708333333333321, 0.0), (0.65625, 0.0), (0.68541666666666656, 0.0)])
+        
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(self.vuln_function, self.gmf))
