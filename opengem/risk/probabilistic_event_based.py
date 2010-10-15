@@ -3,7 +3,7 @@
 from opengem import shapes
 
 def compute_loss_ratios(vuln_function, ground_motion_field):
-    """Compute loss ratio using the ground motion field passed."""
+    """Compute loss ratios using the ground motion field passed."""
     if vuln_function == shapes.EMPTY_CURVE or not ground_motion_field:
         return []
     
