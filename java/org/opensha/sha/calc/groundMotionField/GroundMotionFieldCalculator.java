@@ -94,6 +94,32 @@ public class GroundMotionFieldCalculator {
     }
 
     /**
+     * Compute stochastic ground motion field with spatial correlation using
+     * correlation model from Jayamram & Baker (2009):
+     * "Correlation model for spatially distributed ground-motion intensities"
+     * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
+     * 
+     * Ground motion field is calculated by generating Gaussian deviates from a
+     * multivariate normal distribution using Cholesky factorization following
+     * the algorithm described in
+     * "Computational Statistics Handbook with Matlab", Wendy L. Martinez &
+     * Angel R. Martinez, CHAPMAN & HALL, pag. 97.
+     * 
+     * @param attenRel
+     * @param rup
+     * @param sites
+     * @param rn
+     * @return
+     */
+    public static Map<Site, Double>
+            getStochasticGroundMotionFieldWithSpatialCorrelation(
+                    ScalarIntensityMeasureRelationshipAPI attenRel,
+                    EqkRupture rup, List<Site> sites, Random rn) {
+        int numberOfSites = sites.size();
+        return null;
+    }
+
+    /**
      * Generate Gaussian deviate (mean zero, standard deviation =
      * standardDeviation)
      * 
