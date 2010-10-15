@@ -8,6 +8,7 @@ from lxml import etree
 
 from opengem import producer
 from opengem import shapes
+from opengem.xml import NRML, GML
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -46,19 +47,23 @@ class ExposurePortfolioFile(producer.FileProducer):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
 
-            if event == 'start' and element.tag == 'ExposurePortfolio':
+            if event == 'start' and element.tag == \
+                    '%sExposureParameters' % NRML:
+
                 self._set_meta(element)
-            elif event == 'end' and element.tag == 'AssetInstance':
+            elif event == 'end' and element.tag == '%sAssetInstance' % NRML:
                 yield (self._to_site(element), 
                        self._to_site_attributes(element))
 
     def _to_site(self, element):
         """Convert current GML attributes to Site object"""
-        # lon/lat are in XML attributes 'Longitude' and 'Latitude'
+        # lon/lat are in XML attribute gml:pos
         # consider them as mandatory
+
+        pos = element.find("%spos" % GML).text
+        
         try:
-            lon = float(element.get('Longitude').strip())
-            lat = float(element.get('Latitude').strip())
+            lat, lon = [float(x.strip()) for x in pos.split()]
             return shapes.Site(lon, lat)
         except Exception:
             error_str = "element AssetInstance: no valid lon/lat coordinates"
@@ -68,10 +73,12 @@ class ExposurePortfolioFile(producer.FileProducer):
         """Build a dict of all node attributes"""
         site_attributes = {}
 
+        site_attributes["AssetID"] = element.find("%sAssetID" % NRML).text
+        site_attributes["AssetValue"] = float(element.find(
+                "%sAssetValue" % NRML).text)
+
         # consider all attributes of AssetInstance element as mandatory
-        for required_attribute in (('AssetID', str), 
-                                   ('AssetDescription', str),
-                                   ('AssetValue', float),
+        for required_attribute in (('AssetDescription', str),
                                    ('VulnerabilityFunction', str)):
             attr_value = element.get(required_attribute[0])
             if attr_value is not None:
