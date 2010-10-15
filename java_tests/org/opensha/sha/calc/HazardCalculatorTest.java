@@ -1,8 +1,11 @@
 package org.opensha.sha.calc;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
@@ -37,9 +40,10 @@ public class HazardCalculatorTest {
 
     private static List<Site> siteList;
     private static EqkRupForecastAPI erf;
-    private static Hashtable<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap;
-    private static double[] imlVals;
+    private static Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap;
+    private static List<Double> imlVals;
     private static double integrationDistance = 200.0;
+    private static Random rn = new Random();
 
     @Before
     public void setUp() {
@@ -58,34 +62,133 @@ public class HazardCalculatorTest {
     }
 
     /**
-     * Test hazard calculator when a null list of site is passed
+     * Test getHazardCurves when a null list of site is passed
      */
     @Test(expected = IllegalArgumentException.class)
-    public void nullSiteList() {
+    public void getHazardCurvesNullSiteList() {
         ArrayList<Site> siteList = null;
         HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
                 integrationDistance);
     }
 
     /**
-     * Test hazard calculator when an empty list of site is passed
+     * Test getHazardCurves when an empty list of site is passed
      */
     @Test(expected = IllegalArgumentException.class)
-    public void emptySiteList() {
+    public void getHazardCurvesEmptySiteList() {
         ArrayList<Site> siteList = new ArrayList<Site>();
         HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
                 integrationDistance);
     }
 
     /**
-     * Test hazard calculator when a null intensity measure levels array is
+     * Test getHazardCurves when a null earthquake rupture forecast is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getHazardCurvesNullErf() {
+        EqkRupForecastAPI erf = null;
+        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
+                integrationDistance);
+    }
+
+    /**
+     * Test getHazardCurves when a null gmpe map is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getHazardCurvesNullGmpeMap() {
+        Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
+                null;
+        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
+                integrationDistance);
+    }
+
+    /**
+     * Test getHazardCurves when an empty gmpe map is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getHazardCurvesEmptyGmpeMap() {
+        Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
+                new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
+        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
+                integrationDistance);
+    }
+
+    /**
+     * Test getHazardCurves when a null intensity measure levels array is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getHazardCurvesNullImlLevelsList() {
+        List<Double> imlVals = null;
+        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
+                integrationDistance);
+    }
+
+    /**
+     * Test getHazardCurves when an empty intensity measure levels array is
      * passed
      */
     @Test(expected = IllegalArgumentException.class)
-    public void nullImlLevelsList() {
-        double[] imlVals = null;
+    public void getHazardCurvesEmptyImlLevelsList() {
+        List<Double> imlVals = new ArrayList<Double>();
         HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
                 integrationDistance);
+    }
+
+    /**
+     * Test getGroundMotionFields when a null list of site is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getGroundMotionFieldsNullSiteList() {
+        ArrayList<Site> siteList = null;
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+    }
+
+    /**
+     * Test getGroundMotionFields when an empty list of site is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getGroundMotionFieldsEmptySiteList() {
+        ArrayList<Site> siteList = new ArrayList<Site>();
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+    }
+
+    /**
+     * Test getGroundMotionFields when a null earthquake rupture forecast is
+     * passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getGroundMotionFieldsNullErf() {
+        EqkRupForecastAPI erf = null;
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+    }
+
+    /**
+     * Test getGroundMotionFields when a null gmpe map is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getGroundMotionFieldsNullGmpeMap() {
+        Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
+                null;
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+    }
+
+    /**
+     * Test getGroundMotionFields when an empty gmpe map is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getGroundMotionFieldsEmptyGmpeMap() {
+        Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
+                new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+    }
+
+    /**
+     * Test getGroundMotionFields when null random number is passed
+     */
+    @Test(expected = IllegalArgumentException.class)
+    public void getGroundMotionFieldsNullRandomNumberGenerator() {
+        Random rn = null;
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
     }
 
     /**
@@ -167,13 +270,24 @@ public class HazardCalculatorTest {
      * Set up intensity measure levels
      */
     private void setUpImlValues() {
-        imlVals =
-                new double[] { Math.log(0.005), Math.log(0.007),
-                        Math.log(0.0098), Math.log(0.0137), Math.log(0.0192),
-                        Math.log(0.0269), Math.log(0.0376), Math.log(0.0527),
-                        Math.log(0.0738), Math.log(0.103), Math.log(0.145),
-                        Math.log(0.203), Math.log(0.284), Math.log(0.397),
-                        Math.log(0.556), Math.log(0.778), Math.log(1.09) };
+        imlVals = new ArrayList<Double>();
+        imlVals.add(Math.log(0.005));
+        imlVals.add(Math.log(0.007));
+        imlVals.add(Math.log(0.0098));
+        imlVals.add(Math.log(0.0137));
+        imlVals.add(Math.log(0.0192));
+        imlVals.add(Math.log(0.0269));
+        imlVals.add(Math.log(0.0376));
+        imlVals.add(Math.log(0.0527));
+        imlVals.add(Math.log(0.0738));
+        imlVals.add(Math.log(0.103));
+        imlVals.add(Math.log(0.145));
+        imlVals.add(Math.log(0.203));
+        imlVals.add(Math.log(0.284));
+        imlVals.add(Math.log(0.397));
+        imlVals.add(Math.log(0.556));
+        imlVals.add(Math.log(0.778));
+        imlVals.add(Math.log(1.09));
     }
 
     /**
