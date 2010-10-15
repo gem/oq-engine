@@ -27,6 +27,7 @@ import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.FaultUtils;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.util.TectonicRegionType;
 
 /**
  * 
@@ -61,6 +62,8 @@ public class EqkRupture implements java.io.Serializable {
     /* ********************* */
     /** @todo Constructors */
     /* ********************* */
+
+    protected TectonicRegionType tectRegType;
 
     public EqkRupture() {
 
@@ -156,8 +159,8 @@ public class EqkRupture implements java.io.Serializable {
 
     public void setPointSurface(Location location) {
         PointSurface ps =
-                new PointSurface(location.getLatitude(),
-                        location.getLongitude(), location.getDepth());
+                new PointSurface(location.getLatitude(), location
+                        .getLongitude(), location.getDepth());
         setPointSurface(ps);
     }
 
@@ -241,4 +244,11 @@ public class EqkRupture implements java.io.Serializable {
         return info1 + info2;
     }
 
+    public TectonicRegionType getTectonicRegionType() {
+        return tectRegType;
+    }
+
+    public void setTectonicRegionType(TectonicRegionType trt) {
+        tectRegType = trt;
+    }
 }

@@ -13,7 +13,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 
 import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -39,6 +42,9 @@ import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeRuleParam;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
 import org.opensha.gem.GEM1.commons.UnoptimizedDeepCopy;
+import org.opensha.sha.calc.stochasticEventSet.StochasticEventSetGenerator;
+import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
@@ -510,6 +516,80 @@ public class CommandLineCalculator {
             }
         } // while endBranchLabels
     } // doFullCalculation()
+
+    private void doProbabilisticEventBasedCalcForAllLogicTreeEndBranches() {
+        logger.info("Performing calculation probabilistic event based"
+                + "through Monte Carlo Approach.\n");
+        ArrayList<Site> sites = createSiteList(config);
+        Random random = new Random();
+        // load ERF logic tree data
+        ErfLogicTreeData erfLogicTree =
+                new ErfLogicTreeData(
+                        getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+        // load GMPE logic tree data
+        GmpeLogicTreeData gmpeLogicTree =
+                new GmpeLogicTreeData(
+                        getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
+                        config.getString(ConfigItems.COMPONENT.name()), config
+                                .getString(ConfigItems.INTENSITY_MEASURE_TYPE
+                                        .name()), config
+                                .getDouble(ConfigItems.PERIOD.name()), config
+                                .getDouble(ConfigItems.DAMPING.name()), config
+                                .getString(ConfigItems.GMPE_TRUNCATION_TYPE
+                                        .name()),
+                        config.getDouble(ConfigItems.TRUNCATION_LEVEL.name()),
+                        config.getString(ConfigItems.STANDARD_DEVIATION_TYPE
+                                .name()), config
+                                .getDouble(ConfigItems.REFERENCE_VS30_VALUE
+                                        .name()));
+        int numberOfRealization =
+                config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
+                        .name());
+        int numberOfSeismicityHistories =
+                config
+                        .getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
+                                .name());
+        for (int i = 0; i < numberOfRealization; ++i) {
+            GEM1ERF erf =
+                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
+                            config);
+            /* TODO: For the moment select the first GMPE */
+            HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> mapGmpe =
+                    sampleGemLogicTreeGMPE(gmpeLogicTree
+                            .getGmpeLogicTreeHashMap());
+            EqkRupForecast eqkRupForecast =
+                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
+                            config);
+
+            ArrayList<ArrayList<EqkRupture>> seismicityHistories =
+                    StochasticEventSetGenerator
+                            .getMultipleStochasticEventSetsFromPoissonianERF(
+                                    eqkRupForecast,
+                                    numberOfSeismicityHistories, random);
+            for (int j = 0; j < numberOfSeismicityHistories; ++j) {
+                for (int k = 0; k < seismicityHistories.get(j).size(); ++k) {
+                    EqkRupture eqkRupture = seismicityHistories.get(j).get(k);
+
+                    Site site =
+                            new Site(eqkRupture.getRuptureSurface()
+                                    .getLocationList().get(0));
+                    TectonicRegionType tectonic =
+                            eqkRupture.getTectonicRegionType();
+                    ScalarIntensityMeasureRelationshipAPI attenRel =
+                            mapGmpe.get(tectonic);
+                    Map<Site, Double> groundMotionMap =
+                            getStochasticGroundMotionField(attenRel,
+                                    eqkRupture, sites, random);
+
+                } // for k
+            } // for j
+        } // for i
+
+    } // doProbabilisticEventBasedCalcForAllLogicTreeEndBranches()
+
+    private void doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling() {
+
+    } // doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling()
 
     /**
      * @param gmpeLogicTreeHashMap
@@ -1512,6 +1592,13 @@ public class CommandLineCalculator {
 
         return hm;
 
+    }
+
+    Map<Site, Double> getStochasticGroundMotionField(
+            ScalarIntensityMeasureRelationshipAPI attenRel,
+            EqkRupture eqkRupture, List<Site> sites, Random random) {
+        Map<Site, Double> groundMotionMap = new HashMap<Site, Double>();
+        return groundMotionMap;
     }
 
     // for testing
