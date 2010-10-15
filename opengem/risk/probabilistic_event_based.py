@@ -4,7 +4,6 @@ import numpy
 
 from opengem import shapes
 
-# TODO (ac): Port ground_motion_field to a dictionary
 # TODO (ac): Does make sense to export numpy arrays?
 def compute_loss_ratios(vuln_function, ground_motion_field):
     """Compute loss ratios using the ground motion field passed."""
