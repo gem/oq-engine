@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import numpy
+
 from opengem import shapes
 
 def compute_loss_ratios(vuln_function, ground_motion_field):
@@ -23,3 +25,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
                     ground_motion_value))
     
     return loss_ratios
+
+def compute_loss_ratios_range(vuln_function):
+    loss_ratios = vuln_function.ordinates[:, 0]
+    return numpy.linspace(0.0, loss_ratios[-1], num=25)
