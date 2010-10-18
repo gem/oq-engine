@@ -8,12 +8,13 @@ import math
 
 import geohash
 import json
-import ordereddict
+import numpy
 
 from shapely import geometry
 from shapely import wkt
 
 from opengem import flags
+from scipy.interpolate import interp1d
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('distance_precision', 12, 
@@ -290,60 +291,141 @@ class Site(object):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
 
-class FastCurve(object):
+class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
 
+    @classmethod
+    def from_json(cls, json_str):
+        """Construct a curve from a serialized version in
+        json format."""
+        as_dict = json.JSONDecoder().decode(json_str)
+        return Curve.from_dict(as_dict)
+
+    @classmethod
+    def from_dict(cls, values):
+        """Construct a curve from a dictionary.
+        
+        The dictionary keys can be unordered and can be
+        whatever type can be converted to float with float().
+
+        """
+        
+        data = []
+        
+        for key, val in values.items():
+            data.append((float(key), val))
+
+        return Curve(data)
+
     def __init__(self, values):
-        """Construct a curve object with an ordered dict"""
-        odict = ordereddict.OrderedDict()
-        for key, val in values:
-            odict["%s" % key] = val
-        self.values = odict
+        """Construct a curve from a sequence of tuples.
+        
+        The value on the first position of the tuple is the x value,
+        the value(s) on the second position is the y value(s).
+        
+        This class supports multiple y values for the same
+        x value, for example:
+        
+        Curve([(0.1, 1.0), (0.2, 2.0)]) # single y value
+        Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.5))]) # multiple y values
+        
+        or, with lists:
+        
+        Curve([(0.1, [1.0, 0.5]), (0.2, [2.0, 0.5])])
+        
+        The values can be in any order, for axample:
+        
+        Curve([(0.4, 1.0), (0.2, 2.0), (0.3, 2.0)])
+        
+        """
+
+        # sort the values on x axis
+        values = sorted(values, key=lambda data: data[0])
+        
+        elements = len(values)
+        self.x_values = numpy.empty(elements)
+        self.y_values = numpy.empty(elements)
+
+        if elements and type(values[0][1]) in (tuple, list):
+            self.y_values = numpy.empty((elements, len(values[0][1])))
+
+        for index, (key, val) in enumerate(values):
+            self.x_values[index] = key
+            self.y_values[index] = val
 
     def __eq__(self, other):
-        return self.values == other.values
+        return numpy.allclose(self.x_values, other.x_values) \
+                and numpy.allclose(self.y_values, other.y_values)
 
     def __str__(self):
-        return self.values.__str__()
+        return "X Values: %s\nY Values: %s" % (
+                self.x_values.__str__(), self.y_values.__str__())
+
+    def rescale_abscissae(self, value) :
+        """Return a new curve with each abscissa value multiplied
+        by the value passed as parameter."""
+        
+        result = Curve(())
+        result.x_values = self.x_values * value
+        result.y_values = self.y_values
+        
+        return result
 
     @property
-    def domain(self):
-        """Returns the domain values of this curve."""
-        return self.values.keys()
+    def abscissae(self):
+        """Return the abscissa values of this curve in ascending order."""
+        return self.x_values
 
     @property
-    def codomain(self):
-        """Returns the codomain values of this curve."""
-        return self.values.values()
+    def ordinates(self):
+        """Return the ordinate values of this curve in ascending order
+        of the corresponding abscissa values."""
+        return self.y_values
+    
+    @property
+    def is_multi_value(self):
+        """Return true if this curve describes multiple ordinate values,
+        false otherwise."""
+        return self.y_values.ndim > 1
+    
+    def ordinate_for(self, x_value, y_index=0):
+        """Return the y value corresponding to the given x value."""
+        
+        y_values = self.y_values
+        
+        if self.y_values.ndim > 1:
+            y_values = self.y_values[:, y_index]
+        
+        return interp1d(self.x_values, y_values)(x_value)
 
-    # TODO (ac): Change name according to the other function
-    def get_for(self, x_value):
-        """Returns the y value (codomain) corresponding
-        to the given x value (domain)."""
-        return self.values[x_value]
+    def abscissa_for(self, y_value):
+        """Return the x value corresponding to the given y value.
+        
+        This method only works if this curve is strictly monotonic on the given
+        abscissa values.
 
-    def domain_for(self, y_value):
-        """Returns the x value (domain) corresponding
-        to the given y value (codomain)."""
-
-        # TODO (bw): Find out if there is a better way to do this
-        for x, y in self.values.items():
-            if y == y_value: 
-                return float(x)
-
-        # TODO (bw): Test this corner case
-        error_str = "%s is not contained in this function" % (y_value, )
-        raise ValueError(error_str)
+        """
+        y_values = self.y_values
+        
+        if self.y_values.ndim > 1:
+            #  does not support indexing yet
+            y_values = self.y_values[:, 0]
+        
+        index = numpy.where(y_values==y_value)[0][0]
+        return self.x_values[index]
 
     def to_json(self):
-        return json.JSONEncoder().encode(self.values)
+        """Serialize this curve in json format."""
+        as_dict = {}
+        
+        for index, x_value in enumerate(self.x_values):
+            if self.y_values.ndim > 1:
+                as_dict[str(x_value)] = list(self.y_values[index])
+            else:
+                as_dict[str(x_value)] = self.y_values[index]
 
-    def from_json(self, json_str):
-        odict = ordereddict.OrderedDict()
-        for key, value in json.JSONDecoder().decode(json_str).items():
-            odict["%s" % key] = value
-        self.values = odict
-        del odict
+        return json.JSONEncoder().encode(as_dict)
 
-EMPTY_CURVE = FastCurve(())
+
+EMPTY_CURVE = Curve(())
