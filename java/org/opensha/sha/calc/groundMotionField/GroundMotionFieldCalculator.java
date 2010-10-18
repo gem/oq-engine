@@ -5,11 +5,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.math.linear.Array2DRowRealMatrix;
+import org.apache.commons.math.linear.CholeskyDecompositionImpl;
+import org.apache.commons.math.linear.NonSquareMatrixException;
+import org.apache.commons.math.linear.NotPositiveDefiniteMatrixException;
+import org.apache.commons.math.linear.NotSymmetricMatrixException;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
+import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 
 public class GroundMotionFieldCalculator {
 
@@ -98,9 +106,21 @@ public class GroundMotionFieldCalculator {
      * correlation model from Jayamram & Baker (2009):
      * "Correlation model for spatially distributed ground-motion intensities"
      * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
+     * The algorithm is structured according to the following steps: 1) Compute
+     * mean ground motion values, 2) Stochastically generate inter-event
+     * residuals (which follow a univariate normal distribution), 3)
+     * Stochastically generate intra-event residuals (following the proposed
+     * correlation model) 4) Combine the three terms generated in steps 1-3.
      * 
-     * Ground motion field is calculated by generating Gaussian deviates from a
-     * multivariate normal distribution using Cholesky factorization following
+     * NOTE: The correlation model implemented here refers to the case 1 in
+     * Jayamram & Baker (2009) paper, that is when Vs30 values do not show or
+     * are not expected to show clustering (i.e. there are no cluster of sites
+     * in which the geologic conditions of the soil are similar). The method
+     * checks if the sites passed in contains Vs30 values, and if they are found
+     * to vary it gives a warning.
+     * 
+     * Intra-event residuals are calculated by generating Gaussian deviates from
+     * a multivariate normal distribution using Cholesky factorization following
      * the algorithm described in
      * "Computational Statistics Handbook with Matlab", Wendy L. Martinez &
      * Angel R. Martinez, CHAPMAN & HALL, pag. 97.
@@ -111,11 +131,61 @@ public class GroundMotionFieldCalculator {
      * @param rn
      * @return
      */
-    public static Map<Site, Double>
-            getStochasticGroundMotionFieldWithSpatialCorrelation(
-                    ScalarIntensityMeasureRelationshipAPI attenRel,
-                    EqkRupture rup, List<Site> sites, Random rn) {
+    public static Map<Site, Double> getStochasticGroundMotionField_JB2009(
+            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
+            List<Site> sites, Random rn) {
+        attenRel.setEqkRupture(rup);
+        // compute ground motion field considering only inter-event residual
+        attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTER);
+        Map<Site, Double> groundMotionField =
+                getStochasticGroundMotionField(attenRel, rup, sites, rn);
+        // compute covariance matrix considering only intra-event residual
+        attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTRA);
         int numberOfSites = sites.size();
+        Array2DRowRealMatrix covarianceMatrix =
+                new Array2DRowRealMatrix(numberOfSites, numberOfSites);
+        double period =
+                (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
+        double b = Double.NaN;
+        if (period < 1)
+            b = 8.5 + 17.2 * period;
+        else if (period >= 1)
+            b = 22.0 + 3.7 * period;
+        double intraEventStd_i = Double.NaN;
+        double intraEventStd_j = Double.NaN;
+        double distance = Double.NaN;
+        double covarianceValue = Double.NaN;
+        int index_i = 0;
+        for (Site site_i : sites) {
+            attenRel.setSite(site_i);
+            intraEventStd_i = attenRel.getStdDev();
+            int index_j = 0;
+            for (Site site_j : sites) {
+                attenRel.setSite(site_j);
+                intraEventStd_j = attenRel.getStdDev();
+                distance =
+                        LocationUtils.horzDistance(site_i.getLocation(),
+                                site_j.getLocation());
+                covarianceValue =
+                        intraEventStd_i * intraEventStd_j
+                                * Math.exp(-3 * (distance / b));
+                covarianceMatrix.setEntry(index_i, index_j, covarianceValue);
+                index_j = index_j + 1;
+            }
+            index_i = index_i + 1;
+        }
+        CholeskyDecompositionImpl cholDecomp = null;
+        try {
+            cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
+        } catch (NonSquareMatrixException e) {
+            e.printStackTrace();
+        } catch (NotSymmetricMatrixException e) {
+            e.printStackTrace();
+        } catch (NotPositiveDefiniteMatrixException e) {
+            e.printStackTrace();
+        }
 
         return null;
     }
