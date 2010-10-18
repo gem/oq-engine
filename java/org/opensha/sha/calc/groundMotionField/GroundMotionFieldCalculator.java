@@ -116,6 +116,7 @@ public class GroundMotionFieldCalculator {
                     ScalarIntensityMeasureRelationshipAPI attenRel,
                     EqkRupture rup, List<Site> sites, Random rn) {
         int numberOfSites = sites.size();
+
         return null;
     }
 
