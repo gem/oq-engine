@@ -1,15 +1,44 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<ExposurePortfolio PortfolioID="PAV01" PortfolioDescription="Collection of existing building in downtown Pavia">
-    <AssetInstance AssetID="01" AssetDescription="Moment-resisting non-ductile concrete frame low rise" AssetValue="150000" VulnerabilityFunction="RC/DMRF-D/LR"
-         Latitude="45.16667" Longitude="9.15000"/>
-    <AssetInstance AssetID="02" AssetDescription="Moment-resisting non-ductile concrete frame med rise" AssetValue="250000" VulnerabilityFunction="RC/DMRF-D/MR"
-         Latitude="45.12200" Longitude="9.15333"/>
-    <AssetInstance AssetID="03" AssetDescription="Moment-resisting non-ductile concrete frame high rise" AssetValue="500000" VulnerabilityFunction="RC/DMRF-D/HR"
-         Latitude="45.17999" Longitude="9.14777"/>
-    <AssetInstance AssetID="04" AssetDescription="Moment-resisting ductile concrete frame low rise" AssetValue="170000" VulnerabilityFunction="RC/ND-FR-D/LR"
-         Latitude="45.13005" Longitude="9.15765"/>
-    <AssetInstance AssetID="05" AssetDescription="Moment-resisting ductile concrete frame low rise" AssetValue="170000" VulnerabilityFunction="RC/ND-FR-D/LR"
-         Latitude="45.13300" Longitude="9.15934"/>
-    <AssetInstance AssetID="06" AssetDescription="Moment-resisting ductile concrete frame high rise" AssetValue="320000" VulnerabilityFunction="RC/ND-FR-D/HR"
-         Latitude="45.13805" Longitude="9.15876"/> 
+<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
+	<Config>
+    	<ExposureParameters PortfolioID="PAV01" PortfolioDescription="Collection of existing building in downtown Pavia" AssetType="buildings" LossType="economical loss">
+		</ExposureParameters>
+	</Config>
+	<ExposureList>
+		<AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
+			<AssetID>01</AssetID>
+		  	<StructureType>RC-LR-PC</StructureType>
+	      	<gml:pos>45.16667 9.15000</gml:pos>
+	      	<AssetValue>150000</AssetValue>
+		</AssetInstance>
+	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
+		  <AssetID>02</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos>45.12200 9.15333</gml:pos>
+	      <AssetValue>250000</AssetValue>
+	    </AssetInstance>
+	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
+		  <AssetID>03</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos>45.17999 9.14777</gml:pos>
+	      <AssetValue>500000</AssetValue>
+	    </AssetInstance>
+	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/ND-FR-D/LR">
+		  <AssetID>04</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos>45.13005 9.15765</gml:pos>
+	      <AssetValue>170000</AssetValue>
+	    </AssetInstance>
+		<AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/ND-FR-D/LR">
+		  <AssetID>05</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos>45.13300 9.15934</gml:pos>
+	      <AssetValue>170000</AssetValue>
+	    </AssetInstance>
+		<AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/ND-FR-D/HR">
+		  <AssetID>06</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos>45.13805 9.15876</gml:pos>
+	      <AssetValue>320000</AssetValue>
+	    </AssetInstance>
+	</ExposureList>
 </ExposurePortfolio>

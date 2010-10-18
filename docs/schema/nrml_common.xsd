@@ -1,12 +1,103 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://opengem.org/xmlns/shaml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
-	xmlns:shaml="http://opengem.org/xmlns/shaml/0.1">
+	targetNamespace="http://opengem.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
+	xmlns:nrml="http://opengem.org/xmlns/nrml/0.1">
 
 	<!-- -->
 	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
 	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
 	<!-- -->
+	
+	<xs:complexType name="AssetType">
+	<xs:all>
+		<xs:element ref="nrml:AssetID"/>
+		<xs:element ref="nrml:StructureType"/>
+		<xs:element minOccurs="0" ref="gml:pos"/>
+		<xs:element ref="nrml:AssetValue"/>
+	</xs:all>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+	
+	<xs:element name="Asset" type="nrml:AssetType"/>
+	
+	<xs:complexType name="AssetPortfolioType">
+		<xs:sequence>
+            <xs:element ref="nrml:Common" minOccurs="0"/>
+    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    				<xs:element ref="nrml:Asset"/>
+    		</xs:sequence>
+    	</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+	
+	
+	<xs:complexType name="CurveType">
+		<xs:all>
+			<xs:element ref="nrml:Values"/>
+			<xs:element minOccurs="0" ref="gml:pos"/>
+		</xs:all>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+
+	<xs:element name="Curve" type="nrml:CurveType"/>
+	
+    <xs:complexType name="CommonType">
+        <xs:sequence maxOccurs="unbounded" minOccurs="0">
+    		<xs:any namespace="##any"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="Common" type="nrml:CommonType"/>
+    
+	<xs:complexType name="CurveListType">
+		<xs:sequence>
+            <xs:element ref="nrml:Common" minOccurs="0"/>
+    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    				<xs:element ref="nrml:Curve"/>
+    		</xs:sequence>
+    	</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+	
+	<xs:complexType name="ModelType">
+		<xs:sequence>
+			<xs:element ref="nrml:LossRatios"/>
+			<xs:element ref="nrml:CoefficientsVariation"/>
+		</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+
+	<xs:element name="Model" type="nrml:ModelType"/>
+	
+	<xs:complexType name="ModelListType">
+		<xs:sequence>
+            <xs:element ref="nrml:Common" minOccurs="0"/>
+    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
+    				<xs:element ref="nrml:Model"/>
+    		</xs:sequence>
+    	</xs:sequence>
+		<xs:anyAttribute namespace="##any" processContents="lax"/>
+	</xs:complexType>
+	
+	<xs:element name="Config"/>
+
+	<xs:element name="AssetID" type="xs:string"/>
+	<xs:element name="AssetValue" type="xs:double"/>
+	<xs:element name="CoefficientsVariation" type="gml:doubleList"/>
+	<xs:element name="IMLValues" type="gml:doubleList"/>
+	<xs:element name="IMT">
+		<xs:simpleType>
+			<xs:restriction base="xs:string">
+				<xs:enumeration value="PGA"/>
+				<xs:enumeration value="PGD"/>
+				<xs:enumeration value="PGV"/>
+				<xs:enumeration value="SA"/>
+				<xs:enumeration value="MMI"/>
+			</xs:restriction>
+		</xs:simpleType>
+	</xs:element>
+	<xs:element name="LossRatios" type="gml:doubleList"/>
+	<xs:element name="StructureType" type="xs:string"/>
+	<xs:element name="Values" type="gml:doubleList"/>
 
 	<xs:complexType name="EvenlyDiscretizedDistType">
 		<xs:annotation>
@@ -31,7 +122,7 @@
 	</xs:complexType>
 	<xs:complexType name="GrdFieldSetType">
 		<xs:sequence>
-			<xs:element maxOccurs="unbounded" name="GrdField" type="shaml:GrdFieldType"/>
+			<xs:element maxOccurs="unbounded" name="GrdField" type="nrml:GrdFieldType"/>
 		</xs:sequence>
 	</xs:complexType>
 	<xs:complexType mixed="true" name="GrdDataType">
@@ -42,15 +133,15 @@
 	<!--Grid type -->
 	<xs:complexType name="GrdType">
 		<xs:all>
-			<xs:element name="GrdSpecs" type="shaml:GrdSpecsType"/>
-			<xs:element maxOccurs="1" name="GrdFieldSet" type="shaml:GrdFieldSetType"/>
-			<xs:element name="GrdDataArray" type="shaml:GrdDataType"/>
+			<xs:element name="GrdSpecs" type="nrml:GrdSpecsType"/>
+			<xs:element maxOccurs="1" name="GrdFieldSet" type="nrml:GrdFieldSetType"/>
+			<xs:element name="GrdDataArray" type="nrml:GrdDataType"/>
 		</xs:all>
 	</xs:complexType>
 	<!-- -->
 	<xs:complexType name="GrdFieldType">
 		<xs:attribute name="index" type="xs:int"/>
-		<xs:attribute name="name" type="shaml:paramType"/>
+		<xs:attribute name="name" type="nrml:paramType"/>
 		<xs:attribute name="refValue" type="xs:double">
 			<xs:annotation>
 				<xs:documentation>This attribute allows to specify a value associated with one layer of the grid file. For example, in the case of a multi-layered grid with several layers each one containing the rate of occurrence [events/year] for a specific magnitude interval, through this attribute is possible to specify the corresponding magnitude value (as a standard: the value in the middle of the interval). </xs:documentation>
@@ -62,7 +153,7 @@
 	<!-- -->
 	<xs:simpleType name="paramType">
 		<xs:annotation>
-			<xs:documentation>Labelsthat can be used to describe the parameters to be used in pshaML.</xs:documentation>
+			<xs:documentation>Labels that can be used to describe the parameters to be used in NRML.</xs:documentation>
 		</xs:annotation>
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="adimensional"/>
