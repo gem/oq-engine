@@ -16,3 +16,4 @@ from classical_psha_based_unittest import *
 from memcached_unittest import *
 from probabilistic_event_based_unittest import *
 from shapes_unittest import *
+from engines_unittest import *

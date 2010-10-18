@@ -119,8 +119,8 @@ def set_value_json_encoded(memcache_client, key, value):
 
     try:
         memcache_client.set(key, encoded_value)
-    except Exception:
-        raise RuntimeError("cannot write key %s to memcache" % key)
+    except Exception, e:
+        raise RuntimeError("cannot write key %s to memcache - %s" % (key, e))
 
     return True
 

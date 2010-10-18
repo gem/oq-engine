@@ -40,8 +40,9 @@ def generate_id(prefix):
 def generate_product_key(job_id, block_id, site, product):
     """construct memcached key from several part IDs"""
     if site is not None:
-        return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
-                                            str(site), str(product)))
+        return MEMCACHE_KEY_SEPARATOR.join(
+                (str(job_id), str(block_id),
+                str(site).replace(" ", ""), str(product)))
     else:
         return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
                                             str(product)))

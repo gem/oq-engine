@@ -98,6 +98,34 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         return classical_psha_based.compute_loss_curve(
             loss_ratio_curve, asset['AssetValue'])
 
+class ProbabilisticEventBasedCalculator(object):
+    
+    def __init__(self, job_id, block_id, memcache_client=None):
+        self.job_id = job_id
+        self.block_id = block_id
+
+        if memcache_client is not None:
+            self.memcache_client = memcache_client
+        else:
+            self.memcache_client = memcached.get_client(binary=False)
+
+    def compute_loss_ratio_curve(self, site):
+        # read exposure
+        # read vulnerability function
+        # read GMF
+        # compute
+
+    def compute_loss_curve(self, site, loss_ratio_curve):
+        key_exposure = identifiers.generate_product_key(self.job_id,
+            self.block_id, site, identifiers.EXPOSURE_KEY_TOKEN)
+        
+        asset = memcached.get_value_json_decoded(
+                self.memcache_client, key_exposure)
+        
+        if asset is None:
+            return None
+        
+        return loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
 
 def compute_loss(loss_curve, pe_interval):
     """Interpolate loss for a specific probability of exceedance interval"""
