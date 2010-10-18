@@ -98,6 +98,8 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             loss_ratio_curve, asset['AssetValue'])
 
 class ProbabilisticEventBasedCalculator(object):
+    """Compute loss ratio and loss curves using the probabilistic event
+    based approach."""
     
     def __init__(self, job_id, block_id, memcache_client=None):
         self.job_id = job_id
@@ -113,6 +115,7 @@ class ProbabilisticEventBasedCalculator(object):
                 self.memcache_client, self.job_id)
 
     def compute_loss_ratio_curve(self, site):
+        """Compute the loss ratio curve for a single site."""
         key_exposure = identifiers.generate_product_key(self.job_id,
                 self.block_id, site, identifiers.EXPOSURE_KEY_TOKEN)
 
@@ -129,6 +132,7 @@ class ProbabilisticEventBasedCalculator(object):
                 vuln_function, gmf)
 
     def compute_loss_curve(self, site, loss_ratio_curve):
+        """Compute the loss curve for a single site."""
         key_exposure = identifiers.generate_product_key(self.job_id,
             self.block_id, site, identifiers.EXPOSURE_KEY_TOKEN)
         

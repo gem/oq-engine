@@ -36,10 +36,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.cum_histogram = numpy.array([216, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-    def test_an_empty_function_produces_an_empty_list(self):
+    def test_an_empty_function_produces_an_empty_set(self):
         self.assertEqual([], compute_loss_ratios(shapes.EMPTY_CURVE, self.gmf))
     
-    def test_an_empty_gmf_produces_an_empty_list(self):
+    def test_an_empty_gmf_produces_an_empty_set(self):
         self.assertEqual([], compute_loss_ratios(self.vuln_function, {"IMLs": ()}))
     
     def test_loss_ratios_boundaries(self):
@@ -83,7 +83,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.0, 0.0, 0.00158240000000000, 0.0810400000000000, 0.0, 0.00307200000000000, 0.0199728000000000])
         
         # the length of the result is the length of the gmf
-        self.assertEqual(len(self.gmf["IMLs"]), len(compute_loss_ratios(self.vuln_function, self.gmf)))
         self.assertTrue(numpy.allclose(expected_loss_ratios, compute_loss_ratios(self.vuln_function, self.gmf)))
     
     def test_loss_ratios_range_generation(self):
@@ -91,8 +90,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.2333, 0.2625, 0.2917, 0.3208, 0.3500, 0.3792, 0.4083, 0.4375, 0.4667, 0.4958, 0.5250,
                 0.5542, 0.5833, 0.6125, 0.6417, 0.6708, 0.700])
                 
-        self.assertEqual(len(expected_range), len(compute_loss_ratios_range(self.vuln_function)))
-
         self.assertTrue(numpy.allclose(expected_range,
                 compute_loss_ratios_range(self.vuln_function), atol=0.0001))
     
