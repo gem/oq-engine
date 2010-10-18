@@ -17,6 +17,7 @@ SITES_KEY_TOKEN = 'sites'
 
 HAZARD_CURVE_KEY_TOKEN = 'hazard_curve'
 EXPOSURE_KEY_TOKEN = 'exposure'
+GMF_KEY_TOKEN = 'gmf'
 VULNERABILITY_CURVE_KEY_TOKEN = 'vulnerability_curves'
 
 LOSS_RATIO_CURVE_KEY_TOKEN = 'loss_ratio_curve'
