@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module defines the functions used to compute loss ratio curves
+This module defines the functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
 
 """
@@ -10,7 +10,6 @@ import numpy
 
 from opengem import shapes
 
-# TODO (ac): Does make sense to export numpy arrays?
 def compute_loss_ratios(vuln_function, ground_motion_field):
     """Compute loss ratios using the ground motion field passed."""
     if vuln_function == shapes.EMPTY_CURVE or not ground_motion_field["IMLs"]:
@@ -31,7 +30,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_value))
     
-    return loss_ratios
+    return numpy.array(loss_ratios)
 
 def compute_loss_ratios_range(vuln_function):
     """Compute the range of loss ratios used to build the loss ratio curve."""
@@ -40,13 +39,13 @@ def compute_loss_ratios_range(vuln_function):
     
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
-    return list(numpy.histogram(loss_ratios, bins=loss_ratios_range)
-            [0][::-1].cumsum()[::-1])
+    return numpy.histogram(loss_ratios, bins=loss_ratios_range
+            )[0][::-1].cumsum()[::-1]
 
 def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
     """Compute the rates of exceedance for the given ground motion
     field and cumulative histogram."""
-    return list(numpy.array(cum_histogram).astype(float)
+    return (numpy.array(cum_histogram).astype(float) 
             / ground_motion_field["TSES"])
 
 def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
@@ -58,7 +57,7 @@ def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
                 (rates_of_exceedance[idx] * -1) \
                 *  ground_motion_field["TimeSpan"]))
     
-    return probs_of_exceedance
+    return numpy.array(probs_of_exceedance)
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     """Compute the loss ratio curve using the probailistic event approach."""
