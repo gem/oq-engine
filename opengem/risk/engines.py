@@ -3,8 +3,6 @@
 Top-level managers for computation classes.
 """
 
-import json
-
 from opengem import identifiers
 from opengem import logs
 from opengem import memcached
@@ -12,6 +10,7 @@ from opengem import shapes
 
 from opengem.parser import vulnerability
 from opengem.risk import classical_psha_based
+from opengem.risk import probabilistic_event_based
 
 logger = logs.RISK_LOG
 
@@ -108,13 +107,26 @@ class ProbabilisticEventBasedCalculator(object):
             self.memcache_client = memcache_client
         else:
             self.memcache_client = memcached.get_client(binary=False)
+        
+        self.vuln_curves = \
+                vulnerability.load_vulnerability_curves_from_memcache(
+                self.memcache_client, self.job_id)
 
     def compute_loss_ratio_curve(self, site):
-        # read exposure
-        # read vulnerability function
-        # read GMF
-        # compute
-        pass
+        key_exposure = identifiers.generate_product_key(self.job_id,
+                self.block_id, site, identifiers.EXPOSURE_KEY_TOKEN)
+
+        asset = memcached.get_value_json_decoded(
+                self.memcache_client, key_exposure)
+
+        vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
+
+        key_gmf = identifiers.generate_product_key(self.job_id, 
+            self.block_id, site, identifiers.GMF_KEY_TOKEN)
+       
+        gmf = memcached.get_value_json_decoded(self.memcache_client, key_gmf)
+        return probabilistic_event_based.compute_loss_ratio_curve(
+                vuln_function, gmf)
 
     def compute_loss_curve(self, site, loss_ratio_curve):
         key_exposure = identifiers.generate_product_key(self.job_id,
