@@ -248,8 +248,8 @@ public class EqkRupture implements java.io.Serializable {
         return tectRegType;
     }
 
-    public void setTectRegType(TectonicRegionType tectRegType) {
-        this.tectRegType = tectRegType;
+    public void setTectRegType(TectonicRegionType tectonicRegType) {
+        this.tectRegType = tectonicRegType;
     }
 
 }

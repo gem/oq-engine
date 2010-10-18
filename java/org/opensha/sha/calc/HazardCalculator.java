@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -25,6 +27,8 @@ import org.opensha.sha.util.TectonicRegionType;
  */
 
 public class HazardCalculator {
+
+    private static Log logger = LogFactory.getLog(HazardCalculator.class);
 
     /**
      * Calculate hazard curves for a set of sites from an earthquake rupture
@@ -52,32 +56,18 @@ public class HazardCalculator {
                     EqkRupForecastAPI erf,
                     Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
                     List<Double> imlVals, double integrationDistance) {
-        if (siteList == null) {
-            throw new IllegalArgumentException("List of sites cannot be null");
-        }
-        if (siteList.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "List of sites must contain at least one site");
-        }
-        if (erf == null) {
-            throw new IllegalArgumentException(
-                    "Earthquake rupture forecast cannot be null");
-        }
-        if (gmpeMap == null) {
-            throw new IllegalArgumentException("Gmpe map cannot be null");
-        }
-        if (gmpeMap.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Gmpe map must contain at least one gmpe");
-        }
+        validateInput(siteList, erf, gmpeMap);
         if (imlVals == null) {
-            throw new IllegalArgumentException(
-                    "Array of intensity measure levels cannot be null");
+            String msg = "Array of intensity measure levels cannot be null";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
         }
         if (imlVals.isEmpty()) {
-            throw new IllegalArgumentException(
+            String msg =
                     "Array of intensity measure levels must"
-                            + " contain at least one value");
+                            + " contain at least one value";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
         }
         Map<Site, DiscretizedFuncAPI> results =
                 new HashMap<Site, DiscretizedFuncAPI>();
@@ -88,16 +78,12 @@ public class HazardCalculator {
         try {
             curveCalculator = new HazardCurveCalculator();
             curveCalculator.setMaxSourceDistance(integrationDistance);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        }
-        for (Site site : siteList) {
-            try {
+            for (Site site : siteList) {
                 curveCalculator.getHazardCurve(hazardCurve, site, gmpeMap, erf);
                 results.put(site, hazardCurve);
-            } catch (RemoteException e) {
-                e.printStackTrace();
             }
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
         return results;
     }
@@ -126,27 +112,11 @@ public class HazardCalculator {
                     EqkRupForecastAPI erf,
                     Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
                     Random rn) {
-        if (siteList == null) {
-            throw new IllegalArgumentException("List of sites cannot be null");
-        }
-        if (siteList.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "List of sites must contain at least one site");
-        }
-        if (erf == null) {
-            throw new IllegalArgumentException(
-                    "Earthquake rupture forecast cannot be null");
-        }
-        if (gmpeMap == null) {
-            throw new IllegalArgumentException("Gmpe map cannot be null");
-        }
-        if (gmpeMap.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Gmpe map must contain at least one gmpe");
-        }
+        validateInput(siteList, erf, gmpeMap);
         if (rn == null) {
-            throw new IllegalArgumentException(
-                    "Random number generator cannot be null");
+            String msg = "Random number generator cannot be null";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
         }
         Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                 new HashMap<EqkRupture, Map<Site, Double>>();
@@ -159,5 +129,39 @@ public class HazardCalculator {
                             gmpeMap.get(rup.getTectRegType()), rup, siteList,
                             rn));
         return groundMotionFields;
+    }
+
+    public static
+            Boolean
+            validateInput(
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
+        if (siteList == null) {
+            String msg = "List of sites cannot be null";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        if (siteList.isEmpty()) {
+            String msg = "List of sites must contain at least one site";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        if (erf == null) {
+            String msg = "Earthquake rupture forecast cannot be null";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        if (gmpeMap == null) {
+            String msg = "Gmpe map cannot be null";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        if (gmpeMap.isEmpty()) {
+            String msg = "Gmpe map must contain at least one gmpe";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+        return true;
     }
 }
