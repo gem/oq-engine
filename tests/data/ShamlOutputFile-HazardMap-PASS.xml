@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<shaml:HazardResultList xmlns:shaml="http://opengem.org/xmlns/shaml/0.1" 
+<nrml:HazardResultList xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" 
                         xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
-    <shaml:Result timeSpanDuration="50.0" IDmodel="PGA_1_1" IMT="PGA">
-        <shaml:Descriptor>
-            <shaml:endBranchLabel>1_1</shaml:endBranchLabel>
-        </shaml:Descriptor>
-        <shaml:Values>
-            <shaml:HazardMap exceedanceProb="0.1" fixedGMLevel="1.0">
-                <shaml:Site>
-                    <shaml:Site>
+    <nrml:Result timeSpanDuration="50.0" IDmodel="PGA_1_1" IMT="PGA">
+        <nrml:Descriptor>
+            <nrml:endBranchLabel>1_1</nrml:endBranchLabel>
+        </nrml:Descriptor>
+        <nrml:Values>
+            <nrml:HazardMap exceedanceProb="0.1" fixedGMLevel="1.0">
+                <nrml:Site>
+                    <nrml:Site>
                         <gml:pos>2.0 48.0</gml:pos>
-                    </shaml:Site>
-                    <shaml:Values>0.1</shaml:Values>
-                    <shaml:vs30>760.0</shaml:vs30>
-                </shaml:Site>
-                <shaml:Site>
-                    <shaml:Site>
+                    </nrml:Site>
+                    <nrml:Values>0.1</nrml:Values>
+                    <nrml:vs30>760.0</nrml:vs30>
+                </nrml:Site>
+                <nrml:Site>
+                    <nrml:Site>
                         <gml:pos>2.0 48.1</gml:pos>
-                    </shaml:Site>
-                    <shaml:Values>0.2</shaml:Values>
-                    <shaml:vs30>760.0</shaml:vs30>
-                </shaml:Site>
-                <shaml:Site>
-                    <shaml:Site>
+                    </nrml:Site>
+                    <nrml:Values>0.2</nrml:Values>
+                    <nrml:vs30>760.0</nrml:vs30>
+                </nrml:Site>
+                <nrml:Site>
+                    <nrml:Site>
                         <gml:pos>2.1 48.0</gml:pos>
-                    </shaml:Site>
-                    <shaml:Values>0.3</shaml:Values>
-                    <shaml:vs30>760.0</shaml:vs30>
-                </shaml:Site>
-                <shaml:Site>
-                    <shaml:Site>
+                    </nrml:Site>
+                    <nrml:Values>0.3</nrml:Values>
+                    <nrml:vs30>760.0</nrml:vs30>
+                </nrml:Site>
+                <nrml:Site>
+                    <nrml:Site>
                         <gml:pos>2.1 48.1</gml:pos>
-                    </shaml:Site>
-                    <shaml:Values>0.4</shaml:Values>
-                    <shaml:vs30>760.0</shaml:vs30>
-                </shaml:Site>
-            </shaml:HazardMap>
-        </shaml:Values>
-    </shaml:Result>
-</shaml:HazardResultList>
+                    </nrml:Site>
+                    <nrml:Values>0.4</nrml:Values>
+                    <nrml:vs30>760.0</nrml:vs30>
+                </nrml:Site>
+            </nrml:HazardMap>
+        </nrml:Values>
+    </nrml:Result>
+</nrml:HazardResultList>

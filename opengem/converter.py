@@ -8,9 +8,7 @@ import os
 import guppy
 import jpype
 
-from opengem import logs
-
-log = logs.LOG
+from opengem.logs import LOG
 
 
 def convert(input_path, input_module, output_path, output_module):
@@ -19,12 +17,11 @@ def convert(input_path, input_module, output_path, output_module):
     for the input directories. The parsing itself is done in the class
     constructor, and output is derived from a writeSources method."""
     
-    log.info("Starting conversion run...")
+    LOG.info("Starting conversion run...")
     jarpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../lib")
-    log.debug("Jarpath is %s", jarpath)
-    
-    # " -Xms2048m -Xmx2048m ", 
-    jpype.startJVM(jpype.getDefaultJVMPath(), "-Djava.ext.dirs=%s" % jarpath)
+    LOG.debug("Jarpath is %s", jarpath)
+    max_mem = 4000
+    jpype.startJVM(jpype.getDefaultJVMPath(), "-Djava.ext.dirs=%s" % jarpath, "-Xmx%sM" % max_mem)
     input_module.init_paths(input_path, jpype)
     
     SOURCE_NAMESPACE = "org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData."
@@ -42,11 +39,11 @@ def convert(input_path, input_module, output_path, output_module):
     for model, _subdir in input_module.JAVA_MODELS:
         outfile = os.path.join(output_path, model+"-foo.xml")
         if os.path.exists(outfile):
-            log.info("Output exists, skipping generation of %s", outfile)
+            LOG.info("Output exists, skipping generation of %s", outfile)
             continue
         java_class = jpype.JClass(model)
         input_parser = java_class(latmin, latmax, lonmin, lonmax)
-        log.debug("Loaded a %s parser with %s sources", 
+        LOG.debug("Loaded a %s parser with %s sources", 
                     model, input_parser.getNumSources())
         print(dir(input_parser))
         print dir(input_parser.srcDataList[0])
@@ -67,9 +64,9 @@ def convert(input_path, input_module, output_path, output_module):
         
             print "mfd: %s" % (dir(source.mfd))
             return
-        log.debug("Writing output to %s", outfile)
+        LOG.debug("Writing output to %s", outfile)
         file_writer_class = jpype.JClass("java.io.FileWriter")
         input_parser.writeSources2KMLfile(
                     file_writer_class(outfile))
     
-    log.info("Finished conversion run.")
+    LOG.info("Finished conversion run.")

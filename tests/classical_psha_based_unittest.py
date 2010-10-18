@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# encoding: utf-8
+# -*- coding: utf-8 -*-
 """
 Test cases for the probablistic scenario described
 in the scientific model. The values we check against are taken from
@@ -7,22 +7,28 @@ the documentation you can find at <http://to_be_defined>.
 """
 
 import unittest
+
 from decimal import *
 from ordereddict import *
 
+from opengem import identifiers
+from opengem import logs
+from opengem import memcached
+from opengem import shapes
 from opengem import test
+
 from opengem.parser import vulnerability
 from opengem.risk.classical_psha_based import *
 from opengem.risk.classical_psha_based import _compute_lrem_po, \
     _compute_lrem, _split_loss_ratios, _generate_loss_ratios, \
     _compute_loss_ratio_curve_from_lrem_po
-from opengem import shapes
 
+logger = logs.RISK_LOG
 
 # input test values
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
-HAZARD_CURVE = shapes.FastCurve(
+HAZARD_CURVE = shapes.Curve(
     [(5.0, 0.138), (6.0, 0.099), (7.0, 0.068), (8.0, 0.041)])
 
 LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000], \
@@ -35,15 +41,15 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         # [0, 0.0600, 0.1200, 0.1800, 0.2400, 0.3000, 0.4500]  
         # and pe of : [0.3460, 0.1200, 0.0570, 0.0400, 0.0190, 0.0090,  0]
         # 
-        self.loss_ratio_pe_curve = shapes.FastCurve([
+        self.loss_ratio_pe_curve = shapes.Curve([
             (0, 0.3460), (0.06, 0.12), (0.12, 0.057), (0.18, 0.04), 
             (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
         
-        self.loss_ratio_pe_mid_curve = shapes.FastCurve([(0.0300, 0.2330), 
+        self.loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330), 
             (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295), 
             (0.2700, 0.0140), (0.3750, 0.0045)])
             
-        self.loss_ratio_po_curve = shapes.FastCurve([(0.0600, 0.1445),
+        self.loss_ratio_po_curve = shapes.Curve([(0.0600, 0.1445),
         	(0.1200, 0.0400), (0.1800, 0.0190), (0.2300, 0.0155), 
         	(0.300, 0.0095)])
         
@@ -58,7 +64,7 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
         
         loss_ratio_pe_mid_curve = compute_mid_mean_pe(self.loss_ratio_pe_curve)
             
-        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.codomain):
+        for idx, val in enumerate(self.loss_ratio_pe_mid_curve.ordinates):
             self.assertAlmostEqual(val, loss_ratio_pe_mid_curve[idx])        
 
     # todo BW itarate these test values one by one
@@ -71,10 +77,10 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
     def test_loss_ratio_po_computation(self):
         
         loss_ratio_po_mid_curve = compute_mid_po(
-            self.loss_ratio_pe_mid_curve.codomain)
+            self.loss_ratio_pe_mid_curve.ordinates)
         
-        self.loss_ratio_po_curve_codomain = [0.1445, 0.0400, 0.0190, 0.0155, 
-            0.0095]
+        self.loss_ratio_po_curve_codomain = \
+            [0.1445, 0.0400, 0.0190, 0.0155, 0.0095]
             
         for idx, val in enumerate(self.loss_ratio_po_curve_codomain):
             self.assertAlmostEqual(val, loss_ratio_po_mid_curve[idx])
@@ -101,13 +107,29 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     # loss curve tests
     def setUp(self):
-        self.vuln_curve_code = "TEST"
-        vuln_curve = shapes.FastCurve(
+
+        self.memcache_client = memcached.get_client(binary=False)
+
+        # get random ID as job_id
+        self.job_id = identifiers.generate_random_id()
+
+        self.vuln_curve_code_test = "TEST"
+        vuln_curve_test = shapes.Curve(
             [(5.0, (0.25, 0.5)),
              (6.0, (0.4, 0.4)),
              (7.0, (0.6, 0.3))])
-        vulnerability.register_vuln_curve(self.vuln_curve_code, vuln_curve)
-        
+
+        # make this a function that adds a given vuln curve dict
+        # to vuln curves in memcached
+        self.vulnerability_curves = vulnerability.register_vuln_curves(
+            {self.vuln_curve_code_test: vuln_curve_test,
+             vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE}, 
+            self.job_id, 
+            self.memcache_client)
+
+    def tearDown(self):
+        # flush vulnerability curves in memcache
+        vulnerability.delete_vuln_curves(self.job_id, self.memcache_client)
 
     def test_empty_loss_curve(self):
         """Degenerate case."""
@@ -118,28 +140,30 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
         self.assertEqual(compute_loss_curve(
-                shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
+                shapes.Curve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
                 INVALID_ASSET_VALUE),
                 shapes.EMPTY_CURVE)
     
     def test_loss_curve_computation(self):
-        loss_ratio_curve = shapes.FastCurve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)])
+        loss_ratio_curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0), 
+                                             (0.3, 3.0)])
         loss_curve = compute_loss_curve(loss_ratio_curve, ASSET_VALUE)
 
-        self.assertEqual(shapes.FastCurve([(0.1 * ASSET_VALUE, 1.0),
+        self.assertEqual(shapes.Curve([
+                (0.1 * ASSET_VALUE, 1.0),
                 (0.2 * ASSET_VALUE, 2.0),
-                (0.3 * ASSET_VALUE, 3.0)]).values, loss_curve.values)
+                (0.3 * ASSET_VALUE, 3.0)]), loss_curve)
 
     # loss ratio exceedance matrix * po tests
-    
     def test_empty_matrix(self):
         """Degenerate case."""
         self.assertEqual([], _compute_lrem_po(shapes.EMPTY_CURVE,
                 None, None))
         
     def test_lrem_po_computation(self):
-        lrem_po = _compute_lrem_po(self.vuln_curve_code, 
-                LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
+        lrem_po = _compute_lrem_po(
+            self.vulnerability_curves[self.vuln_curve_code_test], 
+            LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
 
         self.assertAlmostEquals(0.0959, lrem_po[0][0], 4)
         self.assertAlmostEquals(0.0367, lrem_po[1][0], 4)
@@ -148,25 +172,24 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertAlmostEquals(0.0673, lrem_po[0][2], 4)
         self.assertAlmostEquals(0.05718, lrem_po[1][2], 4)
 
-    #
     # loss ratio curve tests
-    #
-    
     def test_empty_loss_ratio_curve(self):
         """Degenerate case."""
         self.assertEqual(shapes.EMPTY_CURVE, compute_loss_ratio_curve(None, []))
         
     def test_end_to_end(self):
         """These values were hand-computed by Vitor Silva."""
-        hazard_curve = shapes.FastCurve(
+        hazard_curve = shapes.Curve(
             [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
         
-        lrem = _compute_lrem(self.vuln_curve_code)
+        lrem = _compute_lrem(
+            self.vulnerability_curves[self.vuln_curve_code_test])
         
-        loss_ratio_curve = compute_loss_ratio_curve(self.vuln_curve_code,
-                                hazard_curve)
+        loss_ratio_curve = compute_loss_ratio_curve(
+            self.vulnerability_curves[self.vuln_curve_code_test], 
+            hazard_curve)
         
-        lr_curve_expected = shapes.FastCurve([(0.0, 0.650), 
+        lr_curve_expected = shapes.Curve([(0.0, 0.650), 
                                               (0.05, 0.650),
                                               (0.10, 0.632),
                                               (0.15, 0.569),
@@ -182,23 +205,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                                               (0.52, 0.085),
                                               (0.56, 0.066),
                                               (0.60, 0.051)])
-        for key, val in lr_curve_expected.values.items():
-            self.assertAlmostEqual(val, loss_ratio_curve.get_for(key), 3)
+
+        for x_value in lr_curve_expected.abscissae:
+            self.assertAlmostEqual(lr_curve_expected.ordinate_for(x_value),
+                    loss_ratio_curve.ordinate_for(x_value), 3)
     
     def test_empty_matrix(self):
         """Degenerate case."""
-        #cself.assertEqual([], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
-        self.assertEqual([None], _compute_lrem(vulnerability.EMPTY_CODE, shapes.EMPTY_CURVE))
-
-    
-    def test_lrem_computation(self):
-        lrem = _compute_lrem(self.vuln_curve_code)
-        
-        # self.assertAlmostEquals(1.0, lrem[0][1], 4)
-        #self.assertAlmostEquals(0.5, lrem[4][0], 4)
-        #self.assertAlmostEquals(0.5, lrem[9][1], 4)
-        #self.assertAlmostEquals(0.5, lrem[14][2], 4)
-        # self.assertAlmostEquals(0.0, lrem[15][0], 4)
+        # cself.assertEqual([], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
+        self.assertEqual([None], _compute_lrem(
+            self.vulnerability_curves[vulnerability.EMPTY_CODE], 
+            shapes.EMPTY_CURVE))
         
     # loss ratios splitting tests
 
@@ -263,7 +280,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     # TODO (bw): Should we check also if the curve has no values?
     def test_ratio_is_zero_if_probability_is_out_of_bounds(self):
-        loss_curve = shapes.FastCurve([(0.21, 0.131), (0.24, 0.108),
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
                 
         self.assertEqual(0.0, compute_conditional_loss(loss_curve, 0.050))
@@ -272,7 +289,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 loss_curve, 0.200))        
 
     def test_conditional_loss_computation(self):
-        loss_curve = shapes.FastCurve([(0.21, 0.131), (0.24, 0.108),
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertAlmostEqual(0.2526, 

@@ -1,0 +1,98 @@
+# Input file for ERF logic tree definition. 
+    
+# A logic tree is defined by a series of branching levels (each identified by the keyword "BranchingLevel"). 
+# Each branching level is defined by:
+# - a integer number: (identifying the position of the level in the logic tree)
+# - a string: (describing what type of epistemic uncertainties the branching level is representing),
+# - a string: indicating to which previously defined branches, the current branching level applies to.
+# currently only two strings are supported: "NONE", "ALL". The string "NONE" represents the case in which
+# the branching level does not apply to anything (this is only used for the first branching level), 
+# and the string "ALL" indicating that the branching level applies to all previously created branches 
+# NOTE: in the future we want to implement branching levels that can apply to specific branches (and not all),
+# in this case the user will introduce, rather than a string, one or more integers referring to indexes of
+# previously defined branches to which the current branching level is applying to. However this feature is
+# not currently supported.
+
+# A branching level is then populated by one or more branches. A set of branches is defined by the keyword
+# "BranchSet".
+# A "BranchSet" is defined by an uncertainty model descriptor (specifying how the uncertainty model is defined). Currently
+# there are two ways to specify an uncertainty model:
+#         - inputfile: ASCII input file defining a source model
+#         - rule: predefined string defining a single parameter uncertainty model
+# If "inputfile" is chosen then the user must provide one or more input file names (including paths)
+# together with descriptor strings and associated weights.
+# If "rule" is chosen then the user must provide a rule descriptor string (among the ones that the software can process)
+# and one or more parameter uncertainties values, together with the associated weights.
+# NOTE: the only rules implemented so far are:
+# - mMaxGRRelative: relative uncertainties on maximum magnitude for GR mfd (uncertainties are applied conserving total moment rate)
+# - bGRRelative: relative uncertainties on GR b value (uncertainties are applied conserving total moment rate)
+
+# keyword "BranchingLevel" define beginning of branching level definition
+BranchingLevel
+# branching level number (it's the first so equal to 1)
+1
+# branching label (a string describing what type of uncertainties this branching level is representing)
+source geometry uncertainties
+# to which previously defined branches it applies (NONE because it's the first branching level)
+NONE
+
+# keyword "BranchSet" define beginning of branches definition
+# In this case two source models are given
+BranchSet
+# uncertainty model type
+inputfile
+# input file name(s)
+./data/src_model1.dat     ./data/src_model2.dat
+# input file descriptor(s) (in each descriptor spaces are not allowed)
+source_geometry_model_#1   source_geometry_model_#2
+# weight(s)
+0.5  0.5
+
+# We define now the second branching level. This branching level
+# describe uncertainties on the maximum magnitude.
+BranchingLevel
+# branching level number
+2
+# branching label
+maximum magnitude uncertainties
+# applies to
+ALL
+
+# Branch set definition for branching level 2
+BranchSet
+# in this case uncertainties are specified by a rule
+rule
+# rule descriptor (in this case the following numbers represent
+# relative uncertainties (that is to be added) on the maximum magnitude 
+mMaxGRRelative
+# uncertainty values
+0.2 0.0 -0.2
+# uncertainty weights
+0.2 0.6 0.2
+
+# We define now the third branching level. This branching level
+# describe uncertainties on the Gutenberg-Richter b value
+BranchingLevel
+# branching level number
+3
+# branching label
+b value uncertainties
+# applies to
+ALL
+
+# Branch set definition for branching level 3
+BranchSet
+# in this case uncertainties are specified by a rule
+rule
+# rule descriptor (in this case the following numbers represent
+# relative uncertainties (that is to be added) on the maximum magnitude 
+bGRRelative
+# uncertainty values
+0.1 0.0 -0.1
+# uncertainty weights
+0.2 0.6 0.2
+
+
+
+
+

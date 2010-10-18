@@ -4,11 +4,14 @@
 Helper functions for our unit and smoke tests.
 """
 
-from opengem.logs import LOG as log
+
 import os
 import time
 import subprocess
 
+import guppy
+
+from opengem.logs import LOG
 from opengem import producer
 from opengem import flags
 
@@ -20,6 +23,8 @@ flags.DEFINE_boolean('download_test_data', True,
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
 
+SCHEMA_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '../docs/schema'))
 
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three 
@@ -35,7 +40,7 @@ def guarantee_file(path, url):
     if not os.path.isfile(path):
         if not FLAGS.download_test_data:
             raise Exception("Test data does not exist")
-        log.info("Downloading test data for %s", path)
+        LOG.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception("Test data could not be downloaded from %s" % (url))
@@ -52,18 +57,40 @@ def timeit(method):
         print '%r (%r, %r) %2.2f sec' % \
               (method.__name__, args, kw, timeend-timestart)
         return result
-
+    try:
+        import nose
+        return nose.tools.make_decorator(method)(_timed)
+    except ImportError, _e:
+        pass
     return _timed    
 
 
-def skipit(_method):
+def skipit(method):
     """Decorator for skipping tests"""
-    def _skipme(*_args, **_kw):
+    try:
+        import nose
+        from nose.plugins.skip import SkipTest
+    except ImportError, _e:
+        def skip_me(*_args, **_kw):
+            print "Can't raise nose SkipTest error, silently skipping %r" % (
+                method.__name__)
+        return skip_me
+    def skipme(*_args, **_kw):
         """The skipped method"""
-        pass
-    return _skipme
+        print "Raising a nose SkipTest error"
+        raise SkipTest("skipping method %r" % method.__name__)
+    return nose.tools.make_decorator(method)(skipme)
 
 
 def measureit(method):
     """Decorator that profiles memory usage"""
-    return method
+    def _measured(*args, **kw):
+        result =  method(*args, **kw)
+        print guppy.hpy().heap()
+        return result
+    try:
+        import nose
+        return nose.tools.make_decorator(method)(_measured)
+    except ImportError, _e:
+        pass
+    return _measured  

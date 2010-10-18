@@ -16,16 +16,27 @@ import glob
 import os
 import sys
 
-from setuptools import setup, find_packages
-""" this is a dummy comment, for testing the repository handling. Anybody kindly requested to remove """
+from distutils.core import setup
+from setuptools import find_packages
 
-srcdir = os.path.join(os.path.dirname(sys.argv[0]), 'src')
+scripts = ["bin/%s" % x for x in os.listdir('bin')]
+scripts.extend(
+    ["opengem/utils/%s" % x for x in os.listdir('opengem/utils')])
+libs = []
+for x in os.listdir('lib'):
+    if x[-4:] == '.jar':
+        libs.append("lib/%s" % x)
 
-setup(name='opengem-risk',
+setup(name='opengem',
       version='0.1.0',
-      description='OpenGEM Risk Engine',
+      description='OpenGEM Platform',
       author='gem-core',
-      author_email='gem-core@googlegroups.com',
-      url='http://www.globalquakemodel.org/',
-      packages = find_packages(),
+      author_email='opengem-dev@googlegroups.com',
+      url='http://www.opengem.org/',
+      packages=['opengem','opengem.hazard','opengem.risk',
+                'opengem.output','opengem.parser', 'opengem.seismicsources'],
+      data_files=[('/etc/opengem', ['celeryconfig.py']),
+                  ('lib', libs),],
+      scripts=scripts,
+      requires=['lxml','shapely',"gflags",'pylibmc(==0.9.2)'],
      )
