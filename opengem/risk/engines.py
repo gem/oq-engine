@@ -114,6 +114,7 @@ class ProbabilisticEventBasedCalculator(object):
         # read vulnerability function
         # read GMF
         # compute
+        pass
 
     def compute_loss_curve(self, site, loss_ratio_curve):
         key_exposure = identifiers.generate_product_key(self.job_id,
