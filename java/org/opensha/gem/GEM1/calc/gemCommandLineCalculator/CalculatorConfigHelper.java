@@ -48,7 +48,7 @@ public class CalculatorConfigHelper {
     // -> does an enum type make sense? ...no.
     // ...and yes: For the programmer to know at least how to access the
     // defaults.
-    public enum ConfigItems {
+    public static enum ConfigItems {
         ERF_LOGIC_TREE_FILE, GMPE_LOGIC_TREE_FILE, OUTPUT_DIR,
         PROBABILITY_OF_EXCEEDANCE, SUBDUCTION_FAULT_SURFACE_DISCRETIZATION,
         MAXIMUM_DISTANCE, SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP, 
