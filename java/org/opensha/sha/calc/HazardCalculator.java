@@ -103,9 +103,8 @@ public class HazardCalculator {
     }
 
     /**
-     * Calculate (for the moment uncorrelated) ground motion fields from a
-     * stochastic event set generated through random sampling of an earthquake
-     * rupture forecast
+     * Calculate uncorrelated ground motion fields from a stochastic event set
+     * generated through random sampling of an earthquake rupture forecast
      * 
      * @param siteList
      *            : list of sites ({@link Site}) where to compute ground motion
