@@ -148,11 +148,11 @@ public class GroundMotionFieldCalculator {
                 new Array2DRowRealMatrix(numberOfSites, numberOfSites);
         double period =
                 (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
-        double b = Double.NaN;
+        double correlationRange = Double.NaN;
         if (period < 1)
-            b = 8.5 + 17.2 * period;
+            correlationRange = 8.5 + 17.2 * period;
         else if (period >= 1)
-            b = 22.0 + 3.7 * period;
+            correlationRange = 22.0 + 3.7 * period;
         double intraEventStd_i = Double.NaN;
         double intraEventStd_j = Double.NaN;
         double distance = Double.NaN;
@@ -170,7 +170,7 @@ public class GroundMotionFieldCalculator {
                                 site_j.getLocation());
                 covarianceValue =
                         intraEventStd_i * intraEventStd_j
-                                * Math.exp(-3 * (distance / b));
+                                * Math.exp(-3 * (distance / correlationRange));
                 covarianceMatrix.setEntry(index_i, index_j, covarianceValue);
                 index_j = index_j + 1;
             }
