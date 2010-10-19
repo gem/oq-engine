@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.junit.Before;
@@ -166,6 +168,35 @@ public class GroundMotionFieldCalculatorTest implements
         compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
     }
 
+    @Test
+    public void correlatedGroundMotion_JB2009() {
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
+        double truncationLevel = 2.0;
+        setImr(truncationType, truncationLevel);
+        Random rn = new Random(seed);
+        double latMin = 33.0;
+        double latMax = 34.0;
+        double lonMin = -118.0;
+        double lonMax = -117.0;
+        double gridSpacing = 0.5;
+        List<Site> sites = new ArrayList<Site>();
+        int numLat = (int) ((latMax - latMin) / gridSpacing + 1);
+        int numLon = (int) ((lonMax - lonMin) / gridSpacing + 1);
+        for (int i = 0; i < numLat; i++) {
+            for (int j = 0; j < numLon; j++) {
+                Site site =
+                        new Site(new Location(latMin + i * gridSpacing, lonMin
+                                + j * gridSpacing));
+                site.addParameter(new DoubleParameter(Vs30_Param.NAME, 760.0));
+                sites.add(site);
+            }
+        }
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                sites, rn);
+    }
+
     private void compareHazardCurveForSingleEarthquake(String truncationType,
             double truncationLevel) {
 
@@ -299,6 +330,7 @@ public class GroundMotionFieldCalculatorTest implements
         return rup;
     }
 
+    @Override
     public void parameterChangeWarning(ParameterChangeWarningEvent event) {
     }
 

@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.apache.commons.math.linear.Array2DRowRealMatrix;
+import org.apache.commons.math.linear.BlockRealMatrix;
 import org.apache.commons.math.linear.CholeskyDecompositionImpl;
 import org.apache.commons.math.linear.NonSquareMatrixException;
 import org.apache.commons.math.linear.NotPositiveDefiniteMatrixException;
@@ -144,8 +144,17 @@ public class GroundMotionFieldCalculator {
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
         int numberOfSites = sites.size();
-        Array2DRowRealMatrix covarianceMatrix =
-                new Array2DRowRealMatrix(numberOfSites, numberOfSites);
+        double[] gaussianDeviates = new double[numberOfSites];
+        for (int i = 0; i < numberOfSites; i++)
+            gaussianDeviates[i] =
+                    getGaussianDeviate(
+                            1.0,
+                            (Double) attenRel.getParameter(
+                                    SigmaTruncLevelParam.NAME).getValue(),
+                            (String) attenRel.getParameter(
+                                    SigmaTruncTypeParam.NAME).getValue(), rn);
+        BlockRealMatrix covarianceMatrix =
+                new BlockRealMatrix(numberOfSites, numberOfSites);
         double period =
                 (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
         double correlationRange = Double.NaN;
@@ -176,6 +185,12 @@ public class GroundMotionFieldCalculator {
             }
             index_i = index_i + 1;
         }
+        // for (int i = 0; i < covarianceMatrix.getRowDimension(); i++) {
+        // for (int j = 0; j < covarianceMatrix.getColumnDimension(); j++) {
+        // System.out.print(covarianceMatrix.getEntry(i, j) + " ");
+        // }
+        // System.out.println("\n");
+        // }
         CholeskyDecompositionImpl cholDecomp = null;
         try {
             cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
@@ -186,8 +201,16 @@ public class GroundMotionFieldCalculator {
         } catch (NotPositiveDefiniteMatrixException e) {
             e.printStackTrace();
         }
+        double[] intraEventResiduals =
+                cholDecomp.getLT().preMultiply(gaussianDeviates);
+        int indexSite = 0;
+        for (Site site : sites) {
+            double val = groundMotionField.get(site);
+            groundMotionField.put(site, val + intraEventResiduals[indexSite]);
+            indexSite = indexSite + 1;
+        }
 
-        return null;
+        return groundMotionField;
     }
 
     /**
