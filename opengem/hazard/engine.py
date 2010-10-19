@@ -2,18 +2,16 @@
 Top-level managers for hazard computation.
 """
 
-import os
+from opengem import java
 
-import jpype
-
-from opengem import logs
-
-log = logs.HAZARD_LOG
-
-
-def init_engine():
-    jarpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../lib")
-    log.debug("Jarpath is %s", jarpath)
-    jpype.startJVM(jpype.getDefaultJVMPath(), " -Xms2048m -Xmx2048m ", "-Djava.ext.dirs=%s" % jarpath)
-    input_module.init_paths(input_path, jpype)
+def run_hazard():
+    jvm = java.jvm()
+    GemComputeModel = jvm.JClass(
+        "org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeModel")
     
+    # Build source list
+    input_model = jvm.JClass()
+    
+    engine = GemComputeModel(model.getList(), modelName,
+                gmpeLogicTree.getGemLogicTree(), latmin, latmax, lonmin,
+                lonmax, delta, probLevel, outDir, outputHazCurve, calcSet);
