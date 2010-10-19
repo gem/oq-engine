@@ -33,6 +33,7 @@ import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.CalculationMode;
 import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.ConfigItems;
 import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeHazard;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
@@ -74,9 +75,6 @@ public class CommandLineCalculator {
     private static Long randomSeed = null;
     private Configuration config;
     private PropertiesConfiguration propsConfig;
-    // keyword
-    private static String MONTE_CARLO = "Monte Carlo";
-    private static String FULL_CALCULATION = "Full Calculation";
     // for debugging
     private static Boolean D = false;
 
@@ -186,10 +184,12 @@ public class CommandLineCalculator {
         // get calculation mode
         String calculationMode =
                 config.getString(ConfigItems.CALCULATION_MODE.name());
-        if (calculationMode.equalsIgnoreCase(MONTE_CARLO)) {
+        if (calculationMode.equalsIgnoreCase(CalculationMode.MONTE_CARLO
+                .value())) {
             // do calculation by random sampling end-branch models
             doCalculationThroughMonteCarloApproach();
-        } else if (calculationMode.equalsIgnoreCase(FULL_CALCULATION)) {
+        } else if (calculationMode.equalsIgnoreCase(CalculationMode.FULL
+                .value())) {
             // do calculation for each end branch model
             doFullCalculation();
         } else {
@@ -218,13 +218,53 @@ public class CommandLineCalculator {
     } // doCalculation()
 
     /**
+     * This method is analogue to {@link doCalculation} </br> But because it
+     * returns a value instead of saving results to a file, this calculation can
+     * not just be triggered by {@link doCalculation}, using a flag such as
+     * "flagProbabilisticEventBase" to distinct the "normal" case and the
+     * probabilistic event based case.
      * 
-     * @return
+     * @return a ground motion map
      */
-    public Map<Site, Double> doCalculationProbabilisticEventBased() {
-        // return doProbabilisticEventBasedCalcForAllLogicTreeEndBranches();
-        return doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling();
-    }
+    public Map<Site, Double> doCalculationProbabilisticEventBased()
+            throws ConfigurationException {
+        Map<Site, Double> result = null;
+        StringBuffer logMsg = new StringBuffer();
+        // start chronometer
+        long startTimeMs = System.currentTimeMillis();
+        // get calculation mode
+        String calculationMode =
+                config.getString(ConfigItems.CALCULATION_MODE.name());
+        if (calculationMode.equalsIgnoreCase(CalculationMode.MONTE_CARLO
+                .value())) {
+            // do calculation by random sampling end-branch models
+            result =
+                    doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling();
+        } else if (calculationMode.equalsIgnoreCase(CalculationMode.FULL
+                .value())) {
+            // do calculation for each end branch model
+            result = doProbabilisticEventBasedCalcForAllLogicTreeEndBranches();
+        } else {
+            logMsg.append("Calculation mode: "
+                    + config.getString(ConfigItems.CALCULATION_MODE.name())
+                    + " not recognized. Check the configuration file!\n"
+                    + "Execution stops!");
+            logger.info(logMsg);
+            throw new ConfigurationException(logMsg.toString());
+        }
+        // calculate elapsed time
+        long taskTimeMs = System.currentTimeMillis() - startTimeMs;
+        logMsg
+                .append("Wall clock time (including time for saving output files)\n");
+        // 1h = 60*60*10^3 ms
+        logMsg.append(String.format("hours  : %6.3f\n", taskTimeMs
+                / (60 * 60 * Math.pow(10, 3))));
+        // 1 min = 60*10^3 ms
+        logMsg.append(String.format("minutes: %6.3f\n", taskTimeMs
+                / (60 * Math.pow(10, 3))));
+        logger.info(logMsg);
+        return result;
+    } // doCalculationProbabilisticEventBased()
 
     private void doCalculationThroughMonteCarloApproach() {
         logger.info("Performing calculation through Monte Carlo Approach.\n");
@@ -587,7 +627,7 @@ public class CommandLineCalculator {
                     StochasticEventSetGenerator
                             .getMultipleStochasticEventSetsFromPoissonianERF(
                                     eqkRupForecast,
-                                    numberOfSeismicityHistories, random);
+                                    numberOfSeismicityHistories, getRandom());
             for (int j = 0; j < numberOfSeismicityHistories; ++j) {
                 for (int k = 0; k < seismicityHistories.get(j).size(); ++k) {
                     EqkRupture eqkRupture = seismicityHistories.get(j).get(k);
@@ -598,7 +638,7 @@ public class CommandLineCalculator {
                     groundMotionMap =
                             GroundMotionFieldCalculator
                                     .getStochasticGroundMotionField(attenRel,
-                                            eqkRupture, sites, random);
+                                            eqkRupture, sites, getRandom());
                 } // for seismicityHistories
             } // for numberOfSeismicityHistories
         } // for numberOfRealization
