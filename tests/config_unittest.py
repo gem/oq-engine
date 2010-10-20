@@ -35,7 +35,7 @@ class ConfigTestCase(unittest.TestCase):
 
     def test_generates_a_new_job(self):
         job = self.reader.generate_job(1)
-        self.assertEqual("JOB%s1" % identifiers.MEMCACHE_KEY_SEPARATOR, job["JOB_ID"])
+        self.assertEqual("JOB%s1" % identifiers.MEMCACHE_KEY_SEPARATOR, job[config.JOB_ID])
         
         # 3 hazard parameters defined, 7 risk parameters defined and the job id
         self.assertEqual(11, len(job))
@@ -45,5 +45,5 @@ class ConfigTestCase(unittest.TestCase):
     
     def test_stores_a_new_job_in_memcached(self):
         memcached_client = memcached.get_client(binary=False)
-        self.reader.generate_and_store_job(1)
-        self.assertEqual(self.reader.generate_job(1), config.Config.job_with_id(1))
+        job = self.reader.generate_and_store_job(1)
+        self.assertEqual(job, config.Config.job_with_id(1))
