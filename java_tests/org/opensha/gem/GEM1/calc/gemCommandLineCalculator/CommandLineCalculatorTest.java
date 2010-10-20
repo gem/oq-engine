@@ -31,21 +31,6 @@ public class CommandLineCalculatorTest {
     }
 
     /**
-     * Looks for the config file only in the class path, no where else. Looks
-     * for a file called "CalculatorConfig.properties".
-     */
-    private String searchForConfigFile() {
-        final String fileName = "CalculatorConfig.properties";
-        final String classPathProperty = System.getProperty("java.class.path");
-        final String userDirProperty = System.getProperty("user.dir");
-        final String javaHomeProperty = System.getProperty("java.home");
-        System.out.println(classPathProperty);
-        System.out.println(userDirProperty);
-        System.out.println(javaHomeProperty);
-        return classPathProperty;
-    }
-
-    /**
      * The calculator does not yet run if it is give to calculate for an
      * intensity measure type "MMI". This tests veryfies that. It is expected to
      * fail.
@@ -74,29 +59,68 @@ public class CommandLineCalculatorTest {
         clc.doCalculation();
     } // testCalculatorConfig()
 
+    /**
+     * Tests the probabilistic event based hazard calc through Monte Carlo logic
+     * tree sampling.</br> If this test passes, i.e.</br> - all configurations
+     * needed are given in the config file</br> - all needed objects of type
+     * org.opensha.commons.param.Parameter are properly instantiated</br> - the
+     * application workflow is not interrupted
+     * 
+     * @throws ConfigurationException
+     */
     @Test
-    public void testDoProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling()
+    public void testDoProbabilisticEventBasedCalcMonteCarlo()
             throws ConfigurationException {
-        searchForConfigFile();
-        Map<Site, Double> result = null;
         CommandLineCalculator clc =
                 new CommandLineCalculator("CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
-        String value = CalculationMode.MONTE_CARLO.value();
+        String mode = CalculationMode.MONTE_CARLO.value();
         // String calculationModeFull = CalculationMode.FULL.value();
-        clc.setConfigItem(key, value);
-        result = clc.doCalculationProbabilisticEventBased();
+        clc.setConfigItem(key, mode);
+        testDoProbabilisticEventBasedCalc(clc);
+    }
+
+    /**
+     * Tests the probabilistic event based hazard calc for the full logic tree
+     * sampling.</br> If this test passes, i.e.</br> - all configurations needed
+     * are given in the config file</br> - all needed objects of type
+     * org.opensha.commons.param.Parameter are properly instantiated</br> - the
+     * application workflow is not interrupted
+     * 
+     * @throws ConfigurationException
+     */
+    @Test
+    public void testDoProbabilisticEventBasedCalcFull()
+            throws ConfigurationException {
+        CommandLineCalculator clc =
+                new CommandLineCalculator("CalculatorConfig.properties");
+        String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
+        String mode = CalculationMode.FULL.value();
+        clc.setConfigItem(key, mode);
+        testDoProbabilisticEventBasedCalc(clc);
+    }
+
+    /**
+     * This method does the work for {@link
+     * testDoProbabilisticEventBasedCalcMonteCarlo()} and {@link
+     * testDoProbabilisticEventBasedCalcFull()}.
+     * 
+     * @param clc
+     *            CommandLineCalculator object configured for either "full"
+     *            event based hazard calculation or for the "Monte Carlo"
+     *            approach.
+     * @throws ConfigurationException
+     */
+    private void testDoProbabilisticEventBasedCalc(CommandLineCalculator clc)
+            throws ConfigurationException {
+        Map<Site, Double> result = clc.doCalculationProbabilisticEventBased();
         Object o = null;
         assertTrue(result != null);
         assertTrue(result instanceof Map);
-        assertTrue(result.size() > 0);
-        assertTrue((o = result.keySet().iterator().next()) instanceof Site);
-        assertTrue(result.get(o) instanceof Double);
+        // assertTrue(result.size() > 0);
+        assertTrue(result.size() > 0
+                && (o = result.keySet().iterator().next()) instanceof Site);
+        assertTrue(result.size() > 0 && result.get(o) instanceof Double);
     } // testDoProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling()
 
-    // @Test
-    // public void testDoProbabilisticEventBasedCalcForAllLogicTreeEndBranches()
-    // {
-    // Map<Site, Double>
-    // }
 } // class CommandLineCalculatorTest
