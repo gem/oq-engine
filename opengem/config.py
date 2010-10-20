@@ -5,6 +5,10 @@ from ConfigParser import ConfigParser, NoOptionError
 from opengem import memcached
 from opengem import identifiers
 
+JOB_ID = "JOB_ID"
+INPUT_REGION = "filter_region"
+HAZARD_CURVES = "hazard_curves"
+
 RISK_SECTION_NAME = "RISK"
 HAZARD_SECTION_NAME = "HAZARD"
 
@@ -36,7 +40,7 @@ class Config(object):
         """Generate a job with the loaded parameters."""
         
         if job_id is None:
-            job_id = identifiers.generate_sequence()
+            job_id = identifiers.generate_sequence().next()
         
         job = {}
         
@@ -48,7 +52,7 @@ class Config(object):
         for param in self.parser.items(HAZARD_SECTION_NAME):
             job[param[0]] = param[1]
         
-        job["JOB_ID"] = identifiers.MEMCACHE_KEY_SEPARATOR.join(
+        job[JOB_ID] = identifiers.MEMCACHE_KEY_SEPARATOR.join(
                 ("JOB", str(job_id)))
 
         return job
@@ -58,7 +62,9 @@ class Config(object):
         
         job = self.generate_job(job_id)
         memcached_client = memcached.get_client(binary=False)
-        memcached.set_value_json_encoded(memcached_client, job["JOB_ID"], job)
+        memcached.set_value_json_encoded(memcached_client, job[JOB_ID], job)
+        
+        return job
 
     @property
     def risk(self):

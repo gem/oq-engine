@@ -15,6 +15,7 @@ from opengem import logs
 from opengem import memcached
 from opengem import producer
 from opengem import shapes
+from opengem import config
 
 from opengem.risk import tasks
 
@@ -22,7 +23,7 @@ from opengem.output import geotiff
 from opengem.output.risk import RiskXMLWriter
 
 from opengem.parser import exposure
-from opengem.parser import shaml_output
+from opengem.parser import hazard
 from opengem.parser import vulnerability
 
 
@@ -36,28 +37,19 @@ class Jobber(object):
     and to execute the computations in parallel tasks (using the celery
     framework and the message queue RabbitMQ).
     """
-    def __init__(self, vulnerability_model_file, hazard_curve_file,
-                 region_file, exposure_file, output_file, partition):
-
-        self.vulnerability_model_file = vulnerability_model_file
-        self.hazard_curve_file = hazard_curve_file
-        self.region_file = region_file
-        self.exposure_file = exposure_file
-        self.output_file = output_file
-        self.partition = partition
-
+    def __init__(self, job, partition):
         self.memcache_client = None
-
-        self.job_id_generator = identifiers.generate_id('job')
-        self.block_id_generator = identifiers.generate_id('block')
-
+        self.partition = partition
+        self.job = job
+        
         self._init()
+        self.block_id_generator = identifiers.generate_id('block')
 
     def run(self):
         """Core method of Jobber. It splits the requested computation
         in blocks and executes these as parallel tasks.
         """
-        job_id = self.job_id_generator.next()
+        job_id = self.job[config.JOB_ID]
         logger.debug("running jobber, job_id = %s" % job_id)
 
         if self.partition is True:
@@ -126,19 +118,20 @@ class Jobber(object):
     def _preload(self, job_id, block_id):
 
         # set region
-        region_constraint = shapes.RegionConstraint.from_file(self.region_file)
+        region_constraint = shapes.RegionConstraint.from_file(
+                self.job[config.INPUT_REGION])
 
         # TODO(fab): the cell size has to be determined from the configuration 
         region_constraint.cell_size = 1.0
 
         # load hazard curve file and write to memcache_client
-        shaml_parser = shaml_output.ShamlOutputFile(self.hazard_curve_file)
+        nrml_parser = hazard.NrmlFile(self.job[config.HAZARD_CURVES])
         attribute_constraint = \
             producer.AttributeConstraint({'IMT' : 'MMI'})
 
         sites_hash_list = []
 
-        for site, hazard_curve_data in shaml_parser.filter(
+        for site, hazard_curve_data in nrml_parser.filter(
                 region_constraint, attribute_constraint):
 
             gridpoint = region_constraint.grid.point_at(site)
