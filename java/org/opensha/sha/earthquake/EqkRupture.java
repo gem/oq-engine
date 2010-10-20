@@ -65,8 +65,6 @@ public class EqkRupture implements java.io.Serializable {
     /** @todo Constructors */
     /* ********************* */
 
-    protected TectonicRegionType tectRegType;
-
     public EqkRupture() {
 
     }
@@ -161,8 +159,8 @@ public class EqkRupture implements java.io.Serializable {
 
     public void setPointSurface(Location location) {
         PointSurface ps =
-                new PointSurface(location.getLatitude(), location
-                        .getLongitude(), location.getDepth());
+                new PointSurface(location.getLatitude(),
+                        location.getLongitude(), location.getDepth());
         setPointSurface(ps);
     }
 
