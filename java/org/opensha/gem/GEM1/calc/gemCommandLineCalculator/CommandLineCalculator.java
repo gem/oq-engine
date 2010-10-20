@@ -17,6 +17,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -33,6 +34,7 @@ import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.param.DoubleParameter;
 import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.CalculationMode;
 import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.ConfigItems;
 import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeHazard;
@@ -54,6 +56,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSource
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -680,10 +684,11 @@ public class CommandLineCalculator {
                             .getMultipleStochasticEventSetsFromPoissonianERF(
                                     eqkRupForecast,
                                     numberOfSeismicityHistories, getRandom());
-            for (int l = 0; l < gmpeEndBranchModel.size(); ++l) {
+            Set<String> keySet = gmpeEndBranchModel.keySet();
+            for (String gmpeMapName : keySet) {
                 // loop over GMPE end branches
                 Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> mapGmpe =
-                        gmpeEndBranchModel.get(l);
+                        gmpeEndBranchModel.get(gmpeMapName);
                 for (int j = 0; j < numberOfSeismicityHistories; ++j) {
                     // loop over seismicity histories
                     for (int k = 0; k < seismicityHistories.get(j).size(); ++k) {
@@ -697,10 +702,10 @@ public class CommandLineCalculator {
                                         .getStochasticGroundMotionField(
                                                 attenRel, eqkRupture, sites,
                                                 getRandom());
-                    }
-                }
-            }
-        }
+                    } // for seismicityHistorities
+                } // for numberOfSeismicityHistories
+            } // for key set with gmpe map names
+        } // for endBranchModels
         return groundMotionMap;
     } // doProbabilisticEventBasedCalcForAllLogicTreeEndBranches()
 
@@ -1063,7 +1068,16 @@ public class CommandLineCalculator {
         // store locations as sites
         Iterator<Location> iter = locList.iterator();
         while (iter.hasNext()) {
-            sites.add(new Site(iter.next()));
+            Site site = new Site(iter.next());
+            site.addParameter(new DoubleParameter(Vs30_Param.NAME, calcConfig
+                    .getDouble(ConfigItems.REFERENCE_VS30_VALUE.name())));
+            site
+                    .addParameter(new DoubleParameter(
+                            DepthTo2pt5kmPerSecParam.NAME,
+                            calcConfig
+                                    .getDouble(ConfigItems.REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM
+                                            .name())));
+            sites.add(site);
         }
         // return array list of sites
         return sites;
