@@ -632,7 +632,7 @@ public class CommandLineCalculator {
                 for (int k = 0; k < seismicityHistories.get(j).size(); ++k) {
                     EqkRupture eqkRupture = seismicityHistories.get(j).get(k);
                     TectonicRegionType tectonicRegionType =
-                            eqkRupture.getTectonicRegionType();
+                            eqkRupture.getTectRegType();
                     ScalarIntensityMeasureRelationshipAPI attenRel =
                             mapGmpe.get(tectonicRegionType);
                     groundMotionMap =
@@ -691,7 +691,7 @@ public class CommandLineCalculator {
                         EqkRupture eqkRupture =
                                 seismicityHistories.get(j).get(k);
                         ScalarIntensityMeasureRelationshipAPI attenRel =
-                                mapGmpe.get(eqkRupture.getTectonicRegionType());
+                                mapGmpe.get(eqkRupture.getTectRegType());
                         groundMotionMap =
                                 GroundMotionFieldCalculator
                                         .getStochasticGroundMotionField(
