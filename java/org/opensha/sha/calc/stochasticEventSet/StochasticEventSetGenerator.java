@@ -1,18 +1,13 @@
 package org.opensha.sha.calc.stochasticEventSet;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.opensha.commons.data.TimeSpan;
 import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
-
-import org.opensha.sha.magdist.IncrementalMagFreqDist;
 
 /**
  * 
@@ -41,7 +36,7 @@ public class StochasticEventSetGenerator {
      *          events.
      */
     public static ArrayList<EqkRupture> getStochasticEventSetFromPoissonianERF(
-            EqkRupForecast erf, Random rn) {
+            EqkRupForecastAPI erf, Random rn) {
 
         validateInput(erf, rn);
 
@@ -114,14 +109,14 @@ public class StochasticEventSetGenerator {
      * 
      * @param erf
      */
-    private static Boolean ensurePoissonian(EqkRupForecast erf) {
+    private static Boolean ensurePoissonian(EqkRupForecastAPI erf) {
         for (ProbEqkSource src : (ArrayList<ProbEqkSource>) erf.getSourceList())
             if (src.isSourcePoissonian() == false)
                 throw new IllegalArgumentException("Sources must be Poissonian");
         return true;
     }
 
-    private static Boolean validateInput(EqkRupForecast erf, Random rn) {
+    private static Boolean validateInput(EqkRupForecastAPI erf, Random rn) {
         if (erf == null) {
             throw new IllegalArgumentException(
                     "Earthquake rupture forecast cannot be null");

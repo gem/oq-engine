@@ -59,6 +59,8 @@ public class EqkRupture implements java.io.Serializable {
     /** object to contain arbitrary parameters */
     protected ParameterList otherParams;
 
+    protected TectonicRegionType tectRegType;
+
     /* ********************* */
     /** @todo Constructors */
     /* ********************* */
@@ -244,11 +246,12 @@ public class EqkRupture implements java.io.Serializable {
         return info1 + info2;
     }
 
-    public TectonicRegionType getTectonicRegionType() {
+    public TectonicRegionType getTectRegType() {
         return tectRegType;
     }
 
-    public void setTectonicRegionType(TectonicRegionType trt) {
-        tectRegType = trt;
+    public void setTectRegType(TectonicRegionType tectonicRegType) {
+        this.tectRegType = tectonicRegType;
     }
+
 }
