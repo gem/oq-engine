@@ -11,12 +11,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.apache.commons.math.linear.RealMatrix;
+import org.apache.commons.math.stat.correlation.PearsonsCorrelation;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.DoubleParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
@@ -27,6 +30,7 @@ import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
+import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
@@ -36,6 +40,7 @@ public class GroundMotionFieldCalculatorTest implements
 
     private DiscretizedFuncAPI iml;
     private Site site;
+    private List<Site> siteList;
     private ScalarIntensityMeasureRelationshipAPI imr;
     private EqkRupture rupture;
 
@@ -47,6 +52,7 @@ public class GroundMotionFieldCalculatorTest implements
     public void setUp() {
         setIml();
         setSite();
+        setSiteList();
         setEqkRup();
     }
 
@@ -170,31 +176,57 @@ public class GroundMotionFieldCalculatorTest implements
 
     @Test
     public void correlatedGroundMotion_JB2009() {
-        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
-        double truncationLevel = 2.0;
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
         setImr(truncationType, truncationLevel);
         Random rn = new Random(seed);
-        double latMin = 33.0;
-        double latMax = 34.0;
-        double lonMin = -118.0;
-        double lonMax = -117.0;
-        double gridSpacing = 0.5;
-        List<Site> sites = new ArrayList<Site>();
-        int numLat = (int) ((latMax - latMin) / gridSpacing + 1);
-        int numLon = (int) ((lonMax - lonMin) / gridSpacing + 1);
-        for (int i = 0; i < numLat; i++) {
-            for (int j = 0; j < numLon; j++) {
-                Site site =
-                        new Site(new Location(latMin + i * gridSpacing, lonMin
-                                + j * gridSpacing));
-                site.addParameter(new DoubleParameter(Vs30_Param.NAME, 760.0));
-                sites.add(site);
+        int numRealizations = 25000;
+        double[][] data = new double[numRealizations][siteList.size()];
+        Map<Site, Double> map = null;
+        for (int i = 0; i < numRealizations; i++) {
+            System.out.println("realization " + (i + 1));
+            map =
+                    GroundMotionFieldCalculator
+                            .getStochasticGroundMotionField_JB2009(imr,
+                                    rupture, siteList, rn);
+            int indexSite = 0;
+            for (Site site : siteList) {
+                data[i][indexSite] = map.get(site);
+                indexSite = indexSite + 1;
             }
         }
-        Map<Site, Double> map =
-                GroundMotionFieldCalculator
-                        .getStochasticGroundMotionField_JB2009(imr, rupture,
-                                sites, rn);
+        RealMatrix correlationMatrix =
+                new PearsonsCorrelation(data).getCorrelationMatrix();
+        double period = (Double) imr.getParameter(PeriodParam.NAME).getValue();
+        double correlationRange = Double.NaN;
+        double distance = Double.NaN;
+        double predictedCorrelation = Double.NaN;
+        double observedCorrelation = Double.NaN;
+        if (period < 1)
+            correlationRange = 8.5 + 17.2 * period;
+        else if (period >= 1)
+            correlationRange = 22.0 + 3.7 * period;
+        int index_i = 0;
+        for (Site site_i : siteList) {
+            int index_j = 0;
+            for (Site site_j : siteList) {
+                distance =
+                        LocationUtils.horzDistance(site_i.getLocation(),
+                                site_j.getLocation());
+                predictedCorrelation =
+                        Math.exp(-3 * (distance / correlationRange));
+                observedCorrelation =
+                        correlationMatrix.getEntry(index_i, index_j);
+                System.out.println("Predicted: " + predictedCorrelation
+                        + ", observed: " + observedCorrelation);
+                index_j = index_j + 1;
+            }
+            index_i = index_i + 1;
+        }
+        // for (Site site : siteList)
+        // System.out.println(site.getLocation().getLongitude() + " "
+        // + site.getLocation().getLatitude() + " "
+        // + Math.exp(map.get(site)));
     }
 
     private void compareHazardCurveForSingleEarthquake(String truncationType,
@@ -250,6 +282,27 @@ public class GroundMotionFieldCalculatorTest implements
         Site site = new Site(new Location(33.8, -117.4));
         site.addParameter(new DoubleParameter(Vs30_Param.NAME, 760.0));
         this.site = site;
+    }
+
+    private void setSiteList() {
+        siteList = new ArrayList<Site>();
+        double latMin = 33.5;
+        double latMax = 33.5;
+        double lonMin = -118.0;
+        double lonMax = -117.8;
+        double gridSpacing = 0.1;
+        List<Site> sites = new ArrayList<Site>();
+        int numLat = (int) ((latMax - latMin) / gridSpacing + 1);
+        int numLon = (int) ((lonMax - lonMin) / gridSpacing + 1);
+        for (int i = 0; i < numLat; i++) {
+            for (int j = 0; j < numLon; j++) {
+                Site site =
+                        new Site(new Location(latMin + i * gridSpacing, lonMin
+                                + j * gridSpacing));
+                site.addParameter(new DoubleParameter(Vs30_Param.NAME, 760.0));
+                siteList.add(site);
+            }
+        }
     }
 
     private void setImr(String truncationType, double truncationLevel) {
