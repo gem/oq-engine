@@ -1,0 +1,24 @@
+# The '#' character and the ';' are used to start a single line comment
+
+[RISK]
+
+# file containing the exposure in nrml format
+EXPOSURE = exposure.xml
+
+# file containing the vulnerability functions
+VULNERABILITY = vulnerability.xml
+
+# the region to filter on
+FILTER_REGION = 
+
+# the selected for output generation
+OUTPUT_REGION =
+
+# file containing the hazard curves in nrml format
+HAZARD_CURVES = hazard_curves.xml
+
+# name of the loss map file to generate
+LOSS_MAP = loss_map.tiff
+
+# name of the loss ratio map file to generate
+LOSS_RATIO_MAP = loss_ratio_map.tiff
