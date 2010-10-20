@@ -120,10 +120,9 @@ public class GroundMotionFieldCalculator {
      * to vary it gives a warning.
      * 
      * Intra-event residuals are calculated by generating Gaussian deviates from
-     * a multivariate normal distribution using Cholesky factorization following
-     * the algorithm described in
-     * "Computational Statistics Handbook with Matlab", Wendy L. Martinez &
-     * Angel R. Martinez, CHAPMAN & HALL, pag. 97.
+     * a multivariate normal distribution using Cholesky factorization
+     * (decompose covariance matrix, take lower triangular and multiply by a
+     * vector of uncorrelated, standard Gaussian variables)
      * 
      * @param attenRel
      * @param rup
@@ -135,12 +134,14 @@ public class GroundMotionFieldCalculator {
             ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
             List<Site> sites, Random rn) {
         attenRel.setEqkRupture(rup);
-        // compute ground motion field considering only inter-event residual
+        // compute ground motion field considering only inter-event standard
+        // deviation
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTER);
         Map<Site, Double> groundMotionField =
                 getStochasticGroundMotionField(attenRel, rup, sites, rn);
-        // compute covariance matrix considering only intra-event residual
+        // compute covariance matrix considering only intra-event standard
+        // deviation
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
         int numberOfSites = sites.size();
@@ -185,12 +186,7 @@ public class GroundMotionFieldCalculator {
             }
             index_i = index_i + 1;
         }
-        // for (int i = 0; i < covarianceMatrix.getRowDimension(); i++) {
-        // for (int j = 0; j < covarianceMatrix.getColumnDimension(); j++) {
-        // System.out.print(covarianceMatrix.getEntry(i, j) + " ");
-        // }
-        // System.out.println("\n");
-        // }
+        // compute intra-event residuals using cholesky decomposition
         CholeskyDecompositionImpl cholDecomp = null;
         try {
             cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
@@ -202,7 +198,7 @@ public class GroundMotionFieldCalculator {
             e.printStackTrace();
         }
         double[] intraEventResiduals =
-                cholDecomp.getLT().preMultiply(gaussianDeviates);
+                cholDecomp.getL().operate(gaussianDeviates);
         int indexSite = 0;
         for (Site site : sites) {
             double val = groundMotionField.get(site);
