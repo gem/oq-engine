@@ -28,6 +28,7 @@ import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.attenRelImpl.AS_1997_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
@@ -176,27 +177,36 @@ public class GroundMotionFieldCalculatorTest implements
 
     @Test
     public void correlatedGroundMotion_JB2009() {
+
+        /**
+         * Compares correlation matrix derived by multiple ground motion field
+         * realizations (each calculated using the
+         * getStochasticGroundMotionField_JB2009 method and considering only
+         * intra-event residuals and no vs30 clustering) with the theoretical
+         * correlation matrix.
+         */
+        Random rn = new Random(seed);
+        int numRealizations = 50000;
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
         setImr(truncationType, truncationLevel);
-        Random rn = new Random(seed);
-        int numRealizations = 25000;
-        double[][] data = new double[numRealizations][siteList.size()];
+        double[][] observedGroundMotionFields =
+                new double[numRealizations][siteList.size()];
         Map<Site, Double> map = null;
         for (int i = 0; i < numRealizations; i++) {
-            System.out.println("realization " + (i + 1));
             map =
                     GroundMotionFieldCalculator
                             .getStochasticGroundMotionField_JB2009(imr,
-                                    rupture, siteList, rn);
+                                    rupture, siteList, rn, false, false);
             int indexSite = 0;
             for (Site site : siteList) {
-                data[i][indexSite] = map.get(site);
+                observedGroundMotionFields[i][indexSite] = map.get(site);
                 indexSite = indexSite + 1;
             }
         }
         RealMatrix correlationMatrix =
-                new PearsonsCorrelation(data).getCorrelationMatrix();
+                new PearsonsCorrelation(observedGroundMotionFields)
+                        .getCorrelationMatrix();
         double period = (Double) imr.getParameter(PeriodParam.NAME).getValue();
         double correlationRange = Double.NaN;
         double distance = Double.NaN;
@@ -217,16 +227,171 @@ public class GroundMotionFieldCalculatorTest implements
                         Math.exp(-3 * (distance / correlationRange));
                 observedCorrelation =
                         correlationMatrix.getEntry(index_i, index_j);
-                System.out.println("Predicted: " + predictedCorrelation
-                        + ", observed: " + observedCorrelation);
+                String message =
+                        "CORRELATION. Predicted: " + predictedCorrelation
+                                + ", observed: " + observedCorrelation;
+                System.out.println(message);
+                assertEquals(message, predictedCorrelation,
+                        observedCorrelation, tolerance);
                 index_j = index_j + 1;
             }
             index_i = index_i + 1;
         }
-        // for (Site site : siteList)
-        // System.out.println(site.getLocation().getLongitude() + " "
-        // + site.getLocation().getLatitude() + " "
-        // + Math.exp(map.get(site)));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NullImr() {
+        /**
+         * Check the behaviour when a null imr is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        ScalarIntensityMeasureRelationshipAPI imr = null;
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NullRupture() {
+        /**
+         * Check the behaviour when a null rupture is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        EqkRupture rupture = null;
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NullListOfSites() {
+        /**
+         * Check the behaviour when a null list of sites is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        List<Site> siteList = null;
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_EmptyListOfSites() {
+        /**
+         * Check the behaviour when an empty list of sites is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        List<Site> siteList = new ArrayList<Site>();
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NullRandomNumberGenerator() {
+        /**
+         * Check the behaviour when a null random number generator is passed
+         */
+        Random rn = null;
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        List<Site> siteList = new ArrayList<Site>();
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NullInterEvent() {
+        /**
+         * Check the behaviour when a null flag for inter-event residuals is
+         * passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        List<Site> siteList = new ArrayList<Site>();
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, null, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NullVs30() {
+        /**
+         * Check the behaviour when a null flag for Vs30 is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+        List<Site> siteList = new ArrayList<Site>();
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, null);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NoInterEvent() {
+        /**
+         * Check the behaviour when an attenuation relationship without
+         * inter-event standard deviation is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        ScalarIntensityMeasureRelationshipAPI imr = new AS_1997_AttenRel(this);
+        imr.setParamDefaults();
+        imr.getParameter(SigmaTruncTypeParam.NAME).setValue(truncationType);
+        imr.getParameter(SigmaTruncLevelParam.NAME).setValue(truncationLevel);
+        imr.setIntensityMeasure(PGA_Param.NAME);
+        List<Site> siteList = new ArrayList<Site>();
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, true, false);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void correlatedGroundMotion_JB2009_NoItraEvent() {
+        /**
+         * Check the behaviour when an attenuation relationship without
+         * intra-event standard deviation is passed
+         */
+        Random rn = new Random(seed);
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        ScalarIntensityMeasureRelationshipAPI imr = new AS_1997_AttenRel(this);
+        imr.setParamDefaults();
+        imr.getParameter(SigmaTruncTypeParam.NAME).setValue(truncationType);
+        imr.getParameter(SigmaTruncLevelParam.NAME).setValue(truncationLevel);
+        imr.setIntensityMeasure(PGA_Param.NAME);
+        List<Site> siteList = new ArrayList<Site>();
+        Map<Site, Double> map =
+                GroundMotionFieldCalculator
+                        .getStochasticGroundMotionField_JB2009(imr, rupture,
+                                siteList, rn, false, false);
     }
 
     private void compareHazardCurveForSingleEarthquake(String truncationType,

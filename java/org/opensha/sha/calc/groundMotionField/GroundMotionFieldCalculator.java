@@ -112,38 +112,69 @@ public class GroundMotionFieldCalculator {
      * Stochastically generate intra-event residuals (following the proposed
      * correlation model) 4) Combine the three terms generated in steps 1-3.
      * 
-     * NOTE: The correlation model implemented here refers to the case 1 in
-     * Jayamram & Baker (2009) paper, that is when Vs30 values do not show or
-     * are not expected to show clustering (i.e. there are no cluster of sites
-     * in which the geologic conditions of the soil are similar). The method
-     * checks if the sites passed in contains Vs30 values, and if they are found
-     * to vary it gives a warning.
-     * 
      * Intra-event residuals are calculated by generating Gaussian deviates from
      * a multivariate normal distribution using Cholesky factorization
      * (decompose covariance matrix, take lower triangular and multiply by a
      * vector of uncorrelated, standard Gaussian variables)
      * 
      * @param attenRel
+     *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
+     *            relationship used for ground motion field calculation
      * @param rup
+     *            : {@link EqkRupture} earthquake rupture generating the ground
+     *            motion field
      * @param sites
+     *            : array list of {@link Site} where ground motion values have
+     *            to be computed
      * @param rn
+     *            : {@link Random} random number generator
+     * @param inter_event
+     *            : if true compute ground motion field using both inter- and
+     *            intra-event residuals, if false use only intra-event residuals
+     * @param Vs30Cluster
+     *            : true if Vs30 values show clustering [compute correlation
+     *            range according to case 2 of Jayaram&Baker paper], false if
+     *            Vs30 values do not show clustering [compute correlation range
+     *            according to case 1 of Jayaram&Baker paper]
      * @return
      */
     public static Map<Site, Double> getStochasticGroundMotionField_JB2009(
             ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
-            List<Site> sites, Random rn) {
-        attenRel.setEqkRupture(rup);
-        // compute ground motion field considering only inter-event standard
-        // deviation
-        attenRel.getParameter(StdDevTypeParam.NAME).setValue(
-                StdDevTypeParam.STD_DEV_TYPE_INTER);
-        Map<Site, Double> groundMotionField =
-                getStochasticGroundMotionField(attenRel, rup, sites, rn);
-        // compute covariance matrix considering only intra-event standard
-        // deviation
-        attenRel.getParameter(StdDevTypeParam.NAME).setValue(
-                StdDevTypeParam.STD_DEV_TYPE_INTRA);
+            List<Site> sites, Random rn, Boolean inter_event,
+            Boolean Vs30Cluster) {
+        validateInput(attenRel, rup, sites);
+        if (rn == null)
+            throw new IllegalArgumentException(
+                    "Random number generator cannot be null");
+        if (inter_event == null)
+            throw new IllegalArgumentException(
+                    "Usage of inter event residuals must be specified");
+        if (Vs30Cluster == null)
+            throw new IllegalArgumentException(
+                    "Vs30 cluster option must be specified");
+        if (inter_event == true
+                && attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
+                        .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER) == false)
+            throw new IllegalArgumentException(
+                    "The specified attenuation relationship does not provide"
+                            + " inter-event standard deviation");
+        if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
+                .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTRA) == false)
+            throw new IllegalArgumentException(
+                    "The specified attenuation relationship does not provide"
+                            + " intra-event standard deviation");
+
+        Map<Site, Double> groundMotionField = null;
+        if (inter_event == true) {
+            attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                    StdDevTypeParam.STD_DEV_TYPE_INTER);
+            groundMotionField =
+                    getStochasticGroundMotionField(attenRel, rup, sites, rn);
+        } else
+            groundMotionField = getMeanGroundMotionField(attenRel, rup, sites);
+        // compute intra-event residuals, by decomposing the covariance matrix
+        // with cholesky decomposition, and by multiplying the lower triangular
+        // matrix with a vector of univariate Gaussian deviates
         int numberOfSites = sites.size();
         double[] gaussianDeviates = new double[numberOfSites];
         for (int i = 0; i < numberOfSites; i++)
@@ -155,38 +186,8 @@ public class GroundMotionFieldCalculator {
                             (String) attenRel.getParameter(
                                     SigmaTruncTypeParam.NAME).getValue(), rn);
         BlockRealMatrix covarianceMatrix =
-                new BlockRealMatrix(numberOfSites, numberOfSites);
-        double period =
-                (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
-        double correlationRange = Double.NaN;
-        if (period < 1)
-            correlationRange = 8.5 + 17.2 * period;
-        else if (period >= 1)
-            correlationRange = 22.0 + 3.7 * period;
-        double intraEventStd_i = Double.NaN;
-        double intraEventStd_j = Double.NaN;
-        double distance = Double.NaN;
-        double covarianceValue = Double.NaN;
-        int index_i = 0;
-        for (Site site_i : sites) {
-            attenRel.setSite(site_i);
-            intraEventStd_i = attenRel.getStdDev();
-            int index_j = 0;
-            for (Site site_j : sites) {
-                attenRel.setSite(site_j);
-                intraEventStd_j = attenRel.getStdDev();
-                distance =
-                        LocationUtils.horzDistance(site_i.getLocation(),
-                                site_j.getLocation());
-                covarianceValue =
-                        intraEventStd_i * intraEventStd_j
-                                * Math.exp(-3 * (distance / correlationRange));
-                covarianceMatrix.setEntry(index_i, index_j, covarianceValue);
-                index_j = index_j + 1;
-            }
-            index_i = index_i + 1;
-        }
-        // compute intra-event residuals using cholesky decomposition
+                getCovarianceMatrix_JB2009(attenRel, rup, sites, rn,
+                        Vs30Cluster);
         CholeskyDecompositionImpl cholDecomp = null;
         try {
             cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
@@ -239,6 +240,63 @@ public class GroundMotionFieldCalculator {
             }
         }
         return dev * standardDeviation;
+    }
+
+    /**
+     * Calculates covariance matrix for intra-event residuals using correlation
+     * model of Jayamram & Baker (2009):
+     * "Correlation model for spatially distributed ground-motion intensities"
+     * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
+     * 
+     * @param attenRel
+     * @param rup
+     * @param sites
+     * @param rn
+     * @param Vs30Cluster
+     * @return
+     */
+    private static BlockRealMatrix getCovarianceMatrix_JB2009(
+            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
+            List<Site> sites, Random rn, Boolean Vs30Cluster) {
+        int numberOfSites = sites.size();
+        BlockRealMatrix covarianceMatrix =
+                new BlockRealMatrix(numberOfSites, numberOfSites);
+        attenRel.setEqkRupture(rup);
+        attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTRA);
+        double period =
+                (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
+        double correlationRange = Double.NaN;
+        if (period < 1 && Vs30Cluster == false)
+            correlationRange = 8.5 + 17.2 * period;
+        else if (period < 1 && Vs30Cluster == true)
+            correlationRange = 40.7 - 15.0 * period;
+        else if (period >= 1)
+            correlationRange = 22.0 + 3.7 * period;
+        double intraEventStd_i = Double.NaN;
+        double intraEventStd_j = Double.NaN;
+        double distance = Double.NaN;
+        double covarianceValue = Double.NaN;
+        int index_i = 0;
+        for (Site site_i : sites) {
+            attenRel.setSite(site_i);
+            intraEventStd_i = attenRel.getStdDev();
+            int index_j = 0;
+            for (Site site_j : sites) {
+                attenRel.setSite(site_j);
+                intraEventStd_j = attenRel.getStdDev();
+                distance =
+                        LocationUtils.horzDistance(site_i.getLocation(),
+                                site_j.getLocation());
+                covarianceValue =
+                        intraEventStd_i * intraEventStd_j
+                                * Math.exp(-3 * (distance / correlationRange));
+                covarianceMatrix.setEntry(index_i, index_j, covarianceValue);
+                index_j = index_j + 1;
+            }
+            index_i = index_i + 1;
+        }
+        return covarianceMatrix;
     }
 
     private static Boolean validateInput(
