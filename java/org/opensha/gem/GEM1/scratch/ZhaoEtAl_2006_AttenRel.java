@@ -857,7 +857,9 @@ public class ZhaoEtAl_2006_AttenRel extends AttenuationRelationship implements
 
         double lnGm =
                 a[iper] * mag + b[iper] * rRup - Math.log(r) + e[iper]
-                        * hypodepth * delta_h + flag_Fr * Sr[iper]
+                        * hypodepth * delta_h
+                        + flag_Fr
+                        * Sr[iper]
                         + flag_Si
                         * Si[iper]
                         +
