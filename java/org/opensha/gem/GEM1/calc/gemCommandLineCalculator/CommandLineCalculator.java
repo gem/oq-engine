@@ -274,25 +274,9 @@ public class CommandLineCalculator {
         logger.info("Performing calculation through Monte Carlo Approach.\n");
         // System.out.println("Performing calculation through Monte Carlo Approach.\n");
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree =
-                new ErfLogicTreeData(
-                        getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
         // load GMPE logic tree data
-        GmpeLogicTreeData gmpeLogicTree =
-                new GmpeLogicTreeData(
-                        getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
-                        config.getString(ConfigItems.COMPONENT.name()), config
-                                .getString(ConfigItems.INTENSITY_MEASURE_TYPE
-                                        .name()), config
-                                .getDouble(ConfigItems.PERIOD.name()), config
-                                .getDouble(ConfigItems.DAMPING.name()), config
-                                .getString(ConfigItems.GMPE_TRUNCATION_TYPE
-                                        .name()),
-                        config.getDouble(ConfigItems.TRUNCATION_LEVEL.name()),
-                        config.getString(ConfigItems.STANDARD_DEVIATION_TYPE
-                                .name()), config
-                                .getDouble(ConfigItems.REFERENCE_VS30_VALUE
-                                        .name()));
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         // instantiate the repository for the results
         GEMHazardCurveRepositoryList hcRepList =
                 new GEMHazardCurveRepositoryList();
@@ -408,29 +392,9 @@ public class CommandLineCalculator {
         logger.info("Performing full calculation. \n");
         // System.out.println("Performing full calculation. \n");
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree =
-                new ErfLogicTreeData(config
-                        .getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
         // load GMPE logic tree data
-        String gmpeLogicTreeFile =
-                config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
-        String component = config.getString(ConfigItems.COMPONENT.name());
-        String intensityMeasureType =
-                config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name());
-        double period = config.getDouble(ConfigItems.PERIOD.name());
-        double damping = config.getDouble(ConfigItems.DAMPING.name());
-        String truncationType =
-                config.getString(ConfigItems.GMPE_TRUNCATION_TYPE.name());
-        double truncationLevel =
-                config.getDouble(ConfigItems.TRUNCATION_LEVEL.name());
-        String standardDeviationType =
-                config.getString(ConfigItems.STANDARD_DEVIATION_TYPE.name());
-        double vs30Reference =
-                config.getDouble(ConfigItems.REFERENCE_VS30_VALUE.name());
-        GmpeLogicTreeData gmpeLogicTree =
-                new GmpeLogicTreeData(gmpeLogicTreeFile, component,
-                        intensityMeasureType, period, damping, truncationType,
-                        truncationLevel, standardDeviationType, vs30Reference);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         // compute ERF logic tree end-branch models
         HashMap<String, ArrayList<GEMSourceData>> endBranchModels =
                 computeErfLogicTreeEndBrancheModels(erfLogicTree
@@ -1758,7 +1722,6 @@ public class CommandLineCalculator {
                         intensityMeasureType, period, damping,
                         gmpeTruncationType, truncationLevel,
                         standardDeviationType, referenceVs30Value);
-
         // GmpeLogicTreeData gmpeLogicTree =
         // new GmpeLogicTreeData(
         // getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
