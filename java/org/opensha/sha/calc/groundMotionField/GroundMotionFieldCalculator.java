@@ -142,7 +142,9 @@ public class GroundMotionFieldCalculator {
             ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
             List<Site> sites, Random rn, Boolean inter_event,
             Boolean Vs30Cluster) {
+
         validateInput(attenRel, rup, sites);
+
         if (rn == null)
             throw new IllegalArgumentException(
                     "Random number generator cannot be null");
@@ -172,6 +174,7 @@ public class GroundMotionFieldCalculator {
                     getStochasticGroundMotionField(attenRel, rup, sites, rn);
         } else
             groundMotionField = getMeanGroundMotionField(attenRel, rup, sites);
+
         // compute intra-event residuals, by decomposing the covariance matrix
         // with cholesky decomposition, and by multiplying the lower triangular
         // matrix with a vector of univariate Gaussian deviates
