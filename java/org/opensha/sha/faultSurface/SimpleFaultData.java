@@ -214,7 +214,7 @@ public class SimpleFaultData implements java.io.Serializable {
 
             } else { // if this is first fault section, add all points in fault
                      // trace
-            // add the fault Trace locations to combined trace
+                // add the fault Trace locations to combined trace
                 for (int locIndex = 0; locIndex < numLocations; ++locIndex)
                     combinedFaultTrace.add(faultTrace.get(locIndex).clone());
             }

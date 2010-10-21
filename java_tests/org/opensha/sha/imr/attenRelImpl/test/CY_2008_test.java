@@ -353,8 +353,10 @@ public class CY_2008_test extends NGATest {
                                         + "  rrup = " + (float) rRup
                                         + "  rjb = " + (float) dist_jb + "\n\t"
                                         + "FaultType = " + fltType + "  rx = "
-                                        + (float) rx + "  dip = " + (float) dip
-                                        + "\n\t" + "w = "
+                                        + (float) rx + "  dip = "
+                                        + (float) dip
+                                        + "\n\t"
+                                        + "w = "
                                         + (float) w
                                         + "  ztor = "
                                         + (float) ztor
@@ -410,8 +412,10 @@ public class CY_2008_test extends NGATest {
                                         + "  rrup = " + (float) rRup
                                         + "  rjb = " + (float) dist_jb + "\n\t"
                                         + "FaultType = " + fltType + "  rx = "
-                                        + (float) rx + "  dip = " + (float) dip
-                                        + "\n\t" + "w = "
+                                        + (float) rx + "  dip = "
+                                        + (float) dip
+                                        + "\n\t"
+                                        + "w = "
                                         + (float) w
                                         + "  ztor = "
                                         + (float) ztor

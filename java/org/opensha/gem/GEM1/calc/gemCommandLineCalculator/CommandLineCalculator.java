@@ -11,9 +11,13 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -30,6 +34,8 @@ import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
+import org.opensha.commons.param.DoubleParameter;
+import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.CalculationMode;
 import org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigHelper.ConfigItems;
 import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeHazard;
 import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTree;
@@ -39,6 +45,10 @@ import org.opensha.gem.GEM1.calc.gemLogicTree.GemLogicTreeRuleParam;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepository;
 import org.opensha.gem.GEM1.calc.gemOutput.GEMHazardCurveRepositoryList;
 import org.opensha.gem.GEM1.commons.UnoptimizedDeepCopy;
+import org.opensha.sha.calc.groundMotionField.GroundMotionFieldCalculator;
+import org.opensha.sha.calc.stochasticEventSet.StochasticEventSetGenerator;
+import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
@@ -46,6 +56,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSource
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
@@ -62,11 +74,11 @@ public class CommandLineCalculator {
     // declared static. The use of "static" should therefore be avoided in
     // code within any "library" type project.
     private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
+    // random is to access through its getter method
+    private static Random random = null;
+    private static Long randomSeed = null;
     private Configuration config;
     private PropertiesConfiguration propsConfig;
-    // keyword
-    private static String MONTE_CARLO = "Monte Carlo";
-    private static String FULL_CALCULATION = "Full Calculation";
     // for debugging
     private static Boolean D = false;
 
@@ -138,21 +150,49 @@ public class CommandLineCalculator {
     }
 
     /**
+     * After a call to this method a Random generator is initialised and its
+     * seed can be retrieved by <code>getRandomSeed()</code>
+     * 
+     * @return This' class random generator. This also initialises this' class
+     *         randomSeed such that getRandomSeed does not return null anymore.
+     */
+    public static Random getRandom() {
+        if (random == null) {
+            randomSeed = new Date().getTime();
+            random = new Random(randomSeed);
+        }
+        return random;
+    }
+
+    /**
+     * 
+     * @return The long value that is used to initialise this' class random
+     *         generator. This is null if the random generator has not yet been
+     *         initialised. To do so, call <code>getRandom()</code>
+     * @see getRandom()
+     */
+    public static Long getRandomSeed() {
+        return randomSeed;
+    }
+
+    /**
      * This is the main method that do the calculations. According to the
      * specifications in the configuration file the method will do the required
      * calculations.
      */
-    public void doCalculation() {
+    public void doCalculation() throws ConfigurationException {
         StringBuffer logMsg = new StringBuffer();
         // start chronometer
         long startTimeMs = System.currentTimeMillis();
         // get calculation mode
         String calculationMode =
                 config.getString(ConfigItems.CALCULATION_MODE.name());
-        if (calculationMode.equalsIgnoreCase(MONTE_CARLO)) {
+        if (calculationMode.equalsIgnoreCase(CalculationMode.MONTE_CARLO
+                .value())) {
             // do calculation by random sampling end-branch models
             doCalculationThroughMonteCarloApproach();
-        } else if (calculationMode.equalsIgnoreCase(FULL_CALCULATION)) {
+        } else if (calculationMode.equalsIgnoreCase(CalculationMode.FULL
+                .value())) {
             // do calculation for each end branch model
             doFullCalculation();
         } else {
@@ -161,16 +201,11 @@ public class CommandLineCalculator {
                     + " not recognized. Check the configuration file!\n"
                     + "Execution stops!");
             logger.info(logMsg);
-            // System.out.println("Calculation mode: " +
-            // config.getString(ConfigItems.CALCULATION_MODE.name())
-            // + " not recognized. Check the configuration file!\n" +
-            // "Execution stops!");
-            System.exit(0);
+            throw new ConfigurationException(logMsg.toString());
         }
         // calculate elapsed time
         long taskTimeMs = System.currentTimeMillis() - startTimeMs;
         logMsg.append("Wall clock time (including time for saving output files)\n");
-        // System.out.println("Wall clock time (including time for saving output files)");
         // 1h = 60*60*10^3 ms
         logMsg.append(String.format("hours  : %6.3f\n", taskTimeMs
                 / (60 * 60 * Math.pow(10, 3))));
@@ -183,6 +218,54 @@ public class CommandLineCalculator {
         // 3)));
         logger.info(logMsg);
     } // doCalculation()
+
+    /**
+     * This method is analogue to {@link doCalculation} </br> But because it
+     * returns a value instead of saving results to a file, this calculation can
+     * not just be triggered by {@link doCalculation}, using a flag such as
+     * "flagProbabilisticEventBase" to distinct the "normal" case and the
+     * probabilistic event based case.
+     * 
+     * @return a ground motion map
+     */
+    public Map<Site, Double> doCalculationProbabilisticEventBased()
+            throws ConfigurationException {
+        Map<Site, Double> result = null;
+        StringBuffer logMsg = new StringBuffer();
+        // start chronometer
+        long startTimeMs = System.currentTimeMillis();
+        // get calculation mode
+        String calculationMode =
+                config.getString(ConfigItems.CALCULATION_MODE.name());
+        if (calculationMode.equalsIgnoreCase(CalculationMode.MONTE_CARLO
+                .value())) {
+            // do calculation by random sampling end-branch models
+            result =
+                    doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling();
+        } else if (calculationMode.equalsIgnoreCase(CalculationMode.FULL
+                .value())) {
+            // do calculation for each end branch model
+            result = doProbabilisticEventBasedCalcForAllLogicTreeEndBranches();
+        } else {
+            logMsg.append("Calculation mode: "
+                    + config.getString(ConfigItems.CALCULATION_MODE.name())
+                    + " not recognized. Check the configuration file!\n"
+                    + "Execution stops!");
+            logger.info(logMsg);
+            throw new ConfigurationException(logMsg.toString());
+        }
+        // calculate elapsed time
+        long taskTimeMs = System.currentTimeMillis() - startTimeMs;
+        logMsg.append("Wall clock time (including time for saving output files)\n");
+        // 1h = 60*60*10^3 ms
+        logMsg.append(String.format("hours  : %6.3f\n", taskTimeMs
+                / (60 * 60 * Math.pow(10, 3))));
+        // 1 min = 60*10^3 ms
+        logMsg.append(String.format("minutes: %6.3f\n",
+                taskTimeMs / (60 * Math.pow(10, 3))));
+        logger.info(logMsg);
+        return result;
+    } // doCalculationProbabilisticEventBased()
 
     private void doCalculationThroughMonteCarloApproach() {
         logger.info("Performing calculation through Monte Carlo Approach.\n");
@@ -426,8 +509,6 @@ public class CommandLineCalculator {
             while (gmpeEndBranchLabels.hasNext()) {
                 String gmpeLabel = gmpeEndBranchLabels.next();
                 logger.info("Processing gmpe end-branch model: " + gmpeLabel);
-                // System.out.println("Processing gmpe end-branch model: " +
-                // gmpeLabel);
                 // do calculation
                 GemComputeHazard compHaz =
                         new GemComputeHazard(numThreads, sites, erf,
@@ -505,6 +586,113 @@ public class CommandLineCalculator {
             }
         } // while endBranchLabels
     } // doFullCalculation()
+
+    private Map<Site, Double>
+            doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling() {
+        logger.info("Performing calculation probabilistic event based"
+                + "through Monte Carlo Approach.\n");
+        Map<Site, Double> groundMotionMap = null;
+        ArrayList<Site> sites = createSiteList(config);
+        // load ERF logic tree data
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        // load GMPE logic tree data
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        int numberOfRealization =
+                config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
+                        .name());
+        int numberOfSeismicityHistories =
+                config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
+        for (int i = 0; i < numberOfRealization; ++i) {
+            // GEM1ERF erf =
+            // sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
+            // config);
+            /* TODO: For the moment select the first GMPE */
+            HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> mapGmpe =
+                    sampleGemLogicTreeGMPE(gmpeLogicTree
+                            .getGmpeLogicTreeHashMap());
+            EqkRupForecast eqkRupForecast =
+                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
+                            config);
+            ArrayList<ArrayList<EqkRupture>> seismicityHistories =
+                    StochasticEventSetGenerator
+                            .getMultipleStochasticEventSetsFromPoissonianERF(
+                                    eqkRupForecast,
+                                    numberOfSeismicityHistories, getRandom());
+            for (int j = 0; j < numberOfSeismicityHistories; ++j) {
+                for (int k = 0; k < seismicityHistories.get(j).size(); ++k) {
+                    EqkRupture eqkRupture = seismicityHistories.get(j).get(k);
+                    TectonicRegionType tectonicRegionType =
+                            eqkRupture.getTectRegType();
+                    ScalarIntensityMeasureRelationshipAPI attenRel =
+                            mapGmpe.get(tectonicRegionType);
+                    groundMotionMap =
+                            GroundMotionFieldCalculator
+                                    .getStochasticGroundMotionField(attenRel,
+                                            eqkRupture, sites, getRandom());
+                } // for seismicityHistories
+            } // for numberOfSeismicityHistories
+        } // for numberOfRealization
+        return groundMotionMap;
+    } // doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling ()
+
+    private Map<Site, Double>
+            doProbabilisticEventBasedCalcForAllLogicTreeEndBranches() {
+        logger.info("Performing calculation probabilistic event based"
+                + " for all logic tree branches.\n");
+        Map<Site, Double> groundMotionMap = null;
+        ArrayList<Site> sites = createSiteList(config);
+        // load ERF logic tree data
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        // load GMPE logic tree data
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        int numberOfRealization =
+                config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
+                        .name());
+        int numberOfSeismicityHistories =
+                config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
+        // compute ERF logic tree end-branch models
+        HashMap<String, ArrayList<GEMSourceData>> endBranchModels =
+                computeErfLogicTreeEndBrancheModels(erfLogicTree
+                        .getErfLogicTree());
+        // compute gmpe logic tree end-branch models
+        HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModel =
+                computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree
+                        .getGmpeLogicTreeHashMap());
+        for (int i = 0; i < endBranchModels.size(); ++i) {
+            // loop over ERF end branches
+            ArrayList<GEMSourceData> erfBranch = endBranchModels.get(i);
+            EqkRupForecast eqkRupForecast =
+                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
+                            config);
+            ArrayList<ArrayList<EqkRupture>> seismicityHistories =
+                    StochasticEventSetGenerator
+                            .getMultipleStochasticEventSetsFromPoissonianERF(
+                                    eqkRupForecast,
+                                    numberOfSeismicityHistories, getRandom());
+            Set<String> keySet = gmpeEndBranchModel.keySet();
+            for (String gmpeMapName : keySet) {
+                // loop over GMPE end branches
+                Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> mapGmpe =
+                        gmpeEndBranchModel.get(gmpeMapName);
+                for (int j = 0; j < numberOfSeismicityHistories; ++j) {
+                    // loop over seismicity histories
+                    for (int k = 0; k < seismicityHistories.get(j).size(); ++k) {
+                        // loop over ruptures
+                        EqkRupture eqkRupture =
+                                seismicityHistories.get(j).get(k);
+                        ScalarIntensityMeasureRelationshipAPI attenRel =
+                                mapGmpe.get(eqkRupture.getTectRegType());
+                        groundMotionMap =
+                                GroundMotionFieldCalculator
+                                        .getStochasticGroundMotionField(
+                                                attenRel, eqkRupture, sites,
+                                                getRandom());
+                    } // for seismicityHistorities
+                } // for numberOfSeismicityHistories
+            } // for key set with gmpe map names
+        } // for endBranchModels
+        return groundMotionMap;
+    } // doProbabilisticEventBasedCalcForAllLogicTreeEndBranches()
 
     /**
      * @param gmpeLogicTreeHashMap
@@ -869,7 +1057,15 @@ public class CommandLineCalculator {
         // store locations as sites
         Iterator<Location> iter = locList.iterator();
         while (iter.hasNext()) {
-            sites.add(new Site(iter.next()));
+            Site site = new Site(iter.next());
+            site.addParameter(new DoubleParameter(Vs30_Param.NAME, calcConfig
+                    .getDouble(ConfigItems.REFERENCE_VS30_VALUE.name())));
+            site.addParameter(new DoubleParameter(
+                    DepthTo2pt5kmPerSecParam.NAME,
+                    calcConfig
+                            .getDouble(ConfigItems.REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM
+                                    .name())));
+            sites.add(site);
         }
         // return array list of sites
         return sites;
@@ -907,12 +1103,12 @@ public class CommandLineCalculator {
             // load sources
             srcList = inputModelData.getSourceList();
         } else {
-            logger.info("The first branching level of the ERF logic tree does not contain a source model!!\n"
-                    + "Please correct your input!\n" + "Execution stopped!");
-            // System.out.println("The first branching level of the ERF logic tree does not contain a source model!!");
-            // System.out.println("Please correct your input!");
-            // System.out.println("Execution stopped!");
-            System.exit(0);
+            String msg =
+                    "The first branching level of the ERF logic tree does"
+                            + " not contain a source model!!\n"
+                            + "Please correct your input!\n Execution stopped!";
+            logger.info(msg);
+            throw new IllegalArgumentException(msg);
         }
         // loop over sources
         // source index
@@ -971,14 +1167,12 @@ public class CommandLineCalculator {
                     }
                 } else {
                     // rule is not defined:
-                    logger.info("No rule is defined at branching level: " + i
-                            + "\n" + "Please correct your input!\n"
-                            + "Execution stopped!");
-                    // System.out.println("No rule is defined at branching level: "
-                    // + i);
-                    // System.out.println("Please correct your input!");
-                    // System.out.println("Execution stopped!");
-                    System.exit(0);
+                    String msg =
+                            "No rule is defined at branching level: " + i
+                                    + "\n" + "Please correct your input!\n"
+                                    + "Execution stopped!";
+                    logger.info(msg);
+                    throw new IllegalArgumentException(msg);
                 } // end if no rule is defined
             } // end loop over branching levels
             sourceIndex = sourceIndex + 1;
@@ -1054,15 +1248,13 @@ public class CommandLineCalculator {
             return newAreaSrc;
         } else {
             // not(rule == mMaxGRRelative || == bGRRelative)
-            logger.info("Rule: " + rule.getRuleName().toString()
-                    + " not supported.\n"
-                    + "Check your input. Execution is stopped.");
-            // System.out.println("Rule: " + rule.getRuleName().toString() +
-            // " not supported.");
-            // System.out.println("Check your input. Execution is stopped.");
-            System.exit(0);
+            String msg =
+                    "Rule: " + rule.getRuleName().toString()
+                            + " not supported.\n"
+                            + "Check your input. Execution is stopped.";
+            logger.info(msg);
+            throw new IllegalArgumentException(msg);
         }
-        return null;
     } // applyRuleToAreaSource()
 
     /**
@@ -1126,15 +1318,13 @@ public class CommandLineCalculator {
             return newPntSource;
         } else {
             // not(rule == mMaxGRRelative || == bGRRelative)
-            logger.info("Rule: " + rule.getRuleName().toString()
-                    + " not supported.\n"
-                    + "Check your input. Execution is stopped.");
-            // System.out.println("Rule: " + rule.getRuleName().toString() +
-            // " not supported.");
-            // System.out.println("Check your input. Execution is stopped.");
-            System.exit(0);
+            String msg =
+                    "Rule: " + rule.getRuleName().toString()
+                            + " not supported.\n"
+                            + "Check your input. Execution is stopped.";
+            logger.info(msg);
+            throw new IllegalArgumentException(msg);
         }
-        return null;
     } // applyRuleToPointSource()
 
     /**
@@ -1195,15 +1385,13 @@ public class CommandLineCalculator {
             }
         } else {
             // not(rule == mMaxGRRelative || == bGRRelative)
-            logger.info("Rule: " + rule.getRuleName().toString()
-                    + " not supported.\n"
-                    + "Check your input. Execution is stopped.");
-            // System.out.println("Rule: " + rule.getRuleName().toString() +
-            // " not supported.");
-            // System.out.println("Check your input. Execution is stopped.");
-            System.exit(0);
+            String msg =
+                    "Rule: " + rule.getRuleName().toString()
+                            + " not supported.\n"
+                            + "Check your input. Execution is stopped.";
+            logger.info(msg);
+            throw new IllegalArgumentException(msg);
         }
-        return null;
     } // applyRuleToFaultSource()
 
     /**
@@ -1274,15 +1462,13 @@ public class CommandLineCalculator {
 
         }// end if rule == mMaxGRRelative || == bGRRelative
         else {
-            logger.info("Rule: " + rule.getRuleName().toString()
-                    + " not supported.\n"
-                    + "Check your input. Execution is stopped.");
-            // System.out.println("Rule: " + rule.getRuleName().toString() +
-            // " not supported.");
-            // System.out.println("Check your input. Execution is stopped.");
-            System.exit(0);
+            String msg =
+                    "Rule: " + rule.getRuleName().toString()
+                            + " not supported.\n"
+                            + "Check your input. Execution is stopped.";
+            logger.info(msg);
+            throw new IllegalArgumentException(msg);
         }
-        return null;
     } // applyRuleToSubductionFaultSource()
 
     private static ArrayList<GEMSourceData> applyRuleToSourceList(
@@ -1409,19 +1595,19 @@ public class CommandLineCalculator {
             return newMfdGr;
 
         } else {
-            logger.info("Uncertaintiy value: " + deltaB
-                    + " on b value for source: " + sourceName
-                    + " give b value smaller than 0!\n"
-                    + "Check your input. Execution stopped!");
+            String msg =
+                    "Uncertaintiy value: " + deltaB
+                            + " on b value for source: " + sourceName
+                            + " give b value smaller than 0!\n"
+                            + "Check your input. Execution stopped!";
+            logger.info(msg);
             // System.out.println("Uncertaintiy value: " + deltaB +
             // " on b value for source: " + sourceName
             // + " give b value smaller than 0!");
             // System.out.println("Check your input. Execution stopped!");
-            System.exit(0);
-            return null;
+            throw new IllegalArgumentException(msg);
         }
-
-    }
+    } // applybGrRelative()
 
     /**
      * Set the GEM1ERF params given the parameters defined in
@@ -1571,6 +1757,64 @@ public class CommandLineCalculator {
         return hm;
 
     }
+
+    private ErfLogicTreeData
+            createErfLogicTreeData(Configuration configuration) {
+        // load ERF logic tree data
+        ErfLogicTreeData erfLogicTree =
+                new ErfLogicTreeData(
+                        getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+        return erfLogicTree;
+    } // createErfLogicTreeData()
+
+    private GmpeLogicTreeData createGmpeLogicTreeData(
+            Configuration configuration) {
+        // load GMPE logic tree data
+        String relativePath =
+                getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
+        String component =
+                configuration.getString(ConfigItems.COMPONENT.name());
+        String intensityMeasureType =
+                configuration.getString(ConfigItems.INTENSITY_MEASURE_TYPE
+                        .name());
+        Double period = configuration.getDouble(ConfigItems.PERIOD.name());
+        Double damping = configuration.getDouble(ConfigItems.DAMPING.name());
+        String gmpeTruncationType =
+                configuration
+                        .getString(ConfigItems.GMPE_TRUNCATION_TYPE.name());
+        Double truncationLevel =
+                configuration.getDouble(ConfigItems.TRUNCATION_LEVEL.name());
+        String standardDeviationType =
+                configuration.getString(ConfigItems.STANDARD_DEVIATION_TYPE
+                        .name());
+        Double referenceVs30Value =
+                configuration
+                        .getDouble(ConfigItems.REFERENCE_VS30_VALUE.name());
+        // instantiate eventually
+        GmpeLogicTreeData gmpeLogicTree =
+                new GmpeLogicTreeData(relativePath, component,
+                        intensityMeasureType, period, damping,
+                        gmpeTruncationType, truncationLevel,
+                        standardDeviationType, referenceVs30Value);
+
+        // GmpeLogicTreeData gmpeLogicTree =
+        // new GmpeLogicTreeData(
+        // getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),
+        // config.getString(ConfigItems.COMPONENT.name()), config
+        // .getString(ConfigItems.INTENSITY_MEASURE_TYPE
+        // .name()), config
+        // .getDouble(ConfigItems.PERIOD.name()), config
+        // .getDouble(ConfigItems.DAMPING.name()), config
+        // .getString(ConfigItems.GMPE_TRUNCATION_TYPE
+        // .name()),
+        // config.getDouble(ConfigItems.TRUNCATION_LEVEL.name()),
+        // config.getString(ConfigItems.STANDARD_DEVIATION_TYPE
+        // .name()), config
+        // .getDouble(ConfigItems.REFERENCE_VS30_VALUE
+        // .name()));
+
+        return gmpeLogicTree;
+    } // createGmpeLogicTreeData()
 
     // for testing
     public static void main(String[] args) throws IOException,

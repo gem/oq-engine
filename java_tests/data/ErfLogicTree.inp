@@ -42,7 +42,7 @@ BranchSet
 # uncertainty model type
 inputfile
 # input file name(s)
-./data/src_model1.dat     ./data/src_model2.dat
+./java_tests/data/src_model1.dat     ./java_tests/data/src_model2.dat
 # input file descriptor(s) (in each descriptor spaces are not allowed)
 source_geometry_model_#1   source_geometry_model_#2
 # weight(s)
