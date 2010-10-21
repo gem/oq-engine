@@ -8,6 +8,7 @@ import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.util.TectonicRegionType;
 
 /**
  * 
@@ -41,8 +42,10 @@ public class StochasticEventSetGenerator {
         validateInput(erf, rn);
 
         ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
+        TectonicRegionType tectonicRegionType = null;
         for (int sourceIdx = 0; sourceIdx < erf.getNumSources(); sourceIdx++) {
             ProbEqkSource src = erf.getSource(sourceIdx);
+            tectonicRegionType = src.getTectonicRegionType();
             for (int ruptureIdx = 0; ruptureIdx < src.getNumRuptures(); ruptureIdx++) {
                 ProbEqkRupture rup = src.getRupture(ruptureIdx);
                 double numExpectedRup = -Math.log(1 - rup.getProbability());
@@ -50,6 +53,7 @@ public class StochasticEventSetGenerator {
                         new EqkRupture(rup.getMag(), rup.getAveRake(),
                                 rup.getRuptureSurface(),
                                 rup.getHypocenterLocation());
+                eqk.setTectRegType(tectonicRegionType);
                 // sample Poisson distribution using inverse transfom method
                 // p is the Poisson probability
                 // F is the cumulative distribution function
