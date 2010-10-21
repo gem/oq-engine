@@ -11,7 +11,6 @@ import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
-import org.opensha.gem.GEM1.scratch.HazardCurveCalculator;
 import org.opensha.sha.calc.groundMotionField.GroundMotionFieldCalculator;
 import org.opensha.sha.calc.stochasticEventSet.StochasticEventSetGenerator;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
