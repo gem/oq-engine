@@ -144,10 +144,13 @@ public class CommandLineCalculator {
         config.setProperty(key, value);
     }
 
+    private String configFilesPath() {
+        return FilenameUtils.getFullPath(((AbstractFileConfiguration) config)
+                .getPath());
+    }
+
     private String getRelativePath(String key) {
-        return (FilenameUtils.getFullPath(((AbstractFileConfiguration) config)
-                .getPath()))
-                + config.getString(key);
+        return configFilesPath() + config.getString(key);
     }
 
     /**
@@ -827,8 +830,10 @@ public class CommandLineCalculator {
                 // define label from branch ID number
                 String label = Integer.toString(branch.getRelativeID());
                 // read the corresponding source model
+                String sourceName = configFilesPath() + branch.getNameInputFile();
+                
                 ArrayList<GEMSourceData> srcList =
-                        new InputModelData(branch.getNameInputFile(), config
+                        new InputModelData(sourceName, config
                                 .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()))
                                 .getSourceList();
                 // save in the hash map
@@ -1072,8 +1077,10 @@ public class CommandLineCalculator {
             // InputModelData(branch.getNameInputFile(),
             // Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
             // new here is the apache Configuration object
+            String sourceName = configFilesPath() + branch.getNameInputFile();
+            
             InputModelData inputModelData =
-                    new InputModelData(branch.getNameInputFile(), calcConfig
+                    new InputModelData(sourceName, calcConfig
                             .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()));
             // load sources
             srcList = inputModelData.getSourceList();
