@@ -132,6 +132,12 @@
 			</instr>
 		</emma>
 
+        <copy todir="${instrumented.dir}/classes/org/opensha/sha/imr/attenRelImpl/" overwrite="true">
+            <fileset dir="${src.dir}/org/opensha/sha/imr/attenRelImpl/">
+                <include name="**/*.txt" />
+            </fileset>
+        </copy>
+
 		<junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
 			<classpath>
 				<!-- Input test files -->
