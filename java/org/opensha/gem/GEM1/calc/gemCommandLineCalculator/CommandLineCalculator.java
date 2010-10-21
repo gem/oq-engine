@@ -146,8 +146,7 @@ public class CommandLineCalculator {
 
     private String getRelativePath(String key) {
         return (FilenameUtils.getFullPath(((AbstractFileConfiguration) config)
-                .getPath()))
-                + config.getString(key);
+                .getPath())) + config.getString(key);
     }
 
     /**
@@ -206,16 +205,15 @@ public class CommandLineCalculator {
         }
         // calculate elapsed time
         long taskTimeMs = System.currentTimeMillis() - startTimeMs;
-        logMsg
-                .append("Wall clock time (including time for saving output files)\n");
+        logMsg.append("Wall clock time (including time for saving output files)\n");
         // 1h = 60*60*10^3 ms
         logMsg.append(String.format("hours  : %6.3f\n", taskTimeMs
                 / (60 * 60 * Math.pow(10, 3))));
         // System.out.printf("hours  : %6.3f\n", taskTimeMs / (60 * 60 *
         // Math.pow(10, 3)));
         // 1 min = 60*10^3 ms
-        logMsg.append(String.format("minutes: %6.3f\n", taskTimeMs
-                / (60 * Math.pow(10, 3))));
+        logMsg.append(String.format("minutes: %6.3f\n",
+                taskTimeMs / (60 * Math.pow(10, 3))));
         // System.out.printf("minutes: %6.3f\n", taskTimeMs / (60 * Math.pow(10,
         // 3)));
         logger.info(logMsg);
@@ -258,14 +256,13 @@ public class CommandLineCalculator {
         }
         // calculate elapsed time
         long taskTimeMs = System.currentTimeMillis() - startTimeMs;
-        logMsg
-                .append("Wall clock time (including time for saving output files)\n");
+        logMsg.append("Wall clock time (including time for saving output files)\n");
         // 1h = 60*60*10^3 ms
         logMsg.append(String.format("hours  : %6.3f\n", taskTimeMs
                 / (60 * 60 * Math.pow(10, 3))));
         // 1 min = 60*10^3 ms
-        logMsg.append(String.format("minutes: %6.3f\n", taskTimeMs
-                / (60 * Math.pow(10, 3))));
+        logMsg.append(String.format("minutes: %6.3f\n",
+                taskTimeMs / (60 * Math.pow(10, 3))));
         logger.info(logMsg);
         return result;
     } // doCalculationProbabilisticEventBased()
@@ -323,18 +320,18 @@ public class CommandLineCalculator {
             // change because they are randomly sampled
             GemComputeHazard compHaz =
                     new GemComputeHazard(numOfThreads, sites,
-                            sampleGemLogicTreeERF(erfLogicTree
-                                    .getErfLogicTree(), config),
+                            sampleGemLogicTreeERF(
+                                    erfLogicTree.getErfLogicTree(), config),
                             sampleGemLogicTreeGMPE(gmpeLogicTree
                                     .getGmpeLogicTreeHashMap()), imlList,
                             maxDistance);
             // store results
             hcRepList.add(compHaz.getValues(), Integer.toString(i));
         } // for
-        // save hazard curves
+          // save hazard curves
         if (D)
-            saveHazardCurveRepositoryListToAsciiFile(config
-                    .getString(ConfigItems.OUTPUT_DIR.name()), hcRepList);
+            saveHazardCurveRepositoryListToAsciiFile(
+                    config.getString(ConfigItems.OUTPUT_DIR.name()), hcRepList);
         // create the requested output
         if (config.getBoolean(ConfigItems.MEAN_GROUND_MOTION_MAP.name())) {
             // calculate mean ground motion map for the given prob of exceedance
@@ -347,9 +344,8 @@ public class CommandLineCalculator {
             String outfile =
                     config.getString((ConfigItems.OUTPUT_DIR.name()))
                             + "meanGroundMotionMap_"
-                            + config
-                                    .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                            .name())
+                            + config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                    .name())
                             * 100
                             + "%"
                             + config.getString(ConfigItems.INVESTIGATION_TIME
@@ -363,10 +359,9 @@ public class CommandLineCalculator {
             for (GEMHazardCurveRepository hcRep : hcRepList.getHcRepList()) {
                 // calculate ground motion map
                 ArrayList<Double> groundMotionMap =
-                        hcRep
-                                .getHazardMap(config
-                                        .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                                .name()));
+                        hcRep.getHazardMap(config
+                                .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                        .name()));
                 // define file name
                 String outfile =
                         config.getString(ConfigItems.OUTPUT_DIR.name())
@@ -374,14 +369,12 @@ public class CommandLineCalculator {
                                 + hcRepList.getEndBranchLabels()
                                         .get(indexLabel)
                                 + "_"
-                                + config
-                                        .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                                .name())
+                                + config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                        .name())
                                 * 100
                                 + "%"
-                                + config
-                                        .getString(ConfigItems.INVESTIGATION_TIME
-                                                .name()) + "yr.dat";
+                                + config.getString(ConfigItems.INVESTIGATION_TIME
+                                        .name()) + "yr.dat";
                 saveGroundMotionMapToAsciiFile(outfile, groundMotionMap,
                         hcRepList.getHcRepList().get(0).getGridNode());
                 indexLabel = indexLabel + 1;
@@ -409,8 +402,8 @@ public class CommandLineCalculator {
         // System.out.println("Performing full calculation. \n");
         // load ERF logic tree data
         ErfLogicTreeData erfLogicTree =
-                new ErfLogicTreeData(config
-                        .getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+                new ErfLogicTreeData(
+                        config.getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
         // load GMPE logic tree data
         String gmpeLogicTreeFile =
                 config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
@@ -449,7 +442,7 @@ public class CommandLineCalculator {
             // System.out.println("End branch label: " + erfEndBranchLabel +
             // "\n");
         } // while
-        // compute gmpe logic tree end-branch models
+          // compute gmpe logic tree end-branch models
         HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> gmpeEndBranchModel =
                 computeGmpeLogicTreeEndBrancheModels(gmpeLogicTree
                         .getGmpeLogicTreeHashMap());
@@ -480,13 +473,13 @@ public class CommandLineCalculator {
                 // +
                 // gmpeEndBranchModel.get(gmpeEndBranchLabel).get(trt).getName());
             } // while
-            // TODO:
-            // O.k., here, the intention is to insert a one line gap after
-            // a "block" logging messages. But is this the way?
+              // TODO:
+              // O.k., here, the intention is to insert a one line gap after
+              // a "block" logging messages. But is this the way?
             logger.info("\n");
             // System.out.println("\n");
         } // while gmpeEndBranchLabelIter
-        // instantiate the repository for the results
+          // instantiate the repository for the results
         GEMHazardCurveRepositoryList hcRepList =
                 new GEMHazardCurveRepositoryList();
         // sites for calculation
@@ -524,29 +517,26 @@ public class CommandLineCalculator {
                 // store results
                 hcRepList.add(compHaz.getValues(), erfLabel + "-" + gmpeLabel);
             } // while gmpeEndBranchLabels
-            // create the requested output
+              // create the requested output
             if (config.getBoolean(ConfigItems.MEAN_GROUND_MOTION_MAP.name())) {
                 // calculate mean hazard map for the given prob of exceedance
                 ArrayList<Double> meanGroundMotionMap =
                         hcRepList
                                 .getMeanGroundMotionMap(
-                                        config
-                                                .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                                        .name()), erfLogicTree
+                                        config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                                .name()), erfLogicTree
                                                 .getErfLogicTree(),
                                         gmpeLogicTree.getGmpeLogicTreeHashMap());
                 // save mean ground motion map
                 String outfile =
                         config.getString(ConfigItems.OUTPUT_DIR.name())
                                 + "meanGroundMotionMap_"
-                                + config
-                                        .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                                .name())
+                                + config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                        .name())
                                 * 100
                                 + "%"
-                                + config
-                                        .getString(ConfigItems.INVESTIGATION_TIME
-                                                .name()) + "yr.dat";
+                                + config.getString(ConfigItems.INVESTIGATION_TIME
+                                        .name()) + "yr.dat";
                 saveGroundMotionMapToAsciiFile(outfile, meanGroundMotionMap,
                         hcRepList.getHcRepList().get(0).getGridNode());
             }
@@ -557,10 +547,9 @@ public class CommandLineCalculator {
                 for (GEMHazardCurveRepository hcRep : hcRepList.getHcRepList()) {
                     // calculate ground motion map
                     ArrayList<Double> groundMotionMap =
-                            hcRep
-                                    .getHazardMap(config
-                                            .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                                    .name()));
+                            hcRep.getHazardMap(config
+                                    .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                            .name()));
                     // define file name
                     String outfile =
                             config.getString(ConfigItems.OUTPUT_DIR.name())
@@ -568,14 +557,12 @@ public class CommandLineCalculator {
                                     + hcRepList.getEndBranchLabels().get(
                                             indexLabel)
                                     + "_"
-                                    + config
-                                            .getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
-                                                    .name())
+                                    + config.getDouble(ConfigItems.PROBABILITY_OF_EXCEEDANCE
+                                            .name())
                                     * 100
                                     + "%"
-                                    + config
-                                            .getString(ConfigItems.INVESTIGATION_TIME
-                                                    .name()) + "yr.dat";
+                                    + config.getString(ConfigItems.INVESTIGATION_TIME
+                                            .name()) + "yr.dat";
                     saveGroundMotionMapToAsciiFile(outfile, groundMotionMap,
                             hcRepList.getHcRepList().get(0).getGridNode());
                     indexLabel = indexLabel + 1;
@@ -583,9 +570,9 @@ public class CommandLineCalculator {
             }
             if (config.getBoolean(ConfigItems.MEAN_HAZARD_CURVES.name())) {
                 GEMHazardCurveRepository meanHazardCurves =
-                        hcRepList.getMeanHazardCurves(erfLogicTree
-                                .getErfLogicTree(), gmpeLogicTree
-                                .getGmpeLogicTreeHashMap());
+                        hcRepList.getMeanHazardCurves(
+                                erfLogicTree.getErfLogicTree(),
+                                gmpeLogicTree.getGmpeLogicTreeHashMap());
                 String outfile =
                         config.getString(ConfigItems.OUTPUT_DIR.name())
                                 + "meanHazardCurves.dat";
@@ -600,7 +587,8 @@ public class CommandLineCalculator {
         } // while endBranchLabels
     } // doFullCalculation()
 
-    private Map<Site, Double> doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling() {
+    private Map<Site, Double>
+            doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling() {
         logger.info("Performing calculation probabilistic event based"
                 + "through Monte Carlo Approach.\n");
         Map<Site, Double> groundMotionMap = null;
@@ -613,9 +601,7 @@ public class CommandLineCalculator {
                 config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
                         .name());
         int numberOfSeismicityHistories =
-                config
-                        .getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
-                                .name());
+                config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
         for (int i = 0; i < numberOfRealization; ++i) {
             // GEM1ERF erf =
             // sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
@@ -649,7 +635,8 @@ public class CommandLineCalculator {
         return groundMotionMap;
     } // doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling ()
 
-    private Map<Site, Double> doProbabilisticEventBasedCalcForAllLogicTreeEndBranches() {
+    private Map<Site, Double>
+            doProbabilisticEventBasedCalcForAllLogicTreeEndBranches() {
         logger.info("Performing calculation probabilistic event based"
                 + " for all logic tree branches.\n");
         Map<Site, Double> groundMotionMap = null;
@@ -662,9 +649,7 @@ public class CommandLineCalculator {
                 config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
                         .name());
         int numberOfSeismicityHistories =
-                config
-                        .getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
-                                .name());
+                config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
         // compute ERF logic tree end-branch models
         HashMap<String, ArrayList<GEMSourceData>> endBranchModels =
                 computeErfLogicTreeEndBrancheModels(erfLogicTree
@@ -732,8 +717,10 @@ public class CommandLineCalculator {
      *         assumption in this method is that the logic tree for the Gmpes
      *         contains only one branching level.
      */
-    private HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> computeGmpeLogicTreeEndBrancheModels(
-            HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap) {
+    private
+            HashMap<String, HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>>
+            computeGmpeLogicTreeEndBrancheModels(
+                    HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap) {
         // make deep copy
         HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMapCopy =
                 (HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>>) UnoptimizedDeepCopy
@@ -807,10 +794,11 @@ public class CommandLineCalculator {
                                         + branch.getRelativeID();
                         // get gmpe
                         ScalarIntensityMeasureRelationshipAPI gmpe =
-                                gmpeLogicTreeHashMapCopy.get(trtList.get(0))
-                                        .getEBMap().get(
-                                                Integer.toString(branch
-                                                        .getRelativeID()));
+                                gmpeLogicTreeHashMapCopy
+                                        .get(trtList.get(0))
+                                        .getEBMap()
+                                        .get(Integer.toString(branch
+                                                .getRelativeID()));
                         // add tectonic setting - gmpe
                         // current end branch model
                         HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> newHashMap =
@@ -833,7 +821,7 @@ public class CommandLineCalculator {
                     // to the current model
                     endBranchModels.remove(label);
                 } // end loop over current end-branch models
-                // remove processed tectonic setting
+                  // remove processed tectonic setting
                 gmpeLogicTreeHashMapCopy.remove(trtList.get(0));
                 trtList.remove(0);
             } // end while !gmpeLogicTreeHashMapCopy.keySet().isEmpty()
@@ -841,8 +829,9 @@ public class CommandLineCalculator {
         return endBranchModels;
     } // computeGmpeLogicTreeEndBranchModels()
 
-    private HashMap<String, ArrayList<GEMSourceData>> computeErfLogicTreeEndBrancheModels(
-            GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree) {
+    private HashMap<String, ArrayList<GEMSourceData>>
+            computeErfLogicTreeEndBrancheModels(
+                    GemLogicTree<ArrayList<GEMSourceData>> erfLogicTree) {
         // make deep copy
         GemLogicTree<ArrayList<GEMSourceData>> erfLogicTreeCopy =
                 (GemLogicTree<ArrayList<GEMSourceData>>) UnoptimizedDeepCopy
@@ -864,9 +853,9 @@ public class CommandLineCalculator {
                 String label = Integer.toString(branch.getRelativeID());
                 // read the corresponding source model
                 ArrayList<GEMSourceData> srcList =
-                        new InputModelData(branch.getNameInputFile(), config
-                                .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()))
-                                .getSourceList();
+                        new InputModelData(branch.getNameInputFile(),
+                                config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
+                                        .name())).getSourceList();
                 // save in the hash map
                 endBranchModels.put(label, srcList);
             }
@@ -914,7 +903,7 @@ public class CommandLineCalculator {
                     // to the current model
                     endBranchModels.remove(label);
                 } // end loop over current end-branch models
-                // remove processed branching level
+                  // remove processed branching level
                 erfLogicTreeCopy.getBranchingLevelsList().remove(0);
             } // end while !erfLogicTreeCopy.getBranchingLevelsList().isEmpty()
         } // end if !endBranchModels.isEmpty()
@@ -961,8 +950,8 @@ public class CommandLineCalculator {
             for (int igmv = 0; igmv < hazardCurves.getHcRepList().get(0)
                     .getGmLevels().size(); igmv++) {
                 double gmv =
-                        hazardCurves.getHcRepList().get(0).getGmLevels().get(
-                                igmv);
+                        hazardCurves.getHcRepList().get(0).getGmLevels()
+                                .get(igmv);
                 gmv = Math.exp(gmv);
                 oWriter.write(String.format("%7.4e ", gmv));
             } // for
@@ -1071,12 +1060,11 @@ public class CommandLineCalculator {
             Site site = new Site(iter.next());
             site.addParameter(new DoubleParameter(Vs30_Param.NAME, calcConfig
                     .getDouble(ConfigItems.REFERENCE_VS30_VALUE.name())));
-            site
-                    .addParameter(new DoubleParameter(
-                            DepthTo2pt5kmPerSecParam.NAME,
-                            calcConfig
-                                    .getDouble(ConfigItems.REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM
-                                            .name())));
+            site.addParameter(new DoubleParameter(
+                    DepthTo2pt5kmPerSecParam.NAME,
+                    calcConfig
+                            .getDouble(ConfigItems.REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM
+                                    .name())));
             sites.add(site);
         }
         // return array list of sites
@@ -1109,8 +1097,9 @@ public class CommandLineCalculator {
             // Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
             // new here is the apache Configuration object
             InputModelData inputModelData =
-                    new InputModelData(branch.getNameInputFile(), calcConfig
-                            .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()));
+                    new InputModelData(branch.getNameInputFile(),
+                            calcConfig.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
+                                    .name()));
             // load sources
             srcList = inputModelData.getSourceList();
         } else {
@@ -1141,28 +1130,37 @@ public class CommandLineCalculator {
                     if (src instanceof GEMAreaSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(sourceIndex, applyRuleToAreaSource(
-                                (GEMAreaSourceData) src, branch.getRule()));
+                        srcList.set(
+                                sourceIndex,
+                                applyRuleToAreaSource((GEMAreaSourceData) src,
+                                        branch.getRule()));
                     }
                     // if point source
                     if (src instanceof GEMPointSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(sourceIndex, applyRuleToPointSource(
-                                (GEMPointSourceData) src, branch.getRule()));
+                        srcList.set(
+                                sourceIndex,
+                                applyRuleToPointSource(
+                                        (GEMPointSourceData) src,
+                                        branch.getRule()));
                     }
                     // if fault source
                     if (src instanceof GEMFaultSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(sourceIndex, applyRuleToFaultSource(
-                                (GEMFaultSourceData) src, branch.getRule()));
+                        srcList.set(
+                                sourceIndex,
+                                applyRuleToFaultSource(
+                                        (GEMFaultSourceData) src,
+                                        branch.getRule()));
                     }
                     // if subduction source
                     if (src instanceof GEMSubductionFaultSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(sourceIndex,
+                        srcList.set(
+                                sourceIndex,
                                 applyRuleToSubductionFaultSource(
                                         (GEMSubductionFaultSourceData) src,
                                         branch.getRule()));
@@ -1179,7 +1177,7 @@ public class CommandLineCalculator {
             } // end loop over branching levels
             sourceIndex = sourceIndex + 1;
         } // end loop over sources
-        // instantiate ERF
+          // instantiate ERF
         erf = new GEM1ERF(srcList);
         // set ERF parameters
         setGEM1ERFParams(erf, calcConfig);
@@ -1202,10 +1200,14 @@ public class CommandLineCalculator {
         // define new area source
         GEMAreaSourceData newAreaSrc = areaSrc;
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString().equalsIgnoreCase(
-                GemLogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName()
+                .toString()
+                .equalsIgnoreCase(
+                        GemLogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.bGRRelative.toString())) {
             // loop over mfds
             // mfd index
             int mfdIndex = 0;
@@ -1214,20 +1216,27 @@ public class CommandLineCalculator {
                 if (mfd instanceof GutenbergRichterMagFreqDist) {
                     // new mfd
                     GutenbergRichterMagFreqDist newMfdGr = null;
-                    if (rule.getRuleName().toString().equalsIgnoreCase(
-                            GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
+                    if (rule.getRuleName()
+                            .toString()
+                            .equalsIgnoreCase(
+                                    GemLogicTreeRuleParam.mMaxGRRelative
+                                            .toString())) {
                         // uncertainties on Mmax
                         newMfdGr =
                                 applyMmaxGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd, rule
-                                                .getVal(), areaSrc.getName());
-                    } else if (rule.getRuleName().toString().equalsIgnoreCase(
-                            GemLogicTreeRuleParam.bGRRelative.toString())) {
+                                        (GutenbergRichterMagFreqDist) mfd,
+                                        rule.getVal(), areaSrc.getName());
+                    } else if (rule
+                            .getRuleName()
+                            .toString()
+                            .equalsIgnoreCase(
+                                    GemLogicTreeRuleParam.bGRRelative
+                                            .toString())) {
                         // uncertainties on b value
                         newMfdGr =
                                 applybGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd, rule
-                                                .getVal(), areaSrc.getName());
+                                        (GutenbergRichterMagFreqDist) mfd,
+                                        rule.getVal(), areaSrc.getName());
                     }
                     // substitute old mfd with new mfd
                     newAreaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] =
@@ -1235,7 +1244,7 @@ public class CommandLineCalculator {
                 } // end if mfd is GR
                 mfdIndex = mfdIndex + 1;
             } // for (loop over mfds)
-            // return new area source
+              // return new area source
             return newAreaSrc;
         } else {
             // not(rule == mMaxGRRelative || == bGRRelative)
@@ -1264,10 +1273,14 @@ public class CommandLineCalculator {
         // new point source
         GEMPointSourceData newPntSource = pntSrc;
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString().equalsIgnoreCase(
-                GemLogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName()
+                .toString()
+                .equalsIgnoreCase(
+                        GemLogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.bGRRelative.toString())) {
             // loop over mfds
             // mfd index
             int mfdIndex = 0;
@@ -1276,18 +1289,25 @@ public class CommandLineCalculator {
                 if (mfd instanceof GutenbergRichterMagFreqDist) {
                     GutenbergRichterMagFreqDist newMfdGr = null;
                     // create new mfd by applying rule
-                    if (rule.getRuleName().toString().equalsIgnoreCase(
-                            GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
+                    if (rule.getRuleName()
+                            .toString()
+                            .equalsIgnoreCase(
+                                    GemLogicTreeRuleParam.mMaxGRRelative
+                                            .toString())) {
                         newMfdGr =
                                 applyMmaxGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd, rule
-                                                .getVal(), pntSrc.getName());
-                    } else if (rule.getRuleName().toString().equalsIgnoreCase(
-                            GemLogicTreeRuleParam.bGRRelative.toString())) {
+                                        (GutenbergRichterMagFreqDist) mfd,
+                                        rule.getVal(), pntSrc.getName());
+                    } else if (rule
+                            .getRuleName()
+                            .toString()
+                            .equalsIgnoreCase(
+                                    GemLogicTreeRuleParam.bGRRelative
+                                            .toString())) {
                         newMfdGr =
                                 applybGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd, rule
-                                                .getVal(), pntSrc.getName());
+                                        (GutenbergRichterMagFreqDist) mfd,
+                                        rule.getVal(), pntSrc.getName());
                     }
                     // substitute old mfd with new mfd
                     newPntSource.getHypoMagFreqDistAtLoc().getMagFreqDistList()[mfdIndex] =
@@ -1321,34 +1341,43 @@ public class CommandLineCalculator {
     private static GEMFaultSourceData applyRuleToFaultSource(
             GEMFaultSourceData faultSrc, GemLogicTreeRule rule) {
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString().equalsIgnoreCase(
-                GemLogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName()
+                .toString()
+                .equalsIgnoreCase(
+                        GemLogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.bGRRelative.toString())) {
             // mfd
             IncrementalMagFreqDist mfd = faultSrc.getMfd();
             if (mfd instanceof GutenbergRichterMagFreqDist) {
                 GutenbergRichterMagFreqDist newMfdGr = null;
                 // create new mfd by applying rule
-                if (rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
+                if (rule.getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
                     newMfdGr =
                             applyMmaxGrRelative(
-                                    (GutenbergRichterMagFreqDist) mfd, rule
-                                            .getVal(), faultSrc.getName());
-                } else if (rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.bGRRelative.toString())) {
+                                    (GutenbergRichterMagFreqDist) mfd,
+                                    rule.getVal(), faultSrc.getName());
+                } else if (rule
+                        .getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.bGRRelative.toString())) {
                     newMfdGr =
                             applybGrRelative((GutenbergRichterMagFreqDist) mfd,
                                     rule.getVal(), faultSrc.getName());
                 }
                 // return new fault source with new mfd
-                return new GEMFaultSourceData(faultSrc.getID(), faultSrc
-                        .getName(), faultSrc.getTectReg(), newMfdGr, faultSrc
-                        .getTrace(), faultSrc.getDip(), faultSrc.getDip(),
-                        faultSrc.getSeismDepthLow(), faultSrc
-                                .getSeismDepthUpp(), faultSrc
-                                .getFloatRuptureFlag());
+                return new GEMFaultSourceData(faultSrc.getID(),
+                        faultSrc.getName(), faultSrc.getTectReg(), newMfdGr,
+                        faultSrc.getTrace(), faultSrc.getDip(),
+                        faultSrc.getDip(), faultSrc.getSeismDepthLow(),
+                        faultSrc.getSeismDepthUpp(),
+                        faultSrc.getFloatRuptureFlag());
             } else {
                 // mfd is not GR
                 // if the uncertainty do not apply return the unchanged object
@@ -1377,14 +1406,20 @@ public class CommandLineCalculator {
      *          to uncertainty changed according to the rule. In case the rule
      *          is not recognized an error is thrown and execution stops
      */
-    private static GEMSubductionFaultSourceData applyRuleToSubductionFaultSource(
-            GEMSubductionFaultSourceData subFaultSrc, GemLogicTreeRule rule) {
+    private static GEMSubductionFaultSourceData
+            applyRuleToSubductionFaultSource(
+                    GEMSubductionFaultSourceData subFaultSrc,
+                    GemLogicTreeRule rule) {
 
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString().equalsIgnoreCase(
-                GemLogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName()
+                .toString()
+                .equalsIgnoreCase(
+                        GemLogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.bGRRelative.toString())) {
 
             // mfd
             IncrementalMagFreqDist mfd = subFaultSrc.getMfd();
@@ -1394,14 +1429,19 @@ public class CommandLineCalculator {
                 GutenbergRichterMagFreqDist newMfdGr = null;
 
                 // create new mfd by applying rule
-                if (rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
+                if (rule.getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.mMaxGRRelative.toString())) {
                     newMfdGr =
                             applyMmaxGrRelative(
-                                    (GutenbergRichterMagFreqDist) mfd, rule
-                                            .getVal(), subFaultSrc.getName());
-                } else if (rule.getRuleName().toString().equalsIgnoreCase(
-                        GemLogicTreeRuleParam.bGRRelative.toString())) {
+                                    (GutenbergRichterMagFreqDist) mfd,
+                                    rule.getVal(), subFaultSrc.getName());
+                } else if (rule
+                        .getRuleName()
+                        .toString()
+                        .equalsIgnoreCase(
+                                GemLogicTreeRuleParam.bGRRelative.toString())) {
                     newMfdGr =
                             applybGrRelative((GutenbergRichterMagFreqDist) mfd,
                                     rule.getVal(), subFaultSrc.getName());
@@ -1415,7 +1455,7 @@ public class CommandLineCalculator {
                         newMfdGr, subFaultSrc.getFloatRuptureFlag());
 
             } // end if mfd is GR
-            // if uncertainty does not apply return unchanged object
+              // if uncertainty does not apply return unchanged object
             else {
                 return subFaultSrc;
             }
@@ -1508,13 +1548,12 @@ public class CommandLineCalculator {
 
         } else {
             // stop execution and return null
-            logger
-                    .info("Uncertaintiy value: "
-                            + deltaMmax
-                            + " on maximum magnitude for source: "
-                            + sourceName
-                            + " give maximum magnitude smaller than minimum magnitude!\n"
-                            + "Check your input. Execution stopped.");
+            logger.info("Uncertaintiy value: "
+                    + deltaMmax
+                    + " on maximum magnitude for source: "
+                    + sourceName
+                    + " give maximum magnitude smaller than minimum magnitude!\n"
+                    + "Check your input. Execution stopped.");
             // System.out.println("Uncertaintiy value: " + deltaMmax +
             // " on maximum magnitude for source: " + sourceName
             // + " give maximum magnitude smaller than minimum magnitude!");
@@ -1524,8 +1563,9 @@ public class CommandLineCalculator {
 
     }
 
-    private static GutenbergRichterMagFreqDist applybGrRelative(
-            GutenbergRichterMagFreqDist mfdGR, double deltaB, String sourceName) {
+    private static GutenbergRichterMagFreqDist
+            applybGrRelative(GutenbergRichterMagFreqDist mfdGR, double deltaB,
+                    String sourceName) {
 
         // minimum magnitude
         double mMin = mfdGR.getMagLower();
@@ -1587,8 +1627,8 @@ public class CommandLineCalculator {
          * is one method per type defined: setString(), setDouble(), setInt(),
          * ...
          */
-        erf.setParameter(GEM1ERF.MIN_MAG_NAME, calcConfig
-                .getDouble(ConfigItems.MINIMUM_MAGNITUDE.name()));
+        erf.setParameter(GEM1ERF.MIN_MAG_NAME,
+                calcConfig.getDouble(ConfigItems.MINIMUM_MAGNITUDE.name()));
         // set time span
         TimeSpan timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
         timeSpan.setDuration(calcConfig
@@ -1597,44 +1637,42 @@ public class CommandLineCalculator {
 
         // params for area source
         // set inclusion of area sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_AREA_SRC_PARAM_NAME, calcConfig
-                .getBoolean(ConfigItems.INCLUDE_AREA_SOURCES.name()));
+        erf.setParameter(GEM1ERF.INCLUDE_AREA_SRC_PARAM_NAME,
+                calcConfig.getBoolean(ConfigItems.INCLUDE_AREA_SOURCES.name()));
         // set rupture type ("area source rupture model /
         // area_source_rupture_model / AreaSourceRuptureModel)
-        erf.setParameter(GEM1ERF.AREA_SRC_RUP_TYPE_NAME, calcConfig
-                .getString(ConfigItems.TREAT_AREA_SOURCE_AS.name()));
+        erf.setParameter(GEM1ERF.AREA_SRC_RUP_TYPE_NAME,
+                calcConfig.getString(ConfigItems.TREAT_AREA_SOURCE_AS.name()));
         // set area discretization
         erf.setParameter(GEM1ERF.AREA_SRC_DISCR_PARAM_NAME, calcConfig
                 .getDouble(ConfigItems.AREA_SOURCE_DISCRETIZATION.name()));
         // set mag-scaling relationship
-        erf
-                .setParameter(
-                        GEM1ERF.AREA_SRC_MAG_SCALING_REL_PARAM_NAME,
-                        calcConfig
-                                .getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
-                                        .name()));
+        erf.setParameter(
+                GEM1ERF.AREA_SRC_MAG_SCALING_REL_PARAM_NAME,
+                calcConfig
+                        .getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
+                                .name()));
         // params for grid source
         // inclusion of grid sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_GRIDDED_SEIS_PARAM_NAME, calcConfig
-                .getBoolean(ConfigItems.INCLUDE_GRID_SOURCES.name()));
+        erf.setParameter(GEM1ERF.INCLUDE_GRIDDED_SEIS_PARAM_NAME,
+                calcConfig.getBoolean(ConfigItems.INCLUDE_GRID_SOURCES.name()));
         // rupture model
-        erf.setParameter(GEM1ERF.GRIDDED_SEIS_RUP_TYPE_NAME, calcConfig
-                .getString(ConfigItems.TREAT_GRID_SOURCE_AS.name()));
+        erf.setParameter(GEM1ERF.GRIDDED_SEIS_RUP_TYPE_NAME,
+                calcConfig.getString(ConfigItems.TREAT_GRID_SOURCE_AS.name()));
         // mag-scaling relationship
-        erf
-                .setParameter(
-                        GEM1ERF.GRIDDED_SEIS_MAG_SCALING_REL_PARAM_NAME,
-                        calcConfig
-                                .getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
-                                        .name()));
+        erf.setParameter(
+                GEM1ERF.GRIDDED_SEIS_MAG_SCALING_REL_PARAM_NAME,
+                calcConfig
+                        .getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
+                                .name()));
 
         // params for fault source
         // inclusion of fault sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME, calcConfig
-                .getBoolean(ConfigItems.INCLUDE_FAULT_SOURCE.name()));
+        erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME,
+                calcConfig.getBoolean(ConfigItems.INCLUDE_FAULT_SOURCE.name()));
         // rupture offset
-        erf.setParameter(GEM1ERF.FAULT_RUP_OFFSET_PARAM_NAME, calcConfig
-                .getDouble(ConfigItems.FAULT_RUPTURE_OFFSET.name()));
+        erf.setParameter(GEM1ERF.FAULT_RUP_OFFSET_PARAM_NAME,
+                calcConfig.getDouble(ConfigItems.FAULT_RUPTURE_OFFSET.name()));
         // surface discretization
         erf.setParameter(GEM1ERF.FAULT_DISCR_PARAM_NAME, calcConfig
                 .getDouble(ConfigItems.FAULT_SURFACE_DISCRETIZATION.name()));
@@ -1647,11 +1685,11 @@ public class CommandLineCalculator {
         erf.setParameter(GEM1ERF.FAULT_SCALING_SIGMA_PARAM_NAME, calcConfig
                 .getDouble(ConfigItems.FAULT_MAGNITUDE_SCALING_SIGMA.name()));
         // rupture aspect ratio
-        erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME, calcConfig
-                .getDouble(ConfigItems.RUPTURE_ASPECT_RATIO.name()));
+        erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME,
+                calcConfig.getDouble(ConfigItems.RUPTURE_ASPECT_RATIO.name()));
         // rupture floating type
-        erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME, calcConfig
-                .getString(ConfigItems.RUPTURE_FLOATING_TYPE.name()));
+        erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME,
+                calcConfig.getString(ConfigItems.RUPTURE_FLOATING_TYPE.name()));
 
         // params for subduction fault
         // inclusion of fault sources in the calculation
@@ -1667,12 +1705,11 @@ public class CommandLineCalculator {
                 .getDouble(ConfigItems.SUBDUCTION_FAULT_SURFACE_DISCRETIZATION
                         .name()));
         // mag-scaling relationship
-        erf
-                .setParameter(
-                        GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME,
-                        calcConfig
-                                .getString(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP
-                                        .name()));
+        erf.setParameter(
+                GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME,
+                calcConfig
+                        .getString(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP
+                                .name()));
         // mag-scaling sigma
         erf.setParameter(GEM1ERF.SUB_SCALING_SIGMA_PARAM_NAME, calcConfig
                 .getDouble(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA
@@ -1681,17 +1718,17 @@ public class CommandLineCalculator {
         erf.setParameter(GEM1ERF.SUB_RUP_ASPECT_RATIO_PARAM_NAME, calcConfig
                 .getDouble(ConfigItems.SUBDUCTION_RUPTURE_ASPECT_RATIO.name()));
         // rupture floating type
-        erf
-                .setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, calcConfig
-                        .getString(ConfigItems.SUBDUCTION_RUPTURE_FLOATING_TYPE
-                                .name()));
+        erf.setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, calcConfig
+                .getString(ConfigItems.SUBDUCTION_RUPTURE_FLOATING_TYPE.name()));
 
         // update
         erf.updateForecast();
     } // setGEM1ERFParams()
 
-    private static HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> sampleGemLogicTreeGMPE(
-            HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE) {
+    private static
+            HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>
+            sampleGemLogicTreeGMPE(
+                    HashMap<TectonicRegionType, GemLogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE) {
 
         HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> hm =
                 new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
@@ -1721,7 +1758,8 @@ public class CommandLineCalculator {
 
     }
 
-    private ErfLogicTreeData createErfLogicTreeData(Configuration configuration) {
+    private ErfLogicTreeData
+            createErfLogicTreeData(Configuration configuration) {
         // load ERF logic tree data
         ErfLogicTreeData erfLogicTree =
                 new ErfLogicTreeData(

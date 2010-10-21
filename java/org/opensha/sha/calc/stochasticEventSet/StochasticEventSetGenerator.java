@@ -50,9 +50,9 @@ public class StochasticEventSetGenerator {
                 ProbEqkRupture rup = src.getRupture(ruptureIdx);
                 double numExpectedRup = -Math.log(1 - rup.getProbability());
                 EqkRupture eqk =
-                        new EqkRupture(rup.getMag(), rup.getAveRake(), rup
-                                .getRuptureSurface(), rup
-                                .getHypocenterLocation());
+                        new EqkRupture(rup.getMag(), rup.getAveRake(),
+                                rup.getRuptureSurface(),
+                                rup.getHypocenterLocation());
                 eqk.setTectRegType(tectonicRegionType);
                 // sample Poisson distribution using inverse transfom method
                 // p is the Poisson probability
@@ -95,8 +95,9 @@ public class StochasticEventSetGenerator {
      *            {@link Random} random number generator
      * @return {@link ArrayList} of {@link ArrayList} of {@link EqkRupture}.
      */
-    public static ArrayList<ArrayList<EqkRupture>> getMultipleStochasticEventSetsFromPoissonianERF(
-            EqkRupForecast erf, int num, Random rn) {
+    public static ArrayList<ArrayList<EqkRupture>>
+            getMultipleStochasticEventSetsFromPoissonianERF(EqkRupForecast erf,
+                    int num, Random rn) {
 
         ArrayList<ArrayList<EqkRupture>> multiStocEventSet =
                 new ArrayList<ArrayList<EqkRupture>>();
