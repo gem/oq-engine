@@ -197,7 +197,8 @@ public class GroundMotionFieldCalculatorTest implements
         Boolean inter_event = false;
         Boolean vs30Cluster = false;
         double[][] observedGroundMotionFields =
-                getGroundMotionFieldRealizations(rn, inter_event, vs30Cluster);
+                getGroundMotionFieldRealizations(rn, inter_event, vs30Cluster,
+                        numRealizations);
 
         RealMatrix correlationMatrix =
                 new PearsonsCorrelation(observedGroundMotionFields)
@@ -267,7 +268,8 @@ public class GroundMotionFieldCalculatorTest implements
         Boolean inter_event = true;
         Boolean vs30Cluster = false;
         double[][] observedGroundMotionFields =
-                getGroundMotionFieldRealizations(rn, inter_event, vs30Cluster);
+                getGroundMotionFieldRealizations(rn, inter_event, vs30Cluster,
+                        numRealizations);
 
         RealMatrix covarianceMatrix =
                 new Covariance(observedGroundMotionFields)
@@ -467,8 +469,7 @@ public class GroundMotionFieldCalculatorTest implements
     }
 
     private double[][] getGroundMotionFieldRealizations(Random rn,
-            Boolean inter_event, Boolean vs30Cluster) {
-        int numRealizations = 50000;
+            Boolean inter_event, Boolean vs30Cluster, int numRealizations) {
         double[][] observedGroundMotionFields =
                 new double[numRealizations][siteList.size()];
         Map<Site, Double> map = null;
