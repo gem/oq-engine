@@ -1,6 +1,5 @@
 package org.opensha.sha.imr.attenRelImpl;
 
-import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -8,7 +7,6 @@ import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
-import org.opensha.sha.imr.param.PropagationEffectParams.DistanceEpicentralParameter;
 
 public class PredictionEquationTestHelper {
 
