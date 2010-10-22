@@ -166,14 +166,24 @@ public class GroundMotionFieldCalculator {
                     "The specified attenuation relationship does not provide"
                             + " intra-event standard deviation");
 
-        Map<Site, Double> groundMotionField = null;
+        Map<Site, Double> groundMotionField =
+                getMeanGroundMotionField(attenRel, rup, sites);
         if (inter_event == true) {
             attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                     StdDevTypeParam.STD_DEV_TYPE_INTER);
-            groundMotionField =
-                    getStochasticGroundMotionField(attenRel, rup, sites, rn);
-        } else
-            groundMotionField = getMeanGroundMotionField(attenRel, rup, sites);
+            attenRel.setEqkRupture(rup);
+            double interEventResidual =
+                    getGaussianDeviate(
+                            attenRel.getStdDev(),
+                            (Double) attenRel.getParameter(
+                                    SigmaTruncLevelParam.NAME).getValue(),
+                            (String) attenRel.getParameter(
+                                    SigmaTruncTypeParam.NAME).getValue(), rn);
+            for (Site site : sites) {
+                double val = groundMotionField.get(site);
+                groundMotionField.put(site, val + interEventResidual);
+            }
+        }
 
         // compute intra-event residuals, by decomposing the covariance matrix
         // with cholesky decomposition, and by multiplying the lower triangular
