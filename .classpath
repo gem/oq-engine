@@ -18,12 +18,9 @@
 	<classpathentry kind="lib" path="lib/oscache-2.4.1.jar"/>
 	<classpathentry kind="lib" path="lib/memcached-2.5.jar"/>
 	<classpathentry kind="lib" path="lib/gson-1.5.jar"/>
-	<classpathentry kind="lib" path="lib/Jama-1.0.2.jar"/>
 	<classpathentry kind="lib" path="lib/commons-collections-3.2.1.jar"/>
 	<classpathentry kind="lib" path="lib/commons-configuration-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
-	<classpathentry kind="var" path="AGITAR_MOCK_OBJECTS"/>
-	<classpathentry kind="var" path="AGITAR_TEST_LIB"/>
 	<classpathentry kind="lib" path="lib/commons-io-1.4.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

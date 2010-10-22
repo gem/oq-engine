@@ -1,10 +1,8 @@
 package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.StringTokenizer;
 
 import org.apache.commons.configuration.Configuration;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -12,20 +10,47 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 
 public class CalculatorConfigHelper {
-    private enum IntensityMeasure {
+
+    /**
+     * This enum type defines all valid values for the intensity measure type
+     * configuration item. enum is used rather than defining all valid values as
+     * static members: <code></br>
+     * private final static String INTENSITY_MEASURE_CODE_PGA = "pga";</br>
+     * private final static String INTENSITY_MEASURE_CODE_MMI = "mmi";</br>
+     * </code></br>
+     * 
+     * @author roland
+     * 
+     */
+    public static enum IntensityMeasure {
         PGA("pga"), MMI("mmi"), PGV("pgv"), PGD("pgd"), SA("sa");
         private static HashMap<String, IntensityMeasure> intensityMeasures =
                 null;
-        private String type;
+        private final String type;
 
         IntensityMeasure(String name) {
             type = name;
         }
 
+        /**
+         * This method aims to a user friendly (i.e. readable) configuration
+         * value.</br> To override the enum's toString() method is not typically
+         * desirable. That method aims to a programmer friendly name.
+         * 
+         * @return the user friendly configuration value
+         */
         public String type() {
             return type;
         }
 
+        /**
+         * Retrieves the enum objects from a internally stored HashMap. (Least
+         * access costs.)
+         * 
+         * @param key
+         *            The enum's name as returned by the enum's name() method.
+         * @return The enum object to the corresponding key.
+         */
         public static IntensityMeasure get(String key) {
             if (intensityMeasures == null) {
                 intensityMeasures = new HashMap<String, IntensityMeasure>();
@@ -37,19 +62,62 @@ public class CalculatorConfigHelper {
         } // get
     } // enum IntensityMeasure
 
-    // for internal use only
-    // private final static String INTENSITY_MEASURE_CODE_PGA = "pga";
-    // private final static String INTENSITY_MEASURE_CODE_MMI = "mmi";
-    // private final static String PGV = "pgv";
-    // private final static String PGD = "pgd";
-    // private final static String SA = "sa";
+    /**
+     * This enum type defines all valid values for the calculation modes
+     * configuration item. enum is used rather than defining all valid values as
+     * static members: <code></br>
+     * private final static String INTENSITY_MEASURE_CODE_PGA = "pga";</br>
+     * private final static String INTENSITY_MEASURE_CODE_MMI = "mmi";</br>
+     * </code></br>
+     * 
+     * @author roland
+     * 
+     */
+    public static enum CalculationMode {
+        FULL("Full Calculation"), MONTE_CARLO("Monte Carlo");
+        private static HashMap<String, CalculationMode> calculationModes = null;
+        private final String value;
+
+        CalculationMode(String name) {
+            value = name;
+        }
+
+        /**
+         * This method aims to a user friendly (i.e. readable) configuration
+         * value.</br> To override the enum's toString() method is not typically
+         * desirable. That method aims to a programmer friendly name.
+         * 
+         * @return the user friendly configuration value
+         */
+        public String value() {
+            return value;
+        }
+
+        /**
+         * Retrieves the enum objects from a internally stored HashMap. (Least
+         * access costs.)
+         * 
+         * @param key
+         *            The enum's name as returned by the enum's name() method.
+         * @return The enum object to the corresponding key.
+         */
+        public static CalculationMode get(String key) {
+            if (calculationModes == null) {
+                calculationModes = new HashMap<String, CalculationMode>();
+                for (CalculationMode cm : values()) {
+                    calculationModes.put(cm.name(), cm);
+                }
+            }
+            return calculationModes.get(key);
+        } // get
+    } // enum CalculationMode
 
     // There may be additional/customizable properties
     // -> does an enum type make sense? ...no.
     // ...and yes: For the programmer to know at least how to access the
     // defaults.
-    public enum ConfigItems {
-        ERF_LOGIC_TREE_FILE, GMPE_LOGIC_TREE_FILE, OUTPUT_DIR, PROBABILITY_OF_EXCEEDANCE, SUBDUCTION_FAULT_SURFACE_DISCRETIZATION, MAXIMUM_DISTANCE, SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP, SUBDUCTION_RUPTURE_FLOATING_TYPE, INTENSITY_MEASURE_TYPE, FAULT_MAGNITUDE_SCALING_SIGMA, INCLUDE_GRID_SOURCES, PERIOD, INCLUDE_SUBDUCTION_FAULT_SOURCE, WIDTH_OF_MFD_BIN, MINIMUM_MAGNITUDE, MEAN_GROUND_MOTION_MAP, SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA, DAMPING, NUMBER_OF_HAZARD_CURVE_CALCULATIONS, AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP, INVESTIGATION_TIME, TREAT_GRID_SOURCE_AS, INCLUDE_AREA_SOURCES, FAULT_MAGNITUDE_SCALING_RELATIONSHIP, SUBDUCTION_RUPTURE_ASPECT_RATIO, TREAT_AREA_SOURCE_AS, REFERENCE_VS30_VALUE, REGION_VERTEX, REGION_GRID_SPACING, CALCULATION_MODE, FAULT_SURFACE_DISCRETIZATION, COMPONENT, RUPTURE_ASPECT_RATIO, NUMBER_OF_PROCESSORS, INTENSITY_MEASURE_LEVELS, TRUNCATION_LEVEL, GMPE_TRUNCATION_TYPE, AREA_SOURCE_DISCRETIZATION, GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP, STANDARD_DEVIATION_TYPE, INCLUDE_FAULT_SOURCE, SUBDUCTION_FAULT_RUPTURE_OFFSET, FAULT_RUPTURE_OFFSET, INDIVIDUAL_GROUND_MOTION_MAP, MEAN_HAZARD_CURVES, INDIVIDUAL_HAZARD_CURVES, RUPTURE_FLOATING_TYPE
+    public static enum ConfigItems {
+        ERF_LOGIC_TREE_FILE, GMPE_LOGIC_TREE_FILE, OUTPUT_DIR, PROBABILITY_OF_EXCEEDANCE, SUBDUCTION_FAULT_SURFACE_DISCRETIZATION, MAXIMUM_DISTANCE, SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP, SUBDUCTION_RUPTURE_FLOATING_TYPE, INTENSITY_MEASURE_TYPE, FAULT_MAGNITUDE_SCALING_SIGMA, INCLUDE_GRID_SOURCES, PERIOD, INCLUDE_SUBDUCTION_FAULT_SOURCE, WIDTH_OF_MFD_BIN, MINIMUM_MAGNITUDE, MEAN_GROUND_MOTION_MAP, SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA, DAMPING, NUMBER_OF_HAZARD_CURVE_CALCULATIONS, NUMBER_OF_SEISMICITY_HISTORIES, AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP, INVESTIGATION_TIME, TREAT_GRID_SOURCE_AS, INCLUDE_AREA_SOURCES, FAULT_MAGNITUDE_SCALING_RELATIONSHIP, SUBDUCTION_RUPTURE_ASPECT_RATIO, TREAT_AREA_SOURCE_AS, REFERENCE_VS30_VALUE, REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM, REGION_VERTEX, REGION_GRID_SPACING, CALCULATION_MODE, FAULT_SURFACE_DISCRETIZATION, COMPONENT, RUPTURE_ASPECT_RATIO, NUMBER_OF_PROCESSORS, INTENSITY_MEASURE_LEVELS, TRUNCATION_LEVEL, GMPE_TRUNCATION_TYPE, AREA_SOURCE_DISCRETIZATION, GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP, STANDARD_DEVIATION_TYPE, INCLUDE_FAULT_SOURCE, SUBDUCTION_FAULT_RUPTURE_OFFSET, FAULT_RUPTURE_OFFSET, INDIVIDUAL_GROUND_MOTION_MAP, MEAN_HAZARD_CURVES, INDIVIDUAL_HAZARD_CURVES, RUPTURE_FLOATING_TYPE,
     }; // enum
 
     /**
