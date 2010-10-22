@@ -1,18 +1,14 @@
 package org.opensha.sha.calc.stochasticEventSet;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.opensha.commons.data.TimeSpan;
 import org.opensha.sha.earthquake.EqkRupForecast;
+import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
-
-import org.opensha.sha.magdist.IncrementalMagFreqDist;
+import org.opensha.sha.util.TectonicRegionType;
 
 /**
  * 
@@ -41,13 +37,15 @@ public class StochasticEventSetGenerator {
      *          events.
      */
     public static ArrayList<EqkRupture> getStochasticEventSetFromPoissonianERF(
-            EqkRupForecast erf, Random rn) {
+            EqkRupForecastAPI erf, Random rn) {
 
         validateInput(erf, rn);
 
         ArrayList<EqkRupture> stochasticEventSet = new ArrayList<EqkRupture>();
+        TectonicRegionType tectonicRegionType = null;
         for (int sourceIdx = 0; sourceIdx < erf.getNumSources(); sourceIdx++) {
             ProbEqkSource src = erf.getSource(sourceIdx);
+            tectonicRegionType = src.getTectonicRegionType();
             for (int ruptureIdx = 0; ruptureIdx < src.getNumRuptures(); ruptureIdx++) {
                 ProbEqkRupture rup = src.getRupture(ruptureIdx);
                 double numExpectedRup = -Math.log(1 - rup.getProbability());
@@ -55,6 +53,7 @@ public class StochasticEventSetGenerator {
                         new EqkRupture(rup.getMag(), rup.getAveRake(),
                                 rup.getRuptureSurface(),
                                 rup.getHypocenterLocation());
+                eqk.setTectRegType(tectonicRegionType);
                 // sample Poisson distribution using inverse transfom method
                 // p is the Poisson probability
                 // F is the cumulative distribution function
@@ -114,14 +113,14 @@ public class StochasticEventSetGenerator {
      * 
      * @param erf
      */
-    private static Boolean ensurePoissonian(EqkRupForecast erf) {
+    private static Boolean ensurePoissonian(EqkRupForecastAPI erf) {
         for (ProbEqkSource src : (ArrayList<ProbEqkSource>) erf.getSourceList())
             if (src.isSourcePoissonian() == false)
                 throw new IllegalArgumentException("Sources must be Poissonian");
         return true;
     }
 
-    private static Boolean validateInput(EqkRupForecast erf, Random rn) {
+    private static Boolean validateInput(EqkRupForecastAPI erf, Random rn) {
         if (erf == null) {
             throw new IllegalArgumentException(
                     "Earthquake rupture forecast cannot be null");
