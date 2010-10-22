@@ -202,6 +202,11 @@ public class GroundMotionFieldCalculatorTest implements
         RealMatrix correlationMatrix =
                 new PearsonsCorrelation(observedGroundMotionFields)
                         .getCorrelationMatrix();
+
+        compareCorrelationMatrix(correlationMatrix);
+    }
+
+    private void compareCorrelationMatrix(RealMatrix correlationMatrix) {
         double period = (Double) imr.getParameter(PeriodParam.NAME).getValue();
         double correlationRange = Double.NaN;
         double distance = Double.NaN;
@@ -271,6 +276,11 @@ public class GroundMotionFieldCalculatorTest implements
                 new PearsonsCorrelation(observedGroundMotionFields)
                         .getCorrelationMatrix();
 
+        compareCovarianceMatrix(covarianceMatrix, correlationMatrix);
+    }
+
+    private void compareCovarianceMatrix(RealMatrix covarianceMatrix,
+            RealMatrix correlationMatrix) {
         imr.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_TOTAL);
         double observedCovariance = Double.NaN;
@@ -458,6 +468,7 @@ public class GroundMotionFieldCalculatorTest implements
 
     private double[][] getGroundMotionFieldRealizations(Random rn,
             Boolean inter_event, Boolean vs30Cluster) {
+        int numRealizations = 50000;
         double[][] observedGroundMotionFields =
                 new double[numRealizations][siteList.size()];
         Map<Site, Double> map = null;
