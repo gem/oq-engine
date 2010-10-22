@@ -28,7 +28,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
-import org.opensha.commons.util.UtilSuite;
 import org.opensha.sha.imr.attenRelImpl.SEA_1999_AttenRel;
 
 /**
@@ -122,7 +121,7 @@ public class Spudich_1999_test implements ParameterChangeWarningListener {
      */
 
     public static void main(String[] args) {
-        org.junit.runner.JUnitCore.runClasses(UtilSuite.class);
+        org.junit.runner.JUnitCore.runClasses(Spudich_1999_test.class);
     }
 
 }
