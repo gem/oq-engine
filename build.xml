@@ -65,7 +65,7 @@
 		<mkdir dir="${tests.report.dir}" />
 
 		<!-- Compile test classes -->
-		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/gem/engine/**/*.java org/opensha/gem/**/*.java" srcdir="${test.dir}" />
+		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/gem/**/*.java" srcdir="${test.dir}" />
 
 		<emma enabled="true">
 			<instr verbosity="verbose" instrpath="${classes.dir}" destdir="${instrumented.dir}" metadatafile="${coverage.dir}/metadata.emma" merge="true" mode="fullcopy">
@@ -73,12 +73,6 @@
 				<filter excludes="au.com.jenisys.view.*" />
 			</instr>
 		</emma>
-
-        <copy todir="${instrumented.dir}/classes/org/opensha/sha/imr/attenRelImpl/" overwrite="true">
-            <fileset dir="${src.dir}/org/opensha/sha/imr/attenRelImpl/">
-                <include name="**/*.txt" />
-            </fileset>
-        </copy>
 
 		<junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
 			<classpath>
