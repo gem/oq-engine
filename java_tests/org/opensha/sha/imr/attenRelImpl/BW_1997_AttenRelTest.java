@@ -1,6 +1,6 @@
 package org.opensha.sha.imr.attenRelImpl;
 
-import static org.junit.Assert.assertEquals;
+import junit.framework.TestCase;
 
 import org.junit.After;
 import org.junit.Before;
@@ -11,13 +11,11 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.sha.earthquake.EqkRupture;
-import org.opensha.sha.imr.param.PropagationEffectParams.WarningDoublePropagationEffectParameter;
-
-import junit.framework.TestCase;
 
 public class BW_1997_AttenRelTest extends TestCase {
     private BW_1997_AttenRel bw_1997_AttenRel;
 
+    @Override
     @Before
     public void setUp() {
         /*
@@ -35,6 +33,7 @@ public class BW_1997_AttenRelTest extends TestCase {
                 });
     } // setUp()
 
+    @Override
     @After
     public void tearDown() {
         // just do this... if any, it will destroy statics, unclosed streams,
