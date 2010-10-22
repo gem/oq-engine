@@ -532,7 +532,7 @@ The information eventually included into the SeismicSourceObject superseeds the 
         </xs:simpleType>
     </xs:attribute>
     <xs:complexType name="MagnitudeType">
-        <xs:attribute name="value" type="xs:double" use="optional"/>
+        <xs:attribute name="value" type="xs:double"/>
     </xs:complexType>
     <xs:element name="magnitude" type="nrml:MagnitudeType"/>
     <xs:complexType name="PointRuptureType">
@@ -546,7 +546,7 @@ The information eventually included into the SeismicSourceObject superseeds the 
         </xs:all>
         <xs:attribute ref="nrml:AverageStrike"/>
         <xs:attribute ref="nrml:AverageDip"/>
-        <xs:attribute ref="nrml:AverageRake" use="optional"/>
+        <xs:attribute ref="nrml:AverageRake"/>
         <xs:attribute ref="nrml:TectonicRegion"/>
     </xs:complexType>
     <xs:complexType name="SimpleFaultRuptureType">
