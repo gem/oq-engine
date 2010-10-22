@@ -1,7 +1,5 @@
 package org.opensha.sha.imr.attenRelImpl;
 
-import java.util.TreeMap;
-
 import org.opensha.commons.data.NamedObjectAPI;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.exceptions.InvalidRangeException;
@@ -18,8 +16,6 @@ import org.opensha.sha.imr.param.EqkRuptureParams.MagParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.MMI_Param;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceEpicentralParameter;
-import org.opensha.sha.imr.param.PropagationEffectParams.DistanceHypoParameter;
-import org.opensha.sha.imr.param.PropagationEffectParams.DistanceJBParameter;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 
 /**
@@ -211,6 +207,7 @@ public class BW_1997_AttenRel extends AttenuationRelationship implements
      * @param eqkRupture
      * 
      */
+    @Override
     public void setEqkRupture(EqkRupture eqkRupture)
             throws InvalidRangeException {
         magParam.setValue(new Double(eqkRupture.getMag()));
@@ -224,6 +221,7 @@ public class BW_1997_AttenRel extends AttenuationRelationship implements
      * @param site
      * 
      */
+    @Override
     public void setSite(Site site) throws ParameterException {
         this.site = site;
         setPropagationEffectParams();
