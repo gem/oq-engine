@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.math.linear.RealMatrix;
+import org.apache.commons.math.stat.correlation.Covariance;
 import org.apache.commons.math.stat.correlation.PearsonsCorrelation;
 import org.gem.calc.GroundMotionFieldCalculator;
 import org.junit.Before;
@@ -35,6 +36,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
+import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 
 public class GroundMotionFieldCalculatorTest implements
@@ -188,26 +190,25 @@ public class GroundMotionFieldCalculatorTest implements
          */
         Random rn = new Random(seed);
         int numRealizations = 50000;
+
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
         setImr(truncationType, truncationLevel);
+
+        Boolean inter_event = false;
+        Boolean vs30Cluster = false;
         double[][] observedGroundMotionFields =
-                new double[numRealizations][siteList.size()];
-        Map<Site, Double> map = null;
-        for (int i = 0; i < numRealizations; i++) {
-            map =
-                    GroundMotionFieldCalculator
-                            .getStochasticGroundMotionField_JB2009(imr,
-                                    rupture, siteList, rn, false, false);
-            int indexSite = 0;
-            for (Site site : siteList) {
-                observedGroundMotionFields[i][indexSite] = map.get(site);
-                indexSite = indexSite + 1;
-            }
-        }
+                getGroundMotionFieldRealizations(rn, inter_event, vs30Cluster,
+                        numRealizations);
+
         RealMatrix correlationMatrix =
                 new PearsonsCorrelation(observedGroundMotionFields)
                         .getCorrelationMatrix();
+
+        validateCorrelation(correlationMatrix);
+    }
+
+    private void validateCorrelation(RealMatrix correlationMatrix) {
         double period = (Double) imr.getParameter(PeriodParam.NAME).getValue();
         double correlationRange = Double.NaN;
         double distance = Double.NaN;
@@ -231,9 +232,82 @@ public class GroundMotionFieldCalculatorTest implements
                 String message =
                         "CORRELATION. Predicted: " + predictedCorrelation
                                 + ", observed: " + observedCorrelation;
-                System.out.println(message);
                 assertEquals(message, predictedCorrelation,
                         observedCorrelation, tolerance);
+                index_j = index_j + 1;
+            }
+            index_i = index_i + 1;
+        }
+    }
+
+    @Test
+    public void correlatedGroundMotion_JB2009_InterEvent() {
+
+        /**
+         * Compares covariance values, from covariance matrix derived by
+         * multiple ground motion field realizations (each calculated using the
+         * getStochasticGroundMotionField_JB2009 method and considering both
+         * inter- and intra-event residuals and no vs30 clustering) with
+         * covariance values obtained multiplying correlation values (obtained
+         * from the same set of ground motion realizations) with total standard
+         * deviations for the site of interest. That is validate the following
+         * equality:
+         * 
+         * cov_ij = corr_ij * totalStd_i * totalStd_j,
+         * 
+         * cov_ij = covariance value between site i and j, corr_ij = correlation
+         * value between site i and j, totalStd_i and totalStd_j are the total
+         * standard deviations for sites i and j
+         */
+        Random rn = new Random(seed);
+        int numRealizations = 50000;
+
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 1.0;
+        setImr(truncationType, truncationLevel);
+
+        Boolean inter_event = true;
+        Boolean vs30Cluster = false;
+        double[][] observedGroundMotionFields =
+                getGroundMotionFieldRealizations(rn, inter_event, vs30Cluster,
+                        numRealizations);
+
+        RealMatrix covarianceMatrix =
+                new Covariance(observedGroundMotionFields)
+                        .getCovarianceMatrix();
+        RealMatrix correlationMatrix =
+                new PearsonsCorrelation(observedGroundMotionFields)
+                        .getCorrelationMatrix();
+
+        validateCovariance(covarianceMatrix, correlationMatrix);
+    }
+
+    private void validateCovariance(RealMatrix covarianceMatrix,
+            RealMatrix correlationMatrix) {
+        imr.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+        double observedCovariance = Double.NaN;
+        double expectedCovariance = Double.NaN;
+        double totalStd_i = Double.NaN;
+        double totalStd_j = Double.NaN;
+        int index_i = 0;
+        for (Site site_i : siteList) {
+            imr.setSite(site_i);
+            totalStd_i = imr.getStdDev();
+            int index_j = 0;
+            for (Site site_j : siteList) {
+                imr.setSite(site_j);
+                totalStd_j = imr.getStdDev();
+                observedCovariance =
+                        covarianceMatrix.getEntry(index_i, index_j);
+                expectedCovariance =
+                        correlationMatrix.getEntry(index_i, index_j)
+                                * (totalStd_i) * (totalStd_j);
+                String message =
+                        "COVARIANCE. Expected: " + expectedCovariance
+                                + ", observed: " + observedCovariance;
+                assertEquals(message, observedCovariance, expectedCovariance,
+                        tolerance);
                 index_j = index_j + 1;
             }
             index_i = index_i + 1;
@@ -393,6 +467,26 @@ public class GroundMotionFieldCalculatorTest implements
                 GroundMotionFieldCalculator
                         .getStochasticGroundMotionField_JB2009(imr, rupture,
                                 siteList, rn, false, false);
+    }
+
+    private double[][] getGroundMotionFieldRealizations(Random rn,
+            Boolean inter_event, Boolean vs30Cluster, int numRealizations) {
+        double[][] observedGroundMotionFields =
+                new double[numRealizations][siteList.size()];
+        Map<Site, Double> map = null;
+        for (int i = 0; i < numRealizations; i++) {
+            map =
+                    GroundMotionFieldCalculator
+                            .getStochasticGroundMotionField_JB2009(imr,
+                                    rupture, siteList, rn, inter_event,
+                                    vs30Cluster);
+            int indexSite = 0;
+            for (Site site : siteList) {
+                observedGroundMotionFields[i][indexSite] = map.get(site);
+                indexSite = indexSite + 1;
+            }
+        }
+        return observedGroundMotionFields;
     }
 
     private void compareHazardCurveForSingleEarthquake(String truncationType,
