@@ -6,9 +6,10 @@
 	<!-- import -->
 	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
 		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
-		
+
 	<xs:include schemaLocation="nrml_common.xsd"/>
 
+	<xs:include schemaLocation="nrml_seismic.xsd"/>
 	<xs:element name="HazardCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
 	<xs:element name="HazardCurvePGA" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
 	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>
@@ -26,35 +27,9 @@
 		</xs:complexType>
 	</xs:element>
 	<xs:attribute name="endBranchLabel" type="xs:string"/>
-	
-	
+
+
 	<!-- Hazard shakemap definition -->
-	<xs:complexType name="MagnitudeType">
-		<xs:attribute name="value" use="required" type="xs:double"/>
-		<xs:attribute name="type" use="required"  type="xs:string"/>
-	</xs:complexType>
-	<xs:element name="magnitude" type="nrml:MagnitudeType"/>
-	
-	<xs:attribute name="AverageRake">
-		<xs:simpleType>
-			<xs:restriction base="xs:double">
-				<xs:minInclusive fixed="true" value="0.0"/>
-				<xs:maxInclusive fixed="true" value="+360.0"/>
-			</xs:restriction>
-		</xs:simpleType>
-	</xs:attribute>	
-	
-	<xs:complexType name="PointRuptureType">
-		<xs:annotation>
-			<xs:documentation>Describe an earthquake event (for the moment a point source, using location as hypocenter)</xs:documentation>
-		</xs:annotation>
-		<xs:all>
-			<xs:element name="location" type="gml:PointType"/>
-			<xs:element ref="nrml:magnitude"/>
-		</xs:all>
-		<xs:attribute ref="nrml:AverageRake" use="required"/>
-	</xs:complexType>
-	
 	<xs:simpleType name="IntensityMeasureTypeType">
 		<xs:annotation>
 			<xs:documentation>Describe the valid IMT values</xs:documentation>
@@ -67,26 +42,29 @@
 			<xs:enumeration value="SA"/>
 		</xs:restriction>
 	</xs:simpleType>
-		
-	<xs:element name="Rupture"  abstract="true"/>
+
+	<xs:element name="Rupture" abstract="true"/>
 	<xs:element name="PointRupture" type="nrml:PointRuptureType" substitutionGroup="nrml:Rupture"/>
+	<xs:element name="SimpleFaultRupture" type="nrml:SimpleFaultRuptureType" substitutionGroup="nrml:Rupture"/>
+	<xs:element name="ComplexFaultRupture" type="nrml:ComplexFaultDataType" substitutionGroup="nrml:Rupture"/>
+	<xs:element name="ArbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType" substitutionGroup="nrml:Rupture"/>
 	
 	<xs:element name="IntensityMeasureType" type="nrml:IntensityMeasureTypeType"/>
-	
+
 	<xs:simpleType name="GroundMotionType">
 		<xs:restriction base="xs:double"/>
 	</xs:simpleType>
-	<xs:element name="GroundMotion" type="nrml:GroundMotionType"/>	
-	
+	<xs:element name="GroundMotion" type="nrml:GroundMotionType"/>
+
 	<xs:simpleType name="Vs30MethodType">
-	    <xs:annotation>
+		<xs:annotation>
 			<xs:documentation>Method used to account for vs30</xs:documentation>
 		</xs:annotation>
 		<xs:restriction base="xs:string">
 			<xs:enumeration value="None"/>
 		</xs:restriction>
 	</xs:simpleType>
-	
+
 	<!-- Type of equation seems missing in the config file defined in OpenSHA -->
 	<xs:complexType name="GMPEParametersType">
 		<xs:annotation>
@@ -128,7 +106,7 @@
 			</xs:simpleType>
 		</xs:attribute>
 	</xs:complexType>
-	
+
 	<xs:complexType name="GroundMotionSiteType">
 		<xs:annotation>
 			<xs:documentation>Describe a ground motion value for a single site</xs:documentation>
@@ -138,7 +116,7 @@
 		</xs:all>
 		<xs:attribute name="groundMotion" use="required" type="nrml:GroundMotionType"/>
 	</xs:complexType>
-	
+
 	<xs:complexType name="GroundMotionFieldType">
 		<xs:annotation>
 			<xs:documentation>Describe a ground motion field (ground motion values for a set of sites)</xs:documentation>
@@ -148,7 +126,7 @@
 		</xs:sequence>
 		<xs:attribute name="description" type="xs:string"/>
 	</xs:complexType>
-	
+
 	<xs:complexType name="GroundMotionFieldSetType">
 		<xs:annotation>
 			<xs:documentation>Describes a set of Ground Motion Fields</xs:documentation>
@@ -159,5 +137,4 @@
 			<xs:element maxOccurs="unbounded" name="field" type="nrml:GroundMotionFieldType"/>
 		</xs:sequence>
 	</xs:complexType>
-	
 </xs:schema>
