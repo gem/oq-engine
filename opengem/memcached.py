@@ -119,15 +119,15 @@ def set_value_json_encoded(memcache_client, key, value):
 
     try:
         memcache_client.set(key, encoded_value)
-    except Exception:
-        raise RuntimeError("cannot write key %s to memcache" % key)
+    except Exception, e:
+        raise RuntimeError("cannot write key %s to memcache - %s" % (key, e))
 
     return True
 
 def get_sites_from_memcache(memcache_client, job_id, block_id):
 
-    memcache_key_sites = identifiers.generate_product_key(
-        job_id, block_id, None, identifiers.SITES_KEY_TOKEN)
+    memcache_key_sites = identifiers.generate_product_key(job_id, 
+        identifiers.SITES_KEY_TOKEN, block_id) 
 
     return get_value_json_decoded(memcache_client, memcache_key_sites)
     
