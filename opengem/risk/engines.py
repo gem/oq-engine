@@ -45,7 +45,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
 
         # check in memcache if hazard and exposure for gridpoint are there
         memcache_key_hazard = identifiers.generate_product_key(self.job_id, 
-            self.block_id, gridpoint, identifiers.HAZARD_CURVE_KEY_TOKEN)
+            identifiers.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
        
         hazard_curve_json = self.memcache_client.get(memcache_key_hazard)
         logger.debug("hazard curve as JSON: %s" % hazard_curve_json)
@@ -60,7 +60,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         memcache_key_exposure = identifiers.generate_product_key(self.job_id, 
-            self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
+            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)
@@ -89,7 +89,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         memcache_key_exposure = identifiers.generate_product_key(self.job_id,
-            self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
+            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)
         if asset is None:
