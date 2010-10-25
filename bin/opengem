@@ -75,8 +75,8 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        config = config.Config(FLAGS.risk_config, FLAGS.hazard_config)
-        job = config.generate_and_store_job()
-        
+        config = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
+        job.to_memcached()
+
         the_jobber = jobber.Jobber(job, FLAGS.partition)
         the_jobber.run()

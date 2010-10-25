@@ -11,39 +11,28 @@ from opengem import memcached
 RISK_CONFIG_FILE = "risk-config.gem"
 HAZARD_CONFIG_FILE = "hazard-config.gem"
 
-class ConfigTestCase(unittest.TestCase):
+class JobTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.reader = config.Config(os.path.join(test.DATA_DIR, 
+        self.job = config.Job.from_files(os.path.join(test.DATA_DIR, 
                 RISK_CONFIG_FILE), os.path.join(test.DATA_DIR, 
                 HAZARD_CONFIG_FILE))
     
-    def test_reads_hazard_configuration_file(self):
-        self.assertEqual(3, len(self.reader.hazard))
-        self.assertEqual("ErfLogicTree.inp", self.reader["ERF_LOGIC_TREE_FILE"])
-        self.assertEqual("GmpeLogicTree.inp", self.reader["GMPE_LOGIC_TREE_FILE"])
-        self.assertEqual("~/gem_output", self.reader["OUTPUT_DIR"])
-    
-    def test_reads_risk_configuration_file(self):
-        self.assertEqual(7, len(self.reader.risk))
-        self.assertEqual("exposure.xml", self.reader["EXPOSURE"])
-        self.assertEqual("vulnerability.xml", self.reader["VULNERABILITY"])
-        self.assertEqual("loss_ratio_map.tiff", self.reader["LOSS_RATIO_MAP"])
-    
-    def test_an_exception_is_raised_with_unknown_key(self):
-        self.assertRaises(ValueError, self.reader.__getitem__, "UNKNOWN_KEY")
+    def test_can_create_a_job_from_config_files(self):
+        self.assertEqual("ErfLogicTree.inp", self.job["erf_logic_tree_file"])
+        self.assertEqual("GmpeLogicTree.inp", self.job["gmpe_logic_tree_file"])
+        self.assertEqual("~/gem_output", self.job["output_dir"])
+        self.assertEqual("exposure.xml", self.job["exposure"])
+        self.assertEqual("vulnerability.xml", self.job["vulnerability"])
+        self.assertEqual("loss_ratio_map.tiff", self.job["loss_ratio_map"])
+        self.assertEqual("", self.job["filter_region"])
+        self.assertEqual("", self.job["output_region"])
+        self.assertEqual("hazard_curves.xml", self.job["hazard_curves"])
+        self.assertEqual("loss_map.tiff", self.job["loss_map"])
 
-    def test_generates_a_new_job(self):
-        job = self.reader.generate_job(1)
-        self.assertEqual("JOB%s1" % identifiers.MEMCACHE_KEY_SEPARATOR, job[config.JOB_ID])
-        
-        # 3 hazard parameters defined, 7 risk parameters defined and the job id
-        self.assertEqual(11, len(job))
-        
-        self.assertEqual("vulnerability.xml", job["vulnerability"])
-        self.assertEqual("GmpeLogicTree.inp", job["gmpe_logic_tree_file"])
+    def test_a_job_has_an_identifier(self):
+        self.assertEqual(1, config.Job({}, 1).id)
     
-    def test_stores_a_new_job_in_memcached(self):
-        memcached_client = memcached.get_client(binary=False)
-        job = self.reader.generate_and_store_job(1)
-        self.assertEqual(job, config.Config.job_with_id(1))
+    def test_can_store_and_read_jobs_from_memcached(self):
+        self.job.to_memcached()
+        self.assertEqual(self.job, config.Job.from_memcached(self.job.id))
