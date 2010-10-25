@@ -42,7 +42,9 @@ def generate_product_key(job_id, product, block_id="", site=""):
     """construct memcached key from several part IDs"""
 
     strip = lambda x: x.replace(" ", "")
-    key_list = [str(job_id), str(block_id), strip(str(site)), strip(str(product))]
+    key_list = [str(job_id), str(block_id),
+            strip(str(site)), strip(str(product))]
+
     return MEMCACHE_KEY_SEPARATOR.join(key_list)
 
 def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
