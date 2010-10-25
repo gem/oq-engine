@@ -1,13 +1,16 @@
 package org.opensha.sha.calc;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gem.engine.hazard.memcached.Cache;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -49,13 +52,11 @@ public class HazardCalculator {
      *            : maximum distance used for integration
      * @return
      */
-    public static
-            Map<Site, DiscretizedFuncAPI>
-            getHazardCurves(
-                    List<Site> siteList,
-                    EqkRupForecastAPI erf,
-                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    List<Double> imlVals, double integrationDistance) {
+    public static Map<Site, DiscretizedFuncAPI> getHazardCurves(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+            List<Double> imlVals, double integrationDistance) {
         validateInput(siteList, erf, gmpeMap);
         if (imlVals == null) {
             String msg = "Array of intensity measure levels cannot be null";
@@ -105,13 +106,11 @@ public class HazardCalculator {
      *            : random ({@link Random}) number generator
      * @return
      */
-    public static
-            Map<EqkRupture, Map<Site, Double>>
-            getGroundMotionFields(
-                    List<Site> siteList,
-                    EqkRupForecastAPI erf,
-                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    Random rn) {
+    public static Map<EqkRupture, Map<Site, Double>> getGroundMotionFields(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+            Random rn) {
         validateInput(siteList, erf, gmpeMap);
         if (rn == null) {
             String msg = "Random number generator cannot be null";
@@ -125,18 +124,15 @@ public class HazardCalculator {
                         .getStochasticEventSetFromPoissonianERF(erf, rn);
         for (EqkRupture rup : eqkRupList)
             groundMotionFields.put(rup, GroundMotionFieldCalculator
-                    .getStochasticGroundMotionField(
-                            gmpeMap.get(rup.getTectRegType()), rup, siteList,
-                            rn));
+                    .getStochasticGroundMotionField(gmpeMap.get(rup
+                            .getTectRegType()), rup, siteList, rn));
         return groundMotionFields;
     }
 
-    public static
-            Boolean
-            validateInput(
-                    List<Site> siteList,
-                    EqkRupForecastAPI erf,
-                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
+    public static Boolean validateInput(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
         if (siteList == null) {
             String msg = "List of sites cannot be null";
             logger.error(msg);
@@ -163,5 +159,44 @@ public class HazardCalculator {
             throw new IllegalArgumentException(msg);
         }
         return true;
+    }
+
+    /**
+     * Saves a ground motion map to a Cache object.
+     * 
+     * @param cache
+     *            the cache to store the ground motion map
+     * @return a List<String> object containing all keys used as key in the
+     *         cache's hash map
+     */
+    public static List<String> saveToMemcache(
+            Map<EqkRupture, Map<Site, Double>> groundMotionFields,
+            int indexOfRupture, Cache cache) {
+        // TODO Change with the model ID later on!
+        // does return distinct integers for distinct objects
+
+        // JSONObject jo = new JSONObject(groundMotionMap);
+        // new Gson().toJson()
+        ArrayList<String> allKeys = new ArrayList<String>();
+        StringBuilder key = null;
+        Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
+        int indexEqkRupture = 0;
+        for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
+            ++indexEqkRupture;
+            Map<Site, Double> groundMotionField =
+                    groundMotionFields.get(eqkRupture);
+            Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
+            for (Site s : groundMotionFieldKeys) {
+                key = new StringBuilder();
+                key.append(indexOfRupture);
+                key.append('_');
+                key.append(s.getLocation().getLatitude());
+                key.append('_');
+                key.append(s.getLocation().getLongitude());
+                cache.set(key.toString(), groundMotionField.get(s));
+                allKeys.add(key.toString());
+            }
+        }
+        return allKeys;
     }
 }
