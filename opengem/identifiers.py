@@ -37,14 +37,11 @@ def generate_id(prefix):
         counter += 1
         yield INTERNAL_ID_SEPARATOR.join((str(prefix), str(counter)))
 
-def generate_product_key(job_id, block_id, site, product):
+def generate_product_key(job_id, product, block_id="", site=""):
     """construct memcached key from several part IDs"""
-    if site is not None:
-        return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
-                                            str(site), str(product)))
-    else:
-        return MEMCACHE_KEY_SEPARATOR.join((str(job_id), str(block_id),
-                                            str(product)))
+
+    key_list = [str(job_id), str(block_id), str(site), str(product)]
+    return MEMCACHE_KEY_SEPARATOR.join(key_list)
 
 def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
     """This function returns a random ID by using the uuid4 method. In order
