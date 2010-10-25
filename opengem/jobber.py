@@ -49,7 +49,8 @@ class Jobber(object):
         """Core method of Jobber. It splits the requested computation
         in blocks and executes these as parallel tasks.
         """
-        job_id = self.job[config.JOB_ID]
+
+        job_id = self.job.id
         logger.debug("running jobber, job_id = %s" % job_id)
 
         if self.partition is True:
