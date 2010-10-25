@@ -102,7 +102,7 @@ class Jobber(object):
                 self.memcache_client, job_id, block_id):
 
             key = identifiers.generate_product_key(job_id, 
-                block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
+                identifiers.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
             loss_curve = self.memcache_client.get(key)
             loss_curves.append((shapes.Site(site_lon, site_lat), 
                                 loss_curve))
@@ -154,7 +154,7 @@ class Jobber(object):
                                                 hazard_curve_data['Values']))
 
             memcache_key_hazard = identifiers.generate_product_key(
-                job_id, block_id, gridpoint, "hazard_curve")
+                job_id, identifiers.HAZARD_CURVE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("Loading hazard curve %s at %s, %s" % (
                         hazard_curve, site.latitude,  site.longitude))
@@ -168,7 +168,7 @@ class Jobber(object):
 
         # write site hashes to memcache (JSON)
         memcache_key_sites = identifiers.generate_product_key(
-                job_id, block_id, None, "sites")
+            job_id, identifiers.SITES_KEY_TOKEN, block_id)
         success = memcached.set_value_json_encoded(self.memcache_client, 
                 memcache_key_sites, sites_hash_list)
         if not success:
@@ -181,7 +181,7 @@ class Jobber(object):
             gridpoint = region_constraint.grid.point_at(site)
 
             memcache_key_asset = identifiers.generate_product_key(
-                job_id, block_id, gridpoint, "exposure")
+                job_id, identifiers.EXPOSURE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))

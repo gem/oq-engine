@@ -44,7 +44,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
 
         # check in memcache if hazard and exposure for gridpoint are there
         memcache_key_hazard = identifiers.generate_product_key(self.job_id, 
-            self.block_id, gridpoint, identifiers.HAZARD_CURVE_KEY_TOKEN)
+            identifiers.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
        
         hazard_curve_json = self.memcache_client.get(memcache_key_hazard)
         logger.debug("hazard curve as JSON: %s" % hazard_curve_json)
@@ -59,7 +59,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         memcache_key_exposure = identifiers.generate_product_key(self.job_id, 
-            self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
+            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)
@@ -88,7 +88,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         memcache_key_exposure = identifiers.generate_product_key(self.job_id,
-            self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
+            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)
         if asset is None:
@@ -117,7 +117,7 @@ class ProbabilisticEventBasedCalculator(object):
     def compute_loss_ratio_curve(self, site):
         """Compute the loss ratio curve for a single site."""
         key_exposure = identifiers.generate_product_key(self.job_id,
-                self.block_id, site, identifiers.EXPOSURE_KEY_TOKEN)
+                identifiers.EXPOSURE_KEY_TOKEN, self.block_id, site)
 
         asset = memcached.get_value_json_decoded(
                 self.memcache_client, key_exposure)
@@ -125,7 +125,7 @@ class ProbabilisticEventBasedCalculator(object):
         vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
 
         key_gmf = identifiers.generate_product_key(self.job_id, 
-            self.block_id, site, identifiers.GMF_KEY_TOKEN)
+                identifiers.GMF_KEY_TOKEN, self.block_id, site)
        
         gmf = memcached.get_value_json_decoded(self.memcache_client, key_gmf)
         return probabilistic_event_based.compute_loss_ratio_curve(
@@ -134,7 +134,7 @@ class ProbabilisticEventBasedCalculator(object):
     def compute_loss_curve(self, site, loss_ratio_curve):
         """Compute the loss curve for a single site."""
         key_exposure = identifiers.generate_product_key(self.job_id,
-            self.block_id, site, identifiers.EXPOSURE_KEY_TOKEN)
+                identifiers.EXPOSURE_KEY_TOKEN, self.block_id, site)
         
         asset = memcached.get_value_json_decoded(
                 self.memcache_client, key_exposure)

@@ -56,10 +56,10 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         self.calculator = engines.ProbabilisticEventBasedCalculator(JOB_ID, BLOCK_ID)
 
         self.key_exposure = identifiers.generate_product_key(JOB_ID,
-                BLOCK_ID, SITE, identifiers.EXPOSURE_KEY_TOKEN)
+                identifiers.EXPOSURE_KEY_TOKEN, BLOCK_ID, SITE)
 
         self.key_gmf = identifiers.generate_product_key(JOB_ID,
-                BLOCK_ID, SITE, identifiers.GMF_KEY_TOKEN)
+                identifiers.GMF_KEY_TOKEN, BLOCK_ID, SITE)
 
         # delete old keys
         self.memcached_client.delete(self.key_exposure)
