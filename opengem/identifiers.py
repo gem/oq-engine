@@ -13,8 +13,9 @@ MAX_LENGTH_RANDOM_ID = 36
 MEMCACHE_KEY_SEPARATOR = '!'
 INTERNAL_ID_SEPARATOR = ':'
 
+ERF_KEY_TOKEN = 'erf'
 SITES_KEY_TOKEN = 'sites'
-
+MGM_KEY_TOKEN = 'mgm'
 HAZARD_CURVE_KEY_TOKEN = 'hazard_curve'
 EXPOSURE_KEY_TOKEN = 'exposure'
 GMF_KEY_TOKEN = 'gmf'
@@ -40,6 +41,7 @@ def generate_id(prefix):
 
 def generate_product_key(job_id, product, block_id="", site=""):
     """construct memcached key from several part IDs"""
+    # TODO(chris): FIXME modify below to always have 4 fields in the key.
 
     strip = lambda x: x.replace(" ", "")
     key_list = [str(job_id), str(block_id),
