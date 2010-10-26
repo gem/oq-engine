@@ -45,9 +45,10 @@ def _bootstrap_linux():
                         "liblapack-dev", "pylint", "unzip"] 
         gdal_packages = ["gdal-bin", "libgdal1-dev", "python-gdal"]
         pip_packages = ["virtualenv", "virtualenvwrapper"]
-        virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
-                               "python-gflags", "guppy", "libLAS", "numpy", "scipy", 
-                               "celery", "nose", "django", "ordereddict"] 
+        virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
+                               "eventlet", "python-gflags", "guppy", 
+                               "libLAS", "numpy", "scipy", "celery",
+                               "nose", "django", "ordereddict"] 
 
         _apt_install(" ".join(apt_packages)) 
         _pip_install(" ".join(pip_packages), usesudo=True)
@@ -70,7 +71,7 @@ def _bootstrap_linux():
 
         _pip_install("pylibmc", version="0.9.2", virtualenv="opengem")
 
-        # Fucking GDAL.
+        # GDAL.
         _apt_install(" ".join(gdal_packages))
 
         #download and install geohash
