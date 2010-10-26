@@ -36,6 +36,7 @@ import org.gem.engine.hazard.GEM1ERF;
 import org.gem.engine.hazard.GEMHazardCurveRepository;
 import org.gem.engine.hazard.GEMHazardCurveRepositoryList;
 import org.gem.engine.hazard.GemComputeHazard;
+import org.gem.engine.hazard.memcached.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeRule;
@@ -62,6 +63,8 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+import com.google.gson.Gson;
+
 public class CommandLineCalculator {
     //
     // Apache commons logging, not log4j specifically
@@ -78,7 +81,6 @@ public class CommandLineCalculator {
     private static Random random = null;
     private static Long randomSeed = null;
     private Configuration config;
-    private PropertiesConfiguration propsConfig;
     // for debugging
     private static Boolean D = false;
 
@@ -110,6 +112,13 @@ public class CommandLineCalculator {
         config = new PropertiesConfiguration();
         ((PropertiesConfiguration) config).load(calcConfigFile);
     } // constructor
+
+    public CommandLineCalculator(Cache cache, String key) {
+        Properties properties =
+                new Gson().fromJson((String) cache.get(key), Properties.class);
+
+        config = ConfigurationConverter.getConfiguration(properties);
+    }
 
     public void setConfig(Properties p) {
         config = ConfigurationConverter.getConfiguration(p);
@@ -151,6 +160,29 @@ public class CommandLineCalculator {
 
     private String getRelativePath(String key) {
         return configFilesPath() + config.getString(key);
+    }
+
+    /**
+     * Two calculators are equal when have the same configuration.
+     * 
+     * @param obj
+     *            the calculator to compare on
+     * @return true if the calculators are equal, false otherwise
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof CommandLineCalculator)) {
+            return false;
+        }
+
+        CommandLineCalculator other = (CommandLineCalculator) obj;
+
+        Properties thisConfig = ConfigurationConverter.getProperties(config);
+
+        Properties otherConfig =
+                ConfigurationConverter.getProperties(other.config);
+
+        return thisConfig.equals(otherConfig);
     }
 
     /**
@@ -830,8 +862,9 @@ public class CommandLineCalculator {
                 // define label from branch ID number
                 String label = Integer.toString(branch.getRelativeID());
                 // read the corresponding source model
-                String sourceName = configFilesPath() + branch.getNameInputFile();
-                
+                String sourceName =
+                        configFilesPath() + branch.getNameInputFile();
+
                 ArrayList<GEMSourceData> srcList =
                         new InputModelData(sourceName, config
                                 .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()))
@@ -1053,8 +1086,7 @@ public class CommandLineCalculator {
     } // createSiteList()
 
     private GEM1ERF sampleGemLogicTreeERF(
-            LogicTree<ArrayList<GEMSourceData>> ltERF,
-            Configuration calcConfig) {
+            LogicTree<ArrayList<GEMSourceData>> ltERF, Configuration calcConfig) {
         // erf to be returned
         GEM1ERF erf = null;
         // array list of sources that will contain the samples sources
@@ -1078,7 +1110,7 @@ public class CommandLineCalculator {
             // Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
             // new here is the apache Configuration object
             String sourceName = configFilesPath() + branch.getNameInputFile();
-            
+
             InputModelData inputModelData =
                     new InputModelData(sourceName, calcConfig
                             .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()));
