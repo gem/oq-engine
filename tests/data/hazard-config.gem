@@ -1,0 +1,12 @@
+# The '#' character and the ';' are used to start a single line comment
+
+[HAZARD]
+
+# file containing erf logic tree structure
+ERF_LOGIC_TREE_FILE = ErfLogicTree.inp
+# file containing gmpe logic tree structure
+GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
+# output directory
+OUTPUT_DIR = ~/gem_output
+
+# ...

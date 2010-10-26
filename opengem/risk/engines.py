@@ -3,8 +3,6 @@
 Top-level managers for computation classes.
 """
 
-import json
-
 from opengem import identifiers
 from opengem import logs
 from opengem import memcached
@@ -12,6 +10,7 @@ from opengem import shapes
 
 from opengem.parser import vulnerability
 from opengem.risk import classical_psha_based
+from opengem.risk import probabilistic_event_based
 
 logger = logs.RISK_LOG
 
@@ -45,7 +44,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
 
         # check in memcache if hazard and exposure for gridpoint are there
         memcache_key_hazard = identifiers.generate_product_key(self.job_id, 
-            self.block_id, gridpoint, identifiers.HAZARD_CURVE_KEY_TOKEN)
+            identifiers.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
        
         hazard_curve_json = self.memcache_client.get(memcache_key_hazard)
         logger.debug("hazard curve as JSON: %s" % hazard_curve_json)
@@ -60,7 +59,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         memcache_key_exposure = identifiers.generate_product_key(self.job_id, 
-            self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
+            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)
@@ -89,7 +88,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         memcache_key_exposure = identifiers.generate_product_key(self.job_id,
-            self.block_id, gridpoint, identifiers.EXPOSURE_KEY_TOKEN)
+            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         asset = memcached.get_value_json_decoded(self.memcache_client,
                                                  memcache_key_exposure)
         if asset is None:
@@ -98,6 +97,52 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         return classical_psha_based.compute_loss_curve(
             loss_ratio_curve, asset['AssetValue'])
 
+class ProbabilisticEventBasedCalculator(object):
+    """Compute loss ratio and loss curves using the probabilistic event
+    based approach."""
+    
+    def __init__(self, job_id, block_id, memcache_client=None):
+        self.job_id = job_id
+        self.block_id = block_id
+
+        if memcache_client is not None:
+            self.memcache_client = memcache_client
+        else:
+            self.memcache_client = memcached.get_client(binary=False)
+        
+        self.vuln_curves = \
+                vulnerability.load_vulnerability_curves_from_memcache(
+                self.memcache_client, self.job_id)
+
+    def compute_loss_ratio_curve(self, site):
+        """Compute the loss ratio curve for a single site."""
+        key_exposure = identifiers.generate_product_key(self.job_id,
+                identifiers.EXPOSURE_KEY_TOKEN, self.block_id, site)
+
+        asset = memcached.get_value_json_decoded(
+                self.memcache_client, key_exposure)
+
+        vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
+
+        key_gmf = identifiers.generate_product_key(self.job_id, 
+                identifiers.GMF_KEY_TOKEN, self.block_id, site)
+       
+        gmf = memcached.get_value_json_decoded(self.memcache_client, key_gmf)
+        return probabilistic_event_based.compute_loss_ratio_curve(
+                vuln_function, gmf)
+
+    def compute_loss_curve(self, site, loss_ratio_curve):
+        """Compute the loss curve for a single site."""
+        key_exposure = identifiers.generate_product_key(self.job_id,
+                identifiers.EXPOSURE_KEY_TOKEN, self.block_id, site)
+        
+        asset = memcached.get_value_json_decoded(
+                self.memcache_client, key_exposure)
+        
+        if asset is None:
+            return None
+        
+        return loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
 
 def compute_loss(loss_curve, pe_interval):
     """Interpolate loss for a specific probability of exceedance interval"""
