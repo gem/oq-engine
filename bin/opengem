@@ -34,23 +34,15 @@ from opengem import flags
 from opengem import jobber
 from opengem import logs
 
+from opengem import config
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import vulnerability
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('exposure', 'exposure.xml', 'exposure input')
-flags.DEFINE_string('vulnerability', 'vulnerability.xml',
-                    'vulnerability input')
-flags.DEFINE_string('filter_region', None, 'region to filter input')                    
-flags.DEFINE_string('output_region', None, 'region to generate output')
-flags.DEFINE_string('hazard_curves', 'hazard_curves.xml', 
-                    'hazard curves')
-
-flags.DEFINE_string('loss_map', 'loss_map.tiff', 'loss map output')
-flags.DEFINE_string('loss_ratio_map', 'loss_ratio_map.tiff',
-                    'loss ratio map output')
+flags.DEFINE_string('risk_config', 'risk-config.gem', 'Risk configuration file')
+flags.DEFINE_string('hazard_config', 'hazard-config.gem', 'Hazard configuration file')
 
 flags.DEFINE_boolean('profile', False, 'Run profiler?')
 flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
@@ -83,10 +75,8 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        the_jobber = jobber.Jobber(FLAGS.vulnerability, 
-                                   FLAGS.hazard_curves, 
-                                   FLAGS.filter_region, 
-                                   FLAGS.exposure, 
-                                   FLAGS.loss_map,
-                                   FLAGS.partition)
+        config = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
+        job.to_memcached()
+
+        the_jobber = jobber.Jobber(job, FLAGS.partition)
         the_jobber.run()

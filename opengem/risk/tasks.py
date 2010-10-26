@@ -65,7 +65,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
 
             # write to memcache: loss_ratio
             key = identifiers.generate_product_key(job_id,
-                block_id, gridpoint, identifiers.LOSS_RATIO_CURVE_KEY_TOKEN)
+                identifiers.LOSS_RATIO_CURVE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))
@@ -75,7 +75,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
             loss_curve = risk_engine.compute_loss_curve(gridpoint, 
                                                         loss_ratio_curve)
             key = identifiers.generate_product_key(job_id, 
-                block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
+                identifiers.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("RESULT: loss curve is %s, write to key %s" % (
                 loss_curve, key))
@@ -85,7 +85,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
             loss_conditional = engines.compute_loss(loss_curve, 
                                                     conditional_loss_poe)
             key = identifiers.generate_product_key(job_id, 
-                block_id, gridpoint, identifiers.CONDITIONAL_LOSS_KEY_TOKEN)
+                identifiers.CONDITIONAL_LOSS_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("RESULT: conditional loss is %s, write to key %s" % (
                 loss_conditional, key))

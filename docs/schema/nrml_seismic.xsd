@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
     targetNamespace="http://opengem.org/xmlns/nrml/0.1"
-    xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
+    xmlns:nrml="http://opengem.org/xmlns/nrml/0.1"
+    xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
 
     <!-- include common types-->
     <xs:annotation>
@@ -12,7 +13,7 @@
 
     <!-- import -->
     <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+        schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
     <xs:include schemaLocation="nrml_common.xsd"/>
     <!-- -->
 
@@ -205,8 +206,57 @@
                 </xs:restriction>
             </xs:simpleType>
         </xs:attribute>
-        <xs:attribute name="FaultTop" type="xs:double"/>
-        <xs:attribute name="FaultBottom" type="xs:double"/>
+        <xs:attribute name="TectonicRegionType">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Active Shallow Crust"/>
+                    <xs:enumeration value="Stable Shallow Crust"/>
+                    <xs:enumeration value="Subduction Interface"/>
+                    <xs:enumeration value="Subduction IntraSlab"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="SeimogenicLayerTopDepth">
+            <xs:simpleType>
+                <xs:restriction base="xs:double">
+                    <xs:minInclusive fixed="true" value="0.0"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="SeimogenicLayerBottomDepth">
+            <xs:simpleType>
+                <xs:restriction base="xs:double">
+                    <xs:minInclusive fixed="true" value="0.0"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+    <xs:complexType name="ComplexFaultDataType">
+        <xs:annotation>
+            <xs:documentation>Describes irregular (non-rectangular) fault</xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="TopFaultTrace" type="gml:LineStringType" form="qualified"/>
+            <xs:element name="BottomFaultTrace" type="gml:LineStringType" form="qualified"/>
+        </xs:all>
+        <xs:attribute name="AverageRake">
+            <xs:simpleType>
+                <xs:restriction base="xs:double">
+                    <xs:minInclusive fixed="true" value="-180.0"/>
+                    <xs:maxInclusive fixed="true" value="+360.0"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="TectonicRegionType">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Active Shallow Crust"/>
+                    <xs:enumeration value="Stable Shallow Crust"/>
+                    <xs:enumeration value="Subduction Interface"/>
+                    <xs:enumeration value="Subduction IntraSlab"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
     </xs:complexType>
     <xs:complexType name="SeismicSourceSubductionFaultType">
         <xs:annotation>
@@ -433,4 +483,118 @@ The information eventually included into the SeismicSourceObject superseeds the 
         </xs:annotation>
     </xs:element>
     <xs:element name="LogicTree" type="nrml:LogicTreeERFType"/>
+    <xs:attribute name="AverageStrike">
+        <xs:simpleType>
+            <xs:restriction base="xs:double">
+                <xs:minInclusive fixed="true" value="0.0"/>
+                <xs:maxInclusive fixed="true" value="+360.0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="AverageDip">
+        <xs:simpleType>
+            <xs:restriction base="xs:double">
+                <xs:minInclusive fixed="true" value="0.0"/>
+                <xs:maxInclusive fixed="true" value="+90.0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="AverageRake">
+        <xs:simpleType>
+            <xs:restriction base="xs:double">
+                <xs:minInclusive fixed="true" value="-180.0"/>
+                <xs:maxInclusive fixed="true" value="+180.0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="TectonicRegion">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:enumeration value="Active Shallow Crust"/>
+                <xs:enumeration value="Stable Shallow Crust"/>
+                <xs:enumeration value="Subduction Interface"/>
+                <xs:enumeration value="Subduction IntraSlab"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="SeimogenicLayerTopDepth">
+        <xs:simpleType>
+            <xs:restriction base="xs:double">
+                <xs:minInclusive fixed="true" value="0.0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:attribute name="SeimogenicLayerBottomDepth">
+        <xs:simpleType>
+            <xs:restriction base="xs:double">
+                <xs:minInclusive fixed="true" value="0.0"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+    <xs:complexType name="MagnitudeType">
+        <xs:attribute name="value" type="xs:double"/>
+    </xs:complexType>
+    <xs:element name="magnitude" type="nrml:MagnitudeType"/>
+    <xs:complexType name="PointRuptureType">
+        <xs:annotation>
+            <xs:documentation>Describes a point rupture
+</xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="hypocenterLocation" type="gml:PointType"/>
+            <xs:element ref="nrml:magnitude"/>
+        </xs:all>
+        <xs:attribute ref="nrml:AverageStrike"/>
+        <xs:attribute ref="nrml:AverageDip"/>
+        <xs:attribute ref="nrml:AverageRake"/>
+        <xs:attribute ref="nrml:TectonicRegion"/>
+    </xs:complexType>
+    <xs:complexType name="SimpleFaultRuptureType">
+        <xs:annotation>
+            <xs:documentation>Describes a rupture as derived from a simple 
+fault data</xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element ref="nrml:magnitude"/>
+            <xs:element name="simpleFaultData" type="nrml:SimpleFaultDataType"/>
+        </xs:all>
+    </xs:complexType>
+    <xs:complexType name="ComplexFaultRuptureType">
+        <xs:annotation>
+            <xs:documentation>Describes a rupture as derived from 
+a complex fault data
+</xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element ref="nrml:magnitude"/>
+            <xs:element name="complexFaultData" type="nrml:ComplexFaultDataType"/>
+        </xs:all>
+    </xs:complexType>
+    <xs:complexType name="ArbitrarilyComplexRuptureType">
+        <xs:annotation>
+            <xs:documentation>Describes an arbitrarily complex rupture
+</xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element ref="gml:Surface"/>
+        </xs:all>
+        <xs:attribute name="AverageRake">
+            <xs:simpleType>
+                <xs:restriction base="xs:double">
+                    <xs:minInclusive fixed="true" value="-180.0"/>
+                    <xs:maxInclusive fixed="true" value="+360.0"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+        <xs:attribute name="TectonicRegion">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Active Shallow Crust"/>
+                    <xs:enumeration value="Stable Shallow Crust"/>
+                    <xs:enumeration value="Subduction Interface"/>
+                    <xs:enumeration value="Subduction IntraSlab"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
 </xs:schema>
