@@ -167,14 +167,8 @@ public class HazardCalculator {
      * @return a List<String> object containing all keys used as key in the
      *         cache's hash map
      */
-    public static List<String> saveToMemcache(
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields,
-            int indexOfRupture, Cache cache) {
-        // TODO Change with the model ID later on!
-        // does return distinct integers for distinct objects
-
-        // JSONObject jo = new JSONObject(groundMotionMap);
-        // new Gson().toJson()
+    public static List<String> storeToMemcache(
+            Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
         ArrayList<String> allKeys = new ArrayList<String>();
         StringBuilder key = null;
         Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
@@ -186,7 +180,7 @@ public class HazardCalculator {
             Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
             for (Site s : groundMotionFieldKeys) {
                 key = new StringBuilder();
-                key.append(indexOfRupture);
+                key.append(indexEqkRupture);
                 key.append('_');
                 key.append(s.getLocation().getLatitude());
                 key.append('_');
