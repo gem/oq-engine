@@ -577,6 +577,7 @@ a complex fault data
         </xs:annotation>
         <xs:all>
             <xs:element ref="gml:Surface"/>
+            <xs:element ref="nrml:magnitude"/>
         </xs:all>
         <xs:attribute name="AverageRake">
             <xs:simpleType>

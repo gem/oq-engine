@@ -47,7 +47,7 @@
 	<xs:element name="PointRupture" type="nrml:PointRuptureType" substitutionGroup="nrml:Rupture"/>
 	<xs:element name="SimpleFaultRupture" type="nrml:SimpleFaultRuptureType"
 		substitutionGroup="nrml:Rupture"/>
-	<xs:element name="ComplexFaultRupture" type="nrml:ComplexFaultDataType"
+	<xs:element name="ComplexFaultRupture" type="nrml:ComplexFaultRuptureType"
 		substitutionGroup="nrml:Rupture"/>
 	<xs:element name="ArbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType"
 		substitutionGroup="nrml:Rupture"/>
