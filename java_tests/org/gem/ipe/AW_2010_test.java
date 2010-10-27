@@ -38,7 +38,6 @@ import java.io.LineNumberReader;
 import java.util.Scanner;
 import java.util.StringTokenizer;
 
-import org.gem.ipe.AW_2010_AttenRel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,6 +51,7 @@ import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
+import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
 
 public class AW_2010_test implements ParameterChangeWarningListener {
@@ -148,7 +148,7 @@ public class AW_2010_test implements ParameterChangeWarningListener {
         double meanMMI_pointRupture =
                 aw_2010_AttenRel.getMeanForPointRup(mag, hypoDist);
         double std_pointRupture =
-                aw_2010_AttenRel.getStdDevForPointRup(hypoDist);
+                aw_2010_AttenRel.getTotalStdDevForPointRup(hypoDist);
 
         assertEquals(meanMMI_pointRupture, meanMMI, tolerance);
         assertEquals(std_pointRupture, std, tolerance);
@@ -201,7 +201,8 @@ public class AW_2010_test implements ParameterChangeWarningListener {
                         DistanceRupParameter.NAME).getValue();
         double meanMMI_finiteRupture =
                 aw_2010_AttenRel.getMeanForFiniteRup(mag, rRup);
-        double std_finiteRupture = aw_2010_AttenRel.getStdDevForFiniteRup(rRup);
+        double std_finiteRupture =
+                aw_2010_AttenRel.getTotalStdDevForFiniteRup(rRup);
 
         assertEquals(meanMMI_finiteRupture, meanMMI, tolerance);
         assertEquals(std_finiteRupture, std, tolerance);
@@ -250,13 +251,18 @@ public class AW_2010_test implements ParameterChangeWarningListener {
      */
     @Test(expected = org.opensha.commons.exceptions.WarningException.class)
     public void hypocentralDistanceTooLarge() {
+        Site site = new Site(new Location(0.0, 4., 0.0));
+        EqkRupture rup = getEqkRuptureFromPointSource();
+        aw_2010_AttenRel.setSite(site);
+        aw_2010_AttenRel.setEqkRupture(rup);
+    }
+
+    private EqkRupture getEqkRuptureFromPointSource() {
         double mag = 5.0;
         double aveRake = 0.0;
         Location hypo = new Location(0.0, 0.0, 5.0);
-        Site site = new Site(new Location(0.0, 4., 0.0));
         EqkRupture rup = getPointEqkRupture(mag, hypo, aveRake);
-        aw_2010_AttenRel.setSite(site);
-        aw_2010_AttenRel.setEqkRupture(rup);
+        return rup;
     }
 
     /**
@@ -269,6 +275,13 @@ public class AW_2010_test implements ParameterChangeWarningListener {
      */
     @Test(expected = org.opensha.commons.exceptions.WarningException.class)
     public void closestDistanceToRuptureTooLarge() {
+        Site site = new Site(new Location(0.0, 0.0, 0.0));
+        EqkRupture rup = getEqkRuptureFromFiniteFault();
+        aw_2010_AttenRel.setSite(site);
+        aw_2010_AttenRel.setEqkRupture(rup);
+    }
+
+    private EqkRupture getEqkRuptureFromFiniteFault() {
         double aveDip = 90.0;
         double lowerSeisDepth = 13.0;
         double upperSeisDepth = 0.0;
@@ -285,12 +298,109 @@ public class AW_2010_test implements ParameterChangeWarningListener {
         double mag = 6.889;
         double aveRake = 0.0;
         Location hypo = new Location(33.73183, -117.44568);
-        Site site = new Site(new Location(0.0, 0.0, 0.0));
         EqkRupture rup =
                 getFiniteEqkRupture(aveDip, lowerSeisDepth, upperSeisDepth,
                         trace, gridSpacing, mag, hypo, aveRake);
+        return rup;
+    }
+
+    /**
+     * Checks if the inter-event standard deviation for point rupture is
+     * correctly retrieved
+     */
+    @Test
+    public void interEventStdForPointRupture() {
+        Site site = new Site(new Location(0.0, 0.0, 0.0));
+        EqkRupture rup = getEqkRuptureFromPointSource();
         aw_2010_AttenRel.setSite(site);
         aw_2010_AttenRel.setEqkRupture(rup);
+
+        aw_2010_AttenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTER);
+        double inter = aw_2010_AttenRel.getStdDev();
+
+        // inter-event std for finite rupture as reported in Allen&Wald paper
+        double interExpected = 0.40;
+
+        assertEquals(interExpected, inter, tolerance);
+    }
+
+    /**
+     * Checks of the inter-event standard deviation for finite rupture is
+     * correctly retrieved
+     */
+    @Test
+    public void interEventStdForFiniteRupture() {
+        Site site = new Site(new Location(33.8, -117.6, 0.0));
+        EqkRupture rup = getEqkRuptureFromFiniteFault();
+        aw_2010_AttenRel.setSite(site);
+        aw_2010_AttenRel.setEqkRupture(rup);
+
+        aw_2010_AttenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTER);
+        double inter = aw_2010_AttenRel.getStdDev();
+
+        // inter-event std for finite rupture as reported in Allen&Wald paper
+        double interExpected = 0.21;
+
+        assertEquals(interExpected, inter, tolerance);
+
+    }
+
+    /**
+     * Checks if the intra-event standard deviation for point ruptures is
+     * correctly retrieved
+     */
+    @Test
+    public void intraEventStdForPointRupture() {
+        Site site = new Site(new Location(0.0, 0.0, 0.0));
+        EqkRupture rup = getEqkRuptureFromPointSource();
+        aw_2010_AttenRel.setSite(site);
+        aw_2010_AttenRel.setEqkRupture(rup);
+
+        aw_2010_AttenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTRA);
+        double intra = aw_2010_AttenRel.getStdDev();
+
+        aw_2010_AttenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+        double total = aw_2010_AttenRel.getStdDev();
+
+        // inter-event std for point rupture as reported in Allen&Wald paper
+        double inter = 0.40;
+
+        double intraExpected =
+                Math.sqrt(Math.pow(total, 2) - Math.pow(inter, 2));
+
+        assertEquals(intraExpected, intra, tolerance);
+    }
+
+    /**
+     * Checks if the intra-event standard deviation for finite ruptures is
+     * correctly retrieved
+     */
+    @Test
+    public void intraEventStdForFiniteRupture() {
+        Site site = new Site(new Location(33.8, -117.6, 0.0));
+        EqkRupture rup = getEqkRuptureFromFiniteFault();
+        aw_2010_AttenRel.setSite(site);
+        aw_2010_AttenRel.setEqkRupture(rup);
+
+        aw_2010_AttenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTRA);
+        double intra = aw_2010_AttenRel.getStdDev();
+
+        aw_2010_AttenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+        double total = aw_2010_AttenRel.getStdDev();
+
+        // inter-event std for finite rupture as reported in Allen&Wald paper
+        double inter = 0.21;
+
+        double intraExpected =
+                Math.sqrt(Math.pow(total, 2) - Math.pow(inter, 2));
+
+        assertEquals(intraExpected, intra, tolerance);
     }
 
     /*
@@ -387,12 +497,12 @@ public class AW_2010_test implements ParameterChangeWarningListener {
                     computedmean =
                             aw_2010_AttenRel.getMeanForFiniteRup(mw[j], r[i]);
                     computedstddev =
-                            aw_2010_AttenRel.getStdDevForFiniteRup(r[i]);
+                            aw_2010_AttenRel.getTotalStdDevForFiniteRup(r[i]);
                 } else {
                     computedmean =
                             aw_2010_AttenRel.getMeanForPointRup(mw[j], r[i]);
                     computedstddev =
-                            aw_2010_AttenRel.getStdDevForPointRup(r[i]);
+                            aw_2010_AttenRel.getTotalStdDevForPointRup(r[i]);
                 }
                 assertEquals(expectedmean, computedmean, tolerance);
                 assertEquals(expectedstddev, computedstddev, tolerance);
