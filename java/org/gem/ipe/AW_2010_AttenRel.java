@@ -28,13 +28,11 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * 
  * <b>Description:</b> This class implements the Allen and Wald 2010 intensity
  * prediction equation (IPE): "Prediction of macroseismic intensities for global
- * active crustal earthquakes", J.Seismol. At the time of this implementation,
- * the paper is not yet published. The current implementation is based on the
- * Perl module that implements this equation in the ShakeMap software (the
- * module was provided by Georgia Cua to Damiano Monelli). Verification tables
- * have been provided by Damiano Monelli as an Excel spreadsheet. According to
- * Georgia's comments, the IPE is technically designed for 5 < M < 7.9,
- * intensity > 2, and R < 300 kms. TODO: Once the paper is published, revise the
+ * active crustal earthquakes", J.Seismol. The implementation follows the
+ * manuscript sent by Trevor Allen to Damiano Monelli (27/09/2010). Verification
+ * tables have been provided by Damiano Monelli as an Excel spreadsheet. The IPE
+ * is technically designed for 5 < M < 7.9, intensity > 2, and R < 300 kms for
+ * active crustal regions. TODO: Once the paper is published, revise the
  * implementation and possibly ask for verification tables directly from the
  * original authors.
  * <p>
@@ -108,7 +106,7 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
     // Values for warning parameters
     protected final static Double MAG_WARN_MIN = new Double(5.0);
-    protected final static Double MAG_WARN_MAX = new Double(8.0);
+    protected final static Double MAG_WARN_MAX = new Double(7.9);
     protected final static Double DISTANCE_RUP_WARN_MIN = new Double(0.0);
     protected final static Double DISTANCE_RUP_WARN_MAX = new Double(300.0);
 
@@ -202,7 +200,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
 
     /**
      * Creates other Parameters that the mean or stdDev depends upon, in this
-     * case, the StdDevType parameter. Only STD_DEV_TYPE_TOTAL is supported.
+     * case, the StdDevType parameter. Total, intra and inter-event standard
+     * deviations are supported.
      * 
      */
     @Override
@@ -210,6 +209,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
         super.initOtherParams();
         StringConstraint stdDevTypeConstraint = new StringConstraint();
         stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_NONE);
+        stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_INTER);
+        stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_INTRA);
         stdDevTypeConstraint.addString(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
         stdDevTypeConstraint.setNonEditable();
         stdDevTypeParam = new StdDevTypeParam(stdDevTypeConstraint);
@@ -346,14 +347,33 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
         double stdDev = Double.NaN;
         if (stdDevType.equals(StdDevTypeParam.STD_DEV_TYPE_NONE)) {
             stdDev = 0.0;
-        } else {
+        } else if (stdDevType.equals(StdDevTypeParam.STD_DEV_TYPE_TOTAL)) {
             EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
             if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
-                stdDev = getStdDevForPointRup(rHypo);
+                stdDev = getTotalStdDevForPointRup(rHypo);
             } else {
-                stdDev = getStdDevForFiniteRup(rRup);
+                stdDev = getTotalStdDevForFiniteRup(rRup);
+            }
+        } else if (stdDevType.equals(StdDevTypeParam.STD_DEV_TYPE_INTER)) {
+            EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
+            if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
+                stdDev = sigma2PointRup;
+            } else {
+                stdDev = sigma2FiniteRup;
+            }
+        } else if (stdDevType.equals(StdDevTypeParam.STD_DEV_TYPE_INTRA)) {
+            EvenlyGriddedSurfaceAPI eqkSurf = eqkRupture.getRuptureSurface();
+            if (eqkSurf.getNumCols() == 1 && eqkSurf.getNumRows() == 1) {
+                stdDev =
+                        Math.sqrt(Math.pow(getTotalStdDevForPointRup(rHypo), 2)
+                                - Math.pow(sigma2PointRup, 2));
+            } else {
+                stdDev =
+                        Math.sqrt(Math.pow(getTotalStdDevForFiniteRup(rRup), 2)
+                                - Math.pow(sigma2FiniteRup, 2));
             }
         }
+
         return stdDev;
     }
 
@@ -482,14 +502,14 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
     }
 
     /**
-     * Calculates standard deviation for finite ruptures.
+     * Calculates total standard deviation for finite ruptures.
      * 
      * @param Rrup
      *            , closest distance to rupture (km)
      * @return double
      * 
      */
-    public double getStdDevForFiniteRup(double Rrup) {
+    public double getTotalStdDevForFiniteRup(double Rrup) {
         double sigma1 =
                 s1FiniteRup
                         + (s2FiniteRup / (1 + Math.pow((Rrup / s3FiniteRup), 2)));
@@ -499,14 +519,14 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
     }
 
     /**
-     * Calculates standard deviation for point rupture.
+     * Calculates total standard deviation for point rupture.
      * 
      * @param Rhypo
      *            , hypocentral distance
      * @return double
      * 
      */
-    public double getStdDevForPointRup(double Rhypo) {
+    public double getTotalStdDevForPointRup(double Rhypo) {
         double sigma1 =
                 s1PointRup
                         + (s2PointRup / (1 + Math.pow((Rhypo / s3PointRup), 2)));
