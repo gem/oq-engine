@@ -45,10 +45,13 @@
 
 	<xs:element name="Rupture" abstract="true"/>
 	<xs:element name="PointRupture" type="nrml:PointRuptureType" substitutionGroup="nrml:Rupture"/>
-	<xs:element name="SimpleFaultRupture" type="nrml:SimpleFaultRuptureType" substitutionGroup="nrml:Rupture"/>
-	<xs:element name="ComplexFaultRupture" type="nrml:ComplexFaultDataType" substitutionGroup="nrml:Rupture"/>
-	<xs:element name="ArbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType" substitutionGroup="nrml:Rupture"/>
-	
+	<xs:element name="SimpleFaultRupture" type="nrml:SimpleFaultRuptureType"
+		substitutionGroup="nrml:Rupture"/>
+	<xs:element name="ComplexFaultRupture" type="nrml:ComplexFaultDataType"
+		substitutionGroup="nrml:Rupture"/>
+	<xs:element name="ArbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType"
+		substitutionGroup="nrml:Rupture"/>
+
 	<xs:element name="IntensityMeasureType" type="nrml:IntensityMeasureTypeType"/>
 
 	<xs:simpleType name="GroundMotionType">
@@ -70,9 +73,9 @@
 		<xs:annotation>
 			<xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
 		</xs:annotation>
-		<xs:attribute name="IMT" use="required" type="nrml:IntensityMeasureTypeType"/>
+		<xs:attribute name="IMT" use="optional" type="nrml:IntensityMeasureTypeType"/>
 		<xs:attribute name="vs30method" type="nrml:Vs30MethodType"/>
-		<xs:attribute name="groundMotionComponent" use="required">
+		<xs:attribute name="groundMotionComponent" use="optional">
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
 					<xs:enumeration value="average"/>
@@ -83,9 +86,9 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-		<xs:attribute name="period" use="required" type="xs:double"/>
-		<xs:attribute name="damping" use="required" type="xs:double"/>
-		<xs:attribute name="truncationType" use="required">
+		<xs:attribute name="period" use="optional" type="xs:double"/>
+		<xs:attribute name="damping" use="optional" type="xs:double"/>
+		<xs:attribute name="truncationType" use="optional">
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
 					<xs:enumeration value="None"/>
@@ -94,8 +97,8 @@
 				</xs:restriction>
 			</xs:simpleType>
 		</xs:attribute>
-		<xs:attribute name="truncationLevel" use="required" type="xs:double"/>
-		<xs:attribute name="stdDevType" use="required">
+		<xs:attribute name="truncationLevel" use="optional" type="xs:double"/>
+		<xs:attribute name="stdDevType" use="optional">
 			<xs:simpleType>
 				<xs:restriction base="xs:string">
 					<xs:enumeration value="total"/>
@@ -137,4 +140,5 @@
 			<xs:element maxOccurs="unbounded" name="field" type="nrml:GroundMotionFieldType"/>
 		</xs:sequence>
 	</xs:complexType>
+	<xs:element name="GroundMotionFieldSet" type="nrml:GroundMotionFieldSetType"/>
 </xs:schema>
