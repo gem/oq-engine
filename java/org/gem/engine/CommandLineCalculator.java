@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -36,6 +37,7 @@ import org.gem.engine.hazard.GEM1ERF;
 import org.gem.engine.hazard.GEMHazardCurveRepository;
 import org.gem.engine.hazard.GEMHazardCurveRepositoryList;
 import org.gem.engine.hazard.GemComputeHazard;
+import org.gem.engine.hazard.memcached.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeRule;
@@ -272,6 +274,39 @@ public class CommandLineCalculator {
         logger.info(logMsg);
         return result;
     } // doCalculationProbabilisticEventBased()
+
+    /**
+     * Saves a ground motion map to a Cache object.
+     * 
+     * @param cache
+     *            the cache to store the ground motion map
+     * @return a List<String> object containing all keys used as key in the
+     *         cache's hash map
+     */
+    public static List<String> storeToMemcache(
+            Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
+        ArrayList<String> allKeys = new ArrayList<String>();
+        StringBuilder key = null;
+        Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
+        int indexEqkRupture = 0;
+        for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
+            ++indexEqkRupture;
+            Map<Site, Double> groundMotionField =
+                    groundMotionFields.get(eqkRupture);
+            Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
+            for (Site s : groundMotionFieldKeys) {
+                key = new StringBuilder();
+                key.append(indexEqkRupture);
+                key.append('_');
+                key.append(s.getLocation().getLatitude());
+                key.append('_');
+                key.append(s.getLocation().getLongitude());
+                cache.set(key.toString(), groundMotionField.get(s));
+                allKeys.add(key.toString());
+            }
+        }
+        return allKeys;
+    }
 
     private void doCalculationThroughMonteCarloApproach() {
         logger.info("Performing calculation through Monte Carlo Approach.\n");
@@ -830,8 +865,9 @@ public class CommandLineCalculator {
                 // define label from branch ID number
                 String label = Integer.toString(branch.getRelativeID());
                 // read the corresponding source model
-                String sourceName = configFilesPath() + branch.getNameInputFile();
-                
+                String sourceName =
+                        configFilesPath() + branch.getNameInputFile();
+
                 ArrayList<GEMSourceData> srcList =
                         new InputModelData(sourceName, config
                                 .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()))
@@ -1053,8 +1089,7 @@ public class CommandLineCalculator {
     } // createSiteList()
 
     private GEM1ERF sampleGemLogicTreeERF(
-            LogicTree<ArrayList<GEMSourceData>> ltERF,
-            Configuration calcConfig) {
+            LogicTree<ArrayList<GEMSourceData>> ltERF, Configuration calcConfig) {
         // erf to be returned
         GEM1ERF erf = null;
         // array list of sources that will contain the samples sources
@@ -1078,7 +1113,7 @@ public class CommandLineCalculator {
             // Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
             // new here is the apache Configuration object
             String sourceName = configFilesPath() + branch.getNameInputFile();
-            
+
             InputModelData inputModelData =
                     new InputModelData(sourceName, calcConfig
                             .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()));

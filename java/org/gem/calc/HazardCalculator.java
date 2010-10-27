@@ -1,16 +1,13 @@
 package org.gem.calc;
 
 import java.rmi.RemoteException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.gem.engine.hazard.memcached.Cache;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -157,38 +154,5 @@ public class HazardCalculator {
             throw new IllegalArgumentException(msg);
         }
         return true;
-    }
-
-    /**
-     * Saves a ground motion map to a Cache object.
-     * 
-     * @param cache
-     *            the cache to store the ground motion map
-     * @return a List<String> object containing all keys used as key in the
-     *         cache's hash map
-     */
-    public static List<String> storeToMemcache(
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
-        ArrayList<String> allKeys = new ArrayList<String>();
-        StringBuilder key = null;
-        Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
-        int indexEqkRupture = 0;
-        for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
-            ++indexEqkRupture;
-            Map<Site, Double> groundMotionField =
-                    groundMotionFields.get(eqkRupture);
-            Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
-            for (Site s : groundMotionFieldKeys) {
-                key = new StringBuilder();
-                key.append(indexEqkRupture);
-                key.append('_');
-                key.append(s.getLocation().getLatitude());
-                key.append('_');
-                key.append(s.getLocation().getLongitude());
-                cache.set(key.toString(), groundMotionField.get(s));
-                allKeys.add(key.toString());
-            }
-        }
-        return allKeys;
     }
 }

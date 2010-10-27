@@ -14,6 +14,7 @@ import java.util.Random;
 
 import net.spy.memcached.MemcachedClient;
 
+import org.gem.engine.CommandLineCalculator;
 import org.gem.engine.hazard.memcached.Cache;
 import org.junit.After;
 import org.junit.Before;
@@ -224,17 +225,12 @@ public class HazardCalculatorTest {
      */
     @Test
     public void storeGroundMotionMapToCache() {
-        // try {
-        // setUp();
-        // } catch (IOException e) {
-        // System.out.println("xxr my own setup and still nulls!");
-        // e.printStackTrace();
-        // }
         Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                 HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
                         rn);
         List<String> keys =
-                HazardCalculator.storeToMemcache(groundMotionFields, cache);
+                CommandLineCalculator
+                        .storeToMemcache(groundMotionFields, cache);
         int groundMotionFieldSize = keys.size() / groundMotionFields.size();
         int index = 0;
         // now find a Double object for each key
