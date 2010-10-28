@@ -10,10 +10,10 @@ Usage Examples:
     python run_tests.py
 
     # to run a specific test suite imported here
-    python run_tests.py ExampleTestCase
+    python run_tests.py tests:ExampleTestCase
 
     # to run a specific test imported here
-    python run_tests.py ExampleTestCase.testBasic
+    python run_tests.py tests:ExampleTestCase.testBasic
 
 """
 
@@ -30,10 +30,14 @@ if __name__ == '__main__':
     sys.argv = FLAGS(sys.argv)  
     sys.path.append("tests")
     logs.init_logs()
-    
     try:
         import nose
-        args = ['nosetests']
+
+        args = sys.argv
+        args.remove('run_tests.py')
+        args = ['nosetests'] + args
+
+
         if (FLAGS.debug == "debug"):
             pass
         else:
