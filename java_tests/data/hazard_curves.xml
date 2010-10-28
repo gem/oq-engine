@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml:HazardResultList xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" 
+                        xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
+    <nrml:Result timeSpanDuration="50.0" IDmodel="MMI_3_1" IMT="MMI">
+        <nrml:Descriptor>
+            <nrml:endBranchLabel>3_1</nrml:endBranchLabel>
+        </nrml:Descriptor>
+        <nrml:Values>
+            <nrml:HazardCurveList>
+                <nrml:IML>6.0 7.0 8.0 9.0 10.0 11.0 12.0</nrml:IML>
+                <nrml:List>
+                    <nrml:Curve maxProb="1.0" minProb="0.0">
+                        <nrml:Site>
+                            <nrml:Site>
+                                <gml:pos>12.45 41.9</gml:pos>
+                            </nrml:Site>
+                            <nrml:Values>1.0912e-01 7.2623e-02 4.0757e-02 1.8583e-02 6.8433e-03 2.2807e-03 6.1451e-04</nrml:Values>
+                            <nrml:vs30>760.0</nrml:vs30>
+                        </nrml:Site>
+                    </nrml:Curve>
+                </nrml:List>
+            </nrml:HazardCurveList>
+        </nrml:Values>
+    </nrml:Result>
+</nrml:HazardResultList>
+<!-- Latitude="41.9" Longitude="12.45" -->
