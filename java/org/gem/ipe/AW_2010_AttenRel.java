@@ -31,9 +31,9 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * active crustal earthquakes", J.Seismol. The implementation follows the
  * manuscript sent by Trevor Allen to Damiano Monelli (27/09/2010). Verification
  * tables have been provided by Damiano Monelli as an Excel spreadsheet. The IPE
- * is technically designed for 5 < M < 7.9, intensity > 2, and R < 300 kms for
- * active crustal regions. TODO: Once the paper is published, revise the
- * implementation and possibly ask for verification tables directly from the
+ * is technically designed for 5 <= Mw <= 7.9, intensity > 2, and R <= 300 km
+ * for active crustal regions. TODO: Once the paper is published, revise the
+ * implementation and possibly ask for verification tables directly to the
  * original authors.
  * <p>
  * 
@@ -48,6 +48,8 @@ import org.opensha.sha.imr.param.PropagationEffectParams.DistanceRupParameter;
  * <UL>
  * <LI>magParam - moment magnitude
  * <LI>distanceRupParam - closest distance to rupture km
+ * <LI>distanceHypoParam - hypocentral distance (assuming hypocenter located in
+ * the rupture middle point) km
  * <LI>stdDevTypeParam - the type of standard deviation
  * </UL>
  * </p>
@@ -201,7 +203,8 @@ public class AW_2010_AttenRel extends AttenuationRelationship implements
     /**
      * Creates other Parameters that the mean or stdDev depends upon, in this
      * case, the StdDevType parameter. Total, intra and inter-event standard
-     * deviations are supported.
+     * deviations are supported. The adopted constructor set the default value
+     * to total.
      * 
      */
     @Override

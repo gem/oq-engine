@@ -116,13 +116,14 @@ public class AW_2010_test implements ParameterChangeWarningListener {
     /**
      * This test compares the results of the getMean() and getStdDev() methods
      * when setting a Site and a point EqkRupture object with the results of the
-     * get getMeanForPointRup(m,r) method when passing directly the magnitude
-     * and hypocentral distance values. This test is meant to validate if the
-     * Site and EqkRupture parameters are passed correctly to the
-     * AttenuationRelationship object and correct distinction is done between
-     * point and finite rupture. The average rake is not needed by the IPE but
-     * is used to define the EqkRupture object. In the test, the Site is defined
-     * on the same latitude as the hypocenter but shifted 0.1 degrees East.
+     * get getMeanForPointRup(m,r) and getTotalStdDevForPointRup(r) methods when
+     * passing directly the magnitude and hypocentral distance values. This test
+     * is meant to validate if the Site and EqkRupture parameters are passed
+     * correctly to the AttenuationRelationship object and correct distinction
+     * is done between point and finite rupture. The average rake is not needed
+     * by the IPE but is used to define the EqkRupture object. In the test, the
+     * Site is defined on the same latitude as the hypocenter but shifted 0.1
+     * degrees East.
      * 
      */
     @Test
@@ -331,6 +332,7 @@ public class AW_2010_test implements ParameterChangeWarningListener {
      */
     @Test
     public void interEventStdForFiniteRupture() {
+        // example site close to fault
         Site site = new Site(new Location(33.8, -117.6, 0.0));
         EqkRupture rup = getEqkRuptureFromFiniteFault();
         aw_2010_AttenRel.setSite(site);
@@ -381,6 +383,7 @@ public class AW_2010_test implements ParameterChangeWarningListener {
      */
     @Test
     public void intraEventStdForFiniteRupture() {
+        // example site close to fault
         Site site = new Site(new Location(33.8, -117.6, 0.0));
         EqkRupture rup = getEqkRuptureFromFiniteFault();
         aw_2010_AttenRel.setSite(site);
