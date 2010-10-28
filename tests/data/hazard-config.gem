@@ -1,7 +1,7 @@
 # The '#' character and the ';' are used to start a single line comment
 
 [HAZARD]
-
+INPUT_REGION="Turkey.txt"
 # file containing erf logic tree structure
 ERF_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
