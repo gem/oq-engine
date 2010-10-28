@@ -9,7 +9,7 @@ EXPOSURE = exposure.xml
 VULNERABILITY = vulnerability.xml
 
 # the region to filter on
-FILTER_REGION = 
+FILTER_REGION = rect.region
 
 # the selected for output generation
 OUTPUT_REGION =

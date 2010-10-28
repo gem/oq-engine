@@ -117,7 +117,6 @@ class Jobber(object):
         self.memcache_client.flush_all()
 
     def _preload(self, job_id, block_id):
-
         # set region
         region_constraint = shapes.RegionConstraint.from_file(
                 self.job[config.INPUT_REGION])
@@ -170,7 +169,7 @@ class Jobber(object):
                 "jobber: cannot write sites to memcache")
         
         # load assets and write to memcache
-        exposure_parser = exposure.ExposurePortfolioFile(self.exposure_file)
+        exposure_parser = exposure.ExposurePortfolioFile(self.job['exposure'])
         for site, asset in exposure_parser.filter(region_constraint):
             gridpoint = region_constraint.grid.point_at(site)
 
