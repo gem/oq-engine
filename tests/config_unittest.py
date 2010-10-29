@@ -5,8 +5,6 @@ import unittest
 
 from opengem import test
 from opengem import config
-from opengem import identifiers
-from opengem import memcached
 
 RISK_CONFIG_FILE = "risk-config.gem"
 HAZARD_CONFIG_FILE = "hazard-config.gem"

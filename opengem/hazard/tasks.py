@@ -8,8 +8,10 @@ The following tasks are defined in the hazard engine:
 """
 
 import json
-from opengem import identifiers
-from opengem import memcached
+
+from opengem import hazard
+from opengem import kvs
+
 from celery.decorators import task
 
 
@@ -28,9 +30,9 @@ def generate_erf(job_id):
     erf = [job_id]
     erf_serialized = json.JSONEncoder().encode(erf)
 
-    key = identifiers.generate_product_key(job_id, identifiers.ERF_KEY_TOKEN)
+    key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
 
-    memcache_client = memcached.get_client(binary=False)
+    memcache_client = kvs.get_client(binary=False)
     memcache_client.set(key, erf_serialized)
 
     return job_id
@@ -50,10 +52,10 @@ def compute_hazard_curve(job_id, block_id, site_id=None):
         """
         Inner class to dry things up.
         """
-        memcache_client = memcached.get_client(binary=False)
+        memcache_client = kvs.get_client(binary=False)
 
-        chf_key = identifiers.generate_product_key(job_id, 
-            identifiers.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
+        chf_key = kvs.generate_product_key(job_id, 
+            hazard.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
 
         chf = memcache_client.get(chf_key)
 
@@ -68,18 +70,21 @@ def compute_hazard_curve(job_id, block_id, site_id=None):
         return chf
 
 
-    memcache_client = memcached.get_client(binary=False)
+    memcache_client = kvs.get_client(binary=False)
 
     if site_id is not None:
-        site_key = identifiers.generate_product_key(job_id,
-            identifiers.SITES_KEY_TOKEN, block_id, site_id)
+        # This has a pretty stupid assumption as to how sites will be written 
+        # to memcached. 
+        # TODO(chris): Fix this to use kvs.generate_sites_key, or just use
+        #              the site_id. 
+        site_key = kvs.generate_product_key(job_id, kvs.SITES_KEY_TOKEN, 
+            block_id, site_id)
 
         site = memcache_client.get(site_key)
         sites = [site]
     else:
         # We want all sites for this block.
-        sites = memcached.get_sites_from_memcache(memcache_client, job_id, 
-            block_id)
+        sites = kvs.get_sites_from_memcache(memcache_client, job_id, block_id)
 
     if sites is not None:
         return [_compute_hazard_curve(job_id, block_id, site) for site in sites]
@@ -90,10 +95,10 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     Compute mean ground intensity for a specific site.
     """
 
-    memcached_client = memcached.get_client(binary=False)
+    memcached_client = kvs.get_client(binary=False)
 
-    mgm_key = identifiers.generate_product_key(job_id, 
-        identifiers.MGM_KEY_TOKEN, block_id, site_id)
+    mgm_key = kvs.generate_product_key(job_id, hazard.MGM_KEY_TOKEN, block_id, 
+        site_id)
     mgm = memcached_client.get(mgm_key)
 
     if not mgm:
