@@ -64,6 +64,8 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+import com.google.gson.Gson;
+
 public class CommandLineCalculator {
     //
     // Apache commons logging, not log4j specifically
@@ -80,7 +82,6 @@ public class CommandLineCalculator {
     private static Random random = null;
     private static Long randomSeed = null;
     private Configuration config;
-    private PropertiesConfiguration propsConfig;
     // for debugging
     private static Boolean D = false;
 
@@ -112,6 +113,13 @@ public class CommandLineCalculator {
         config = new PropertiesConfiguration();
         ((PropertiesConfiguration) config).load(calcConfigFile);
     } // constructor
+
+    public CommandLineCalculator(Cache cache, String key) {
+        Properties properties =
+                new Gson().fromJson((String) cache.get(key), Properties.class);
+
+        config = ConfigurationConverter.getConfiguration(properties);
+    }
 
     public void setConfig(Properties p) {
         config = ConfigurationConverter.getConfiguration(p);
@@ -153,6 +161,29 @@ public class CommandLineCalculator {
 
     private String getRelativePath(String key) {
         return configFilesPath() + config.getString(key);
+    }
+
+    /**
+     * Two calculators are equal when have the same configuration.
+     * 
+     * @param obj
+     *            the calculator to compare on
+     * @return true if the calculators are equal, false otherwise
+     */
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof CommandLineCalculator)) {
+            return false;
+        }
+
+        CommandLineCalculator other = (CommandLineCalculator) obj;
+
+        Properties thisConfig = ConfigurationConverter.getProperties(config);
+
+        Properties otherConfig =
+                ConfigurationConverter.getProperties(other.config);
+
+        return thisConfig.equals(otherConfig);
     }
 
     /**
