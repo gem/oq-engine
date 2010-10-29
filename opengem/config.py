@@ -2,8 +2,7 @@
 
 from ConfigParser import ConfigParser
 
-from opengem import memcached
-from opengem import identifiers
+from opengem import kvs
 
 INPUT_REGION = "filter_region"
 HAZARD_CURVES = "hazard_curves"
@@ -18,9 +17,9 @@ class Job(object):
     def from_memcached(cls, job_id):
         """Return the job in memcached with the given id."""
         
-        key = identifiers.MEMCACHE_KEY_SEPARATOR.join(("JOB", str(job_id)))
-        memcached_client = memcached.get_client(binary=False)
-        params = memcached.get_value_json_decoded(memcached_client, key)
+        key = kvs.generate_job_key(job_id)
+        memcached_client = kvs.get_client(binary=False)
+        params = kvs.get_value_json_decoded(memcached_client, key)
 
         return Job(params, job_id)
 
@@ -55,7 +54,7 @@ class Job(object):
     def __init__(self, params, job_id=None):
         
         if job_id is None:
-            job_id = identifiers.generate_sequence().next()
+            job_id = kvs.generate_random_id()
 
         self.job_id = job_id
         self.params = params
@@ -77,8 +76,6 @@ class Job(object):
     def to_memcached(self):
         """Store this job into memcached."""
 
-        key = identifiers.MEMCACHE_KEY_SEPARATOR.join(
-                ("JOB", str(self.job_id)))
-
-        memcached_client = memcached.get_client(binary=False)
-        memcached.set_value_json_encoded(memcached_client, key, self.params)
+        key = kvs.generate_job_key(self.job_id)
+        memcached_client = kvs.get_client(binary=False)
+        kvs.set_value_json_encoded(memcached_client, key, self.params)

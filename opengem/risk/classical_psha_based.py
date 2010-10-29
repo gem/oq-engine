@@ -68,9 +68,7 @@ from scipy import sqrt # pylint: disable=F0401,E0611
 from scipy import stats # pylint: disable=F0401,E0611
 from scipy import log # pylint: disable=F0401,E0611
 
-from opengem import identifiers
 from opengem import logs
-from opengem import memcached
 from opengem import shapes
 
 logger = logs.RISK_LOG
