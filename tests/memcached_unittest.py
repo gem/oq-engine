@@ -8,16 +8,16 @@ import pylibmc
 import unittest
 
 from opengem import logs
-from opengem import memcached
+from opengem import kvs
 from opengem import shapes
 from opengem import test
+
+from opengem.kvs import reader
+
 from opengem.output import hazard as hazard_output
 from opengem.parser import hazard as hazard_parser
 
 LOG = logs.LOG
-
-MEMCACHED_PORT = 11211
-MEMCACHED_HOST = "localhost"
 
 TEST_FILE = "nrml_test_result.xml"
 
@@ -36,15 +36,14 @@ class MemcachedTestCase(unittest.TestCase):
     
     def setUp(self):
         java_class = jpype.JClass("org.gem.engine.hazard.memcached.Cache")
-        self.java_client = java_class(MEMCACHED_HOST, MEMCACHED_PORT)
+        self.java_client = java_class(kvs.MEMCACHED_HOST, kvs.MEMCACHED_PORT)
         
-        self.python_client = pylibmc.Client([
-                MEMCACHED_HOST + ":%d" % MEMCACHED_PORT], binary=False)
-        
+        self.python_client = kvs.get_client(binary=False)
+
         # clean server side cache
         self.python_client.flush_all()
         
-        self.reader = memcached.Reader(self.python_client)
+        self.reader = reader.Reader(self.python_client)
         self._delete_test_file()
     
     def tearDown(self):
