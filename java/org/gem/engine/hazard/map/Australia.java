@@ -3,11 +3,11 @@ package org.gem.engine.hazard.map;
 import java.io.FileWriter;
 import java.io.IOException;
 
+import org.gem.CalculationSettings;
+import org.gem.engine.hazard.GemComputeModel;
+import org.gem.engine.hazard.GemGmpe2;
 import org.gem.engine.hazard.parsers.australia.australia2GemSourceData;
-import org.opensha.gem.GEM1.calc.gemHazardCalculator.GemComputeModel;
-import org.opensha.gem.GEM1.calc.gemLogicTree.gemLogicTreeImpl.gmpe.GemGmpe2;
-import org.opensha.gem.GEM1.commons.CalculationSettings;
-import org.opensha.gem.GEM1.util.CpuParams;
+import org.gem.params.CpuParams;
 
 public class Australia {
 

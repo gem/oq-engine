@@ -9,11 +9,13 @@ import random
 import time
 import unittest
 
+from opengem import config
 from opengem import flags
-from opengem import identifiers
+from opengem import hazard
 from opengem import logs
-from opengem import memcached
+from opengem import kvm
 from opengem import producer
+from opengem import risk
 from opengem import shapes
 
 from opengem.risk import tasks
@@ -22,7 +24,7 @@ from opengem.output import geotiff
 from opengem.output.risk import RiskXMLWriter
 
 from opengem.parser import exposure
-from opengem.parser import shaml_output
+from opengem.parser import hazard
 from opengem.parser import vulnerability
 
 
@@ -36,28 +38,20 @@ class Jobber(object):
     and to execute the computations in parallel tasks (using the celery
     framework and the message queue RabbitMQ).
     """
-    def __init__(self, vulnerability_model_file, hazard_curve_file,
-                 region_file, exposure_file, output_file, partition):
-
-        self.vulnerability_model_file = vulnerability_model_file
-        self.hazard_curve_file = hazard_curve_file
-        self.region_file = region_file
-        self.exposure_file = exposure_file
-        self.output_file = output_file
-        self.partition = partition
-
+    def __init__(self, job, partition):
         self.memcache_client = None
-
-        self.job_id_generator = identifiers.generate_id('job')
-        self.block_id_generator = identifiers.generate_id('block')
-
+        self.partition = partition
+        self.job = job
+        
         self._init()
+        self.block_id_generator = kvs.block_id_generator()
 
     def run(self):
         """Core method of Jobber. It splits the requested computation
         in blocks and executes these as parallel tasks.
         """
-        job_id = self.job_id_generator.next()
+
+        job_id = self.job.id
         logger.debug("running jobber, job_id = %s" % job_id)
 
         if self.partition is True:
@@ -97,12 +91,12 @@ class Jobber(object):
         # produce output for one block
         loss_curves = []
 
-        for (gridpoint, (site_lon, site_lat)) in \
-            memcached.get_sites_from_memcache(
-                self.memcache_client, job_id, block_id):
+        sites = kvs.get_sites_from_memcache(self.memcache_client, job_id, 
+            block_id)
 
-            key = identifiers.generate_product_key(job_id, 
-                block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
+        for (gridpoint, (site_lon, site_lat)) in sites:
+            key = kvs.generate_product_key(job_id, 
+                risk.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
             loss_curve = self.memcache_client.get(key)
             loss_curves.append((shapes.Site(site_lon, site_lat), 
                                 loss_curve))
@@ -120,25 +114,26 @@ class Jobber(object):
     def _init(self):
         
         # TODO(fab): find out why this works only with binary=False
-        self.memcache_client = memcached.get_client(binary=False)
+        self.memcache_client = kvs.get_client(binary=False)
         self.memcache_client.flush_all()
 
     def _preload(self, job_id, block_id):
 
         # set region
-        region_constraint = shapes.RegionConstraint.from_file(self.region_file)
+        region_constraint = shapes.RegionConstraint.from_file(
+                self.job[config.INPUT_REGION])
 
         # TODO(fab): the cell size has to be determined from the configuration 
         region_constraint.cell_size = 1.0
 
         # load hazard curve file and write to memcache_client
-        shaml_parser = shaml_output.ShamlOutputFile(self.hazard_curve_file)
+        nrml_parser = hazard.NrmlFile(self.job[config.HAZARD_CURVES])
         attribute_constraint = \
             producer.AttributeConstraint({'IMT' : 'MMI'})
 
         sites_hash_list = []
 
-        for site, hazard_curve_data in shaml_parser.filter(
+        for site, hazard_curve_data in nrml_parser.filter(
                 region_constraint, attribute_constraint):
 
             gridpoint = region_constraint.grid.point_at(site)
@@ -153,8 +148,8 @@ class Jobber(object):
             hazard_curve = shapes.Curve(zip(hazard_curve_data['IML'], 
                                                 hazard_curve_data['Values']))
 
-            memcache_key_hazard = identifiers.generate_product_key(
-                job_id, block_id, gridpoint, "hazard_curve")
+            memcache_key_hazard = kvs.generate_product_key(job_id, 
+                hazard.HAZARD_CURVE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("Loading hazard curve %s at %s, %s" % (
                         hazard_curve, site.latitude,  site.longitude))
@@ -167,9 +162,9 @@ class Jobber(object):
                     "jobber: cannot write hazard curve to memcache")
 
         # write site hashes to memcache (JSON)
-        memcache_key_sites = identifiers.generate_product_key(
-                job_id, block_id, None, "sites")
-        success = memcached.set_value_json_encoded(self.memcache_client, 
+        memcache_key_sites = kvs.generate_sites_key(job_id, block_id)
+
+        success = kvs.set_value_json_encoded(self.memcache_client, 
                 memcache_key_sites, sites_hash_list)
         if not success:
             raise ValueError(
@@ -180,13 +175,13 @@ class Jobber(object):
         for site, asset in exposure_parser.filter(region_constraint):
             gridpoint = region_constraint.grid.point_at(site)
 
-            memcache_key_asset = identifiers.generate_product_key(
-                job_id, block_id, gridpoint, "exposure")
+            memcache_key_asset = kvs.generate_product_key(
+                job_id, risk.EXPOSURE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))
 
-            success = memcached.set_value_json_encoded(self.memcache_client, 
+            success = kvs.set_value_json_encoded(self.memcache_client, 
                 memcache_key_asset, asset)
             if not success:
                 raise ValueError(

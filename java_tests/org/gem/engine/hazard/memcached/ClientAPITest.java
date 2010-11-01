@@ -3,13 +3,9 @@ package org.gem.engine.hazard.memcached;
 import static org.junit.Assert.assertEquals;
 
 import java.io.Serializable;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import net.spy.memcached.MemcachedClient;
-
-import org.junit.Before;
 import org.junit.Test;
 
 /**
@@ -18,14 +14,7 @@ import org.junit.Test;
  * 
  * @author Andrea Cerisara
  */
-public class ClientAPITest {
-
-    private static final int EXPIRE_TIME = 3600;
-
-    private static final int PORT = 11211;
-    private static final String LOCALHOST = "localhost";
-
-    private MemcachedClient client;
+public class ClientAPITest extends BaseMemcachedTest {
 
     public static class AReallyCoolObject implements Serializable {
 
@@ -51,16 +40,10 @@ public class ClientAPITest {
 
     }
 
-    @Before
-    public void setUp() throws Exception {
-        client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
-        client.flush(); // clear the server side cache
-    }
-
     @Test
     public void canStoreAndRetrieveASimpleType() {
-        client.set("STRING", EXPIRE_TIME, "VALUE");
-        assertEquals("VALUE", client.get("STRING"));
+        client.set("KEY", EXPIRE_TIME, "VALUE");
+        assertEquals("VALUE", client.get("KEY"));
     }
 
     @Test
@@ -70,14 +53,14 @@ public class ClientAPITest {
         results.add(2.0);
         results.add(3.0);
 
-        client.set("LIST", EXPIRE_TIME, results);
-        assertEquals(results, client.get("LIST"));
+        client.set("KEY", EXPIRE_TIME, results);
+        assertEquals(results, client.get("KEY"));
     }
 
     @Test
     public void canStoreAndRetrieveAComplexType() {
-        client.set("OBJ", EXPIRE_TIME, new AReallyCoolObject(1.0, 2.0));
-        assertEquals(new AReallyCoolObject(1.0, 2.0), client.get("OBJ"));
+        client.set("KEY", EXPIRE_TIME, new AReallyCoolObject(1.0, 2.0));
+        assertEquals(new AReallyCoolObject(1.0, 2.0), client.get("KEY"));
     }
 
 }

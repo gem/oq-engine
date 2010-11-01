@@ -14,7 +14,7 @@ import time
 import unittest
 
 from opengem import logs
-from opengem import memcached
+from opengem import kvs
 
 import tests.tasks as test_tasks
 
@@ -27,7 +27,7 @@ MAX_WAIT_LOOPS = 10
 
 class JobberTestCase(unittest.TestCase):
     def setUp(self):
-        self.memcache_client = memcached.get_client(binary=False)
+        self.memcache_client = kvs.get_client(binary=False)
         self.memcache_client.flush_all()
 
     def tearDown(self):

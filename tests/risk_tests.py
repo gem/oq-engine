@@ -11,9 +11,7 @@ import unittest
 
 from shapely import geometry
 
-from opengem import identifiers
 from opengem import logs
-from opengem import memcached
 from opengem import shapes
 from opengem import test
 
