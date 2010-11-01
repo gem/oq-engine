@@ -16,6 +16,7 @@
 	<path id="libraries">
 		<!-- TODO Find out which jar from OpenSHA causes java.util.zip.ZipException: error in opening zip file -->
 
+		<pathelement location="${lib.dir}/opensha-lite.jar" />
 		<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
 		<pathelement location="${lib.dir}/commons-configuration-1.6.jar" />
 		<pathelement location="${lib.dir}/commons-collections-3.2.1.jar" />
@@ -59,71 +60,12 @@
 
 	<taskdef resource="emma_ant.properties" classpathref="libraries" />
 
-	<target name="junit-opensha" depends="compile-sources">
-        <mkdir dir="${coverage.dir}" />
-        <mkdir dir="${tests.report.dir}" />
-
-        <!-- Compile test classes -->
-        <javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/opensha/**/*.java " srcdir="${test.dir}" />
-        <emma enabled="true">
-            <instr verbosity="verbose" instrpath="${classes.dir}" destdir="${instrumented.dir}" metadatafile="${coverage.dir}/metadata.emma" merge="true" mode="fullcopy">
-                <filter excludes="*Test*" />
-                <filter excludes="au.com.jenisys.view.*" />
-            </instr>
-        </emma>
-
-        <junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
-            <classpath>
-                <!-- Input test files -->
-                <pathelement path="${test.dir}/data" />
-
-                <pathelement path="${instrumented.dir}/classes" />
-
-                <!-- TODO Find out why referencing the defined path with an id gets a java.lang.NullPointerException  -->
-                <pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
-                <pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
-                <pathelement location="${lib.dir}/commons-math-2.1.jar" />
-				<pathelement location="${lib.dir}/commons-io-1.4.jar" />
-                <pathelement location="${lib.dir}/junit-4.8.1.jar" />
-                <pathelement location="${lib.dir}/oscache-2.4.1.jar" />
-                <pathelement location="${lib.dir}/hamcrest-all-1.2.jar" />
-                <pathelement location="${lib.dir}/emma.jar" />
-                <pathelement location="${lib.dir}/lombok.jar" />
-                <pathelement location="${lib.dir}/emma_ant.jar" />
-                <pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
-                <pathelement location="${lib.dir}/dom4j.jar" />
-                <pathelement location="${lib.dir}/commons-lang-2.4.jar" />
-                <pathelement location="${lib.dir}/memcached-2.5.jar" />
-                <pathelement location="${lib.dir}/gson-1.5.jar" />
-                
-            </classpath>
-
-            <formatter type="xml" />
-
-            <batchtest fork="yes" todir="${tests.report.dir}">
-                <fileset dir="${test.dir}">
-                    <include name="org/opensha/**/*.java" />
-                </fileset>
-            </batchtest>
-        </junit>
-
-        <emma enabled="true">
-            <report sourcepath="${src.dir}">
-                <infileset dir="${coverage.dir}" includes="*.emma, *.ec" />
-                <xml outfile="${coverage.dir}/coverage.xml" depth="method" />
-            </report>
-        </emma>
-        
-        <echo message="Cleaning compiled resources..." />
-        <delete dir="${build.dir}" />
-	</target>
-	
 	<target name="junit-tests-with-coverage" depends="compile-sources">
 		<mkdir dir="${coverage.dir}" />
 		<mkdir dir="${tests.report.dir}" />
 
 		<!-- Compile test classes -->
-		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/gem/engine/**/*.java org/opensha/gem/**/*.java" srcdir="${test.dir}" />
+		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/gem/**/*.java" srcdir="${test.dir}" />
 
 		<emma enabled="true">
 			<instr verbosity="verbose" instrpath="${classes.dir}" destdir="${instrumented.dir}" metadatafile="${coverage.dir}/metadata.emma" merge="true" mode="fullcopy">
@@ -140,6 +82,7 @@
 				<pathelement path="${instrumented.dir}/classes" />
 
 				<!-- TODO Find out why referencing the defined path with an id gets a java.lang.NullPointerException  -->
+				<pathelement location="${lib.dir}/opensha-lite.jar" />
 				<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
 				<pathelement location="${lib.dir}/commons-configuration-1.6.jar" />
 				<pathelement location="${lib.dir}/commons-collections-3.2.1.jar" />

@@ -11,8 +11,9 @@ Tasks in the risk engine include the following:
 from celery.decorators import task
 
 from opengem import flags
-from opengem import identifiers
-from opengem import memcached
+from opengem import kvs 
+from opengem import risk
+
 from opengem.risk import engines
 
 FLAGS = flags.FLAGS
@@ -40,7 +41,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
         conditional_loss_poe = DEFAULT_conditional_loss_poe
 
     # start up memcache client
-    memcache_client = memcached.get_client(binary=False)
+    memcache_client = kvs.get_client(binary=False)
 
     # load risk engine, make it use memcache
     # uses hazard, exposure from memcache
@@ -50,7 +51,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
     # loop over sites for this block
     # assumes that hazard, assets, and output risk grid are the same
     # (no nearest-neighbour search to find hazard)
-    sites_list = memcached.get_sites_from_memcache(memcache_client,
+    sites_list = kvs.get_sites_from_memcache(memcache_client,
                                                    job_id, block_id)
 
     logger.debug("sites list for this task w/ job_id %s, block_id %s:\n%s" % (
@@ -64,8 +65,8 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
         if loss_ratio_curve is not None:
 
             # write to memcache: loss_ratio
-            key = identifiers.generate_product_key(job_id,
-                block_id, gridpoint, identifiers.LOSS_RATIO_CURVE_KEY_TOKEN)
+            key = kvs.generate_product_key(job_id,
+                risk.LOSS_RATIO_CURVE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))
@@ -74,8 +75,8 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
             # compute loss curve
             loss_curve = risk_engine.compute_loss_curve(gridpoint, 
                                                         loss_ratio_curve)
-            key = identifiers.generate_product_key(job_id, 
-                block_id, gridpoint, identifiers.LOSS_CURVE_KEY_TOKEN)
+            key = kvs.generate_product_key(job_id, 
+                risk.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("RESULT: loss curve is %s, write to key %s" % (
                 loss_curve, key))
@@ -84,8 +85,8 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
             # compute conditional loss
             loss_conditional = engines.compute_loss(loss_curve, 
                                                     conditional_loss_poe)
-            key = identifiers.generate_product_key(job_id, 
-                block_id, gridpoint, identifiers.CONDITIONAL_LOSS_KEY_TOKEN)
+            key = kvs.generate_product_key(job_id, 
+                risk.CONDITIONAL_LOSS_KEY_TOKEN, block_id, gridpoint)
 
             logger.debug("RESULT: conditional loss is %s, write to key %s" % (
                 loss_conditional, key))
