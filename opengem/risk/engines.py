@@ -3,9 +3,10 @@
 Top-level managers for computation classes.
 """
 
-from opengem import identifiers
+from opengem import hazard
 from opengem import logs
-from opengem import memcached
+from opengem import kvs
+from opengem import risk
 from opengem import shapes
 
 from opengem.parser import vulnerability
@@ -27,7 +28,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         if memcache_client is not None:
             self.memcache_client = memcache_client
         else:
-            self.memcache_client = memcached.get_client(binary=False)
+            self.memcache_client = kvs.get_client(binary=False)
 
         self.vulnerability_curves = \
             vulnerability.load_vulnerability_curves_from_memcache(
@@ -43,8 +44,8 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         """ Returns the loss ratio curve for a single gridpoint"""
 
         # check in memcache if hazard and exposure for gridpoint are there
-        memcache_key_hazard = identifiers.generate_product_key(self.job_id, 
-            identifiers.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
+        memcache_key_hazard = kvs.generate_product_key(self.job_id, 
+            hazard.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
        
         hazard_curve_json = self.memcache_client.get(memcache_key_hazard)
         logger.debug("hazard curve as JSON: %s" % hazard_curve_json)
@@ -58,11 +59,11 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             logger.debug("no hazard curve found")
             return None
 
-        memcache_key_exposure = identifiers.generate_product_key(self.job_id, 
-            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
+        memcache_key_exposure = kvs.generate_product_key(self.job_id, 
+            risk.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         
-        asset = memcached.get_value_json_decoded(self.memcache_client,
-                                                 memcache_key_exposure)
+        asset = kvs.get_value_json_decoded(self.memcache_client,
+            memcache_key_exposure)
 
         logger.debug("asset at key %s is %s" % (memcache_key_exposure, asset))
 
@@ -87,10 +88,10 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         if loss_ratio_curve is None:
             return None
 
-        memcache_key_exposure = identifiers.generate_product_key(self.job_id,
-            identifiers.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
-        asset = memcached.get_value_json_decoded(self.memcache_client,
-                                                 memcache_key_exposure)
+        memcache_key_exposure = kvs.generate_product_key(self.job_id,
+            risk.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
+        asset = kvs.get_value_json_decoded(self.memcache_client,
+            memcache_key_exposure)
         if asset is None:
             return None
 
@@ -108,7 +109,7 @@ class ProbabilisticEventBasedCalculator(object):
         if memcache_client is not None:
             self.memcache_client = memcache_client
         else:
-            self.memcache_client = memcached.get_client(binary=False)
+            self.memcache_client = kvs.get_client(binary=False)
         
         self.vuln_curves = \
                 vulnerability.load_vulnerability_curves_from_memcache(
@@ -116,28 +117,26 @@ class ProbabilisticEventBasedCalculator(object):
 
     def compute_loss_ratio_curve(self, site):
         """Compute the loss ratio curve for a single site."""
-        key_exposure = identifiers.generate_product_key(self.job_id,
-                identifiers.EXPOSURE_KEY_TOKEN, self.block_id, site)
+        key_exposure = kvs.generate_product_key(self.job_id,
+            risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
 
-        asset = memcached.get_value_json_decoded(
-                self.memcache_client, key_exposure)
+        asset = kvs.get_value_json_decoded(self.memcache_client, key_exposure)
 
         vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
 
-        key_gmf = identifiers.generate_product_key(self.job_id, 
-                identifiers.GMF_KEY_TOKEN, self.block_id, site)
+        key_gmf = kvs.generate_product_key(self.job_id, 
+                risk.GMF_KEY_TOKEN, self.block_id, site)
        
-        gmf = memcached.get_value_json_decoded(self.memcache_client, key_gmf)
+        gmf = kvs.get_value_json_decoded(self.memcache_client, key_gmf)
         return probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf)
 
     def compute_loss_curve(self, site, loss_ratio_curve):
         """Compute the loss curve for a single site."""
-        key_exposure = identifiers.generate_product_key(self.job_id,
-                identifiers.EXPOSURE_KEY_TOKEN, self.block_id, site)
+        key_exposure = kvs.generate_product_key(self.job_id,
+            risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
         
-        asset = memcached.get_value_json_decoded(
-                self.memcache_client, key_exposure)
+        asset = kvs.get_value_json_decoded(self.memcache_client, key_exposure)
         
         if asset is None:
             return None
