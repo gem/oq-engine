@@ -3,17 +3,12 @@
 Main jobber module
 """
 
-import json
-import os
-import random
-import time
-import unittest
 
 from opengem import config
 from opengem import flags
 from opengem import hazard
 from opengem import logs
-from opengem import kvm
+from opengem import kvs
 from opengem import producer
 from opengem import risk
 from opengem import shapes
@@ -29,15 +24,16 @@ from opengem.parser import vulnerability
 
 
 FLAGS = flags.FLAGS
-logger = logs.LOG
-
 LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
+
+LOGGER = logs.LOG
 
 class Jobber(object):
     """The Jobber class is responsible to evaluate the configuration settings
     and to execute the computations in parallel tasks (using the celery
     framework and the message queue RabbitMQ).
     """
+
     def __init__(self, job, partition):
         self.memcache_client = None
         self.partition = partition
@@ -52,7 +48,7 @@ class Jobber(object):
         """
 
         job_id = self.job.id
-        logger.debug("running jobber, job_id = %s" % job_id)
+        LOGGER.debug("running jobber, job_id = %s" % job_id)
 
         if self.partition is True:
             self._partition(job_id)
@@ -62,20 +58,21 @@ class Jobber(object):
             self._execute(job_id, block_id)
             self._write_output_for_block(job_id, block_id)
 
-        logger.debug("Jobber run ended")
+        LOGGER.debug("Jobber run ended")
 
     def _partition(self, job_id):
-
-        # _partition() has to:
-        # - get the full set of sites
-        # - select a subset of these sites
-        # - write the subset of sites to memcache, prepare a computation block
+        """
+         _partition() has to:
+          - get the full set of sites
+          - select a subset of these sites
+          - write the subset of sites to memcache, prepare a computation block
+        """
         pass
 
     def _execute(self, job_id, block_id):
+        """ Execute celery task for risk given block with sites """
         
-        # execute celery task for risk, for given block with sites
-        logger.debug("starting task block, block_id = %s" % block_id)
+        LOGGER.debug("starting task block, block_id = %s" % block_id)
 
         # task compute_risk has return value 'True' (writes its results to
         # memcache).
@@ -101,23 +98,26 @@ class Jobber(object):
             loss_curves.append((shapes.Site(site_lon, site_lat), 
                                 loss_curve))
 
-        logger.debug("serializing loss_curves")
+        LOGGER.debug("serializing loss_curves")
         output_generator = RiskXMLWriter(LOSS_CURVES_OUTPUT_FILE)
         output_generator.serialize(loss_curves)
         
         #output_generator = output.SimpleOutput()
         #output_generator.serialize(ratio_results)
         
-        #output_generator = geotiff.GeoTiffFile(output_file, region_constraint.grid)
+        #output_generator = geotiff.GeoTiffFile(output_file, 
+        #    region_constraint.grid)
         #output_generator.serialize(losses_one_perc)
 
     def _init(self):
+        """ Initialize memcached_client. This should move into a Singleton """
         
         # TODO(fab): find out why this works only with binary=False
         self.memcache_client = kvs.get_client(binary=False)
         self.memcache_client.flush_all()
 
     def _preload(self, job_id, block_id):
+        """ preload configuration for job """
 
         # set region
         region_constraint = shapes.RegionConstraint.from_file(
@@ -151,7 +151,7 @@ class Jobber(object):
             memcache_key_hazard = kvs.generate_product_key(job_id, 
                 hazard.HAZARD_CURVE_KEY_TOKEN, block_id, gridpoint)
 
-            logger.debug("Loading hazard curve %s at %s, %s" % (
+            LOGGER.debug("Loading hazard curve %s at %s, %s" % (
                         hazard_curve, site.latitude,  site.longitude))
 
             success = self.memcache_client.set(memcache_key_hazard, 
@@ -178,7 +178,7 @@ class Jobber(object):
             memcache_key_asset = kvs.generate_product_key(
                 job_id, risk.EXPOSURE_KEY_TOKEN, block_id, gridpoint)
 
-            logger.debug("Loading asset %s at %s, %s" % (asset,
+            LOGGER.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))
 
             success = kvs.set_value_json_encoded(self.memcache_client, 
