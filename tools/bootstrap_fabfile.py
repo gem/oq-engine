@@ -114,6 +114,7 @@ def _bootstrap_osx():
         print "You need to install Homebrew to bootstrap_osx"
         print 
         print 'ruby -e "$(curl -fsS http://gist.github.com/raw/323731/install_homebrew.rb)"'
+
         sys.exit()
 
     # Install python2.6
@@ -397,5 +398,5 @@ def _install_python():
 
     if _homebrew_install("python"):
         # Move them back
-        sudo("mv python{,2.6}")
+        sudo("mv python{,2.6}.rb")
         sudo("mv python.rb{-bootstrap_osx,}")
