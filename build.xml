@@ -13,28 +13,8 @@
 	<property name="javadoc.report.dir" value="${dist.dir}/javadoc" />
 	<property name="tests.report.dir" value="${dist.dir}/tests_result" />
 
-	<path id="libraries">
-		<!-- TODO Find out which jar from OpenSHA causes java.util.zip.ZipException: error in opening zip file -->
-
-		<pathelement location="${lib.dir}/opensha-lite.jar" />
-		<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
-		<pathelement location="${lib.dir}/commons-configuration-1.6.jar" />
-		<pathelement location="${lib.dir}/commons-collections-3.2.1.jar" />
-		<pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
-		<pathelement location="${lib.dir}/commons-io-1.4.jar" />
-		<pathelement location="${lib.dir}/commons-math-2.1.jar" />
-		<pathelement location="${lib.dir}/junit-4.8.1.jar" />
-		<pathelement location="${lib.dir}/oscache-2.4.1.jar" />
-		<pathelement location="${lib.dir}/hamcrest-all-1.2.jar" />
-		<pathelement location="${lib.dir}/emma.jar" />
-		<pathelement location="${lib.dir}/lombok.jar" />
-		<pathelement location="${lib.dir}/emma_ant.jar" />
-		<pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
-		<pathelement location="${lib.dir}/dom4j.jar" />
-		<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
-		<pathelement location="${lib.dir}/memcached-2.5.jar" />
-		<pathelement location="${lib.dir}/gson-1.5.jar" />
-		
+	<path id="dependencies">
+		<fileset dir="${lib.dir}" includes="*.jar" />
 	</path>
 
 	<target name="clean">
@@ -43,29 +23,26 @@
 	</target>
 
 	<target name="javadoc">
-		<javadoc classpathref="libraries" packagenames="org.gem.engine.*" sourcepath="${src.dir}" destdir="${javadoc.report.dir}" author="true" version="true" use="true" windowtitle="OpenGEM Java Core API" />
+		<javadoc classpathref="dependencies" packagenames="org.gem.engine.*" sourcepath="${src.dir}" destdir="${javadoc.report.dir}" author="true" version="true" use="true" windowtitle="OpenGEM Java Core API" />
 	</target>
 
 	<target name="compile-sources" depends="clean">
 		<mkdir dir="${classes.dir}" />
-
-		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/**/*.java " srcdir="${src.dir}" />
+		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="dependencies" includes="org/**/*.java " srcdir="${src.dir}" />
 	</target>
 
-    <target name="compile" depends="compile-sources">
-        <jar  destfile="${lib.dir}/opengem-minimal.jar"
-                 basedir="${classes.dir}"
-                 includes="**/*.class" />
-    </target>
+	<target name="build-opengem-jar" depends="compile-sources">
+		<jar destfile="${dist.dir}/opengem-minimal.jar" basedir="${classes.dir}" includes="**/*.class" />
+	</target>
 
-	<taskdef resource="emma_ant.properties" classpathref="libraries" />
+	<taskdef resource="emma_ant.properties" classpathref="dependencies" />
 
 	<target name="junit-tests-with-coverage" depends="compile-sources">
 		<mkdir dir="${coverage.dir}" />
 		<mkdir dir="${tests.report.dir}" />
 
 		<!-- Compile test classes -->
-		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="libraries" includes="org/gem/**/*.java" srcdir="${test.dir}" />
+		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="dependencies" includes="org/gem/**/*.java" srcdir="${test.dir}" />
 
 		<emma enabled="true">
 			<instr verbosity="verbose" instrpath="${classes.dir}" destdir="${instrumented.dir}" metadatafile="${coverage.dir}/metadata.emma" merge="true" mode="fullcopy">
@@ -76,30 +53,13 @@
 
 		<junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
 			<classpath>
+				<!-- External libraries -->
+				<path refid="dependencies" />
+
 				<!-- Input test files -->
 				<pathelement path="${test.dir}/data" />
 
 				<pathelement path="${instrumented.dir}/classes" />
-
-				<!-- TODO Find out why referencing the defined path with an id gets a java.lang.NullPointerException  -->
-				<pathelement location="${lib.dir}/opensha-lite.jar" />
-				<pathelement location="${lib.dir}/lambdaj-2.1-with-dependencies.jar" />
-				<pathelement location="${lib.dir}/commons-configuration-1.6.jar" />
-				<pathelement location="${lib.dir}/commons-collections-3.2.1.jar" />
-				<pathelement location="${lib.dir}/commons-logging-1.1.1.jar" />
-				<pathelement location="${lib.dir}/commons-math-2.1.jar" />
-				<pathelement location="${lib.dir}/commons-io-1.4.jar" />
-				<pathelement location="${lib.dir}/junit-4.8.1.jar" />
-				<pathelement location="${lib.dir}/oscache-2.4.1.jar" />
-				<pathelement location="${lib.dir}/hamcrest-all-1.2.jar" />
-				<pathelement location="${lib.dir}/emma.jar" />
-				<pathelement location="${lib.dir}/lombok.jar" />
-				<pathelement location="${lib.dir}/emma_ant.jar" />
-				<pathelement location="${lib.dir}/mockito-all-1.8.2.jar" />
-				<pathelement location="${lib.dir}/dom4j.jar" />
-				<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
-				<pathelement location="${lib.dir}/memcached-2.5.jar" />
-				<pathelement location="${lib.dir}/gson-1.5.jar" />
 			</classpath>
 
 			<formatter type="xml" />
@@ -120,7 +80,7 @@
 				<xml outfile="${coverage.dir}/coverage.xml" depth="method" />
 			</report>
 		</emma>
-		
+
 		<echo message="Cleaning compiled resources..." />
 		<delete dir="${build.dir}" />
 	</target>
