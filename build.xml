@@ -74,7 +74,7 @@
 			</instr>
 		</emma>
 
-		<junit haltonerror="no" haltonfailure="yes" maxmemory="2g" fork="yes" dir="${coverage.dir}">
+		<junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
 			<classpath>
 				<!-- Input test files -->
 				<pathelement path="${test.dir}/data" />
