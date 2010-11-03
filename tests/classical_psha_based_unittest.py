@@ -11,9 +11,8 @@ import unittest
 from decimal import *
 from ordereddict import *
 
-from opengem import identifiers
 from opengem import logs
-from opengem import memcached
+from opengem import kvs 
 from opengem import shapes
 from opengem import test
 
@@ -108,10 +107,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
     # loss curve tests
     def setUp(self):
 
-        self.memcache_client = memcached.get_client(binary=False)
+        self.memcache_client = kvs.get_client(binary=False)
 
         # get random ID as job_id
-        self.job_id = identifiers.generate_random_id()
+        self.job_id = kvs.generate_random_id()
 
         self.vuln_curve_code_test = "TEST"
         vuln_curve_test = shapes.Curve(
