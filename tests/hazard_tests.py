@@ -8,6 +8,7 @@ import unittest
 from opengem import hazard
 from opengem import kvs
 from opengem.hazard import tasks
+from opengem.hazard import engine as hazengine
 from tests.jobber_unittest import wait_for_celery_tasks
 from tests.memcached_unittest import ONE_CURVE_MODEL
 
@@ -26,6 +27,11 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def tearDown(self):
         pass
+
+    def test_hazard_engine_runs(self):
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from memcached."""
+        hazengine.run_hazard()
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
@@ -106,3 +112,8 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazard.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
             self.memcache_client.set(site_key, ONE_CURVE_MODEL)
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()

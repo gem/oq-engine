@@ -3,10 +3,10 @@
 
 import os
 import time
-import jpype
 import pylibmc
 import unittest
 
+from opengem import java
 from opengem import logs
 from opengem import kvs
 from opengem import shapes
@@ -22,10 +22,7 @@ LOG = logs.LOG
 TEST_FILE = "nrml_test_result.xml"
 
 # starting the jvm...
-jarpath = os.path.join(os.path.abspath("."), "lib")
-jpype.startJVM(jpype.getDefaultJVMPath(), "-Dlog4j.disableOverride=false", 
-                "-Dlog4j.disable=WARN", "-Dlog4j.debug", 
-                "-Dlog4j.logger.net.spy=WARN", "-Djava.ext.dirs=%s" % jarpath)
+jpype = java.jvm()
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
 ONE_CURVE_MODEL = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[0.1,0.2,0.3]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label"]}'

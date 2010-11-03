@@ -3,6 +3,7 @@ from example_unittest import *
 from flags_unittest import *
 from geo_unittest import *
 from hazard_nrml_unittest import *
+from hazard_tests import *
 from jobber_unittest import *
 from loss_output_unittest import *
 from output_unittest import *
