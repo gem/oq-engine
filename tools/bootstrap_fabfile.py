@@ -21,7 +21,7 @@ def cleanup():
 
 
 def cleanup_osx():
-
+    pass
 
 def _bootstrap_other():
     pass
@@ -172,7 +172,6 @@ def _bootstrap_osx():
     _pip_install(" ".join(virtualenv_packages), virtualenv="opengem")
     _pip_install("pylibmc", version="0.9.2", virtualenv="opengem")
 
-
     #download and install geohash
     geohash_url = "http://python-geohash.googlecode.com/files/python-geohash-0.6.tar.gz"
     geohash_file = "python-geohash-0.6.tar.gz"
@@ -229,7 +228,7 @@ def teardown_osx():
 
 def _attach_and_install(dmg, volume, package):
     run("hdiutil attach %s" % dmg )
-    run("installer -pkg /Volumes/%s/%s -target /" % (volume, package))
+    sudo("installer -pkg /Volumes/%s/%s -target /" % (volume, package))
     run("hdiutil detach %s" % volume)
 
 def _curl(url, filename):
@@ -374,10 +373,11 @@ def _pip_install(python_package, virtualenv=None, version=None):
             install_package = "%s -E ~/.virtualenvs/%s" % (install_package, 
                                                            virtualenv)
 
+        dep_env="MACOSX_DEPLOYMENT_TARGET=10.6 "                                                  
         if not virtualenv:
-            return sudo(install_package)
+            return sudo(dep_env + install_package)
         else:
-            return run(install_package)
+            return run(dep_env + install_package)
 
 def ls(file):
     return _warn_only_run("ls %s" % file)
@@ -392,7 +392,6 @@ def _install_python():
                 that to uninstall python2.6 with brew, you'll need to manually move it 
                 back.
             """
-
 
             sudo('curl "https://gist.github.com/raw/635038/a3d24cbe"'
                  '> python2.6.rb')
