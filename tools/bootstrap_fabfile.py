@@ -163,7 +163,7 @@ def _bootstrap_osx():
     with cd("~"):
         if not ls(".virtualenvs"):
             run("mkdir -p .virtualenvs")
-            run("%s; mkvirtualenv opengem" % _osx_virtualenv_source())
+            run("%s mkvirtualenv opengem" % _osx_virtualenv_source())
 
     virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
                            "python-gflags", "guppy", "celery", "nose", "django",
