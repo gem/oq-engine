@@ -49,7 +49,7 @@ class Job(object):
 
         # risk parameters
         for param in parser.items(RISK_SECTION_NAME):
-            params[param[0]] = param[1]
+            params[str(param[0]).upper()] = param[1]
 
         # hazard parameters
         for param in parser.items(HAZARD_SECTION_NAME):
