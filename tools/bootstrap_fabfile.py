@@ -7,16 +7,21 @@ PYTHON_PATH = "%s/python/2.6.5" % CELLAR_PATH
 
 def bootstrap():
     def _detect_os():
-        platform = run('uname')
-        if platform == 'Darwin':
-            return _bootstrap_osx
-        elif platform == 'Linux':
-            return _bootstrap_linux
-        else:
-            return _bootstrap_other
+        platforms = {'Darwin': _bootstrap_osx, 'Linux': _bootstrap_linux}
+        return platforms.get(run('uname'), _bootstrap_other)
 
     bootstrap_fn = _detect_os()      # bootstrap_fn = _bootstrap_linux
     bootstrap_fn()                   # _bootstrap_linux()
+
+
+def cleanup():
+    def _detect_os():
+        platforms = {'Darwin': _cleanup_osx, 'Linux': _cleanup_linux}
+        return platforms.get(run('uname'), _cleanup_other)
+
+
+def cleanup_osx():
+    pass
 
 def _bootstrap_other():
     pass
@@ -113,7 +118,7 @@ def _bootstrap_osx():
     if not _homebrew_is_installed():
         print "You need to install Homebrew to bootstrap_osx"
         print 
-        print 'ruby -e "$(curl -fsS http://gist.github.com/raw/323731/install_homebrew.rb)"'
+        print 'ruby -e "$(curl -fsS https://gist.github.com/raw/323731/install_homebrew.rb)"'
 
         sys.exit()
 
@@ -139,13 +144,6 @@ def _bootstrap_osx():
                 run("./configure `brew diy`")
                 sudo("make && make install && brew ln libmemcached")
 
-    # Install PostgreSQL
-    _homebrew_install("postgresql")
-    _homebrew_install("postgis")
-    _configure_postgresql()
-    _start_postgresql()
-    _createdb_postgresql()
-
     # Install virtualenv
     _pip_install("virtualenv")
 
@@ -154,7 +152,7 @@ def _bootstrap_osx():
     # nice path
     _pip_install("virtualenvwrapper")
 
-    url = "http://gist.github.com/raw/635189/9f483e4969149a1fe1ed81f7ae33f19dfbc328bf/gistfile1.txt"
+    url = "https://gist.github.com/raw/635189/9f483e4969149a1fe1ed81f7ae33f19dfbc328bf/gistfile1.txt"
     with cd("/usr/local/Library/Formula"):
         if not ls("virtualenvwrapper.rb"): 
             sudo("curl %s > virtualenvwrapper.rb" % url)
@@ -165,7 +163,7 @@ def _bootstrap_osx():
     with cd("~"):
         if not ls(".virtualenvs"):
             run("mkdir -p .virtualenvs")
-            run("%s; mkvirtualenv opengem" % _osx_virtualenv_source())
+            run("%s mkvirtualenv opengem" % _osx_virtualenv_source())
 
     virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
                            "python-gflags", "guppy", "celery", "nose", "django",
@@ -230,7 +228,7 @@ def teardown_osx():
 
 def _attach_and_install(dmg, volume, package):
     run("hdiutil attach %s" % dmg )
-    run("installer -pkg /Volumes/%s/%s -target /" % (volume, package))
+    sudo("installer -pkg /Volumes/%s/%s -target /" % (volume, package))
     run("hdiutil detach %s" % volume)
 
 def _curl(url, filename):
@@ -298,7 +296,7 @@ def _install_jpype_from_source(java_home=None):
 
 def _install_numpy_from_source():
     with cd("/tmp"):
-        diffurl = ("http://gist.github.com/raw/636065/"
+        diffurl = ("https://gist.github.com/raw/636065/"
                    "b1302efeeea6bdd716cfdbb0ba351f2d4cc758f4/numpy_ppc.diff")
 
         if not ls("numpy"):
@@ -360,7 +358,7 @@ def _pip_installed(python_package, virtualenv=None):
         env.warn_only = False
         return res
 
-def _pip_install(python_package, virtualenv=None, version=None, usesudo=False):
+def _pip_install(python_package, virtualenv=None, version=None):
     if not _pip_installed(python_package, virtualenv):
         if version:
             install_package="pip install %s==%s" % (python_package, version)
@@ -370,7 +368,7 @@ def _pip_install(python_package, virtualenv=None, version=None, usesudo=False):
             install_package = "%s -E ~/.virtualenvs/%s" % (install_package, 
                                                            virtualenv)
 
-        if usesudo:
+        if not virtualenv:
             return sudo(install_package)
         else:
             return run(install_package)
@@ -389,14 +387,11 @@ def _install_python():
                 back.
             """
 
-            sudo('curl "http://gist.github.com/raw/635038/a3d24cbe"'
+            sudo('curl "https://gist.github.com/raw/635038/a3d24cbe"'
                  '> python2.6.rb')
 
             if ls("python.rb"):
                 sudo("mv python.rb{,-bootstrap_osx}")
                 sudo("cp python{2.6,}.rb")
 
-    if _homebrew_install("python"):
-        # Move them back
-        sudo("mv python{,2.6}.rb")
-        sudo("mv python.rb{-bootstrap_osx,}")
+    _homebrew_install("python")
