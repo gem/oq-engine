@@ -28,9 +28,11 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+import com.google.gson.Gson;
+
 public class InputModelData {
 
-    private ArrayList<GEMSourceData> sourceList;
+    private static ArrayList<GEMSourceData> sourceList;
 
     // border type for area source definition
     private static BorderType borderType = BorderType.GREAT_CIRCLE;
@@ -769,6 +771,11 @@ public class InputModelData {
 
     public ArrayList<GEMSourceData> getSourceList() {
         return sourceList;
+    }
+
+    public static String getJsonSourceList() {
+        String json = new Gson().toJson(sourceList);
+        return json;
     }
 
     // for testing
