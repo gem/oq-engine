@@ -21,7 +21,7 @@ def cleanup():
 
 
 def cleanup_osx():
-
+    pass
 
 def _bootstrap_other():
     pass
