@@ -2,9 +2,12 @@ package org.gem.engine;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -14,6 +17,7 @@ import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gem.engine.hazard.memcached.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeBranchingLevel;
@@ -45,15 +49,48 @@ public class GmpeLogicTreeData {
     private static String comment = "#";
 
     // package for gmpe
-    private String packageName = "org.opensha.sha.imr.attenRelImpl.";
+    private final String packageName = "org.opensha.sha.imr.attenRelImpl.";
 
     // for debugging
     private static Boolean D = false;
 
+    public GmpeLogicTreeData(Cache cache, String key, String component,
+            String intensityMeasureType, double period, double damping,
+            String truncType, double truncLevel, String stdType, double vs30)
+            throws IOException {
+
+        // open file
+
+        String source = (String) cache.get(key);
+        byte[] bytevals = source.getBytes();
+        InputStream byteis = new ByteArrayInputStream(bytevals);
+        BufferedInputStream oBIS = new BufferedInputStream(byteis);
+        BufferedReader oReader =
+                new BufferedReader(new InputStreamReader(oBIS));
+        parse_tree(oReader, component, intensityMeasureType, period, damping,
+                truncType, truncLevel, stdType, vs30);
+    }
+
     public GmpeLogicTreeData(String gmpeInputFile, String component,
             String intensityMeasureType, double period, double damping,
-            String truncType, double truncLevel, String stdType, double vs30) {
+            String truncType, double truncLevel, String stdType, double vs30)
+            throws FileNotFoundException {
         D = logger.isDebugEnabled();
+
+        // open file
+        File file = new File(gmpeInputFile);
+        FileInputStream oFIS = new FileInputStream(file.getPath());
+        BufferedInputStream oBIS = new BufferedInputStream(oFIS);
+        BufferedReader oReader =
+                new BufferedReader(new InputStreamReader(oBIS));
+        parse_tree(oReader, component, intensityMeasureType, period, damping,
+                truncType, truncLevel, stdType, vs30);
+    }
+
+    private void parse_tree(BufferedReader oReader, String component,
+            String intensityMeasureType, double period, double damping,
+            String truncType, double truncLevel, String stdType, double vs30) {
+
         try {
             // instatiate hash map of gmpe logic tree
             gmpeLogicTreeHashMap =
@@ -72,13 +109,6 @@ public class GmpeLogicTreeData {
 
             String subductionIntraSlabGmpeNames = null;
             String subductionIntraSlabGmpeWeights = null;
-
-            // open file
-            File file = new File(gmpeInputFile);
-            FileInputStream oFIS = new FileInputStream(file.getPath());
-            BufferedInputStream oBIS = new BufferedInputStream(oFIS);
-            BufferedReader oReader =
-                    new BufferedReader(new InputStreamReader(oBIS));
 
             if (D) {
                 logger.debug("\n\n\nGMPE Logic Tree structure\n");

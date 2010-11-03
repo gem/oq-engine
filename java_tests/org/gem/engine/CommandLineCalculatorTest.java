@@ -5,6 +5,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 
@@ -12,8 +13,8 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.gem.engine.CalculatorConfigHelper.CalculationMode;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
 import org.gem.engine.CalculatorConfigHelper.IntensityMeasure;
-import org.gem.engine.hazard.memcached.Cache;
 import org.gem.engine.hazard.memcached.BaseMemcachedTest;
+import org.gem.engine.hazard.memcached.Cache;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
 
@@ -27,9 +28,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * fail.
      * 
      * @throws ConfigurationException
+     * @throws IOException
      */
     @Test(expected = IllegalArgumentException.class)
-    public void testCalculatorConfig() throws ConfigurationException {
+    public void testCalculatorConfig() throws ConfigurationException,
+            IOException {
 
         /*
          * (state at 2010-10-07): This lets the test fail as expected
@@ -58,10 +61,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * application workflow is not interrupted
      * 
      * @throws ConfigurationException
+     * @throws IOException
      */
     @Test
     public void testDoProbabilisticEventBasedCalcMonteCarlo()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         CommandLineCalculator clc =
                 new CommandLineCalculator("CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
@@ -79,10 +83,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * application workflow is not interrupted
      * 
      * @throws ConfigurationException
+     * @throws IOException
      */
     @Test
     public void testDoProbabilisticEventBasedCalcFull()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         CommandLineCalculator clc =
                 new CommandLineCalculator("CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
@@ -101,9 +106,10 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      *            event based hazard calculation or for the "Monte Carlo"
      *            approach.
      * @throws ConfigurationException
+     * @throws IOException
      */
     private void testDoProbabilisticEventBasedCalc(CommandLineCalculator clc)
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         Map<Site, Double> result = clc.doCalculationProbabilisticEventBased();
         Object o = null;
         assertTrue(result != null);
@@ -116,7 +122,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
     @Test
     // spike on the java.util.Properties object
-    public void twoPropertiesAreEqualWithTheSameParameters() {
+            public
+            void twoPropertiesAreEqualWithTheSameParameters() {
         Properties config1 = new Properties();
         config1.setProperty("KEY", "VALUE");
 
