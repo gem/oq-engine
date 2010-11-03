@@ -2,17 +2,12 @@ package org.gem.engine.hazard;
 
 import static org.junit.Assert.assertEquals;
 
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import net.spy.memcached.MemcachedClient;
-
-import org.gem.engine.hazard.GEMHazardCurveRepository;
-import org.gem.engine.hazard.GEMHazardCurveRepositoryList;
 import org.gem.engine.hazard.memcached.Cache;
-import org.junit.After;
+import org.gem.engine.hazard.memcached.BaseMemcachedTest;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
@@ -20,19 +15,16 @@ import org.opensha.commons.geo.Location;
 
 import com.google.gson.Gson;
 
-public class GEMHazardCurveRepositoryListTest {
+public class GEMHazardCurveRepositoryListTest extends BaseMemcachedTest {
 
-    private static final int PORT = 11211;
-    private static final String LOCALHOST = "localhost";
     private static final Double TOLERANCE = 1e-10;
 
-    private MemcachedClient client;
     private GEMHazardCurveRepositoryList model;
 
+    @Override
     @Before
     public void setUp() throws Exception {
-        client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
-        client.flush(); // clear the server side cache
+        super.setUp();
 
         // sample model
         model = new GEMHazardCurveRepositoryList();
@@ -77,11 +69,6 @@ public class GEMHazardCurveRepositoryListTest {
         set.setGmLevels(groundMotionLevels);
 
         model.add(set, null);
-    }
-
-    @After
-    public void tearDown() {
-        client.shutdown();
     }
 
     @Test

@@ -74,7 +74,7 @@
 			</instr>
 		</emma>
 
-		<junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
+		<junit haltonerror="no" haltonfailure="yes" maxmemory="2g" fork="yes" dir="${coverage.dir}">
 			<classpath>
 				<!-- Input test files -->
 				<pathelement path="${test.dir}/data" />
@@ -100,16 +100,15 @@
 				<pathelement location="${lib.dir}/commons-lang-2.4.jar" />
 				<pathelement location="${lib.dir}/memcached-2.5.jar" />
 				<pathelement location="${lib.dir}/gson-1.5.jar" />
-				
 			</classpath>
 
 			<formatter type="xml" />
 
 			<batchtest fork="yes" todir="${tests.report.dir}">
 				<fileset dir="${test.dir}">
-					<include name="org/gem/engine/**/*Test*.java" />    
-					<include name="org/opensha/gem/**/*Test*.java" />
-					<exclude name="**/Base*.java" />
+					<exclude name="**/*Base*.java" />
+					<exclude name="**/*TestHelper*.java" />
+					<exclude name="**/*TestUtils*.java" />
 					<exclude name="**/AllTests.java" />
 				</fileset>
 			</batchtest>

@@ -1,5 +1,5 @@
-import os, re, sys, random
-from fabric.api import run, env, sudo, local, put, abort, prompt, cd
+import os, re, random
+from fabric.api import env, run, sudo, local, cd
 from fabric.state import output as fabric_output
 
 CELLAR_PATH = "/usr/local/Cellar"
@@ -7,22 +7,101 @@ PYTHON_PATH = "%s/python/2.6.5" % CELLAR_PATH
 
 def bootstrap():
     def _detect_os():
-        if sys.platform == 'darwin':
-            return _bootstrap_osx
-        elif sys.platform == 'linux2':
-            return _bootstrap_linux
-        else:
-            return _bootstrap_other
-    bootstrap_fn = _detect_os()
-    bootstrap_fn()
+        platforms = {'Darwin': _bootstrap_osx, 'Linux': _bootstrap_linux}
+        return platforms.get(run('uname'), _bootstrap_other)
 
+    bootstrap_fn = _detect_os()      # bootstrap_fn = _bootstrap_linux
+    bootstrap_fn()                   # _bootstrap_linux()
+
+
+def cleanup():
+    def _detect_os():
+        platforms = {'Darwin': _cleanup_osx, 'Linux': _cleanup_linux}
+        return platforms.get(run('uname'), _cleanup_other)
+
+
+def cleanup_osx():
+
+
+def _bootstrap_other():
+    pass
 
 def _bootstrap_linux():
-    print "Linux OS dev env bootstrapping is not yet implemented." 
-    print "Maybe you want to do this instead?"
-
     def _detect_distro():
+        distro = run("lsb_release -is")
+        if distro == "Ubuntu":
+            version = run("lsb_release -a | grep Release | sed -e 's/Release: *//'")
+
+            if not float(version) >= 9.04:
+                raise "Included python is too old. Upgrade your distro, dude."
+
+            return _bootstrap_ubuntu
+        #elif distro == "Fedora":
+        #    return _bootstrap_fedora
+        else:
+            raise "I don't know this distro."
+
+    def _bootstrap_ubuntu():
+        apt_packages = ["build-essential", "python2.6", "python2.6-dev", 
+                        "python-setuptools", "python-pip", "gfortran", 
+                        "rabbitmq-server", "memcached", "libmemcache-dev", 
+                        "libmemcached-dev", "postgresql", "postgis",
+                        "libxml2-dev", "libxslt-dev", "libblas-dev",
+                        "liblapack-dev", "pylint", "unzip"] 
+        gdal_packages = ["gdal-bin", "libgdal1-dev", "python-gdal"]
+        pip_packages = ["virtualenv", "virtualenvwrapper"]
+        virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
+                               "eventlet", "python-gflags", "guppy", 
+                               "libLAS", "numpy", "scipy", "celery",
+                               "nose", "django", "ordereddict"] 
+
+        _apt_install(" ".join(apt_packages)) 
+        _pip_install(" ".join(pip_packages), usesudo=True)
+        sudo("rm -rf ~/build/")
+
+        _configure_postgresql(pgsql_path="/usr/lib/postgresql/8.4/bin/")
+        _start_postgresql(initd="/etc/init.d/postgresql-8.4")
+        _adduser_posgresql()
+        _createdb_postgresql()
+
+        # Build the environment
+        with cd("~"):
+            if not ls(".virtualenvs"):
+                run("mkdir -p .virtualenvs")
+                run("%s mkvirtualenv opengem" % _ubuntu_virtualenv_source())   
+
+
+        for venv_package in virtualenv_packages:
+            _pip_install(venv_package, virtualenv="opengem")
+
+        _pip_install("pylibmc", version="0.9.2", virtualenv="opengem")
+
+        # GDAL.
+        _apt_install(" ".join(gdal_packages))
+
+        #download and install geohash
+        geohash_url = "http://python-geohash.googlecode.com/files/python-geohash-0.6.tar.gz"
+        geohash_file = "python-geohash-0.6.tar.gz"
+        with cd("/tmp"):
+            if not ls(geohash_file):
+                _curl(geohash_url, geohash_file)
+                run("tar xzf %s" % geohash_file)
+                with cd("python-geohash-0.6"):
+                    run("python setup.py install --prefix=~/.virtualenvs/opengem")
+
+        # Install jpype from source
+        _install_jpype_from_source(java_home="/usr/lib/jvm/java-6-sun-1.6.0.15/")
+
+        # Add virtualenv source to .profile
+        if "virtualenvwrapper.sh" not in _warn_only_run("cat ~/.profile"):
+            run("echo %s >> ~/.profile" % _ubuntu_virtualenv_source())
+
+    def _bootstrap_fedora():
         pass
+
+    bootstrap_fn = _detect_distro()
+    bootstrap_fn()
+
 
 def _bootstrap_osx():
     """
@@ -39,7 +118,7 @@ def _bootstrap_osx():
     if not _homebrew_is_installed():
         print "You need to install Homebrew to bootstrap_osx"
         print 
-        print 'ruby -e "$(curl -fsS http://gist.github.com/raw/323731/install_homebrew.rb)"'
+        print 'ruby -e "$(curl -fsS https://gist.github.com/raw/323731/install_homebrew.rb)"'
         sys.exit()
 
     # Install python2.6
@@ -64,13 +143,6 @@ def _bootstrap_osx():
                 run("./configure `brew diy`")
                 sudo("make && make install && brew ln libmemcached")
 
-    # Install PostgreSQL
-    _homebrew_install("postgresql")
-    _homebrew_install("postgis")
-    _configure_postgresql()
-    _start_postgresql()
-    _createdb_postgresql()
-
     # Install virtualenv
     _pip_install("virtualenv")
 
@@ -79,7 +151,8 @@ def _bootstrap_osx():
     # nice path
     _pip_install("virtualenvwrapper")
 
-    url = "http://gist.github.com/raw/635189/9f483e4969149a1fe1ed81f7ae33f19dfbc328bf/gistfile1.txt"
+    url = "https://gist.github.com/raw/635189/9f483e4969149a1fe1ed81f7ae33f19dfbc328bf/gistfile1.txt"
+
     with cd("/usr/local/Library/Formula"):
         if not ls("virtualenvwrapper.rb"): 
             sudo("curl %s > virtualenvwrapper.rb" % url)
@@ -90,28 +163,15 @@ def _bootstrap_osx():
     with cd("~"):
         if not ls(".virtualenvs"):
             run("mkdir -p .virtualenvs")
-            run("%s mkvirtualenv opengem" % _virtualenv_source())
+            run("%s; mkvirtualenv opengem" % _osx_virtualenv_source())
 
-    _pip_install("lxml", virtualenv="opengem")
-    _pip_install("pyyaml", virtualenv="opengem")
-    _pip_install("sphinx", virtualenv="opengem")
-    _pip_install("shapely", virtualenv="opengem")
-    _pip_install("eventlet", virtualenv="opengem")
-    _pip_install("python-gflags", virtualenv="opengem")
-    _pip_install("guppy", virtualenv="opengem")
-    _pip_install("celery", virtualenv="opengem")
-    _pip_install("nose", virtualenv="opengem")
-    _pip_install("django", virtualenv="opengem")
-    _pip_install("ordereddict", virtualenv="opengem")
+    virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
+                           "python-gflags", "guppy", "celery", "nose", "django",
+                           "ordereddict", "pylint"]
+
+    _pip_install(" ".join(virtualenv_packages), virtualenv="opengem")
     _pip_install("pylibmc", version="0.9.2", virtualenv="opengem")
-    _pip_install("pylint", virtualenv="opengem")
 
-    # Install OpenSHA-lite
-    opensha_url = "http://opengem.globalquakemodel.org/job/OpenSHA-Lite/lastSuccessfulBuild/artifact/dist/opensha-lite.jar"
-    opensha_file = "opensha-lite.jar"
-    print run("pwd")
-    with cd("../lib"):
-        _curl(opensha_url, opensha_file)
 
     #download and install geohash
     geohash_url = "http://python-geohash.googlecode.com/files/python-geohash-0.6.tar.gz"
@@ -153,7 +213,7 @@ def _bootstrap_osx():
     # Add virtualenv source to .profile
     if "virtualenvwrapper.sh" not in _warn_only_run("cat ~/.profile"):
         f = open("%s/.profile" % os.environ['HOME'], 'a')
-        f.write(_virtualenv_source())
+        f.write(_osx_virtualenv_source())
         f.close()
 
 
@@ -173,7 +233,6 @@ def _attach_and_install(dmg, volume, package):
     run("hdiutil detach %s" % volume)
 
 def _curl(url, filename):
-    run("pwd")
     run("curl %s > %s" % (url, filename))
 
 def _start_celery():
@@ -183,9 +242,13 @@ def _start_celery():
 def _start_rabbitmq():
     sudo("nohup /usr/local/sbin/rabbitmq-server &")
 
-def _start_postgresql():
-    if not run("ps aux | grep postgres"):
-        run("postgres -D /tmp/pgsql &")
+
+def _start_postgresql(initd=None):
+    if not _warn_only_run("ps aux | grep [p]ostgres"):
+        if not initd:
+            run("postgres -D /tmp/pgsql &")
+        else:
+            sudo("%s start" % initd)
 
 def _configure_rabbitmq_auth():
     env.warn_only = True
@@ -194,12 +257,19 @@ def _configure_rabbitmq_auth():
     sudo('/usr/local/sbin/rabbitmqctl set_permissions -p celeryvhost celeryuser ".*" ".*" ".*"')
     env.warn_only = False
 
-def _configure_postgresql():
+
+def _configure_postgresql(pgsql_path=""):
     if not ls("/tmp/pgsql"):
-        run("initdb /tmp/pgsql")
+        run("%sinitdb -U `whoami` /tmp/pgsql" % pgsql_path)
+
+def _adduser_posgresql():
+    username=run("whoami")
+    env.warn_only = True
+    sudo("su - postgres -c \"createuser -s %s\"" % username)
+    env.warn_only = False
 
 def _createdb_postgresql():
-    if not run("psql -l | grep opengem"):
+    if not _warn_only_run("psql -l | grep opengem"):
         run("createdb opengem")
     
 
@@ -211,19 +281,26 @@ def _install_gdal_from_dmg():
             _curl(gdal_url, gdal_file)
             _attach_and_install(gdal_file, "GDAL\ Complete", "GDAL\ Complete.pkg")
 
-def _install_jpype_from_source():
+def _install_jpype_from_source(java_home=None):
     jpype_url="http://softlayer.dl.sourceforge.net/project/jpype/JPype/0.5.4/JPype-0.5.4.1.zip"
     jpype_file = "JPype-0.5.4.1.zip"
+
+    if java_home:
+        java_home = "JAVA_HOME=%s" % java_home
+    else:
+        java_home = ""
+
     with cd("/tmp"):
         if not ls(jpype_file):
             _curl(jpype_url, jpype_file) 
             run("unzip %s" % jpype_file)
             with cd("JPype-0.5.4.1"):
-                run("python setup.py install --prefix=~/.virtualenvs/opengem")
+                run("%s python setup.py install --prefix=~/.virtualenvs/opengem" % java_home)
 
 def _install_numpy_from_source():
     with cd("/tmp"):
-        diffurl = ("http://gist.github.com/raw/636065/"
+        diffurl = ("https://gist.github.com/raw/636065/"
+
                    "b1302efeeea6bdd716cfdbb0ba351f2d4cc758f4/numpy_ppc.diff")
 
         if not ls("numpy"):
@@ -251,9 +328,11 @@ def _homebrew_exists(package):
 
     return True
 
+def _apt_install(package):
+    return sudo("apt-get -y install %s" % package, pty=True)
+
 def _homebrew_install(package):
     if not _homebrew_exists(package):
-        print env.warn_only
         return sudo("brew install %s" % package, pty=True)
 
 def _homebrew_uninstall(package):
@@ -261,7 +340,11 @@ def _homebrew_uninstall(package):
     if output:
         return sudo("brew uninstall %s" % package)
 
-def _virtualenv_source():
+
+def _ubuntu_virtualenv_source():
+    return "source /usr/local/bin/virtualenvwrapper.sh"
+
+def _osx_virtualenv_source():
     # todo(chris) THIS IS SUPER UGLY. 
     return """
 export VIRTUALENVWRAPPER_PYTHON=%s/bin/python
@@ -275,8 +358,11 @@ def _pip_installed(python_package, virtualenv=None):
         python_site_dir="~/.virtualenvs/opengem/lib/python2.6/site-packages/"
 
     with cd(python_site_dir):
-        print run("pwd")
-        return ls("%s*" % python_package)
+        env.warn_only = True
+        res = ls("%s*" % python_package)
+        env.warn_only = False
+        return res
+
 
 def _pip_install(python_package, virtualenv=None, version=None):
     if not _pip_installed(python_package, virtualenv):
@@ -287,7 +373,11 @@ def _pip_install(python_package, virtualenv=None, version=None):
         if virtualenv: 
             install_package = "%s -E ~/.virtualenvs/%s" % (install_package, 
                                                            virtualenv)
-        return run(install_package)
+
+        if not virtualenv:
+            return sudo(install_package)
+        else:
+            return run(install_package)
 
 def ls(file):
     return _warn_only_run("ls %s" % file)
@@ -303,14 +393,13 @@ def _install_python():
                 back.
             """
 
-            sudo('curl "http://gist.github.com/raw/635038/a3d24cbe"'
+
+            sudo('curl "https://gist.github.com/raw/635038/a3d24cbe"'
                  '> python2.6.rb')
 
             if ls("python.rb"):
                 sudo("mv python.rb{,-bootstrap_osx}")
                 sudo("cp python{2.6,}.rb")
 
-    if _homebrew_install("python"):
-        # Move them back
-        sudo("mv python{,2.6}")
-        sudo("mv python.rb{-bootstrap_osx,}")
+    _homebrew_install("python")
+
