@@ -29,5 +29,38 @@ def run_hazard():
     my_job = config.Job.from_files(os.path.abspath("tests/data/risk-config.gem"),
                                     os.path.abspath("tests/data/hazard-config.gem"))
     my_job.to_memcached()
-    engine = HazardEngineClass(cache, my_job.key)
-    engine.doCalculation()
+    
+    # Constructing HazardEngine from files directly, for ERF generation
+    engine = HazardEngineClass(os.path.abspath("tests/data/hazard-config.gem"))
+    erf_data = engine.createErfLogicTreeData()
+    LOG.debug("ERF DATA is %s" % erf_data)
+    LOG.debug(dir(erf_data))
+    
+    erf_data.erfLogicTree.printGemLogicTreeStructure()
+    
+    erf = engine.sampleGemLogicTreeERF(erf_data.getErfLogicTree())
+    LOG.debug("ERF is %s" % erf)
+    sources = erf.getSourceList()
+    for source in sources:
+        # DEBUG:root:['allSourceLocs', 'aveRupTopVersusMag', 'computeApproxTotalProbAbove', 
+        # 'computeTotalProb', 'computeTotalProbAbove', 'defaultHypoDepth', 
+        # 'drawRandomEqkRuptures', 'duration', 'equals', 'firstStrike', 
+        # 'focalMechanisms', 'getAllSourceLocs', 'getClass', 'getDuration', 
+        # 'getInfo', 'getMinDistance', 'getMinMag', 'getName', 'getNumRuptures',
+        #  'getRegion', 'getRupture', 'getRuptureClone', 'getRuptureList', 
+        # 'getRupturesIterator', 'getSourceMetadata', 'getSourceSurface', 
+        # 'getTectonicRegionType', 'gridReg', 'gridResolution', 'hashCode', 
+        # 'info', 'isPoissonian', 'isPoissonianSource', 'isSourcePoissonian', 
+        # 'location', 'lowerSeisDepth', 'magFreqDists', 'magScalingRel', 
+        # 'maxLength', 'minMag', 'name', 'nodeWeights', 'notify', 'notifyAll', 
+        # 'numRuptures', 'numStrikes', 'pointSources', 'probEqkRupture', 
+        # 'probEqkRuptureList', 'rates', 'reg', 'region', 'ruptureList', 
+        # 'rupturesIterator', 'setDuration', 'setInfo', 'setTectonicRegionType',
+        #  'sourceIndex', 'sourceMetadata', 'sourceSurface', 
+        # 'tectonicRegionType', 'toString', 'wait']
+        LOG.debug(source.duration)
+        LOG.debug(source.name)
+        LOG.debug(source.getRuptureList())
+    # LOG.debug(erf_data.toString())
+    # engine = HazardEngineClass(cache, my_job.key)
+    # engine.doCalculation()

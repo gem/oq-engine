@@ -38,6 +38,7 @@ import org.gem.engine.hazard.GEMHazardCurveRepositoryList;
 import org.gem.engine.hazard.GemComputeHazard;
 import org.gem.engine.hazard.memcached.Cache;
 import org.gem.engine.logictree.LogicTree;
+import org.gem.engine.logictree.LogicTreeAPI;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
@@ -315,7 +316,7 @@ public class CommandLineCalculator {
         logger.info("Performing calculation through Monte Carlo Approach.\n");
         // System.out.println("Performing calculation through Monte Carlo Approach.\n");
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
         GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         // instantiate the repository for the results
@@ -348,8 +349,8 @@ public class CommandLineCalculator {
             // change because they are randomly sampled
             GemComputeHazard compHaz =
                     new GemComputeHazard(numOfThreads, sites,
-                            sampleGemLogicTreeERF(
-                                    erfLogicTree.getErfLogicTree(), config),
+                            sampleGemLogicTreeERF(erfLogicTree
+                                    .getErfLogicTree()),
                             sampleGemLogicTreeGMPE(gmpeLogicTree
                                     .getGmpeLogicTreeHashMap()), imlList,
                             maxDistance);
@@ -429,7 +430,7 @@ public class CommandLineCalculator {
         logger.info("Performing full calculation. \n");
         // System.out.println("Performing full calculation. \n");
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
         GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         // compute ERF logic tree end-branch models
@@ -603,7 +604,7 @@ public class CommandLineCalculator {
         Map<Site, Double> groundMotionMap = null;
         ArrayList<Site> sites = createSiteList(config);
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
         GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         int numberOfRealization =
@@ -620,8 +621,7 @@ public class CommandLineCalculator {
                     sampleGemLogicTreeGMPE(gmpeLogicTree
                             .getGmpeLogicTreeHashMap());
             EqkRupForecast eqkRupForecast =
-                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
-                            config);
+                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree());
             ArrayList<ArrayList<EqkRupture>> seismicityHistories =
                     StochasticEventSetGenerator
                             .getMultipleStochasticEventSetsFromPoissonianERF(
@@ -652,7 +652,7 @@ public class CommandLineCalculator {
         Map<Site, Double> groundMotionMap = null;
         ArrayList<Site> sites = createSiteList(config);
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
         GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         int numberOfRealization =
@@ -672,8 +672,7 @@ public class CommandLineCalculator {
             // loop over ERF end branches
             ArrayList<GEMSourceData> erfBranch = endBranchModels.get(i);
             EqkRupForecast eqkRupForecast =
-                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
-                            config);
+                    sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree());
             ArrayList<ArrayList<EqkRupture>> seismicityHistories =
                     StochasticEventSetGenerator
                             .getMultipleStochasticEventSetsFromPoissonianERF(
@@ -1084,9 +1083,8 @@ public class CommandLineCalculator {
         return sites;
     } // createSiteList()
 
-    private GEM1ERF
-            sampleGemLogicTreeERF(LogicTree<ArrayList<GEMSourceData>> ltERF,
-                    Configuration calcConfig) {
+    public GEM1ERF sampleGemLogicTreeERF(
+            LogicTreeAPI<ArrayList<GEMSourceData>> ltERF) {
         // erf to be returned
         GEM1ERF erf = null;
         // array list of sources that will contain the samples sources
@@ -1102,18 +1100,11 @@ public class CommandLineCalculator {
         LogicTreeBranch branch =
                 ltERF.getBranchingLevel(0).getBranch(branchNumber - 1);
         if (branch.getNameInputFile() != null) {
-            // read input file model
-            // next line shows how to read from a Properties object (will be
-            // deleted soon).
-            // InputModelData inputModelData = new
-            // InputModelData(branch.getNameInputFile(),
-            // Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
-            // new here is the apache Configuration object
             String sourceName = configFilesPath() + branch.getNameInputFile();
 
             InputModelData inputModelData =
                     new InputModelData(sourceName,
-                            calcConfig.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
+                            config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
                                     .name()));
             // load sources
             srcList = inputModelData.getSourceList();
@@ -1195,7 +1186,7 @@ public class CommandLineCalculator {
           // instantiate ERF
         erf = new GEM1ERF(srcList);
         // set ERF parameters
-        setGEM1ERFParams(erf, calcConfig);
+        setGEM1ERFParams(erf, config);
         return erf;
     } // sampleGemLogicTreeERF()
 
@@ -1763,9 +1754,7 @@ public class CommandLineCalculator {
 
     }
 
-    private ErfLogicTreeData
-            createErfLogicTreeData(Configuration configuration)
-                    throws IOException {
+    public ErfLogicTreeData createErfLogicTreeData() throws IOException {
         // load ERF logic tree data
         if (hasPath == true) {
             ErfLogicTreeData erfLogicTree =
@@ -1775,7 +1764,7 @@ public class CommandLineCalculator {
             return erfLogicTree;
         } else {
             return new ErfLogicTreeData(kvs,
-                    ConfigItems.ERF_LOGIC_TREE_FILE.name());
+                    config.getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
         }
     } // createErfLogicTreeData()
 

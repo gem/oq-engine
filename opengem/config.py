@@ -92,7 +92,6 @@ class Job(object):
         if self.base_path is None:
             raise Exception("Can't slurp files without a base path, homie...")
         for key, val in self.params.items():
-            print key[-5:]
             if key[-5:] == '_FILE':
                 LOG.debug("Slurping %s : %s" % (key, val))
                 path = os.path.join(self.base_path, val)
