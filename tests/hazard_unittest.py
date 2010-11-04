@@ -5,9 +5,10 @@ import logging
 import time
 import unittest
 
-from opengem import identifiers
-from opengem import memcached
+from opengem import hazard
+from opengem import kvs
 from opengem.hazard import tasks
+from opengem.hazard import engine as hazengine
 from tests.jobber_unittest import wait_for_celery_tasks
 from tests.memcached_unittest import ONE_CURVE_MODEL
 
@@ -21,11 +22,16 @@ TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
 
 class HazardEngineTestCase(unittest.TestCase):
     def setUp(self):
-        self.memcache_client = memcached.get_client(binary=False)
+        self.memcache_client = kvs.get_client(binary=False)
         self.memcache_client.flush_all()
 
     def tearDown(self):
         pass
+
+    def test_hazard_engine_runs(self):
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from memcached."""
+        hazengine.run_hazard()
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
@@ -39,10 +45,11 @@ class HazardEngineTestCase(unittest.TestCase):
         results = []
         result_keys = []
         expected_values = {}
+
+        print hazard.ERF_KEY_TOKEN
         
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = identifiers.generate_product_key(job_id,
-                        identifiers.ERF_KEY_TOKEN)
+            erf_key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
 
             # Build the expected values
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
@@ -55,8 +62,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         wait_for_celery_tasks(results)
 
-        memcached_client = memcached.get_client(binary=False)
-        result_values = memcached_client.get_multi(result_keys)
+        result_values = self.memcache_client.get_multi(result_keys)
 
         self.assertEqual(result_values, expected_values)
 
@@ -82,8 +88,8 @@ class HazardEngineTestCase(unittest.TestCase):
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = identifiers.generate_product_key(job_id, 
-                identifiers.MGM_KEY_TOKEN, block_id, site)
+            mgm_key = kvs.generate_product_key(job_id, hazard.MGM_KEY_TOKEN, 
+                block_id, site)
             self.memcache_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
             results.append(tasks.compute_mgm_intensity.apply_async(
@@ -97,13 +103,17 @@ class HazardEngineTestCase(unittest.TestCase):
     def _prepopulate_sites_for_block(self, job_id, block_id):
         sites = ["Testville,TestLand", "Provaville,TestdiTerra",
                  "Teststadt,Landtesten", "villed'essai,paystest"]
-        sites_key = identifiers.generate_product_key(job_id, 
-            identifiers.SITES_KEY_TOKEN, block_id) 
+        sites_key = kvs.generate_sites_key(job_id, block_id)
 
         self.memcache_client.set(sites_key, json.JSONEncoder().encode(sites))
 
         for site in sites:
-            site_key = identifiers.generate_product_key(job_id,
-                identifiers.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
+            site_key = kvs.generate_product_key(job_id,
+                hazard.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
             self.memcache_client.set(site_key, ONE_CURVE_MODEL)
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()
