@@ -307,6 +307,71 @@ public class CommandLineCalculator {
     } // doCalculationProbabilisticEventBased()
 
     /**
+     * Suggested format for a jsonized GMF {'gmf_id' : { 'eqkrupture_id' : {
+     * 'site_id' : {'lat' : lat_val, 'lon' : lon_val, 'mag' : double_val}}}}
+     * 
+     * From identifiers.py, these are what the expected keys look like (this
+     * makes no expectation of the values), the keys are after the colon.
+     * 
+     * sites: job_id!block_id!!sites gmf: job_id!block_id!!gmf gmf:
+     * job_id!block_id!site!gmf
+     * 
+     * @return
+     */
+    public static String jsonizeGroundMotionFields(String gmfId,
+            String[] eqkRuptureIds, String[] siteIds,
+            Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
+        StringBuilder result = new StringBuilder();
+        int ruptureCount = eqkRuptureIds.length;
+        int siteCount = siteIds.length;
+        int gmfCount = groundMotionFields.size();
+        if (!(ruptureCount * siteCount == gmfCount)) {
+            String msg =
+                    ruptureCount + " ruptures * " + siteCount
+                            + " sites. \n-> There are " + ruptureCount + " * "
+                            + siteCount + " = " + ruptureCount * siteCount
+                            + " GMFs ecxpected but there are: " + gmfCount;
+            throw new IllegalArgumentException(msg);
+        }
+        Gson gson = new Gson();
+
+        // TODO:
+        // The EqkRupture memcache keys must be known here.
+        // For now behave, as if the map object is ordered.
+        // 
+        Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
+        int indexEqkRupture = 0;
+        for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
+            result.append(gson.toJson(eqkRuptureIds[indexEqkRupture]));
+            result.append(gson.toJson(":"));
+            ++indexEqkRupture;
+            Map<Site, Double> groundMotionField =
+                    groundMotionFields.get(eqkRupture);
+            // TODO:
+            // The Site memcache keys must be known here.
+            // For now behave, as if the map object is ordered.
+            Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
+            int indexSite = 0;
+            for (Site s : groundMotionFieldKeys) {
+                result.append(gson.toJson(siteIds[indexSite]));
+                result.append(":");
+                result.append(gson.toJson("{ 'lat': "
+                        + gson.toJson(s.getLocation().getLatitude())));
+                // key = new StringBuilder();
+                // key.append(indexEqkRupture);
+                // key.append('_');
+                // key.append(s.getLocation().getLatitude());
+                // key.append('_');
+                // key.append(s.getLocation().getLongitude());
+                // cache.set(key.toString(), groundMotionField.get(s));
+                // allKeys.add(key.toString());
+            }
+        }
+
+        return result.toString();
+    }
+
+    /**
      * Saves a ground motion map to a Cache object.
      * 
      * @param cache
