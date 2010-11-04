@@ -9,7 +9,7 @@ import time
 
 from celery.decorators import task
 
-from opengem import memcached
+from opengem import kvs
 
 MAX_WAIT_TIME_MILLISECS = 1200
 
@@ -29,7 +29,7 @@ def simple_task_return_name_to_memcache(name, **kwargs):
 
     logger = simple_task_return_name_to_memcache.get_logger(**kwargs)
 
-    memcache_client = memcached.get_client(binary=False)
+    memcache_client = kvs.get_client(binary=False)
 
     wait_time = _wait_a_bit()
     logger.info("processing %s, waited %s milliseconds" % (name, wait_time))
@@ -42,7 +42,7 @@ def simple_task_list_dict_to_memcache(name, **kwargs):
 
     logger = simple_task_list_dict_to_memcache.get_logger(**kwargs)
 
-    memcache_client = memcached.get_client(binary=False)
+    memcache_client = kvs.get_client(binary=False)
 
     wait_time = _wait_a_bit()
     logger.info("processing list/dict.%s, waited %s milliseconds" % (name, wait_time))
@@ -56,7 +56,7 @@ def simple_task_json_to_memcache(name, **kwargs):
 
     logger = simple_task_json_to_memcache.get_logger(**kwargs)
 
-    memcache_client = memcached.get_client(binary=False)
+    memcache_client = kvs.get_client(binary=False)
 
     wait_time = _wait_a_bit()
     logger.info("processing json.%s, waited %s milliseconds" % (name, wait_time))

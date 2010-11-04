@@ -1,0 +1,32 @@
+
+# EXAMPLE OF FAULT SOURCE
+newsource
+          
+            # source id
+            src03
+            # source name
+            Mount Diablo Thrust 
+            # tectonic region type
+            Active Shallow Crust
+
+                                            # source typology
+                                            fault
+                                            # fault trace (lat,lon)
+                                            # intersection of fault surface with earth surface
+                                            # number of fault trace points
+                                            2
+                                            # trace points coordinates (lat,lon)
+                                            37.73010 -121.82290
+                                            37.87710 -122.03880
+                                            # fault dip (degree)
+                                            38.0
+                                            # fault rake (degree)
+                                            90
+                                            # seismogenic layer top depth (km)
+                                            8
+                                            # seismogenic layer bottom depth (km)
+                                            13
+                                            # magnitude frequency distribution
+                                            # 	gr aGR(cumulative) bGR mMax 
+                                            # 	ch magChar rateChar sigmaChar numSigma (NOTE: not yet implemented!)
+                                            gr 3.0 0.8 6.5 7.0

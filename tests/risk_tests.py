@@ -11,9 +11,7 @@ import unittest
 
 from shapely import geometry
 
-from opengem import identifiers
 from opengem import logs
-from opengem import memcached
 from opengem import shapes
 from opengem import test
 
@@ -205,11 +203,3 @@ class RiskEngineTestCase(unittest.TestCase):
         # No exposure at second site, so no loss results
         self.assertEqual(loss_results[second_gp], None)
         # self.assertNotEqual(loss_results[fourth_gp], None)
-
-
-class RiskOutputTestCase(unittest.TestCase):
-    """Confirm that XML output from risk engine is valid against schema,
-    as well as correct given the inputs."""
-    
-    def setUp(self):
-        pass

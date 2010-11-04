@@ -3,29 +3,29 @@
 
 import os
 import time
-import jpype
 import pylibmc
 import unittest
 
+from opengem import hazard
+from opengem import risk
+from opengem import java
 from opengem import logs
-from opengem import memcached
+from opengem import kvs
 from opengem import shapes
 from opengem import test
+
+from opengem.kvs import reader
+from opengem.parser import vulnerability
+
 from opengem.output import hazard as hazard_output
 from opengem.parser import hazard as hazard_parser
 
 LOG = logs.LOG
 
-MEMCACHED_PORT = 11211
-MEMCACHED_HOST = "localhost"
-
 TEST_FILE = "nrml_test_result.xml"
 
 # starting the jvm...
-jarpath = os.path.join(os.path.abspath("."), "lib")
-jpype.startJVM(jpype.getDefaultJVMPath(), "-Dlog4j.disableOverride=false", 
-                "-Dlog4j.disable=WARN", "-Dlog4j.debug", 
-                "-Dlog4j.logger.net.spy=WARN", "-Djava.ext.dirs=%s" % jarpath)
+jpype = java.jvm()
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
 ONE_CURVE_MODEL = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[0.1,0.2,0.3]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label"]}'
@@ -36,15 +36,14 @@ class MemcachedTestCase(unittest.TestCase):
     
     def setUp(self):
         java_class = jpype.JClass("org.gem.engine.hazard.memcached.Cache")
-        self.java_client = java_class(MEMCACHED_HOST, MEMCACHED_PORT)
+        self.java_client = java_class(kvs.MEMCACHED_HOST, kvs.MEMCACHED_PORT)
         
-        self.python_client = pylibmc.Client([
-                MEMCACHED_HOST + ":%d" % MEMCACHED_PORT], binary=False)
-        
+        self.python_client = kvs.get_client(binary=False)
+
         # clean server side cache
         self.python_client.flush_all()
         
-        self.reader = memcached.Reader(self.python_client)
+        self.reader = reader.Reader(self.python_client)
         self._delete_test_file()
     
     def tearDown(self):
@@ -241,3 +240,68 @@ class MemcachedTestCase(unittest.TestCase):
                 self.assertEqual(val, data.values()[0][key])
 
         self.assertEqual(1, number_of_curves)
+
+
+class IdentifierTestCase(unittest.TestCase):
+    def setUp(self):
+        self.job_id = 123456
+        self.product = "TestProduct"
+        self.block_id = 8801 # This is just an interesting number
+        self.site = "Testville,TestLand"
+
+    def test_generate_product_key_with_only_job_id_and_product(self):
+        key = kvs.generate_product_key(self.job_id, self.product)
+
+        ev = "%s!!!%s" % (self.job_id, self.product)
+        self.assertEqual(key, ev)
+
+    def test_generate_product_key_with_job_id_product_and_block_id(self):
+        key = kvs.generate_product_key(self.job_id, self.product, self.block_id)
+
+        ev =  "%s!%s!!%s" % (self.job_id, self.block_id, self.product)
+        self.assertEqual(key, ev)
+
+    def test_generate_product_key_with_job_id_product_and_site(self):
+        key = kvs.generate_product_key(self.job_id, self.product, 
+            site=self.site)
+
+        ev =  "%s!!%s!%s" % (self.job_id, self.site, self.product)
+        self.assertEqual(key, ev)
+
+    def test_generate_product_key_with_all_test_data(self):
+        key = kvs.generate_product_key(self.job_id, self.product, self.block_id,
+            self.site)
+
+        ev = "%s!%s!%s!%s" % (self.job_id, self.block_id, self.site, 
+            self.product) 
+        self.assertEqual(key, ev)
+
+    def test_generate_product_key_with_tokens_from_kvs(self):
+        products = [
+            hazard.ERF_KEY_TOKEN,
+            hazard.MGM_KEY_TOKEN,
+            hazard.HAZARD_CURVE_KEY_TOKEN,
+            risk.CONDITIONAL_LOSS_KEY_TOKEN,
+            risk.EXPOSURE_KEY_TOKEN,
+            risk.GMF_KEY_TOKEN,
+            risk.LOSS_RATIO_CURVE_KEY_TOKEN,
+            risk.LOSS_CURVE_KEY_TOKEN,
+            vulnerability.VULNERABILITY_CURVE_KEY_TOKEN,
+        ]
+
+        for product in products:
+            key = kvs.generate_product_key(self.job_id, product,
+                self.block_id, self.site)
+
+            ev = "%s!%s!%s!%s" % (self.job_id, self.block_id, self.site,
+                product)
+            self.assertEqual(key, ev)
+    
+    def test_memcached_doesnt_support_spaces_in_keys(self):
+        self.product = "A TestProduct"
+        self.site = "Testville, TestLand"
+        key = kvs.generate_product_key(self.job_id, self.product, 
+            site=self.site)
+
+        ev = "%s!!Testville,TestLand!ATestProduct" % self.job_id
+        self.assertEqual(key, ev)
