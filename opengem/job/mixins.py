@@ -10,19 +10,16 @@ class Mixin(object):
         self.mixin = mixin
 
     def __enter__(self):
-        self._load()
-        return self
+        return self._load()
 
     def __exit__(self, *args):
         self._unload()
 
     def _load(self):
-        print "In _load, self is %s" % self
         if issubclass(self.mixin, type(self)):
             calculation_mode = self.target.params['CALCULATION_MODE']
             self.mixin = self.mixin.mixins[calculation_mode]
         self.target.__class__.__bases__ += (self.mixin,)
-
         return self.target
 
     def _unload(self):
