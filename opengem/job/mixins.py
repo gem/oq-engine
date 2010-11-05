@@ -1,37 +1,40 @@
-import opengem.hazard.job
-import opengem.risk.job
+# from opengem.hazard.job import HazJobMixin
+# import opengem.risk.job
 
 
 class Mixin(object):
-    mixins = []
+    mixins = {}
     def __init__(self, target, mixin):
+        print "Constructoring Mixin with target of %s" % target
         self.target = target
         self.mixin = mixin
 
     def __enter__(self):
         self._load()
+        return self
 
     def __exit__(self, *args):
         self._unload()
 
     def _load(self):
+        print "In _load, self is %s" % self
         if issubclass(self.mixin, type(self)):
-            calculation_mode = self.target.params['calculation_mode']
-            mixin_index = self.mixin.mixins.index(calculation_mode)
-            self.mixin = self.mixin.mixins[mixin_index]
+            calculation_mode = self.target.params['CALCULATION_MODE']
+            self.mixin = self.mixin.mixins[calculation_mode]
         self.target.__class__.__bases__ += (self.mixin,)
+
         return self.target
 
     def _unload(self):
-        bases = list(self.target.__bases__)
+        bases = list(self.target.__class__.__bases__)
         bases.remove(self.mixin)
         self.target.__class__.__bases__ = tuple(bases)
 
     @classmethod
-    def register(cls, mixin):
-        if not mixin in cls.mixins:
-            return cls.mixins.append(mixin)
+    def register(cls, key, mixin):
+        if not key in cls.mixins:
+            cls.mixins[key] = mixin
 
     @classmethod
-    def unregister(cls, mixin):
-        return mixins.remove(mixin)
+    def unregister(cls, key):
+        del mixins[key]
