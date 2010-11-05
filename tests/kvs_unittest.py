@@ -36,8 +36,10 @@ class MemcachedTestCase(unittest.TestCase):
     def setUp(self):
         
         # starting the jvm...
+        print "About to start the jvm..."
         jpype = java.jvm()
         java_class = jpype.JClass("org.gem.engine.hazard.memcached.Cache")
+        print ("Not dead yet, and found the class...")
         self.java_client = java_class(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         
         self.python_client = kvs.get_client(binary=False)
