@@ -7,9 +7,6 @@ import jpype
 
 from opengem.logs import LOG
 
-
-
-
         
 def jvm(max_mem=4000):
     jarpaths = (os.path.abspath(os.path.join(os.path.dirname(__file__), "../lib")), 
