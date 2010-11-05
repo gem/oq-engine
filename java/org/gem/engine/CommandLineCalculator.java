@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -1092,7 +1093,7 @@ public class CommandLineCalculator {
         // number of branching levels in the logic tree
         int numBranchingLevels = ltERF.getBranchingLevelsList().size();
         // sample first branching level to get the starting source model
-        int branchNumber = ltERF.sampleBranchingLevel(0);
+        int branchNumber = ltERF.sampleBranchingLevel(0, getRandom());
         // get the corresponding branch (the -1 is needed because branchNumber
         // is the
         // number of the branch (starting from 1) and not the index of the
@@ -1124,7 +1125,7 @@ public class CommandLineCalculator {
             // uncertainties
             for (int i = 1; i < numBranchingLevels; i++) {
                 // sample the current branching level
-                branchNumber = ltERF.sampleBranchingLevel(i);
+                branchNumber = ltERF.sampleBranchingLevel(i, getRandom());
                 // get the sampled branch
                 branch = ltERF.getBranchingLevel(i).getBranch(branchNumber - 1);
                 if (branch.getRule() != null) {
@@ -1189,6 +1190,128 @@ public class CommandLineCalculator {
         setGEM1ERFParams(erf, config);
         return erf;
     } // sampleGemLogicTreeERF()
+
+    /**
+     * Generate N source models (each represented by an array list of
+     * GEMSourceData objects), by randomly sampling the source model logic tree.
+     * 
+     * @param lt
+     *            : source model logic tree
+     * @param N
+     *            : number of models to be generated
+     * @param seed
+     *            : seed number for the random number generator
+     * @return
+     */
+    public List<ArrayList<GEMSourceData>> sampleSourceModelLogicTree(
+            LogicTreeAPI<ArrayList<GEMSourceData>> lt, int N, long seed) {
+
+        List<ArrayList<GEMSourceData>> modelList =
+                new ArrayList<ArrayList<GEMSourceData>>();
+        ArrayList<GEMSourceData> srcList = null;
+        Random rn = new Random(seed);
+
+        for (int indexModel = 0; indexModel < N; indexModel++) {
+
+            // sample first branching level to get the starting source model
+            int branchNumber = lt.sampleBranchingLevel(0, getRandom());
+            LogicTreeBranch branch =
+                    lt.getBranchingLevel(0).getBranch(branchNumber - 1);
+            if (branch.getNameInputFile() != null) {
+                String sourceName =
+                        configFilesPath() + branch.getNameInputFile();
+
+                InputModelData inputModelData =
+                        new InputModelData(sourceName,
+                                config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
+                                        .name()));
+                // load sources
+                srcList = inputModelData.getSourceList();
+            } else {
+                String msg =
+                        "The first branching level of the ERF logic tree does"
+                                + " not contain a source model!!\n"
+                                + "Please correct your input!\n Execution stopped!";
+                logger.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+
+            // loop over sources
+            // for each source, loop over remaining branching levels and apply
+            // uncertainties
+            int numBranchingLevels = lt.getBranchingLevelsList().size();
+            int sourceIndex = 0;
+            for (GEMSourceData src : srcList) {
+                for (int i = 1; i < numBranchingLevels; i++) {
+                    // sample the current branching level
+                    branchNumber = lt.sampleBranchingLevel(i, getRandom());
+                    // get the sampled branch
+                    branch =
+                            lt.getBranchingLevel(i).getBranch(branchNumber - 1);
+                    if (branch.getRule() != null) {
+                        // at the moment we apply rules to all source
+                        // typologies. In
+                        // the future we may want
+                        // to apply some filter (i.e. apply rule to this source
+                        // type
+                        // only...)
+                        // if area source
+                        if (src instanceof GEMAreaSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToAreaSource(
+                                            (GEMAreaSourceData) src,
+                                            branch.getRule()));
+                        }
+                        // if point source
+                        if (src instanceof GEMPointSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToPointSource(
+                                            (GEMPointSourceData) src,
+                                            branch.getRule()));
+                        }
+                        // if fault source
+                        if (src instanceof GEMFaultSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToFaultSource(
+                                            (GEMFaultSourceData) src,
+                                            branch.getRule()));
+                        }
+                        // if subduction source
+                        if (src instanceof GEMSubductionFaultSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToSubductionFaultSource(
+                                            (GEMSubductionFaultSourceData) src,
+                                            branch.getRule()));
+                        }
+                    } else {
+                        // rule is not defined:
+                        String msg =
+                                "No rule is defined at branching level: " + i
+                                        + "\n" + "Please correct your input!\n"
+                                        + "Execution stopped!";
+                        logger.info(msg);
+                        throw new IllegalArgumentException(msg);
+                    } // end if no rule is defined
+                } // end loop over branching levels
+                sourceIndex = sourceIndex + 1;
+            } // end loop over sources
+            modelList.add(srcList);
+        }
+
+        return modelList;
+    }
 
     /**
      * This method applies an "uncertainty" rule to an area source data object
@@ -1741,7 +1864,7 @@ public class CommandLineCalculator {
                     listLtGMPE.get(trt);
 
             // sample the first branching level
-            int branch = ltGMPE.sampleBranchingLevel(0);
+            int branch = ltGMPE.sampleBranchingLevel(0, getRandom());
 
             // select the corresponding gmpe from the end-branch mapping
             ScalarIntensityMeasureRelationshipAPI gmpe =
