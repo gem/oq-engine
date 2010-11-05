@@ -28,6 +28,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gem.JsonSerializer;
 import org.gem.UnoptimizedDeepCopy;
 import org.gem.calc.GroundMotionFieldCalculator;
 import org.gem.calc.StochasticEventSetGenerator;
@@ -115,6 +116,7 @@ public class CommandLineCalculator {
             throws ConfigurationException {
         config = new PropertiesConfiguration();
         ((PropertiesConfiguration) config).load(calcConfigFile);
+        System.out.println(config);
         hasPath = true;
     } // constructor
 
@@ -1191,6 +1193,18 @@ public class CommandLineCalculator {
         return erf;
     } // sampleGemLogicTreeERF()
 
+    public void sampleAndSaveERFTree(Cache cache, String key)
+            throws IOException {
+        int N =
+                config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
+                        .name());
+        long seed = (long) 0.0;
+        List<ArrayList<GEMSourceData>> sources =
+                sampleSourceModelLogicTree(createErfLogicTreeData()
+                        .getErfLogicTree(), N, seed);
+        JsonSerializer.serializeSourceList(cache, key, sources.get(0));
+    }
+
     /**
      * Generate N source models (each represented by an array list of
      * GEMSourceData objects), by randomly sampling the source model logic tree.
@@ -1204,7 +1218,7 @@ public class CommandLineCalculator {
      * @return
      */
     public List<ArrayList<GEMSourceData>> sampleSourceModelLogicTree(
-            LogicTreeAPI<ArrayList<GEMSourceData>> lt, int N, long seed) {
+            LogicTree<ArrayList<GEMSourceData>> lt, int N, long seed) {
 
         List<ArrayList<GEMSourceData>> modelList =
                 new ArrayList<ArrayList<GEMSourceData>>();
@@ -1880,6 +1894,8 @@ public class CommandLineCalculator {
     public ErfLogicTreeData createErfLogicTreeData() throws IOException {
         // load ERF logic tree data
         if (hasPath == true) {
+            System.out.println(getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE
+                    .name()));
             ErfLogicTreeData erfLogicTree =
                     new ErfLogicTreeData(
                             getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE

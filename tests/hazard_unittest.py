@@ -39,12 +39,24 @@ class HazardEngineTestCase(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_hazard_engine_runs(self):
+    def test_hazard_engine_jobber_runs(self):
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from memcached."""
+        site_id = 1
+        hazengine = job.Job.from_file(TEST_JOB_FILE)
+        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
+            hc = hazengine.execute()
+            source_model_key = kvs.generate_product_key(hazengine.id, hazard.ERF_KEY_TOKEN)
+            print self.memcache_client.get(source_model_key)
+            #self.assertEqual(
+            
+    def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from memcached."""
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_memcached(job_id)
+        print type(hazengine)
         with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
             hc = hazengine.compute_hazard_curve(site_id)
 
