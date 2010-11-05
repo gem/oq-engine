@@ -135,24 +135,24 @@ class BlockSplitterTestCase(unittest.TestCase):
     
     def test_an_empty_set_produces_no_blocks(self):
         self.splitter = jobber.BlockSplitter(())
-        self.assert_number_of_blocks_is(0)
+        self._assert_number_of_blocks_is(0)
 
     def test_splits_the_set_into_a_single_block(self):
         self.splitter = jobber.BlockSplitter((SITE,), 3)
-        self.assert_number_of_blocks_is(1)
+        self._assert_number_of_blocks_is(1)
 
         self.splitter = jobber.BlockSplitter((SITE, SITE), 3)
-        self.assert_number_of_blocks_is(1)
+        self._assert_number_of_blocks_is(1)
 
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
-        self.assert_number_of_blocks_is(1)
+        self._assert_number_of_blocks_is(1)
 
     def test_splits_the_set_into_multiple_blocks(self):
         self.splitter = jobber.BlockSplitter((SITE, SITE), 1)
-        self.assert_number_of_blocks_is(2)
+        self._assert_number_of_blocks_is(2)
 
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
-        self.assert_number_of_blocks_is(2)
+        self._assert_number_of_blocks_is(2)
 
     def test_generates_the_correct_blocks(self):
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
@@ -163,7 +163,7 @@ class BlockSplitterTestCase(unittest.TestCase):
 
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
         expected_blocks = (jobber.Block((SITE, SITE)), jobber.Block((SITE,)))
-        self.assert_blocks_are(expected_blocks)
+        self._assert_blocks_are(expected_blocks)
 
     def test_splitting_with_region_intersection(self):
         region_constraint = shapes.RegionConstraint.from_simple(
@@ -177,13 +177,13 @@ class BlockSplitterTestCase(unittest.TestCase):
                 jobber.Block((shapes.Site(2.0, 2.0),)))
 
         self.splitter = jobber.BlockSplitter(sites, 2, constraint=region_constraint)
-        self.assert_blocks_are(expected_blocks)
+        self._assert_blocks_are(expected_blocks)
 
-    def assert_blocks_are(self, expected_blocks):
+    def _assert_blocks_are(self, expected_blocks):
         for idx, block in enumerate(self.splitter):
             self.assertEqual(expected_blocks[idx], block)
 
-    def assert_number_of_blocks_is(self, number):
+    def _assert_number_of_blocks_is(self, number):
         counter = 0
         
         for block in self.splitter:

@@ -9,6 +9,11 @@ from opengem import config
 RISK_CONFIG_FILE = "risk-config.gem"
 HAZARD_CONFIG_FILE = "hazard-config.gem"
 
+
+def fname():
+    """docstring for fname"""
+    pass
+
 class JobTestCase(unittest.TestCase):
     
     def setUp(self):
@@ -36,21 +41,29 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, config.Job.from_kvs(self.job.id))
     
     def test_is_invalid_with_no_region_and_exposure(self):
-        # no parameters
-        self.assertFalse(config.Job({}).is_valid())
+        self.job = config.Job({})
+        self.assertFalse(self._decorated_function()())
 
         # parameters defined, but empty
-        self.assertFalse(config.Job({config.EXPOSURE: "",
-                config.INPUT_REGION: ""}).is_valid())
+        self.job = config.Job({config.EXPOSURE: "", config.INPUT_REGION: ""})
+        self.assertFalse(self._decorated_function()())
         
         # parameters defined
-        self.assertTrue(config.Job({
-                config.EXPOSURE: "exposure.xml"}).is_valid())
+        self.job = config.Job({config.EXPOSURE: "exposure.xml"})
+        self.assertTrue(self._decorated_function()())
         
-        self.assertTrue(config.Job({
-                config.EXPOSURE: "",
-                config.INPUT_REGION: "region.file"}).is_valid())
+        self.job = config.Job({config.INPUT_REGION: "region.file"})
+        self.assertTrue(self._decorated_function()())
         
-        self.assertTrue(config.Job({
+        self.job = config.Job({
                 config.EXPOSURE: "exposure.xml",
-                config.INPUT_REGION: "region.file"}).is_valid())
+                config.INPUT_REGION: "region.file"})
+
+        self.assertTrue(self._decorated_function()())
+    
+    def _decorated_function(self):
+        @self.job.validate
+        def f():
+            return True
+        
+        return f

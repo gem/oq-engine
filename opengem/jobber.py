@@ -224,17 +224,17 @@ class BlockSplitter(object):
     def __iter__(self):
         if not len(self.sites):
             return
-        else:
-            number_of_blocks = int(math.ceil(len(self.sites) / float(self.sites_per_block)))
 
-            for idx in range(number_of_blocks):
-                filtered_sites = []
-                offset = idx * self.sites_per_block
-                sites = self.sites[offset:offset + self.sites_per_block]
+        number_of_blocks = int(math.ceil(len(self.sites) / float(self.sites_per_block)))
+
+        for idx in range(number_of_blocks):
+            filtered_sites = []
+            offset = idx * self.sites_per_block
+            sites = self.sites[offset:offset + self.sites_per_block]
 
 # TODO (ac): Can be done better using shapely, but after the shapes.Site refactoring...            
-                for site in sites:
-                    if self.constraint.match(site):
-                        filtered_sites.append(site)
+            for site in sites:
+                if self.constraint.match(site):
+                    filtered_sites.append(site)
                 
-                yield(Block(filtered_sites))
+            yield(Block(filtered_sites))
