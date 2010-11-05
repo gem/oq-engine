@@ -163,7 +163,23 @@ class BlockSplitterTestCase(unittest.TestCase):
 
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
         expected_blocks = (jobber.Block((SITE, SITE)), jobber.Block((SITE,)))
+        self.assert_blocks_are(expected_blocks)
 
+    def test_splitting_with_region_intersection(self):
+        region_constraint = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+        
+        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
+            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
+
+        expected_blocks = (
+                jobber.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
+                jobber.Block((shapes.Site(2.0, 2.0),)))
+
+        self.splitter = jobber.BlockSplitter(sites, 2, constraint=region_constraint)
+        self.assert_blocks_are(expected_blocks)
+
+    def assert_blocks_are(self, expected_blocks):
         for idx, block in enumerate(self.splitter):
             self.assertEqual(expected_blocks[idx], block)
 
