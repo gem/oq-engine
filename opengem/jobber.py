@@ -195,7 +195,7 @@ class Jobber(object):
 class Block(object):
 
     def __init__(self, sites):
-        self.sites = sites
+        self.sites = tuple(sites)
         self.block_id = kvs.generate_random_id()
 
     def __eq__(self, other):
@@ -209,9 +209,17 @@ class Block(object):
 
 class BlockSplitter(object):
 
-    def __init__(self, sites, sites_per_block=SITES_PER_BLOCK):
+    def __init__(self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
         self.sites = sites
+        self.constraint = constraint
         self.sites_per_block = sites_per_block
+    
+        if not self.constraint:
+            class AlwaysTrueConstraint():
+                def match(self, point):
+                    return True
+            
+            self.constraint = AlwaysTrueConstraint()
     
     def __iter__(self):
         if not len(self.sites):
@@ -220,5 +228,13 @@ class BlockSplitter(object):
             number_of_blocks = int(math.ceil(len(self.sites) / float(self.sites_per_block)))
 
             for idx in range(number_of_blocks):
+                filtered_sites = []
                 offset = idx * self.sites_per_block
-                yield(Block(self.sites[offset:offset + self.sites_per_block]))
+                sites = self.sites[offset:offset + self.sites_per_block]
+
+# TODO (ac): Can be done better using shapely, but after the shapes.Site refactoring...            
+                for site in sites:
+                    if self.constraint.match(site):
+                        filtered_sites.append(site)
+                
+                yield(Block(filtered_sites))
