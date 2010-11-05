@@ -1,3 +1,7 @@
+import opengem.hazard.job
+import opengem.risk.job
+
+
 class Mixin(object):
     mixins = []
     def __init__(self, target, mixin):
@@ -15,12 +19,13 @@ class Mixin(object):
             calculation_mode = self.target.params['calculation_mode']
             mixin_index = self.mixin.mixins.index(calculation_mode)
             self.mixin = self.mixin.mixins[mixin_index]
-        self.target.__bases__ += (self.mixin,)
+        self.target.__class__.__bases__ += (self.mixin,)
+        return self.target
 
     def _unload(self):
         bases = list(self.target.__bases__)
         bases.remove(self.mixin)
-        self.target.__bases__ = tuple(bases)
+        self.target.__class__.__bases__ = tuple(bases)
 
     @classmethod
     def register(cls, mixin):
