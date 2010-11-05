@@ -11,6 +11,7 @@ from opengem import logs
 from opengem import kvs
 from opengem import shapes
 from opengem import test
+from opengem import settings
 
 from opengem.kvs import reader
 
@@ -36,7 +37,7 @@ class MemcachedTestCase(unittest.TestCase):
     
     def setUp(self):
         java_class = jpype.JClass("org.gem.engine.hazard.memcached.Cache")
-        self.java_client = java_class(kvs.MEMCACHED_HOST, kvs.MEMCACHED_PORT)
+        self.java_client = java_class(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         
         self.python_client = kvs.get_client(binary=False)
 
