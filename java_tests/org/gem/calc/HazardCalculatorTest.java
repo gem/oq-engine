@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import junit.framework.Assert;
 import net.spy.memcached.MemcachedClient;
 
 import org.gem.engine.CommandLineCalculator;
@@ -229,10 +230,8 @@ public class HazardCalculatorTest {
                 HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
                         rn);
         List<String> keys =
-                CommandLineCalculator
-                        .storeToMemcache(groundMotionFields, cache);
-        int groundMotionFieldSize = keys.size() / groundMotionFields.size();
-        int index = 0;
+                CommandLineCalculator.gmfValuesToMemcache(groundMotionFields,
+                        cache);
         // now find a Double object for each key
         Iterator<String> keyIterator = keys.iterator();
         while (keyIterator.hasNext()) {
@@ -250,6 +249,55 @@ public class HazardCalculatorTest {
             // ...An accurate test has to construct a Site object from the keys
             // and use that "Site" to retrieve the value from the map.
         } // while
+    }
+
+    @Test
+    public void gmfToJsonTest() {
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields =
+                HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
+                        rn);
+        String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
+        // 
+        // EqkRupture firstKey = groundMotionFields.keySet().iterator().next();
+        // Map<Site, Double> firstGmf = groundMotionFields.get(firstKey);
+        Iterator<Map<Site, Double>> gmfIterator =
+                groundMotionFields.values().iterator();
+        Map<Site, Double> firstGmf = null;
+        while (gmfIterator.hasNext() && firstGmf == null) {
+            firstGmf = groundMotionFields.values().iterator().next();
+        }
+        if (firstGmf == null) {
+            Assert
+                    .fail("HazardCalculator did not return ground motion fields: "
+                            + groundMotionFields.toString());
+        }
+        String[] siteIds = new String[firstGmf.size()];
+        for (int i = 0; i < eqkRuptureIds.length; ++i) {
+            eqkRuptureIds[i] = "eqkRupture_id_" + i;
+        }
+        for (int i = 0; i < siteIds.length; ++i) {
+            siteIds[i] = "site_id_" + i;
+        }
+        String jsonString =
+                CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
+                        siteIds, groundMotionFields);
+        System.out.println(jsonString);
+        assertNotNull("jsonString is expected to not to be null", jsonString);
+    }
+
+    @Test
+    public void gmfToMemcache() {
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields =
+                HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
+                        rn);
+        String gmfsId = "gmfs_id";
+        String memCacheKey = "gmfs_id";
+
+        String[] eqkRuptureIds = null;
+        String[] siteIds = null;
+        CommandLineCalculator.gmfToMemcache(memCacheKey, gmfsId, eqkRuptureIds,
+                siteIds, groundMotionFields, cache);
+
     }
 
     /**
