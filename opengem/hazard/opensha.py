@@ -5,7 +5,7 @@ Top-level managers for hazard computation.
 import os
 
 from opengem import java
-from opengem.kvs import MEMCACHED_PORT, MEMCACHED_HOST
+from opengem.settings import MEMCACHED_PORT, MEMCACHED_HOST
 from opengem import config
 from opengem.logs import LOG
 
