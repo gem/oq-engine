@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""These are the unit tests for the jobber module. At the moment, they contain
+"""
+These are the unit tests for the jobber module. At the moment, they contain
 only tests for the basic underlying technologies (celery, memcached).
 A test that asserts that a given computation result can reproduced is still
 missing.
@@ -15,6 +16,8 @@ import unittest
 
 from opengem import logs
 from opengem import kvs
+from opengem import jobber
+from opengem import shapes
 
 import tests.tasks as test_tasks
 
@@ -24,11 +27,13 @@ TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
+SITE = shapes.Site(1.0, 1.0)
 
 class JobberTestCase(unittest.TestCase):
+
     def setUp(self):
-        self.memcache_client = kvs.get_client(binary=False)
-        self.memcache_client.flush_all()
+        self.kvs_client = kvs.get_client(binary=False)
+        self.kvs_client.flush_all()
 
     def tearDown(self):
         pass
@@ -57,7 +62,7 @@ class JobberTestCase(unittest.TestCase):
 
         wait_for_celery_tasks(results)
 
-        result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
+        result_values = self.kvs_client.get_multi(TASK_NAME_SIMPLE)
         self.assertEqual(sorted(TASK_NAME_SIMPLE), 
                          sorted(result_values.values()))
 
@@ -78,7 +83,7 @@ class JobberTestCase(unittest.TestCase):
         for name in TASK_NAME_SIMPLE:
             expected_keys.extend(["list.%s" % name, "dict.%s" % name])
 
-        result_values = self.memcache_client.get_multi(expected_keys)
+        result_values = self.kvs_client.get_multi(expected_keys)
 
         expected_dict = {}
         for curr_key in sorted(expected_keys):
@@ -102,7 +107,7 @@ class JobberTestCase(unittest.TestCase):
 
         wait_for_celery_tasks(results)
 
-        result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
+        result_values = self.kvs_client.get_multi(TASK_NAME_SIMPLE)
 
         expected_dict = {}
         for curr_key in TASK_NAME_SIMPLE:
@@ -116,6 +121,60 @@ class JobberTestCase(unittest.TestCase):
             result_dict[k] = decoder.decode(v)
 
         self.assertEqual(expected_dict, result_dict)
+
+class BlockTestCase(unittest.TestCase):
+    
+    def test_block_has_a_unique_id(self):
+        self.assertTrue(jobber.Block(()).id)
+        self.assertTrue(jobber.Block(()).id != jobber.Block(()).id)
+
+class BlockSplitterTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.splitter = None
+    
+    def test_an_empty_set_produces_no_blocks(self):
+        self.splitter = jobber.BlockSplitter(())
+        self.assert_number_of_blocks_is(0)
+
+    def test_splits_the_set_into_a_single_block(self):
+        self.splitter = jobber.BlockSplitter((SITE,), 3)
+        self.assert_number_of_blocks_is(1)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE), 3)
+        self.assert_number_of_blocks_is(1)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
+        self.assert_number_of_blocks_is(1)
+
+    def test_splits_the_set_into_multiple_blocks(self):
+        self.splitter = jobber.BlockSplitter((SITE, SITE), 1)
+        self.assert_number_of_blocks_is(2)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
+        self.assert_number_of_blocks_is(2)
+
+    def test_generates_the_correct_blocks(self):
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
+        expected_blocks = (jobber.Block((SITE, SITE, SITE)),)
+        
+        for idx, block in enumerate(self.splitter):
+            self.assertEqual(expected_blocks[idx], block)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
+        expected_blocks = (jobber.Block((SITE, SITE)), jobber.Block((SITE,)))
+
+        for idx, block in enumerate(self.splitter):
+            self.assertEqual(expected_blocks[idx], block)
+
+    def assert_number_of_blocks_is(self, number):
+        counter = 0
+        
+        for block in self.splitter:
+            counter += 1
+        
+        self.assertEqual(number, counter)
+
 
 def wait_for_celery_tasks(celery_results, 
                           max_wait_loops=MAX_WAIT_LOOPS, 

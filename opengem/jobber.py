@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-Main jobber module
+Main jobber module.
 """
 
+import math
 
 from opengem import config
 from opengem import flags
@@ -22,11 +23,10 @@ from opengem.parser import exposure
 from opengem.parser import hazard
 from opengem.parser import vulnerability
 
-
 FLAGS = flags.FLAGS
 LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
-
 LOGGER = logs.LOG
+SITES_PER_BLOCK = 100
 
 class Jobber(object):
     """The Jobber class is responsible to evaluate the configuration settings
@@ -192,4 +192,33 @@ class Jobber(object):
             self.vulnerability_model_file)
 
 
+class Block(object):
 
+    def __init__(self, sites):
+        self.sites = sites
+        self.block_id = kvs.generate_random_id()
+
+    def __eq__(self, other):
+        return self.sites == other.sites
+
+    @property
+    def id(self):
+        """Return the id of this block."""
+        return self.block_id
+
+
+class BlockSplitter(object):
+
+    def __init__(self, sites, sites_per_block=SITES_PER_BLOCK):
+        self.sites = sites
+        self.sites_per_block = sites_per_block
+    
+    def __iter__(self):
+        if not len(self.sites):
+            return
+        else:
+            number_of_blocks = int(math.ceil(len(self.sites) / float(self.sites_per_block)))
+
+            for idx in range(number_of_blocks):
+                offset = idx * self.sites_per_block
+                yield(Block(self.sites[offset:offset + self.sites_per_block]))

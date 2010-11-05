@@ -31,7 +31,7 @@ class JobTestCase(unittest.TestCase):
     def test_a_job_has_an_identifier(self):
         self.assertEqual(1, config.Job({}, 1).id)
     
-    def test_can_store_and_read_jobs_from_memcached(self):
+    def test_can_store_and_read_jobs_from_kvs(self):
         self.job.to_kvs()
         self.assertEqual(self.job, config.Job.from_kvs(self.job.id))
     
