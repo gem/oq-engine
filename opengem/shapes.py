@@ -50,6 +50,7 @@ class Region(object):
     @classmethod
     def from_file(cls, path):
         """Load a region from a wkt file with a single polygon"""
+        print path
         with open(path) as wkt_file:
             polygon = wkt.loads(wkt_file.read())
             return cls(polygon=polygon)

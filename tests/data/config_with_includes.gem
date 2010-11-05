@@ -1,0 +1,3 @@
+[general]
+risk_include = risk-config.gem
+hazard_include = hazard-config.gem

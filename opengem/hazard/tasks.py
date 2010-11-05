@@ -10,6 +10,7 @@ The following tasks are defined in the hazard engine:
 import json
 
 from opengem import hazard
+from opengem.hazard import opensha
 from opengem import kvs
 
 from celery.decorators import task
@@ -27,7 +28,7 @@ def generate_erf(job_id):
     """
 
     # TODO(JM): implement real ERF computation
-    erf = [job_id]
+    erf = opensha.generate_erf()
     erf_serialized = json.JSONEncoder().encode(erf)
 
     key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)

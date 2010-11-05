@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+""" A single hazard/risk job """
+
 import hashlib
+import re
 import os
 
 from ConfigParser import ConfigParser
@@ -8,17 +11,43 @@ from ConfigParser import ConfigParser
 from opengem import kvs
 from opengem.logs import LOG
 
+
 INPUT_REGION = "filter_region"
 HAZARD_CURVES = "hazard_curves"
+RE_INCLUDE = re.compile(r'^(.*)_include')
 
-RISK_SECTION_NAME = "RISK"
-HAZARD_SECTION_NAME = "HAZARD"
+
+def parse_config_file(config_file):
+    """
+    We have a single configuration file which may contain a risk section and
+    a hazard section. This input file must be in the ConfigParser format
+    defined at: http://docs.python.org/library/configparser.html.
+
+    There may be a general section which may define configuration includes in
+    the format of "sectionname_include = someconfigname.gem". These too must be
+    in the ConfigParser format.
+    """
+
+    parser = ConfigParser()
+    parser.read(config_file)
+
+    params = {}
+    for section in parser.sections():
+        for key, value in parser.items(section):
+            # Handle includes.
+            if RE_INCLUDE.match(key):
+                config_file = "%s/%s" % (os.path.dirname(config_file), value)
+                params.update(parse_config_file(config_file))
+            else:
+                params[key.upper()] = value
+
+    return params
 
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    @classmethod
-    def from_memcached(cls, job_id):
+    @staticmethod
+    def from_memcached(job_id):
         """Return the job in memcached with the given id."""
         
         key = kvs.generate_job_key(job_id)
@@ -27,38 +56,16 @@ class Job(object):
 
         return Job(params, job_id)
 
-    @classmethod
-    def from_files(cls, risk_config_file, hazard_config_file):
-        """Create a job from external configuration files.
+    @staticmethod
+    def from_file(config_file):
+        """ Create a job from external configuration files. """
         
-        We have a configuration file for the risk part, and a configuration
-        file for the hazard part. The input files must be compatible with the
-        ConfigParser module, http://docs.python.org/library/configparser.html.
-        
-        The risk parameters must be defined under the [RISK] section,
-        while the hazard parameters must be defined under the [HAZARD] section.
-
-        """
-        
-        base_path = os.path.dirname(risk_config_file)
-
-        parser = ConfigParser()
-        parser.read([risk_config_file, hazard_config_file])
-
-        params = {}
-
-        # risk parameters
-        for param in parser.items(RISK_SECTION_NAME):
-            params[str(param[0]).upper()] = param[1]
-
-        # hazard parameters
-        for param in parser.items(HAZARD_SECTION_NAME):
-            params[str(param[0]).upper()] = param[1]
+        base_path = os.path.dirname(config_file)
+        params = parse_config_file(config_file)
 
         return Job(params, base_path=base_path)
 
     def __init__(self, params, job_id=None, base_path=None):
-        
         if job_id is None:
             job_id = kvs.generate_random_id()
         
@@ -88,7 +95,7 @@ class Job(object):
     def _slurp_files(self):
         """Read referenced files and write them into memcached, key'd on their
         sha1s."""
-        memcached_client = kvs.get_client(binary=True)
+        memcached_client = kvs.get_client(binary=False)
         if self.base_path is None:
             raise Exception("Can't slurp files without a base path, homie...")
         for key, val in self.params.items():
@@ -98,7 +105,6 @@ class Job(object):
                 with open(path) as data_file:
                     LOG.debug("Slurping %s" % path)
                     sha1 = hashlib.sha1(data_file.read()).hexdigest()
-                    LOG.debug("SHA1 is %s" % sha1)
                     data_file.seek(0)
                     memcached_client.set(sha1, data_file.read())
                     self.params[key] = sha1

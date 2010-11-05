@@ -7,8 +7,9 @@ import unittest
 
 from opengem import hazard
 from opengem import kvs
+from opengem import test
 from opengem.hazard import tasks
-from opengem.hazard import engine as hazengine
+from opengem.hazard import opensha as hazengine
 from tests.jobber_unittest import wait_for_celery_tasks
 from tests.memcached_unittest import ONE_CURVE_MODEL
 
@@ -18,9 +19,13 @@ MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.1500 +35.0000", "intensity": 2.0594e+00}'
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
+TEST_JOB_FILE = test.test_file('config.gem')
 
 
 class HazardEngineTestCase(unittest.TestCase):
+    """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
+    Most data returned from the engine is via memcached."""
+    
     def setUp(self):
         self.memcache_client = kvs.get_client(binary=False)
         self.memcache_client.flush_all()
@@ -31,7 +36,7 @@ class HazardEngineTestCase(unittest.TestCase):
     def test_hazard_engine_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from memcached."""
-        hazengine.run_hazard()
+        hazengine.preload(TEST_JOB_FILE)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []

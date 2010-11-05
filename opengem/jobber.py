@@ -12,6 +12,7 @@ from opengem import kvs
 from opengem import producer
 from opengem import risk
 from opengem import shapes
+from opengem import settings
 
 from opengem.risk import tasks
 
@@ -24,7 +25,6 @@ from opengem.parser import vulnerability
 
 
 FLAGS = flags.FLAGS
-LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 
 LOGGER = logs.LOG
 
@@ -99,7 +99,7 @@ class Jobber(object):
                                 loss_curve))
 
         LOGGER.debug("serializing loss_curves")
-        output_generator = RiskXMLWriter(LOSS_CURVES_OUTPUT_FILE)
+        output_generator = RiskXMLWriter(settings.LOSS_CURVES_OUTPUT_FILE)
         output_generator.serialize(loss_curves)
         
         #output_generator = output.SimpleOutput()
@@ -171,7 +171,7 @@ class Jobber(object):
                 "jobber: cannot write sites to memcache")
         
         # load assets and write to memcache
-        exposure_parser = exposure.ExposurePortfolioFile(self.exposure_file)
+        exposure_parser = exposure.ExposurePortfolioFile(self.job['exposure'])
         for site, asset in exposure_parser.filter(region_constraint):
             gridpoint = region_constraint.grid.point_at(site)
 
