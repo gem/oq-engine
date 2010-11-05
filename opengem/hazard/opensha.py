@@ -4,15 +4,19 @@ Top-level managers for hazard computation.
 
 import os
 
+from opengem import hazard
 from opengem import java
+from opengem import job
+from opengem.job import mixins
+from opengem.hazard import job
+from opengem import kvs
 from opengem import settings
-from opengem import config
 from opengem.logs import LOG
 
 JAVA_CLASSES = {
-    'HazardEngineClass' : "org.gem.engine.CommandLineCalculator",
+    'InputModelData' : "org.gem.engine.InputModelData",
     'KVS' : "org.gem.engine.hazard.memcached.Cache",
-    'HazardUtil' : "org.gem.engine.hazard.Util",
+    'JsonSerializer' : "org.gem.JsonSerializer",
 }
 
 def jclass(class_key):
@@ -20,37 +24,46 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-class HazardJobMixin(object):
+class MonteCarloMixin:
 
-    def __init__(self, job_file):
-
-    def preload(self, fn):
-        def mc_preloader(self, *args, **kwargs):
+    def preload(fn):
+        """A decorator for preload steps that must run on the Jobber"""
+        def preloader(self, *args, **kwargs):
             assert(self.base_path)
             # Slurp related files here...
             erf_logic_tree_file = guarantee_file(self.base_path, 
                         self.params['ERF_LOGIC_TREE_FILE'])
-            self.store_source_model(erf_logic_tree_file)
+            self.store_source_model(erf_logic_tree_file, 
+                            self.params['WIDTH_OF_MFD_BIN'])
             fn(*args, **kwargs)
         
-        if self.params['CALCULATION_MODE'].upper() == 'MONTE CARLO':
-            return mc_preloader
+        return preloader
         
         raise Exception("Can only handle Monte Carlo Hazard mode right now.")
 
-    def store_source_model(self, tree_file):
+    def store_source_model(self, tree_file, delta_mfd):
         """Generates an Earthquake Rupture Forecast, using the source zones and
         logic trees specified in the job config file. Note that this has to be
         done using the file itself, since it has nested references to other files.
     
         job_file should be an absolute path.
         """
-        engine = jclass("HazardEngineClass")(tree_file)
+        engine = jclass("InputModelData")(tree_file, delta_mfd)
         source_model = engine.sampleSourceModelLogicTree()
+        key = kvs.generate_product_key(self.id, hazard.ERF_KEY_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
-        util = jclass("HazardUtil")()
-        util.serializeSources(cache, source_model)
+        jclass("JsonSerializer").serializeSourceList(cache, key, source_model)
+    
+    @preload
+    def execute(self):
+        pass
 
+    def compute_hazard_curve(self, site_id):
+        """Actual hazard curve calculation, runs on the workers."""
+        pass
+
+
+job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
 
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
