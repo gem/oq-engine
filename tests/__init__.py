@@ -13,6 +13,4 @@ from risk_tests import *
 from schema_unittest import *
 from classical_psha_based_unittest import *
 from kvs_unittest import *
-from probabilistic_event_based_unittest import *
-from engines_unittest import *
 from job_unittest import *

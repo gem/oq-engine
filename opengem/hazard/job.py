@@ -1,20 +1,9 @@
 from opengem.job.mixins import Mixin
+from opengem.hazard import opensha
 
 Mixin.register(HazJobMixin)
-HazJobMixin.register(MonteCarloMixin)
+HazJobMixin.register(opensha.MonteCarloMixin)
 
 
 class HazJobMixin(Mixin):
     mixins = []
-
-
-class MonteCarloMixin:
-    def preload(self, fn):
-        def preloader(self, *args, *kwargs):
-            return fn(*args, **kwargs)
-
-        return preloader
-
-    @preload
-    def execute():
-        pass
