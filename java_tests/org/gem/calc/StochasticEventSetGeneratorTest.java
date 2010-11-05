@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.gem.calc.StochasticEventSetGenerator;
 import org.gem.engine.hazard.GEM1ERF;
 import org.gem.engine.hazard.parsers.nshmp.NshmpFault2GemSourceData;
 import org.junit.Test;
@@ -45,7 +44,9 @@ public class StochasticEventSetGeneratorTest {
                 rn);
     }
 
-    @Test
+    // @Test
+    // This test needs a lot of memory resources that we don't currently have on
+    // our CI VM...
     public void compareOccurrenceRates() {
 
         /**
@@ -170,8 +171,6 @@ public class StochasticEventSetGeneratorTest {
             stochasticRate =
                     stochasticRate / (timeSpan * numStochasticEventSets);
             stochasticRateExpected = mfd.getY(i);
-            System.out.println("Expected: " + stochasticRateExpected
-                    + ", calculated: " + stochasticRate);
             assertEquals(stochasticRateExpected, stochasticRate, tolerance);
         }
     }

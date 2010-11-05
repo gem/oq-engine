@@ -38,5 +38,7 @@ setup(name='opengem',
       data_files=[('/etc/opengem', ['celeryconfig.py']),
                   ('lib', libs),],
       scripts=scripts,
-      requires=['lxml','shapely',"gflags",'pylibmc(==0.9.2)'],
-     )
+      install_requires=["pyyaml", "shapely", "python-gflags", "pylibmc==0.9.2",
+                        "lxml", "sphinx", "eventlet", "guppy", "libLAS",
+                        "numpy", "scipy", "celery", "nose", "django",
+                        "ordereddict"])
