@@ -26,6 +26,10 @@ libs = []
 for x in os.listdir('lib'):
     if x[-4:] == '.jar':
         libs.append("lib/%s" % x)
+        
+with os.popen("which gfortran") as gf:
+    if not gf:
+        print 'You need to install gfortran'
 
 setup(name='opengem',
       version='0.1.0',
@@ -41,4 +45,4 @@ setup(name='opengem',
       install_requires=["pyyaml", "shapely", "python-gflags", "pylibmc==0.9.2",
                         "lxml", "sphinx", "eventlet", "guppy", "libLAS",
                         "numpy", "scipy", "celery", "nose", "django",
-                        "ordereddict"])
+                        "ordereddict", "libxml2-dev", "libxslt-dev"])
