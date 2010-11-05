@@ -32,5 +32,25 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(1, config.Job({}, 1).id)
     
     def test_can_store_and_read_jobs_from_memcached(self):
-        self.job.to_memcached()
-        self.assertEqual(self.job, config.Job.from_memcached(self.job.id))
+        self.job.to_kvs()
+        self.assertEqual(self.job, config.Job.from_kvs(self.job.id))
+    
+    def test_is_invalid_with_no_region_and_exposure(self):
+        # no parameters
+        self.assertFalse(config.Job({}).is_valid())
+
+        # parameters defined, but empty
+        self.assertFalse(config.Job({config.EXPOSURE: "",
+                config.INPUT_REGION: ""}).is_valid())
+        
+        # parameters defined
+        self.assertTrue(config.Job({
+                config.EXPOSURE: "exposure.xml"}).is_valid())
+        
+        self.assertTrue(config.Job({
+                config.EXPOSURE: "",
+                config.INPUT_REGION: "region.file"}).is_valid())
+        
+        self.assertTrue(config.Job({
+                config.EXPOSURE: "exposure.xml",
+                config.INPUT_REGION: "region.file"}).is_valid())

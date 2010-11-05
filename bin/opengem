@@ -75,8 +75,12 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        config = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
-        job.to_memcached()
-
-        the_jobber = jobber.Jobber(job, FLAGS.partition)
-        the_jobber.run()
+        job = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
+        
+        if job.is_valid():
+            job.to_kvs()
+            jobber.Jobber(job, FLAGS.partition).run()
+        else:
+            # TODO (ac): Should we print additional details?
+            logs.LOG.critical("The job configuration is inconsistent, \
+                    aborting computation.")
