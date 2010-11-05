@@ -2,8 +2,7 @@ package org.gem.engine.logictree;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
+import java.util.Random;
 
 public interface LogicTreeAPI<Element> extends Iterable<Element> {
 
@@ -30,6 +29,6 @@ public interface LogicTreeAPI<Element> extends Iterable<Element> {
 
     public void saveGemLogicTreeModel(String fileName) throws Exception;
 
-    public int sampleBranchingLevel(int branchingLevelIndex);
+    public int sampleBranchingLevel(int branchingLevelIndex, Random rn);
 
 }
