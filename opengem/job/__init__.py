@@ -122,7 +122,7 @@ class Job(object):
 
     def to_memcached(self):
         """Store this job into memcached."""
-        self._slurp_files()
+        # self._slurp_files()
         key = kvs.generate_job_key(self.job_id)
         memcached_client = kvs.get_client(binary=False)
         kvs.set_value_json_encoded(memcached_client, key, self.params)
