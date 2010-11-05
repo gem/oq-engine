@@ -11,6 +11,7 @@ from opengem import risk
 from opengem import java
 from opengem import logs
 from opengem import kvs
+from opengem import settings
 from opengem import shapes
 from opengem import test
 
@@ -24,8 +25,6 @@ LOG = logs.LOG
 
 TEST_FILE = "nrml_test_result.xml"
 
-# starting the jvm...
-jpype = java.jvm()
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
 ONE_CURVE_MODEL = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[0.1,0.2,0.3]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label"]}'
@@ -35,8 +34,11 @@ MULTIPLE_CURVES_MULTIPLE_BRANCHES = '{"modelName":"","hcRepList":[{"gridNode":[{
 class MemcachedTestCase(unittest.TestCase):
     
     def setUp(self):
+        
+        # starting the jvm...
+        jpype = java.jvm()
         java_class = jpype.JClass("org.gem.engine.hazard.memcached.Cache")
-        self.java_client = java_class(kvs.MEMCACHED_HOST, kvs.MEMCACHED_PORT)
+        self.java_client = java_class(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         
         self.python_client = kvs.get_client(binary=False)
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -34,15 +34,14 @@ from opengem import flags
 from opengem import jobber
 from opengem import logs
 
-from opengem import config
+from opengem.job import Job
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import vulnerability
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('risk_config', 'risk-config.gem', 'Risk configuration file')
-flags.DEFINE_string('hazard_config', 'hazard-config.gem', 'Hazard configuration file')
+flags.DEFINE_string('config_file', 'opengem-config.gem', 'OpenGEM configuration file')
 
 flags.DEFINE_boolean('profile', False, 'Run profiler?')
 flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
@@ -75,7 +74,7 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     else:
-        config = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
+        job = Job.from_file(FLAGS.config_file)
         job.to_memcached()
 
         the_jobber = jobber.Jobber(job, FLAGS.partition)

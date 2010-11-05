@@ -5,62 +5,59 @@ Top-level managers for hazard computation.
 import os
 
 from opengem import java
-from opengem.kvs import MEMCACHED_PORT, MEMCACHED_HOST
+from opengem import settings
 from opengem import config
 from opengem.logs import LOG
 
-def run_hazard():
+JAVA_CLASSES = {
+    'HazardEngineClass' : "org.gem.engine.CommandLineCalculator",
+    'KVS' : "org.gem.engine.hazard.memcached.Cache",
+    'HazardUtil' : "org.gem.engine.hazard.Util",
+}
+
+def jclass(class_key):
     jpype = java.jvm()
+    return jpype.JClass(JAVA_CLASSES[class_key])
+
+
+class HazardJobMixin(object):
+
+    def __init__(self, job_file):
+
+    def preload(self, fn):
+        def mc_preloader(self, *args, **kwargs):
+            assert(self.base_path)
+            # Slurp related files here...
+            erf_logic_tree_file = guarantee_file(self.base_path, 
+                        self.params['ERF_LOGIC_TREE_FILE'])
+            self.store_source_model(erf_logic_tree_file)
+            fn(*args, **kwargs)
+        
+        if self.params['CALCULATION_MODE'].upper() == 'MONTE CARLO':
+            return mc_preloader
+        
+        raise Exception("Can only handle Monte Carlo Hazard mode right now.")
+
+    def store_source_model(self, tree_file):
+        """Generates an Earthquake Rupture Forecast, using the source zones and
+        logic trees specified in the job config file. Note that this has to be
+        done using the file itself, since it has nested references to other files.
     
-    LOG.debug("Constructed a jvm")
-    HazardEngineClass = jpype.JClass(
-        "org.gem.engine.CommandLineCalculator")
-            
-    MemcacheClass = jpype.JClass(
-        "org.gem.engine.hazard.memcached.Cache")
-    cache = MemcacheClass(MEMCACHED_HOST, MEMCACHED_PORT)
-    
-    # Build source list
-    # input_model = jvm.JClass()
-    # 
-    # engine = GemComputeModel(model.getList(), modelName,
-    #             gmpeLogicTree.getGemLogicTree(), latmin, latmax, lonmin,
-    #             lonmax, delta, probLevel, outDir, outputHazCurve, calcSet);
-    my_job = config.Job.from_files(os.path.abspath("tests/data/risk-config.gem"),
-                                    os.path.abspath("tests/data/hazard-config.gem"))
-    my_job.to_memcached()
-    
-    # Constructing HazardEngine from files directly, for ERF generation
-    engine = HazardEngineClass(os.path.abspath("tests/data/hazard-config.gem"))
-    erf_data = engine.createErfLogicTreeData()
-    LOG.debug("ERF DATA is %s" % erf_data)
-    LOG.debug(dir(erf_data))
-    
-    erf_data.erfLogicTree.printGemLogicTreeStructure()
-    
-    erf = engine.sampleGemLogicTreeERF(erf_data.getErfLogicTree())
-    LOG.debug("ERF is %s" % erf)
-    sources = erf.getSourceList()
-    for source in sources:
-        # DEBUG:root:['allSourceLocs', 'aveRupTopVersusMag', 'computeApproxTotalProbAbove', 
-        # 'computeTotalProb', 'computeTotalProbAbove', 'defaultHypoDepth', 
-        # 'drawRandomEqkRuptures', 'duration', 'equals', 'firstStrike', 
-        # 'focalMechanisms', 'getAllSourceLocs', 'getClass', 'getDuration', 
-        # 'getInfo', 'getMinDistance', 'getMinMag', 'getName', 'getNumRuptures',
-        #  'getRegion', 'getRupture', 'getRuptureClone', 'getRuptureList', 
-        # 'getRupturesIterator', 'getSourceMetadata', 'getSourceSurface', 
-        # 'getTectonicRegionType', 'gridReg', 'gridResolution', 'hashCode', 
-        # 'info', 'isPoissonian', 'isPoissonianSource', 'isSourcePoissonian', 
-        # 'location', 'lowerSeisDepth', 'magFreqDists', 'magScalingRel', 
-        # 'maxLength', 'minMag', 'name', 'nodeWeights', 'notify', 'notifyAll', 
-        # 'numRuptures', 'numStrikes', 'pointSources', 'probEqkRupture', 
-        # 'probEqkRuptureList', 'rates', 'reg', 'region', 'ruptureList', 
-        # 'rupturesIterator', 'setDuration', 'setInfo', 'setTectonicRegionType',
-        #  'sourceIndex', 'sourceMetadata', 'sourceSurface', 
-        # 'tectonicRegionType', 'toString', 'wait']
-        LOG.debug(source.duration)
-        LOG.debug(source.name)
-        LOG.debug(source.getRuptureList())
-    # LOG.debug(erf_data.toString())
-    # engine = HazardEngineClass(cache, my_job.key)
-    # engine.doCalculation()
+        job_file should be an absolute path.
+        """
+        engine = jclass("HazardEngineClass")(tree_file)
+        source_model = engine.sampleSourceModelLogicTree()
+        cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        util = jclass("HazardUtil")()
+        util.serializeSources(cache, source_model)
+
+
+def guarantee_file(base_path, file_spec):
+    """Resolves a file_spec (http, local relative or absolute path, git url,
+    etc.) to an absolute path to a (possibly temporary) file."""
+    # TODO(JMC): Parse out git, http, or full paths here...
+    return os.path.join(base_path, file_spec)
+
+
+# engine = HazardEngineClass(cache, my_job.key)
+# engine.doCalculation()
