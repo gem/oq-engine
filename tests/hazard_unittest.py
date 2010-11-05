@@ -8,7 +8,7 @@ import unittest
 from opengem import hazard
 from opengem import kvs
 from opengem.hazard import tasks
-from opengem.hazard import engine as hazengine
+#from opengem.hazard import engine as hazengine
 from tests.jobber_unittest import wait_for_celery_tasks
 from tests.memcached_unittest import ONE_CURVE_MODEL
 
