@@ -28,8 +28,6 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-import com.google.gson.Gson;
-
 public class InputModelData {
 
     private static ArrayList<GEMSourceData> sourceList;
@@ -771,11 +769,6 @@ public class InputModelData {
 
     public ArrayList<GEMSourceData> getSourceList() {
         return sourceList;
-    }
-
-    public static String getJsonSourceList() {
-        String json = new Gson().toJson(sourceList);
-        return json;
     }
 
     // for testing
