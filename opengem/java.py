@@ -13,10 +13,10 @@ JVM = None
 def jvm(max_mem=4000):
     global JVM
     if JVM is None:
-        jarpath = os.path.join(os.path.dirname(
-                    os.path.abspath(__file__)), "../lib")
-        LOG.debug("Jarpath is %s", jarpath)
+        jarpaths = (os.path.join(os.path.abspath(__file__), "../lib"), 
+                    os.path.join(os.path.abspath(__file__), "../dist"))
+        LOG.debug("Jarpath is %s", jarpaths)
         jpype.startJVM(jpype.getDefaultJVMPath(), 
-                        "-Djava.ext.dirs=%s" % jarpath, "-Xmx%sM" % max_mem)
+                        "-Djava.ext.dirs=%s" % jarpaths, "-Xmx%sM" % max_mem)
         JVM = jpype
     return JVM

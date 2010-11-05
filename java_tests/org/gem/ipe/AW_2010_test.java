@@ -58,7 +58,6 @@ public class AW_2010_test implements ParameterChangeWarningListener {
 
     private AW_2010_AttenRel aw_2010_AttenRel = null;
 
-    private static String inputFilePath = "/java_tests/data/";
     private static String inputFileNameFinite = "AW2010FINITE.TXT";
     private static String inputFileNamePoint = "AW2010POINT.TXT";
 
@@ -80,18 +79,13 @@ public class AW_2010_test implements ParameterChangeWarningListener {
      * ruptures against a verification table obtained using an Excel spreadsheet
      */
     @Test
-    public void pointRuptureEquation() {
-        boolean isFiniteRupture = false;
-        File dir1 = new File(".");
-        String dirPath = null;
-        try {
-            dirPath = dir1.getCanonicalPath();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        File inFile = new File(dirPath + inputFilePath + inputFileNamePoint);
+    public void pointRuptureEquation() throws Exception {
+        File inFile =
+                new File(ClassLoader.getSystemResource(inputFileNamePoint)
+                        .toURI());
+
         int numlines = countFileLines(inFile);
-        doTest(isFiniteRupture, tolerance, numlines, inFile);
+        doTest(false, tolerance, numlines, inFile);
     }
 
     /**
@@ -99,18 +93,13 @@ public class AW_2010_test implements ParameterChangeWarningListener {
      * ruptures against a verification table obtained using an Excel spreadsheet
      */
     @Test
-    public void finiteRuptureEquation() {
-        boolean isFiniteRupture = true;
-        File dir1 = new File(".");
-        String dirPath = null;
-        try {
-            dirPath = dir1.getCanonicalPath();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        File inFile = new File(dirPath + inputFilePath + inputFileNameFinite);
+    public void finiteRuptureEquation() throws Exception {
+        File inFile =
+                new File(ClassLoader.getSystemResource(inputFileNameFinite)
+                        .toURI());
+
         int numlines = countFileLines(inFile);
-        doTest(isFiniteRupture, tolerance, numlines, inFile);
+        doTest(true, tolerance, numlines, inFile);
     }
 
     /**
@@ -135,11 +124,10 @@ public class AW_2010_test implements ParameterChangeWarningListener {
         Site site = new Site(new Location(0.0, 0.1, 0.0));
         EqkRupture rup = getPointEqkRupture(mag, hypo, aveRake);
         double hypoDist =
-                Math.sqrt(Math.pow(
-                        LocationUtils.horzDistance(hypo, site.getLocation()), 2)
-                        + Math.pow(
-                                LocationUtils.vertDistance(hypo,
-                                        site.getLocation()), 2));
+                Math.sqrt(Math.pow(LocationUtils.horzDistance(hypo, site
+                        .getLocation()), 2)
+                        + Math.pow(LocationUtils.vertDistance(hypo, site
+                                .getLocation()), 2));
         aw_2010_AttenRel.setSite(site);
         aw_2010_AttenRel.setEqkRupture(rup);
 
