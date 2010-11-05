@@ -7,6 +7,7 @@ import json
 import logging
 import pylibmc
 import uuid
+from opengem import settings
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
 
@@ -15,8 +16,6 @@ INTERNAL_ID_SEPARATOR = ':'
 
 MAX_LENGTH_RANDOM_ID = 36
 MEMCACHE_KEY_SEPARATOR = '!'
-MEMCACHED_PORT = 11211
-MEMCACHED_HOST = "localhost"
 
 
 def block_id_generator():
@@ -59,7 +58,8 @@ def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
 
 
 
-def get_client(memcached_host=MEMCACHED_HOST, memcached_port=MEMCACHED_PORT,
+def get_client(memcached_host=settings.MEMCACHED_HOST,
+               memcached_port=settings.MEMCACHED_PORT,
                **kwargs):
     """possible kwargs:
         binary
