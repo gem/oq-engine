@@ -64,7 +64,9 @@ class Job(object):
         base_path = os.path.dirname(config_file)
         params = parse_config_file(config_file)
 
-        return Job(params, base_path=base_path)
+        job = Job(params, base_path=base_path)
+        job.config_file = config_file
+        return job
 
     def __init__(self, params, job_id=None, base_path=None):
         if job_id is None:

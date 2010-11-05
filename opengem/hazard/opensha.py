@@ -14,7 +14,7 @@ from opengem import settings
 from opengem.logs import LOG
 
 JAVA_CLASSES = {
-    'InputModelData' : "org.gem.engine.InputModelData",
+    'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
     'KVS' : "org.gem.engine.hazard.memcached.Cache",
     'JsonSerializer' : "org.gem.JsonSerializer",
 }
@@ -31,28 +31,34 @@ class MonteCarloMixin:
         def preloader(self, *args, **kwargs):
             assert(self.base_path)
             # Slurp related files here...
-            erf_logic_tree_file = guarantee_file(self.base_path, 
-                        self.params['ERF_LOGIC_TREE_FILE'])
-            self.store_source_model(erf_logic_tree_file, 
-                            self.params['WIDTH_OF_MFD_BIN'])
-            fn(*args, **kwargs)
+            #erf_logic_tree_file = guarantee_file(self.base_path, 
+            #            self.params['ERF_LOGIC_TREE_FILE'])
+            
+            self.store_source_model(self.config_file)
+            fn(self, *args, **kwargs)
         
         return preloader
         
         raise Exception("Can only handle Monte Carlo Hazard mode right now.")
 
-    def store_source_model(self, tree_file, delta_mfd):
+    def store_source_model(self, tree_file):
         """Generates an Earthquake Rupture Forecast, using the source zones and
         logic trees specified in the job config file. Note that this has to be
         done using the file itself, since it has nested references to other files.
     
         job_file should be an absolute path.
         """
-        engine = jclass("InputModelData")(tree_file, delta_mfd)
-        source_model = engine.sampleSourceModelLogicTree()
+        
+        jpype = java.jvm()
+        print "In python, config file path: %s" % tree_file
+        
+        sample_num = self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS']
+        seed = self.params.get('RANDOM_SEED', 0.0)
+        
+        engine = jclass("CommandLineCalculator")(tree_file)
         key = kvs.generate_product_key(self.id, hazard.ERF_KEY_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
-        jclass("JsonSerializer").serializeSourceList(cache, key, source_model)
+        engine.sampleAndSaveERFTree(cache, key)
     
     @preload
     def execute(self):

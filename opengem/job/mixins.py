@@ -5,7 +5,6 @@
 class Mixin(object):
     mixins = {}
     def __init__(self, target, mixin):
-        print "Constructoring Mixin with target of %s" % target
         self.target = target
         self.mixin = mixin
 

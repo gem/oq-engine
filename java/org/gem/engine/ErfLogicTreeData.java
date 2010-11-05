@@ -339,6 +339,7 @@ public class ErfLogicTreeData {
     } // constructor
 
     public LogicTree<ArrayList<GEMSourceData>> getErfLogicTree() {
+        // LogicTree<ArrayList<GEMSourceData>>
         return erfLogicTree;
     }
 
