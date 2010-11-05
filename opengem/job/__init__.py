@@ -73,7 +73,8 @@ class Job(object):
         self.job_id = job_id
         self.params = params
         self.base_path = base_path
-        self.to_memcached()
+        if base_path:
+            self.to_memcached()
         
     @property
     def id(self):
@@ -87,7 +88,7 @@ class Job(object):
 
     def launch(self):
         for mixin in Mixin.mixins():
-            with Mixin(self, mixin):
+            with Mixin(self.__class__, mixin):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
