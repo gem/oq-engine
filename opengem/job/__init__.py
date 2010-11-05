@@ -10,12 +10,12 @@ from ConfigParser import ConfigParser
 
 from opengem import kvs
 from opengem.logs import LOG
+from opengem.job.mixins import Mixin
 
 
 INPUT_REGION = "filter_region"
 HAZARD_CURVES = "hazard_curves"
 RE_INCLUDE = re.compile(r'^(.*)_include')
-
 
 def parse_config_file(config_file):
     """
@@ -42,6 +42,7 @@ def parse_config_file(config_file):
                 params[key.upper()] = value
 
     return params
+
 
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
@@ -72,6 +73,8 @@ class Job(object):
         self.job_id = job_id
         self.params = params
         self.base_path = base_path
+        if base_path:
+            self.to_memcached()
         
     @property
     def id(self):
@@ -82,6 +85,14 @@ class Job(object):
     def key(self):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
+
+    def launch(self):
+        for mixin in Mixin.mixins():
+            with Mixin(self.__class__, mixin):
+                # The mixin defines a preload decorator to handle the needed
+                # data for the tasks and decorates _execute(). the mixin's
+                # _execute() method calls the expected tasks.
+                self.execute()
 
     def __getitem__(self, name):
         return self.params[name]

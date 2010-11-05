@@ -342,7 +342,7 @@ def _homebrew_uninstall(package):
 
 
 def _ubuntu_virtualenv_source():
-    return "source /usr/local/bin/virtualenvwrapper.sh"
+    return "\nsource /usr/local/bin/virtualenvwrapper.sh"
 
 def _osx_virtualenv_source():
     # todo(chris) THIS IS SUPER UGLY. 

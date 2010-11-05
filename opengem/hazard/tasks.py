@@ -28,13 +28,7 @@ def generate_erf(job_id):
     """
 
     # TODO(JM): implement real ERF computation
-    erf = opensha.generate_erf()
-    erf_serialized = json.JSONEncoder().encode(erf)
 
-    key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
-
-    memcache_client = kvs.get_client(binary=False)
-    memcache_client.set(key, erf_serialized)
 
     return job_id
 
