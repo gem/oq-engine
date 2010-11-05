@@ -4,7 +4,9 @@ Top-level managers for hazard computation.
 
 import os
 
+from opengem import hazard
 from opengem import java
+from opengem import kvs
 from opengem import settings
 from opengem import config
 from opengem.logs import LOG
@@ -12,7 +14,7 @@ from opengem.logs import LOG
 JAVA_CLASSES = {
     'HazardEngineClass' : "org.gem.engine.CommandLineCalculator",
     'KVS' : "org.gem.engine.hazard.memcached.Cache",
-    'HazardUtil' : "org.gem.engine.hazard.Util",
+    'JsonSerializer' : "org.gem.JsonSerializer",
 }
 
 def jclass(class_key):
@@ -22,9 +24,11 @@ def jclass(class_key):
 
 class HazardJobMixin(object):
 
-    def __init__(self, job_file):
+    @staticmethod
+    def from_file():
 
     def preload(self, fn):
+        """A decorator for preload steps that must run on the Jobber"""
         def mc_preloader(self, *args, **kwargs):
             assert(self.base_path)
             # Slurp related files here...
@@ -47,9 +51,17 @@ class HazardJobMixin(object):
         """
         engine = jclass("HazardEngineClass")(tree_file)
         source_model = engine.sampleSourceModelLogicTree()
+        key = kvs.generate_product_key(self.id, hazard.ERF_KEY_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
-        util = jclass("HazardUtil")()
-        util.serializeSources(cache, source_model)
+        jclass("JsonSerializer").serializeSourceList(cache, key, source_model)
+    
+    @preload
+    def execute(self):
+        pass
+
+    def compute_hazard_curve(self):
+        """Actual hazard curve calculation, runs on the workers."""
+        pass
 
 
 def guarantee_file(base_path, file_spec):
