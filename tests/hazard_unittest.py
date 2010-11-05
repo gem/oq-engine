@@ -23,6 +23,9 @@ TEST_JOB_FILE = test.test_file('config.gem')
 
 
 class HazardEngineTestCase(unittest.TestCase):
+    """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
+    Most data returned from the engine is via memcached."""
+    
     def setUp(self):
         self.memcache_client = kvs.get_client(binary=False)
         self.memcache_client.flush_all()
