@@ -79,14 +79,17 @@ class Job(object):
     def __str__(self):
         return str(self.params)
 
-    def is_valid(self):
-        """Check that this job satisfies the mandatory rules to start
-        the whole computation process."""
-        
-        if not self.has(INPUT_REGION) and not self.has(EXPOSURE):
-            return False
+    def validate(self, fn):
+        """Validate this job before running the decorated function."""
 
-        return True
+        def validator(*args):
+               try:
+                   assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+                   return fn(*args)
+               except AssertionError:
+                   return False
+
+        return validator
 
     def to_kvs(self):
         """Store this job into the underlying kvs system."""
