@@ -8,6 +8,7 @@ from opengem import hazard
 from opengem import java
 from opengem import job
 from opengem.job import mixins
+from opengem.hazard import job
 from opengem import kvs
 from opengem import settings
 from opengem.logs import LOG
@@ -21,10 +22,6 @@ JAVA_CLASSES = {
 def jclass(class_key):
     jpype = java.jvm()
     return jpype.JClass(JAVA_CLASSES[class_key])
-
-
-class HazardJobMixin(mixins.Mixin):
-    mixins = []
 
 
 class MonteCarloMixin:
@@ -61,10 +58,12 @@ class MonteCarloMixin:
     def execute(self):
         pass
 
-    def compute_hazard_curve(self):
+    def compute_hazard_curve(self, site_id):
         """Actual hazard curve calculation, runs on the workers."""
         pass
 
+
+job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
 
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
