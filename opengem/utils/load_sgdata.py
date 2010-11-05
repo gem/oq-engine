@@ -15,13 +15,13 @@ from psycopg2 import IntegrityError
 
 from django.contrib.gis.utils import mapping, LayerMapping, add_postgis_srs
 from seismicsources.models import SourceGeometryCatalog, SeismicSource
+from opengem import settings
 
 try:
     add_postgis_srs(900913)
 except IntegrityError:
     print "The Google Spherical Mercator projection, or a projection with srid 900913, already exists, skipping insert"
 
-SOURCEGEOM_SHP = 'seismicsources/data/sourcegeometrycatalog.shp'
 
 #13Sep2010: Use manual mapping in models.py -- sourcegeometrycatalog_mapping
 sourcegeometrycatalog_mapping = {
@@ -44,7 +44,7 @@ sourcegeometrycatalog_mapping = {
 
 
 layer = LayerMapping(SourceGeometryCatalog,
-                      SOURCEGEOM_SHP,
+                      settings.SOURCEGEOM_SHP,
                       sourcegeometrycatalog_mapping,
                       transform=False,
                       encoding='iso-8859-1')
