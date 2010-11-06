@@ -13,9 +13,9 @@ from opengem.logs import LOG
 from opengem.job.mixins import Mixin
 
 
-INPUT_REGION = "filter_region"
-HAZARD_CURVES = "hazard_curves"
-RE_INCLUDE = re.compile(r'^(.*)_include')
+INPUT_REGION = "FILTER_REGION"
+HAZARD_CURVES = "HAZARD_CURVES"
+RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 def parse_config_file(config_file):
     """
@@ -34,12 +34,13 @@ def parse_config_file(config_file):
     params = {}
     for section in parser.sections():
         for key, value in parser.items(section):
+            key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
                 params.update(parse_config_file(config_file))
             else:
-                params[key.upper()] = value
+                params[key] = value
 
     return params
 

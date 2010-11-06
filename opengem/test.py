@@ -30,6 +30,8 @@ SCHEMA_DIR = os.path.abspath(os.path.join(
 def test_file(file_name):
     return os.path.join(DATA_DIR, file_name)
 
+def smoketest_file(file_name):
+    return os.path.join(os.path.dirname(__file__), "../smoketests", file_name)
 
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three 
