@@ -196,10 +196,37 @@ class Block(object):
 
     def __init__(self, sites):
         self.sites = tuple(sites)
-        self.block_id = kvs.generate_random_id()
+        self.block_id = kvs.block_id()
 
     def __eq__(self, other):
         return self.sites == other.sites
+
+    @classmethod
+    def from_kvs(cls, block_id):
+        """Return the block in the underlying kvs system with the given id."""
+
+        kvs_client = kvs.get_client(binary=False)
+        raw_sites = kvs.get_value_json_decoded(kvs_client, block_id)
+
+        sites = []
+
+        for raw_site in raw_sites:
+            sites.append(shapes.Site(raw_site[0], raw_site[1]))
+
+        return Block(sites)
+
+    def to_kvs(self):
+        """Store this block into the underlying kvs system."""
+
+        raw_sites = []
+
+        for site in self.sites:
+            raw_sites.append(site.coords)
+
+        # TODO (ac): Refactor this, the client lookup
+        # can be done in the kvs module
+        kvs_client = kvs.get_client(binary=False)
+        kvs.set_value_json_encoded(kvs_client, self.id, raw_sites)
 
     @property
     def id(self):
@@ -225,14 +252,16 @@ class BlockSplitter(object):
         if not len(self.sites):
             return
 
-        number_of_blocks = int(math.ceil(len(self.sites) / float(self.sites_per_block)))
+        number_of_blocks = int(math.ceil(len(self.sites) /
+                float(self.sites_per_block)))
 
         for idx in range(number_of_blocks):
             filtered_sites = []
             offset = idx * self.sites_per_block
             sites = self.sites[offset:offset + self.sites_per_block]
 
-# TODO (ac): Can be done better using shapely, but after the shapes.Site refactoring...            
+            # TODO (ac): Can be done better using shapely.intersects,
+            # but after the shapes.Site refactoring...
             for site in sites:
                 if self.constraint.match(site):
                     filtered_sites.append(site)
