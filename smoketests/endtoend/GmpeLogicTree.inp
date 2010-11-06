@@ -1,0 +1,36 @@
+# Input file for the definition of the Gmpe Logic Tree. 
+# Currently the logic tree consist of only one branching level. 
+# The user specifies the  gmpe for tectonic setting
+# (Active Shallow Crust, Stable shallow crust, Subduction Interface, Subduction intraslab)
+
+
+# stable continental
+#Stable Shallow Crust
+#BA_2008_AttenRel CB_2008_AttenRel
+#0.5 0.5
+
+# subduction interface
+#Subduction Interface
+#Zhao06 Zhao06
+#0.5 0.5
+
+# subduction intraslab
+#Subduction IntraSlab
+#Zhao06 Zhao06
+#0.5 0.5
+
+# branch for active shallow regions
+Active Shallow Crust
+# gmpe name (opensha class name)
+BA_2008_AttenRel CB_2008_AttenRel
+# gmpe weights
+0.5 0.5
+
+
+
+
+
+
+
+
+

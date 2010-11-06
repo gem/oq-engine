@@ -25,12 +25,14 @@ def jvm(max_mem=4000):
         mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
         errstream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stderr)
         outputstream = jpype.JClass("org.gem.PythonOutputStream")()
-        outputstream.setPythonStdout(mystream)
-        ps = jpype.JClass("java.io.PrintStream")
         err_stream = jpype.JClass("org.gem.PythonOutputStream")()
+        outputstream.setPythonStdout(mystream)
         err_stream.setPythonStdout(errstream)
+        
+        ps = jpype.JClass("java.io.PrintStream")
         jpype.java.lang.System.setOut(ps(outputstream))
         jpype.java.lang.System.setErr(ps(err_stream))
+        
     return jpype
 
 
