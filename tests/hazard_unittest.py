@@ -28,6 +28,10 @@ TEST_SOURCE_MODEL = ""
 with open(test.smoketest_file('endtoend/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
+TEST_GMPE_MODEL = ""
+with open(test.smoketest_file('endtoend/expected_gmpe_model.json'), 'r') as f:
+    TEST_GMPE_MODEL = f.read()
+
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
     return jobobj.id
@@ -60,7 +64,7 @@ class HazardEngineTestCase(unittest.TestCase):
             gmpe_key = kvs.generate_product_key(hazengine.id, 
                                 hazard.GMPE_TOKEN)
             gmpe_model = self.memcache_client.get(gmpe_key)
-            print gmpe_model
+            self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
@@ -68,7 +72,6 @@ class HazardEngineTestCase(unittest.TestCase):
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_memcached(job_id)
-        print type(hazengine)
         with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
             hc = hazengine.compute_hazard_curve(site_id)
 
