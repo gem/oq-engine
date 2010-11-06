@@ -23,6 +23,7 @@ def generate_job_key(job_id):
     """ Return a job key """
     return _generate_key(("JOB", str(job_id)))
 
+
 def generate_sites_key(job_id, block_id):
     """ Return sites key """
 
@@ -53,7 +54,6 @@ def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
     return str(uuid.uuid4())[0:length]
 
 
-
 def get_client(memcached_host=MEMCACHED_HOST, memcached_port=MEMCACHED_PORT,
                **kwargs):
     """possible kwargs:
@@ -62,7 +62,7 @@ def get_client(memcached_host=MEMCACHED_HOST, memcached_port=MEMCACHED_PORT,
     return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
                           **kwargs)
 
-
+# TODO (ac): Refactor, delete the client parameter
 def get_sites_from_memcache(memcache_client, job_id, block_id):
     """ Get all of the sites for a block """
 
@@ -71,17 +71,18 @@ def get_sites_from_memcache(memcache_client, job_id, block_id):
     return get_value_json_decoded(memcache_client, memcache_key_sites)
 
 
-def get_value_json_decoded(memcache_client, key):
+def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
-    value = memcache_client.get(key)
+    value = get_client(binary=False).get(key)
     decoder = json.JSONDecoder()
+    
     try:
         return decoder.decode(value)
     except Exception:
         return None
 
 
-def set_value_json_encoded(memcache_client, key, value):
+def set_value_json_encoded(key, value):
     """ Encode value and set in kvs """
     encoder = json.JSONEncoder()
 
@@ -91,7 +92,7 @@ def set_value_json_encoded(memcache_client, key, value):
         raise ValueError("cannot encode value %s to JSON" % value)
 
     try:
-        memcache_client.set(key, encoded_value)
+        get_client(binary=False).set(key, encoded_value)
     except Exception, e:
         raise RuntimeError("cannot write key %s to memcache - %s" % (key, e))
 
@@ -114,6 +115,10 @@ def _prefix_id_generator(prefix):
 # generator instance used to generate IDs for blocks
 BLOCK_ID_GENERATOR = _prefix_id_generator("block")
 
-def block_id():
-    """Return a unique id for a block."""
+def generate_block_id():
+    """Generate a unique id for a block."""
     return BLOCK_ID_GENERATOR.next()
+
+def generate_vuln_key(job_id):
+    """Generate the key used to store vulnerability curves."""
+    return generate_product_key(job_id, "vulnerability_curves")

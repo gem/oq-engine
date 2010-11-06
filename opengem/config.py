@@ -19,8 +19,7 @@ class Job(object):
         """Return the job in the underlying kvs system with the given id."""
         
         key = kvs.generate_job_key(job_id)
-        kvs_client = kvs.get_client(binary=False)
-        params = kvs.get_value_json_decoded(kvs_client, key)
+        params = kvs.get_value_json_decoded(key)
 
         return Job(params, job_id)
 
@@ -95,5 +94,4 @@ class Job(object):
         """Store this job into the underlying kvs system."""
 
         key = kvs.generate_job_key(self.job_id)
-        kvs_client = kvs.get_client(binary=False)
-        kvs.set_value_json_encoded(kvs_client, key, self.params)
+        kvs.set_value_json_encoded(key, self.params)
