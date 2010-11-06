@@ -2,6 +2,7 @@
 Includes classpath arguments, and heap size."""
 
 import os
+import sys
 
 import jpype
 
@@ -20,6 +21,16 @@ def jvm(max_mem=4000):
             # "-Dlog4j.debug",
             "-Dlog4j.configuration=log4j.properties",
             "-Xmx%sM" % max_mem)
+        
+        mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
+        errstream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stderr)
+        outputstream = jpype.JClass("org.gem.PythonOutputStream")()
+        outputstream.setPythonStdout(mystream)
+        ps = jpype.JClass("java.io.PrintStream")
+        err_stream = jpype.JClass("org.gem.PythonOutputStream")()
+        err_stream.setPythonStdout(errstream)
+        jpype.java.lang.System.setOut(ps(outputstream))
+        jpype.java.lang.System.setErr(ps(err_stream))
     return jpype
 
 
