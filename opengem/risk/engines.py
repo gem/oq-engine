@@ -65,7 +65,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             logger.debug("no asset found")
             return None
 
-        logger.debug("Compute method: vuln curves are")
+        logger.debug("compute method: vuln curves are")
         for k,v in self.vulnerability_curves.items():
             logger.debug("%s: %s" % (k, v.values))
 
