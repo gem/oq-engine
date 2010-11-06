@@ -15,6 +15,7 @@ from opengem.risk import probabilistic_event_based
 
 logger = logs.RISK_LOG
 
+# TODO (ac): This class is not covered by unit tests...
 class ClassicalPSHABasedLossRatioCalculator(object):
     """Computes loss ratio curves based on hazard curves and 
     exposure portfolios"""
@@ -25,53 +26,46 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         self.job_id = job_id
         self.block_id = block_id
 
-        if memcache_client is not None:
-            self.memcache_client = memcache_client
-        else:
-            self.memcache_client = kvs.get_client(binary=False)
+        self.vuln_curves = \
+                vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
 
-        self.vulnerability_curves = \
-            vulnerability.load_vulnerability_curves_from_memcache(
-                self.memcache_client, self.job_id)
-
-        # self.vulnerability_curves is a dict of {string: Curve},
-        # Curve.values is OrderedDict key: [v1, v2]
+        # self.vuln_curves is a dict of {string: Curve}
         logger.debug("ProbabilisticLossRatioCalculator init: vuln curves are")
+
         for k,v in self.vulnerability_curves.items():
             logger.debug("%s: %s" % (k, v.values))
  
     def compute_loss_ratio_curve(self, gridpoint):
         """ Returns the loss ratio curve for a single gridpoint"""
 
-        # check in memcache if hazard and exposure for gridpoint are there
-        memcache_key_hazard = kvs.generate_product_key(self.job_id, 
+        # check in kvs if hazard and exposure for gridpoint are there
+        kvs_key_hazard = kvs.generate_product_key(self.job_id, 
             hazard.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
        
-        hazard_curve_json = self.memcache_client.get(memcache_key_hazard)
+        hazard_curve_json = self.get_client(binary=False).get(kvs_key_hazard)
         logger.debug("hazard curve as JSON: %s" % hazard_curve_json)
  
         hazard_curve = shapes.EMPTY_CURVE
         hazard_curve.from_json(hazard_curve_json)
 
-        logger.debug("hazard curve at key %s is %s" % (memcache_key_hazard, 
+        logger.debug("hazard curve at key %s is %s" % (kvs_key_hazard, 
                                                     hazard_curve.values))
         if hazard_curve is None:
             logger.debug("no hazard curve found")
             return None
 
-        memcache_key_exposure = kvs.generate_product_key(self.job_id, 
+        kvs_key_exposure = kvs.generate_product_key(self.job_id, 
             risk.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         
-        asset = kvs.get_value_json_decoded(self.memcache_client,
-            memcache_key_exposure)
+        asset = kvs.get_value_json_decoded(kvs_key_exposure)
 
-        logger.debug("asset at key %s is %s" % (memcache_key_exposure, asset))
+        logger.debug("asset at key %s is %s" % (kvs_key_exposure, asset))
 
         if asset is None:
             logger.debug("no asset found")
             return None
 
-        logger.debug("compute method: vuln curves are")
+        logger.debug("Compute method: vuln curves are")
         for k,v in self.vulnerability_curves.items():
             logger.debug("%s: %s" % (k, v.values))
 
@@ -83,15 +77,16 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             vulnerability_curve, hazard_curve)
     
     def compute_loss_curve(self, gridpoint, loss_ratio_curve):
-        """ Returns the loss curve based on loss ratio and exposure"""
+        """Return the loss curve based on loss ratio and exposure."""
         
         if loss_ratio_curve is None:
             return None
 
-        memcache_key_exposure = kvs.generate_product_key(self.job_id,
+        kvs_key_exposure = kvs.generate_product_key(self.job_id,
             risk.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
-        asset = kvs.get_value_json_decoded(self.memcache_client,
-            memcache_key_exposure)
+
+        asset = kvs.get_value_json_decoded(kvs_key_exposure)
+
         if asset is None:
             return None
 
@@ -102,32 +97,26 @@ class ProbabilisticEventBasedCalculator(object):
     """Compute loss ratio and loss curves using the probabilistic event
     based approach."""
     
-    def __init__(self, job_id, block_id, memcache_client=None):
+    def __init__(self, job_id, block_id):
         self.job_id = job_id
         self.block_id = block_id
 
-        if memcache_client is not None:
-            self.memcache_client = memcache_client
-        else:
-            self.memcache_client = kvs.get_client(binary=False)
-        
         self.vuln_curves = \
-                vulnerability.load_vulnerability_curves_from_memcache(
-                self.memcache_client, self.job_id)
+                vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
 
     def compute_loss_ratio_curve(self, site):
         """Compute the loss ratio curve for a single site."""
         key_exposure = kvs.generate_product_key(self.job_id,
             risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
 
-        asset = kvs.get_value_json_decoded(self.memcache_client, key_exposure)
+        asset = kvs.get_value_json_decoded(key_exposure)
 
         vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
 
         key_gmf = kvs.generate_product_key(self.job_id, 
                 risk.GMF_KEY_TOKEN, self.block_id, site)
        
-        gmf = kvs.get_value_json_decoded(self.memcache_client, key_gmf)
+        gmf = kvs.get_value_json_decoded(key_gmf)
         return probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf)
 
@@ -136,7 +125,7 @@ class ProbabilisticEventBasedCalculator(object):
         key_exposure = kvs.generate_product_key(self.job_id,
             risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
         
-        asset = kvs.get_value_json_decoded(self.memcache_client, key_exposure)
+        asset = kvs.get_value_json_decoded(key_exposure)
         
         if asset is None:
             return None

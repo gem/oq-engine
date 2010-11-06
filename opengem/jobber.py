@@ -196,7 +196,7 @@ class Block(object):
 
     def __init__(self, sites):
         self.sites = tuple(sites)
-        self.block_id = kvs.block_id()
+        self.block_id = kvs.generate_block_id()
 
     def __eq__(self, other):
         return self.sites == other.sites
@@ -205,8 +205,7 @@ class Block(object):
     def from_kvs(cls, block_id):
         """Return the block in the underlying kvs system with the given id."""
 
-        kvs_client = kvs.get_client(binary=False)
-        raw_sites = kvs.get_value_json_decoded(kvs_client, block_id)
+        raw_sites = kvs.get_value_json_decoded(block_id)
 
         sites = []
 
@@ -223,10 +222,7 @@ class Block(object):
         for site in self.sites:
             raw_sites.append(site.coords)
 
-        # TODO (ac): Refactor this, the client lookup
-        # can be done in the kvs module
-        kvs_client = kvs.get_client(binary=False)
-        kvs.set_value_json_encoded(kvs_client, self.id, raw_sites)
+        kvs.set_value_json_encoded(self.id, raw_sites)
 
     @property
     def id(self):
