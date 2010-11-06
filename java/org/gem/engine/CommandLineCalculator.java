@@ -339,11 +339,10 @@ public class CommandLineCalculator {
             result.append(gson.toJson(eqkRuptureIds[indexEqkRupture]));
             // start the eqk json object
             result.append(":{");
-            ++indexEqkRupture;
             Map<Site, Double> groundMotionField =
                     groundMotionFields.get(eqkRupture);
             // TODO:
-            // The Site memcache keys must be known here.
+            // The sites' memcache keys must be known here.
             // For now behave, as if the map object is ordered.
             Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
             int indexSite = 0;
