@@ -22,7 +22,11 @@ MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.1500 +35.0000", "intensity": 2.0594e+00}'
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
-TEST_JOB_FILE = test.test_file('config.gem')
+TEST_JOB_FILE = test.smoketest_file('endtoend/config.gem')
+
+TEST_SOURCE_MODEL = ""
+with open(test.smoketest_file('endtoend/expected_source_model.json'), 'r') as f:
+    TEST_SOURCE_MODEL = f.read()
 
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
@@ -47,8 +51,9 @@ class HazardEngineTestCase(unittest.TestCase):
         with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
             hc = hazengine.execute()
             source_model_key = kvs.generate_product_key(hazengine.id, hazard.ERF_KEY_TOKEN)
-            print self.memcache_client.get(source_model_key)
-            #self.assertEqual(
+            source_model = self.memcache_client.get(source_model_key)
+            # We have the random seed in the config, so this is guaranteed
+            self.assertEqual(source_model, TEST_SOURCE_MODEL)
             
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw

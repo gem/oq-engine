@@ -1198,7 +1198,8 @@ public class CommandLineCalculator {
         int N =
                 config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
                         .name());
-        long seed = (long) 0.0;
+        long seed = config.getLong(ConfigItems.ERFLT_RANDOM_SEED.name(), 0);
+        logger.warn("Random seed for ERFLT is " + Long.toString(seed));
         List<ArrayList<GEMSourceData>> sources =
                 sampleSourceModelLogicTree(createErfLogicTreeData()
                         .getErfLogicTree(), N, seed);
@@ -1223,12 +1224,17 @@ public class CommandLineCalculator {
         List<ArrayList<GEMSourceData>> modelList =
                 new ArrayList<ArrayList<GEMSourceData>>();
         ArrayList<GEMSourceData> srcList = null;
-        Random rn = new Random(seed);
+        Random rn = null;
+        if (seed != 0) {
+            rn = new Random(seed);
+        } else {
+            rn = new Random();
+        }
 
         for (int indexModel = 0; indexModel < N; indexModel++) {
 
             // sample first branching level to get the starting source model
-            int branchNumber = lt.sampleBranchingLevel(0, getRandom());
+            int branchNumber = lt.sampleBranchingLevel(0, rn);
             LogicTreeBranch branch =
                     lt.getBranchingLevel(0).getBranch(branchNumber - 1);
             if (branch.getNameInputFile() != null) {
@@ -1258,7 +1264,7 @@ public class CommandLineCalculator {
             for (GEMSourceData src : srcList) {
                 for (int i = 1; i < numBranchingLevels; i++) {
                     // sample the current branching level
-                    branchNumber = lt.sampleBranchingLevel(i, getRandom());
+                    branchNumber = lt.sampleBranchingLevel(i, rn);
                     // get the sampled branch
                     branch =
                             lt.getBranchingLevel(i).getBranch(branchNumber - 1);

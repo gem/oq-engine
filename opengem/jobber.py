@@ -4,7 +4,7 @@ Main jobber module
 """
 
 
-from opengem import config
+from opengem import job
 from opengem import flags
 from opengem import hazard
 from opengem import logs
@@ -120,14 +120,18 @@ class Jobber(object):
         """ preload configuration for job """
 
         # set region
+        # If there's a region file, use it. Otherwise,
+        # get the region of interest as the convex hull of the
+        # multipoint collection of the portfolio of assets.
+        
         region_constraint = shapes.RegionConstraint.from_file(
-                self.job[config.INPUT_REGION])
+                self.job[job.INPUT_REGION])
 
         # TODO(fab): the cell size has to be determined from the configuration 
         region_constraint.cell_size = 1.0
 
         # load hazard curve file and write to memcache_client
-        nrml_parser = hazard.NrmlFile(self.job[config.HAZARD_CURVES])
+        nrml_parser = hazard.NrmlFile(self.job[job.HAZARD_CURVES])
         attribute_constraint = \
             producer.AttributeConstraint({'IMT' : 'MMI'})
 
