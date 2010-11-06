@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-A simple memcached reader.
+This module contains generic functions to access
+the underlying kvs systems.
 """
 
 import json
@@ -12,16 +13,10 @@ logging.getLogger('jpype').setLevel(logging.ERROR)
 
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
-
 MAX_LENGTH_RANDOM_ID = 36
 MEMCACHE_KEY_SEPARATOR = '!'
 MEMCACHED_PORT = 11211
 MEMCACHED_HOST = "localhost"
-
-
-def block_id_generator():
-    """ Return a block id generator """
-    return _prefix_id_generator('block')
 
 
 def generate_job_key(job_id):
@@ -109,8 +104,16 @@ def _generate_key(key_list):
 
 
 def _prefix_id_generator(prefix):
-    """generator for task IDs (prefix+sequence number)"""
+    """Generator for IDs with a specific prefix (prefix + sequence number)."""
+
     counter = 0
     while(True):
         counter += 1
         yield INTERNAL_ID_SEPARATOR.join((str(prefix), str(counter)))
+
+# generator instance used to generate IDs for blocks
+BLOCK_ID_GENERATOR = _prefix_id_generator("block")
+
+def block_id():
+    """Return a unique id for a block."""
+    return BLOCK_ID_GENERATOR.next()

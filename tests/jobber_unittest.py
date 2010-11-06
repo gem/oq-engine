@@ -124,9 +124,15 @@ class JobberTestCase(unittest.TestCase):
 
 class BlockTestCase(unittest.TestCase):
     
-    def test_block_has_a_unique_id(self):
+    def test_a_block_has_a_unique_id(self):
         self.assertTrue(jobber.Block(()).id)
         self.assertTrue(jobber.Block(()).id != jobber.Block(()).id)
+
+    def test_can_serialize_a_block_into_kvs(self):
+        block = jobber.Block((SITE, SITE))
+        block.to_kvs()
+
+        self.assertEqual(block, jobber.Block.from_kvs(block.id))
 
 class BlockSplitterTestCase(unittest.TestCase):
     
@@ -157,9 +163,7 @@ class BlockSplitterTestCase(unittest.TestCase):
     def test_generates_the_correct_blocks(self):
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
         expected_blocks = (jobber.Block((SITE, SITE, SITE)),)
-        
-        for idx, block in enumerate(self.splitter):
-            self.assertEqual(expected_blocks[idx], block)
+        self._assert_blocks_are(expected_blocks)
 
         self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
         expected_blocks = (jobber.Block((SITE, SITE)), jobber.Block((SITE,)))

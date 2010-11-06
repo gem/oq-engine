@@ -243,27 +243,32 @@ class Site(object):
         self.point = geometry.Point(longitude, latitude)
     
     @property
+    def coords(self):
+        """Return a tuple with the coordinates of this point"""
+        return (self.longitude, self.latitude)
+
+    @property
     def longitude(self):
-        "Point x value is longitude"
+        """Point x value is longitude"""
         return self.point.x
-        
+
     @property
     def latitude(self):
-        "Point y value is latitude"
+        """Point y value is latitude"""
         return self.point.y
 
     def __eq__(self, other):
         return self.hash() == other.hash()
     
     def equals(self, other):
-        """Verbose wrapper around == """
+        """Verbose wrapper around =="""
         return self.point.equals(other)
-    
+
     def hash(self):
-        """ Ugly geohashing function, get rid of this!
+        """Ugly geohashing function, get rid of this!
         TODO(jmc): Dont use sites as dict keys"""
         return self._geohash()
-    
+
     def __hash__(self):
         if not self:
             return 0 # empty
@@ -286,7 +291,7 @@ class Site(object):
     
     def __repr__(self):
         return self.hash()
-        
+
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
