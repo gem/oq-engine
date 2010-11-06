@@ -40,8 +40,8 @@ class GeoTiffFile(writer.FileWriter):
         #   top left y, rotation, n-s pixel resolution
         corner = self.grid.region.upper_left_corner
         self.target.SetGeoTransform(
-            [corner.longitude, self.grid.cell_size, 
-             0, corner.latitude, 0, self.grid.cell_size])
+            [corner.latitude, self.grid.cell_size, 
+             0, corner.longitude, 0, -self.grid.cell_size])
 
         # set the reference info 
         srs = osr.SpatialReference()
@@ -58,6 +58,7 @@ class GeoTiffFile(writer.FileWriter):
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
+        print self.raster
         self.target.GetRasterBand(1).WriteArray(self.raster)
         self.target = None  # This is required to flush the file
         self.finished.send(True)
@@ -68,12 +69,3 @@ class GeoTiffFile(writer.FileWriter):
         for key, val in iterable.items():
             self.write((key.column, key.row), val/maxval * 254)
         self.close()
-
-
-# http://adventuresindevelopment.blogspot.com/2008/12/
-# python-gdal-adding-geotiff-meta-data.html
-# ncols         174
-# nrows         115
-# xllcorner     14.97
-# yllcorner     -34.54
-# cellsize      0.11

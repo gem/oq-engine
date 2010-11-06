@@ -194,21 +194,21 @@ class Grid(object):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
         # print "lat offset = %s" % latitude_offset
-        return int((latitude_offset / self.cell_size)) + 1
+        return int((latitude_offset / self.cell_size)) # + 1
 
     def _row_to_latitude(self, row):
         """Determine latitude from given grid row"""
-        return self.lower_left_corner.latitude + ((row-1) * self.cell_size)
+        return self.lower_left_corner.latitude + ((row) * self.cell_size) # row - 1
 
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
         # print "long offset = %s" % longitude_offset
-        return int((longitude_offset / self.cell_size) + 1)
+        return int((longitude_offset / self.cell_size)) # +1
     
     def _column_to_longitude(self, column):
         """Determine longitude from given grid column"""
-        return self.lower_left_corner.longitude + ((column-1) * self.cell_size)
+        return self.lower_left_corner.longitude + ((column) * self.cell_size) # column -1
 
     def point_at(self, site):
         """Translates a site into a matrix bidimensional point."""
