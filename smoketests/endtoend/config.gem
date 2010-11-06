@@ -14,6 +14,7 @@ REGION_GRID_SPACING = 0.1
 [HAZARD]
 
 ERFLT_RANDOM_SEED = 23
+GMPELT_RANDOM_SEED = 0
 
 # file containing erf logic tree structure
 ERF_LOGIC_TREE_FILE = ErfLogicTree.inp

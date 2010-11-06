@@ -10,6 +10,7 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -29,6 +30,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.gem.JsonSerializer;
+import org.gem.ScalarIMRJsonAdapter;
 import org.gem.UnoptimizedDeepCopy;
 import org.gem.calc.GroundMotionFieldCalculator;
 import org.gem.calc.StochasticEventSetGenerator;
@@ -67,6 +69,8 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 public class CommandLineCalculator {
     //
@@ -351,12 +355,14 @@ public class CommandLineCalculator {
             // every iteration. This is necessary because both, ERF and GMPEs
             // change because they are randomly sampled
             GemComputeHazard compHaz =
-                    new GemComputeHazard(numOfThreads, sites,
+                    new GemComputeHazard(
+                            numOfThreads,
+                            sites,
                             sampleGemLogicTreeERF(erfLogicTree
                                     .getErfLogicTree()),
-                            sampleGemLogicTreeGMPE(gmpeLogicTree
-                                    .getGmpeLogicTreeHashMap()), imlList,
-                            maxDistance);
+                            sampleGemLogicTreeGMPE(
+                                    gmpeLogicTree.getGmpeLogicTreeHashMap(), 0L),
+                            imlList, maxDistance);
             // store results
             hcRepList.add(compHaz.getValues(), Integer.toString(i));
         } // for
@@ -621,8 +627,8 @@ public class CommandLineCalculator {
             // config);
             /* TODO: For the moment select the first GMPE */
             HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> mapGmpe =
-                    sampleGemLogicTreeGMPE(gmpeLogicTree
-                            .getGmpeLogicTreeHashMap());
+                    sampleGemLogicTreeGMPE(
+                            gmpeLogicTree.getGmpeLogicTreeHashMap(), 0L);
             EqkRupForecast eqkRupForecast =
                     sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree());
             ArrayList<ArrayList<EqkRupture>> seismicityHistories =
@@ -1204,6 +1210,26 @@ public class CommandLineCalculator {
                 sampleSourceModelLogicTree(createErfLogicTreeData()
                         .getErfLogicTree(), N, seed);
         JsonSerializer.serializeSourceList(cache, key, sources.get(0));
+    }
+
+    public void sampleAndSaveGMPETree(Cache cache, String key)
+            throws IOException {
+        long seed = config.getLong(ConfigItems.GMPELT_RANDOM_SEED.name(), 0);
+        logger.warn("Random seed for GMPELT is " + Long.toString(seed));
+        HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpe_map =
+                sampleGemLogicTreeGMPE(createGmpeLogicTreeData(config)
+                        .getGmpeLogicTreeHashMap(), seed);
+
+        GsonBuilder gson = new GsonBuilder();
+        gson.registerTypeAdapter(ScalarIntensityMeasureRelationshipAPI.class,
+                new ScalarIMRJsonAdapter());
+
+        Type hashType =
+                new TypeToken<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>>() {
+                }.getType();
+        logger.debug("GMPE HASHMAP: " + gmpe_map);
+        String json = gson.create().toJson(gmpe_map, hashType);
+        cache.set(key, json);
     }
 
     /**
@@ -1864,10 +1890,19 @@ public class CommandLineCalculator {
         erf.updateForecast();
     } // setGEM1ERFParams()
 
-    private static
+    public static
             HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>
             sampleGemLogicTreeGMPE(
-                    HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE) {
+                    HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE,
+                    long seed) {
+        // TODO(JMC): Do I do anything with the N?
+
+        Random rn = null;
+        if (seed != 0) {
+            rn = new Random(seed);
+        } else {
+            rn = new Random();
+        }
 
         HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> hm =
                 new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
@@ -1884,7 +1919,7 @@ public class CommandLineCalculator {
                     listLtGMPE.get(trt);
 
             // sample the first branching level
-            int branch = ltGMPE.sampleBranchingLevel(0, getRandom());
+            int branch = ltGMPE.sampleBranchingLevel(0, rn);
 
             // select the corresponding gmpe from the end-branch mapping
             ScalarIntensityMeasureRelationshipAPI gmpe =

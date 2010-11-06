@@ -50,10 +50,17 @@ class HazardEngineTestCase(unittest.TestCase):
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
             hc = hazengine.execute()
-            source_model_key = kvs.generate_product_key(hazengine.id, hazard.ERF_KEY_TOKEN)
+            source_model_key = kvs.generate_product_key(hazengine.id, 
+                                hazard.SOURCE_MODEL_TOKEN)
             source_model = self.memcache_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             self.assertEqual(source_model, TEST_SOURCE_MODEL)
+            
+            
+            gmpe_key = kvs.generate_product_key(hazengine.id, 
+                                hazard.GMPE_TOKEN)
+            gmpe_model = self.memcache_client.get(gmpe_key)
+            print gmpe_model
             
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw

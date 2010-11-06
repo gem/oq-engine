@@ -31,17 +31,20 @@ class MonteCarloMixin:
         def preloader(self, *args, **kwargs):
             assert(self.base_path)
             # Slurp related files here...
+            # TODO(JMC): No reason to give java the whole config file
+            # Just the ERF LT file should do it...
             #erf_logic_tree_file = guarantee_file(self.base_path, 
             #            self.params['ERF_LOGIC_TREE_FILE'])
             
             self.store_source_model(self.config_file)
+            self.store_gmpe_map(self.config_file)
             fn(self, *args, **kwargs)
         
         return preloader
         
         raise Exception("Can only handle Monte Carlo Hazard mode right now.")
 
-    def store_source_model(self, tree_file):
+    def store_source_model(self, config_file):
         """Generates an Earthquake Rupture Forecast, using the source zones and
         logic trees specified in the job config file. Note that this has to be
         done using the file itself, since it has nested references to other files.
@@ -50,18 +53,34 @@ class MonteCarloMixin:
         """
         
         jpype = java.jvm()
-        print "In python, config file path: %s" % tree_file
         
-        sample_num = self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS']
-        seed = self.params.get('RANDOM_SEED', 0.0)
-        
-        engine = jclass("CommandLineCalculator")(tree_file)
-        key = kvs.generate_product_key(self.id, hazard.ERF_KEY_TOKEN)
+        engine = jclass("CommandLineCalculator")(config_file)
+        key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         engine.sampleAndSaveERFTree(cache, key)
     
+    
+    def store_gmpe_map(self, config_file):
+        """Generates a hash of tectonic regions and GMPEs, using the logic tree
+        specified in the job config file.
+        
+        In the future, this file *could* be passed as a string, since it does 
+        not have any included references."""
+        jpype = java.jvm()  
+        
+        engine = jclass("CommandLineCalculator")(config_file)
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        engine.sampleAndSaveGMPETree(cache, key)
+            
+    
     @preload
     def execute(self):
+        # Chop up subregions
+        # For each subregion, take a subset of the source model
+        # 
+        # Spawn task for subregion, sending in source-subset and 
+        # GMPE subset
         pass
 
     def compute_hazard_curve(self, site_id):
