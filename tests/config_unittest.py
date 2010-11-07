@@ -9,11 +9,6 @@ from opengem import config
 RISK_CONFIG_FILE = "risk-config.gem"
 HAZARD_CONFIG_FILE = "hazard-config.gem"
 
-
-def fname():
-    """docstring for fname"""
-    pass
-
 class JobTestCase(unittest.TestCase):
     
     def setUp(self):
