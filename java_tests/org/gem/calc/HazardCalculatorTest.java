@@ -340,8 +340,6 @@ public class HazardCalculatorTest {
         String jsonFromMemcache = (String) client.get(memCacheKey);
         assertNotNull("test gmfToMemcacheTest: no value returned from cache",
                 jsonFromMemcache);
-        // System.out.println(jsonFromGmf.substring(0, 500));
-        // System.out.println(jsonFromMemcache.substring(0, 500));
         assertTrue(jsonFromGmf.compareTo(jsonFromGmf) == 0);
     }
 
