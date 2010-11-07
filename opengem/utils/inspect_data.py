@@ -6,13 +6,13 @@ import os
 import time
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 from django.contrib.gis.gdal import *
+from opengem import settings
 
-WORLD_SHP = 'world/data/TM_WORLD_BORDERS-0.3.shp'
 
 print
 print
 
-ds = DataSource(WORLD_SHP)
+ds = DataSource(settings.WORLD_SHP)
 print 'Datasource: %s\n' % ds
 print
 
