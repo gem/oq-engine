@@ -16,7 +16,6 @@ from opengem import shapes
 
 from opengem.risk import tasks
 
-from opengem.output import geotiff
 from opengem.output.risk import RiskXMLWriter
 
 from opengem.parser import exposure
