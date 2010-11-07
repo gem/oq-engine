@@ -82,11 +82,11 @@ class Job(object):
         """Validate this job before running the decorated function."""
 
         def validator(*args):
-               try:
-                   assert self.has(EXPOSURE) or self.has(INPUT_REGION)
-                   return fn(*args)
-               except AssertionError:
-                   return False
+            try:
+                assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+                return fn(*args)
+            except AssertionError:
+                return False
 
         return validator
 
