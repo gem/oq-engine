@@ -1,6 +1,7 @@
 package org.gem.calc;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -253,51 +254,95 @@ public class HazardCalculatorTest {
 
     @Test
     public void gmfToJsonTest() {
-        Map<EqkRupture, Map<Site, Double>> groundMotionFields =
-                HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
-                        rn);
-        String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
-        // 
-        // EqkRupture firstKey = groundMotionFields.keySet().iterator().next();
-        // Map<Site, Double> firstGmf = groundMotionFields.get(firstKey);
-        Iterator<Map<Site, Double>> gmfIterator =
-                groundMotionFields.values().iterator();
-        Map<Site, Double> firstGmf = null;
-        while (gmfIterator.hasNext() && firstGmf == null) {
-            firstGmf = groundMotionFields.values().iterator().next();
+        int maxTries = 111;
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
+        while (maxTries > 0 && groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            --maxTries;
+            // HazardCalculator does not return ground motion fields in more
+            // than 50% of the runs. Is it possible that this
+            // has to do with the random seed? (That is the parameter that
+            // changes for each call.)
+            groundMotionFields =
+                    HazardCalculator.getGroundMotionFields(siteList, erf,
+                            gmpeMap, rn);
+
         }
-        if (firstGmf == null) {
+        if (groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
             Assert
-                    .fail("HazardCalculator did not return ground motion fields: "
+                    .fail("HazardCalculator did not return ground motion fields after "
+                            + maxTries
+                            + " runs."
                             + groundMotionFields.toString());
+
         }
-        String[] siteIds = new String[firstGmf.size()];
+        String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
         for (int i = 0; i < eqkRuptureIds.length; ++i) {
             eqkRuptureIds[i] = "eqkRupture_id_" + i;
         }
+        Map<Site, Double> firstGmf =
+                groundMotionFields.values().iterator().next();
+        String[] siteIds = new String[firstGmf.size()];
         for (int i = 0; i < siteIds.length; ++i) {
             siteIds[i] = "site_id_" + i;
         }
         String jsonString =
                 CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
                         siteIds, groundMotionFields);
-        System.out.println(jsonString);
         assertNotNull("jsonString is expected to not to be null", jsonString);
     }
 
     @Test
-    public void gmfToMemcache() {
-        Map<EqkRupture, Map<Site, Double>> groundMotionFields =
-                HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
-                        rn);
-        String gmfsId = "gmfs_id";
-        String memCacheKey = "gmfs_id";
+    public void gmfToMemcacheTest() {
+        int maxTries = 111;
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
+        while (maxTries > 0 && groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            --maxTries;
+            // HazardCalculator does not return ground motion fields in more
+            // than 50% of the runs. Is it possible that this
+            // has to do with the random seed? (That is the parameter that
+            // changes for each call.)
+            groundMotionFields =
+                    HazardCalculator.getGroundMotionFields(siteList, erf,
+                            gmpeMap, rn);
 
-        String[] eqkRuptureIds = null;
-        String[] siteIds = null;
+        }
+        if (groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            Assert
+                    .fail("HazardCalculator did not return ground motion fields after "
+                            + maxTries
+                            + " runs."
+                            + groundMotionFields.toString());
+
+        }
+        Map<Site, Double> firstGmf =
+                groundMotionFields.values().iterator().next();
+        String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
+        for (int i = 0; i < eqkRuptureIds.length; ++i) {
+            eqkRuptureIds[i] = "eqkRupture_id_" + i;
+        }
+        String[] siteIds = new String[firstGmf.size()];
+        for (int i = 0; i < siteIds.length; ++i) {
+            siteIds[i] = "site_id_" + i;
+        }
+        String gmfsId = "gmfs_id";
+        String memCacheKey = "memCache_key";
+        // this is what we expect to find in memcache later
+        String jsonFromGmf =
+                CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
+                        siteIds, groundMotionFields);
+        // converts the groundmotion fields to json and stores them in the cache
         CommandLineCalculator.gmfToMemcache(memCacheKey, gmfsId, eqkRuptureIds,
                 siteIds, groundMotionFields, cache);
-
+        String jsonFromMemcache = (String) client.get(memCacheKey);
+        assertNotNull("test gmfToMemcacheTest: no value returned from cache",
+                jsonFromMemcache);
+        // System.out.println(jsonFromGmf.substring(0, 500));
+        // System.out.println(jsonFromMemcache.substring(0, 500));
+        assertTrue(jsonFromGmf.compareTo(jsonFromGmf) == 0);
     }
 
     /**
