@@ -1,0 +1,32 @@
+
+# FAULT 1 PEER TESTS
+newsource
+          
+            # source id
+            01
+            # source name
+            FAULT1PEER
+            # tectonic region type
+            Active Shallow Crust
+
+                                            # source typology
+                                            fault
+                                            # fault trace (lat,lon)
+                                            # intersection of fault surface with earth surface
+                                            # number of fault trace points
+                                            2
+                                            # trace points coordinates (lat,lon)
+                                            38.00000 -122.00000
+                                            38.22480 -122.00000
+                                            # fault dip (degree)
+                                            90.0
+                                            # fault rake (degree)
+                                            0.0
+                                            # seismogenic layer top depth (km)
+                                            0
+                                            # seismogenic layer bottom depth (km)
+                                            12
+                                            # magnitude frequency distribution
+                                            # 	gr aGR(cumulative) bGR mMax 
+                                            # 	ch magChar rateChar sigmaChar numSigma (NOTE: not yet implemented!)
+                                            gr 3.1292 0.9 5.0 6.5
