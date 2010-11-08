@@ -172,6 +172,20 @@ class JobberTestCase(unittest.TestCase):
         self.assertEqual(jobber.Block(expected_sites),
                 jobber.Block.from_kvs(blocks_keys[0]))
 
+    def test_with_no_partition_we_just_process_a_single_block(self):
+        jobber.SITES_PER_BLOCK = 1
+        
+        # test exposure has 6 assets
+        job = config.Job({config.EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+
+        # but we have 1 block instead of 6
+        self.assertEqual(1, len(blocks_keys))
+
+
 class BlockTestCase(unittest.TestCase):
     
     def test_a_block_has_a_unique_id(self):
