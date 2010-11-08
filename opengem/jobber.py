@@ -46,16 +46,20 @@ class Jobber(object):
         in blocks and executes these as parallel tasks.
         """
 
-        LOGGER.debug("running jobber, job_id = %s" % self.job_id)
+        LOGGER.debug("running jobber, job_id = %s" % self.job.id)
 
         for block_id in self._partition():
-            self._preload(self.job_id, block_id)
-            self._execute(self.job_id, block_id)
-            self._write_output_for_block(self.job_id, block_id)
+            self._preload(self.job.id, block_id)
+            self._execute(self.job.id, block_id)
+            self._write_output_for_block(self.job.id, block_id)
 
         LOGGER.debug("Jobber run ended")
 
     def _partition(self):
+        """Split the set of sites to compute in blocks and store
+        the in the underlying kvs system.
+        """
+
         sites = []
         blocks_keys = []
         region_constraint = self._read_region_constraint()
@@ -73,7 +77,6 @@ class Jobber(object):
                 blocks_keys.append(block.id)
                 block.to_kvs()
         else:
-            # TODO (ac): Test this!
             block = Block(sites)
             blocks_keys.append(block.id)
             block.to_kvs()
@@ -81,6 +84,8 @@ class Jobber(object):
         return blocks_keys
 
     def _read_region_constraint(self):
+        """Read the region constraint, if present, from the job definition."""
+
         if self.job.has(config.INPUT_REGION):
             return shapes.RegionConstraint.from_file(
                     self.job[config.INPUT_REGION])
@@ -88,6 +93,9 @@ class Jobber(object):
             return None
 
     def _read_sites_from_exposure(self):
+        """Read the set of sites to compute from the exposure file specified
+        in the job definition."""
+
         sites = []
         reader = exposure.ExposurePortfolioFile(self.job[config.EXPOSURE])
         
@@ -220,6 +228,7 @@ class Jobber(object):
 
 
 class Block(object):
+    """A block is a collection of sites to compute."""
 
     def __init__(self, sites):
         self.sites = tuple(sites)
@@ -258,6 +267,7 @@ class Block(object):
 
 
 class BlockSplitter(object):
+    """Split the sites into a set of blocks."""
 
     def __init__(self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
         self.sites = sites
