@@ -14,15 +14,6 @@ def bootstrap():
     bootstrap_fn()                   # _bootstrap_linux()
 
 
-def cleanup():
-    def _detect_os():
-        platforms = {'Darwin': _cleanup_osx, 'Linux': _cleanup_linux}
-        return platforms.get(run('uname'), _cleanup_other)
-
-
-def cleanup_osx():
-
-
 def _bootstrap_other():
     pass
 
@@ -56,7 +47,7 @@ def _bootstrap_linux():
                                "nose", "django", "ordereddict"] 
 
         _apt_install(" ".join(apt_packages)) 
-        _pip_install(" ".join(pip_packages), usesudo=True)
+        _pip_install(" ".join(pip_packages))
         sudo("rm -rf ~/build/")
 
         _configure_postgresql(pgsql_path="/usr/lib/postgresql/8.4/bin/")
