@@ -95,6 +95,15 @@ class Region(object):
             self._grid = Grid(self, self.cell_size)
         return self._grid
     
+    @property
+    def sites(self):
+        sites = []
+        
+        for site in self:
+            sites.append(site)
+        
+        return sites
+    
     def __iter__(self):    
         if not self.cell_size:
             raise Exception(
@@ -290,7 +299,7 @@ class Site(object):
         return self.hash() == other.hash()
     
     def __repr__(self):
-        return self.hash()
+        return self.__str__()
 
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)

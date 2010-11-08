@@ -27,6 +27,7 @@ LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 LOGGER = logs.LOG
 SITES_PER_BLOCK = 100
 
+# TODO (ac): This class is not covered by unit tests...
 class Jobber(object):
     """The Jobber class is responsible to evaluate the configuration settings
     and to execute the computations in parallel tasks (using the celery
@@ -39,34 +40,61 @@ class Jobber(object):
         self.job = job
         
         self._init()
-        self.block_id_generator = kvs.block_id_generator()
 
     def run(self):
         """Core method of Jobber. It splits the requested computation
         in blocks and executes these as parallel tasks.
         """
 
-        job_id = self.job.id
-        LOGGER.debug("running jobber, job_id = %s" % job_id)
+        LOGGER.debug("running jobber, job_id = %s" % self.job_id)
 
-        if self.partition is True:
-            self._partition(job_id)
-        else:
-            block_id = self.block_id_generator.next()
-            self._preload(job_id, block_id)
-            self._execute(job_id, block_id)
-            self._write_output_for_block(job_id, block_id)
+        for block_id in self._partition():
+            self._preload(self.job_id, block_id)
+            self._execute(self.job_id, block_id)
+            self._write_output_for_block(self.job_id, block_id)
 
         LOGGER.debug("Jobber run ended")
 
-    def _partition(self, job_id):
-        """
-         _partition() has to:
-          - get the full set of sites
-          - select a subset of these sites
-          - write the subset of sites to memcache, prepare a computation block
-        """
-        pass
+    def _partition(self):
+        sites = []
+        blocks_keys = []
+        region_constraint = self._read_region_constraint()
+        
+        # we use the exposure, if specified,
+        # otherwise we use the input region
+        if self.job.has(config.EXPOSURE):
+            sites = self._read_sites_from_exposure()
+        else:
+            sites = shapes.Region.from_file(
+                    self.job[config.INPUT_REGION]).sites
+
+        if self.partition:
+            for block in BlockSplitter(sites, constraint=region_constraint):
+                blocks_keys.append(block.id)
+                block.to_kvs()
+        else:
+            # TODO (ac): Test this!
+            block = Block(sites)
+            blocks_keys.append(block.id)
+            block.to_kvs()
+        
+        return blocks_keys
+
+    def _read_region_constraint(self):
+        if self.job.has(config.INPUT_REGION):
+            return shapes.RegionConstraint.from_file(
+                    self.job[config.INPUT_REGION])
+        else:
+            return None
+
+    def _read_sites_from_exposure(self):
+        sites = []
+        reader = exposure.ExposurePortfolioFile(self.job[config.EXPOSURE])
+        
+        for asset_data in reader:
+            sites.append(asset_data[0])
+
+        return sites
 
     def _execute(self, job_id, block_id):
         """ Execute celery task for risk given block with sites """
