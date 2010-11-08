@@ -32,6 +32,7 @@
 	</target>
 
 	<target name="build-opengem-jar" depends="compile-sources">
+		<mkdir dir="${dist.dir}" />
 		<jar destfile="${dist.dir}/opengem-minimal.jar" basedir="${classes.dir}" includes="**/*.class" />
 	</target>
 
