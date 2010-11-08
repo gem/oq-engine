@@ -17,6 +17,9 @@ JAVA_CLASSES = {
     'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
     'KVS' : "org.gem.engine.hazard.memcached.Cache",
     'JsonSerializer' : "org.gem.JsonSerializer",
+    "EventSetGen" : "org.gem.calc.StochasticEventSetGenerator",
+    "Random" : "java.util.Random",
+    "GEM1ERF" : "org.gem.engine.hazard.GEM1ERF",
 }
 
 def jclass(class_key):
@@ -82,10 +85,32 @@ class MonteCarloMixin:
         # Spawn task for subregion, sending in source-subset and 
         # GMPE subset
         pass
+        
+    def generate_erf(self):
+        erfclass = jclass("GEM1ERF")
+        
+        key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
+        cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        sources = jclass("JsonSerializer").getSourceListFromCache(cache, key)
+        
+        return erfclass.getGEM1ERF(sources)
+    
+    def load_ruptures(self):
+        
+        erf = self.generate_erf()
+        
+        seed = 0 # TODO(JMC): Real seed please
+        rn = jclass("Random")(seed)
+        event_set_gen = jclass("EventSetGen")
+        self.ruptures = event_set_gen.getStochasticEventSetFromPoissonianERF(
+                            erf, rn)
 
     def compute_hazard_curve(self, site_id):
         """Actual hazard curve calculation, runs on the workers."""
-        pass
+        jpype = java.jvm()
+        self.load_ruptures()
+        
+        
 
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)

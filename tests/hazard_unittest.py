@@ -42,7 +42,7 @@ class HazardEngineTestCase(unittest.TestCase):
     
     def setUp(self):
         self.memcache_client = kvs.get_client(binary=False)
-        self.memcache_client.flush_all()
+        # self.memcache_client.flush_all()
 
     def tearDown(self):
         pass
