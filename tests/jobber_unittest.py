@@ -18,6 +18,8 @@ from opengem import logs
 from opengem import kvs
 from opengem import jobber
 from opengem import shapes
+from opengem import config
+from opengem import test
 
 import tests.tasks as test_tasks
 
@@ -28,6 +30,9 @@ TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
 SITE = shapes.Site(1.0, 1.0)
+EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.xml"
+REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
+REGION_TEST_FILE = "small.region"
 
 class JobberTestCase(unittest.TestCase):
 
@@ -121,6 +126,51 @@ class JobberTestCase(unittest.TestCase):
             result_dict[k] = decoder.decode(v)
 
         self.assertEqual(expected_dict, result_dict)
+
+    def test_prepares_blocks_using_the_exposure(self):
+        job = config.Job({config.EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+        
+        expected_block = jobber.Block((shapes.Site(9.15000, 45.16667),
+                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999),
+                shapes.Site(9.15765, 45.13005), shapes.Site(9.15934, 45.13300),
+                shapes.Site(9.15876, 45.13805)))
+        
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(expected_block, jobber.Block.from_kvs(blocks_keys[0]))
+
+    def test_prepares_blocks_using_the_exposure_and_filtering(self):
+        job = config.Job({config.EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE),
+                config.INPUT_REGION: os.path.join(
+                test.DATA_DIR, REGION_EXPOSURE_TEST_FILE)})
+    
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+
+        expected_block = jobber.Block((shapes.Site(9.15765, 45.13005),
+                shapes.Site(9.15934, 45.133), shapes.Site(9.15876, 45.13805)))
+
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(expected_block, jobber.Block.from_kvs(blocks_keys[0]))
+    
+    def test_prepares_blocks_using_the_input_region(self):
+        region_path = os.path.join(test.DATA_DIR, REGION_TEST_FILE)
+        job = config.Job({config.INPUT_REGION: region_path})
+
+        expected_sites = []
+        for site in shapes.Region.from_file(region_path):
+            expected_sites.append(site)
+    
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(jobber.Block(expected_sites),
+                jobber.Block.from_kvs(blocks_keys[0]))
 
 class BlockTestCase(unittest.TestCase):
     
