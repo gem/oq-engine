@@ -47,7 +47,7 @@ def _bootstrap_linux():
                                "nose", "django", "ordereddict"] 
 
         _apt_install(" ".join(apt_packages)) 
-        _pip_install(" ".join(pip_packages), usesudo=True)
+        _pip_install(" ".join(pip_packages))
         sudo("rm -rf ~/build/")
 
         _configure_postgresql(pgsql_path="/usr/lib/postgresql/8.4/bin/")
