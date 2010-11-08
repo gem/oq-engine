@@ -321,13 +321,13 @@ public class CommandLineCalculator {
      * 
      * @return
      */
-    public static String gmfToJson(String gmfsId, String[] eqkRuptureIds,
+    public static String gmfToJson(String gmfId, String[] eqkRuptureIds,
             String[] siteIds,
             Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
         StringBuilder result = new StringBuilder();
         Gson gson = new Gson();
         result.append("{");
-        result.append(gson.toJson(gmfsId));
+        result.append(gson.toJson(gmfId));
         result.append(":{");
         // TODO:
         // The EqkRupture memcache keys must be known here.
@@ -378,20 +378,47 @@ public class CommandLineCalculator {
         return result.toString();
     }
 
-    public static void gmfToMemcache(String memCacheKey, String gmfsId,
+    /**
+     * Saves a ground motion map to a Cache object.<br>
+     * <br>
+     * 1) Converts the <code>groundMotionFields</code> into json format.<br>
+     * E.g.<br>
+     * {"gmf_id":<br>
+     * {"eqkRupture_id_0":<br>
+     * {"site_id_0":{"lat":35.0,"lon":37.6,"mag":-4.7}},
+     * {"site_id_1":{"lat":37.5,"lon":35.6,"mag":-2.8}},...
+     * 
+     * 2) Saves the json string to memCache.
+     * 
+     * @param memCacheKey
+     * @param gmfId
+     *            The "json key" for the GMF (ground motion field)
+     * @param eqkRuptureIds
+     *            The "json key" for the the ruptures contained in
+     *            groundMotionFields
+     * @param siteIds
+     *            The "json key" for all the sites contained in
+     *            groundMotionFields
+     * @param groundMotionFields
+     *            The GMF to be saved to memcache
+     * @param cache
+     *            The memcache
+     */
+    public static void gmfToMemcache(String memCacheKey, String gmfId,
             String[] eqkRuptureIds, String[] siteIds,
             Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
         String json =
-                gmfToJson(gmfsId, eqkRuptureIds, siteIds, groundMotionFields);
+                gmfToJson(gmfId, eqkRuptureIds, siteIds, groundMotionFields);
         cache.set(memCacheKey, json);
     }
 
     /**
      * Saves a ground motion map to a Cache object.
      * 
-     * The approach of this method will probably never be used: Every GMF value
-     * is stored to the cache with its own key. (The key consists of a rupture
-     * number and the site's coordinates.)
+     * The approach of this method will probably never be used:<br>
+     * Every GMF (double-)value is stored to the cache with its own key. (The
+     * key consists of a continuous number given to each rupture and the site's
+     * coordinates.)
      * 
      * @param cache
      *            the cache to store the ground motion map
