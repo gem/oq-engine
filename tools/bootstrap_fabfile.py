@@ -14,15 +14,6 @@ def bootstrap():
     bootstrap_fn()                   # _bootstrap_linux()
 
 
-def cleanup():
-    def _detect_os():
-        platforms = {'Darwin': _cleanup_osx, 'Linux': _cleanup_linux}
-        return platforms.get(run('uname'), _cleanup_other)
-
-
-def cleanup_osx():
-
-
 def _bootstrap_other():
     pass
 
