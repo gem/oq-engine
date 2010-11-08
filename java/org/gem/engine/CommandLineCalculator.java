@@ -1960,5 +1960,94 @@ public class CommandLineCalculator {
         // clc.saveMeanGroundMotionMapToGMTAsciiFile();
         System.exit(0);
     } // main()
+/*
 
+# Pseudo-code
+
+# PRELOAD, Done on jobber node and HazardEngine:
+# The jobber reads input and stores it to memcache (if necessary).
+# The jobber starts the HazardEngine.
+# The jobber provides config-file and memcache-keys to the HazardEngine.
+
+
+1)
+# ERF generation (triggered by worker node, result is an ERF)
+# This was a very rough approach (and has already been refined?)
+#
+engine = HazardEngine(Cache, job-id)
+json_model = memcache.get('job-id:hazard-sources')
+source_model = util.deserializeSources(json_model)
+erf = HazardEngine.generateERF(source_model)
+
+2)
+# Question: Store ERF to memcache, correct?
+# Quesiton: Is the memcache key 'job-id:erf_id' constructed
+# by the hazard engine or by indentifiers.pyc?
+# Question: The ERF may be used by the hazard engine later on (GMF computation), correct?
+# How is the access to the erf-memcache-keys so that the engine can retrieve the erf?
+memcache.set('job-id:erf_id', json_model)
+
+3)
+# Question: Does the jobber then start the GMF calculation or does it the HazardEngine autonomously?
+# Question: Is the necessary input data (siteList, gmpeMap) to be stored to memcache before?
+# Remark: E.g. the erf may be stored to the cache (step 2).
+# GMF computation (in org.gem.calc.HazardCalculator):
+  GMF = getGroundMotionFields(siteList, erf, gmpeMap, randomGenerator)
+  
+4)
+# A GMF is serialized and stored to memcache in this format:
+# 
+# Question: The json-keys (gmf_id, eqkrupture_id, site_id)
+# are to be determined by the calling method, correct? 
+#  
+# {'gmf_id' :
+# { 'eqkrupture_id' :
+# { 'site_id' : {'lat' : lat_val, 'lon' : lon_val, 'mag' : double_val}}}
+#
+gmfToJson(gmfId, eqkRuptureIds, siteIds, groundMotionFields)
+
+5)
+# The json-GMF is saved to the cache:
+#
+# Question: Also the memcache-key used to store the whole json-GMF to
+# memcache is to be determined by the calling method, correct?
+#
+# Question: If so, is it passed in by the jobber?
+# Or is it stored to the cache e.g. as "job-id:gmf-memcache-key"?
+#
+gmfToMemcache(memCacheKey, gmfId, eqkRuptureIds, siteIds, groundMotionFields, cache)
+
+
+# GMF in json format, example output of the program:
+# 
+# {"gmf_id":
+# {"eqkRupture_id_0":
+# {"site_id_0":{"lat":35.0,"lon":37.6,"mag":-4.78}},
+# {"site_id_1":{"lat":37.5,"lon":35.6,"mag":-2.84}},
+# {"site_id_2":{"lat":35.0,"lon":35.4,"mag":-4.13}},
+# {"site_id_3":{"lat":36.6,"lon":37.7,"mag":-3.76}},
+# {"site_id_4":{"lat":36.4,"lon":35.0,"mag":-4.12}},
+# {"site_id_5":{"lat":35.3,"lon":35.4,"mag":-4.86}},
+# {"site_id_6":{"lat":35.8,"lon":36.9,"mag":-2.81}},
+# {"site_id_7":{"lat":35.6,"...
+
+
+# Just as a remark:
+# (S. below) Former discussed "format" was to save *each GMF-double*
+#  value (this can be a lot) with its own key to memcache:
+# "1_lat1_lon1":"2.5559",
+# "1_lat2_lon2":"2.5556",
+# "1_lat3_lon3":"2.5588",
+# "2_lat1_lon1":"12.33333",
+# "2_lat1_lon1":"12.44444",
+# "2_lat1_lon1":"12.55555",
+# "3_lat1_lon1":"0.5",
+# "3_lat1_lon1":"0.6",
+# "3_lat1_lon1":"0.7",
+# "4_lat1_lon1":"1.0001",
+# "4_lat1_lon1":"1.0002",
+# "4_lat2_lon2":"1.0003"
+
+
+ */
 } // class CommandLineCalculatorWithProperties
