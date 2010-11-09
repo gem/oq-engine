@@ -917,7 +917,9 @@ public class CommandLineCalculator {
     private void saveGroundMotionMapToAsciiFile(String outfile,
             ArrayList<Double> map, ArrayList<Site> siteList) {
         try {
-            FileOutputStream oOutFIS = new FileOutputStream(outfile);
+            File file = new File(outfile);
+            FileOutputStream oOutFIS =
+                    new FileOutputStream(file.getAbsolutePath());
             BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
             BufferedWriter oWriter =
                     new BufferedWriter(new OutputStreamWriter(oOutBIS));
@@ -944,7 +946,9 @@ public class CommandLineCalculator {
     private static void saveHazardCurveRepositoryListToAsciiFile(
             String outfile, GEMHazardCurveRepositoryList hazardCurves) {
         try {
-            FileOutputStream oOutFIS = new FileOutputStream(outfile);
+            File file = new File(outfile);
+            FileOutputStream oOutFIS =
+                    new FileOutputStream(file.getAbsolutePath());
             BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
             BufferedWriter oWriter =
                     new BufferedWriter(new OutputStreamWriter(oOutBIS));
@@ -1000,7 +1004,9 @@ public class CommandLineCalculator {
     private static void saveHazardCurveRepositoryToAsciiFile(String outfile,
             GEMHazardCurveRepository rep) {
         try {
-            FileOutputStream oOutFIS = new FileOutputStream(outfile);
+            File file = new File(outfile);
+            FileOutputStream oOutFIS =
+                    new FileOutputStream(file.getAbsolutePath());
             BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
             BufferedWriter oWriter =
                     new BufferedWriter(new OutputStreamWriter(oOutBIS));
@@ -1039,27 +1045,31 @@ public class CommandLineCalculator {
         }
     } // saveFractiles()
 
+    /**
+     * Creates array list of Site objects storing locations for hazard
+     * calculations.
+     * 
+     * @param calcConfig
+     * @return
+     */
     private static ArrayList<Site> createSiteList(Configuration calcConfig) {
-        // arraylist of sites storing locations where hazard curves must be
-        // calculated
         ArrayList<Site> sites = new ArrayList<Site>();
-        // create gridded region from borders coordinates and grid spacing
-        // GriddedRegion gridReg = new
-        // GriddedRegion(calcConfig.getRegionBoundary(),BorderType.MERCATOR_LINEAR,calcConfig.getGridSpacing(),null);
         LocationList locations =
                 CalculatorConfigHelper.makeRegionboundary(calcConfig);
-        // old style: "properties" - going to be deleted
-        // double gridSpacing =
-        // Double.parseDouble(calcConfig.getProperty(ConfigItems.REGION_GRID_SPACING.name()));
-        double gridSpacing =
-                calcConfig.getDouble(ConfigItems.REGION_GRID_SPACING.name());
-        GriddedRegion gridReg =
-                new GriddedRegion(locations, BorderType.MERCATOR_LINEAR,
-                        gridSpacing, null);
-        // get list of locations in the region
-        LocationList locList = gridReg.getNodeList();
+        if (calcConfig.getBoolean(ConfigItems.REGION.name()) == true) {
+            // create gridded region from location list (interpreted as defining
+            // the boundary) and grid spacing
+            double gridSpacing =
+                    calcConfig
+                            .getDouble(ConfigItems.REGION_GRID_SPACING.name());
+            GriddedRegion gridReg =
+                    new GriddedRegion(locations, BorderType.GREAT_CIRCLE,
+                            gridSpacing, null);
+            // get list of locations in the region
+            locations = gridReg.getNodeList();
+        }
         // store locations as sites
-        Iterator<Location> iter = locList.iterator();
+        Iterator<Location> iter = locations.iterator();
         while (iter.hasNext()) {
             Site site = new Site(iter.next());
             site.addParameter(new DoubleParameter(Vs30_Param.NAME, calcConfig
@@ -1073,7 +1083,7 @@ public class CommandLineCalculator {
                     calcConfig.getString(ConfigItems.SADIGH_SITE_TYPE.name())));
             sites.add(site);
         }
-        // return array list of sites
+
         return sites;
     } // createSiteList()
 
