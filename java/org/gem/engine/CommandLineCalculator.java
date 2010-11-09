@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
+import java.util.Set;
 
 import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -330,7 +331,7 @@ public class CommandLineCalculator {
         // TODO:
         // The EqkRupture memcache keys must be known here.
         // For now behave, as if the map object is ordered.
-        // 
+        //
         Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
         int indexEqkRupture = 0;
         for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
@@ -368,7 +369,7 @@ public class CommandLineCalculator {
                 }
                 ++indexSite;
             } // for
-            // close the eqk json object
+              // close the eqk json object
             result.append("}");
             ++indexEqkRupture;
         } // for
