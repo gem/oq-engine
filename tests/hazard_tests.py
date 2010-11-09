@@ -40,8 +40,6 @@ class HazardEngineTestCase(unittest.TestCase):
         result_keys = []
         expected_values = {}
 
-        print hazard.ERF_KEY_TOKEN
-        
         for job_id in TASK_JOBID_SIMPLE:
             erf_key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
 
