@@ -24,6 +24,7 @@ import org.gem.engine.hazard.memcached.Cache;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
+import org.opensha.sha.earthquake.EqkRupture;
 
 import com.google.gson.Gson;
 
@@ -52,7 +53,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         // final String intensityMeasureTypeToTest =
         // IntensityMeasure.PGA.type();
         CommandLineCalculator clc =
-                new CommandLineCalculator("CalculatorConfig.properties");
+                new CommandLineCalculator(
+                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
         clc.setConfigItem(ConfigItems.INTENSITY_MEASURE_TYPE.name(),
                 intensityMeasureTypeToTest);
         clc.doCalculation();
@@ -71,11 +73,15 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void testDoProbabilisticEventBasedCalcMonteCarlo()
             throws ConfigurationException {
         CommandLineCalculator clc =
-                new CommandLineCalculator("CalculatorConfig.properties");
+                new CommandLineCalculator(
+                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.MONTE_CARLO.value();
-        // String calculationModeFull = CalculationMode.FULL.value();
         clc.setConfigItem(key, mode);
+        key =
+                CalculatorConfigHelper.ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
+                        .name();
+        clc.setConfigItem(key, Integer.toString(10));
         testDoProbabilisticEventBasedCalc(clc);
     }
 
@@ -92,10 +98,15 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void testDoProbabilisticEventBasedCalcFull()
             throws ConfigurationException {
         CommandLineCalculator clc =
-                new CommandLineCalculator("CalculatorConfig.properties");
+                new CommandLineCalculator(
+                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.FULL.value();
         clc.setConfigItem(key, mode);
+        key =
+                CalculatorConfigHelper.ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
+                        .name();
+        clc.setConfigItem(key, Integer.toString(10));
         testDoProbabilisticEventBasedCalc(clc);
     }
 
@@ -112,14 +123,15 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      */
     private void testDoProbabilisticEventBasedCalc(CommandLineCalculator clc)
             throws ConfigurationException {
-        Map<Site, Double> result = clc.doCalculationProbabilisticEventBased();
+        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result =
+                clc.doCalculationProbabilisticEventBased();
         Object o = null;
         assertTrue(result != null);
         assertTrue(result instanceof Map);
-        // assertTrue(result.size() > 0);
-        assertTrue(result.size() > 0
-                && (o = result.keySet().iterator().next()) instanceof Site);
-        assertTrue(result.size() > 0 && result.get(o) instanceof Double);
+        assertTrue(result.size() > 0);
+        // assertTrue(result.size() > 0
+        // && (o = result.get(o).keySet().iterator().next()) instanceof Site);
+        // assertTrue(result.size() > 0 && result.get(o) instanceof String);
     } // testDoProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling()
 
     @Test
@@ -198,12 +210,97 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
     }
 
+    /**
+     * Implements PEER test set 1 case 5 (single, planar, vertical fault, with
+     * floating ruptures following GR truncated magnitude frequency
+     * distribution) using stochastic event set approach
+     * 
+     * @throws ConfigurationException
+     */
+    @Test
+    public void peerSet1Case5StochasticEventSet() throws ConfigurationException {
+        double tolerance = 1e-2;
+        int numberSeismicityHistories = 50000;
+        CommandLineCalculator clc =
+                new CommandLineCalculator(
+                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields =
+                clc.doCalculationProbabilisticEventBased();
+        Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
+        double[] imlList =
+                new double[] { 0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
+                        0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8 };
+        computeHazardCurves(numberSeismicityHistories, groundMotionFields,
+                calculatedResults, imlList);
+
+        Map<Location, double[]> expectedResults =
+                getHandResultsPeerTestSet1Case5();
+        compareResults(calculatedResults, expectedResults, tolerance);
+
+        expectedResults = getMeanResultsPeerTestSet1Case5();
+        compareResults(calculatedResults, expectedResults, tolerance);
+    }
+
+    private
+            void
+            computeHazardCurves(
+                    int numberSeismicityHistories,
+                    Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields,
+                    Map<Location, double[]> calculatedResults, double[] imlList) {
+        for (Integer i : groundMotionFields.keySet())
+            for (String label : groundMotionFields.get(i).keySet())
+                for (EqkRupture rup : groundMotionFields.get(i).get(label)
+                        .keySet())
+                    for (Site site : groundMotionFields.get(i).get(label)
+                            .get(rup).keySet()) {
+                        Location loc = site.getLocation();
+                        double groundMotionValue =
+                                Math.exp(groundMotionFields.get(i).get(label)
+                                        .get(rup).get(site));
+                        for (int j = 0; j < imlList.length; j++)
+                            if (groundMotionValue > imlList[j])
+                                calculatedResults.get(loc)[j] =
+                                        calculatedResults.get(loc)[j] + 1;
+                    }
+        for (Location loc : calculatedResults.keySet()) {
+            for (int j = 0; j < imlList.length; j++)
+                calculatedResults.get(loc)[j] =
+                        calculatedResults.get(loc)[j]
+                                / numberSeismicityHistories;
+        }
+    }
+
+    private Map<Location, double[]> setUpCalculatedResultsMap() {
+        Map<Location, double[]> calculatedResults =
+                new HashMap<Location, double[]>();
+        calculatedResults.put(new Location(38.113, -122.000), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        calculatedResults.put(new Location(38.113, -122.114), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        calculatedResults.put(new Location(38.111, -122.570), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        calculatedResults.put(new Location(38.000, -122.000), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        calculatedResults.put(new Location(37.910, -122.000), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        calculatedResults.put(new Location(38.225, -122.000), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        calculatedResults.put(new Location(38.113, -121.886), new double[] {
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0 });
+        return calculatedResults;
+    }
+
     private void compareResults(Map<Location, double[]> computedResults,
             Map<Location, double[]> expectedResults, double tolerance) {
         for (Location loc : expectedResults.keySet()) {
             for (int i = 0; i < expectedResults.get(loc).length; i++) {
-                // System.out.println("Expected: " + expectedResults.get(loc)[i]
-                // + ", computed: " + computedResults.get(loc)[i]);
                 assertEquals(expectedResults.get(loc)[i],
                         computedResults.get(loc)[i], tolerance);
             }
