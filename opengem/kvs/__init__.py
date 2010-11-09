@@ -62,13 +62,11 @@ def get_client(memcached_host=settings.MEMCACHED_HOST,
     return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
                           **kwargs)
 
-# TODO (ac): Refactor, delete the client parameter
 def get_sites_from_memcache(memcache_client, job_id, block_id):
     """ Get all of the sites for a block """
 
     memcache_key_sites = generate_sites_key(job_id, block_id)
-
-    return get_value_json_decoded(memcache_client, memcache_key_sites)
+    return get_value_json_decoded(memcache_key_sites)
 
 
 def get_value_json_decoded(key):
