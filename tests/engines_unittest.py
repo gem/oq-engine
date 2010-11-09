@@ -53,7 +53,7 @@ GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.memcached_client = kvs.get_client(binary=False)
+        self.kvs_client = kvs.get_client(binary=False)
         self.calculator = engines.ProbabilisticEventBasedCalculator(JOB_ID, BLOCK_ID)
 
         self.key_exposure = kvs.generate_product_key(JOB_ID,
@@ -63,17 +63,16 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
             risk.GMF_KEY_TOKEN, BLOCK_ID, SITE)
 
         # delete old keys
-        self.memcached_client.delete(self.key_exposure)
-        self.memcached_client.delete(vulnerability.generate_memcache_key(JOB_ID))
-        self.memcached_client.delete(self.key_gmf)
+        self.kvs_client.delete(self.key_exposure)
+        self.kvs_client.delete(kvs.generate_vuln_key(JOB_ID))
+        self.kvs_client.delete(self.key_gmf)
     
     def test_no_loss_curve_with_no_asset_value(self):
         self.assertEqual(None, self.calculator.compute_loss_curve(
                 SITE, shapes.EMPTY_CURVE))
     
     def test_computes_the_loss_curve(self):
-        kvs.set_value_json_encoded(
-                self.memcached_client, self.key_exposure, {"AssetValue": 5.0})
+        kvs.set_value_json_encoded(self.key_exposure, {"AssetValue": 5.0})
 
         loss_ratio_curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
         
@@ -89,19 +88,19 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
                 (0.37, (0.405, 1.0)), (0.52, (0.700, 1.0))])
         
         # ugly, it shouldn't take the json format
-        vulnerability.write_vulnerability_curves_to_memcache(
-                self.memcached_client, JOB_ID, {"Type1": vuln_curve.to_json()})
+        vulnerability.write_vulnerability_curves_to_kvs(
+                JOB_ID, {"Type1": vuln_curve.to_json()})
         
         # recreate the calculator to get the vuln function
         calculator = engines.ProbabilisticEventBasedCalculator(JOB_ID, BLOCK_ID)
         
         # saving the exposure
         kvs.set_value_json_encoded(
-                self.memcached_client, self.key_exposure, {"AssetValue": 5.0,
+                self.key_exposure, {"AssetValue": 5.0,
                 "VulnerabilityFunction": "Type1"})
         
         # saving the ground motion field
-        kvs.set_value_json_encoded(self.memcached_client, self.key_gmf, GMF)
+        kvs.set_value_json_encoded(self.key_gmf, GMF)
         
         # manually computed curve
         expected_curve = shapes.Curve([

@@ -1,13 +1,23 @@
 package org.gem.calc;
 
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-import org.gem.calc.HazardCalculator;
+import junit.framework.Assert;
+import net.spy.memcached.MemcachedClient;
+
+import org.gem.engine.CommandLineCalculator;
+import org.gem.engine.hazard.memcached.Cache;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,6 +32,7 @@ import org.opensha.commons.param.DoubleParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
+import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.FloatingPoissonFaultSource;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -45,13 +56,24 @@ public class HazardCalculatorTest {
     private static List<Double> imlVals;
     private static double integrationDistance = 200.0;
     private static Random rn = new Random();
+    // for memcache tests:
+    private static final int PORT = 11211;
+    private static final String LOCALHOST = "localhost";
+    private MemcachedClient client;
+    private Cache cache;
 
     @Before
-    public void setUp() {
+    public void setUp() throws IOException {
         setUpSites();
         setUpErf();
         setUpGmpeMap();
         setUpImlValues();
+        try {
+            setUpMemcache();
+        } catch (IOException e) {
+            tearDown();
+            throw e;
+        }
     }
 
     @After
@@ -60,6 +82,14 @@ public class HazardCalculatorTest {
         erf = null;
         gmpeMap = null;
         imlVals = null;
+        if (client != null) {
+            client.shutdown();
+            client = null;
+        }
+        if (cache != null) {
+            cache.flush();
+            cache = null;
+        }
     }
 
     /**
@@ -193,6 +223,127 @@ public class HazardCalculatorTest {
     }
 
     /**
+     * Test storing a ground motion map
+     */
+    @Test
+    public void storeGroundMotionMapToCache() {
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields =
+                HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
+                        rn);
+        List<String> keys =
+                CommandLineCalculator.gmfValuesToMemcache(groundMotionFields,
+                        cache);
+        // now find a Double object for each key
+        Iterator<String> keyIterator = keys.iterator();
+        while (keyIterator.hasNext()) {
+            String key = keyIterator.next();
+            Object valueFromCache = client.get(key);
+            assertNotNull(
+                    "test storeGroundMotionMapToCache: no value returned from cache",
+                    valueFromCache);
+            // This is not an assert mehtod, but in error case this cast to
+            // Double would cause a ClassCastException and let the test fail.
+            Double value = (Double) valueFromCache;
+            // If the ground motion map contains this value, I am satisfied.
+            // ...but this may be an equal ground motion value belonging to an
+            // different site.
+            // ...An accurate test has to construct a Site object from the keys
+            // and use that "Site" to retrieve the value from the map.
+        } // while
+    }
+
+    @Test
+    public void gmfToJsonTest() {
+        int maxTries = 111;
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
+        while (maxTries > 0 && groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            --maxTries;
+            // HazardCalculator does not return ground motion fields in more
+            // than 50% of the runs. Is it possible that this
+            // has to do with the random seed? (That is the parameter that
+            // changes for each call.)
+            groundMotionFields =
+                    HazardCalculator.getGroundMotionFields(siteList, erf,
+                            gmpeMap, rn);
+
+        }
+        if (groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            Assert
+                    .fail("HazardCalculator did not return ground motion fields after "
+                            + maxTries
+                            + " runs."
+                            + groundMotionFields.toString());
+
+        }
+        String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
+        for (int i = 0; i < eqkRuptureIds.length; ++i) {
+            eqkRuptureIds[i] = "eqkRupture_id_" + i;
+        }
+        Map<Site, Double> firstGmf =
+                groundMotionFields.values().iterator().next();
+        String[] siteIds = new String[firstGmf.size()];
+        for (int i = 0; i < siteIds.length; ++i) {
+            siteIds[i] = "site_id_" + i;
+        }
+        String jsonString =
+                CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
+                        siteIds, groundMotionFields);
+        assertNotNull("jsonString is expected to not to be null", jsonString);
+    }
+
+    @Test
+    public void gmfToMemcacheTest() {
+        int maxTries = 111;
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
+        while (maxTries > 0 && groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            --maxTries;
+            // HazardCalculator does not return ground motion fields in more
+            // than 50% of the runs. Is it possible that this
+            // has to do with the random seed? (That is the parameter that
+            // changes for each call.)
+            groundMotionFields =
+                    HazardCalculator.getGroundMotionFields(siteList, erf,
+                            gmpeMap, rn);
+
+        }
+        if (groundMotionFields == null
+                || groundMotionFields.values().size() == 0) {
+            Assert
+                    .fail("HazardCalculator did not return ground motion fields after "
+                            + maxTries
+                            + " runs."
+                            + groundMotionFields.toString());
+
+        }
+        Map<Site, Double> firstGmf =
+                groundMotionFields.values().iterator().next();
+        String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
+        for (int i = 0; i < eqkRuptureIds.length; ++i) {
+            eqkRuptureIds[i] = "eqkRupture_id_" + i;
+        }
+        String[] siteIds = new String[firstGmf.size()];
+        for (int i = 0; i < siteIds.length; ++i) {
+            siteIds[i] = "site_id_" + i;
+        }
+        String gmfsId = "gmfs_id";
+        String memCacheKey = "memCache_key";
+        // this is what we expect to find in memcache later
+        String jsonFromGmf =
+                CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
+                        siteIds, groundMotionFields);
+        // converts the groundmotion fields to json and stores them in the cache
+        CommandLineCalculator.gmfToMemcache(memCacheKey, gmfsId, eqkRuptureIds,
+                siteIds, groundMotionFields, cache);
+        String jsonFromMemcache = (String) client.get(memCacheKey);
+        assertNotNull("test gmfToMemcacheTest: no value returned from cache",
+                jsonFromMemcache);
+        assertTrue(jsonFromGmf.compareTo(jsonFromGmf) == 0);
+    }
+
+    /**
      * Set up list of sites
      */
     private static void setUpSites() {
@@ -289,6 +440,16 @@ public class HazardCalculatorTest {
         imlVals.add(Math.log(0.556));
         imlVals.add(Math.log(0.778));
         imlVals.add(Math.log(1.09));
+    }
+
+    /**
+     * Set up the MemcachedClient and the cache to access the same host/port.
+     * 
+     * @throws IOException
+     */
+    private void setUpMemcache() throws IOException {
+        client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
+        cache = new Cache(LOCALHOST, PORT);
     }
 
     /**
