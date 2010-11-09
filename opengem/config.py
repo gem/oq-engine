@@ -6,6 +6,7 @@ from opengem import kvs
 
 INPUT_REGION = "filter_region"
 HAZARD_CURVES = "hazard_curves"
+EXPOSURE = "exposure"
 
 RISK_SECTION_NAME = "RISK"
 HAZARD_SECTION_NAME = "HAZARD"
@@ -14,12 +15,11 @@ class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     @classmethod
-    def from_memcached(cls, job_id):
-        """Return the job in memcached with the given id."""
+    def from_kvs(cls, job_id):
+        """Return the job in the underlying kvs system with the given id."""
         
         key = kvs.generate_job_key(job_id)
-        memcached_client = kvs.get_client(binary=False)
-        params = kvs.get_value_json_decoded(memcached_client, key)
+        params = kvs.get_value_json_decoded(key)
 
         return Job(params, job_id)
 
@@ -69,13 +69,29 @@ class Job(object):
 
     def __eq__(self, other):
         return self.params == other.params
-        
+    
+    def has(self, name):
+        """Return true if this job has the given parameter defined
+        and specified, false otherwise."""
+        return self.params.has_key(name) and self.params[name] != ""
+    
     def __str__(self):
         return str(self.params)
 
-    def to_memcached(self):
-        """Store this job into memcached."""
+    def validate(self, fn):
+        """Validate this job before running the decorated function."""
+
+        def validator(*args):
+            try:
+                assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+                return fn(*args)
+            except AssertionError:
+                return False
+
+        return validator
+
+    def to_kvs(self):
+        """Store this job into the underlying kvs system."""
 
         key = kvs.generate_job_key(self.job_id)
-        memcached_client = kvs.get_client(binary=False)
-        kvs.set_value_json_encoded(memcached_client, key, self.params)
+        kvs.set_value_json_encoded(key, self.params)
