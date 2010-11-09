@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
@@ -29,6 +29,8 @@ import sys
 if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'opengem')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from fabric.api import env, local, run
+from multiprocessing import Process
 
 from opengem import flags
 from opengem import jobber
@@ -38,6 +40,7 @@ from opengem import config
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import vulnerability
+
 
 FLAGS = flags.FLAGS
 
@@ -49,6 +52,54 @@ flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
 flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
 
 flags.DEFINE_boolean('partition', False, 'Partition job?')
+
+flags.DEFINE_boolean('server', False, 'Launch memcached and RabbitMQ subprocs')
+
+def _launch_server_subprocs():
+    """Start memcached and RabbitMQ as python subprocs.
+
+    There should only be one copy of RabbitMQ running  
+    and (for now) only one copy of memcached.
+
+    If a process is already running, don't kill it
+    and carry on.
+
+    If a process is not running, launch it as a
+    multiprocessing.Process
+    """
+    # set the host string (otherwise, the user will be prompted for one)
+    env.host_string = 'localhost'
+
+    
+    # launch rabbitmq if it's not already running
+    if not _is_running('[r]abbitmq'):
+        print "Starting rabbitmq..."
+        Process(target=local, args=('sudo /usr/local/sbin/rabbitmq-server',)).start()
+
+ 
+    # launch memcached if it's not already running
+    if not _is_running('[m]emcached'):
+        print "Starting memcached..."
+        Process(target=local, args=('memcached',)).start()
+
+def _is_running(proc_name):
+    """Checks to see if a process is already
+    running by executing a 'ps aux | grep proc_name'.
+
+    Be sure to surroud the first letter
+    of the proc_name with [] to avoid getting
+    a false positive from the grep
+    (example: '[m]emcached', instead of 'memcached').
+    """
+    # set fabric to warn only (so fabric run() calls with no
+    # response don't crash and burn)
+    env.warn_only = True
+
+    is_running = run('ps aux | grep %s' % proc_name) != ''
+    # reset warn only
+    env.warn_only = False
+
+    return is_running
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
@@ -74,9 +125,14 @@ if __name__ == '__main__':
         import pstats
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
+    elif FLAGS.server:
+        # launch memcached and rabbitmq
+        _launch_server_subprocs()
     else:
-        config = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
-        job.to_memcached()
-
-        the_jobber = jobber.Jobber(job, FLAGS.partition)
-        the_jobber.run()
+        job = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
+        job.to_kvs()
+        
+        if not jobber.Jobber(job, FLAGS.partition).run():
+            # TODO (ac): Should we print additional details?
+            logs.LOG.critical("The job configuration is inconsistent, "
+                    "aborting computation.")

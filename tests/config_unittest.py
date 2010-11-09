@@ -31,6 +31,34 @@ class JobTestCase(unittest.TestCase):
     def test_a_job_has_an_identifier(self):
         self.assertEqual(1, config.Job({}, 1).id)
     
-    def test_can_store_and_read_jobs_from_memcached(self):
-        self.job.to_memcached()
-        self.assertEqual(self.job, config.Job.from_memcached(self.job.id))
+    def test_can_store_and_read_jobs_from_kvs(self):
+        self.job.to_kvs()
+        self.assertEqual(self.job, config.Job.from_kvs(self.job.id))
+    
+    def test_is_invalid_with_no_region_and_exposure(self):
+        self.job = config.Job({})
+        self.assertFalse(self._decorated_function()())
+
+        # parameters defined, but empty
+        self.job = config.Job({config.EXPOSURE: "", config.INPUT_REGION: ""})
+        self.assertFalse(self._decorated_function()())
+        
+        # parameters defined
+        self.job = config.Job({config.EXPOSURE: "exposure.xml"})
+        self.assertTrue(self._decorated_function()())
+        
+        self.job = config.Job({config.INPUT_REGION: "region.file"})
+        self.assertTrue(self._decorated_function()())
+        
+        self.job = config.Job({
+                config.EXPOSURE: "exposure.xml",
+                config.INPUT_REGION: "region.file"})
+
+        self.assertTrue(self._decorated_function()())
+    
+    def _decorated_function(self):
+        @self.job.validate
+        def f():
+            return True
+        
+        return f

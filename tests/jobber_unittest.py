@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""These are the unit tests for the jobber module. At the moment, they contain
+"""
+These are the unit tests for the jobber module. At the moment, they contain
 only tests for the basic underlying technologies (celery, memcached).
 A test that asserts that a given computation result can reproduced is still
 missing.
@@ -15,6 +16,10 @@ import unittest
 
 from opengem import logs
 from opengem import kvs
+from opengem import jobber
+from opengem import shapes
+from opengem import config
+from opengem import test
 
 import tests.tasks as test_tasks
 
@@ -24,11 +29,16 @@ TASK_NAME_SIMPLE = ["one", "two", "three", "four"]
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
+SITE = shapes.Site(1.0, 1.0)
+EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.xml"
+REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
+REGION_TEST_FILE = "small.region"
 
 class JobberTestCase(unittest.TestCase):
+
     def setUp(self):
-        self.memcache_client = kvs.get_client(binary=False)
-        self.memcache_client.flush_all()
+        self.kvs_client = kvs.get_client(binary=False)
+        self.kvs_client.flush_all()
 
     def tearDown(self):
         pass
@@ -57,7 +67,7 @@ class JobberTestCase(unittest.TestCase):
 
         wait_for_celery_tasks(results)
 
-        result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
+        result_values = self.kvs_client.get_multi(TASK_NAME_SIMPLE)
         self.assertEqual(sorted(TASK_NAME_SIMPLE), 
                          sorted(result_values.values()))
 
@@ -78,7 +88,7 @@ class JobberTestCase(unittest.TestCase):
         for name in TASK_NAME_SIMPLE:
             expected_keys.extend(["list.%s" % name, "dict.%s" % name])
 
-        result_values = self.memcache_client.get_multi(expected_keys)
+        result_values = self.kvs_client.get_multi(expected_keys)
 
         expected_dict = {}
         for curr_key in sorted(expected_keys):
@@ -102,7 +112,7 @@ class JobberTestCase(unittest.TestCase):
 
         wait_for_celery_tasks(results)
 
-        result_values = self.memcache_client.get_multi(TASK_NAME_SIMPLE)
+        result_values = self.kvs_client.get_multi(TASK_NAME_SIMPLE)
 
         expected_dict = {}
         for curr_key in TASK_NAME_SIMPLE:
@@ -116,6 +126,139 @@ class JobberTestCase(unittest.TestCase):
             result_dict[k] = decoder.decode(v)
 
         self.assertEqual(expected_dict, result_dict)
+
+    def test_prepares_blocks_using_the_exposure(self):
+        job = config.Job({config.EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+        
+        expected_block = jobber.Block((shapes.Site(9.15000, 45.16667),
+                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999),
+                shapes.Site(9.15765, 45.13005), shapes.Site(9.15934, 45.13300),
+                shapes.Site(9.15876, 45.13805)))
+        
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(expected_block, jobber.Block.from_kvs(blocks_keys[0]))
+
+    def test_prepares_blocks_using_the_exposure_and_filtering(self):
+        job = config.Job({config.EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE),
+                config.INPUT_REGION: os.path.join(
+                test.DATA_DIR, REGION_EXPOSURE_TEST_FILE)})
+    
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+
+        expected_block = jobber.Block((shapes.Site(9.15765, 45.13005),
+                shapes.Site(9.15934, 45.133), shapes.Site(9.15876, 45.13805)))
+
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(expected_block, jobber.Block.from_kvs(blocks_keys[0]))
+    
+    def test_prepares_blocks_using_the_input_region(self):
+        region_path = os.path.join(test.DATA_DIR, REGION_TEST_FILE)
+        job = config.Job({config.INPUT_REGION: region_path})
+
+        expected_sites = []
+        for site in shapes.Region.from_file(region_path):
+            expected_sites.append(site)
+    
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(jobber.Block(expected_sites),
+                jobber.Block.from_kvs(blocks_keys[0]))
+
+    def test_with_no_partition_we_just_process_a_single_block(self):
+        jobber.SITES_PER_BLOCK = 1
+        
+        # test exposure has 6 assets
+        job = config.Job({config.EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        
+        job_manager = jobber.Jobber(job, True)
+        blocks_keys = job_manager._partition()
+
+        # but we have 1 block instead of 6
+        self.assertEqual(1, len(blocks_keys))
+
+
+class BlockTestCase(unittest.TestCase):
+    
+    def test_a_block_has_a_unique_id(self):
+        self.assertTrue(jobber.Block(()).id)
+        self.assertTrue(jobber.Block(()).id != jobber.Block(()).id)
+
+    def test_can_serialize_a_block_into_kvs(self):
+        block = jobber.Block((SITE, SITE))
+        block.to_kvs()
+
+        self.assertEqual(block, jobber.Block.from_kvs(block.id))
+
+class BlockSplitterTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.splitter = None
+    
+    def test_an_empty_set_produces_no_blocks(self):
+        self.splitter = jobber.BlockSplitter(())
+        self._assert_number_of_blocks_is(0)
+
+    def test_splits_the_set_into_a_single_block(self):
+        self.splitter = jobber.BlockSplitter((SITE,), 3)
+        self._assert_number_of_blocks_is(1)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE), 3)
+        self._assert_number_of_blocks_is(1)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
+        self._assert_number_of_blocks_is(1)
+
+    def test_splits_the_set_into_multiple_blocks(self):
+        self.splitter = jobber.BlockSplitter((SITE, SITE), 1)
+        self._assert_number_of_blocks_is(2)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
+        self._assert_number_of_blocks_is(2)
+
+    def test_generates_the_correct_blocks(self):
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 3)
+        expected_blocks = (jobber.Block((SITE, SITE, SITE)),)
+        self._assert_blocks_are(expected_blocks)
+
+        self.splitter = jobber.BlockSplitter((SITE, SITE, SITE), 2)
+        expected_blocks = (jobber.Block((SITE, SITE)), jobber.Block((SITE,)))
+        self._assert_blocks_are(expected_blocks)
+
+    def test_splitting_with_region_intersection(self):
+        region_constraint = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+        
+        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
+            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
+
+        expected_blocks = (
+                jobber.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
+                jobber.Block((shapes.Site(2.0, 2.0),)))
+
+        self.splitter = jobber.BlockSplitter(sites, 2, constraint=region_constraint)
+        self._assert_blocks_are(expected_blocks)
+
+    def _assert_blocks_are(self, expected_blocks):
+        for idx, block in enumerate(self.splitter):
+            self.assertEqual(expected_blocks[idx], block)
+
+    def _assert_number_of_blocks_is(self, number):
+        counter = 0
+        
+        for block in self.splitter:
+            counter += 1
+        
+        self.assertEqual(number, counter)
+
 
 def wait_for_celery_tasks(celery_results, 
                           max_wait_loops=MAX_WAIT_LOOPS, 
