@@ -54,7 +54,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         // IntensityMeasure.PGA.type();
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         clc.setConfigItem(ConfigItems.INTENSITY_MEASURE_TYPE.name(),
                 intensityMeasureTypeToTest);
         clc.doCalculation();
@@ -74,7 +74,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
             throws ConfigurationException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.MONTE_CARLO.value();
         clc.setConfigItem(key, mode);
@@ -99,7 +99,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
             throws ConfigurationException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.FULL.value();
         clc.setConfigItem(key, mode);
@@ -197,7 +197,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         clc.doCalculation();
         Map<Location, double[]> computedResults = readComputedResults();
 
@@ -223,7 +223,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         int numberSeismicityHistories = 50000;
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields =
                 clc.doCalculationProbabilisticEventBased();
         Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
@@ -239,6 +239,20 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
         expectedResults = getMeanResultsPeerTestSet1Case5();
         compareResults(calculatedResults, expectedResults, tolerance);
+    }
+
+    @Test
+    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException {
+        double tolerance = 1e-3;
+        CommandLineCalculator clc =
+                new CommandLineCalculator(
+                        "peerSet1Case8a/CalculatorConfig.properties");
+        clc.doCalculation();
+        Map<Location, double[]> computedResults = readComputedResults();
+
+        Map<Location, double[]> expectedResults =
+                getMeanResultsPeerTestSet1Case8a();
+        compareResults(computedResults, expectedResults, tolerance);
     }
 
     private
@@ -408,4 +422,64 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         return meanResults;
     }
 
+    private Map<Location, double[]> getMeanResultsPeerTestSet1Case8a() {
+
+        Map<Location, double[]> meanResults = new HashMap<Location, double[]>();
+
+        Location loc = new Location(38.113, -122.000);
+        double[] probEx =
+                new double[] { 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
+                        1.56E-02, 1.48E-02, 1.36E-02, 1.22E-02, 1.09E-02,
+                        9.50E-03, 8.12E-03, 6.99E-03, 5.99E-03, 5.12E-03,
+                        3.68E-03, 2.65E-03, 1.91E-03, 1.40E-03 };
+        meanResults.put(loc, probEx);
+
+        loc = new Location(38.113, -122.114);
+        probEx =
+                new double[] { 1.59E-02, 1.59E-02, 1.59E-02, 1.47E-02,
+                        1.20E-02, 8.98E-03, 6.41E-03, 4.49E-03, 3.09E-03,
+                        2.14E-03, 1.49E-03, 1.04E-03, 7.40E-04, 5.24E-04,
+                        2.68E-04, 1.44E-04, 7.89E-05, 4.48E-05 };
+        meanResults.put(loc, probEx);
+
+        loc = new Location(38.111, -122.570);
+        probEx =
+                new double[] { 1.59E-02, 1.57E-02, 3.42E-03, 3.19E-04,
+                        4.15E-05, 7.37E-06, 1.61E-06, 4.03E-07 };
+        meanResults.put(loc, probEx);
+
+        loc = new Location(38.000, -122.000);
+        probEx =
+                new double[] { 1.59E-02, 1.59E-02, 1.59E-02, 1.55E-02,
+                        1.41E-02, 1.22E-02, 1.03E-02, 8.39E-03, 6.80E-03,
+                        5.49E-03, 4.37E-03, 3.52E-03, 2.84E-03, 2.29E-03,
+                        1.51E-03, 1.00E-03, 6.74E-04, 4.58E-04 };
+        meanResults.put(loc, probEx);
+
+        loc = new Location(37.910, -122.000);
+        probEx =
+                new double[] { 1.59E-02, 1.59E-02, 1.55E-02, 1.20E-02,
+                        7.98E-03, 4.99E-03, 3.08E-03, 1.91E-03, 1.21E-03,
+                        7.68E-04, 4.99E-04, 3.25E-04, 2.19E-04, 1.48E-04,
+                        7.01E-05, 3.50E-05, 1.81E-05, 9.72E-06 };
+        meanResults.put(loc, probEx);
+
+        loc = new Location(38.225, -122.000);
+        probEx =
+                new double[] { 1.59E-02, 1.59E-02, 1.59E-02, 1.55E-02,
+                        1.40E-02, 1.22E-02, 1.02E-02, 8.38E-03, 6.79E-03,
+                        5.48E-03, 4.36E-03, 3.51E-03, 2.83E-03, 2.28E-03,
+                        1.50E-03, 9.97E-04, 6.71E-04, 4.56E-04 };
+        meanResults.put(loc, probEx);
+
+        loc = new Location(38.113, -121.886);
+        probEx =
+                new double[] { 1.59E-02, 1.59E-02, 1.59E-02, 1.47E-02,
+                        1.20E-02, 8.98E-03, 6.41E-03, 4.49E-03, 3.09E-03,
+                        2.14E-03, 1.49E-03, 1.04E-03, 7.40E-04, 5.24E-04,
+                        2.68E-04, 1.44E-04, 7.89E-05, 4.48E-05 };
+        meanResults.put(loc, probEx);
+
+        return meanResults;
+    }
 } // class CommandLineCalculatorTest
