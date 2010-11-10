@@ -747,9 +747,16 @@ public class InputModelData {
         }
 
         // compute total cumulative rate between minimum and maximum magnitude
-        double totCumRate =
-                Math.pow(10, aVal - bVal * mMin)
-                        - Math.pow(10, aVal - bVal * mMax);
+        double totCumRate = Double.NaN;
+        if (mMin != mMax) {
+            totCumRate =
+                    Math.pow(10, aVal - bVal * mMin)
+                            - Math.pow(10, aVal - bVal * mMax);
+        } else {
+            // compute incremental a value
+            double aIncr = aVal + Math.log10(bVal * Math.log(10));
+            totCumRate = Math.pow(10, aIncr - bVal * mMin);
+        }
 
         if (mMax != mMin) {
             // shift to bin center

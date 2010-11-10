@@ -312,10 +312,8 @@ public class ErfLogicTreeData {
                                     new LogicTreeBranch((i + 1), ruleName,
                                             uncertWeight);
                             // set input file name
-                            branch.setRule(new LogicTreeRule(
-                                    LogicTreeRuleParam
-                                            .getTypeForName(ruleName),
-                                    uncertVal));
+                            branch.setRule(new LogicTreeRule(LogicTreeRuleParam
+                                    .getTypeForName(ruleName), uncertVal));
                             // add to branching level
                             branchingLevel.addBranch(branch);
                         }
