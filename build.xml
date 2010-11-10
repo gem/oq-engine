@@ -37,7 +37,7 @@
 	</target>
 
 	<taskdef resource="emma_ant.properties" classpathref="dependencies" />
-
+	
 	<target name="junit-tests-with-coverage" depends="compile-sources">
 		<mkdir dir="${coverage.dir}" />
 		<mkdir dir="${tests.report.dir}" />
@@ -52,7 +52,7 @@
 			</instr>
 		</emma>
 
-		<junit haltonerror="no" haltonfailure="yes" fork="yes" dir="${coverage.dir}">
+		<junit dir="." haltonerror="yes" haltonfailure="yes" fork="yes">
 			<classpath>
 				<!-- External libraries -->
 				<path refid="dependencies" />
@@ -77,13 +77,15 @@
 
 		<emma enabled="true">
 			<report sourcepath="${src.dir}">
-				<infileset dir="${coverage.dir}" includes="*.emma, *.ec" />
+				<infileset file="coverage.ec" />
+				<infileset file="${coverage.dir}/metadata.emma" />
 				<xml outfile="${coverage.dir}/coverage.xml" depth="method" />
 			</report>
 		</emma>
 
 		<echo message="Cleaning compiled resources..." />
 		<delete dir="${build.dir}" />
+		<delete file="coverage.ec" />
 	</target>
 
 </project>
