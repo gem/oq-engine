@@ -71,7 +71,7 @@ class HazardEngineTestCase(unittest.TestCase):
         errors, and should have params loaded from memcached."""
         site_id = 1
         job_id = generate_job()
-        hazengine = job.Job.from_memcached(job_id)
+        hazengine = job.Job.from_kvs(job_id)
         with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
             hc = hazengine.compute_hazard_curve(site_id)
 

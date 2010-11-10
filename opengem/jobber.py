@@ -9,6 +9,9 @@ from opengem import job
 from opengem import flags
 from opengem import logs
 from opengem import kvs
+from opengem import shapes
+
+from opengem.parser import exposure
 
 FLAGS = flags.FLAGS
 LOGGER = logs.LOG
@@ -21,10 +24,10 @@ class Jobber(object):
     framework and the message queue RabbitMQ).
     """
 
-    def __init__(self, job, partition):
+    def __init__(self, incoming_job, partition):
         self.memcache_client = None
         self.partition = partition
-        self.job = job
+        self.job = incoming_job
         
         self._init()
 
@@ -56,11 +59,11 @@ class Jobber(object):
         
         # we use the exposure, if specified,
         # otherwise we use the input region
-        if self.job.has(config.EXPOSURE):
+        if self.job.has(job.EXPOSURE):
             sites = self._read_sites_from_exposure()
         else:
             sites = shapes.Region.from_file(
-                    self.job[config.INPUT_REGION]).sites
+                    self.job[job.INPUT_REGION]).sites
 
         if self.partition:
             for block in BlockSplitter(sites, constraint=region_constraint):
@@ -76,9 +79,10 @@ class Jobber(object):
     def _read_region_constraint(self):
         """Read the region constraint, if present, from the job definition."""
 
-        if self.job.has(config.INPUT_REGION):
+        print self.job
+        if self.job.has(job.INPUT_REGION):
             return shapes.RegionConstraint.from_file(
-                    self.job[config.INPUT_REGION])
+                    self.job[job.INPUT_REGION])
         else:
             return None
 
@@ -87,7 +91,8 @@ class Jobber(object):
         in the job definition."""
 
         sites = []
-        reader = exposure.ExposurePortfolioFile(self.job[config.EXPOSURE])
+        reader = exposure.ExposurePortfolioFile(self.job[job.EXPOSURE])
+
         
         for asset_data in reader:
             sites.append(asset_data[0])
