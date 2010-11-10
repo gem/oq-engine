@@ -54,7 +54,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         // IntensityMeasure.PGA.type();
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         clc.setConfigItem(ConfigItems.INTENSITY_MEASURE_TYPE.name(),
                 intensityMeasureTypeToTest);
         clc.doCalculation();
@@ -74,7 +74,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
             throws ConfigurationException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.MONTE_CARLO.value();
         clc.setConfigItem(key, mode);
@@ -99,7 +99,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
             throws ConfigurationException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.FULL.value();
         clc.setConfigItem(key, mode);
@@ -136,8 +136,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
     @Test
     // spike on the java.util.Properties object
-            public
-            void twoPropertiesAreEqualWithTheSameParameters() {
+    public void twoPropertiesAreEqualWithTheSameParameters() {
         Properties config1 = new Properties();
         config1.setProperty("KEY", "VALUE");
 
@@ -197,7 +196,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         clc.doCalculation();
         Map<Location, double[]> computedResults = readComputedResults();
 
@@ -223,7 +222,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         int numberSeismicityHistories = 50000;
         CommandLineCalculator clc =
                 new CommandLineCalculator(
-                        "tests/data/peerSet1Case5/CalculatorConfig.properties");
+                        "peerSet1Case5/CalculatorConfig.properties");
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields =
                 clc.doCalculationProbabilisticEventBased();
         Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
@@ -241,18 +240,16 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         compareResults(calculatedResults, expectedResults, tolerance);
     }
 
-    private
-            void
-            computeHazardCurves(
-                    int numberSeismicityHistories,
-                    Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields,
-                    Map<Location, double[]> calculatedResults, double[] imlList) {
+    private void computeHazardCurves(
+            int numberSeismicityHistories,
+            Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields,
+            Map<Location, double[]> calculatedResults, double[] imlList) {
         for (Integer i : groundMotionFields.keySet())
             for (String label : groundMotionFields.get(i).keySet())
                 for (EqkRupture rup : groundMotionFields.get(i).get(label)
                         .keySet())
-                    for (Site site : groundMotionFields.get(i).get(label)
-                            .get(rup).keySet()) {
+                    for (Site site : groundMotionFields.get(i).get(label).get(
+                            rup).keySet()) {
                         Location loc = site.getLocation();
                         double groundMotionValue =
                                 Math.exp(groundMotionFields.get(i).get(label)
@@ -301,8 +298,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
             Map<Location, double[]> expectedResults, double tolerance) {
         for (Location loc : expectedResults.keySet()) {
             for (int i = 0; i < expectedResults.get(loc).length; i++) {
-                assertEquals(expectedResults.get(loc)[i],
-                        computedResults.get(loc)[i], tolerance);
+                assertEquals(expectedResults.get(loc)[i], computedResults
+                        .get(loc)[i], tolerance);
             }
         }
     }
