@@ -2,7 +2,6 @@
 """
 This module defines the functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
-
 """
 
 import math
@@ -10,9 +9,11 @@ import numpy
 
 from opengem import shapes
 
+
 def compute_loss_ratios(vuln_function, ground_motion_field):
     """Compute loss ratios using the ground motion field passed."""
-    if vuln_function == shapes.EMPTY_CURVE or not ground_motion_field["IMLs"]:
+    if vuln_function == shapes.EMPTY_CURVE or not \
+                        ground_motion_field["IMLs"]:
         return []
     
     imls = vuln_function.abscissae
