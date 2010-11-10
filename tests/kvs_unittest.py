@@ -14,6 +14,7 @@ from opengem import kvs
 from opengem import settings
 from opengem import shapes
 from opengem import test
+from opengem import settings
 
 from opengem.kvs import reader
 from opengem.parser import vulnerability
