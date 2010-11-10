@@ -84,6 +84,11 @@ public class CommandLineCalculator {
     // for debugging
     private static Boolean D = false;
 
+    // output file names hazard curves
+    public static String MEAN_HAZARD_CURVES = "meanHazardCurves.dat";
+    public static String INDIVIDUAL_HAZARD_CURVES =
+            "individualHazardCurves.dat";
+
     /**
      * 
      * @param inStream
@@ -126,6 +131,10 @@ public class CommandLineCalculator {
 
     public void setConfig(Configuration c) {
         config = c;
+    }
+
+    public String getKeyValue(String key) {
+        return config.getString(key);
     }
 
     /**
@@ -553,13 +562,13 @@ public class CommandLineCalculator {
                     hcRepList.getMeanHazardCurves();
             String outfile =
                     config.getString(ConfigItems.OUTPUT_DIR.name())
-                            + "meanHazardCurves.dat";
+                            + MEAN_HAZARD_CURVES;
             saveHazardCurveRepositoryToAsciiFile(outfile, meanHazardCurves);
         }
         if (config.getBoolean(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name())) {
             String outfile =
                     config.getString(ConfigItems.OUTPUT_DIR.name())
-                            + "individualHazardCurves.dat";
+                            + INDIVIDUAL_HAZARD_CURVES;
             saveHazardCurveRepositoryListToAsciiFile(outfile, hcRepList);
         }
 
@@ -723,13 +732,13 @@ public class CommandLineCalculator {
                                 gmpeLogicTree.getGmpeLogicTreeHashMap());
                 String outfile =
                         config.getString(ConfigItems.OUTPUT_DIR.name())
-                                + "meanHazardCurves.dat";
+                                + MEAN_HAZARD_CURVES;
                 saveHazardCurveRepositoryToAsciiFile(outfile, meanHazardCurves);
             }
             if (config.getBoolean(ConfigItems.INDIVIDUAL_HAZARD_CURVES.name())) {
                 String outfile =
                         config.getString(ConfigItems.OUTPUT_DIR.name())
-                                + "individualHazardCurves.dat";
+                                + INDIVIDUAL_HAZARD_CURVES;
                 saveHazardCurveRepositoryListToAsciiFile(outfile, hcRepList);
             }
         } // while endBranchLabels
