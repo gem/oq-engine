@@ -9,10 +9,11 @@
 # rigidity (N/m2) = 3e10
 # fault length  (m) = 25*1e3
 # fault width (m) = 12*1e3
-#
 # From the above data we can calculate the seismic moment rate (N*m/yr):
 # seismic moment rate = rigidity * fault length * fault width * slip rate
-# we can then compute the incremental a value using the formula given in Ward 1994 (eq. 10 pag. 1299) 
+#
+# The test set 1 case 5 define the magnitude frequency distribution as truncated exponential with minimum magnitude = 5.0 and maximum magnitude = 6.5.
+# We can then compute the incremental a value using the formula given in Ward 1994 (eq. 10 pag. 1299) 
 # ("A multidisciplinary approach to seismic hazard in Southern California", BSSA, Vol.84, No.5, pp.1293-1309, October 1994):
 # incremental a value = log10( (log(10) * (1.5 + b value) * seismic moment rate) / (10^((1.5 + b value) * maximum magnitude + 9.05)) )
 # from the incremental a value we can then derive the cumulative a value, using the following formula:

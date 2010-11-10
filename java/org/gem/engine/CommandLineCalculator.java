@@ -751,6 +751,8 @@ public class CommandLineCalculator {
                         .name());
         int numberOfSeismicityHistories =
                 config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
+        Boolean correlationFlag =
+                config.getBoolean(ConfigItems.GROUND_MOTION_CORRELATION.name());
 
         // For each seismicity history required by the user, loop over the
         // number of realizations requested. For each realization sample both
@@ -768,7 +770,7 @@ public class CommandLineCalculator {
                                 .getGmpeLogicTreeHashMap());
                 Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                         HazardCalculator.getGroundMotionFields(sites, erf,
-                                gmpeModel, getRandom());
+                                gmpeModel, getRandom(), correlationFlag);
                 map.put(Integer.toString(j + 1), groundMotionFields);
                 results.put(i + 1, map);
             }
@@ -789,6 +791,8 @@ public class CommandLineCalculator {
         GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
         int numberOfSeismicityHistories =
                 config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
+        Boolean correlationFlag =
+                config.getBoolean(ConfigItems.GROUND_MOTION_CORRELATION.name());
 
         HashMap<String, ArrayList<GEMSourceData>> sourceEndBranchModels =
                 computeErfLogicTreeEndBrancheModels(erfLogicTree
@@ -814,7 +818,7 @@ public class CommandLineCalculator {
                     Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                             HazardCalculator.getGroundMotionFields(sites, erf,
                                     gmpeEndBranchModels.get(gmpe_model_label),
-                                    getRandom());
+                                    getRandom(), correlationFlag);
                     map.put(source_model_label + "_" + gmpe_model_label,
                             groundMotionFields);
                     results.put(i + 1, map);
