@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-A simple memcached reader.
+This module contains generic functions to access
+the underlying kvs systems.
 """
 
 import json
@@ -13,19 +14,14 @@ logging.getLogger('jpype').setLevel(logging.ERROR)
 
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
-
 MAX_LENGTH_RANDOM_ID = 36
 MEMCACHE_KEY_SEPARATOR = '!'
-
-
-def block_id_generator():
-    """ Return a block id generator """
-    return _prefix_id_generator('block')
 
 
 def generate_job_key(job_id):
     """ Return a job key """
     return _generate_key(("JOB", str(job_id)))
+
 
 def generate_sites_key(job_id, block_id):
     """ Return sites key """
@@ -57,7 +53,6 @@ def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
     return str(uuid.uuid4())[0:length]
 
 
-
 def get_client(memcached_host=settings.MEMCACHED_HOST,
                memcached_port=settings.MEMCACHED_PORT,
                **kwargs):
@@ -67,26 +62,25 @@ def get_client(memcached_host=settings.MEMCACHED_HOST,
     return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
                           **kwargs)
 
-
 def get_sites_from_memcache(memcache_client, job_id, block_id):
     """ Get all of the sites for a block """
 
     memcache_key_sites = generate_sites_key(job_id, block_id)
+    return get_value_json_decoded(memcache_key_sites)
 
-    return get_value_json_decoded(memcache_client, memcache_key_sites)
 
-
-def get_value_json_decoded(memcache_client, key):
+def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
-    value = memcache_client.get(key)
+    value = get_client(binary=False).get(key)
     decoder = json.JSONDecoder()
+    
     try:
         return decoder.decode(value)
     except Exception:
         return None
 
 
-def set_value_json_encoded(memcache_client, key, value):
+def set_value_json_encoded(key, value):
     """ Encode value and set in kvs """
     encoder = json.JSONEncoder()
 
@@ -96,7 +90,7 @@ def set_value_json_encoded(memcache_client, key, value):
         raise ValueError("cannot encode value %s to JSON" % value)
 
     try:
-        memcache_client.set(key, encoded_value)
+        get_client(binary=False).set(key, encoded_value)
     except Exception, e:
         raise RuntimeError("cannot write key %s to memcache - %s" % (key, e))
 
@@ -109,8 +103,20 @@ def _generate_key(key_list):
 
 
 def _prefix_id_generator(prefix):
-    """generator for task IDs (prefix+sequence number)"""
+    """Generator for IDs with a specific prefix (prefix + sequence number)."""
+
     counter = 0
     while(True):
         counter += 1
         yield INTERNAL_ID_SEPARATOR.join((str(prefix), str(counter)))
+
+# generator instance used to generate IDs for blocks
+BLOCK_ID_GENERATOR = _prefix_id_generator("block")
+
+def generate_block_id():
+    """Generate a unique id for a block."""
+    return BLOCK_ID_GENERATOR.next()
+
+def generate_vuln_key(job_id):
+    """Generate the key used to store vulnerability curves."""
+    return generate_product_key(job_id, "vulnerability_curves")

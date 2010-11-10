@@ -44,13 +44,26 @@ def parse_config_file(config_file):
 
     return params
 
+def validate(fn):
+    """Validate this job before running the decorated function."""
+
+    def validator(self, *args):
+        """Validate this job before running the decorated function."""
+        try:
+            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+            return fn(self, *args)
+        except AssertionError:
+            return False
+
+    return validator
+
 
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     @staticmethod
-    def from_memcached(job_id):
-        """Return the job in memcached with the given id."""
+    def from_kvs(job_id):
+        """Return the job in the underlying kvs system with the given id."""
         
         key = kvs.generate_job_key(job_id)
         memcached_client = kvs.get_client(binary=False)
@@ -89,6 +102,7 @@ class Job(object):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
 
+    @validate
     def launch(self):
         for mixin in Mixin.mixins():
             with Mixin(self.__class__, mixin):
@@ -96,6 +110,11 @@ class Job(object):
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
                 self.execute()
+
+    def has(self, name):
+        """Return true if this job has the given parameter defined
+        and specified, false otherwise."""
+        return self.params.has_key(name) and self.params[name] != ""
 
     def __getitem__(self, name):
         return self.params[name]
@@ -105,7 +124,7 @@ class Job(object):
         
     def __str__(self):
         return str(self.params)
-
+    
     def _slurp_files(self):
         """Read referenced files and write them into memcached, key'd on their
         sha1s."""
@@ -123,7 +142,7 @@ class Job(object):
                     memcached_client.set(sha1, data_file.read())
                     self.params[key] = sha1
 
-    def to_memcached(self):
+    def to_kvs(self):
         """Store this job into memcached."""
         # self._slurp_files()
         key = kvs.generate_job_key(self.job_id)

@@ -26,6 +26,10 @@ libs = []
 for x in os.listdir('lib'):
     if x[-4:] == '.jar':
         libs.append("lib/%s" % x)
+        
+with os.popen("which gfortran") as gf:
+    if not gf:
+        raise EnvirontmentError("You need to install gfortran")
 
 setup(name='opengem',
       version='0.1.0',

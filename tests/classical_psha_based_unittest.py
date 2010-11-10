@@ -105,10 +105,8 @@ class ClassicalPSHABasedMeanLossTestCase(unittest.TestCase):
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     # loss curve tests
+
     def setUp(self):
-
-        self.memcache_client = kvs.get_client(binary=False)
-
         # get random ID as job_id
         self.job_id = kvs.generate_random_id()
 
@@ -123,12 +121,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.vulnerability_curves = vulnerability.register_vuln_curves(
             {self.vuln_curve_code_test: vuln_curve_test,
              vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE}, 
-            self.job_id, 
-            self.memcache_client)
+            self.job_id)
 
     def tearDown(self):
         # flush vulnerability curves in memcache
-        vulnerability.delete_vuln_curves(self.job_id, self.memcache_client)
+        vulnerability.delete_vuln_curves(self.job_id)
 
     def test_empty_loss_curve(self):
         """Degenerate case."""

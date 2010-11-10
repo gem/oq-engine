@@ -47,13 +47,11 @@ public class HazardCalculator {
      *            : maximum distance used for integration
      * @return
      */
-    public static
-            Map<Site, DiscretizedFuncAPI>
-            getHazardCurves(
-                    List<Site> siteList,
-                    EqkRupForecastAPI erf,
-                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    List<Double> imlVals, double integrationDistance) {
+    public static Map<Site, DiscretizedFuncAPI> getHazardCurves(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+            List<Double> imlVals, double integrationDistance) {
         validateInput(siteList, erf, gmpeMap);
         if (imlVals == null) {
             String msg = "Array of intensity measure levels cannot be null";
@@ -103,13 +101,11 @@ public class HazardCalculator {
      *            : random ({@link Random}) number generator
      * @return
      */
-    public static
-            Map<EqkRupture, Map<Site, Double>>
-            getGroundMotionFields(
-                    List<Site> siteList,
-                    EqkRupForecastAPI erf,
-                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    Random rn) {
+    public static Map<EqkRupture, Map<Site, Double>> getGroundMotionFields(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+            Random rn) {
         validateInput(siteList, erf, gmpeMap);
         if (rn == null) {
             String msg = "Random number generator cannot be null";
@@ -123,18 +119,15 @@ public class HazardCalculator {
                         .getStochasticEventSetFromPoissonianERF(erf, rn);
         for (EqkRupture rup : eqkRupList)
             groundMotionFields.put(rup, GroundMotionFieldCalculator
-                    .getStochasticGroundMotionField(
-                            gmpeMap.get(rup.getTectRegType()), rup, siteList,
-                            rn));
+                    .getStochasticGroundMotionField(gmpeMap.get(rup
+                            .getTectRegType()), rup, siteList, rn));
         return groundMotionFields;
     }
 
-    public static
-            Boolean
-            validateInput(
-                    List<Site> siteList,
-                    EqkRupForecastAPI erf,
-                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
+    public static Boolean validateInput(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
         if (siteList == null) {
             String msg = "List of sites cannot be null";
             logger.error(msg);
