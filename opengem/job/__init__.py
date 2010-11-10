@@ -13,6 +13,7 @@ from opengem.logs import LOG
 from opengem.job.mixins import Mixin
 
 
+EXPOSURE = "EXPOSURE"
 INPUT_REGION = "FILTER_REGION"
 HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -65,9 +66,7 @@ class Job(object):
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
         
-        key = kvs.generate_job_key(job_id)
-        memcached_client = kvs.get_client(binary=False)
-        params = kvs.get_value_json_decoded(memcached_client, key)
+        params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
 
         return Job(params, job_id)
 
@@ -90,8 +89,13 @@ class Job(object):
         self.params = params
         self.base_path = base_path
         if base_path:
-            self.to_memcached()
-        
+            self.to_kvs()
+
+    def has(self, name):
+        """Return true if this job has the given parameter defined
+        and specified, false otherwise."""
+        return self.params.has_key(name) and self.params[name] != ""
+
     @property
     def id(self):
         """Return the id of this job."""
@@ -110,11 +114,6 @@ class Job(object):
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
                 self.execute()
-
-    def has(self, name):
-        """Return true if this job has the given parameter defined
-        and specified, false otherwise."""
-        return self.params.has_key(name) and self.params[name] != ""
 
     def __getitem__(self, name):
         return self.params[name]
@@ -144,7 +143,6 @@ class Job(object):
 
     def to_kvs(self):
         """Store this job into memcached."""
-        # self._slurp_files()
+        #self._slurp_files()
         key = kvs.generate_job_key(self.job_id)
-        memcached_client = kvs.get_client(binary=False)
-        kvs.set_value_json_encoded(memcached_client, key, self.params)
+        kvs.set_value_json_encoded(key, self.params)
