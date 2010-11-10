@@ -30,6 +30,11 @@ import com.google.gson.Gson;
 
 public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
+    private static String peerTestSet1Case5ConfigFile =
+            "peerSet1Case5/CalculatorConfig.properties";
+    private static String peerTestSet1Case8aConfigFile =
+            "peerSet1Case8a/CalculatorConfig.properties";
+
     /**
      * The calculator does not yet run if it is give to calculate for an
      * intensity measure type "MMI". This tests veryfies that. It is expected to
@@ -53,8 +58,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         // final String intensityMeasureTypeToTest =
         // IntensityMeasure.PGA.type();
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case5/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         clc.setConfigItem(ConfigItems.INTENSITY_MEASURE_TYPE.name(),
                 intensityMeasureTypeToTest);
         clc.doCalculation();
@@ -73,8 +77,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void testDoProbabilisticEventBasedCalcMonteCarlo()
             throws ConfigurationException {
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case5/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.MONTE_CARLO.value();
         clc.setConfigItem(key, mode);
@@ -98,8 +101,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void testDoProbabilisticEventBasedCalcFull()
             throws ConfigurationException {
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case5/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
         String mode = CalculationMode.FULL.value();
         clc.setConfigItem(key, mode);
@@ -196,10 +198,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void peerSet1Case5ClassicalPSHA() throws ConfigurationException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case5/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         clc.doCalculation();
-        Map<Location, double[]> computedResults = readComputedResults();
+        Map<Location, double[]> computedResults =
+                readComputedResults(clc.getKeyValue(ConfigItems.OUTPUT_DIR
+                        .name()) + clc.INDIVIDUAL_HAZARD_CURVES);
 
         Map<Location, double[]> expectedResults =
                 getHandResultsPeerTestSet1Case5();
@@ -221,10 +224,12 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void peerSet1Case5UncorrelatedGroundMotionFields()
             throws ConfigurationException {
         double tolerance = 1e-2;
-        int numberSeismicityHistories = 50000;
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case5/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
+        int numberSeismicityHistories =
+                Integer.valueOf(clc
+                        .getKeyValue(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
+                                .name()));
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields =
                 clc.doCalculationProbabilisticEventBased();
         Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
@@ -246,10 +251,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void peerSet1Case8aClassicalPSHA() throws ConfigurationException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case8a/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case8aConfigFile);
         clc.doCalculation();
-        Map<Location, double[]> computedResults = readComputedResults();
+        Map<Location, double[]> computedResults =
+                readComputedResults(clc.getKeyValue(ConfigItems.OUTPUT_DIR
+                        .name()) + clc.INDIVIDUAL_HAZARD_CURVES);
 
         Map<Location, double[]> expectedResults =
                 getMeanResultsPeerTestSet1Case8a();
@@ -260,10 +266,12 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     public void peerSet1Case8aUncorrelatedGroundMotionFields()
             throws ConfigurationException {
         double tolerance = 1e-2;
-        int numberSeismicityHistories = 50000;
         CommandLineCalculator clc =
-                new CommandLineCalculator(
-                        "peerSet1Case8a/CalculatorConfig.properties");
+                new CommandLineCalculator(peerTestSet1Case8aConfigFile);
+        int numberSeismicityHistories =
+                Integer.valueOf(clc
+                        .getKeyValue(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES
+                                .name()));
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields =
                 clc.doCalculationProbabilisticEventBased();
         Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
@@ -343,10 +351,10 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         }
     }
 
-    private Map<Location, double[]> readComputedResults() {
+    private Map<Location, double[]> readComputedResults(String file) {
         Map<Location, double[]> computedResults =
                 new HashMap<Location, double[]>();
-        File results = new File("build/individualHazardCurves.dat");
+        File results = new File(file);
         FileReader fReader = null;
         try {
             fReader = new FileReader(results.getAbsolutePath());
