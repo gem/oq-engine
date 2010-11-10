@@ -218,7 +218,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * @throws ConfigurationException
      */
     @Test
-    public void peerSet1Case5StochasticEventSet() throws ConfigurationException {
+    public void peerSet1Case5UncorrelatedGroundMotionFields()
+            throws ConfigurationException {
         double tolerance = 1e-2;
         int numberSeismicityHistories = 50000;
         CommandLineCalculator clc =
@@ -229,7 +230,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
         double[] imlList =
                 new double[] { 0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
-                        0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8 };
+                        0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0 };
         computeHazardCurves(numberSeismicityHistories, groundMotionFields,
                 calculatedResults, imlList);
 
@@ -253,6 +254,27 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         Map<Location, double[]> expectedResults =
                 getMeanResultsPeerTestSet1Case8a();
         compareResults(computedResults, expectedResults, tolerance);
+    }
+
+    @Test
+    public void peerSet1Case8aUncorrelatedGroundMotionFields()
+            throws ConfigurationException {
+        double tolerance = 1e-2;
+        int numberSeismicityHistories = 50000;
+        CommandLineCalculator clc =
+                new CommandLineCalculator(
+                        "peerSet1Case8a/CalculatorConfig.properties");
+        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> groundMotionFields =
+                clc.doCalculationProbabilisticEventBased();
+        Map<Location, double[]> calculatedResults = setUpCalculatedResultsMap();
+        double[] imlList =
+                new double[] { 0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
+                        0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0 };
+        computeHazardCurves(numberSeismicityHistories, groundMotionFields,
+                calculatedResults, imlList);
+        Map<Location, double[]> expectedResults =
+                getMeanResultsPeerTestSet1Case8a();
+        compareResults(calculatedResults, expectedResults, tolerance);
     }
 
     private
@@ -289,25 +311,25 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
                 new HashMap<Location, double[]>();
         calculatedResults.put(new Location(38.113, -122.000), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         calculatedResults.put(new Location(38.113, -122.114), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         calculatedResults.put(new Location(38.111, -122.570), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         calculatedResults.put(new Location(38.000, -122.000), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         calculatedResults.put(new Location(37.910, -122.000), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         calculatedResults.put(new Location(38.225, -122.000), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         calculatedResults.put(new Location(38.113, -121.886), new double[] {
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0 });
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
         return calculatedResults;
     }
 

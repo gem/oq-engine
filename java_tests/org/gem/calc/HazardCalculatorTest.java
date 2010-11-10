@@ -56,6 +56,7 @@ public class HazardCalculatorTest {
     private static List<Double> imlVals;
     private static double integrationDistance = 200.0;
     private static Random rn = new Random();
+    private static Boolean correlationFlag = false;
     // for memcache tests:
     private static final int PORT = 11211;
     private static final String LOCALHOST = "localhost";
@@ -171,7 +172,8 @@ public class HazardCalculatorTest {
     @Test(expected = IllegalArgumentException.class)
     public void getGroundMotionFieldsNullSiteList() {
         ArrayList<Site> siteList = null;
-        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn,
+                correlationFlag);
     }
 
     /**
@@ -180,7 +182,8 @@ public class HazardCalculatorTest {
     @Test(expected = IllegalArgumentException.class)
     public void getGroundMotionFieldsEmptySiteList() {
         ArrayList<Site> siteList = new ArrayList<Site>();
-        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn,
+                correlationFlag);
     }
 
     /**
@@ -190,7 +193,8 @@ public class HazardCalculatorTest {
     @Test(expected = IllegalArgumentException.class)
     public void getGroundMotionFieldsNullErf() {
         EqkRupForecastAPI erf = null;
-        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn,
+                correlationFlag);
     }
 
     /**
@@ -200,7 +204,8 @@ public class HazardCalculatorTest {
     public void getGroundMotionFieldsNullGmpeMap() {
         Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
                 null;
-        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn,
+                correlationFlag);
     }
 
     /**
@@ -210,7 +215,8 @@ public class HazardCalculatorTest {
     public void getGroundMotionFieldsEmptyGmpeMap() {
         Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
                 new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
-        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn,
+                correlationFlag);
     }
 
     /**
@@ -219,7 +225,8 @@ public class HazardCalculatorTest {
     @Test(expected = IllegalArgumentException.class)
     public void getGroundMotionFieldsNullRandomNumberGenerator() {
         Random rn = null;
-        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn);
+        HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap, rn,
+                correlationFlag);
     }
 
     /**
@@ -229,7 +236,7 @@ public class HazardCalculatorTest {
     public void storeGroundMotionMapToCache() {
         Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                 HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
-                        rn);
+                        rn, correlationFlag);
         List<String> keys =
                 CommandLineCalculator.gmfValuesToMemcache(groundMotionFields,
                         cache);
@@ -265,16 +272,13 @@ public class HazardCalculatorTest {
             // changes for each call.)
             groundMotionFields =
                     HazardCalculator.getGroundMotionFields(siteList, erf,
-                            gmpeMap, rn);
+                            gmpeMap, rn, correlationFlag);
 
         }
         if (groundMotionFields == null
                 || groundMotionFields.values().size() == 0) {
-            Assert
-                    .fail("HazardCalculator did not return ground motion fields after "
-                            + maxTries
-                            + " runs."
-                            + groundMotionFields.toString());
+            Assert.fail("HazardCalculator did not return ground motion fields after "
+                    + maxTries + " runs." + groundMotionFields.toString());
 
         }
         String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
@@ -306,16 +310,13 @@ public class HazardCalculatorTest {
             // changes for each call.)
             groundMotionFields =
                     HazardCalculator.getGroundMotionFields(siteList, erf,
-                            gmpeMap, rn);
+                            gmpeMap, rn, correlationFlag);
 
         }
         if (groundMotionFields == null
                 || groundMotionFields.values().size() == 0) {
-            Assert
-                    .fail("HazardCalculator did not return ground motion fields after "
-                            + maxTries
-                            + " runs."
-                            + groundMotionFields.toString());
+            Assert.fail("HazardCalculator did not return ground motion fields after "
+                    + maxTries + " runs." + groundMotionFields.toString());
 
         }
         Map<Site, Double> firstGmf =
