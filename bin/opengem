@@ -55,6 +55,27 @@ flags.DEFINE_boolean('partition', False, 'Partition job?')
 
 flags.DEFINE_boolean('server', False, 'Launch memcached and RabbitMQ subprocs')
 
+flags.DEFINE_boolean('worker', False, 'Launch celery subprocs')
+
+def _launch_worker_subprocs():
+    """Start celery as python subprocs.
+
+    There should only be one copy of celery running.
+
+    If a process is already running, don't kill it
+    and carry on.
+
+    If a process is not running, launch it as a
+    multiprocessing.Process
+    """
+    # set the host string (otherwise, the user will be prompted for one)
+    env.host_string = 'localhost'
+    
+    # launch celery if it's not already running
+    if not _is_running('[c]elery'):
+        print "Starting celery..."
+        Process(target=local, args=('celeryd',)).start()
+
 def _launch_server_subprocs():
     """Start memcached and RabbitMQ as python subprocs.
 
@@ -128,6 +149,9 @@ if __name__ == '__main__':
     elif FLAGS.server:
         # launch memcached and rabbitmq
         _launch_server_subprocs()
+    elif FLAGS.worker:
+        # launch celery
+        _launch_worker_subprocs()
     else:
         job = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
         job.to_kvs()
