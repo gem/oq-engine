@@ -24,23 +24,26 @@ Data stores will be of four types:
 System components list:
 
 * Modeller's Toolkit
+
  - This is a web-based GIS interface that provides real-time analysis of composite spatial data, and an integrated set of GIS editing tools to produce source zone definitions, and other required inputs to the Engines and calculators.
  
 There are three "Engines", each of which is composed of multiple "calculators":
 
 The HAZARD ENGINE is composed of the following calculators:
 
- - the ERF calculator(s) (Takes a set of sources of four types) (Generates a Synthetic Catalog of ERF)
- - the PSHA calculator(s) (Takes ERF catalog (spatial), and GMPE (also spatial)) - (Generates a grid of hazard curves)
- - the Occurrence / Exceedence calculator (takes a grid of hazard curves) - (Generates a Hazard Map)
+ - Classic PSHA, The Hazard component will need to produce earthquake rupture forecast (ERF) as it is required in order for the stochastic event set generator.
+ - Stochastic Event Set Generator. The Stochastic Event Set Generator is required for the Ground Motion Fields calculator.
  
 The RISK ENGINE is composed of the following calculators:
 
- - The LOSS CURVE calculator (Takes gridded exposure, vulnerability, and either (hazard curves | hazard map | ERF catalog))
- - The LOSS RATIO calculator (Takes ???)
+ - Classical PSHA Based Risk Assessment. The GEM Risk calculator is capable of computing losses due to all the possible seismic events that might occur within a given time span using a classical PSHA-based approach. The main product from these calculations will be loss/loss ratio curves although, loss/loss ratio maps for different probabilities of exceedance as well as average loss/loss ratio maps can also be computed.
+ - Probabilistic Event Based Risk Assessment. The GEM Risk calculator is intended to compute probabilistic event based assessment: using set of ground motion fields (generated through stochastic event set) the risk engine is capable of computing losses per asset and/or the aggregated loss since in this approach it is possible to take into consideration the spatial correlation of the ground motion.
+ - Deterministic Event Based Risk Assessment. Deterministic event-based risk assessment involves the calculation of losses (or loss ratios) for a given set of exposed assets, for a single deterministic earthquake scenario. It requires a ground-motion field (GMF), discrete vulnerability functions and exposure portfolios. The deterministic event based assessment is intended to produce loss / loss ratio maps and statistical data for a specific site.
+ - Wesson et al Calculator. Wesson et all approach represents a direct method for the calculation of the annual frequency of exceedance of a certain earthquake loss. This method parallels the classic method of probabilistic seismic hazard analysis for the calculation  of the annual frequency of exceedance for earthquake ground motions. The method assumes conditional independence of the random component of ground motions and losses at different sites for each earthquake, given magnitude, distance to the sites, and so-called interevent epsilon. The main advantage of this method is that it does not require a separate set of scenario earthquakes, as do Monte Carlo-based approaches and the main drawback, is the fact that it does not take into account the spatial correlation of the ground motion (intra-event correlation)
 
 The SOCIO-ECONOMIC IMPACT Engine is composed of the following calculators:
- - ??
+ - Agent based model
+ - System Economics model
 
 * Viewer's Interface
 * Datastores (with REST interfaces)

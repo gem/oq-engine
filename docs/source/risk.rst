@@ -2,23 +2,24 @@
       License Header goes here
 
 GEM Computational Risk Engine
-====================
+=============================
 The :mod:`Risk` Sub-package
-------------------
+---------------------------
 
 The risk sub package includes:
 
-:mod:`engines` module which has top-level managers for computation classes, which computes loss ratio curves based on hazard curves and 9 exposure portfolios and interpolates loss for a specific probability of excellence interval.
+:mod:`Classical_psha_based` module that defines the computations used in the probabilistic scenario.
 
-:mod:`probabilistic_scenario` module that defines the computations used in the probabilistic scenario.
+:mod:`engines` module has input parsing, various calculation steps and output generation.
+
+:mod:`probabilistic_event_based` module that defines the computations used in the probabilistic scenario.
 
 :mod:`tasks` module which is the core of the computational engine.
 
+The :mod:`classical_psha_based` Module
+--------------------------------------
 
-The :mod:`risk` Module
--------------------------
-
-.. automodule:: opengem.risk
+.. automodule:: opengem.risk.classical_psha_based
     :members:
     :undoc-members:
     :show-inheritance:
@@ -34,7 +35,7 @@ The :mod:`engines` Module
 
 
 The :mod:`probabilistic_scenario` Module
--------------------------
+----------------------------------------
 
 .. automodule:: opengem.risk.probabilistic_scenario
     :members:
@@ -43,7 +44,7 @@ The :mod:`probabilistic_scenario` Module
 
 
 The :mod:`tasks` Module
--------------------------
+-----------------------
 
 .. automodule:: opengem.risk.tasks
     :members:
