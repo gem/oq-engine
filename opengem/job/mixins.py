@@ -1,10 +1,7 @@
-# from opengem.hazard.job import HazJobMixin
-# import opengem.risk.job
-
-
 class Mixin(object):
     mixins = {}
-    def __init__(self, target, mixin):
+    def __init__(self, target, mixin, key=""):
+        self.key = key.upper() + "_CALCULATION_MODE"
         self.target = target
         self.mixin = mixin
 
@@ -16,7 +13,7 @@ class Mixin(object):
 
     def _load(self):
         if issubclass(self.mixin, type(self)):
-            calculation_mode = self.target.params['CALCULATION_MODE']
+            calculation_mode = self.target.params[self.key]
             self.mixin = self.mixin.mixins[calculation_mode]
         self.target.__class__.__bases__ += (self.mixin,)
         return self.target

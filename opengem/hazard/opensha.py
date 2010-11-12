@@ -28,7 +28,6 @@ def jclass(class_key):
 
 
 class MonteCarloMixin:
-
     def preload(fn):
         """A decorator for preload steps that must run on the Jobber"""
         def preloader(self, *args, **kwargs):
@@ -110,8 +109,6 @@ class MonteCarloMixin:
         jpype = java.jvm()
         self.load_ruptures()
         
-        
-
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
 
@@ -120,7 +117,3 @@ def guarantee_file(base_path, file_spec):
     etc.) to an absolute path to a (possibly temporary) file."""
     # TODO(JMC): Parse out git, http, or full paths here...
     return os.path.join(base_path, file_spec)
-
-
-# engine = HazardEngineClass(cache, my_job.key)
-# engine.doCalculation()
