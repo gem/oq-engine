@@ -3,6 +3,7 @@ package org.gem;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Properties;
 
 import org.gem.engine.hazard.memcached.Cache;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
@@ -53,5 +54,16 @@ public class JsonSerializer {
                 }.getType();
 
         return gson.create().fromJson((String) cache.get(key), hashType);
+    }
+
+    public static void serializeConfigurationFile(Cache cache, String key,
+            Properties configProperties) {
+        String json = new Gson().toJson(configProperties, Properties.class);
+        cache.set(key, json);
+    }
+
+    public static Properties getConfigurationPropertiesFromCache(Cache cache,
+            String key) {
+        return new Gson().fromJson((String) cache.get(key), Properties.class);
     }
 }

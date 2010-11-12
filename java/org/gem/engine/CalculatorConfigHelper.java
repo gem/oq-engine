@@ -1,5 +1,6 @@
 package org.gem.engine;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -179,6 +180,15 @@ public class CalculatorConfigHelper {
         Double[] imls = StringArrToDoubleArr(imlArray);
         return makeArbitrarilyDiscretizedFunc(imls, imt);
     } // makeImlList()
+
+    public static List<Double> makeImlDoubleList(Configuration config) {
+        List<Double> imlDoubleList = new ArrayList<Double>();
+        ArbitrarilyDiscretizedFunc imlFunc = makeImlList(config);
+
+        for (int i = 0; i < imlFunc.getNum(); i++)
+            imlDoubleList.add(imlFunc.getX(i));
+        return imlDoubleList;
+    }
 
     private static ArbitrarilyDiscretizedFunc makeArbitrarilyDiscretizedFunc(
             Double[] intensityMeasureLevels, IntensityMeasure imt) {
