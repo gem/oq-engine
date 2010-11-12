@@ -132,6 +132,10 @@ public class CommandLineCalculator {
         config = ConfigurationConverter.getConfiguration(properties);
     }
 
+    public Properties getConfigurationProperties() {
+        return ConfigurationConverter.getProperties(config);
+    }
+
     public void setConfig(Properties p) {
         config = ConfigurationConverter.getConfiguration(p);
     } // setConfig()
