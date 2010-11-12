@@ -86,6 +86,7 @@ class Job(object):
             job_id = kvs.generate_random_id()
         
         self.job_id = job_id
+        self.block_id = 10
         self.params = params
         self.base_path = base_path
         if base_path:
@@ -108,8 +109,8 @@ class Job(object):
 
     @validate
     def launch(self):
-        for mixin in Mixin.mixins():
-            with Mixin(self.__class__, mixin):
+        for (key, mixin) in Mixin.mixins.items():
+            with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.

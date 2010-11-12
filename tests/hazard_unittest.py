@@ -52,7 +52,7 @@ class HazardEngineTestCase(unittest.TestCase):
         errors, and should have params loaded from memcached."""
         site_id = 1
         hazengine = job.Job.from_file(TEST_JOB_FILE)
-        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
+        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
             hc = hazengine.execute()
             source_model_key = kvs.generate_product_key(hazengine.id, 
                                 hazard.SOURCE_MODEL_TOKEN)
@@ -72,7 +72,7 @@ class HazardEngineTestCase(unittest.TestCase):
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_kvs(job_id)
-        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
+        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
             hc = hazengine.compute_hazard_curve(site_id)
 
     @test.skipit
