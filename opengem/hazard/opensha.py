@@ -138,19 +138,20 @@ class MonteCarloMixin:
         """Actual hazard curve calculation, runs on the workers."""
         jpype = java.jvm()
 
-        erf = generate_erf(self)
-        gmpe_map = generate_gmpe_map(self)
+        erf = self.generate_erf()
+        gmpe_map = self.generate_gmpe_map()
         configuration_properties = generate_configuration_properties(self)
         configuration_helper = jclass("CalculatorConfigHelper")
         configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
 
         ## here the site list should be the one appropriate for each worker. Where do I get it?
         ## this method returns a map relating sites with hazard curves (described as DiscretizedFuncAPI)
-        hazardCurves = jclass("HazardCalculator").getHazardCurves(
-        List<Site> siteList,
-        erf,
-        gmpeMap,
-        configuration_helper.makeImlDoubleList(configuration), double integrationDistance)
+
+		integration_distance_key = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems").MAXIMUM_DISTANCE
+		site_lits = configuration_helper.makeImlDoubleList(configuration)
+		integration_distance = configuration_properties.getProperty(integration_distance_key)
+        hazardCurves = jclass("HazardCalculator").getHazardCurves(site_list, 
+            erf, gmpe_map, ch_iml, integration_distance)
         
 
 
