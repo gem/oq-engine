@@ -84,14 +84,14 @@ class MonteCarloMixin:
 
     def store_config_file(self, config_file):
         """Store configuration file to cache"""
-	    jpype = java.jvm()  
+        jpype = java.jvm()  
 
-	    engine = jclass("CommandLineCalculator")(config_file)
-	    # what key to use????
-	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        engine = jclass("CommandLineCalculator")(config_file)
+        # what key to use????
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         jclass("JsonSerializer").serializeConfigurationFile(cache, key,
-		            engine.getConfigurationProperties())
+                    engine.getConfigurationProperties())
     
     @preload
     def execute(self):
@@ -112,17 +112,34 @@ class MonteCarloMixin:
         return erfclass.getGEM1ERF(sources)
 
     def generate_gmpe_map(self):
-	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         
         return jclass("JsonSerializer").getGmpeMapFromCache(cache,key);
 
     def generate_configuration_properties(self):
-	    # what key to use????
-	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        # what key to use????
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
       
         return jclass("JsonSerializer").getConfigurationPropertiesFromCache(cache,key)
+
+    def set_gmpe_params(gmpe_map,properties):
+        gmpeLogicTreeData = jClass("org.gem.engine.GmpeLogicTreeData")
+        configItems = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems")
+        component = configItems.COMPONENT
+        intensityMeasureType = configItems.INTENSITY_MEASURE_TYPE
+        period = configItems.PERIOD
+        damping = configItems.DAMPING
+        truncType = configItems.GMPE_TRUNCATION_TYPE
+        truncLevel = configItems.TRUNCATION_LEVEL
+        stdType = configItems.STANDARD_DEVIATION_TYPE
+        vs30 = REFERENCE_VS30_VALUE
+        for trt in gmpe_map.keySet():
+            gmpe = gmpe_map.get(trt)
+            gmpeLogicTreeData.setGmpeParams(component, intensityMeasureType, period, damping,
+                    truncType, truncLevel, stdType, vs30, gmpe)
+            gmpe_map.put(trt,gmpe)
     
     def load_ruptures(self):
         
@@ -141,15 +158,16 @@ class MonteCarloMixin:
         erf = self.generate_erf()
         gmpe_map = self.generate_gmpe_map()
         configuration_properties = generate_configuration_properties(self)
+        set_gmpe_params(gmpe_map,configuration_properties)
         configuration_helper = jclass("CalculatorConfigHelper")
         configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
 
         ## here the site list should be the one appropriate for each worker. Where do I get it?
         ## this method returns a map relating sites with hazard curves (described as DiscretizedFuncAPI)
 
-		integration_distance_key = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems").MAXIMUM_DISTANCE
-		site_lits = configuration_helper.makeImlDoubleList(configuration)
-		integration_distance = configuration_properties.getProperty(integration_distance_key)
+        integration_distance_key = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems").MAXIMUM_DISTANCE
+        site_lits = configuration_helper.makeImlDoubleList(configuration)
+        integration_distance = configuration_properties.getProperty(integration_distance_key)
         hazardCurves = jclass("HazardCalculator").getHazardCurves(site_list, 
             erf, gmpe_map, ch_iml, integration_distance)
         
