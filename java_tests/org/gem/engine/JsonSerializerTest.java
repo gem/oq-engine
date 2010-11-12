@@ -2,10 +2,14 @@ package org.gem.engine;
 
 import static org.junit.Assert.assertTrue;
 
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.apache.commons.lang.StringUtils;
 import org.gem.JsonSerializer;
+import org.gem.ScalarIMRJsonAdapter;
+import org.gem.engine.hazard.memcached.Cache;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -22,8 +26,14 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSource
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
 import org.opensha.sha.faultSurface.FaultTrace;
+import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
+import org.opensha.sha.imr.attenRelImpl.CY_2008_AttenRel;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 public class JsonSerializerTest {
 
@@ -68,6 +78,41 @@ public class JsonSerializerTest {
         sourceList.add(subduc);
         String json = JsonSerializer.getJsonSourceList(sourceList);
         validateSubdcutionSerialization(subduc, json);
+    }
+
+    @Test
+    public void getGmpeMapFromCacheTest() {
+
+        HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
+                new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
+        gmpeMap.put(TectonicRegionType.ACTIVE_SHALLOW, new BA_2008_AttenRel(
+                null));
+        gmpeMap.put(TectonicRegionType.STABLE_SHALLOW, new CY_2008_AttenRel(
+                null));
+
+        GsonBuilder gson = new GsonBuilder();
+        gson.registerTypeAdapter(ScalarIntensityMeasureRelationshipAPI.class,
+                new ScalarIMRJsonAdapter());
+        Type hashType =
+                new TypeToken<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>>() {
+                }.getType();
+        String json = gson.create().toJson(gmpeMap, hashType);
+        Cache cache = new Cache("localhost", 11211);
+        cache.set("KEY", json);
+
+        HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMapDeserialized =
+                JsonSerializer.getGmpeMapFromCache(cache, "KEY");
+
+        HashMap<String, String> gmpeMapString = new HashMap<String, String>();
+        for (TectonicRegionType trt : gmpeMap.keySet())
+            gmpeMapString.put(trt.toString(), gmpeMap.get(trt).getClass()
+                    .getCanonicalName());
+        HashMap<String, String> gmpeMapDeserializedString =
+                new HashMap<String, String>();
+        for (TectonicRegionType trt : gmpeMapDeserialized.keySet())
+            gmpeMapDeserializedString.put(trt.toString(), gmpeMapDeserialized
+                    .get(trt).getClass().getCanonicalName());
+        assertTrue(gmpeMapString.equals(gmpeMapDeserializedString));
     }
 
     private void validateSubdcutionSerialization(
