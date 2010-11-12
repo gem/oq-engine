@@ -20,6 +20,11 @@ JAVA_CLASSES = {
     "EventSetGen" : "org.gem.calc.StochasticEventSetGenerator",
     "Random" : "java.util.Random",
     "GEM1ERF" : "org.gem.engine.hazard.GEM1ERF",
+    "HazardCalculator" : "org.gem.calc.HazardCalculator",
+    "Properties" : "java.util.Properties",
+    "CalculatorConfigHelper" : "org.gem.engine.CalculatorConfigHelper",
+    "Configuration" : "org.apache.commons.configuration.Configuration",
+    "ConfigurationConverter" : "org.apache.commons.configuration.ConfigurationConverter"
 }
 
 def jclass(class_key):
@@ -40,6 +45,7 @@ class MonteCarloMixin:
             
             self.store_source_model(self.config_file)
             self.store_gmpe_map(self.config_file)
+            self.store_config_file(self.config_file)
             fn(self, *args, **kwargs)
         
         return preloader
@@ -74,7 +80,17 @@ class MonteCarloMixin:
         key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         engine.sampleAndSaveGMPETree(cache, key)
-            
+
+    def store_config_file(self, config_file):
+        """Store configuration file to cache"""
+	    jpype = java.jvm()  
+
+	    engine = jclass("CommandLineCalculator")(config_file)
+	    # what key to use????
+	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        jclass("JsonSerializer").serializeConfigurationFile(cache, key,
+		            engine.getConfigurationProperties())
     
     @preload
     def execute(self):
@@ -93,6 +109,19 @@ class MonteCarloMixin:
         sources = jclass("JsonSerializer").getSourceListFromCache(cache, key)
         
         return erfclass.getGEM1ERF(sources)
+
+    def generate_gmpe_map(self):
+	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        
+        return jclass("JsonSerializer").getGmpeMapFromCache(cache,key);
+
+    def generate_configuration_properties(self):
+	    # what key to use????
+	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+      
+        return jclass("JsonSerializer").getConfigurationPropertiesFromCache(cache,key)
     
     def load_ruptures(self):
         
@@ -107,7 +136,20 @@ class MonteCarloMixin:
     def compute_hazard_curve(self, site_id):
         """Actual hazard curve calculation, runs on the workers."""
         jpype = java.jvm()
-        self.load_ruptures()
+
+        erf = generate_erf(self)
+        gmpe_map = generate_gmpe_map(self)
+        configuration_properties = generate_configuration_properties(self)
+        configuration_helper = jclass("CalculatorConfigHelper")
+        configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
+
+        ## here the site list should be the one appropriate for each worker. Where do I get it?
+        ## this method returns a map relating sites with hazard curves (described as DiscretizedFuncAPI)
+        hazardCurves = jclass("HazardCalculator").getHazardCurves(
+        List<Site> siteList,
+        erf,
+        gmpeMap,
+        configuration_helper.makeImlDoubleList(configuration), double integrationDistance)
         
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
