@@ -578,7 +578,6 @@ public class GmpeLogicTreeData {
                 logger.error(msg);
                 throw new IllegalArgumentException(msg);
             }
-
         }
 
         // set gmpe truncation type
