@@ -1,5 +1,6 @@
 package org.gem.engine;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Type;
@@ -33,6 +34,7 @@ import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.CY_2008_AttenRel;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
+import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.gson.GsonBuilder;
@@ -84,7 +86,8 @@ public class JsonSerializerTest {
     }
 
     @Test
-    public void gemSourceDataFromCacheTest() {
+    public void sourceDataFromCacheTest() {
+
         GEMSourceData area = getAreaSource();
         GEMSourceData point = getPointSource();
         GEMSourceData fault = getFaultSource();
@@ -101,28 +104,187 @@ public class JsonSerializerTest {
         List<GEMSourceData> sourceListDeserialized =
                 JsonSerializer.getSourceListFromCache(cache, "KEY");
 
-        for (int i = 0; i < sourceList.size(); i++) {
-            assertTrue(sourceList.get(i).getID()
-                    .equalsIgnoreCase(sourceListDeserialized.get(i).getID()));
-            assertTrue(sourceList.get(i).getName()
-                    .equalsIgnoreCase(sourceListDeserialized.get(i).getName()));
-            assertTrue(sourceList
-                    .get(i)
-                    .getTectReg()
-                    .toString()
-                    .equalsIgnoreCase(
-                            sourceListDeserialized.get(i).getTectReg()
-                                    .toString()));
-            if (sourceList.get(i) instanceof GEMAreaSourceData) {
+        compareSourceDataList(sourceListDeserialized);
+    }
+
+    private void compareSourceDataList(
+            List<GEMSourceData> sourceListDeserialized) {
+        for (int sourceIndex = 0; sourceIndex < sourceList.size(); sourceIndex++) {
+            compareCommonParams(sourceListDeserialized, sourceIndex);
+            if (sourceList.get(sourceIndex) instanceof GEMAreaSourceData) {
                 GEMAreaSourceData srcOriginal =
-                        (GEMAreaSourceData) sourceList.get(i);
+                        (GEMAreaSourceData) sourceList.get(sourceIndex);
                 GEMAreaSourceData srcDeserialized =
-                        (GEMAreaSourceData) sourceListDeserialized.get(i);
-                System.out.println(srcOriginal.getMagfreqDistFocMech()
-                        .getFirstMagFreqDist());
-                System.out.println(srcDeserialized.getMagfreqDistFocMech()
-                        .getFirstMagFreqDist());
+                        (GEMAreaSourceData) sourceListDeserialized
+                                .get(sourceIndex);
+                compareAreaSourceData(srcOriginal, srcDeserialized);
+            } else if (sourceList.get(sourceIndex) instanceof GEMPointSourceData) {
+                GEMPointSourceData srcOriginal =
+                        (GEMPointSourceData) sourceList.get(sourceIndex);
+                GEMPointSourceData srcDeserialized =
+                        (GEMPointSourceData) sourceListDeserialized
+                                .get(sourceIndex);
+                comparePointSourceData(srcOriginal, srcDeserialized);
+            } else if (sourceList.get(sourceIndex) instanceof GEMFaultSourceData) {
+                GEMFaultSourceData srcOriginal =
+                        (GEMFaultSourceData) sourceList.get(sourceIndex);
+                GEMFaultSourceData srcDeserialized =
+                        (GEMFaultSourceData) sourceListDeserialized
+                                .get(sourceIndex);
+                compareFaultSourceData(srcOriginal, srcDeserialized);
+            } else if (sourceList.get(sourceIndex) instanceof GEMSubductionFaultSourceData) {
+                GEMSubductionFaultSourceData srcOriginal =
+                        (GEMSubductionFaultSourceData) sourceList
+                                .get(sourceIndex);
+                GEMSubductionFaultSourceData srcDeserialized =
+                        (GEMSubductionFaultSourceData) sourceListDeserialized
+                                .get(sourceIndex);
+                compareSubductionFaultSourceData(srcOriginal, srcDeserialized);
             }
+
+        }
+    }
+
+    private void compareCommonParams(
+            List<GEMSourceData> sourceListDeserialized, int sourceIndex) {
+        assertTrue(sourceList
+                .get(sourceIndex)
+                .getID()
+                .equalsIgnoreCase(
+                        sourceListDeserialized.get(sourceIndex).getID()));
+        assertTrue(sourceList
+                .get(sourceIndex)
+                .getName()
+                .equalsIgnoreCase(
+                        sourceListDeserialized.get(sourceIndex).getName()));
+        assertTrue(sourceList
+                .get(sourceIndex)
+                .getTectReg()
+                .toString()
+                .equalsIgnoreCase(
+                        sourceListDeserialized.get(sourceIndex).getTectReg()
+                                .toString()));
+    }
+
+    private void compareSubductionFaultSourceData(
+            GEMSubductionFaultSourceData srcOriginal,
+            GEMSubductionFaultSourceData srcDeserialized) {
+        compareFaultTraces(srcOriginal.getTopTrace(),
+                srcDeserialized.getTopTrace());
+        compareFaultTraces(srcOriginal.getBottomTrace(),
+                srcDeserialized.getBottomTrace());
+        assertTrue(srcOriginal.getRake() == srcDeserialized.getRake());
+        assertTrue(srcOriginal.getFloatRuptureFlag() == srcDeserialized
+                .getFloatRuptureFlag());
+        compareMagFreqDist(srcOriginal.getMfd(), srcDeserialized.getMfd());
+    }
+
+    private void compareFaultSourceData(GEMFaultSourceData srcOriginal,
+            GEMFaultSourceData srcDeserialized) {
+        FaultTrace ftOriginal = srcOriginal.getTrace();
+        FaultTrace ftDeserialized = srcDeserialized.getTrace();
+        compareFaultTraces(ftOriginal, ftDeserialized);
+        assertTrue(srcOriginal.getDip() == srcDeserialized.getDip());
+        assertTrue(srcOriginal.getRake() == srcDeserialized.getRake());
+        assertTrue(srcOriginal.getSeismDepthLow() == srcDeserialized
+                .getSeismDepthLow());
+        assertTrue(srcOriginal.getSeismDepthUpp() == srcDeserialized
+                .getSeismDepthUpp());
+        assertTrue(srcOriginal.getFloatRuptureFlag() == srcDeserialized
+                .getFloatRuptureFlag());
+        compareMagFreqDist(srcOriginal.getMfd(), srcDeserialized.getMfd());
+    }
+
+    private void compareFaultTraces(FaultTrace ftOriginal,
+            FaultTrace ftDeserialized) {
+        assertTrue(ftOriginal.size() == ftDeserialized.size());
+        for (int i = 0; i < ftOriginal.size(); i++) {
+            assertTrue(ftOriginal.get(i).equals(ftDeserialized.get(i)));
+        }
+    }
+
+    private void comparePointSourceData(GEMPointSourceData srcOriginal,
+            GEMPointSourceData srcDeserialized) {
+        assertTrue(srcOriginal
+                .getHypoMagFreqDistAtLoc()
+                .getLocation()
+                .equals(srcDeserialized.getHypoMagFreqDistAtLoc().getLocation()));
+        assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getNumMagFreqDists() == srcDeserialized
+                .getHypoMagFreqDistAtLoc().getNumMagFreqDists());
+        assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getNumFocalMechs() == srcDeserialized
+                .getHypoMagFreqDistAtLoc().getNumFocalMechs());
+        for (int i = 0; i < srcOriginal.getHypoMagFreqDistAtLoc()
+                .getNumMagFreqDists(); i++) {
+            compareMagFreqDist(srcOriginal.getHypoMagFreqDistAtLoc()
+                    .getMagFreqDist(i), srcDeserialized
+                    .getHypoMagFreqDistAtLoc().getMagFreqDist(i));
+            compareFocalMechanisms(srcOriginal.getHypoMagFreqDistAtLoc()
+                    .getFocalMech(i), srcDeserialized.getHypoMagFreqDistAtLoc()
+                    .getFocalMech(i));
+        }
+        compareRupDepthVsMagFunction(srcOriginal.getAveRupTopVsMag(),
+                srcDeserialized.getAveRupTopVsMag());
+        assertTrue(srcOriginal.getAveHypoDepth() == srcDeserialized
+                .getAveHypoDepth());
+    }
+
+    private void compareAreaSourceData(GEMAreaSourceData srcOriginal,
+            GEMAreaSourceData srcDeserialized) {
+        LocationList borderOriginal = srcOriginal.getRegion().getBorder();
+        LocationList borderDeserialized =
+                srcDeserialized.getRegion().getBorder();
+        assertTrue(borderOriginal.size() == borderDeserialized.size());
+        for (int i = 0; i < borderOriginal.size(); i++)
+            assertTrue(borderOriginal.get(i).equals(borderDeserialized.get(i)));
+        // indirect way to compare regions.
+        assertEquals(srcOriginal.getArea(), srcDeserialized.getArea(), 0.0001);
+        assertTrue(srcOriginal.getMagfreqDistFocMech().getNumMagFreqDists() == srcDeserialized
+                .getMagfreqDistFocMech().getNumMagFreqDists());
+        assertTrue(srcOriginal.getMagfreqDistFocMech().getNumFocalMechs() == srcDeserialized
+                .getMagfreqDistFocMech().getNumFocalMechs());
+        for (int i = 0; i < srcOriginal.getMagfreqDistFocMech()
+                .getNumFocalMechs(); i++) {
+            compareMagFreqDist(srcOriginal.getMagfreqDistFocMech()
+                    .getMagFreqDistList()[i], srcDeserialized
+                    .getMagfreqDistFocMech().getMagFreqDistList()[i]);
+            compareFocalMechanisms(srcOriginal.getMagfreqDistFocMech()
+                    .getFocalMech(i), srcDeserialized.getMagfreqDistFocMech()
+                    .getFocalMech(i));
+        }
+        compareRupDepthVsMagFunction(srcOriginal.getAveRupTopVsMag(),
+                srcDeserialized.getAveRupTopVsMag());
+        assertTrue(srcOriginal.getAveHypoDepth() == srcDeserialized
+                .getAveHypoDepth());
+    }
+
+    private void compareRupDepthVsMagFunction(
+            ArbitrarilyDiscretizedFunc rupDepthVsMagOriginal,
+            ArbitrarilyDiscretizedFunc rupDepthVsMagDeserialized) {
+        assertTrue(rupDepthVsMagOriginal.getNum() == rupDepthVsMagDeserialized
+                .getNum());
+        for (int i = 0; i < rupDepthVsMagOriginal.getNum(); i++) {
+            assertTrue(rupDepthVsMagOriginal.get(i).getX() == rupDepthVsMagDeserialized
+                    .get(i).getX());
+            assertTrue(rupDepthVsMagOriginal.get(i).getY() == rupDepthVsMagDeserialized
+                    .get(i).getY());
+        }
+    }
+
+    private void compareFocalMechanisms(FocalMechanism fmOriginal,
+            FocalMechanism fmDeserialized) {
+        assertTrue(fmOriginal.getStrike() == fmDeserialized.getStrike());
+        assertTrue(fmOriginal.getDip() == fmDeserialized.getDip());
+        assertTrue(fmOriginal.getRake() == fmDeserialized.getRake());
+    }
+
+    private void compareMagFreqDist(IncrementalMagFreqDist mfdOriginal,
+            IncrementalMagFreqDist mfdDeserialized) {
+        assertTrue(mfdOriginal.getNum() == mfdDeserialized.getNum());
+        for (int j = 0; j < mfdOriginal.getNum(); j++) {
+            assertTrue(mfdOriginal.get(j).getX() == mfdDeserialized.get(j)
+                    .getX());
+            assertTrue(mfdOriginal.get(j).getY() == mfdDeserialized.get(j)
+                    .getY());
         }
     }
 
