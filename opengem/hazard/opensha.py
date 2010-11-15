@@ -88,11 +88,7 @@ class MonteCarloMixin:
 
         engine = jclass("CommandLineCalculator")(config_file)
         # what key to use????
-<<<<<<< HEAD
-        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
-=======
         key = kvs.generate_product_key(self.id, hazard.JOB_TOKEN)
->>>>>>> origin/hazard-wrapper
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         jclass("JsonSerializer").serializeConfigurationFile(cache, key,
                     engine.getConfigurationProperties())
