@@ -3,6 +3,7 @@ package org.gem;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 
 import org.gem.engine.hazard.memcached.Cache;
@@ -32,11 +33,14 @@ public class JsonSerializer {
         cache.set(key, getJsonSourceList(sourceList));
     }
 
-    public static ArrayList<GEMSourceData> getSourceListFromCache(Cache cache,
+    public static List<GEMSourceData> getSourceListFromCache(Cache cache,
             String key) {
-        Type listType = new TypeToken<ArrayList<GEMSourceData>>() {
+        GsonBuilder gson = new GsonBuilder();
+        gson.registerTypeAdapter(GEMSourceData.class,
+                new SourceDataDeserializer());
+        Type listType = new TypeToken<List<GEMSourceData>>() {
         }.getType();
-        return new Gson().fromJson((String) cache.get(key), listType);
+        return gson.create().fromJson((String) cache.get(key), listType);
     }
 
     public static
