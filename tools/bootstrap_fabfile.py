@@ -194,7 +194,7 @@ def _bootstrap_osx():
     with cd("/tmp"):
         if not ls("/usr/local/lib/swq.h"):
             _curl("http://svn.osgeo.org/gdal/branches/1.7/gdal/ogr/swq.h", "swq.h")
-            sudo("mv {,/usr/local/lib/}swq.h")
+            sudo("mv {,/usr/local/include/}swq.h")
 
     _pip_install("gdal", virtualenv="opengem")
 

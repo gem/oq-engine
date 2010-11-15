@@ -4,6 +4,7 @@ Main jobber module.
 """
 
 import math
+import os
 
 from opengem import job
 from opengem import flags
@@ -87,7 +88,8 @@ class Jobber(object):
         in the job definition."""
 
         sites = []
-        reader = exposure.ExposurePortfolioFile(self.job[job.EXPOSURE])
+        path = os.path.join(self.job.base_path, self.job[job.EXPOSURE])
+        reader = exposure.ExposurePortfolioFile(path)
 
         
         for asset_data in reader:

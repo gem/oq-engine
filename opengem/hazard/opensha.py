@@ -64,6 +64,7 @@ class MonteCarloMixin:
         
         engine = jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
+        LOG.debug("Storing source model at %s" % (key))
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         engine.sampleAndSaveERFTree(cache, key)
     
@@ -87,7 +88,11 @@ class MonteCarloMixin:
 
         engine = jclass("CommandLineCalculator")(config_file)
         # what key to use????
+<<<<<<< HEAD
         key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+=======
+        key = kvs.generate_product_key(self.id, hazard.JOB_TOKEN)
+>>>>>>> origin/hazard-wrapper
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         jclass("JsonSerializer").serializeConfigurationFile(cache, key,
                     engine.getConfigurationProperties())
@@ -122,6 +127,23 @@ class MonteCarloMixin:
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
       
         return jclass("JsonSerializer").getConfigurationPropertiesFromCache(cache,key)
+
+    def set_gmpe_params(gmpe_map,properties):
+        gmpeLogicTreeData = jClass("org.gem.engine.GmpeLogicTreeData")
+        configItems = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems")
+        component = configItems.COMPONENT
+        intensityMeasureType = configItems.INTENSITY_MEASURE_TYPE
+        period = configItems.PERIOD
+        damping = configItems.DAMPING
+        truncType = configItems.GMPE_TRUNCATION_TYPE
+        truncLevel = configItems.TRUNCATION_LEVEL
+        stdType = configItems.STANDARD_DEVIATION_TYPE
+        vs30 = REFERENCE_VS30_VALUE
+        for trt in gmpe_map.keySet():
+            gmpe = gmpe_map.get(trt)
+            gmpeLogicTreeData.setGmpeParams(component, intensityMeasureType, period, damping,
+                    truncType, truncLevel, stdType, vs30, gmpe)
+            gmpe_map.put(trt,gmpe)
     
     def load_ruptures(self):
         
@@ -140,6 +162,8 @@ class MonteCarloMixin:
         erf = self.generate_erf()
         gmpe_map = self.generate_gmpe_map()
         configuration_properties = generate_configuration_properties(self)
+        set_gmpe_params(gmpe_map,configuration_properties)
+
         configuration_helper = jclass("CalculatorConfigHelper")
         configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
 
@@ -149,9 +173,38 @@ class MonteCarloMixin:
         integration_distance_key = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems").MAXIMUM_DISTANCE
         site_lits = configuration_helper.makeImlDoubleList(configuration)
         integration_distance = configuration_properties.getProperty(integration_distance_key)
+        # hazard curves are returned as Map<Site, DiscretizedFuncAPI>
         hazardCurves = jclass("HazardCalculator").getHazardCurves(site_list, 
             erf, gmpe_map, ch_iml, integration_distance)
-        
+
+        # from hazard curves, probability mass functions are calculated
+        pmf = jClass("org.opensha.commons.data.function.DiscretizedFuncAPI")
+        pmf_calculator = jClass("org.gem.calc.ProbabilityMassFunctionCalc")
+        for site in hazardCurves.keySet():
+            pmf = pmf_calculator.getPMF(hazardCurves.get(site))
+            hazardCurves.put(site,pmf)
+           
+
+    def compute_ground_motion_fields(self, site_id):
+        """Ground motion field calculation, runs on the workers."""
+        jpype = java.jvm()
+
+        erf = self.generate_erf()
+        gmpe_map = self.generate_gmpe_map()
+        configuration_properties = self.generate_configuration_properties()
+        set_gmpe_params(gmpe_map,configuration_properties)
+
+        configuration_helper = jclass("CalculatorConfigHelper")
+        configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
+        site_lits = configuration_helper.makeImlDoubleList(configuration)
+
+        seed = 0 # TODO(JMC): Real seed please
+        rn = jclass("Random")(seed)
+    
+        # ground motion fields are returned as Map<EqkRupture, Map<Site, Double>>
+        # that can then be serialized to cache using Roland's code
+        ground_motion_fields = jclass("HazardCalculator").getGroundMotionFields(
+            site_lits, erf, gmpe_map, rn)
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
 
