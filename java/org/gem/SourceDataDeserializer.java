@@ -111,8 +111,9 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
                 obj.get("hypoMagFreqDistAtLoc").getAsJsonObject()
                         .get("location").getAsJsonObject();
         Location loc =
-                new Location(location.get("lat").getAsDouble(), location.get(
-                        "lon").getAsDouble());
+                new Location(location.get("lat").getAsDouble()
+                        * (180 / Math.PI), location.get("lon").getAsDouble()
+                        * (180 / Math.PI));
         JsonArray mfdArray =
                 obj.get("hypoMagFreqDistAtLoc").getAsJsonObject()
                         .get("magFreqDist").getAsJsonArray();
@@ -212,7 +213,7 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
                             * (180 / Math.PI));
             borderLocs.add(loc);
         }
-        Region reg = new Region(borderLocs, BorderType.GREAT_CIRCLE);
+        Region reg = new Region(borderLocs, BorderType.MERCATOR_LINEAR);
         return reg;
     }
 
