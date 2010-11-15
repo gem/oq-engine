@@ -32,8 +32,6 @@ import org.apache.commons.logging.LogFactory;
 import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
 import org.gem.UnoptimizedDeepCopy;
-import org.gem.calc.GroundMotionFieldCalculator;
-import org.gem.calc.StochasticEventSetGenerator;
 import org.gem.calc.HazardCalculator;
 import org.gem.engine.CalculatorConfigHelper.CalculationMode;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
@@ -55,7 +53,6 @@ import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.param.DoubleParameter;
-import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.commons.param.StringParameter;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
@@ -295,9 +292,11 @@ public class CommandLineCalculator {
      * @return a ground motion map
      * @throws IOException
      */
-    public Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> doCalculationProbabilisticEventBased()
-            throws ConfigurationException, IOException {
-        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result = null;
+    public Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>
+            doCalculationProbabilisticEventBased()
+                    throws ConfigurationException, IOException {
+        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result =
+                null;
         StringBuffer logMsg = new StringBuffer();
         // start chronometer
         long startTimeMs = System.currentTimeMillis();
@@ -486,7 +485,7 @@ public class CommandLineCalculator {
         // load ERF logic tree data
         ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         // instantiate the repository for the results
         GEMHazardCurveRepositoryList hcRepList =
                 new GEMHazardCurveRepositoryList();
@@ -602,7 +601,7 @@ public class CommandLineCalculator {
         // load ERF logic tree data
         ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         // compute ERF logic tree end-branch models
         HashMap<String, ArrayList<GEMSourceData>> endBranchModels =
                 computeErfLogicTreeEndBrancheModels(erfLogicTree
@@ -767,7 +766,8 @@ public class CommandLineCalculator {
     } // doFullCalculation()
 
     private Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>
-            doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling() throws IOException {
+            doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling()
+                    throws IOException {
 
         logger.info("Performing probabilistic event based calculation"
                 + "through Monte Carlo sampling of logic trees.\n");
@@ -776,7 +776,7 @@ public class CommandLineCalculator {
                 new HashMap<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>();
         ArrayList<Site> sites = createSiteList(config);
         ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         int numberOfRealization =
                 config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
                         .name());
@@ -796,8 +796,9 @@ public class CommandLineCalculator {
                 GEM1ERF erf =
                         sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree());
                 HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeModel =
-                        sampleGemLogicTreeGMPE(gmpeLogicTree
-                                .getGmpeLogicTreeHashMap(), getRandomSeed());
+                        sampleGemLogicTreeGMPE(
+                                gmpeLogicTree.getGmpeLogicTreeHashMap(),
+                                getRandomSeed());
                 Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                         HazardCalculator.getGroundMotionFields(sites, erf,
                                 gmpeModel, getRandom(), correlationFlag);
@@ -809,7 +810,8 @@ public class CommandLineCalculator {
     }
 
     private Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>
-            doProbabilisticEventBasedCalcForAllLogicTreeEndBranches() throws IOException {
+            doProbabilisticEventBasedCalcForAllLogicTreeEndBranches()
+                    throws IOException {
 
         logger.info("Performing probabilistic event based calculation"
                 + " for all logic tree end-branches\n");
@@ -820,7 +822,7 @@ public class CommandLineCalculator {
         // load ERF logic tree data
         ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         int numberOfSeismicityHistories =
                 config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
         Boolean correlationFlag =
@@ -1378,7 +1380,7 @@ public class CommandLineCalculator {
         long seed = config.getLong(ConfigItems.GMPELT_RANDOM_SEED.name(), 0);
         logger.warn("Random seed for GMPELT is " + Long.toString(seed));
         HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpe_map =
-                sampleGemLogicTreeGMPE(createGmpeLogicTreeData(config)
+                sampleGemLogicTreeGMPE(createGmpeLogicTreeData()
                         .getGmpeLogicTreeHashMap(), seed);
 
         GsonBuilder gson = new GsonBuilder();
@@ -2109,27 +2111,21 @@ public class CommandLineCalculator {
         }
     } // createErfLogicTreeData()
 
-    private GmpeLogicTreeData createGmpeLogicTreeData(
-            Configuration configuration) throws IOException {
+    public GmpeLogicTreeData createGmpeLogicTreeData() throws IOException {
         // load GMPE logic tree data
-        String component =
-                configuration.getString(ConfigItems.COMPONENT.name());
+        String component = config.getString(ConfigItems.COMPONENT.name());
         String intensityMeasureType =
-                configuration.getString(ConfigItems.INTENSITY_MEASURE_TYPE
-                        .name());
-        Double period = configuration.getDouble(ConfigItems.PERIOD.name());
-        Double damping = configuration.getDouble(ConfigItems.DAMPING.name());
+                config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name());
+        Double period = config.getDouble(ConfigItems.PERIOD.name());
+        Double damping = config.getDouble(ConfigItems.DAMPING.name());
         String gmpeTruncationType =
-                configuration
-                        .getString(ConfigItems.GMPE_TRUNCATION_TYPE.name());
+                config.getString(ConfigItems.GMPE_TRUNCATION_TYPE.name());
         Double truncationLevel =
-                configuration.getDouble(ConfigItems.TRUNCATION_LEVEL.name());
+                config.getDouble(ConfigItems.TRUNCATION_LEVEL.name());
         String standardDeviationType =
-                configuration.getString(ConfigItems.STANDARD_DEVIATION_TYPE
-                        .name());
+                config.getString(ConfigItems.STANDARD_DEVIATION_TYPE.name());
         Double referenceVs30Value =
-                configuration
-                        .getDouble(ConfigItems.REFERENCE_VS30_VALUE.name());
+                config.getDouble(ConfigItems.REFERENCE_VS30_VALUE.name());
         // instantiate eventually
         GmpeLogicTreeData gmpeLogicTree = null;
         if (hasPath == true) {
@@ -2141,9 +2137,11 @@ public class CommandLineCalculator {
                             gmpeTruncationType, truncationLevel,
                             standardDeviationType, referenceVs30Value);
         } else {
+            String gmpeSha =
+                    config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
+            logger.debug("Loading GMPE LT from " + gmpeSha);
             gmpeLogicTree =
-                    new GmpeLogicTreeData(kvs,
-                            ConfigItems.GMPE_LOGIC_TREE_FILE.name(), component,
+                    new GmpeLogicTreeData(kvs, gmpeSha, component,
                             intensityMeasureType, period, damping,
                             gmpeTruncationType, truncationLevel,
                             standardDeviationType, referenceVs30Value);
