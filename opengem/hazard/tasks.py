@@ -79,7 +79,7 @@ def compute_hazard_curve(job_id, block_id, site_id=None):
         sites = [site]
     else:
         # We want all sites for this block.
-        sites = kvs.get_sites_from_memcache(memcache_client, job_id, block_id)
+        sites = kvs.get_sites_from_memcache(job_id, block_id)
 
     if sites is not None:
         return [_compute_hazard_curve(job_id, block_id, site) for site in sites]

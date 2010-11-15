@@ -51,7 +51,7 @@ def validate(fn):
     def validator(self, *args):
         """Validate this job before running the decorated function."""
         try:
-            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+#            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
             return fn(self, *args)
         except AssertionError:
             return False
@@ -86,6 +86,7 @@ class Job(object):
             job_id = kvs.generate_random_id()
         
         self.job_id = job_id
+        self.block_id = 10
         self.params = params
         self.base_path = base_path
         if base_path:
@@ -108,12 +109,15 @@ class Job(object):
 
     @validate
     def launch(self):
-        for mixin in Mixin.mixins():
-            with Mixin(self.__class__, mixin):
+        results = []
+        for (key, mixin) in Mixin.mixins.items():
+            with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                self.execute()
+                results.append(self.execute())
+
+        return results
 
     def __getitem__(self, name):
         return self.params[name]

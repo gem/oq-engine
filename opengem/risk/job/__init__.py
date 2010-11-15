@@ -20,7 +20,7 @@ def preload(fn):
         self.store_exposure_assets()
         self.store_vulnerability_model()
 
-        fn(self, *args, **kwargs)
+        return fn(self, *args, **kwargs)
     return preloader
 
 
@@ -34,6 +34,7 @@ def output(fn):
         if result:
             # pylint: disable-msg=W0212
             self._write_output_for_block(self.job_id, self.block_id)
+        return result
 
     return output_writer
 
