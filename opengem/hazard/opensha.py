@@ -83,14 +83,14 @@ class MonteCarloMixin:
 
     def store_config_file(self, config_file):
         """Store configuration file to cache"""
-	    jpype = java.jvm()  
+        jpype = java.jvm()  
 
-	    engine = jclass("CommandLineCalculator")(config_file)
-	    # what key to use????
-	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        engine = jclass("CommandLineCalculator")(config_file)
+        # what key to use????
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         jclass("JsonSerializer").serializeConfigurationFile(cache, key,
-		            engine.getConfigurationProperties())
+                    engine.getConfigurationProperties())
     
     @preload
     def execute(self):
@@ -111,14 +111,14 @@ class MonteCarloMixin:
         return erfclass.getGEM1ERF(sources)
 
     def generate_gmpe_map(self):
-	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         
         return jclass("JsonSerializer").getGmpeMapFromCache(cache,key);
 
     def generate_configuration_properties(self):
-	    # what key to use????
-	    key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        # what key to use????
+        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
       
         return jclass("JsonSerializer").getConfigurationPropertiesFromCache(cache,key)
@@ -146,9 +146,9 @@ class MonteCarloMixin:
         ## here the site list should be the one appropriate for each worker. Where do I get it?
         ## this method returns a map relating sites with hazard curves (described as DiscretizedFuncAPI)
 
-		integration_distance_key = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems").MAXIMUM_DISTANCE
-		site_lits = configuration_helper.makeImlDoubleList(configuration)
-		integration_distance = configuration_properties.getProperty(integration_distance_key)
+        integration_distance_key = jClass("org.gem.engine.CalculatorConfigHelper.ConfigItems").MAXIMUM_DISTANCE
+        site_lits = configuration_helper.makeImlDoubleList(configuration)
+        integration_distance = configuration_properties.getProperty(integration_distance_key)
         hazardCurves = jclass("HazardCalculator").getHazardCurves(site_list, 
             erf, gmpe_map, ch_iml, integration_distance)
         

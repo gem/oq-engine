@@ -133,7 +133,8 @@ class ProbabilisticEventMixin:
         # write site hashes to memcache (JSON)
         memcache_key_sites = kvs.generate_sites_key(self.id, self.block_id)
 
-        success = kvs.set_value_json_encoded(memcache_key_sites, sites_hash_list)
+        success = kvs.set_value_json_encoded(memcache_key_sites, 
+            sites_hash_list)
         if not success:
             raise ValueError("jobber: cannot write sites to memcache")
 
