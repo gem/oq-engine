@@ -57,8 +57,7 @@ class ProbabilisticEventMixin:
         # produce output for one block
         loss_curves = []
 
-        sites = kvs.get_sites_from_memcache(self.memcache_client, job_id, 
-            block_id)
+        sites = kvs.get_sites_from_memcache(job_id, block_id)
 
         for (gridpoint, (site_lon, site_lat)) in sites:
             key = kvs.generate_product_key(job_id, 
@@ -88,7 +87,8 @@ class ProbabilisticEventMixin:
 
         region = self.params[job.INPUT_REGION]
         filter_cell_size = self.params.get("filter cell size", 1.0)
-        self.region_constraint = shapes.RegionConstraint.from_file(region)
+        self.region_constraint = shapes.RegionConstraint.from_file(
+            self.base_path + region)
         self.region_constraint.cell_size = filter_cell_size
 
     def store_sites_and_hazard_curve(self):
@@ -96,7 +96,9 @@ class ProbabilisticEventMixin:
         """
 
         # load hazard curve file and write to memcache_client
-        nrml_parser = hazard.NrmlFile(self.job[job.HAZARD_CURVES])
+
+        nrml_parser = hazard.NrmlFile("%s/%s" % (self.base_path,
+            self.params[job.HAZARD_CURVES]))
         attribute_constraint = producer.AttributeConstraint({'IMT' : 'MMI'})
         sites_hash_list = []
 
@@ -131,15 +133,17 @@ class ProbabilisticEventMixin:
         # write site hashes to memcache (JSON)
         memcache_key_sites = kvs.generate_sites_key(self.id, self.block_id)
 
-        success = kvs.set_value_json_encoded(self.memcache_client, 
-                memcache_key_sites, sites_hash_list)
+        success = kvs.set_value_json_encoded(memcache_key_sites, 
+            sites_hash_list)
         if not success:
             raise ValueError("jobber: cannot write sites to memcache")
 
     def store_exposure_assets(self):
         """ Load exposure assets and write to memcache """
+        
+        exposure_parser = exposure.ExposurePortfolioFile("%s/%s" % 
+            (self.base_path, self.params[job.EXPOSURE]))
 
-        exposure_parser = exposure.ExposurePortfolioFile(self.job['exposure'])
         for site, asset in exposure_parser.filter(self.region_constraint):
             gridpoint = self.region_constraint.grid.point_at(site)
 
@@ -149,8 +153,7 @@ class ProbabilisticEventMixin:
             LOGGER.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))
 
-            success = kvs.set_value_json_encoded(self.memcache_client, 
-                memcache_key_asset, asset)
+            success = kvs.set_value_json_encoded(memcache_key_asset, asset)
             if not success:
                 raise ValueError(
                     "jobber: cannot write asset to memcache")
@@ -158,7 +161,7 @@ class ProbabilisticEventMixin:
     def store_vulnerability_model(self):
         """ load vulnerability and write to memcache """
         vulnerability.load_vulnerability_model(self.id,
-            self.vulnerability_model_file)
+            "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
 
-RiskJobMixin.register("probabilistic event", ProbabilisticEventMixin)
+RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)

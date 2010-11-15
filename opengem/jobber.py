@@ -43,10 +43,6 @@ class Jobber(object):
             self.job.block_id = block_id
             self.job.launch()
 
-            self._preload(self.job.id, block_id)
-            self._execute(self.job.id, block_id)
-            self._write_output_for_block(self.job.id, block_id)
-
         LOGGER.debug("Jobber run ended")
 
     def _partition(self):

@@ -33,7 +33,6 @@ def jclass(class_key):
 
 
 class MonteCarloMixin:
-
     def preload(fn):
         """A decorator for preload steps that must run on the Jobber"""
         def preloader(self, *args, **kwargs):
@@ -203,7 +202,6 @@ class MonteCarloMixin:
         ground_motion_fields = jclass("HazardCalculator").getGroundMotionFields(
             site_lits, erf, gmpe_map, rn)
 
-
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
 
 def guarantee_file(base_path, file_spec):
@@ -211,7 +209,3 @@ def guarantee_file(base_path, file_spec):
     etc.) to an absolute path to a (possibly temporary) file."""
     # TODO(JMC): Parse out git, http, or full paths here...
     return os.path.join(base_path, file_spec)
-
-
-# engine = HazardEngineClass(cache, my_job.key)
-# engine.doCalculation()

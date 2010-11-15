@@ -62,7 +62,7 @@ def get_client(memcached_host=settings.MEMCACHED_HOST,
     return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
                           **kwargs)
 
-def get_sites_from_memcache(memcache_client, job_id, block_id):
+def get_sites_from_memcache(job_id, block_id):
     """ Get all of the sites for a block """
 
     memcache_key_sites = generate_sites_key(job_id, block_id)

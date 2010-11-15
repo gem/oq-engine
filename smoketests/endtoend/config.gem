@@ -1,7 +1,7 @@
 [general]
 
 # the region to filter on
-FILTER_REGION = 
+FILTER_REGION = /../../tests/data/rect.region
 # the selected for output generation
 OUTPUT_REGION =
 # NOTE: The order of the vertices is to be kept!!!
@@ -117,7 +117,7 @@ INDIVIDUAL_HAZARD_CURVES = true
 # CALCULATION MODE (Monte Carlo, Full Calculation)
 # if Monte Carlo is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
 # if Full Calculation is chosen than uncertainties defined by rules are treated as correlated, and hazard curves are calculated for each end-branch of the logic tree 
-CALCULATION_MODE = Monte Carlo
+HAZARD_CALCULATION_MODE = Monte Carlo
 
 # (used if Monte Carlo approach is chosen)
 NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 40
@@ -130,6 +130,8 @@ NUMBER_OF_PROCESSORS = 1
 
 
 [RISK]
+
+RISK_CALCULATION_MODE = Probabilistic Event
 
 # file containing the exposure in nrml format
 EXPOSURE = exposure.xml
