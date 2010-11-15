@@ -132,7 +132,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      */
     private void testDoProbabilisticEventBasedCalc(CommandLineCalculator clc)
             throws ConfigurationException, IOException {
-        Map<Site, Double> result = clc.doCalculationProbabilisticEventBased();
+        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result = clc.doCalculationProbabilisticEventBased();
         Object o = null;
         assertTrue(result != null);
         assertTrue(result instanceof Map);
@@ -201,7 +201,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * @throws ConfigurationException
      */
     @Test
-    public void peerSet1Case5ClassicalPSHA() throws ConfigurationException {
+    public void peerSet1Case5ClassicalPSHA() throws ConfigurationException, IOException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
@@ -228,7 +228,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      */
     @Test
     public void peerSet1Case5UncorrelatedGroundMotionFields()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         double tolerance = 1e-2;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
@@ -254,7 +254,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     }
 
     @Test
-    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException {
+    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException, IOException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case8aConfigFile);
@@ -270,7 +270,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
     @Test
     public void peerSet1Case8aUncorrelatedGroundMotionFields()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         double tolerance = 1e-2;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case8aConfigFile);
