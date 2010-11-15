@@ -51,7 +51,7 @@ def validate(fn):
     def validator(self, *args):
         """Validate this job before running the decorated function."""
         try:
-            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+#            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
             return fn(self, *args)
         except AssertionError:
             return False

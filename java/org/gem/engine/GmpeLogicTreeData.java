@@ -481,164 +481,8 @@ public class GmpeLogicTreeData {
             // set defaults parameters
             ar.setParamDefaults();
 
-            // set component
-            // first check if the chosen component is allowed
-            if (ar.getParameter(ComponentParam.NAME).isAllowed(component)) {
-                ar.getParameter(ComponentParam.NAME).setValue(component);
-            } else {
-                String msg =
-                        "The chosen component: "
-                                + component
-                                + " is not supported by "
-                                + gmpeName
-                                + "\n"
-                                + "The supported components are the following:\n"
-                                + ar.getParameter(ComponentParam.NAME)
-                                        .getConstraint() + "\n"
-                                + "Check your input file!\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
-
-            // set intensity measure type
-            if (ar.getSupportedIntensityMeasuresList().containsParameter(
-                    intensityMeasureType)) {
-                ar.setIntensityMeasure(intensityMeasureType);
-            } else {
-                String msg =
-                        "The chosen intensity measure type: "
-                                + intensityMeasureType
-                                + " is not supported by "
-                                + gmpeName
-                                + "\n"
-                                + "The supported types are the following:\n"
-                                + ar.getSupportedIntensityMeasuresList()
-                                        .toString() + "\n"
-                                + "Check your input file!\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                // System.out.println("The chosen intensity measure type: "+intensityMeasureType+" is not supported by "+gmpeName);
-                // System.out.println("The supported types are the following: ");
-                // System.out.println(ar.getSupportedIntensityMeasuresList().toString());
-                // System.out.println("Check your input file!");
-                // System.out.println("Execution stopped.");
-                throw new IllegalArgumentException(msg);
-            }
-
-            // if SA set period and damping
-            if (intensityMeasureType.equalsIgnoreCase(SA_Param.NAME)) {
-
-                // period
-                if (ar.getParameter(PeriodParam.NAME).isAllowed(period)) {
-                    ar.getParameter(PeriodParam.NAME).setValue(period);
-                } else {
-                    String msg =
-                            "The chosen period: "
-                                    + period
-                                    + " is not supported by "
-                                    + gmpeName
-                                    + "\n"
-                                    + "The allowed values are the following:\n"
-                                    + ar.getParameter(PeriodParam.NAME)
-                                            .getConstraint() + "\n"
-                                    + "Check your input file\n"
-                                    + "Execution stopped.";
-                    logger.error(msg);
-                    new IllegalArgumentException(msg);
-                }
-
-                // damping
-                if (ar.getParameter(DampingParam.NAME).isAllowed(damping)) {
-                    ar.getParameter(DampingParam.NAME).setValue(damping);
-                } else {
-                    String msg =
-                            "The chosen damping: "
-                                    + damping
-                                    + " is not supported by "
-                                    + gmpeName
-                                    + "\n"
-                                    + "The allowed values are the following:\n"
-                                    + ar.getParameter(DampingParam.NAME)
-                                            .getConstraint() + "\n"
-                                    + "Check your input file\n"
-                                    + "Execution stopped.";
-                    logger.error(msg);
-                    throw new IllegalArgumentException(msg);
-                }
-
-            }
-
-            // set gmpe truncation type
-            if (ar.getParameter(SigmaTruncTypeParam.NAME).isAllowed(truncType)) {
-                ar.getParameter(SigmaTruncTypeParam.NAME).setValue(truncType);
-            } else {
-                String msg =
-                        "The chosen truncation type: "
-                                + truncType
-                                + " is not supported.\n"
-                                + "The allowed values are the following:\n"
-                                + ar.getParameter(SigmaTruncTypeParam.NAME)
-                                        .getConstraint() + "\n"
-                                + "Check your input file\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
-
-            // set gmpe truncation level
-            if (ar.getParameter(SigmaTruncLevelParam.NAME)
-                    .isAllowed(truncLevel)) {
-                ar.getParameter(SigmaTruncLevelParam.NAME).setValue(truncLevel);
-            } else {
-                String msg =
-                        "The chosen truncation level: "
-                                + truncLevel
-                                + " is not supported.\n"
-                                + "The allowed values are the following: \n"
-                                + ar.getParameter(SigmaTruncLevelParam.NAME)
-                                        .getConstraint() + "\n"
-                                + "Check your input file\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
-
-            // set standard deviation type
-            if (ar.getParameter(StdDevTypeParam.NAME).isAllowed(stdType)) {
-                ar.getParameter(StdDevTypeParam.NAME).setValue(stdType);
-            } else {
-                String msg =
-                        "The chosen standard deviation type: "
-                                + stdType
-                                + " is not supported by "
-                                + gmpeName
-                                + "\n"
-                                + "The allowed values are the following: \n"
-                                + ar.getParameter(StdDevTypeParam.NAME)
-                                        .getConstraint() + "\n"
-                                + "Check your input file\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                new IllegalArgumentException(msg);
-            }
-
-            // set vs30 value
-            if (ar.getParameter(Vs30_Param.NAME).isAllowed(vs30)) {
-                ar.getParameter(Vs30_Param.NAME).setValue(vs30);
-            } else {
-                String msg =
-                        "The chosen vs30 value: "
-                                + vs30
-                                + " is not valid\n"
-                                + "The allowed values are the following: \n"
-                                + ar.getParameter(Vs30_Param.NAME)
-                                        .getConstraint() + "\n"
-                                + "Check your input file\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                throw new IllegalArgumentException(msg);
-            }
+            setGmpeParams(component, intensityMeasureType, period, damping,
+                    truncType, truncLevel, stdType, vs30, ar);
 
             // set end-branch mapping
             gmpeLogicTree.getEBMap().put(
@@ -647,6 +491,158 @@ public class GmpeLogicTreeData {
         }
 
         return gmpeLogicTree;
+    }
+
+    private void setGmpeParams(String component, String intensityMeasureType,
+            double period, double damping, String truncType, double truncLevel,
+            String stdType, double vs30, AttenuationRelationship ar) {
+        String gmpeName = ar.getClass().getCanonicalName();
+        // set component
+        // first check if the chosen component is allowed
+        if (ar.getParameter(ComponentParam.NAME).isAllowed(component)) {
+            ar.getParameter(ComponentParam.NAME).setValue(component);
+        } else {
+            String msg =
+                    "The chosen component: "
+                            + component
+                            + " is not supported by "
+                            + gmpeName
+                            + "\n"
+                            + "The supported components are the following:\n"
+                            + ar.getParameter(ComponentParam.NAME)
+                                    .getConstraint() + "\n"
+                            + "Check your input file!\n" + "Execution stopped.";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
+        // set intensity measure type
+        if (ar.getSupportedIntensityMeasuresList().containsParameter(
+                intensityMeasureType)) {
+            ar.setIntensityMeasure(intensityMeasureType);
+        } else {
+            String msg =
+                    "The chosen intensity measure type: "
+                            + intensityMeasureType + " is not supported by "
+                            + gmpeName + "\n"
+                            + "The supported types are the following:\n"
+                            + ar.getSupportedIntensityMeasuresList().toString()
+                            + "\n" + "Check your input file!\n"
+                            + "Execution stopped.";
+            logger.error(msg);
+            // System.out.println("The chosen intensity measure type: "+intensityMeasureType+" is not supported by "+gmpeName);
+            // System.out.println("The supported types are the following: ");
+            // System.out.println(ar.getSupportedIntensityMeasuresList().toString());
+            // System.out.println("Check your input file!");
+            // System.out.println("Execution stopped.");
+            throw new IllegalArgumentException(msg);
+        }
+
+        // if SA set period and damping
+        if (intensityMeasureType.equalsIgnoreCase(SA_Param.NAME)) {
+
+            // period
+            if (ar.getParameter(PeriodParam.NAME).isAllowed(period)) {
+                ar.getParameter(PeriodParam.NAME).setValue(period);
+            } else {
+                String msg =
+                        "The chosen period: "
+                                + period
+                                + " is not supported by "
+                                + gmpeName
+                                + "\n"
+                                + "The allowed values are the following:\n"
+                                + ar.getParameter(PeriodParam.NAME)
+                                        .getConstraint() + "\n"
+                                + "Check your input file\n"
+                                + "Execution stopped.";
+                logger.error(msg);
+                new IllegalArgumentException(msg);
+            }
+
+            // damping
+            if (ar.getParameter(DampingParam.NAME).isAllowed(damping)) {
+                ar.getParameter(DampingParam.NAME).setValue(damping);
+            } else {
+                String msg =
+                        "The chosen damping: "
+                                + damping
+                                + " is not supported by "
+                                + gmpeName
+                                + "\n"
+                                + "The allowed values are the following:\n"
+                                + ar.getParameter(DampingParam.NAME)
+                                        .getConstraint() + "\n"
+                                + "Check your input file\n"
+                                + "Execution stopped.";
+                logger.error(msg);
+                throw new IllegalArgumentException(msg);
+            }
+        }
+
+        // set gmpe truncation type
+        if (ar.getParameter(SigmaTruncTypeParam.NAME).isAllowed(truncType)) {
+            ar.getParameter(SigmaTruncTypeParam.NAME).setValue(truncType);
+        } else {
+            String msg =
+                    "The chosen truncation type: "
+                            + truncType
+                            + " is not supported.\n"
+                            + "The allowed values are the following:\n"
+                            + ar.getParameter(SigmaTruncTypeParam.NAME)
+                                    .getConstraint() + "\n"
+                            + "Check your input file\n" + "Execution stopped.";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
+        // set gmpe truncation level
+        if (ar.getParameter(SigmaTruncLevelParam.NAME).isAllowed(truncLevel)) {
+            ar.getParameter(SigmaTruncLevelParam.NAME).setValue(truncLevel);
+        } else {
+            String msg =
+                    "The chosen truncation level: "
+                            + truncLevel
+                            + " is not supported.\n"
+                            + "The allowed values are the following: \n"
+                            + ar.getParameter(SigmaTruncLevelParam.NAME)
+                                    .getConstraint() + "\n"
+                            + "Check your input file\n" + "Execution stopped.";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
+
+        // set standard deviation type
+        if (ar.getParameter(StdDevTypeParam.NAME).isAllowed(stdType)) {
+            ar.getParameter(StdDevTypeParam.NAME).setValue(stdType);
+        } else {
+            String msg =
+                    "The chosen standard deviation type: "
+                            + stdType
+                            + " is not supported by "
+                            + gmpeName
+                            + "\n"
+                            + "The allowed values are the following: \n"
+                            + ar.getParameter(StdDevTypeParam.NAME)
+                                    .getConstraint() + "\n"
+                            + "Check your input file\n" + "Execution stopped.";
+            logger.error(msg);
+            new IllegalArgumentException(msg);
+        }
+
+        // set vs30 value
+        if (ar.getParameter(Vs30_Param.NAME).isAllowed(vs30)) {
+            ar.getParameter(Vs30_Param.NAME).setValue(vs30);
+        } else {
+            String msg =
+                    "The chosen vs30 value: " + vs30 + " is not valid\n"
+                            + "The allowed values are the following: \n"
+                            + ar.getParameter(Vs30_Param.NAME).getConstraint()
+                            + "\n" + "Check your input file\n"
+                            + "Execution stopped.";
+            logger.error(msg);
+            throw new IllegalArgumentException(msg);
+        }
     }
 
     private static ParameterChangeWarningListener
