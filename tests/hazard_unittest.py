@@ -66,6 +66,9 @@ class HazardEngineTestCase(unittest.TestCase):
             gmpe_model = self.memcache_client.get(gmpe_key)
             self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
+            # TODO(JMC): Do this in execute itself..
+            hc = hazengine.compute_hazard_curve(site_id)
+            
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from memcached."""
