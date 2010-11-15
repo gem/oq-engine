@@ -65,6 +65,7 @@ class MonteCarloMixin:
         
         engine = jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
+        LOG.debug("Storing source model at %s" % (key))
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         engine.sampleAndSaveERFTree(cache, key)
     
@@ -88,7 +89,7 @@ class MonteCarloMixin:
 
         engine = jclass("CommandLineCalculator")(config_file)
         # what key to use????
-        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.id, hazard.JOB_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         jclass("JsonSerializer").serializeConfigurationFile(cache, key,
                     engine.getConfigurationProperties())
