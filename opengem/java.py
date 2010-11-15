@@ -10,9 +10,12 @@ from opengem.logs import LOG
 
         
 def jvm(max_mem=4000):
+    """Return the jpype module, after guaranteeing the JVM is running and 
+    the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(os.path.join(os.path.dirname(__file__), "../lib")), 
                 os.path.abspath(os.path.join(os.path.dirname(__file__), "../dist")))
-    LOG.debug("Jarpath is %s", jarpaths)
+    # TODO(JMC): Make sure these directories exist
+    # LOG.debug("Jarpath is %s", jarpaths)
     if not jpype.isJVMStarted():
         print "Default JVM path is %s" % jpype.getDefaultJVMPath()
         jpype.startJVM(jpype.getDefaultJVMPath(), 

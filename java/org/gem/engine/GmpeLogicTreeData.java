@@ -493,7 +493,7 @@ public class GmpeLogicTreeData {
         return gmpeLogicTree;
     }
 
-    private void setGmpeParams(String component, String intensityMeasureType,
+    public void setGmpeParams(String component, String intensityMeasureType,
             double period, double damping, String truncType, double truncLevel,
             String stdType, double vs30, AttenuationRelationship ar) {
         String gmpeName = ar.getClass().getCanonicalName();
