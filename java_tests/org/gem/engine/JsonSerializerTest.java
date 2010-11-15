@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.configuration.ConfigurationException;
@@ -80,6 +81,26 @@ public class JsonSerializerTest {
         sourceList.add(subduc);
         String json = JsonSerializer.getJsonSourceList(sourceList);
         validateSubdcutionSerialization(subduc, json);
+    }
+
+    @Test
+    public void gemSourceDataFromCacheTest() {
+        GEMSourceData area = getAreaSource();
+        GEMSourceData point = getPointSource();
+        GEMSourceData fault = getFaultSource();
+        GEMSourceData subduc = getSubductionSource();
+        sourceList.add(area);
+        sourceList.add(point);
+        sourceList.add(fault);
+        sourceList.add(subduc);
+        String json = JsonSerializer.getJsonSourceList(sourceList);
+        System.out.println("Json string: " + json);
+
+        Cache cache = new Cache("localhost", 11211);
+        cache.set("KEY", json);
+
+        List<GEMSourceData> sourceListDeserialized =
+                JsonSerializer.getSourceListFromCache(cache, "KEY");
     }
 
     @Test
