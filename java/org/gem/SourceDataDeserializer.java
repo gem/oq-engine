@@ -33,11 +33,10 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
             JsonDeserializationContext arg2) throws JsonParseException {
         GEMSourceData sourceData = null;
         JsonObject obj = arg0.getAsJsonObject();
-        System.out.println(obj);
         // common data
-        String id = obj.get("id").toString();
-        String name = obj.get("name").toString();
-        String trtName = obj.get("tectReg").toString();
+        String id = obj.get("id").toString().replace("\"", "");
+        String name = obj.get("name").toString().replace("\"", "");
+        String trtName = obj.get("tectReg").toString().replace("\"", "");
         TectonicRegionType trt = getTectonicRegionType(trtName);
 
         if (obj.has("reg")) { // area source
@@ -96,8 +95,10 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
         for (int i = 0; i < faultTrace.size(); i++) {
             Location loc =
                     new Location(faultTrace.get(i).getAsJsonObject().get("lat")
-                            .getAsDouble(), faultTrace.get(i).getAsJsonObject()
-                            .get("lon").getAsDouble(), faultTrace.get(i)
+                            .getAsDouble()
+                            * (180 / Math.PI), faultTrace.get(i)
+                            .getAsJsonObject().get("lon").getAsDouble()
+                            * (180 / Math.PI), faultTrace.get(i)
                             .getAsJsonObject().get("depth").getAsDouble());
             trace.add(loc);
         }
@@ -205,8 +206,10 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
         for (int i = 0; i < border.size(); i++) {
             Location loc =
                     new Location(border.get(i).getAsJsonObject().get("lat")
-                            .getAsDouble(), border.get(i).getAsJsonObject()
-                            .get("lon").getAsDouble());
+                            .getAsDouble()
+                            * (180 / Math.PI), border.get(i).getAsJsonObject()
+                            .get("lon").getAsDouble()
+                            * (180 / Math.PI));
             borderLocs.add(loc);
         }
         Region reg = new Region(borderLocs, BorderType.GREAT_CIRCLE);

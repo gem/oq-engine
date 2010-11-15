@@ -93,14 +93,37 @@ public class JsonSerializerTest {
         sourceList.add(point);
         sourceList.add(fault);
         sourceList.add(subduc);
-        String json = JsonSerializer.getJsonSourceList(sourceList);
-        System.out.println("Json string: " + json);
 
+        String json = JsonSerializer.getJsonSourceList(sourceList);
         Cache cache = new Cache("localhost", 11211);
         cache.set("KEY", json);
 
         List<GEMSourceData> sourceListDeserialized =
                 JsonSerializer.getSourceListFromCache(cache, "KEY");
+
+        for (int i = 0; i < sourceList.size(); i++) {
+            assertTrue(sourceList.get(i).getID()
+                    .equalsIgnoreCase(sourceListDeserialized.get(i).getID()));
+            assertTrue(sourceList.get(i).getName()
+                    .equalsIgnoreCase(sourceListDeserialized.get(i).getName()));
+            assertTrue(sourceList
+                    .get(i)
+                    .getTectReg()
+                    .toString()
+                    .equalsIgnoreCase(
+                            sourceListDeserialized.get(i).getTectReg()
+                                    .toString()));
+            if (sourceList.get(i) instanceof GEMAreaSourceData) {
+                GEMAreaSourceData srcOriginal =
+                        (GEMAreaSourceData) sourceList.get(i);
+                GEMAreaSourceData srcDeserialized =
+                        (GEMAreaSourceData) sourceListDeserialized.get(i);
+                System.out.println(srcOriginal.getMagfreqDistFocMech()
+                        .getFirstMagFreqDist());
+                System.out.println(srcDeserialized.getMagfreqDistFocMech()
+                        .getFirstMagFreqDist());
+            }
+        }
     }
 
     @Test
