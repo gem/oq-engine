@@ -109,12 +109,15 @@ class Job(object):
 
     @validate
     def launch(self):
+        results = []
         for (key, mixin) in Mixin.mixins.items():
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                self.execute()
+                results.append(self.execute())
+
+        return results
 
     def __getitem__(self, name):
         return self.params[name]

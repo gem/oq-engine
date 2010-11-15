@@ -72,7 +72,7 @@ class HazardEngineTestCase(unittest.TestCase):
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_kvs(job_id)
-        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin):
+        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
             pass
             # hazengine.execute()
             # hc = hazengine.compute_hazard_curve(site_id)
