@@ -218,14 +218,21 @@ public class Chandler_Lam2002_stable_continental_test {
     }
 
     /**
-     * TODO: Damiano, can you please check if the method setValue() in the
-     * classes DistanceEpicentralParameter and DistanceHypoParameter behave in
-     * the same way? My question is if they both throw an InvalidRangeException
-     * when necessary. It may not be thrown for
-     * DistanceEpicentralParameter.setValue()
+     * Check if the method setValue() in the classes DistanceEpicentralParameter
+     * and DistanceHypoParameter behave in the same way... The question is if
+     * they both throw an InvalidRangeException when necessary. It may not be
+     * thrown for DistanceEpicentralParameter.setValue()
      * 
-     * This test checks that the AW_2010_AttenRel object throws a warning
-     * exception when a closest distance to rupture > 300 km is passed.
+     * --> In the method calcValueFromSiteAndEqkRup in
+     * DistanceEpicentralParameter, the distance value is set using the
+     * setValueIgnoreWarning method while in DistanceHypoParameter the distance
+     * is set using setValue (and this gives an exception if the distance is
+     * outside the allowed range). So probably it is correct when using
+     * DistanceEpicentralParameter.setValue() an exception is *not* thrown
+     * 
+     * This test checks that the Chandler_Lam2002_stable_continental object
+     * throws a warning exception when a closest distance to rupture > 300 km is
+     * passed.
      */
     // @Test(expected = org.opensha.commons.exceptions.WarningException.class)
     // public void closestDistanceToRuptureTooLarge() {
