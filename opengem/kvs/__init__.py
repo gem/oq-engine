@@ -52,15 +52,19 @@ def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
         length = MAX_LENGTH_RANDOM_ID
     return str(uuid.uuid4())[0:length]
 
-
+CLIENT = None
 def get_client(memcached_host=settings.MEMCACHED_HOST,
                memcached_port=settings.MEMCACHED_PORT,
                **kwargs):
     """possible kwargs:
         binary
     """
-    return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
+    global CLIENT
+    if not CLIENT:
+        print "Constructing new pylibmc client..."
+        CLIENT = pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
                           **kwargs)
+    return CLIENT
 
 def get_sites_from_memcache(job_id, block_id):
     """ Get all of the sites for a block """
