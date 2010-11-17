@@ -114,7 +114,7 @@ public class HazardCalculator {
                     List<Site> siteList,
                     EqkRupForecastAPI erf,
                     Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    Random rn, Boolean correlation) {
+                    Random rn, boolean correlation) {
         validateInput(siteList, erf, gmpeMap);
         if (rn == null) {
             String msg = "Random number generator cannot be null";
