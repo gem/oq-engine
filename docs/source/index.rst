@@ -15,7 +15,9 @@ Contents:
    output
    formats
    hazard
+   job
    risk
+   schema
 
 Indices and tables
 ==================
