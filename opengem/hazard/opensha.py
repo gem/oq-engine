@@ -4,6 +4,8 @@ Top-level managers for hazard computation.
 
 import os
 
+import numpy
+
 from opengem import hazard
 from opengem import java
 from opengem import job
@@ -29,6 +31,9 @@ JAVA_CLASSES = {
     "ArrayList" : "java.util.ArrayList",
     "GmpeLogicTreeData" : "org.gem.engine.GmpeLogicTreeData",
     "AttenuationRelationship" : "org.opensha.sha.imr.AttenuationRelationship",
+    "EqkRupForecastAPI" : "org.opensha.sha.earthquake.EqkRupForecastAPI",
+    "DoubleParameter" : "org.opensha.commons.param.DoubleParameter",
+    "StringParameter" : "org.opensha.commons.param.StringParameter",
 }
 
 def jclass(class_key):
@@ -116,7 +121,9 @@ class MonteCarloMixin:
         key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
         
-        return jclass("JsonSerializer").getGmpeMapFromCache(cache,key);
+        gmpe_map = jclass("JsonSerializer").getGmpeMapFromCache(cache,key)
+        LOG.debug("gmpe_map: %s" % gmpe_map.__class__)
+        return gmpe_map
 
     def set_gmpe_params(self, gmpe_map):
         jpype = java.jvm()
@@ -160,18 +167,45 @@ class MonteCarloMixin:
         self.ruptures = event_set_gen.getStochasticEventSetFromPoissonianERF(
                             erf, rn)
     
-    def get_IML_func(self):
+    def get_IML_list(self):
         """Build the appropriate Arbitrary Discretized Func from the IMLs,
         based on the IMT"""
         jpype = java.jvm()
-        adf = jclass("ArbitrarilyDiscretizedFunc")()
-        for val in self.params['INTENSITY_MEASURE_LEVELS']:
-            adf.set(val, 1)
         
-        return adf
+        iml_vals = {'PGA' : numpy.log,
+                    'MMI' : lambda iml: iml,
+                    'PGV' : numpy.log,
+                    'PGD' : numpy.log,
+                    'SA' : numpy.log,
+                     }
+        
+        iml_list = jclass("ArrayList")()
+        for val in self.params['INTENSITY_MEASURE_LEVELS'].split(","):
+            iml_list.add(
+                iml_vals[self.params['INTENSITY_MEASURE_TYPE']](
+                float(val)))
+        LOG.debug("Raw IMLs: %s" % self.params['INTENSITY_MEASURE_LEVELS'])
+        LOG.debug("IML_list: %s" % iml_list)
+        # TODO(JMC): This looks wrong
+        return iml_list
 
-    def compute_hazard_curve(self, site_id):
-        """Actual hazard curve calculation, runs on the workers."""
+    def parameterize_sites(self, site_list):
+        jsite_list = jclass("ArrayList")()
+        for x in site_list:
+            site = x.to_java()
+            site.addParameter(jclass("DoubleParameter")("Vs30", 
+                float(self.params['REFERENCE_VS30_VALUE'])))
+            site.addParameter(jclass("DoubleParameter")(
+                    "Depth 2.5 km/sec",
+                    float(self.param['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])))
+            site.addParameter(jclass("StringParameter")("Sadigh Site Type",
+                    self.params['SADIGH_SITE_TYPE']))
+            jsite_list.add(site)
+        return jsite_list
+
+    def compute_hazard_curve(self, site_list):
+        """Actual hazard curve calculation, runs on the workers.
+        Takes a list of Site objects."""
         jpype = java.jvm()
 
         erf = self.generate_erf()
@@ -186,12 +220,20 @@ class MonteCarloMixin:
         
         # TODO(JMC): This looks wrong - this is IML list, not site_list!
         # site_list = configuration_helper.makeImlDoubleList(configuration)
-        ch_iml = self.get_IML_func()
-        integration_distance = self.params['MAXIMUM_DISTANCE']
+        ch_iml = self.get_IML_list()
+        integration_distance = jpype.JDouble(float(self.params['MAXIMUM_DISTANCE']))
+        jsite_list = self.parameterize_sites(site_list)
+        LOG.debug("jsite_list: %s" % jsite_list)
+        # TODO(JMC): There's Java code for this already, sets each site to have
+        # The same default parameters
         
         # hazard curves are returned as Map<Site, DiscretizedFuncAPI>
-        hazardCurves = jclass("HazardCalculator").getHazardCurves(site_list, 
-            erf, gmpe_map, ch_iml, integration_distance)
+        hazardCurves = jclass("HazardCalculator").getHazardCurves(
+            jsite_list, #
+            erf,
+            gmpe_map,
+            ch_iml,
+            integration_distance)
 
         # from hazard curves, probability mass functions are calculated
         pmf = jClass("org.opensha.commons.data.function.DiscretizedFuncAPI")

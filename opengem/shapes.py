@@ -12,9 +12,11 @@ import numpy
 
 from shapely import geometry
 from shapely import wkt
+from scipy.interpolate import interp1d
 
 from opengem import flags
-from scipy.interpolate import interp1d
+from opengem import java
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('distance_precision', 12, 
@@ -290,6 +292,14 @@ class Site(object):
         if value == -1:
             value = -2
         return value
+    
+    def to_java(self):
+        """Converts to a Java Site object"""
+        jpype = java.jvm()
+        loc_class = jpype.JClass("org.opensha.commons.geo.Location")
+        site_class = jpype.JClass("org.opensha.commons.data.Site")
+        # TODO(JMC): Support named sites?
+        return site_class(loc_class(self.latitude, self.longitude))
     
     def _geohash(self):
         """A geohash-encoded string for dict keys"""
