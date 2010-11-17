@@ -7,6 +7,7 @@ import unittest
 
 from opengem import hazard
 from opengem import kvs
+from opengem import shapes
 from opengem import test
 from opengem import job
 from opengem.job import mixins
@@ -50,7 +51,8 @@ class HazardEngineTestCase(unittest.TestCase):
     def test_hazard_engine_jobber_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from memcached."""
-        site_id = 1
+        # site_id = 1
+        site_list = [shapes.Site(40.0, 40.0),]
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
             hc = hazengine.execute()
@@ -67,7 +69,7 @@ class HazardEngineTestCase(unittest.TestCase):
             self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
             # TODO(JMC): Do this in execute itself..
-            hc = hazengine.compute_hazard_curve(site_id)
+            hc = hazengine.compute_hazard_curve(site_list)
             
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
