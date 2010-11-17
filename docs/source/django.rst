@@ -1,5 +1,5 @@
 Opengem (Geo)Django [Used for Seismic Source Administration]
-=======================================================
+============================================================
 Aurea Moemke, 17 Sep 2010
 
 This distribution arose from the user story: Basic Rest Interface (on
@@ -30,7 +30,7 @@ Here are the steps for installing this distribution:
 
 (1) Check out the seismic_source_admin branch from the opengem github.
     The project is in opengem/db/seismic_source_admin/.
-         $ git checkout seismic_source_admin
+    $ git checkout seismic_source_admin
 
 (2) Load all necessary dependencies:
     o Django 1.1 (see www.djangoproject.com for installation instructions)
@@ -52,14 +52,12 @@ Here are the steps for installing this distribution:
 (3) Create the database and load with data. 
     The following instructions are for postgresql.
     (a) If you have not yet done so, create a postgis template called 
-        template_postgis.  For complete instructions, refer to:
-             http://docs.djangoproject.com/en/dev/ref/contrib/gis/install/
-                  #spatialdb-template  
-    (b) Create the database.
-            $ createdb -T template_postgis -U yourusername seismicsourcedb
-    (c) Load sql files. This will create 2 tables (sourcegeometrycatalog and
-        seismic source) and load them with data.
-            $ psql seismicsourcedb postgres < ssdump.sql
+    template_postgis.  For complete instructions, refer to:
+    http://docs.djangoproject.com/en/dev/ref/contrib/gis/install/
+    #spatialdb-template (b) Create the database.
+    $ createdb -T template_postgis -U yourusername seismicsourcedb
+    (c) Load sql files. This will create 2 tables (sourcegeometrycatalog and seismic source) and load them with data.
+    $ psql seismicsourcedb postgres < ssdump.sql
    
 (4) Modify the settings.py file. Set your postgres user name and password.
     DATABASE_ENGINE = 'postgresql_psycopg2' # setting for Postgresql
@@ -72,8 +70,7 @@ Here are the steps for installing this distribution:
          $ python manage.py runserver
 
 (6) Synchronize the database. Type yes when prompted for a superuser.
-    This will be your login to the Admin panel.
-         $ python manage.py syncdb
+    This will be your login to the Admin panel. $ python manage.py syncdb
 
 (7) View project in your browser. Go to to http://localhost:8080/admin/
 
