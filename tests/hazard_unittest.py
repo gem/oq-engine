@@ -61,16 +61,12 @@ class HazardEngineTestCase(unittest.TestCase):
             # We have the random seed in the config, so this is guaranteed
             self.assertEqual(source_model, TEST_SOURCE_MODEL)
             
-            
             gmpe_key = kvs.generate_product_key(hazengine.id, 
                                 hazard.GMPE_TOKEN)
             gmpe_model = self.memcache_client.get(gmpe_key)
             self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
-            print "Results of GMF generation: %s " % hc
-            
-            # TODO(JMC): Do this in execute itself..
-            # hc = hazengine.compute_hazard_curve(site_list)
+            print "Results of GMF generation: "
             
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw

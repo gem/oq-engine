@@ -80,7 +80,8 @@ def get_value_json_decoded(key):
     
     try:
         return decoder.decode(value)
-    except Exception:
+    except Exception, e:
+        print e
         return None
 
 
