@@ -9,16 +9,8 @@ Welcome to OpenGEM's documentation!
 Contents:
 
 .. toctree::
-	:maxdepth: 2
+   :maxdepth: 2
    
-<<<<<<< Updated upstream
-    architecture
-    output
-    formats
-    hazard
-    risk
-    schema	
-=======
    architecture
    output
    formats
@@ -26,7 +18,7 @@ Contents:
    risk
    schema
    readme
->>>>>>> Stashed changes
+
 
 Indices and tables
 ==================
