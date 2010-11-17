@@ -1,4 +1,4 @@
-import os, re, random
+import os, sys, re, random
 from fabric.api import env, run, sudo, local, cd
 from fabric.state import output as fabric_output
 
@@ -12,6 +12,43 @@ def bootstrap():
 
     bootstrap_fn = _detect_os()      # bootstrap_fn = _bootstrap_linux
     bootstrap_fn()                   # _bootstrap_linux()
+
+
+def virtualenv():
+    if not _pip_is_installed():
+        print "You need to install pip to continue with virtualenv setup."
+        print "Visit http://pip.openplans.org/ for more information."
+        sys.exit()
+    # check the user's home dir for an existing virtualenv config
+    # if one already exists, abort.
+    if os.path.exists(os.path.join(os.environ['HOME'], ".virtualenvs/")):
+        print "Virtual environment configuration already",
+        print "exists in: ~/.virtualenvs"
+        sys.exit()
+    _pip_install("virtualenv")
+    _pip_install("virtualenvwrapper")
+    
+    # grab the virtualenv tar from Liferay:
+    venv_tar_url = "http://opengem.cloudfed.com/documents\
+/10156/11140/virtualenvs.tar.gz"
+    venv_file_name = "virtualenvs.tar.gz"
+    print "Downloading virtualenv package from:\n %s" % venv_tar_url
+    print "This may take a few minutes."
+    
+    # curl the virtualenv tar to the user's home dir
+    run("curl -s --create-dirs %s -o ~/%s" % (venv_tar_url, venv_file_name))
+
+    # local virtual env dir 
+    local_venv_path = "~/.virtualenvs/"
+
+    # extract the tar (creating a ~/.virtualenv dir)
+    with cd('~'):
+        run("tar -xzf %s" % venv_file_name)
+
+    # chown and chgrp the virtual env files
+    # to the current user and group, respectively
+    run("chown -R `id -un` %s" % local_venv_path)
+    run("chgrp -R `id -g` %s" % local_venv_path)
 
 
 def _bootstrap_other():
@@ -154,7 +191,7 @@ def _bootstrap_osx():
     with cd("~"):
         if not ls(".virtualenvs"):
             run("mkdir -p .virtualenvs")
-            run("%s; mkvirtualenv opengem" % _osx_virtualenv_source())
+            run("%s mkvirtualenv opengem" % _osx_virtualenv_source())
 
     virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
                            "python-gflags", "guppy", "celery", "nose", "django",
@@ -220,7 +257,7 @@ def teardown_osx():
 
 def _attach_and_install(dmg, volume, package):
     run("hdiutil attach %s" % dmg )
-    run("installer -pkg /Volumes/%s/%s -target /" % (volume, package))
+    sudo("installer -pkg /Volumes/%s/%s -target /" % (volume, package))
     run("hdiutil detach %s" % volume)
 
 def _curl(url, filename):
@@ -310,6 +347,9 @@ def _warn_only_run(command):
 
 def _homebrew_is_installed():
     return _warn_only_run("which brew")
+
+def _pip_is_installed():
+    return _warn_only_run("which pip")
 
 def _homebrew_exists(package):
     output = _warn_only_run("brew info %s" % package)

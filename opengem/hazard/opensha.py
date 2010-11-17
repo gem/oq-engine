@@ -9,6 +9,7 @@ import numpy
 from opengem import hazard
 from opengem import java
 from opengem import job
+from opengem import shapes
 from opengem.job import mixins
 from opengem.hazard import job
 from opengem import kvs
@@ -34,6 +35,9 @@ JAVA_CLASSES = {
     "EqkRupForecastAPI" : "org.opensha.sha.earthquake.EqkRupForecastAPI",
     "DoubleParameter" : "org.opensha.commons.param.DoubleParameter",
     "StringParameter" : "org.opensha.commons.param.StringParameter",
+    "ParameterAPI" : "org.opensha.commons.param.ParameterAPI",
+    "DiscretizedFuncAPI" : "org.opensha.commons.data.function.DiscretizedFuncAPI",
+    "ProbabilityMassFunctionCalc" : "org.gem.calc.ProbabilityMassFunctionCalc",
 }
 
 def jclass(class_key):
@@ -52,9 +56,9 @@ class MonteCarloMixin:
             #erf_logic_tree_file = guarantee_file(self.base_path, 
             #            self.params['ERF_LOGIC_TREE_FILE'])
             
-            self.store_source_model(self.config_file)
-            self.store_gmpe_map(self.config_file)
-            fn(self, *args, **kwargs)
+            # self.store_source_model(self.config_file)
+            # self.store_gmpe_map(self.config_file)
+            return fn(self, *args, **kwargs)
         
         return preloader
         
@@ -79,7 +83,9 @@ class MonteCarloMixin:
     def _get_command_line_calc(self):
         jpype = java.jvm()
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        print cache
         key = self.key
+        print "Key for config job lookup is: %s" % key
         engine = jclass("CommandLineCalculator")(cache, key)
         return engine
     
@@ -105,7 +111,26 @@ class MonteCarloMixin:
         # 
         # Spawn task for subregion, sending in source-subset and 
         # GMPE subset
-        pass
+        
+        # TODO(JMC): Switch on calculation mode, (unless that's already been
+        # determined by the mixin
+        results = {}
+        for i in range(0, float(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])):
+            results['history%s' % i] = {}
+            for j in range(0, float(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])):
+                print "Building GMF for %s/%s" % (i,j)
+                self.store_source_model(self.config_file)
+                self.store_gmpe_map(self.config_file)
+                # TODO(JMC): Don't use the seed again each time
+                # TODO(JMC): Get real site list from boundary
+                
+                site_list = [shapes.Site(40.0, 40.0),]
+                gmfs = self.compute_ground_motion_fields(site_list)
+                print "Computed GMFs is: %s" % gmfs
+                results['history%s' % i]['realization%s' %j] = gmfs
+        print "Fully populated results is %s" % results
+        return results
+        
         
     def generate_erf(self):
         jpype = java.jvm()
@@ -139,9 +164,8 @@ class MonteCarloMixin:
                             # gmpeTruncationType, truncationLevel,
                             # standardDeviationType, referenceVs30Value);
         
-        for trt in gmpe_map.keySet():
-            gmpe = gmpe_map.get(trt)
-            print "gmpe type: %s " % (gmpe.__class__)
+        for tect_region in gmpe_map.keySet():
+            gmpe = gmpe_map.get(tect_region)
             gmpeLogicTreeData = self._get_command_line_calc().createGmpeLogicTreeData()
             gmpeLogicTreeData.setGmpeParams(self.params['COMPONENT'], 
                 self.params['INTENSITY_MEASURE_TYPE'], 
@@ -152,20 +176,17 @@ class MonteCarloMixin:
                 self.params['STANDARD_DEVIATION_TYPE'], 
                 jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
                 jpype.JObject(gmpe, jclass("AttenuationRelationship")))
-                # String component, String intensityMeasureType,
-                # double period, double damping, String truncType, double truncLevel,
-                # String stdType, double vs30, AttenuationRelationship ar
-            gmpe_map.put(trt,gmpe)
+            gmpe_map.put(tect_region,gmpe)
     
-    def load_ruptures(self):
-        
-        erf = self.generate_erf()
-        
-        seed = 0 # TODO(JMC): Real seed please
-        rn = jclass("Random")(seed)
-        event_set_gen = jclass("EventSetGen")
-        self.ruptures = event_set_gen.getStochasticEventSetFromPoissonianERF(
-                            erf, rn)
+    # def load_ruptures(self):
+    #     
+    #     erf = self.generate_erf()
+    #     
+    #     seed = 0 # TODO(JMC): Real seed please
+    #     rn = jclass("Random")(seed)
+    #     event_set_gen = jclass("EventSetGen")
+    #     self.ruptures = event_set_gen.getStochasticEventSetFromPoissonianERF(
+    #                         erf, rn)
     
     def get_IML_list(self):
         """Build the appropriate Arbitrary Discretized Func from the IMLs,
@@ -190,16 +211,20 @@ class MonteCarloMixin:
         return iml_list
 
     def parameterize_sites(self, site_list):
+        jpype = java.jvm()
         jsite_list = jclass("ArrayList")()
         for x in site_list:
             site = x.to_java()
-            site.addParameter(jclass("DoubleParameter")("Vs30", 
-                float(self.params['REFERENCE_VS30_VALUE'])))
-            site.addParameter(jclass("DoubleParameter")(
-                    "Depth 2.5 km/sec",
-                    float(self.param['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])))
-            site.addParameter(jclass("StringParameter")("Sadigh Site Type",
-                    self.params['SADIGH_SITE_TYPE']))
+            
+            vs30 = jclass("DoubleParameter")(jpype.JString("Vs30"))
+            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
+            depth25 = jclass("DoubleParameter")("Depth 2.5 km/sec")
+            depth25.setValue(float(self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+            sadigh = jclass("StringParameter")("Sadigh Site Type")
+            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
+            site.addParameter(vs30)
+            site.addParameter(depth25)
+            site.addParameter(sadigh)
             jsite_list.add(site)
         return jsite_list
 
@@ -236,32 +261,37 @@ class MonteCarloMixin:
             integration_distance)
 
         # from hazard curves, probability mass functions are calculated
-        pmf = jClass("org.opensha.commons.data.function.DiscretizedFuncAPI")
-        pmf_calculator = jClass("org.gem.calc.ProbabilityMassFunctionCalc")
+        # pmf = jclass("DiscretizedFuncAPI")
+        pmf_calculator = jclass("ProbabilityMassFunctionCalc")
         for site in hazardCurves.keySet():
             pmf = pmf_calculator.getPMF(hazardCurves.get(site))
             hazardCurves.put(site,pmf)
            
 
-    def compute_ground_motion_fields(self, site_id):
+    def compute_ground_motion_fields(self, site_list):
         """Ground motion field calculation, runs on the workers."""
+                    # Map<EqkRupture, Map<Site, Double>> groundMotionFields =
+                    #         HazardCalculator.getGroundMotionFields(sites, erf,
+                    #                 gmpeModel, getRandom(), correlationFlag);
+        
         jpype = java.jvm()
 
         erf = self.generate_erf()
         gmpe_map = self.generate_gmpe_map()
         self.set_gmpe_params(gmpe_map)
 
-        configuration_helper = jclass("CalculatorConfigHelper")
-        configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
-        site_lits = configuration_helper.makeImlDoubleList(configuration)
+        jsite_list = self.parameterize_sites(site_list)
+
 
         seed = 0 # TODO(JMC): Real seed please
         rn = jclass("Random")(seed)
     
         # ground motion fields are returned as Map<EqkRupture, Map<Site, Double>>
         # that can then be serialized to cache using Roland's code
+        # Ljava/util/List;Lorg/opensha/sha/earthquake/EqkRupForecastAPI;Ljava/util/Map;Ljava/util/Random;Ljava/lang/Boolean;
         ground_motion_fields = jclass("HazardCalculator").getGroundMotionFields(
-            site_lits, erf, gmpe_map, rn)
+            jsite_list, erf, gmpe_map, rn, jpype.JBoolean(False))
+        return ground_motion_fields
 
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
