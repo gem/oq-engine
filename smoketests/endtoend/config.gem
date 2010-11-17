@@ -21,7 +21,7 @@ ERF_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
 # output directory - relative to this file
-OUTPUT_DIR = ~/gem_output
+OUTPUT_DIR = computed_output
 
 
 # moment magnitude (Mw)
@@ -125,7 +125,7 @@ HAZARD_CALCULATION_MODE = Monte Carlo
 
 # (used if Monte Carlo approach is chosen)
 NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 40
-# (used if Monte Carlo probabilistic event based approach is chosen)
+# (used if probabilistic event based approach is chosen)
 NUMBER_OF_SEISMICITY_HISTORIES = 8
 
 
