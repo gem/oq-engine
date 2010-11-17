@@ -126,8 +126,16 @@ class MonteCarloMixin:
                 
                 site_list = [shapes.Site(40.0, 40.0),]
                 gmfs = self.compute_ground_motion_fields(site_list)
-                print "Computed GMFs is: %s" % gmfs
-                results['history%s' % i]['realization%s' %j] = gmfs
+                rupture_ids = ["%s" % x for x in range(0, gmfs.keySet().size())]
+                site_ids = ["%s" % x for x in range(0, len(site_list))]
+                gmf_id = "%s!gmf!%s!%s" % (self.key, i, j)
+                gmf_json = jclass("CommandLineCalculator").gmfToJson(
+                    gmf_id, rupture_ids, site_ids, gmfs)
+                # public static String gmfToJson(String gmfId, String[] eqkRuptureIds,
+                # String[] siteIds,
+                # Map<EqkRupture, Map<Site, Double>> groundMotionFields
+                print "Computed GMFs is: %s" % gmf_json
+                results['history%s' % i]['realization%s' %j] = gmf_json
         print "Fully populated results is %s" % results
         return results
         
