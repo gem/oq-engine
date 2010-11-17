@@ -17,8 +17,6 @@ Contents:
    hazard
    risk
    schema
-   readme
-
 
 Indices and tables
 ==================
