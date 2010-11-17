@@ -34,6 +34,7 @@ JAVA_CLASSES = {
     "EqkRupForecastAPI" : "org.opensha.sha.earthquake.EqkRupForecastAPI",
     "DoubleParameter" : "org.opensha.commons.param.DoubleParameter",
     "StringParameter" : "org.opensha.commons.param.StringParameter",
+    "ParameterAPI" : "org.opensha.commons.param.ParameterAPI",
 }
 
 def jclass(class_key):
@@ -190,11 +191,13 @@ class MonteCarloMixin:
         return iml_list
 
     def parameterize_sites(self, site_list):
+        jpype = java.jvm()
         jsite_list = jclass("ArrayList")()
         for x in site_list:
             site = x.to_java()
-            site.addParameter(jclass("DoubleParameter")("Vs30", 
-                float(self.params['REFERENCE_VS30_VALUE'])))
+            vs30 = jclass("DoubleParameter")(jpype.JString("Vs30"), 
+                float(self.params['REFERENCE_VS30_VALUE']))
+            site.addParameter(jpype.JObject(vs30, jclass("ParameterAPI")))
             site.addParameter(jclass("DoubleParameter")(
                     "Depth 2.5 km/sec",
                     float(self.param['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])))
