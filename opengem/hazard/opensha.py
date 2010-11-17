@@ -9,6 +9,7 @@ import numpy
 from opengem import hazard
 from opengem import java
 from opengem import job
+from opengem import shapes
 from opengem.job import mixins
 from opengem.hazard import job
 from opengem import kvs
@@ -57,7 +58,7 @@ class MonteCarloMixin:
             
             # self.store_source_model(self.config_file)
             # self.store_gmpe_map(self.config_file)
-            fn(self, *args, **kwargs)
+            return fn(self, *args, **kwargs)
         
         return preloader
         
@@ -82,7 +83,9 @@ class MonteCarloMixin:
     def _get_command_line_calc(self):
         jpype = java.jvm()
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        print cache
         key = self.key
+        print "Key for config job lookup is: %s" % key
         engine = jclass("CommandLineCalculator")(cache, key)
         return engine
     
@@ -112,17 +115,21 @@ class MonteCarloMixin:
         # TODO(JMC): Switch on calculation mode, (unless that's already been
         # determined by the mixin
         results = {}
-        for i in range(0, self.params['NUMBER_OF_SEISMICITY_HISTORIES']):
+        for i in range(0, float(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])):
             results['history%s' % i] = {}
-            for j in range(0, self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS']):
+            for j in range(0, float(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])):
+                print "Building GMF for %s/%s" % (i,j)
                 self.store_source_model(self.config_file)
                 self.store_gmpe_map(self.config_file)
                 # TODO(JMC): Don't use the seed again each time
-                gmfs = self.compute_ground_motion_fields()
+                # TODO(JMC): Get real site list from boundary
+                
+                site_list = [shapes.Site(40.0, 40.0),]
+                gmfs = self.compute_ground_motion_fields(site_list)
+                print "Computed GMFs is: %s" % gmfs
                 results['history%s' % i]['realization%s' %j] = gmfs
-            }
-        }
-        return results;
+        print "Fully populated results is %s" % results
+        return results
         
         
     def generate_erf(self):
@@ -169,7 +176,7 @@ class MonteCarloMixin:
                 self.params['STANDARD_DEVIATION_TYPE'], 
                 jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
                 jpype.JObject(gmpe, jclass("AttenuationRelationship")))
-            gmpe_map.put(trt,gmpe)
+            gmpe_map.put(tect_region,gmpe)
     
     # def load_ruptures(self):
     #     
@@ -281,8 +288,9 @@ class MonteCarloMixin:
     
         # ground motion fields are returned as Map<EqkRupture, Map<Site, Double>>
         # that can then be serialized to cache using Roland's code
+        # Ljava/util/List;Lorg/opensha/sha/earthquake/EqkRupForecastAPI;Ljava/util/Map;Ljava/util/Random;Ljava/lang/Boolean;
         ground_motion_fields = jclass("HazardCalculator").getGroundMotionFields(
-            jsite_list, erf, gmpe_map, rn)
+            jsite_list, erf, gmpe_map, rn, jpype.JBoolean(False))
         return ground_motion_fields
 
 
