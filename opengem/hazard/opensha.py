@@ -15,6 +15,7 @@ from opengem.hazard import job
 from opengem import kvs
 from opengem import settings
 from opengem.logs import LOG
+from opengem.output import geotiff
 
 JAVA_CLASSES = {
     'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
@@ -83,11 +84,7 @@ class MonteCarloMixin:
     def _get_command_line_calc(self):
         jpype = java.jvm()
         cache = jclass("KVS")(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
-        print cache
-        key = self.key
-        print "Key for config job lookup is: %s" % key
-        engine = jclass("CommandLineCalculator")(cache, key)
-        return engine
+        return jclass("CommandLineCalculator")(cache, self.key)
     
     
     def store_gmpe_map(self, config_file):
@@ -114,10 +111,11 @@ class MonteCarloMixin:
         
         # TODO(JMC): Switch on calculation mode, (unless that's already been
         # determined by the mixin
-        results = {}
-        for i in range(0, float(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])):
-            results['history%s' % i] = {}
-            for j in range(0, float(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])):
+        # results = {}
+        histories = float(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
+        realizations = float(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        for i in range(0, histories):
+            for j in range(0, realizations):
                 print "Building GMF for %s/%s" % (i,j)
                 self.store_source_model(self.config_file)
                 self.store_gmpe_map(self.config_file)
@@ -128,16 +126,44 @@ class MonteCarloMixin:
                 gmfs = self.compute_ground_motion_fields(site_list)
                 rupture_ids = ["%s" % x for x in range(0, gmfs.keySet().size())]
                 site_ids = ["%s" % x for x in range(0, len(site_list))]
-                gmf_id = "%s!gmf!%s!%s" % (self.key, i, j)
-                gmf_json = jclass("CommandLineCalculator").gmfToJson(
-                    gmf_id, rupture_ids, site_ids, gmfs)
-                # public static String gmfToJson(String gmfId, String[] eqkRuptureIds,
-                # String[] siteIds,
-                # Map<EqkRupture, Map<Site, Double>> groundMotionFields
-                print "Computed GMFs is: %s" % gmf_json
-                results['history%s' % i]['realization%s' %j] = gmf_json
-        print "Fully populated results is %s" % results
-        return results
+                gmf_id = "%s!%s" % (i, j)
+                key = "%s!GMF!%s" % (self.key, gmf_id)
+                cache = jclass("KVS")(
+                    settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+                jclass("CommandLineCalculator").gmfToMemcache(
+                    cache, key, gmf_id, rupture_ids, site_ids, gmfs)
+        
+            # TODO(JMC): Wait here for the results to be computed
+            # if self.params['OUTPUT_GMF_FILES']
+            for j in range(0, realizations):
+                gmf_id = "%s!%s" % (i, j)
+                gmf_key = "%s!GMF!%s" % (self.key, gmf_id)
+                print gmf_key
+                print kvs.get_client().get(gmf_key)
+                gmf = kvs.get_value_json_decoded(gmf_key)
+                print gmf
+                if gmf:
+                    self.write_gmf_file(gmf)
+                # results['history%s' % i]['realization%s' %j] = gmf_json
+        # print "Fully populated results is %s" % results
+        # return results
+    
+    def write_gmf_file(self, gmfs):
+        for gmf in gmfs:
+            for rupture in gmfs[gmf]:
+                # TODO(JMC): Fix rupture and gmf ids into name
+                path = os.path.join(self.base_path, 
+                        self.params['OUTPUT_DIR'], "gmfab.tiff") # % gmf.keys()[0].replace("!", ""))
+        
+                # TODO(JMC): Make this valid region
+                switzerland = shapes.Region.from_coordinates(
+                    [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
+                image_grid = switzerland.grid
+                gwriter = geotiff.GeoTiffFile(path, image_grid)
+                for site_key in gmfs[gmf][rupture]:
+                    site = gmfs[gmf][rupture][site_key]
+                    gwriter.write((site['lon'], site['lat']), int(site['mag']*-254/10))
+                gwriter.close()
         
         
     def generate_erf(self):
@@ -160,17 +186,6 @@ class MonteCarloMixin:
 
     def set_gmpe_params(self, gmpe_map):
         jpype = java.jvm()
-        
-        # gmpeLogicTreeData = jclass("GmpeLogicTreeData")
-        # gmpeLogicTreeData =                     new GmpeLogicTreeData(kvs,
-        #                     ConfigItems.GMPE_LOGIC_TREE_FILE.name(), component,
-        #                     intensityMeasureType, period, damping,
-        #                     gmpeTruncationType, truncationLevel,
-        #                     standardDeviationType, referenceVs30Value);
-                            # new GmpeLogicTreeData(relativePath, component,
-                            # intensityMeasureType, period, damping,
-                            # gmpeTruncationType, truncationLevel,
-                            # standardDeviationType, referenceVs30Value);
         
         for tect_region in gmpe_map.keySet():
             gmpe = gmpe_map.get(tect_region)
@@ -213,9 +228,6 @@ class MonteCarloMixin:
             iml_list.add(
                 iml_vals[self.params['INTENSITY_MEASURE_TYPE']](
                 float(val)))
-        LOG.debug("Raw IMLs: %s" % self.params['INTENSITY_MEASURE_LEVELS'])
-        LOG.debug("IML_list: %s" % iml_list)
-        # TODO(JMC): This looks wrong
         return iml_list
 
     def parameterize_sites(self, site_list):
@@ -245,14 +257,7 @@ class MonteCarloMixin:
         gmpe_map = self.generate_gmpe_map()
         self.set_gmpe_params(gmpe_map)
 
-        # configuration_helper = jclass("CalculatorConfigHelper")
-        # configuration = jclass("ConfigurationConverter").getConfiguration(configuration_properties)
-
         ## here the site list should be the one appropriate for each worker. Where do I get it?
-        ## this method returns a map relating sites with hazard curves (described as DiscretizedFuncAPI)
-        
-        # TODO(JMC): This looks wrong - this is IML list, not site_list!
-        # site_list = configuration_helper.makeImlDoubleList(configuration)
         ch_iml = self.get_IML_list()
         integration_distance = jpype.JDouble(float(self.params['MAXIMUM_DISTANCE']))
         jsite_list = self.parameterize_sites(site_list)
@@ -278,10 +283,6 @@ class MonteCarloMixin:
 
     def compute_ground_motion_fields(self, site_list):
         """Ground motion field calculation, runs on the workers."""
-                    # Map<EqkRupture, Map<Site, Double>> groundMotionFields =
-                    #         HazardCalculator.getGroundMotionFields(sites, erf,
-                    #                 gmpeModel, getRandom(), correlationFlag);
-        
         jpype = java.jvm()
 
         erf = self.generate_erf()
@@ -290,13 +291,9 @@ class MonteCarloMixin:
 
         jsite_list = self.parameterize_sites(site_list)
 
-
         seed = 0 # TODO(JMC): Real seed please
         rn = jclass("Random")(seed)
     
-        # ground motion fields are returned as Map<EqkRupture, Map<Site, Double>>
-        # that can then be serialized to cache using Roland's code
-        # Ljava/util/List;Lorg/opensha/sha/earthquake/EqkRupForecastAPI;Ljava/util/Map;Ljava/util/Random;Ljava/lang/Boolean;
         ground_motion_fields = jclass("HazardCalculator").getGroundMotionFields(
             jsite_list, erf, gmpe_map, rn, jpype.JBoolean(False))
         return ground_motion_fields

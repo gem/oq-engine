@@ -363,9 +363,12 @@ public class CommandLineCalculator {
         Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
         int indexEqkRupture = 0;
         for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
-            result.append(gson.toJson(eqkRuptureIds[indexEqkRupture]));
+            if (indexEqkRupture > 0) {
+                result.append(",");
+            }
+            result.append(gson.toJson(eqkRuptureIds[indexEqkRupture++]));
             // start the eqk json object
-            result.append(":{");
+            result.append(":");
             Map<Site, Double> groundMotionField =
                     groundMotionFields.get(eqkRupture);
             // TODO:
@@ -373,35 +376,34 @@ public class CommandLineCalculator {
             // For now behave, as if the map object is ordered.
             Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
             int indexSite = 0;
+            StringBuilder siteListString = new StringBuilder();
+            siteListString.append("{");
             for (Site s : groundMotionFieldKeys) {
                 if (indexSite > 0) {
-                    // start the json site object
-                    result.append("{");
+                    siteListString.append(",");
                 }
-                result.append(gson.toJson(siteIds[indexSite]));
+                StringBuilder siteString = new StringBuilder();
+                siteString.append(gson.toJson(siteIds[indexSite++]));
                 // start the json site's value object
-                result.append(":{");
-                result.append(gson.toJson("lat") + ":"
+                siteString.append(":{");
+                siteString.append(gson.toJson("lat") + ":"
                         + gson.toJson(s.getLocation().getLatitude()));
-                result.append(",");
-                result.append(gson.toJson("lon") + ":"
+                siteString.append(",");
+                siteString.append(gson.toJson("lon") + ":"
                         + gson.toJson(s.getLocation().getLongitude()));
-                result.append(",");
-                result.append(gson.toJson("mag") + ":"
+                siteString.append(",");
+                siteString.append(gson.toJson("mag") + ":"
                         + gson.toJson(groundMotionField.get(s)));
                 // close the the json site's value object and the site json
                 // object
-                result.append("}}");
-                if (indexSite < siteIds.length - 1) {
-                    result.append(",");
-                }
-                ++indexSite;
+                siteString.append("}");
+                siteListString.append(siteString);
             } // for
-              // close the eqk json object
-            result.append("}");
-            ++indexEqkRupture;
+            siteListString.append("}");
+            // close the eqk json object
+            result.append(siteListString);
         } // for
-        result.append("}");
+        result.append("}}");
         return result.toString();
     }
 
@@ -431,9 +433,9 @@ public class CommandLineCalculator {
      * @param cache
      *            The memcache
      */
-    public static void gmfToMemcache(String memCacheKey, String gmfId,
-            String[] eqkRuptureIds, String[] siteIds,
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
+    public static void gmfToMemcache(Cache cache, String memCacheKey,
+            String gmfId, String[] eqkRuptureIds, String[] siteIds,
+            Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
         String json =
                 gmfToJson(gmfId, eqkRuptureIds, siteIds, groundMotionFields);
         cache.set(memCacheKey, json);

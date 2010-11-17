@@ -71,6 +71,7 @@ GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
         0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
         "TSES": 900, "TimeSpan": 50}
+    # TSES = TimeSpan times number of Realizations
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
