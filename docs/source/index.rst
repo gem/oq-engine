@@ -18,8 +18,6 @@ Contents:
    job
    risk
    schema
-   readme
-
 
 Indices and tables
 ==================
