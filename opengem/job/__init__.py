@@ -134,7 +134,9 @@ class Job(object):
         sha1s."""
         memcached_client = kvs.get_client(binary=False)
         if self.base_path is None:
-            raise Exception("Can't slurp files without a base path, homie...")
+            LOG.debug("Can't slurp files without a base path, homie...")
+            return
+            # raise Exception("Can't slurp files without a base path, homie...")
         for key, val in self.params.items():
             if key[-5:] == '_FILE':
                 LOG.debug("Slurping %s : %s" % (key, val))
@@ -148,6 +150,6 @@ class Job(object):
 
     def to_kvs(self):
         """Store this job into memcached."""
-        #self._slurp_files()
+        self._slurp_files()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
