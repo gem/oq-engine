@@ -35,6 +35,8 @@ JAVA_CLASSES = {
     "DoubleParameter" : "org.opensha.commons.param.DoubleParameter",
     "StringParameter" : "org.opensha.commons.param.StringParameter",
     "ParameterAPI" : "org.opensha.commons.param.ParameterAPI",
+    "DiscretizedFuncAPI" : "org.opensha.commons.data.function.DiscretizedFuncAPI",
+    "ProbabilityMassFunctionCalc" : "org.gem.calc.ProbabilityMassFunctionCalc",
 }
 
 def jclass(class_key):
@@ -195,14 +197,16 @@ class MonteCarloMixin:
         jsite_list = jclass("ArrayList")()
         for x in site_list:
             site = x.to_java()
-            vs30 = jclass("DoubleParameter")(jpype.JString("Vs30"), 
-                float(self.params['REFERENCE_VS30_VALUE']))
-            site.addParameter(jpype.JObject(vs30, jclass("ParameterAPI")))
-            site.addParameter(jclass("DoubleParameter")(
-                    "Depth 2.5 km/sec",
-                    float(self.param['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])))
-            site.addParameter(jclass("StringParameter")("Sadigh Site Type",
-                    self.params['SADIGH_SITE_TYPE']))
+            
+            vs30 = jclass("DoubleParameter")(jpype.JString("Vs30"))
+            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
+            depth25 = jclass("DoubleParameter")("Depth 2.5 km/sec")
+            depth25.setValue(float(self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+            sadigh = jclass("StringParameter")("Sadigh Site Type")
+            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
+            site.addParameter(vs30)
+            site.addParameter(depth25)
+            site.addParameter(sadigh)
             jsite_list.add(site)
         return jsite_list
 
@@ -239,8 +243,8 @@ class MonteCarloMixin:
             integration_distance)
 
         # from hazard curves, probability mass functions are calculated
-        pmf = jClass("org.opensha.commons.data.function.DiscretizedFuncAPI")
-        pmf_calculator = jClass("org.gem.calc.ProbabilityMassFunctionCalc")
+        # pmf = jclass("DiscretizedFuncAPI")
+        pmf_calculator = jclass("ProbabilityMassFunctionCalc")
         for site in hazardCurves.keySet():
             pmf = pmf_calculator.getPMF(hazardCurves.get(site))
             hazardCurves.put(site,pmf)
