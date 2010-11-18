@@ -13,6 +13,7 @@ from opengem import java
 from opengem import shapes
 from opengem.job import mixins
 from opengem.hazard import job
+from opengem.hazard import tasks
 from opengem import kvs
 from opengem import settings
 from opengem.logs import LOG
@@ -30,7 +31,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         """A decorator for preload steps that must run on the Jobber node"""
         def preloader(self, *args, **kwargs):
             """Validate job"""
-            assert(self.base_path)
+            # assert(self.base_path)
             self.cache = java.jclass("KVS")(
                     settings.MEMCACHED_HOST, 
                     settings.MEMCACHED_PORT)
@@ -71,11 +72,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         
         Loops through various random realizations, spawning tasks to compute
         GMFs."""
-        # Chop up subregions
-        # For each subregion, take a subset of the source model
-        # 
-        # Spawn task for subregion, sending in source-subset and 
-        # GMPE subset
+        results = []
         random.seed(self.params.get('GMF_RANDOM_SEED', None)) 
         histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
         realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
@@ -83,16 +80,16 @@ class MonteCarloMixin: # pylint: disable=W0232
             for j in range(0, realizations):
                 self.store_source_model(self.config_file)
                 self.store_gmpe_map(self.config_file)
-                # TODO(JMC): Don't use the seed again each time
-                # TODO(JMC): Get real site list from boundary
-                
                 for site_list in self.site_list_generator():
                     gmf_id = "%s!%s" % (i, j)
                     seed = random.getrandbits(32)
-                    self.compute_ground_motion_fields(
-                            site_list, gmf_id, seed)
+                    results.append(tasks.compute_ground_motion_fields.delay(
+                            self.id, site_list, gmf_id, seed))
         
-            # TODO(JMC): Wait here for the results to be computed
+            for task in results:
+                task.wait()
+                if task.status != 'SUCCESS': 
+                    raise Exception(task.result)
             # if self.params['OUTPUT_GMF_FILES']
             for j in range(0, realizations):
                 gmf_id = "%s!%s" % (i, j)
@@ -209,6 +206,7 @@ class MonteCarloMixin: # pylint: disable=W0232
             jsite_list.add(site)
         return jsite_list
 
+    @preload
     def compute_hazard_curve(self, site_list):
         """Actual hazard curve calculation, runs on the workers.
         Takes a list of Site objects."""
@@ -226,6 +224,7 @@ class MonteCarloMixin: # pylint: disable=W0232
             hazardCurves.put(site, pmf)
         return hazardCurves
 
+    @preload
     def compute_ground_motion_fields(self, site_list, gmf_id, seed):
         """Ground motion field calculation, runs on the workers."""
         jpype = java.jvm()
