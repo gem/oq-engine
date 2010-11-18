@@ -4,6 +4,7 @@ Wrapper around the OpenSHA-lite java library.
 """
 
 import os
+import random
 
 import numpy
 
@@ -18,14 +19,14 @@ from opengem.logs import LOG
 from opengem.output import geotiff
 
 
-class MonteCarloMixin:
+class MonteCarloMixin: # pylint: disable=W0232
     """Implements the JobMixin, which has a primary entry point of execute().
     Execute is responsible for dispatching celery tasks.
     Note that this Mixin, during execution, will always be an instance of the Job
     class, and thus has access to the self.params dict, full of config params
     loaded from the Job configuration file."""
     
-    def preload(fn):
+    def preload(fn): # pylint: disable=E0213
         """A decorator for preload steps that must run on the Jobber node"""
         def preloader(self, *args, **kwargs):
             """Validate job"""
@@ -33,11 +34,10 @@ class MonteCarloMixin:
             self.cache = java.jclass("KVS")(
                     settings.MEMCACHED_HOST, 
                     settings.MEMCACHED_PORT)
-            return fn(self, *args, **kwargs)
+            self.calc = java.jclass("CommandLineCalculator")(
+                    self.cache, self.key)
+            return fn(self, *args, **kwargs) # pylint: disable=E1102
         return preloader
-        
-    def _get_command_line_calc(self):
-        return java.jclass("CommandLineCalculator")(self.cache, self.key)
 
     def store_source_model(self, config_file):
         """Generates an Earthquake Rupture Forecast, using the source zones and
@@ -61,16 +61,22 @@ class MonteCarloMixin:
         engine.sampleAndSaveGMPETree(self.cache, key)
 
     def site_list_generator(self):
+        """Will subset and yield portions of the region, depending on the 
+        the computation mode."""
         yield [shapes.Site(40.0, 40.0),]
 
     @preload
     def execute(self):
+        """Main hazard processing block.
+        
+        Loops through various random realizations, spawning tasks to compute
+        GMFs."""
         # Chop up subregions
         # For each subregion, take a subset of the source model
         # 
         # Spawn task for subregion, sending in source-subset and 
         # GMPE subset
-        
+        random.seed(self.params.get('GMF_RANDOM_SEED', None)) 
         histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
         realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
         for i in range(0, histories):
@@ -82,58 +88,62 @@ class MonteCarloMixin:
                 
                 for site_list in self.site_list_generator():
                     gmf_id = "%s!%s" % (i, j)
-                    self.compute_ground_motion_fields(site_list, gmf_id)
+                    seed = random.getrandbits(32)
+                    self.compute_ground_motion_fields(
+                            site_list, gmf_id, seed)
         
             # TODO(JMC): Wait here for the results to be computed
             # if self.params['OUTPUT_GMF_FILES']
             for j in range(0, realizations):
                 gmf_id = "%s!%s" % (i, j)
                 gmf_key = "%s!GMF!%s" % (self.key, gmf_id)
-                print gmf_key
-                print kvs.get_client().get(gmf_key)
                 gmf = kvs.get_value_json_decoded(gmf_key)
-                print gmf
                 if gmf:
                     self.write_gmf_file(gmf)
-                # results['history%s' % i]['realization%s' %j] = gmf_json
-        # print "Fully populated results is %s" % results
-        # return results
     
     def write_gmf_file(self, gmfs):
+        """Generate a GeoTiff file for each GMF"""
         for gmf in gmfs:
             for rupture in gmfs[gmf]:
                 # TODO(JMC): Fix rupture and gmf ids into name
                 path = os.path.join(self.base_path, 
-                        self.params['OUTPUT_DIR'], "gmfab.tiff") # % gmf.keys()[0].replace("!", ""))
+                        self.params['OUTPUT_DIR'], "gmfab.tiff")
+                         # % gmf.keys()[0].replace("!", ""))
         
                 # TODO(JMC): Make this valid region
                 switzerland = shapes.Region.from_coordinates(
-                    [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
+                        [(10.0, 100.0), (100.0, 100.0), 
+                         (100.0, 10.0), (10.0, 10.0)])
                 image_grid = switzerland.grid
                 gwriter = geotiff.GeoTiffFile(path, image_grid)
                 for site_key in gmfs[gmf][rupture]:
                     site = gmfs[gmf][rupture][site_key]
-                    gwriter.write((site['lon'], site['lat']), int(site['mag']*-254/10))
+                    gwriter.write((site['lon'], site['lat']), 
+                        int(site['mag']*-254/10))
                 gwriter.close()
         
         
     def generate_erf(self):
-        jpype = java.jvm()
-        erfclass = java.jclass("GEM1ERF")
+        """Generate the Earthquake Rupture Forecast from the currently stored
+        source model logic tree."""
         key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
-        sources = java.jclass("JsonSerializer").getSourceListFromCache(self.cache, key)
-        timespan = self.params['INVESTIGATION_TIME']
-        return erfclass.getGEM1ERF(sources, jpype.JDouble(float(timespan)))
+        sources = java.jclass("JsonSerializer").getSourceListFromCache(
+                    self.cache, key)
+        timespan = float(self.params['INVESTIGATION_TIME'])
+        return java.jclass("GEM1ERF").getGEM1ERF(sources, timespan)
 
     def generate_gmpe_map(self):
+        """Generate the GMPE map from the stored GMPE logic tree."""
         key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
-        gmpe_map = java.jclass("JsonSerializer").getGmpeMapFromCache(self.cache,key)
+        gmpe_map = java.jclass("JsonSerializer").getGmpeMapFromCache(
+                                                    self.cache,key)
+        self.set_gmpe_params(gmpe_map)
         return gmpe_map
 
     def set_gmpe_params(self, gmpe_map):
+        """Push parameters from configuration file into the GMPE objects"""
         jpype = java.jvm()
-        calc = self._get_command_line_calc()
-        gmpeLogicTreeData = calc.createGmpeLogicTreeData()
+        gmpeLogicTreeData = self.calc.createGmpeLogicTreeData()
         for tect_region in gmpe_map.keySet():
             gmpe = gmpe_map.get(tect_region)
             gmpeLogicTreeData.setGmpeParams(self.params['COMPONENT'], 
@@ -177,6 +187,10 @@ class MonteCarloMixin:
         return iml_list
 
     def parameterize_sites(self, site_list):
+        """Convert python Sites to Java Sites, and add default parameters."""
+        # TODO(JMC): There's Java code for this already, sets each site to have
+        # the same default parameters
+        
         jpype = java.jvm()
         jsite_list = java.jclass("ArrayList")()
         for x in site_list:
@@ -185,7 +199,8 @@ class MonteCarloMixin:
             vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
             vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
             depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-            depth25.setValue(float(self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+            depth25.setValue(float(
+                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
             sadigh = java.jclass("StringParameter")("Sadigh Site Type")
             sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
             site.addParameter(vs30)
@@ -197,52 +212,32 @@ class MonteCarloMixin:
     def compute_hazard_curve(self, site_list):
         """Actual hazard curve calculation, runs on the workers.
         Takes a list of Site objects."""
-        jpype = java.jvm()
-
-        erf = self.generate_erf()
-        gmpe_map = self.generate_gmpe_map()
-        self.set_gmpe_params(gmpe_map)
-
-        ## here the site list should be the one appropriate for each worker. Where do I get it?
-        ch_iml = self.get_IML_list()
-        integration_distance = jpype.JDouble(float(self.params['MAXIMUM_DISTANCE']))
         jsite_list = self.parameterize_sites(site_list)
-        LOG.debug("jsite_list: %s" % jsite_list)
-        # TODO(JMC): There's Java code for this already, sets each site to have
-        # The same default parameters
-        
-        # hazard curves are returned as Map<Site, DiscretizedFuncAPI>
         hazardCurves = java.jclass("HazardCalculator").getHazardCurves(
-            jsite_list, #
-            erf,
-            gmpe_map,
-            ch_iml,
-            integration_distance)
+            jsite_list,
+            self.generate_erf(),
+            self.generate_gmpe_map(),
+            self.get_IML_list(),
+            float(self.params['MAXIMUM_DISTANCE']))
 
-        # from hazard curves, probability mass functions are calculated
-        # pmf = jclass("DiscretizedFuncAPI")
         pmf_calculator = java.jclass("ProbabilityMassFunctionCalc")
         for site in hazardCurves.keySet():
             pmf = pmf_calculator.getPMF(hazardCurves.get(site))
-            hazardCurves.put(site,pmf)
-           
+            hazardCurves.put(site, pmf)
+        return hazardCurves
 
-    def compute_ground_motion_fields(self, site_list, gmf_id):
+    def compute_ground_motion_fields(self, site_list, gmf_id, seed):
         """Ground motion field calculation, runs on the workers."""
         jpype = java.jvm()
 
-        erf = self.generate_erf()
-        gmpe_map = self.generate_gmpe_map()
-        self.set_gmpe_params(gmpe_map)
-
         jsite_list = self.parameterize_sites(site_list)
-
-        seed = 0 # TODO(JMC): Real seed please
-        rn = java.jclass("Random")(seed)
         key = "%s!GMF!%s" % (self.key, gmf_id)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
-                self.cache, key, gmf_id, jsite_list, erf, 
-                gmpe_map, rn, jpype.JBoolean(False))
+                self.cache, key, gmf_id, jsite_list,
+                 self.generate_erf(), 
+                self.generate_gmpe_map(), 
+                java.jclass("Random")(seed), 
+                jpype.JBoolean(False))
 
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
