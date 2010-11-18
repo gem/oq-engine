@@ -39,8 +39,8 @@ def compute_loss_ratios_range(vuln_function):
     
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
-    return numpy.histogram(loss_ratios, bins=loss_ratios_range
-            )[0][::-1].cumsum()[::-1]
+    histogram = numpy.histogram(loss_ratios, bins=loss_ratios_range)
+    return (histogram[0][::-1].cumsum()[::-1], histogram[1])
 
 def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
     """Compute the rates of exceedance for the given ground motion
@@ -66,7 +66,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), ground_motion_field),
+            loss_ratios, loss_ratios_range)[0], ground_motion_field),
             ground_motion_field)
     
     data = []
@@ -76,3 +76,19 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
         data.append((mean_loss_ratios, probs_of_exceedance[idx]))
     
     return shapes.Curve(data)
+
+def compute_aggregate_histogram_classes(histograms):
+    """Compute the classes used to build the aggregate histogram."""
+    
+    classes = []
+    for histogram in histograms:
+        classes.append(histogram[1])
+    
+    classes = numpy.array(classes)
+    return numpy.linspace(classes.min(), classes.max(), num=25)
+
+def compute_aggregate_hisogram(histograms):
+    """Compute the aggregate histogram."""
+    # compute the new classes
+    # loop over the histograms
+    pass
