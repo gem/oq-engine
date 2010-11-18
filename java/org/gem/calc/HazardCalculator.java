@@ -3,11 +3,14 @@ package org.gem.calc;
 import java.rmi.RemoteException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gem.engine.CommandLineCalculator;
+import org.gem.engine.hazard.memcached.Cache;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -142,6 +145,33 @@ public class HazardCalculator {
                                 siteList, rn));
         }
         return groundMotionFields;
+    }
+
+    public static
+            void
+            generateAndSaveGMFs(
+                    Cache cache,
+                    String key,
+                    String gmf_id,
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+                    Random rn, boolean correlation) {
+        Map<EqkRupture, Map<Site, Double>> gmfs =
+                getGroundMotionFields(siteList, erf, gmpeMap, rn, correlation);
+
+        String[] site_ids = new String[siteList.size()];
+        ListIterator<Site> sites = siteList.listIterator();
+        while (sites.hasNext()) {
+            Site this_site = sites.next();
+            site_ids[sites.nextIndex() - 1] = this_site.toString();
+        }
+        String[] rupture_ids = new String[gmfs.keySet().size()];
+        for (int x = 0; x < gmfs.keySet().size(); x++) {
+            rupture_ids[x] = Integer.toString(x);
+        }
+        CommandLineCalculator.gmfToMemcache(cache, key, gmf_id, rupture_ids,
+                site_ids, gmfs);
     }
 
     public static

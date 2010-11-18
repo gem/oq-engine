@@ -8,7 +8,41 @@ import jpype
 
 from opengem.logs import LOG
 
-        
+
+JAVA_CLASSES = {
+    'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
+    'KVS' : "org.gem.engine.hazard.memcached.Cache",
+    'JsonSerializer' : "org.gem.JsonSerializer",
+    "EventSetGen" : "org.gem.calc.StochasticEventSetGenerator",
+    "Random" : "java.util.Random",
+    "GEM1ERF" : "org.gem.engine.hazard.GEM1ERF",
+    "HazardCalculator" : "org.gem.calc.HazardCalculator",
+    "Properties" : "java.util.Properties",
+    "CalculatorConfigHelper" : "org.gem.engine.CalculatorConfigHelper",
+    "Configuration" : "org.apache.commons.configuration.Configuration",
+    "ConfigurationConverter" : 
+        "org.apache.commons.configuration.ConfigurationConverter",
+    "ArbitrarilyDiscretizedFunc" : 
+        "org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc",
+    "ArrayList" : "java.util.ArrayList",
+    "GmpeLogicTreeData" : "org.gem.engine.GmpeLogicTreeData",
+    "AttenuationRelationship" : "org.opensha.sha.imr.AttenuationRelationship",
+    "EqkRupForecastAPI" : "org.opensha.sha.earthquake.EqkRupForecastAPI",
+    "DoubleParameter" : "org.opensha.commons.param.DoubleParameter",
+    "StringParameter" : "org.opensha.commons.param.StringParameter",
+    "ParameterAPI" : "org.opensha.commons.param.ParameterAPI",
+    "DiscretizedFuncAPI" : 
+        "org.opensha.commons.data.function.DiscretizedFuncAPI",
+    "ProbabilityMassFunctionCalc" : "org.gem.calc.ProbabilityMassFunctionCalc",
+}
+
+
+def jclass(class_key):
+    """Wrapper around jpype.JClass for short class names"""
+    jvm()
+    return jpype.JClass(JAVA_CLASSES[class_key])
+
+
 def jvm(max_mem=4000):
     """Return the jpype module, after guaranteeing the JVM is running and 
     the classpath has been loaded properly."""
