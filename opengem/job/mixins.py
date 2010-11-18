@@ -13,8 +13,8 @@ class Mixin(object):
 
     def _load(self):
         if issubclass(self.mixin, type(self)):
-            calculation_mode = self.target.params[self.key]
-            self.mixin = self.mixin.mixins[calculation_mode]
+            self._proxied_mixin()
+
         self.target.__class__.__bases__ += (self.mixin,)
         return self.target
 
@@ -23,10 +23,20 @@ class Mixin(object):
         bases.remove(self.mixin)
         self.target.__class__.__bases__ = tuple(bases)
 
+    def _proxied_mixin(self):
+        calculation_mode = self.target.params[self.key]
+        self.mixin = self.mixin.mixins[calculation_mode]['mixin']
+
     @classmethod
-    def register(cls, key, mixin):
+    def ordered_mixins(cls):
+        return [(k, v['mixin'])
+                 for (k, v)
+                 in sorted(cls.mixins.items(), key=lambda x: x[1]['order'])]
+
+    @classmethod
+    def register(cls, key, mixin, order=0):
         if not key in cls.mixins:
-            cls.mixins[key] = mixin
+            cls.mixins[key] = {'mixin': mixin, 'order': order }
 
     @classmethod
     def unregister(cls, key):

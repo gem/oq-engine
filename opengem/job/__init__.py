@@ -51,7 +51,7 @@ def validate(fn):
     def validator(self, *args):
         """Validate this job before running the decorated function."""
         try:
-#            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
             return fn(self, *args)
         except AssertionError:
             return False
@@ -110,7 +110,8 @@ class Job(object):
     @validate
     def launch(self):
         results = []
-        for (key, mixin) in Mixin.mixins.items():
+        for (key, mixin) in Mixin.ordered_mixins():
+            print mixin
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
