@@ -109,9 +109,12 @@ class Job(object):
 
     @validate
     def launch(self):
+        """ Based on the behaviour specified in the configuration, mix in the
+        correct behaviour for the tasks and then execute them.
+        """
+
         results = []
         for (key, mixin) in Mixin.ordered_mixins():
-            print mixin
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
@@ -150,6 +153,6 @@ class Job(object):
 
     def to_kvs(self):
         """Store this job into memcached."""
-        self._slurp_files()
+        # self._slurp_files()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)

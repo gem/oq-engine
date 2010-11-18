@@ -29,15 +29,22 @@ class Mixin(object):
 
     @classmethod
     def ordered_mixins(cls):
+        """ Return a list of mixins sorted by the order value specified at 
+        registration """
+
         return [(k, v['mixin'])
                  for (k, v)
                  in sorted(cls.mixins.items(), key=lambda x: x[1]['order'])]
 
     @classmethod
     def register(cls, key, mixin, order=0):
+        """ Register a new mixin. We expect a string key, a class, and an 
+        optional order. The order is really only optional in the mixin 
+        proxies."""
         if not key in cls.mixins:
             cls.mixins[key] = {'mixin': mixin, 'order': order }
 
     @classmethod
     def unregister(cls, key):
+        """ Remove a mixin by key """
         del mixins[key]
