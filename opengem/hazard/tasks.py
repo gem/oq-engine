@@ -9,8 +9,9 @@ The following tasks are defined in the hazard engine:
 
 import json
 
+from opengem import job
+from opengem.job import mixins
 from opengem import hazard
-from opengem.hazard import opensha
 from opengem import kvs
 
 from celery.decorators import task
@@ -32,6 +33,12 @@ def generate_erf(job_id):
 
     return job_id
 
+@task
+def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
+    # TODO(JMC): Use a block_id instead of a site_list
+    hazengine = job.Job.from_kvs(job_id)
+    with mixins.Mixin(hazengine, hazard.job.HazJobMixin, key="hazard"):
+        hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
 
 @task
 def compute_hazard_curve(job_id, block_id, site_id=None):
