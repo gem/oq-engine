@@ -137,7 +137,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
     def test_builds_the_cumulative_histogram(self):
         self.assertTrue(numpy.allclose(self.cum_histogram, compute_cumulative_histogram(
-                compute_loss_ratios(self.vuln_function, self.gmf), compute_loss_ratios_range(self.vuln_function))))
+                compute_loss_ratios(self.vuln_function, self.gmf), compute_loss_ratios_range(self.vuln_function))[0]))
     
     def test_computes_the_rates_of_exceedance(self):
         expected_rates = numpy.array([0.2400, 0.0344, 0.0189, 0.0133,
@@ -182,3 +182,47 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.68541666666666656, 0.0)])
         
         self.assertEqual(expected_curve, compute_loss_ratio_curve(self.vuln_function, self.gmf))
+
+    def test_computes_aggregate_histogram_classes(self):
+        vuln_function_1 = shapes.Curve([(0.03, (0.001, 1.00)),
+                (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
+                (0.10, (0.080, 1.0)), (0.12, (0.100, 1.0)),
+                (0.22, (0.200, 1.0)), (0.37, (0.405, 1.0)),
+                (0.52, (0.700, 1.0))])
+        
+        vuln_function_2 = shapes.Curve([(0.02, (0.002, 1.00)),
+                (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
+                (0.10, (0.080, 1.0)), (0.12, (0.100, 1.0)),
+                (0.22, (0.200, 1.0)), (0.37, (0.405, 1.0)),
+                (0.52, (0.800, 1.0))])
+        
+        vuln_function_3 = shapes.Curve([(0.01, (0.003, 1.00)),
+                (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
+                (0.10, (0.080, 1.0)), (0.12, (0.100, 1.0)),
+                (0.22, (0.200, 1.0)), (0.37, (0.405, 1.0)),
+                (0.52, (0.600, 1.0))])
+
+        histogram_1 = compute_cumulative_histogram(
+                compute_loss_ratios(vuln_function_1, self.gmf),
+                compute_loss_ratios_range(vuln_function_1))
+
+        histogram_2 = compute_cumulative_histogram(
+                compute_loss_ratios(vuln_function_2, self.gmf),
+                compute_loss_ratios_range(vuln_function_2))
+
+        histogram_3 = compute_cumulative_histogram(
+                compute_loss_ratios(vuln_function_3, self.gmf),
+                compute_loss_ratios_range(vuln_function_3))
+
+        # assuming that the splitting is correct, just checking that is
+        # used the mininum and maximum values from the set of histograms
+        classes = compute_aggregate_histogram_classes(
+                (histogram_1, histogram_2, histogram_3))
+
+        self.assertEqual(25, len(classes))
+        self.assertEqual(0.0, classes[0])
+        self.assertEqual(0.800, classes[-1])
+
+    def test_computes_aggregate_histogram(self):
+        # waiting for manually computed results from Vitor Silva
+        pass
