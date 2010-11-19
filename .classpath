@@ -17,6 +17,6 @@
 	<classpathentry kind="lib" path="lib/commons-configuration-1.6.jar"/>
 	<classpathentry kind="lib" path="lib/log4j-1.2.16.jar"/>
 	<classpathentry kind="lib" path="lib/commons-io-1.4.jar"/>
-	<classpathentry kind="lib" path="lib/opensha-lite.jar" sourcepath="/Users/jmckenty/Projects/OpenSHA/java"/>
+	<classpathentry kind="lib" path="lib/opensha-lite.jar" sourcepath="../OpenSHA/java"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

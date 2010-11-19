@@ -94,15 +94,16 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
         FaultTrace trace = new FaultTrace("");
         for (int i = 0; i < faultTrace.size(); i++) {
             Location loc =
-                    new Location(faultTrace.get(i).getAsJsonObject().get("lat")
-                            .getAsDouble()
-                            * (180 / Math.PI), faultTrace.get(i)
-                            .getAsJsonObject().get("lon").getAsDouble()
-                            * (180 / Math.PI), faultTrace.get(i)
-                            .getAsJsonObject().get("depth").getAsDouble());
+                    locationFromJson(faultTrace.get(i).getAsJsonObject());
             trace.add(loc);
         }
         return trace;
+    }
+
+    private Location locationFromJson(JsonObject obj) {
+        return new Location(obj.get("lat").getAsDouble() * (180 / Math.PI), obj
+                .get("lon").getAsDouble() * (180 / Math.PI), obj.get("depth")
+                .getAsDouble());
     }
 
     private HypoMagFreqDistAtLoc getHypoMagFreqDistAtLoc(JsonObject obj) {
@@ -110,10 +111,7 @@ public class SourceDataDeserializer implements JsonDeserializer<GEMSourceData> {
         JsonObject location =
                 obj.get("hypoMagFreqDistAtLoc").getAsJsonObject()
                         .get("location").getAsJsonObject();
-        Location loc =
-                new Location(location.get("lat").getAsDouble()
-                        * (180 / Math.PI), location.get("lon").getAsDouble()
-                        * (180 / Math.PI));
+        Location loc = locationFromJson(location);
         JsonArray mfdArray =
                 obj.get("hypoMagFreqDistAtLoc").getAsJsonObject()
                         .get("magFreqDist").getAsJsonArray();
