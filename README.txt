@@ -128,6 +128,3 @@ Python/site-packages')
 
     python setup.py build
     sudo python setup.py install
-
-
-Testing GitHub to Pivotal integration.
