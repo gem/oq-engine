@@ -2,9 +2,6 @@
 
 DATA_DIR=./tests/data
 
-# echo "Generating demo data files..."
-# python tests/generate_demo_files.py
-
 echo "Running demo..."
 python bin/opengem \
   --exposure $DATA_DIR/FakeExposurePortfolio.xml \
@@ -13,4 +10,4 @@ python bin/opengem \
   --filter_region $DATA_DIR/rect.region $@
  
 
-#--shakemap $DATA_DIR/shakemap.fake \
+# --shakemap $DATA_DIR/shakemap.fake \
