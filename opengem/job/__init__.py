@@ -59,6 +59,13 @@ def validate(fn):
     return validator
 
 
+def guarantee_file(base_path, file_spec):
+    """Resolves a file_spec (http, local relative or absolute path, git url,
+    etc.) to an absolute path to a (possibly temporary) file."""
+    # TODO(JMC): Parse out git, http, or full paths here...
+    return os.path.join(base_path, file_spec)
+
+
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
@@ -142,7 +149,6 @@ class Job(object):
             # raise Exception("Can't slurp files without a base path, homie...")
         for key, val in self.params.items():
             if key[-5:] == '_FILE':
-                LOG.debug("Slurping %s : %s" % (key, val))
                 path = os.path.join(self.base_path, val)
                 with open(path) as data_file:
                     LOG.debug("Slurping %s" % path)

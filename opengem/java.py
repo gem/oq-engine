@@ -7,7 +7,11 @@ import sys
 import jpype
 
 from opengem.logs import LOG
+from opengem import flags
+FLAGS = flags.FLAGS
 
+flags.DEFINE_boolean('capture_java_debug', True, 
+    "Pipe Java stderr and stdout to python stderr and stdout")
 
 JAVA_CLASSES = {
     'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
@@ -43,7 +47,7 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-def jvm(max_mem=4000):
+def jvm(max_mem=4000, capture_log=FLAGS.capture_java_debug):
     """Return the jpype module, after guaranteeing the JVM is running and 
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(os.path.join(os.path.dirname(__file__), "../lib")), 
@@ -59,16 +63,17 @@ def jvm(max_mem=4000):
             "-Dlog4j.configuration=log4j.properties",
             "-Xmx%sM" % max_mem)
         
-        mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
-        errstream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stderr)
-        outputstream = jpype.JClass("org.gem.PythonOutputStream")()
-        err_stream = jpype.JClass("org.gem.PythonOutputStream")()
-        outputstream.setPythonStdout(mystream)
-        err_stream.setPythonStdout(errstream)
+        if capture_log:
+            mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
+            errstream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stderr)
+            outputstream = jpype.JClass("org.gem.PythonOutputStream")()
+            err_stream = jpype.JClass("org.gem.PythonOutputStream")()
+            outputstream.setPythonStdout(mystream)
+            err_stream.setPythonStdout(errstream)
         
-        ps = jpype.JClass("java.io.PrintStream")
-        jpype.java.lang.System.setOut(ps(outputstream))
-        jpype.java.lang.System.setErr(ps(err_stream))
+            ps = jpype.JClass("java.io.PrintStream")
+            jpype.java.lang.System.setOut(ps(outputstream))
+            jpype.java.lang.System.setErr(ps(err_stream))
         
     return jpype
 

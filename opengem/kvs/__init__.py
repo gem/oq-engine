@@ -64,6 +64,8 @@ def get_client(memcached_host=settings.MEMCACHED_HOST,
         print "Constructing new pylibmc client..."
         CLIENT = pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
                           **kwargs)
+        CLIENT.behaviors["hash"] = "fnv1a_64"
+        CLIENT.behaviors["verify_keys"] = True
     return CLIENT
 
 def get_sites_from_memcache(job_id, block_id):
@@ -75,13 +77,14 @@ def get_sites_from_memcache(job_id, block_id):
 
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
-    value = get_client(binary=False).get(key)
-    decoder = json.JSONDecoder()
-    
     try:
+        value = get_client(binary=False).get(key)
+        decoder = json.JSONDecoder()
         return decoder.decode(value)
     except Exception, e:
+        print "Key was %s" % key
         print e
+        print "Raw JSON was: %s" % value
         return None
 
 
