@@ -11,6 +11,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -378,6 +379,7 @@ public class CommandLineCalculator {
             int indexSite = 0;
             StringBuilder siteListString = new StringBuilder();
             siteListString.append("{");
+            DecimalFormat df = new DecimalFormat("0.########E0");
             for (Site s : groundMotionFieldKeys) {
                 if (indexSite > 0) {
                     siteListString.append(",");
@@ -387,13 +389,13 @@ public class CommandLineCalculator {
                 // start the json site's value object
                 siteString.append(":{");
                 siteString.append(gson.toJson("lat") + ":"
-                        + gson.toJson(s.getLocation().getLatitude()));
+                        + df.format(s.getLocation().getLatitude()));
                 siteString.append(",");
                 siteString.append(gson.toJson("lon") + ":"
-                        + gson.toJson(s.getLocation().getLongitude()));
+                        + df.format(s.getLocation().getLongitude()));
                 siteString.append(",");
                 siteString.append(gson.toJson("mag") + ":"
-                        + gson.toJson(groundMotionField.get(s)));
+                        + df.format(groundMotionField.get(s)));
                 // close the the json site's value object and the site json
                 // object
                 siteString.append("}");
@@ -438,6 +440,7 @@ public class CommandLineCalculator {
             Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
         String json =
                 gmfToJson(gmfId, eqkRuptureIds, siteIds, groundMotionFields);
+        logger.debug("Saving GMF to " + memCacheKey);
         cache.set(memCacheKey, json);
     }
 

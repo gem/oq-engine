@@ -164,7 +164,8 @@ public class HazardCalculator {
         ListIterator<Site> sites = siteList.listIterator();
         while (sites.hasNext()) {
             Site this_site = sites.next();
-            site_ids[sites.nextIndex() - 1] = this_site.toString();
+            site_ids[sites.nextIndex() - 1] =
+                    Integer.toString(sites.nextIndex() - 1);
         }
         String[] rupture_ids = new String[gmfs.keySet().size()];
         for (int x = 0; x < gmfs.keySet().size(); x++) {

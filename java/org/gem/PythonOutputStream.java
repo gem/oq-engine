@@ -12,9 +12,7 @@ public class PythonOutputStream extends OutputStream {
 
     @Override
     public void write(int arg0) throws IOException {
-        // TODO Auto-generated method stub
         thispipe.write((char) arg0);
-
     }
 
 }

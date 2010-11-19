@@ -11,12 +11,10 @@ import numpy
 from opengem import hazard
 from opengem import java
 from opengem import shapes
-from opengem.job import mixins
 from opengem.hazard import job
 from opengem.hazard import tasks
 from opengem import kvs
 from opengem import settings
-from opengem.logs import LOG
 from opengem.output import geotiff
 
 
@@ -64,7 +62,11 @@ class MonteCarloMixin: # pylint: disable=W0232
     def site_list_generator(self):
         """Will subset and yield portions of the region, depending on the 
         the computation mode."""
-        yield [shapes.Site(40.0, 40.0),]
+        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+        coords = zip(verts[1::2], verts[::2])
+        region = shapes.Region.from_coordinates(coords)
+        region.cell_size = float(self.params['REGION_GRID_SPACING'])
+        yield [site for site in region]
 
     @preload
     def execute(self):
@@ -83,8 +85,10 @@ class MonteCarloMixin: # pylint: disable=W0232
                 for site_list in self.site_list_generator():
                     gmf_id = "%s!%s" % (i, j)
                     seed = random.getrandbits(32)
-                    results.append(tasks.compute_ground_motion_fields.delay(
-                            self.id, site_list, gmf_id, seed))
+                    # pylint: disable=E1101
+                    results.append(tasks.compute_ground_motion_fields.delay( 
+                            self.id, site_list, 
+                            gmf_id, seed))
         
             for task in results:
                 task.wait()
@@ -94,9 +98,11 @@ class MonteCarloMixin: # pylint: disable=W0232
             for j in range(0, realizations):
                 gmf_id = "%s!%s" % (i, j)
                 gmf_key = "%s!GMF!%s" % (self.key, gmf_id)
-                gmf = kvs.get_value_json_decoded(gmf_key)
-                if gmf:
-                    self.write_gmf_file(gmf)
+                print "LOADING from %s" % gmf_key
+                if kvs.get_client(binary=False).get(gmf_key):
+                    gmf = kvs.get_value_json_decoded(gmf_key)
+                    if gmf:
+                        self.write_gmf_file(gmf)
     
     def write_gmf_file(self, gmfs):
         """Generate a GeoTiff file for each GMF"""
@@ -108,14 +114,16 @@ class MonteCarloMixin: # pylint: disable=W0232
                          # % gmf.keys()[0].replace("!", ""))
         
                 # TODO(JMC): Make this valid region
-                switzerland = shapes.Region.from_coordinates(
-                        [(10.0, 100.0), (100.0, 100.0), 
-                         (100.0, 10.0), (10.0, 10.0)])
-                image_grid = switzerland.grid
+                verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+                coords = zip(verts[1::2], verts[::2])
+                region = shapes.Region.from_coordinates(coords)
+                image_grid = region.grid
                 gwriter = geotiff.GeoTiffFile(path, image_grid)
                 for site_key in gmfs[gmf][rupture]:
                     site = gmfs[gmf][rupture][site_key]
-                    gwriter.write((site['lon'], site['lat']), 
+                    site_obj = shapes.Site(site['lon'], site['lat'])
+                    point = image_grid.point_at(site_obj)
+                    gwriter.write((point.column, point.row), 
                         int(site['mag']*-254/10))
                 gwriter.close()
         
@@ -140,10 +148,10 @@ class MonteCarloMixin: # pylint: disable=W0232
     def set_gmpe_params(self, gmpe_map):
         """Push parameters from configuration file into the GMPE objects"""
         jpype = java.jvm()
-        gmpeLogicTreeData = self.calc.createGmpeLogicTreeData()
+        gmpe_lt_data = self.calc.createGmpeLogicTreeData()
         for tect_region in gmpe_map.keySet():
             gmpe = gmpe_map.get(tect_region)
-            gmpeLogicTreeData.setGmpeParams(self.params['COMPONENT'], 
+            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'], 
                 self.params['INTENSITY_MEASURE_TYPE'], 
                 jpype.JDouble(float(self.params['PERIOD'])), 
                 jpype.JDouble(float(self.params['DAMPING'])), 
@@ -152,7 +160,7 @@ class MonteCarloMixin: # pylint: disable=W0232
                 self.params['STANDARD_DEVIATION_TYPE'], 
                 jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
                 jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
-            gmpe_map.put(tect_region,gmpe)
+            gmpe_map.put(tect_region, gmpe)
     
     # def load_ruptures(self):
     #     
@@ -164,16 +172,14 @@ class MonteCarloMixin: # pylint: disable=W0232
     #     self.ruptures = event_set_gen.getStochasticEventSetFromPoissonianERF(
     #                         erf, rn)
     
-    def get_IML_list(self):
+    def get_iml_list(self):
         """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""
-        jpype = java.jvm()
-        
-        iml_vals = {'PGA' : numpy.log,
+        based on the IMT"""        
+        iml_vals = {'PGA' : numpy.log,  # pylint: disable=E1101
                     'MMI' : lambda iml: iml,
-                    'PGV' : numpy.log,
-                    'PGD' : numpy.log,
-                    'SA' : numpy.log,
+                    'PGV' : numpy.log, # pylint: disable=E1101
+                    'PGD' : numpy.log, # pylint: disable=E1101
+                    'SA' : numpy.log,  # pylint: disable=E1101
                      }
         
         iml_list = java.jclass("ArrayList")()
@@ -211,18 +217,18 @@ class MonteCarloMixin: # pylint: disable=W0232
         """Actual hazard curve calculation, runs on the workers.
         Takes a list of Site objects."""
         jsite_list = self.parameterize_sites(site_list)
-        hazardCurves = java.jclass("HazardCalculator").getHazardCurves(
+        hazard_curves = java.jclass("HazardCalculator").getHazardCurves(
             jsite_list,
             self.generate_erf(),
             self.generate_gmpe_map(),
-            self.get_IML_list(),
+            self.get_iml_list(),
             float(self.params['MAXIMUM_DISTANCE']))
 
         pmf_calculator = java.jclass("ProbabilityMassFunctionCalc")
-        for site in hazardCurves.keySet():
-            pmf = pmf_calculator.getPMF(hazardCurves.get(site))
-            hazardCurves.put(site, pmf)
-        return hazardCurves
+        for site in hazard_curves.keySet():
+            pmf = pmf_calculator.getPMF(hazard_curves.get(site))
+            hazard_curves.put(site, pmf)
+        return hazard_curves
 
     @preload
     def compute_ground_motion_fields(self, site_list, gmf_id, seed):
@@ -240,10 +246,3 @@ class MonteCarloMixin: # pylint: disable=W0232
 
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
-
-
-def guarantee_file(base_path, file_spec):
-    """Resolves a file_spec (http, local relative or absolute path, git url,
-    etc.) to an absolute path to a (possibly temporary) file."""
-    # TODO(JMC): Parse out git, http, or full paths here...
-    return os.path.join(base_path, file_spec)
