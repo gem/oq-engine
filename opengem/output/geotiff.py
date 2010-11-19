@@ -27,21 +27,21 @@ class GeoTiffFile(writer.FileWriter):
     
     def __init__(self, path, image_grid):
         self.grid = image_grid
-        self.raster = ncm.zeros((self.grid.columns/self.grid.region.cell_size, self.grid.rows/self.grid.region.cell_size))
+        self.raster = ncm.zeros((self.grid.columns, self.grid.rows))
         self.target = None
         super(GeoTiffFile, self).__init__(path)
         
     def _init_file(self):
         driver = gdal.GetDriverByName(self.format)
-        self.target = driver.Create(self.path, int(self.grid.columns/self.grid.region.cell_size), 
-                        int(self.grid.rows/self.grid.region.cell_size), 1, gdal.GDT_Byte)
+        self.target = driver.Create(self.path, int(self.grid.columns), 
+                        int(self.grid.rows), 1, gdal.GDT_Byte)
 
         # top left x, w-e pixel resolution, rotation, 
         #   top left y, rotation, n-s pixel resolution
         corner = self.grid.region.upper_left_corner
         self.target.SetGeoTransform(
             [corner.latitude, self.grid.cell_size, 
-             0, corner.longitude, 0, -self.grid.cell_size])
+             0, corner.longitude, 0, self.grid.cell_size])
 
         # set the reference info 
         srs = osr.SpatialReference()

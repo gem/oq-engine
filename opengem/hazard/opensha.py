@@ -114,6 +114,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         
                 # TODO(JMC): Make this valid region
                 verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+                # Flips lon and lat, and builds a list of coord tuples
                 coords = zip(verts[1::2], verts[::2])
                 region = shapes.Region.from_coordinates(coords)
                 image_grid = region.grid
@@ -123,7 +124,7 @@ class MonteCarloMixin: # pylint: disable=W0232
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
                     gwriter.write((point.column, point.row), 
-                        int(site['mag']*-254/10))
+                        site['mag'])
                 gwriter.close()
         
         
