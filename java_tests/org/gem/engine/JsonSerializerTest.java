@@ -7,9 +7,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Properties;
 
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.lang.StringUtils;
 import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
@@ -321,26 +319,6 @@ public class JsonSerializerTest {
             gmpeMapDeserializedString.put(trt.toString(), gmpeMapDeserialized
                     .get(trt).getClass().getCanonicalName());
         assertTrue(gmpeMapString.equals(gmpeMapDeserializedString));
-    }
-
-    @Test
-    public void getConfigurationPropertiesFromCacheTest()
-            throws ConfigurationException {
-
-        CommandLineCalculator clc =
-                new CommandLineCalculator("CalculatorConfig.properties");
-
-        Cache cache = new Cache("localhost", 11211);
-
-        // serialize configuration file
-        JsonSerializer.serializeConfigurationFile(cache, "KEY",
-                clc.getConfigurationProperties());
-        // read configuration from cache
-        Properties prop =
-                JsonSerializer
-                        .getConfigurationPropertiesFromCache(cache, "KEY");
-        assertTrue(prop.equals(clc.getConfigurationProperties()));
-
     }
 
     private void validateSubdcutionSerialization(
