@@ -94,15 +94,14 @@ class MonteCarloMixin: # pylint: disable=W0232
                 task.wait()
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
+                    
             # if self.params['OUTPUT_GMF_FILES']
             for j in range(0, realizations):
                 gmf_id = "%s!%s" % (i, j)
                 gmf_key = "%s!GMF!%s" % (self.key, gmf_id)
-                print "LOADING from %s" % gmf_key
-                if kvs.get_client(binary=False).get(gmf_key):
-                    gmf = kvs.get_value_json_decoded(gmf_key)
-                    if gmf:
-                        self.write_gmf_file(gmf)
+                gmf = kvs.get_value_json_decoded(gmf_key)
+                if gmf:
+                    self.write_gmf_file(gmf)
     
     def write_gmf_file(self, gmfs):
         """Generate a GeoTiff file for each GMF"""
