@@ -5,8 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-
-import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -22,13 +20,10 @@ import org.gem.engine.CalculatorConfigHelper.CalculationMode;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
 import org.gem.engine.CalculatorConfigHelper.IntensityMeasure;
 import org.gem.engine.hazard.memcached.BaseMemcachedTest;
-import org.gem.engine.hazard.memcached.Cache;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
-
-import com.google.gson.Gson;
 
 public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
@@ -132,7 +127,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      */
     private void testDoProbabilisticEventBasedCalc(CommandLineCalculator clc)
             throws ConfigurationException, IOException {
-        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result = clc.doCalculationProbabilisticEventBased();
+        Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result =
+                clc.doCalculationProbabilisticEventBased();
         Object o = null;
         assertTrue(result != null);
         assertTrue(result instanceof Map);
@@ -181,18 +177,6 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         assertFalse(calc1.equals(calc3));
     }
 
-    @Test
-    public void supportsConfigurationReadingFromCache() {
-        Properties config = new Properties();
-        config.setProperty("KEY", "VALUE");
-        config.setProperty("ANOTHER_KEY", "ANOTHER_VALUE");
-
-        client.set("KEY", EXPIRE_TIME, new Gson().toJson(config));
-
-        assertEquals(new CommandLineCalculator(config),
-                new CommandLineCalculator(new Cache(LOCALHOST, PORT), "KEY"));
-    }
-
     /**
      * Implements PEER test set 1 case 5 (single, planar, vertical fault, with
      * floating ruptures following GR truncated magnitude frequency
@@ -201,7 +185,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * @throws ConfigurationException
      */
     @Test
-    public void peerSet1Case5ClassicalPSHA() throws ConfigurationException, IOException {
+    public void peerSet1Case5ClassicalPSHA() throws ConfigurationException,
+            IOException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
@@ -254,7 +239,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     }
 
     @Test
-    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException, IOException {
+    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException,
+            IOException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case8aConfigFile);
