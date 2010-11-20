@@ -32,7 +32,6 @@ import org.opensha.sha.imr.param.OtherParams.ComponentParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
-import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.util.TectonicRegionType;
 
 public class GmpeLogicTreeData {
@@ -628,20 +627,6 @@ public class GmpeLogicTreeData {
                             + "Check your input file\n" + "Execution stopped.";
             logger.error(msg);
             new IllegalArgumentException(msg);
-        }
-
-        // set vs30 value
-        if (ar.getParameter(Vs30_Param.NAME).isAllowed(vs30)) {
-            ar.getParameter(Vs30_Param.NAME).setValue(vs30);
-        } else {
-            String msg =
-                    "The chosen vs30 value: " + vs30 + " is not valid\n"
-                            + "The allowed values are the following: \n"
-                            + ar.getParameter(Vs30_Param.NAME).getConstraint()
-                            + "\n" + "Check your input file\n"
-                            + "Execution stopped.";
-            logger.error(msg);
-            throw new IllegalArgumentException(msg);
         }
     }
 
