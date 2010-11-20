@@ -5,4 +5,5 @@ class HazJobMixin(Mixin):
     mixins = {}
 
 
-Mixin.register("Hazard", HazJobMixin, order=2)
+Mixin.register("Hazard", HazJobMixin, order=1)
+

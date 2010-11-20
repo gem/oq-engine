@@ -23,14 +23,14 @@ MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.1500 +35.0000", "intensity": 2.0594e+00}'
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
-TEST_JOB_FILE = test.smoketest_file('endtoend/config.gem')
+TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
-with open(test.smoketest_file('endtoend/expected_source_model.json'), 'r') as f:
+with open(test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
-with open(test.smoketest_file('endtoend/expected_gmpe_model.json'), 'r') as f:
+with open(test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
 def generate_job():

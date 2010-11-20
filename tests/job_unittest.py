@@ -11,7 +11,7 @@ from opengem.risk.job.probabilistic import ProbabilisticEventMixin
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 
-TEST_JOB_FILE = test.smoketest_file('endtoend/config.gem')
+TEST_JOB_FILE = test.smoketest_file('nshmp-california-fault/config.gem')
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
