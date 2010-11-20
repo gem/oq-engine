@@ -102,8 +102,8 @@ INSTALLED_APPS = (
 
 LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'
 
-MEMCACHED_PORT = 11211
-MEMCACHED_HOST = "localhost"
+KVS_PORT = 6379
+KVS_HOST = "localhost"
 
 SOURCEGEOM_SHP = 'seismicsources/data/sourcegeometrycatalog.shp'
 WORLD_SHP = 'world/data/TM_WORLD_BORDERS-0.3.shp'

@@ -6,9 +6,8 @@ the underlying kvs systems.
 
 import json
 import logging
-import pylibmc
 import uuid
-from opengem import settings
+from opengem.kvs.redis import Redis
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
 
@@ -52,21 +51,12 @@ def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
         length = MAX_LENGTH_RANDOM_ID
     return str(uuid.uuid4())[0:length]
 
-CLIENT = None
-def get_client(memcached_host=settings.MEMCACHED_HOST,
-               memcached_port=settings.MEMCACHED_PORT,
-               **kwargs):
+def get_client(**kwargs):
     """possible kwargs:
         binary
     """
-    global CLIENT
-    if not CLIENT:
-        print "Constructing new pylibmc client..."
-        CLIENT = pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
-                          **kwargs)
-        CLIENT.behaviors["hash"] = "fnv1a_64"
-        CLIENT.behaviors["verify_keys"] = True
-    return CLIENT
+
+    return Redis(**kwargs)
 
 def get_sites_from_memcache(job_id, block_id):
     """ Get all of the sites for a block """

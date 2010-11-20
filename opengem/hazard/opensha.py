@@ -32,8 +32,8 @@ class MonteCarloMixin: # pylint: disable=W0232
             """Validate job"""
             # assert(self.base_path)
             self.cache = java.jclass("KVS")(
-                    settings.MEMCACHED_HOST, 
-                    settings.MEMCACHED_PORT)
+                    settings.KVS_HOST, 
+                    settings.KVS_PORT)
             self.calc = java.jclass("CommandLineCalculator")(
                     self.cache, self.key)
             return fn(self, *args, **kwargs) # pylint: disable=E1102
