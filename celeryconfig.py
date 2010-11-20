@@ -8,6 +8,10 @@ eventually.
 
 import sys
 
+from opengem import flags
+from opengem import java
+flags.FLAGS.capture_java_debug = False
+
 sys.path.append('.')
 
 BROKER_HOST = "localhost"

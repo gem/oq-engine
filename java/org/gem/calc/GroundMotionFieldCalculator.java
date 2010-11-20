@@ -142,7 +142,6 @@ public class GroundMotionFieldCalculator {
             ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
             List<Site> sites, Random rn, Boolean inter_event,
             Boolean Vs30Cluster) {
-
         validateInput(attenRel, rup, sites);
 
         if (rn == null)
@@ -184,6 +183,7 @@ public class GroundMotionFieldCalculator {
                 groundMotionField.put(site, val + interEventResidual);
             }
         }
+        System.out.println("Finished interevent.");
 
         // compute intra-event residuals, by decomposing the covariance matrix
         // with cholesky decomposition, and by multiplying the lower triangular
@@ -201,6 +201,7 @@ public class GroundMotionFieldCalculator {
         BlockRealMatrix covarianceMatrix =
                 getCovarianceMatrix_JB2009(attenRel, rup, sites, rn,
                         Vs30Cluster);
+
         CholeskyDecompositionImpl cholDecomp = null;
         try {
             cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
@@ -240,6 +241,7 @@ public class GroundMotionFieldCalculator {
      */
     private static double getGaussianDeviate(double standardDeviation,
             double truncationLevel, String truncationType, Random rn) {
+        System.out.println("Inside getGaussianDeviate");
         double dev = rn.nextGaussian();
         if (truncationType
                 .equalsIgnoreCase(SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED)) {
@@ -277,8 +279,16 @@ public class GroundMotionFieldCalculator {
         attenRel.setEqkRupture(rup);
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
-        double period =
-                (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
+        System.out.println("About to check period of AR");
+        double period = 0.0;
+        try {
+            period =
+                    (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
+        } catch (Exception _e) {
+
+        }
+
+        System.out.println("Period of AR is " + period);
         double correlationRange = Double.NaN;
         if (period < 1 && Vs30Cluster == false)
             correlationRange = 8.5 + 17.2 * period;
