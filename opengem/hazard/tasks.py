@@ -30,6 +30,8 @@ def generate_erf(job_id):
 
     # TODO(JM): implement real ERF computation
 
+    erf_key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
+    kvs.get_client().set(erf_key, json.JSONEncoder().encode([job_id]))
 
     return job_id
 
