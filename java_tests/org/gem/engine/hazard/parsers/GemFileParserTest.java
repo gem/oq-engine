@@ -17,7 +17,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
 public class GemFileParserTest {
 
-    private static final String FILENAME = "test.out";
+    private static final String FILENAME = "california-fault.dat";
 
     @Before
     public void setUp() {
@@ -26,7 +26,7 @@ public class GemFileParserTest {
 
     @After
     public void tearDown() {
-        new File(FILENAME).delete();
+        // new File(FILENAME).delete();
     }
 
     @Test

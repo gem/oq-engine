@@ -43,4 +43,4 @@ class RiskJobMixin(Mixin):
     """ A mixin proxy for Risk jobs """
     mixins = {}
 
-Mixin.register("Risk", RiskJobMixin, order=1)
+Mixin.register("Risk", RiskJobMixin, order=2)

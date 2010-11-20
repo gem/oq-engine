@@ -132,17 +132,21 @@ public class HazardCalculator {
         if (correlation == true) {
             Boolean inter_event = true;
             Boolean Vs30Cluster = false;
-            for (EqkRupture rup : eqkRupList)
+            for (EqkRupture rup : eqkRupList) {
+                logger.debug("rupture mag is " + rup.getMag());
                 groundMotionFields.put(rup, GroundMotionFieldCalculator
                         .getStochasticGroundMotionField_JB2009(
                                 gmpeMap.get(rup.getTectRegType()), rup,
                                 siteList, rn, inter_event, Vs30Cluster));
+            }
         } else {
-            for (EqkRupture rup : eqkRupList)
+            for (EqkRupture rup : eqkRupList) {
+                logger.debug("rupture mag is " + rup.getMag());
                 groundMotionFields.put(rup, GroundMotionFieldCalculator
                         .getStochasticGroundMotionField(
                                 gmpeMap.get(rup.getTectRegType()), rup,
                                 siteList, rn));
+            }
         }
         return groundMotionFields;
     }

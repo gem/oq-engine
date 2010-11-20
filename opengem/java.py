@@ -47,7 +47,7 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-def jvm(max_mem=4000, capture_log=FLAGS.capture_java_debug):
+def jvm(max_mem=4000):
     """Return the jpype module, after guaranteeing the JVM is running and 
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(os.path.join(os.path.dirname(__file__), "../lib")), 
@@ -63,7 +63,7 @@ def jvm(max_mem=4000, capture_log=FLAGS.capture_java_debug):
             "-Dlog4j.configuration=log4j.properties",
             "-Xmx%sM" % max_mem)
         
-        if capture_log:
+        if FLAGS.capture_java_debug:
             mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
             errstream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stderr)
             outputstream = jpype.JClass("org.gem.PythonOutputStream")()
