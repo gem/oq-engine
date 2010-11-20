@@ -59,8 +59,8 @@ class Jobber(object):
         if self.job.has(job.EXPOSURE):
             sites = self._read_sites_from_exposure()
         else:
-            sites = shapes.Region.from_file(
-                    self.job[job.INPUT_REGION]).sites
+            path = os.path.join(self.job.base_path, self.job[job.INPUT_REGION])
+            sites = shapes.Region.from_file(path).sites
 
         if self.partition:
             for block in BlockSplitter(sites, constraint=region_constraint):
@@ -75,11 +75,9 @@ class Jobber(object):
 
     def _read_region_constraint(self):
         """Read the region constraint, if present, from the job definition."""
-
-        print self.job
         if self.job.has(job.INPUT_REGION):
-            return shapes.RegionConstraint.from_file(
-                    self.job[job.INPUT_REGION])
+            path = os.path.join(self.job.base_path, self.job[job.INPUT_REGION])
+            return shapes.RegionConstraint.from_file(path)
         else:
             return None
 
