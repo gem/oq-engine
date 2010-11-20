@@ -30,7 +30,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class InputModelData {
 
-    private ArrayList<GEMSourceData> sourceList;
+    private static ArrayList<GEMSourceData> sourceList;
 
     // border type for area source definition
     private static BorderType borderType = BorderType.GREAT_CIRCLE;

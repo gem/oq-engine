@@ -336,8 +336,8 @@ public class HazardCalculatorTest {
                 CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
                         siteIds, groundMotionFields);
         // converts the groundmotion fields to json and stores them in the cache
-        CommandLineCalculator.gmfToMemcache(memCacheKey, gmfsId, eqkRuptureIds,
-                siteIds, groundMotionFields, cache);
+        CommandLineCalculator.gmfToMemcache(cache, memCacheKey, gmfsId,
+                eqkRuptureIds, siteIds, groundMotionFields);
         String jsonFromMemcache = (String) client.get(memCacheKey);
         assertNotNull("test gmfToMemcacheTest: no value returned from cache",
                 jsonFromMemcache);
