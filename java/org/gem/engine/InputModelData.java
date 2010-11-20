@@ -45,9 +45,10 @@ public class InputModelData {
     private static String FAULT_SOURCE = "fault";
     private static String SUBDUCTION_SOURCE = "subduction";
     private static String GUTENBERG_RICHTER = "gr";
+    private static String EVENLY_DISCRETIZED = "ed";
 
     // for debugging
-    private static Boolean D = false;
+    public static Boolean D = false;
 
     // contructor
     public InputModelData(String inputModelFile, double deltaMFD) {
@@ -519,7 +520,14 @@ public class InputModelData {
             st = new StringTokenizer(sRecord);
             double lat = Double.parseDouble(st.nextToken());
             double lon = Double.parseDouble(st.nextToken());
-            trace.add(new Location(lat, lon));
+
+            if (st.hasMoreTokens()) {
+                double depth = Double.parseDouble(st.nextToken());
+                trace.add(new Location(lat, lon, depth));
+            } else {
+                trace.add(new Location(lat, lon));
+            }
+
             if (D)
                 System.out.println("Lat: " + lat + ", Lon: " + lon);
         }
@@ -597,8 +605,22 @@ public class InputModelData {
 
             if (D)
                 System.out.println(mfd);
+        } else if (mfdType.equalsIgnoreCase(EVENLY_DISCRETIZED)) {
+            floatRuptureFlag = true;
+            double mMin = Double.parseDouble(st.nextToken());
+            double mMax = Double.parseDouble(st.nextToken());
+            int num = Integer.parseInt(st.nextToken());
+
+            mfd = new IncrementalMagFreqDist(mMin, mMax, num);
+
+            for (int i = 0; i < num; i++) {
+                sRecord = oReader.readLine();
+                st = new StringTokenizer(sRecord);
+                mfd.set(Double.parseDouble(st.nextToken()), Double
+                        .parseDouble(st.nextToken()));
+            }
         } else {
-            System.out.println("Only GR mfd supported!");
+            System.out.println("Only GR and ED mfd supported!");
             System.out.println("Execution stopped!");
             System.exit(0);
         }
