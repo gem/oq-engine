@@ -289,4 +289,4 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertAlmostEqual(0.2526, 
-                compute_conditional_loss(loss_curve, 0.100), 0.0001)
+                compute_conditional_loss(loss_curve, 0.100), 4)

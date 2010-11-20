@@ -7,9 +7,15 @@ import unittest
 
 from opengem import hazard
 from opengem import kvs
+from opengem import shapes
+from opengem import test
+from opengem import job
+from opengem.job import mixins
 from opengem.hazard import tasks
+from opengem.hazard import opensha # pylint ignore, needed for register
+import opengem.hazard.job
 from tests.jobber_unittest import wait_for_celery_tasks
-from tests.memcached_unittest import ONE_CURVE_MODEL
+from tests.kvs_unittest import ONE_CURVE_MODEL
 
 MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.0500 +35.0000", "intensity": 1.9623e+00, \
@@ -17,16 +23,63 @@ MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.1500 +35.0000", "intensity": 2.0594e+00}'
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
+TEST_JOB_FILE = test.smoketest_file('endtoend/config.gem')
 
+TEST_SOURCE_MODEL = ""
+with open(test.smoketest_file('endtoend/expected_source_model.json'), 'r') as f:
+    TEST_SOURCE_MODEL = f.read()
+
+TEST_GMPE_MODEL = ""
+with open(test.smoketest_file('endtoend/expected_gmpe_model.json'), 'r') as f:
+    TEST_GMPE_MODEL = f.read()
+
+def generate_job():
+    jobobj = job.Job.from_file(TEST_JOB_FILE)
+    return jobobj.id
 
 class HazardEngineTestCase(unittest.TestCase):
+    """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
+    Most data returned from the engine is via memcached."""
+    
     def setUp(self):
         self.memcache_client = kvs.get_client(binary=False)
-        self.memcache_client.flush_all()
+        # self.memcache_client.flush_all()
 
     def tearDown(self):
         pass
 
+    def test_hazard_engine_jobber_runs(self):
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from memcached."""
+        hazengine = job.Job.from_file(TEST_JOB_FILE)
+        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
+            hc = hazengine.execute()
+            
+            source_model_key = kvs.generate_product_key(hazengine.id, 
+                                hazard.SOURCE_MODEL_TOKEN)
+            source_model = self.memcache_client.get(source_model_key)
+            # We have the random seed in the config, so this is guaranteed
+            self.assertEqual(source_model, TEST_SOURCE_MODEL)
+            
+            gmpe_key = kvs.generate_product_key(hazengine.id, 
+                                hazard.GMPE_TOKEN)
+            gmpe_model = self.memcache_client.get(gmpe_key)
+            self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
+            
+            print "Results of GMF generation: "
+            
+    def test_hazard_engine_worker_runs(self):
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from memcached."""
+        site_id = 1
+        job_id = generate_job()
+        hazengine = job.Job.from_kvs(job_id)
+        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
+            pass
+            # hazengine.execute()
+            # hc = hazengine.compute_hazard_curve(site_id)
+
+    @test.skipit
     def test_basic_generate_erf_keeps_order(self):
         results = []
         for job_id in TASK_JOBID_SIMPLE:
@@ -35,11 +88,14 @@ class HazardEngineTestCase(unittest.TestCase):
         self.assertEqual(TASK_JOBID_SIMPLE,
                          [result.get() for result in results])
 
+    @test.skipit
     def test_generate_erf_returns_erf_via_memcached(self):
         results = []
         result_keys = []
         expected_values = {}
 
+        print hazard.ERF_KEY_TOKEN
+        
         for job_id in TASK_JOBID_SIMPLE:
             erf_key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
 
@@ -104,3 +160,8 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazard.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
             self.memcache_client.set(site_key, ONE_CURVE_MODEL)
+
+
+if __name__ == '__main__':
+    import unittest
+    unittest.main()

@@ -10,6 +10,8 @@ import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Type;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +30,8 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gem.JsonSerializer;
+import org.gem.ScalarIMRJsonAdapter;
 import org.gem.UnoptimizedDeepCopy;
 import org.gem.calc.HazardCalculator;
 import org.gem.engine.CalculatorConfigHelper.CalculationMode;
@@ -38,6 +42,7 @@ import org.gem.engine.hazard.GEMHazardCurveRepositoryList;
 import org.gem.engine.hazard.GemComputeHazard;
 import org.gem.engine.hazard.memcached.Cache;
 import org.gem.engine.logictree.LogicTree;
+import org.gem.engine.logictree.LogicTreeAPI;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
@@ -64,6 +69,8 @@ import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 
 public class CommandLineCalculator {
     //
@@ -81,6 +88,8 @@ public class CommandLineCalculator {
     private static Random random = null;
     private static Long randomSeed = null;
     private Configuration config;
+    private Boolean hasPath = false;
+    private Cache kvs;
     // for debugging
     private static Boolean D = false;
 
@@ -116,13 +125,20 @@ public class CommandLineCalculator {
             throws ConfigurationException {
         config = new PropertiesConfiguration();
         ((PropertiesConfiguration) config).load(calcConfigFile);
+        System.out.println(config);
+        hasPath = true;
     } // constructor
 
     public CommandLineCalculator(Cache cache, String key) {
+        kvs = cache;
         Properties properties =
                 new Gson().fromJson((String) cache.get(key), Properties.class);
 
         config = ConfigurationConverter.getConfiguration(properties);
+    }
+
+    public Properties getConfigurationProperties() {
+        return ConfigurationConverter.getProperties(config);
     }
 
     public void setConfig(Properties p) {
@@ -224,11 +240,14 @@ public class CommandLineCalculator {
      * This is the main method that do the calculations. According to the
      * specifications in the configuration file the method will do the required
      * calculations.
+     * 
+     * @throws IOException
      */
-    public void doCalculation() throws ConfigurationException {
+    public void doCalculation() throws ConfigurationException, IOException {
         StringBuffer logMsg = new StringBuffer();
         // start chronometer
         long startTimeMs = System.currentTimeMillis();
+        logger.warn("Going to parse CalcMode from config object...");
         // get calculation mode
         String calculationMode =
                 config.getString(ConfigItems.CALCULATION_MODE.name());
@@ -272,10 +291,11 @@ public class CommandLineCalculator {
      * probabilistic event based case.
      * 
      * @return a ground motion map
+     * @throws IOException
      */
     public Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>
             doCalculationProbabilisticEventBased()
-                    throws ConfigurationException {
+                    throws ConfigurationException, IOException {
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result =
                 null;
         StringBuffer logMsg = new StringBuffer();
@@ -344,9 +364,12 @@ public class CommandLineCalculator {
         Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
         int indexEqkRupture = 0;
         for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
-            result.append(gson.toJson(eqkRuptureIds[indexEqkRupture]));
+            if (indexEqkRupture > 0) {
+                result.append(",");
+            }
+            result.append(gson.toJson(eqkRuptureIds[indexEqkRupture++]));
             // start the eqk json object
-            result.append(":{");
+            result.append(":");
             Map<Site, Double> groundMotionField =
                     groundMotionFields.get(eqkRupture);
             // TODO:
@@ -354,35 +377,35 @@ public class CommandLineCalculator {
             // For now behave, as if the map object is ordered.
             Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
             int indexSite = 0;
+            StringBuilder siteListString = new StringBuilder();
+            siteListString.append("{");
+            DecimalFormat df = new DecimalFormat("0.########E0");
             for (Site s : groundMotionFieldKeys) {
                 if (indexSite > 0) {
-                    // start the json site object
-                    result.append("{");
+                    siteListString.append(",");
                 }
-                result.append(gson.toJson(siteIds[indexSite]));
+                StringBuilder siteString = new StringBuilder();
+                siteString.append(gson.toJson(siteIds[indexSite++]));
                 // start the json site's value object
-                result.append(":{");
-                result.append(gson.toJson("lat") + ":"
-                        + gson.toJson(s.getLocation().getLatitude()));
-                result.append(",");
-                result.append(gson.toJson("lon") + ":"
-                        + gson.toJson(s.getLocation().getLongitude()));
-                result.append(",");
-                result.append(gson.toJson("mag") + ":"
-                        + gson.toJson(groundMotionField.get(s)));
+                siteString.append(":{");
+                siteString.append(gson.toJson("lat") + ":"
+                        + df.format(s.getLocation().getLatitude()));
+                siteString.append(",");
+                siteString.append(gson.toJson("lon") + ":"
+                        + df.format(s.getLocation().getLongitude()));
+                siteString.append(",");
+                siteString.append(gson.toJson("mag") + ":"
+                        + df.format(groundMotionField.get(s)));
                 // close the the json site's value object and the site json
                 // object
-                result.append("}}");
-                if (indexSite < siteIds.length - 1) {
-                    result.append(",");
-                }
-                ++indexSite;
+                siteString.append("}");
+                siteListString.append(siteString);
             } // for
-              // close the eqk json object
-            result.append("}");
-            ++indexEqkRupture;
+            siteListString.append("}");
+            // close the eqk json object
+            result.append(siteListString);
         } // for
-        result.append("}");
+        result.append("}}");
         return result.toString();
     }
 
@@ -412,11 +435,12 @@ public class CommandLineCalculator {
      * @param cache
      *            The memcache
      */
-    public static void gmfToMemcache(String memCacheKey, String gmfId,
-            String[] eqkRuptureIds, String[] siteIds,
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
+    public static void gmfToMemcache(Cache cache, String memCacheKey,
+            String gmfId, String[] eqkRuptureIds, String[] siteIds,
+            Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
         String json =
                 gmfToJson(gmfId, eqkRuptureIds, siteIds, groundMotionFields);
+        logger.debug("Saving GMF to " + memCacheKey);
         cache.set(memCacheKey, json);
     }
 
@@ -460,13 +484,13 @@ public class CommandLineCalculator {
         return allKeys;
     }
 
-    private void doCalculationThroughMonteCarloApproach() {
+    private void doCalculationThroughMonteCarloApproach() throws IOException {
         logger.info("Performing calculation through Monte Carlo Approach.\n");
         // System.out.println("Performing calculation through Monte Carlo Approach.\n");
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         // instantiate the repository for the results
         GEMHazardCurveRepositoryList hcRepList =
                 new GEMHazardCurveRepositoryList();
@@ -496,12 +520,14 @@ public class CommandLineCalculator {
             // every iteration. This is necessary because both, ERF and GMPEs
             // change because they are randomly sampled
             GemComputeHazard compHaz =
-                    new GemComputeHazard(numOfThreads, sites,
-                            sampleGemLogicTreeERF(
-                                    erfLogicTree.getErfLogicTree(), config),
-                            sampleGemLogicTreeGMPE(gmpeLogicTree
-                                    .getGmpeLogicTreeHashMap()), imlList,
-                            maxDistance);
+                    new GemComputeHazard(
+                            numOfThreads,
+                            sites,
+                            sampleGemLogicTreeERF(erfLogicTree
+                                    .getErfLogicTree()),
+                            sampleGemLogicTreeGMPE(
+                                    gmpeLogicTree.getGmpeLogicTreeHashMap(), 0L),
+                            imlList, maxDistance);
             // store results
             hcRepList.add(compHaz.getValues(), Integer.toString(i));
         } // for
@@ -574,13 +600,13 @@ public class CommandLineCalculator {
 
     } // doCalculationThroughMonteCarloApproach()
 
-    private void doFullCalculation() {
+    private void doFullCalculation() throws IOException {
         logger.info("Performing full calculation. \n");
         // System.out.println("Performing full calculation. \n");
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
         // load GMPE logic tree data
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         // compute ERF logic tree end-branch models
         HashMap<String, ArrayList<GEMSourceData>> endBranchModels =
                 computeErfLogicTreeEndBrancheModels(erfLogicTree
@@ -745,7 +771,8 @@ public class CommandLineCalculator {
     } // doFullCalculation()
 
     private Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>
-            doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling() {
+            doProbabilisticEventBasedCalcThroughMonteCarloLogicTreeSampling()
+                    throws IOException {
 
         logger.info("Performing probabilistic event based calculation"
                 + "through Monte Carlo sampling of logic trees.\n");
@@ -753,8 +780,8 @@ public class CommandLineCalculator {
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> results =
                 new HashMap<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>();
         ArrayList<Site> sites = createSiteList(config);
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         int numberOfRealization =
                 config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
                         .name());
@@ -772,11 +799,11 @@ public class CommandLineCalculator {
                     new HashMap<String, Map<EqkRupture, Map<Site, Double>>>();
             for (int j = 0; j < numberOfRealization; j++) {
                 GEM1ERF erf =
-                        sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree(),
-                                config);
+                        sampleGemLogicTreeERF(erfLogicTree.getErfLogicTree());
                 HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeModel =
-                        sampleGemLogicTreeGMPE(gmpeLogicTree
-                                .getGmpeLogicTreeHashMap());
+                        sampleGemLogicTreeGMPE(
+                                gmpeLogicTree.getGmpeLogicTreeHashMap(),
+                                getRandomSeed());
                 Map<EqkRupture, Map<Site, Double>> groundMotionFields =
                         HazardCalculator.getGroundMotionFields(sites, erf,
                                 gmpeModel, getRandom(), correlationFlag);
@@ -788,7 +815,8 @@ public class CommandLineCalculator {
     }
 
     private Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>
-            doProbabilisticEventBasedCalcForAllLogicTreeEndBranches() {
+            doProbabilisticEventBasedCalcForAllLogicTreeEndBranches()
+                    throws IOException {
 
         logger.info("Performing probabilistic event based calculation"
                 + " for all logic tree end-branches\n");
@@ -796,8 +824,10 @@ public class CommandLineCalculator {
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> results =
                 new HashMap<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>>();
         ArrayList<Site> sites = createSiteList(config);
-        ErfLogicTreeData erfLogicTree = createErfLogicTreeData(config);
-        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData(config);
+        // load ERF logic tree data
+        ErfLogicTreeData erfLogicTree = createErfLogicTreeData();
+        // load GMPE logic tree data
+        GmpeLogicTreeData gmpeLogicTree = createGmpeLogicTreeData();
         int numberOfSeismicityHistories =
                 config.getInt(ConfigItems.NUMBER_OF_SEISMICITY_HISTORIES.name());
         Boolean correlationFlag =
@@ -1195,6 +1225,8 @@ public class CommandLineCalculator {
      * @return
      */
     private static ArrayList<Site> createSiteList(Configuration calcConfig) {
+        // arraylist of sites storing locations where hazard curves must be
+        // calculated
         ArrayList<Site> sites = new ArrayList<Site>();
         LocationList locations =
                 CalculatorConfigHelper.makeRegionboundary(calcConfig);
@@ -1228,9 +1260,8 @@ public class CommandLineCalculator {
         return sites;
     } // createSiteList()
 
-    private GEM1ERF
-            sampleGemLogicTreeERF(LogicTree<ArrayList<GEMSourceData>> ltERF,
-                    Configuration calcConfig) {
+    public GEM1ERF sampleGemLogicTreeERF(
+            LogicTreeAPI<ArrayList<GEMSourceData>> ltERF) {
         // erf to be returned
         GEM1ERF erf = null;
         // array list of sources that will contain the samples sources
@@ -1238,7 +1269,7 @@ public class CommandLineCalculator {
         // number of branching levels in the logic tree
         int numBranchingLevels = ltERF.getBranchingLevelsList().size();
         // sample first branching level to get the starting source model
-        int branchNumber = ltERF.sampleBranchingLevel(0);
+        int branchNumber = ltERF.sampleBranchingLevel(0, getRandom());
         // get the corresponding branch (the -1 is needed because branchNumber
         // is the
         // number of the branch (starting from 1) and not the index of the
@@ -1246,18 +1277,11 @@ public class CommandLineCalculator {
         LogicTreeBranch branch =
                 ltERF.getBranchingLevel(0).getBranch(branchNumber - 1);
         if (branch.getNameInputFile() != null) {
-            // read input file model
-            // next line shows how to read from a Properties object (will be
-            // deleted soon).
-            // InputModelData inputModelData = new
-            // InputModelData(branch.getNameInputFile(),
-            // Double.parseDouble(calcConfig.getProperty(ConfigItems.WIDTH_OF_MFD_BIN.name())));
-            // new here is the apache Configuration object
             String sourceName = configFilesPath() + branch.getNameInputFile();
 
             InputModelData inputModelData =
                     new InputModelData(sourceName,
-                            calcConfig.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
+                            config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
                                     .name()));
             // load sources
             srcList = inputModelData.getSourceList();
@@ -1277,7 +1301,7 @@ public class CommandLineCalculator {
             // uncertainties
             for (int i = 1; i < numBranchingLevels; i++) {
                 // sample the current branching level
-                branchNumber = ltERF.sampleBranchingLevel(i);
+                branchNumber = ltERF.sampleBranchingLevel(i, getRandom());
                 // get the sampled branch
                 branch = ltERF.getBranchingLevel(i).getBranch(branchNumber - 1);
                 if (branch.getRule() != null) {
@@ -1339,9 +1363,169 @@ public class CommandLineCalculator {
           // instantiate ERF
         erf = new GEM1ERF(srcList);
         // set ERF parameters
-        setGEM1ERFParams(erf, calcConfig);
+        setGEM1ERFParams(erf, config);
         return erf;
     } // sampleGemLogicTreeERF()
+
+    public void sampleAndSaveERFTree(Cache cache, String key)
+            throws IOException {
+        int N =
+                config.getInt(ConfigItems.NUMBER_OF_HAZARD_CURVE_CALCULATIONS
+                        .name());
+        long seed = config.getLong(ConfigItems.ERFLT_RANDOM_SEED.name(), 0);
+        logger.warn("Random seed for ERFLT is " + Long.toString(seed));
+        List<ArrayList<GEMSourceData>> sources =
+                sampleSourceModelLogicTree(createErfLogicTreeData()
+                        .getErfLogicTree(), N, seed);
+        JsonSerializer.serializeSourceList(cache, key, sources.get(0));
+    }
+
+    public void sampleAndSaveGMPETree(Cache cache, String key)
+            throws IOException {
+        long seed = config.getLong(ConfigItems.GMPELT_RANDOM_SEED.name(), 0);
+        logger.warn("Random seed for GMPELT is " + Long.toString(seed));
+        HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpe_map =
+                sampleGemLogicTreeGMPE(createGmpeLogicTreeData()
+                        .getGmpeLogicTreeHashMap(), seed);
+
+        GsonBuilder gson = new GsonBuilder();
+        gson.registerTypeAdapter(ScalarIntensityMeasureRelationshipAPI.class,
+                new ScalarIMRJsonAdapter());
+
+        Type hashType =
+                new TypeToken<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>>() {
+                }.getType();
+        logger.debug("GMPE HASHMAP: " + gmpe_map);
+        String json = gson.create().toJson(gmpe_map, hashType);
+        cache.set(key, json);
+    }
+
+    /**
+     * Generate N source models (each represented by an array list of
+     * GEMSourceData objects), by randomly sampling the source model logic tree.
+     * 
+     * @param lt
+     *            : source model logic tree
+     * @param N
+     *            : number of models to be generated
+     * @param seed
+     *            : seed number for the random number generator
+     * @return
+     */
+    public List<ArrayList<GEMSourceData>> sampleSourceModelLogicTree(
+            LogicTree<ArrayList<GEMSourceData>> lt, int N, long seed) {
+
+        List<ArrayList<GEMSourceData>> modelList =
+                new ArrayList<ArrayList<GEMSourceData>>();
+        ArrayList<GEMSourceData> srcList = null;
+        Random rn = null;
+        if (seed != 0) {
+            rn = new Random(seed);
+        } else {
+            rn = new Random();
+        }
+
+        for (int indexModel = 0; indexModel < N; indexModel++) {
+
+            // sample first branching level to get the starting source model
+            int branchNumber = lt.sampleBranchingLevel(0, rn);
+            LogicTreeBranch branch =
+                    lt.getBranchingLevel(0).getBranch(branchNumber - 1);
+            if (branch.getNameInputFile() != null) {
+                String sourceName =
+                        configFilesPath() + branch.getNameInputFile();
+
+                InputModelData inputModelData =
+                        new InputModelData(sourceName,
+                                config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
+                                        .name()));
+                // load sources
+                srcList = inputModelData.getSourceList();
+            } else {
+                String msg =
+                        "The first branching level of the ERF logic tree does"
+                                + " not contain a source model!!\n"
+                                + "Please correct your input!\n Execution stopped!";
+                logger.info(msg);
+                throw new IllegalArgumentException(msg);
+            }
+
+            // loop over sources
+            // for each source, loop over remaining branching levels and apply
+            // uncertainties
+            int numBranchingLevels = lt.getBranchingLevelsList().size();
+            int sourceIndex = 0;
+            for (GEMSourceData src : srcList) {
+                for (int i = 1; i < numBranchingLevels; i++) {
+                    // sample the current branching level
+                    branchNumber = lt.sampleBranchingLevel(i, rn);
+                    // get the sampled branch
+                    branch =
+                            lt.getBranchingLevel(i).getBranch(branchNumber - 1);
+                    if (branch.getRule() != null) {
+                        // at the moment we apply rules to all source
+                        // typologies. In
+                        // the future we may want
+                        // to apply some filter (i.e. apply rule to this source
+                        // type
+                        // only...)
+                        // if area source
+                        if (src instanceof GEMAreaSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToAreaSource(
+                                            (GEMAreaSourceData) src,
+                                            branch.getRule()));
+                        }
+                        // if point source
+                        if (src instanceof GEMPointSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToPointSource(
+                                            (GEMPointSourceData) src,
+                                            branch.getRule()));
+                        }
+                        // if fault source
+                        if (src instanceof GEMFaultSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToFaultSource(
+                                            (GEMFaultSourceData) src,
+                                            branch.getRule()));
+                        }
+                        // if subduction source
+                        if (src instanceof GEMSubductionFaultSourceData) {
+                            // replace the old source with the new source
+                            // accordingly to the rule
+                            srcList.set(
+                                    sourceIndex,
+                                    applyRuleToSubductionFaultSource(
+                                            (GEMSubductionFaultSourceData) src,
+                                            branch.getRule()));
+                        }
+                    } else {
+                        // rule is not defined:
+                        String msg =
+                                "No rule is defined at branching level: " + i
+                                        + "\n" + "Please correct your input!\n"
+                                        + "Execution stopped!";
+                        logger.info(msg);
+                        throw new IllegalArgumentException(msg);
+                    } // end if no rule is defined
+                } // end loop over branching levels
+                sourceIndex = sourceIndex + 1;
+            } // end loop over sources
+            modelList.add(srcList);
+        }
+
+        return modelList;
+    }
 
     /**
      * This method applies an "uncertainty" rule to an area source data object
@@ -1874,10 +2058,19 @@ public class CommandLineCalculator {
         erf.updateForecast();
     } // setGEM1ERFParams()
 
-    private static
+    public static
             HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>
             sampleGemLogicTreeGMPE(
-                    HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE) {
+                    HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE,
+                    long seed) {
+        // TODO(JMC): Do I do anything with the N?
+
+        Random rn = null;
+        if (seed != 0) {
+            rn = new Random(seed);
+        } else {
+            rn = new Random();
+        }
 
         HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> hm =
                 new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
@@ -1894,7 +2087,7 @@ public class CommandLineCalculator {
                     listLtGMPE.get(trt);
 
             // sample the first branching level
-            int branch = ltGMPE.sampleBranchingLevel(0);
+            int branch = ltGMPE.sampleBranchingLevel(0, rn);
 
             // select the corresponding gmpe from the end-branch mapping
             ScalarIntensityMeasureRelationshipAPI gmpe =
@@ -1907,44 +2100,57 @@ public class CommandLineCalculator {
 
     }
 
-    private ErfLogicTreeData
-            createErfLogicTreeData(Configuration configuration) {
+    public ErfLogicTreeData createErfLogicTreeData() throws IOException {
         // load ERF logic tree data
-        ErfLogicTreeData erfLogicTree =
-                new ErfLogicTreeData(
-                        getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
-        return erfLogicTree;
+        if (hasPath == true) {
+            System.out.println(getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE
+                    .name()));
+            ErfLogicTreeData erfLogicTree =
+                    new ErfLogicTreeData(
+                            getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE
+                                    .name()));
+            return erfLogicTree;
+        } else {
+            return new ErfLogicTreeData(kvs,
+                    config.getString(ConfigItems.ERF_LOGIC_TREE_FILE.name()));
+        }
     } // createErfLogicTreeData()
 
-    private GmpeLogicTreeData createGmpeLogicTreeData(
-            Configuration configuration) {
+    public GmpeLogicTreeData createGmpeLogicTreeData() throws IOException {
         // load GMPE logic tree data
-        String relativePath =
-                getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
-        String component =
-                configuration.getString(ConfigItems.COMPONENT.name());
+        String component = config.getString(ConfigItems.COMPONENT.name());
         String intensityMeasureType =
-                configuration.getString(ConfigItems.INTENSITY_MEASURE_TYPE
-                        .name());
-        Double period = configuration.getDouble(ConfigItems.PERIOD.name());
-        Double damping = configuration.getDouble(ConfigItems.DAMPING.name());
+                config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name());
+        Double period = config.getDouble(ConfigItems.PERIOD.name());
+        Double damping = config.getDouble(ConfigItems.DAMPING.name());
         String gmpeTruncationType =
-                configuration
-                        .getString(ConfigItems.GMPE_TRUNCATION_TYPE.name());
+                config.getString(ConfigItems.GMPE_TRUNCATION_TYPE.name());
         Double truncationLevel =
-                configuration.getDouble(ConfigItems.TRUNCATION_LEVEL.name());
+                config.getDouble(ConfigItems.TRUNCATION_LEVEL.name());
         String standardDeviationType =
-                configuration.getString(ConfigItems.STANDARD_DEVIATION_TYPE
-                        .name());
+                config.getString(ConfigItems.STANDARD_DEVIATION_TYPE.name());
         Double referenceVs30Value =
-                configuration
-                        .getDouble(ConfigItems.REFERENCE_VS30_VALUE.name());
+                config.getDouble(ConfigItems.REFERENCE_VS30_VALUE.name());
         // instantiate eventually
-        GmpeLogicTreeData gmpeLogicTree =
-                new GmpeLogicTreeData(relativePath, component,
-                        intensityMeasureType, period, damping,
-                        gmpeTruncationType, truncationLevel,
-                        standardDeviationType, referenceVs30Value);
+        GmpeLogicTreeData gmpeLogicTree = null;
+        if (hasPath == true) {
+            String relativePath =
+                    getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
+            gmpeLogicTree =
+                    new GmpeLogicTreeData(relativePath, component,
+                            intensityMeasureType, period, damping,
+                            gmpeTruncationType, truncationLevel,
+                            standardDeviationType, referenceVs30Value);
+        } else {
+            String gmpeSha =
+                    config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
+            logger.debug("Loading GMPE LT from " + gmpeSha);
+            gmpeLogicTree =
+                    new GmpeLogicTreeData(kvs, gmpeSha, component,
+                            intensityMeasureType, period, damping,
+                            gmpeTruncationType, truncationLevel,
+                            standardDeviationType, referenceVs30Value);
+        }
         // GmpeLogicTreeData gmpeLogicTree =
         // new GmpeLogicTreeData(
         // getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name()),

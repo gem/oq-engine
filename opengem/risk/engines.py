@@ -32,8 +32,8 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         # self.vuln_curves is a dict of {string: Curve}
         logger.debug("ProbabilisticLossRatioCalculator init: vuln curves are")
 
-        for k,v in self.vulnerability_curves.items():
-            logger.debug("%s: %s" % (k, v.values))
+        for k,v in self.vuln_curves.items():
+            logger.debug("%s: %s" % (k, v))
  
     def compute_loss_ratio_curve(self, gridpoint):
         """ Returns the loss ratio curve for a single gridpoint"""
