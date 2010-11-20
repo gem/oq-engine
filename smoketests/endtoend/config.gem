@@ -61,7 +61,7 @@ REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
 # Rock, Deep-Soil
 SADIGH_SITE_TYPE = Rock
 # if true compute ground motion fields using correlated model of Jayaram and Baker 2009
-GROUND_MOTION_CORRELATION = false
+GROUND_MOTION_CORRELATION = true
 
 # true or false
 INCLUDE_AREA_SOURCES = true

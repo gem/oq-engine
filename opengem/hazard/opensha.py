@@ -16,7 +16,9 @@ from opengem.hazard import tasks
 from opengem import kvs
 from opengem import settings
 from opengem.output import geotiff
+from opengem import logs
 
+LOG = logs.LOG
 
 class MonteCarloMixin: # pylint: disable=W0232
     """Implements the JobMixin, which has a primary entry point of execute().
@@ -80,15 +82,18 @@ class MonteCarloMixin: # pylint: disable=W0232
         realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
         for i in range(0, histories):
             for j in range(0, realizations):
+                # TODO(JMC): Push the right seeds into these
                 self.store_source_model(self.config_file)
                 self.store_gmpe_map(self.config_file)
                 for site_list in self.site_list_generator():
-                    gmf_id = "%s!%s" % (i, j)
+                    stochastic_set_id = "%s!%s" % (i, j)
                     seed = random.getrandbits(32)
                     # pylint: disable=E1101
                     results.append(tasks.compute_ground_motion_fields.delay( 
                             self.id, site_list, 
-                            gmf_id, seed))
+                            stochastic_set_id, seed))
+                    # results.append(self.compute_ground_motion_fields( 
+                    #         site_list, stochastic_set_id, seed))
         
             for task in results:
                 task.wait()
@@ -97,13 +102,14 @@ class MonteCarloMixin: # pylint: disable=W0232
                     
             # if self.params['OUTPUT_GMF_FILES']
             for j in range(0, realizations):
-                gmf_id = "%s!%s" % (i, j)
-                gmf_key = "%s!GMF!%s" % (self.key, gmf_id)
-                gmf = kvs.get_value_json_decoded(gmf_key)
-                if gmf:
-                    self.write_gmf_file(gmf)
+                stochastic_set_id = "%s!%s" % (i, j)
+                stochastic_set_key = kvs.generate_product_key(
+                        self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+                gmfs = kvs.get_value_json_decoded(stochastic_set_key)
+                if gmfs:
+                    self.write_gmf_files(gmfs)
     
-    def write_gmf_file(self, gmfs):
+    def write_gmf_files(self, gmfs):
         """Generate a GeoTiff file for each GMF"""
         for gmf in gmfs:
             for rupture in gmfs[gmf]:
@@ -231,18 +237,25 @@ class MonteCarloMixin: # pylint: disable=W0232
         return hazard_curves
 
     @preload
-    def compute_ground_motion_fields(self, site_list, gmf_id, seed):
+    def compute_ground_motion_fields(self, site_list, stochastic_set_id, seed):
         """Ground motion field calculation, runs on the workers."""
         jpype = java.jvm()
 
         jsite_list = self.parameterize_sites(site_list)
-        key = "%s!GMF!%s" % (self.key, gmf_id)
+        key = kvs.generate_product_key(
+                    self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+        correlate = (self.params['GROUND_MOTION_CORRELATION'] == "true" and True or False)
+        # correlate = False
+        print "Correlate is %s" % correlate
         java.jclass("HazardCalculator").generateAndSaveGMFs(
-                self.cache, key, gmf_id, jsite_list,
+                self.cache, key, stochastic_set_id, jsite_list,
                  self.generate_erf(), 
                 self.generate_gmpe_map(), 
                 java.jclass("Random")(seed), 
-                jpype.JBoolean(False))
+                jpype.JBoolean(correlate))
+
+def gmf_id(history_idx, realization_idx, rupture_idx):
+    return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
 
 
 job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
