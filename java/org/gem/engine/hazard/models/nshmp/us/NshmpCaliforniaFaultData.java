@@ -1,15 +1,13 @@
 package org.gem.engine.hazard.models.nshmp.us;
 
 import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.gem.engine.hazard.parsers.GemFileParser;
 import org.gem.engine.hazard.parsers.nshmp.NshmpFault2GemSourceData;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -22,19 +20,22 @@ import org.opensha.sha.util.TectonicRegionType;
  * @author damianomonelli
  * 
  */
-
 public class NshmpCaliforniaFaultData extends GemFileParser {
 
-    public static String inDir = "nshmp/CA/";
+    private static final Log logger =
+            LogFactory.getLog(NshmpCaliforniaFaultData.class);
 
-    // constructor
-    public NshmpCaliforniaFaultData(double latmin, double latmax,
-            double lonmin, double lonmax) throws FileNotFoundException {
+    private final String path;
 
+    public NshmpCaliforniaFaultData(String path) {
+        this.path = path;
+    }
+
+    public void read(double latMin, double latMax, double lonMin, double lonMax) {
         srcDataList = new ArrayList<GEMSourceData>();
 
         // hash map containing fault file with corresponding weight
-        HashMap<String, Double> faultFile = new HashMap<String, Double>();
+        HashMap<String, Double> files = new HashMap<String, Double>();
 
         // California B Fault model
         // Deformation model D2.1 -> 0.5
@@ -43,18 +44,18 @@ public class NshmpCaliforniaFaultData extends GemFileParser {
         // Unstiched -> 0.5
         // CHAR -> 0.6667
         // GR -> 0.3334
-        faultFile.put(inDir + "bFault_stitched_D2.1_Char.in", 0.166675); // 0.5*0.5*0.6667
-                                                                         // =
-                                                                         // 0.166675
-        faultFile.put(inDir + "bFault_stitched_D2.1_GR0.in", 0.08335); // 0.5*0.5*0.3334
-                                                                       // =
-                                                                       // 0.08335
-        faultFile.put(inDir + "bFault_unstitched_D2.1_Char.in", 0.166675);
-        faultFile.put(inDir + "bFault_unstitched_D2.1_GR0.in", 0.08335);
-        faultFile.put(inDir + "bFault_stitched_D2.4_Char.in", 0.166675);
-        faultFile.put(inDir + "bFault_stitched_D2.4_GR0.in", 0.08335);
-        faultFile.put(inDir + "bFault_unstitched_D2.4_Char.in", 0.166675);
-        faultFile.put(inDir + "bFault_unstitched_D2.4_GR0.in", 0.08335);
+        files.put(path + "bFault_stitched_D2.1_Char.in", 0.166675); // 0.5*0.5*0.6667
+        // =
+        // 0.166675
+        files.put(path + "bFault_stitched_D2.1_GR0.in", 0.08335); // 0.5*0.5*0.3334
+        // =
+        // 0.08335
+        files.put(path + "bFault_unstitched_D2.1_Char.in", 0.166675);
+        files.put(path + "bFault_unstitched_D2.1_GR0.in", 0.08335);
+        files.put(path + "bFault_stitched_D2.4_Char.in", 0.166675);
+        files.put(path + "bFault_stitched_D2.4_GR0.in", 0.08335);
+        files.put(path + "bFault_unstitched_D2.4_Char.in", 0.166675);
+        files.put(path + "bFault_unstitched_D2.4_GR0.in", 0.08335);
 
         // California A Fault model
         // aPriori_D2.1 -> 0.45
@@ -62,29 +63,32 @@ public class NshmpCaliforniaFaultData extends GemFileParser {
         // MoBal.HB -> 0.225
         // unseg_HB -> 0.05
         // unseg_Ell -> 0.05
-        faultFile.put(inDir + "aFault_aPriori_D2.1.in", 0.45);
-        faultFile.put(inDir + "aFault_MoBal_EllB.in", 0.225);
-        faultFile.put(inDir + "aFault_MoBal.HB.in", 0.225);
-        faultFile.put(inDir + "aFault_unseg_HB.in", 0.05);
-        faultFile.put(inDir + "aFault_unsegEll.in", 0.05);
+        files.put(path + "aFault_aPriori_D2.1.in", 0.45);
+        files.put(path + "aFault_MoBal_EllB.in", 0.225);
+        files.put(path + "aFault_MoBal.HB.in", 0.225);
+        files.put(path + "aFault_unseg_HB.in", 0.05);
+        files.put(path + "aFault_unsegEll.in", 0.05);
 
         // California Creeping Fault model
-        faultFile.put(inDir + "creepflt.new.in", 1.0);
+        files.put(path + "creepflt.new.in", 1.0);
 
-        // iterator over files
-        Set<String> fileName = faultFile.keySet();
-        Iterator<String> iterFileName = fileName.iterator();
-        while (iterFileName.hasNext()) {
-            String key = iterFileName.next();
-            System.out.println("Processing file: " + key + ", weight: "
-                    + faultFile.get(key));
-            // read NSHMP input file
-            NshmpFault2GemSourceData fm =
-                    new NshmpFault2GemSourceData(key,
-                            TectonicRegionType.ACTIVE_SHALLOW,
-                            faultFile.get(key), latmin, latmax, lonmin, lonmax);
-            for (int i = 0; i < fm.getList().size(); i++)
-                srcDataList.add(fm.getList().get(i));
+        for (String file : files.keySet()) {
+            Double weight = files.get(file);
+            logger.info("Processing file " + file + ", weight " + weight);
+
+            try {
+                TectonicRegionType tectRegion =
+                        TectonicRegionType.ACTIVE_SHALLOW;
+
+                NshmpFault2GemSourceData fm =
+                        new NshmpFault2GemSourceData(file, tectRegion, weight,
+                                latMin, latMax, lonMin, lonMax);
+
+                srcDataList.addAll(fm.getList());
+            } catch (FileNotFoundException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
+
 }
