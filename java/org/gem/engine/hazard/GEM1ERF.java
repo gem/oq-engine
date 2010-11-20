@@ -2,6 +2,7 @@ package org.gem.engine.hazard;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.gem.CalculationSettings;
 import org.gem.params.SourceType;
@@ -61,7 +62,7 @@ public class GEM1ERF extends EqkRupForecast {
 
     // for Debug purposes
     private static String C = new String("GEM1ERF");
-    private boolean D = false;
+    private final boolean D = false;
 
     protected ArrayList<GEMSourceData> gemSourceDataList;
 
@@ -260,9 +261,9 @@ public class GEM1ERF extends EqkRupForecast {
             "Fault Scaling Sigma";
     private final static String FAULT_SCALING_SIGMA_PARAM_INFO =
             "The standard deviation of the Area(mag) or Length(M) relationship";
-    private Double FAULT_SCALING_SIGMA_PARAM_MIN = new Double(0);
-    private Double FAULT_SCALING_SIGMA_PARAM_MAX = new Double(1);
-    private Double FAULT_SCALING_SIGMA_PARAM_DEFAULT = new Double(0.0);
+    private final Double FAULT_SCALING_SIGMA_PARAM_MIN = new Double(0);
+    private final Double FAULT_SCALING_SIGMA_PARAM_MAX = new Double(1);
+    private final Double FAULT_SCALING_SIGMA_PARAM_DEFAULT = new Double(0.0);
     DoubleParameter faultScalingSigmaParam;
 
     // rupture aspect ratio parameter stuff
@@ -270,11 +271,11 @@ public class GEM1ERF extends EqkRupForecast {
             "Fault Rupture Aspect Ratio";
     private final static String FAULT_RUP_ASPECT_RATIO_PARAM_INFO =
             "The ratio of rupture length to rupture width for floaters";
-    private Double FAULT_RUP_ASPECT_RATIO_PARAM_MIN = new Double(
+    private final Double FAULT_RUP_ASPECT_RATIO_PARAM_MIN = new Double(
             Double.MIN_VALUE);
-    private Double FAULT_RUP_ASPECT_RATIO_PARAM_MAX = new Double(
+    private final Double FAULT_RUP_ASPECT_RATIO_PARAM_MAX = new Double(
             Double.MAX_VALUE);
-    private Double FAULT_RUP_ASPECT_RATIO_PARAM_DEFAULT = new Double(1.0);
+    private final Double FAULT_RUP_ASPECT_RATIO_PARAM_DEFAULT = new Double(1.0);
     DoubleParameter faultRupAspectRatioParam;
 
     // Floater Type
@@ -333,9 +334,9 @@ public class GEM1ERF extends EqkRupForecast {
             "Subduction Zone Scaling Sigma";
     private final static String SUB_SCALING_SIGMA_PARAM_INFO =
             "The standard deviation of the Area(mag) or Length(M) relationship";
-    private Double SUB_SCALING_SIGMA_PARAM_MIN = new Double(0);
-    private Double SUB_SCALING_SIGMA_PARAM_MAX = new Double(1);
-    private Double SUB_SCALING_SIGMA_PARAM_DEFAULT = new Double(0.0);
+    private final Double SUB_SCALING_SIGMA_PARAM_MIN = new Double(0);
+    private final Double SUB_SCALING_SIGMA_PARAM_MAX = new Double(1);
+    private final Double SUB_SCALING_SIGMA_PARAM_DEFAULT = new Double(0.0);
     DoubleParameter subductionScalingSigmaParam;
 
     // rupture aspect ratio parameter stuff
@@ -343,11 +344,11 @@ public class GEM1ERF extends EqkRupForecast {
             "Subduction Fault Rupture Aspect Ratio";
     private final static String SUB_RUP_ASPECT_RATIO_PARAM_INFO =
             "The ratio of rupture length to rupture width";
-    private Double SUB_RUP_ASPECT_RATIO_PARAM_MIN =
-            new Double(Double.MIN_VALUE);
-    private Double SUB_RUP_ASPECT_RATIO_PARAM_MAX =
-            new Double(Double.MAX_VALUE);
-    private Double SUB_RUP_ASPECT_RATIO_PARAM_DEFAULT = new Double(1.0);
+    private final Double SUB_RUP_ASPECT_RATIO_PARAM_MIN = new Double(
+            Double.MIN_VALUE);
+    private final Double SUB_RUP_ASPECT_RATIO_PARAM_MAX = new Double(
+            Double.MAX_VALUE);
+    private final Double SUB_RUP_ASPECT_RATIO_PARAM_DEFAULT = new Double(1.0);
     DoubleParameter subductionRupAspectRatioParam;
 
     // Floater Type
@@ -419,7 +420,7 @@ public class GEM1ERF extends EqkRupForecast {
      * This takes a allGemSourceDataList (and parses the list into separate
      * lists for each source type).
      */
-    public GEM1ERF(ArrayList<GEMSourceData> allGemSourceDataList) {
+    public GEM1ERF(List<GEMSourceData> allGemSourceDataList) {
         this(allGemSourceDataList, null);
     }
 
@@ -427,7 +428,7 @@ public class GEM1ERF extends EqkRupForecast {
      * This takes a allGemSourceDataList (which get parsed into separate lists)
      * and a CalculationSettings object.
      */
-    public GEM1ERF(ArrayList<GEMSourceData> allGemSourceDataList,
+    public GEM1ERF(List<GEMSourceData> allGemSourceDataList,
             CalculationSettings calcSet) {
         parseSourceListIntoDifferentTypes(allGemSourceDataList);
         initialize(calcSet);
@@ -441,8 +442,8 @@ public class GEM1ERF extends EqkRupForecast {
      * @param timeSpan
      * @return
      */
-    public static GEM1ERF getGEM1ERF(ArrayList<GEMSourceData> sourceDataList,
-            double timeSpan) {
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public static GEM1ERF getGEM1ERF(List sourceDataList, double timeSpan) {
         TimeSpan tms = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
         tms.setDuration(timeSpan);
         GEM1ERF erf = new GEM1ERF(sourceDataList);
@@ -452,7 +453,7 @@ public class GEM1ERF extends EqkRupForecast {
     }
 
     protected void parseSourceListIntoDifferentTypes(
-            ArrayList<GEMSourceData> allGemSourceDataList) {
+            List<GEMSourceData> allGemSourceDataList) {
 
         areaSourceDataList = new ArrayList<GEMSourceData>();
         griddedSeisSourceDataList = new ArrayList<GEMSourceData>();
@@ -460,6 +461,7 @@ public class GEM1ERF extends EqkRupForecast {
         subductionSourceDataList = new ArrayList<GEMSourceData>();
         for (int i = 0; i < allGemSourceDataList.size(); i++) {
             GEMSourceData srcData = allGemSourceDataList.get(i);
+            System.out.println("Separating source " + srcData);
             if (srcData instanceof GEMFaultSourceData)
                 faultSourceDataList.add(srcData);
             else if (srcData instanceof GEMSubductionFaultSourceData)
@@ -532,7 +534,8 @@ public class GEM1ERF extends EqkRupForecast {
             else if (tectReg == TectonicRegionType.SUBDUCTION_INTERFACE)
                 numSubInterface += 1;
             else
-                throw new RuntimeException("tectonic region type not supported");
+                throw new RuntimeException("tectonic region type " + tectReg
+                        + " not supported");
         }
         tectonicRegionTypes = new ArrayList<TectonicRegionType>();
         if (numActiveShallow > 0)
@@ -1223,6 +1226,7 @@ public class GEM1ERF extends EqkRupForecast {
      * @param iSource
      *            : index of the source needed
      */
+    @Override
     public ProbEqkSource getSource(int iSource) {
         ProbEqkSource source = null;
         if (sourceCache != null) {
@@ -1255,6 +1259,7 @@ public class GEM1ERF extends EqkRupForecast {
      * 
      * @return integer
      */
+    @Override
     public int getNumSources() {
         return gemSourceDataList.size();
     }
@@ -1264,6 +1269,7 @@ public class GEM1ERF extends EqkRupForecast {
      * 
      * @return ArrayList of Prob Earthquake sources
      */
+    @Override
     public ArrayList getSourceList() {
         ArrayList list = new ArrayList();
         for (int s = 0; s < this.getNumSources(); s++)
@@ -1276,6 +1282,7 @@ public class GEM1ERF extends EqkRupForecast {
      * 
      * @return : return the name for this class
      */
+    @Override
     public String getName() {
         return NAME;
     }
@@ -1284,6 +1291,7 @@ public class GEM1ERF extends EqkRupForecast {
      * update the forecast
      **/
 
+    @Override
     public void updateForecast() {
 
         // make sure something has changed
@@ -1385,6 +1393,7 @@ public class GEM1ERF extends EqkRupForecast {
      * 
      * @param event
      */
+    @Override
     public void parameterChange(ParameterChangeEvent event) {
         super.parameterChange(event);
         String paramName = event.getParameterName();
