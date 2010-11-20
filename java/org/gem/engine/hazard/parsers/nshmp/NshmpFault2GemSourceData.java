@@ -1,20 +1,14 @@
 package org.gem.engine.hazard.parsers.nshmp;
 
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.math.BigDecimal;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.StringTokenizer;
 
@@ -52,7 +46,8 @@ public class NshmpFault2GemSourceData extends GemFileParser {
     // if true print out MFDs
     private static boolean printMFD = false;
     // directory where to print out the MFDs
-    private String outDirMFD = "/Users/damianomonelli/Desktop/WusFaultMFD/";
+    private final String outDirMFD =
+            "/Users/damianomonelli/Desktop/WusFaultMFD/";
 
     private static double borderThickness = 2.0;
 
@@ -338,6 +333,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
                         FName = FName + " " + token;
                     }
                 }
+                FName = FName.trim();
 
                 // array list storing mfds for each magnitude model
                 ArrayList<IncrementalMagFreqDist> mfds =
@@ -479,7 +475,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
                     }
 
                     if (FType == -2) { // GR fault with extra branching on b
-                                       // value
+                        // value
 
                         // redefine number of branches
                         NMagBranches = 2 * NMagBranches;
@@ -1084,9 +1080,9 @@ public class NshmpFault2GemSourceData extends GemFileParser {
                                     }
                                 } else if (stdMchar < 0) {
                                     // set gaussian mfd by balancing rate
-                                    mfdChar.setAllButTotMoRate(mag,
-                                            Math.abs(stdMchar), fileWeight
-                                                    * dmW[iepi]
+                                    mfdChar.setAllButTotMoRate(mag, Math
+                                            .abs(stdMchar),
+                                            fileWeight * dmW[iepi]
                                                     * magWeight[imag] * tcr,
                                             truncLevel, truncType);
                                     if (printMFD) {
@@ -1294,8 +1290,8 @@ public class NshmpFault2GemSourceData extends GemFileParser {
 
                     // create GEMFaultSourceData abject
                     GEMFaultSourceData fsd =
-                            new GEMFaultSourceData(
-                                    Integer.toString(sourceIndex), FName, trt,
+                            new GEMFaultSourceData(Integer
+                                    .toString(sourceIndex), FName, trt,
                                     finalMFD, faultT, dip, rake, seismDepthLow,
                                     depth0, floatRuptureFlag);
 
