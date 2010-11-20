@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 A trivial implementation of the GeoTiff format,
@@ -12,10 +13,17 @@ I had to add the installed folders to
 PYTHONPATH in my .bash_profile file to get them to load.
 """
 
-import numpy.core.multiarray as ncm
+import numpy
 from osgeo import osr, gdal
 
 from opengem import writer
+
+GDAL_FORMAT = "GTiff"
+GDAL_PIXEL_DATA_TYPE = gdal.GDT_Float32
+SPATIAL_REFERENCE_SYSTEM = "WGS84"
+TIFF_BAND = 1
+TIFF_LONGITUDE_ROTATION = 0
+TIFF_LATITUDE_ROTATION = 0
 
 class GeoTiffFile(writer.FileWriter):
     """Rough implementation of the GeoTiff format,
@@ -23,31 +31,49 @@ class GeoTiffFile(writer.FileWriter):
                 python-gdal-adding-geotiff-meta-data.html
     """
     
-    format = "GTiff"
+    format = GDAL_FORMAT
     
-    def __init__(self, path, image_grid):
+    def __init__(self, path, image_grid, init_value=numpy.nan):
         self.grid = image_grid
-        self.raster = ncm.zeros((self.grid.columns, self.grid.rows))
+
+        # NOTE(fab): GDAL initializes the image as columns x rows.
+        # numpy arrays, however, have usually rows as first axis,
+        # and columns as second axis (as it is the convention for
+        # matrices in maths)
+        
+        # initialize raster to init_value values (default in NaN)
+        self.raster = numpy.ones((self.grid.rows, self.grid.columns),
+                                 dtype=numpy.float) * init_value
         self.target = None
         super(GeoTiffFile, self).__init__(path)
         
     def _init_file(self):
         driver = gdal.GetDriverByName(self.format)
-        self.target = driver.Create(self.path, int(self.grid.columns), 
-                        int(self.grid.rows), 1, gdal.GDT_Byte)
 
-        # top left x, w-e pixel resolution, rotation, 
-        #   top left y, rotation, n-s pixel resolution
+        # NOTE(fab): use GDAL data type GDT_Float32 for science data
+        self.target = driver.Create(self.path, self.grid.columns, 
+            self.grid.rows, TIFF_BAND, GDAL_PIXEL_DATA_TYPE)
+        
         corner = self.grid.region.upper_left_corner
+
+        # this is the order of arguments to SetGeoTransform()
+        # top left x, w-e pixel resolution, rotation, 
+        # top left y, rotation, n-s pixel resolution
+        # rotation is 0 if image is "north up" 
+        # taken from http://www.gdal.org/gdal_tutorial.html
+
+        # NOTE(fab): the last parameter (grid spacing in N-S direction) is 
+        # negative, because the reference point for the image is the 
+        # upper left (north-western) corner
         self.target.SetGeoTransform(
-            [corner.latitude, self.grid.cell_size, 
-             0, corner.longitude, 0, self.grid.cell_size])
+            [corner.longitude, self.grid.cell_size, TIFF_LONGITUDE_ROTATION, 
+             corner.latitude, TIFF_LATITUDE_ROTATION, -self.grid.cell_size])
 
         # set the reference info 
         srs = osr.SpatialReference()
-        srs.SetWellKnownGeogCS("WGS84")
+        srs.SetWellKnownGeogCS(SPATIAL_REFERENCE_SYSTEM)
         self.target.SetProjection(srs.ExportToWkt())
-        
+
         # This doesn't work with the eventlet tpool stuff.
         # self.file = tpool.Proxy(open(self.path, 'w'))
     
@@ -58,7 +84,9 @@ class GeoTiffFile(writer.FileWriter):
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
-        print self.raster
+        
+        # NOTE(fab): numpy raster does not have to be transposed, although
+        # it has rows x columns
         self.target.GetRasterBand(1).WriteArray(self.raster)
         self.target = None  # This is required to flush the file
         self.finished.send(True)
