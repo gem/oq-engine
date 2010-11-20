@@ -80,7 +80,7 @@ class GeoTiffFile(writer.FileWriter):
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later 
         serialization. Make sure these are zero-based cell addresses."""
-        self.raster[int(cell[0]), int(cell[1])] = int(value)
+        self.raster[int(cell[0]), int(cell[1])] = value
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
