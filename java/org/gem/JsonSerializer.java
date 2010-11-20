@@ -29,8 +29,8 @@ public class JsonSerializer {
     }
 
     public static void serializeSourceList(Cache cache, String key,
-            ArrayList<GEMSourceData> sourceList) {
-        cache.set(key, getJsonSourceList(sourceList));
+            ArrayList<GEMSourceData> sources) {
+        cache.set(key, getJsonSourceList(sources));
     }
 
     public static List<GEMSourceData> getSourceListFromCache(Cache cache,
@@ -43,9 +43,8 @@ public class JsonSerializer {
         return gson.create().fromJson((String) cache.get(key), listType);
     }
 
-    public static
-            HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>
-            getGmpeMapFromCache(Cache cache, String key) {
+    public static HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> getGmpeMapFromCache(
+            Cache cache, String key) {
 
         GsonBuilder gson = new GsonBuilder();
         gson.registerTypeAdapter(ScalarIntensityMeasureRelationshipAPI.class,
