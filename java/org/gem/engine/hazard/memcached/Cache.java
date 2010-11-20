@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.util.concurrent.Future;
 
 import net.spy.memcached.MemcachedClient;
+import net.spy.memcached.transcoders.SerializingTranscoder;
 
 /**
  * Represents an object that is capable of storing values.
@@ -22,6 +23,7 @@ public class Cache {
     private static final int EXPIRE_TIME = 3600;
 
     private MemcachedClient client;
+    private SerializingTranscoder trans;
 
     /**
      * Main constructor.
@@ -34,6 +36,8 @@ public class Cache {
     public Cache(String host, int port) {
         try {
             client = new MemcachedClient(new InetSocketAddress(host, port));
+            trans = new SerializingTranscoder();
+            trans.setCompressionThreshold(1024 * 1024);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -50,7 +54,7 @@ public class Cache {
      *            the object to save
      */
     public void set(String key, Object obj) {
-        Future<Boolean> result = client.set(key, EXPIRE_TIME, obj);
+        Future<Boolean> result = client.set(key, EXPIRE_TIME, obj, trans);
 
         try {
             // shouldn't be necessary, just a patch waiting to find a better

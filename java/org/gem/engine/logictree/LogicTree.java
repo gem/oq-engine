@@ -12,19 +12,17 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Random;
 
-import org.gem.engine.hazard.GEM1ERF;
 import org.gem.engine.hazard.GemComputeHazardLogicTree;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
-public class LogicTree<Element> implements LogicTreeAPI<Element>,
-        Serializable {
+public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
 
-    private ArrayList<LogicTreeBranchingLevel> branLevLst;
+    private final ArrayList<LogicTreeBranchingLevel> branLevLst;
     protected HashMap<String, Element> ebMap;
     private static String modelName;
 
-    private Boolean D = false;
+    private final Boolean D = false;
 
     public LogicTree() {
         this.branLevLst = new ArrayList<LogicTreeBranchingLevel>();
@@ -56,7 +54,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
         LogicTree<Element> gemLogicTree = (LogicTree<Element>) obj;
 
         this.branLevLst = gemLogicTree.getBranchingLevelsList();
-        this.ebMap = (HashMap<String, Element>) gemLogicTree.getEBMap();
+        this.ebMap = gemLogicTree.getEBMap();
         this.modelName = gemLogicTree.getModelName();
 
     }
@@ -64,6 +62,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public void addBranchingLevel(LogicTreeBranchingLevel branLev) {
         this.branLevLst.add(branLev);
     }
@@ -71,6 +70,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public void addEBMapping(String str, Element obj) {
         this.ebMap.put(str, obj);
     }
@@ -78,6 +78,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public ArrayList<LogicTreeBranchingLevel> getBranchingLevelsList() {
         return this.branLevLst;
     }
@@ -85,6 +86,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public LogicTreeBranchingLevel getBranchingLevel(int idx) {
         return this.branLevLst.get(idx);
     }
@@ -92,6 +94,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public void setModelName(String str) {
         this.modelName = str;
     }
@@ -99,6 +102,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public String getModelName() {
         return this.modelName;
     }
@@ -106,6 +110,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public double getWeight(String lab) {
         String[] strarr = lab.split("_");
         LogicTreeBranchingLevel brl = this.branLevLst.get(strarr.length - 1);
@@ -117,6 +122,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
     /**
 	 * 
 	 */
+    @Override
     public double getTotWeight(String lab) {
         double weight = 1.0;
         String[] strarr = lab.split("_");
@@ -129,14 +135,17 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
         return weight;
     }
 
+    @Override
     public HashMap<String, Element> getEBMap() {
         return ebMap;
     }
 
+    @Override
     public Iterator<Element> iterator() {
         return ebMap.values().iterator();
     }
 
+    @Override
     public void saveGemLogicTreeModel(String fileName) throws Exception {
 
         // Use a FileOutputStream to send data to a file
@@ -204,13 +213,13 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
      * algorithm description see "Computational Statistics Handbook with
      * Matlab", Martinez & Martinez, Champman & all, pag.83)
      */
-    public int sampleBranchingLevel(int branchingLevelIndex) {
+    @Override
+    public int sampleBranchingLevel(int branchingLevelIndex, Random rn) {
 
         int sample = -Integer.MIN_VALUE;
 
         // get the corresponding branching level
-        LogicTreeBranchingLevel bl =
-                this.branLevLst.get(branchingLevelIndex);
+        LogicTreeBranchingLevel bl = this.branLevLst.get(branchingLevelIndex);
 
         // x values
         int[] x = new int[bl.getBranchList().size()];
@@ -246,7 +255,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>,
                 System.out.println(cdf[i]);
 
         // generate uniform random number between 0 and 1
-        double rand = Math.random();
+        double rand = rn.nextDouble();
         if (D)
             System.out.println("Random number: " + rand);
 

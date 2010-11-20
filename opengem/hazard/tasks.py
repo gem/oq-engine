@@ -9,6 +9,8 @@ The following tasks are defined in the hazard engine:
 
 import json
 
+from opengem import job
+from opengem.job import mixins
 from opengem import hazard
 from opengem import kvs
 
@@ -27,16 +29,16 @@ def generate_erf(job_id):
     """
 
     # TODO(JM): implement real ERF computation
-    erf = [job_id]
-    erf_serialized = json.JSONEncoder().encode(erf)
 
-    key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
-
-    memcache_client = kvs.get_client(binary=False)
-    memcache_client.set(key, erf_serialized)
 
     return job_id
 
+@task
+def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
+    # TODO(JMC): Use a block_id instead of a site_list
+    hazengine = job.Job.from_kvs(job_id)
+    with mixins.Mixin(hazengine, hazard.job.HazJobMixin, key="hazard"):
+        hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
 
 @task
 def compute_hazard_curve(job_id, block_id, site_id=None):
@@ -84,7 +86,7 @@ def compute_hazard_curve(job_id, block_id, site_id=None):
         sites = [site]
     else:
         # We want all sites for this block.
-        sites = kvs.get_sites_from_memcache(memcache_client, job_id, block_id)
+        sites = kvs.get_sites_from_memcache(job_id, block_id)
 
     if sites is not None:
         return [_compute_hazard_curve(job_id, block_id, site) for site in sites]

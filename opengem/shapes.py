@@ -12,9 +12,11 @@ import numpy
 
 from shapely import geometry
 from shapely import wkt
+from scipy.interpolate import interp1d
 
 from opengem import flags
-from scipy.interpolate import interp1d
+from opengem import java
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('distance_precision', 12, 
@@ -50,6 +52,7 @@ class Region(object):
     @classmethod
     def from_file(cls, path):
         """Load a region from a wkt file with a single polygon"""
+        print path
         with open(path) as wkt_file:
             polygon = wkt.loads(wkt_file.read())
             return cls(polygon=polygon)
@@ -63,25 +66,25 @@ class Region(object):
     def lower_left_corner(self):
         """Lower left corner of the containing bounding box"""
         (minx, miny, _maxx, _maxy) = self.bounds
-        return Site(miny, minx)
+        return Site(minx, miny)
         
     @property
     def lower_right_corner(self):
         """Lower right corner of the containing bounding box"""
         (_minx, miny, maxx, _maxy) = self.bounds
-        return Site(miny, maxx)
+        return Site(maxx, miny)
             
     @property
     def upper_left_corner(self):
         """Upper left corner of the containing bounding box"""
         (minx, _miny, _maxx, maxy) = self.bounds
-        return Site(maxy, minx)
+        return Site(minx, maxy)
         
     @property
     def upper_right_corner(self):
         """Upper right corner of the containing bounding box"""
         (_minx, _miny, maxx, maxy) = self.bounds
-        return Site(maxy, maxx)
+        return Site(maxx, maxy)
     
     @property
     def grid(self):
@@ -176,7 +179,6 @@ class Grid(object):
                     self.region.upper_right_corner.longitude)
         self.rows = self._latitude_to_row(
                     self.region.upper_right_corner.latitude)
-        # print "Grid with %s rows and %s columns" % (self.rows, self.columns)
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
@@ -185,7 +187,7 @@ class Grid(object):
     def check_point(self, point):    
         """ Confirm that the point is within the polygon 
         underlying the gridded region"""
-        # print "Checking point at %s" % point
+        #print "Checking point at %s" % point.wkt
         if (self.region.polygon.contains(point)):
             return True
         if self.region.polygon.touches(point):
@@ -201,22 +203,22 @@ class Grid(object):
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
-        # print "lat offset = %s" % latitude_offset
-        return int((latitude_offset / self.cell_size)) + 1
+        #print "lat offset = %s" % latitude_offset
+        return int((latitude_offset / self.cell_size)) # + 1
 
     def _row_to_latitude(self, row):
         """Determine latitude from given grid row"""
-        return self.lower_left_corner.latitude + ((row-1) * self.cell_size)
+        return self.lower_left_corner.latitude + ((row) * self.cell_size) # row - 1
 
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
-        # print "long offset = %s" % longitude_offset
-        return int((longitude_offset / self.cell_size) + 1)
+        #print "long offset = %s" % longitude_offset
+        return int((longitude_offset / self.cell_size)) # +1
     
     def _column_to_longitude(self, column):
         """Determine longitude from given grid column"""
-        return self.lower_left_corner.longitude + ((column-1) * self.cell_size)
+        return self.lower_left_corner.longitude + ((column) * self.cell_size) # column -1
 
     def point_at(self, site):
         """Translates a site into a matrix bidimensional point."""
@@ -237,7 +239,9 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException, _e:
-                    pass
+                    print "GACK! at col %s row %s" % (col, row)
+                    print "Point at %s %s isnt on grid" % \
+                        (point.site.longitude, point.site.latitude)
 
 def c_mul(val_a, val_b):
     """Ugly method of hashing string to integer
@@ -289,6 +293,14 @@ class Site(object):
         if value == -1:
             value = -2
         return value
+    
+    def to_java(self):
+        """Converts to a Java Site object"""
+        jpype = java.jvm()
+        loc_class = jpype.JClass("org.opensha.commons.geo.Location")
+        site_class = jpype.JClass("org.opensha.commons.data.Site")
+        # TODO(JMC): Support named sites?
+        return site_class(loc_class(self.latitude, self.longitude))
     
     def _geohash(self):
         """A geohash-encoded string for dict keys"""
