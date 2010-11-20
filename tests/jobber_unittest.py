@@ -38,7 +38,6 @@ class JobberTestCase(unittest.TestCase):
 
     def setUp(self):
         self.kvs_client = kvs.get_client(binary=False)
-        self.kvs_client.flush_all()
 
     def tearDown(self):
         pass
@@ -93,9 +92,9 @@ class JobberTestCase(unittest.TestCase):
         expected_dict = {}
         for curr_key in sorted(expected_keys):
             if curr_key.startswith('list.'):
-                expected_dict[curr_key] = [curr_key[5:], curr_key[5:]]
+                expected_dict[curr_key] = str([curr_key[5:], curr_key[5:]])
             elif curr_key.startswith('dict.'):
-                expected_dict[curr_key] = {curr_key[5:]: curr_key[5:]}
+                expected_dict[curr_key] = str({curr_key[5:]: curr_key[5:]})
 
         self.assertEqual(expected_dict, result_values)
 
