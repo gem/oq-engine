@@ -50,7 +50,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_and_metadata_validation(self):
         """Create a GeoTIFF, and check if it has the
         correct metadata."""
-        path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_WITHOUT_NUMBER)
+        path = test.test_file(GEOTIFF_FILENAME_WITHOUT_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.GeoTiffFile(path, smallregion.grid)
         gwriter.close()
@@ -61,7 +61,7 @@ class OutputTestCase(unittest.TestCase):
         """Create a GeoTIFF with a number in its filename. This
         test has been written because it has been reported that numbers in the
         filename do not work."""
-        path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_WITH_NUMBER)
+        path = test.test_file(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.GeoTiffFile(path, smallregion.grid)
         gwriter.close()
@@ -73,7 +73,7 @@ class OutputTestCase(unittest.TestCase):
         check through metadata if it has been done correctly. We check the 
         minumum and maximum values of the band, which are expected to have
         the value of the raster nodes."""
-        path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_WITH_NUMBER)
+        path = test.test_file(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.GeoTiffFile(path, smallregion.grid, 
                                       GEOTIFF_TEST_PIXEL_VALUE)
@@ -91,7 +91,7 @@ class OutputTestCase(unittest.TestCase):
         """Create a GeoTIFF and assign values to the raster nodes according
         to a simple function. Then check if the raster values have been set
         correctly."""
-        path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_SQUARE_REGION)
+        path = test.test_file(GEOTIFF_FILENAME_SQUARE_REGION)
         squareregion = shapes.Region.from_coordinates(TEST_REGION_SQUARE)
         gwriter = geotiff.GeoTiffFile(path, squareregion.grid)
         
@@ -109,8 +109,7 @@ class OutputTestCase(unittest.TestCase):
         """Create a GeoTIFF and assign values to the raster nodes according
         to a simple function. Use a somewhat larger, non-square region for 
         that. Then check if the raster values have been set correctly."""
-        path = os.path.join(test.DATA_DIR, 
-                            GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION)
+        path = test.test_file(GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
         gwriter = geotiff.GeoTiffFile(path, asymmetric_region.grid)
@@ -128,7 +127,7 @@ class OutputTestCase(unittest.TestCase):
     @test.skipit
     def test_geotiff_output(self): 
         """Generate a geotiff file with a smiley face."""
-        path = os.path.join(test.DATA_DIR, "test.1.tiff")
+        path = test.test_file("test.1.tiff")
         switzerland = shapes.Region.from_coordinates(
             [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
         image_grid = switzerland.grid
