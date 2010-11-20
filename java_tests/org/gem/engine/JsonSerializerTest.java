@@ -11,7 +11,7 @@ import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
-import org.gem.engine.hazard.memcached.Cache;
+import org.gem.engine.hazard.redis.Cache;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -96,7 +96,7 @@ public class JsonSerializerTest {
         sourceList.add(subduc);
 
         String json = JsonSerializer.getJsonSourceList(sourceList);
-        Cache cache = new Cache("localhost", 11211);
+        Cache cache = new Cache("localhost", 6379);
         cache.set("KEY", json);
 
         List<GEMSourceData> sourceListDeserialized =
@@ -303,7 +303,7 @@ public class JsonSerializerTest {
                 new TypeToken<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>>() {
                 }.getType();
         String json = gson.create().toJson(gmpeMap, hashType);
-        Cache cache = new Cache("localhost", 11211);
+        Cache cache = new Cache("localhost", 6379);
         cache.set("KEY", json);
 
         HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMapDeserialized =
