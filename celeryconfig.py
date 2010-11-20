@@ -10,7 +10,7 @@ import sys
 
 from opengem import flags
 from opengem import java
-flags.FLAGS.capture_java_debug = False
+flags.FLAGS.capture_java_debug = True
 
 sys.path.append('.')
 

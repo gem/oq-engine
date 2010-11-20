@@ -51,6 +51,15 @@ class ProbabilisticEventMixin:
         except TimeoutError:
             return None
 
+    def slice_gmfs(self, block_id):
+        """Load and collate GMF values for all sites in this block. """
+        # TODO(JMC): Confirm this works regardless of the method of haz calc.
+        histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
+        realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        for i in range(0, histories):
+            for j in range(0, realizations):
+                pass
+
     def _write_output_for_block(self, job_id, block_id):
         """note: this is usable only for one block"""
         
@@ -96,7 +105,9 @@ class ProbabilisticEventMixin:
         """
 
         # load hazard curve file and write to memcache_client
-
+        # TODO(JMC): Replace this with GMF slicing
+        return
+        
         nrml_parser = hazard.NrmlFile("%s/%s" % (self.base_path,
             self.params[job.HAZARD_CURVES]))
         attribute_constraint = producer.AttributeConstraint({'IMT' : 'MMI'})
