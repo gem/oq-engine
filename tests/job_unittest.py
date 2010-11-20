@@ -15,16 +15,11 @@ TEST_JOB_FILE = test.smoketest_file('endtoend/config.gem')
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
-        self.job_without_includes = Job.from_file(os.path.join(test.DATA_DIR,
-            CONFIG_FILE))
-        self.job_with_includes = Job.from_file(os.path.join(test.DATA_DIR,
-            CONFIG_WITH_INCLUDES))
-
-        self.job = self.job_without_includes
+        self.job = Job.from_file(test.test_file(CONFIG_FILE))
+        self.job_with_includes = Job.from_file(test.test_file(CONFIG_WITH_INCLUDES))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
-        self.assertEqual(self.job_without_includes.params,
-            self.job_with_includes.params)
+        self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_job_mixes_in_properly(self):
         with Mixin(self.job, ProbabilisticEventMixin):
@@ -34,9 +29,9 @@ class JobTestCase(unittest.TestCase):
         job = Job.from_file(TEST_JOB_FILE)
         self.assertTrue(job.launch())
 
-
     def test_a_job_has_an_identifier(self):
         self.assertEqual(1, Job({}, 1).id)
     
     def test_can_store_and_read_jobs_from_kvs(self):
+        self.job = Job.from_file(os.path.join(test.DATA_DIR, CONFIG_FILE))
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
