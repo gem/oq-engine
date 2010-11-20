@@ -6,8 +6,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.gem.engine.hazard.memcached.Cache;
-import org.gem.engine.hazard.memcached.BaseMemcachedTest;
+import org.gem.engine.hazard.redis.BaseRedisTest;
+import org.gem.engine.hazard.redis.Cache;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
@@ -15,7 +15,7 @@ import org.opensha.commons.geo.Location;
 
 import com.google.gson.Gson;
 
-public class GEMHazardCurveRepositoryListTest extends BaseMemcachedTest {
+public class GEMHazardCurveRepositoryListTest extends BaseRedisTest {
 
     private static final Double TOLERANCE = 1e-10;
 

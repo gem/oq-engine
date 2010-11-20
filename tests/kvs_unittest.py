@@ -29,30 +29,28 @@ TEST_FILE = "nrml_test_result.xml"
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
 ONE_CURVE_MODEL = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[0.1,0.2,0.3]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label"]}'
-MULTIPLE_CURVES_ONE_BRANCH = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}},{"location":{"lat":0.06981317007977318,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[5.1,5.2,5.3],[6.1,6.2,6.3]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label"]}'
-MULTIPLE_CURVES_MULTIPLE_BRANCHES = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.06981317007977318,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[1.8,2.8,3.8]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0},{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[1.5,2.5,3.5]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label1","label2"]}'
+MULTIPLE_CURVES_ONE_BRANCH = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}},{"location":{"lat":0.06981317007977318,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[5.1,5.2,5.3],[6.1,6.2,6.3]],"unitsMeas":"","intensityMeasureType":"PGA","timeSpan":50.0}],"endBranchLabels":["label"]}'
+MULTIPLE_CURVES_MULTIPLE_BRANCHES = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.06981317007977318,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[1.8,2.8,3.8]],"unitsMeas":"","intensityMeasureType":"PGA","timeSpan":50.0},{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[1.5,2.5,3.5]],"unitsMeas":"","intensityMeasureType":"PGA","timeSpan":50.0}],"endBranchLabels":["label1","label2"]}'
 
-class MemcachedTestCase(unittest.TestCase):
+class KVSTestCase(unittest.TestCase):
     
     def setUp(self):
         
         # starting the jvm...
         print "About to start the jvm..."
         jpype = java.jvm()
-        java_class = jpype.JClass("org.gem.engine.hazard.memcached.Cache")
+        java_class = jpype.JClass("org.gem.engine.hazard.redis.Cache")
         print ("Not dead yet, and found the class...")
-        self.java_client = java_class(settings.MEMCACHED_HOST, settings.MEMCACHED_PORT)
+        self.java_client = java_class(settings.KVS_HOST, settings.KVS_PORT)
         
         self.python_client = kvs.get_client(binary=False)
 
-        # clean server side cache
-        self.python_client.flush_all()
-        
         self.reader = reader.Reader(self.python_client)
         self._delete_test_file()
     
     def tearDown(self):
         self._delete_test_file()
+        self.python_client.flushdb()
     
     def _delete_test_file(self):
         try:
@@ -65,6 +63,9 @@ class MemcachedTestCase(unittest.TestCase):
         
         # TODO (ac): I know, it's weird. Looking for something better...
         time.sleep(0.3)
+
+        result = self.java_client.get("KEY")
+        print result
         
         self.assertEqual("VALUE", self.java_client.get("KEY"))
 
@@ -155,7 +156,6 @@ class MemcachedTestCase(unittest.TestCase):
         self.assertEqual(1, len(nrmls.items()))
         self.assertEquals(data, nrmls)
     
-    @test.skipit
     def test_reads_multiple_curves_in_one_branch_nrml(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_ONE_BRANCH)
         nrmls = self.reader.for_nrml("KEY")
@@ -179,7 +179,6 @@ class MemcachedTestCase(unittest.TestCase):
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
     
-    @test.skipit
     def test_reads_multiple_curves_in_multiple_branches_nrml(self):
         self.python_client.set("KEY", MULTIPLE_CURVES_MULTIPLE_BRANCHES)
         nrmls = self.reader.for_nrml("KEY")
@@ -200,8 +199,12 @@ class MemcachedTestCase(unittest.TestCase):
                     "Values": [1.5,2.5,3.5]} 
                 }
 
+        print "data: %s" % data
+        print nrmls
+
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
+
     @test.skipit
     def test_end_to_end_from_memcached_to_nrml(self):
         # storing in memcached from java side
