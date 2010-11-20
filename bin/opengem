@@ -153,8 +153,6 @@ if __name__ == '__main__':
         _launch_worker_subprocs()
     else:
         job = Job.from_file(FLAGS.config_file)
-        job.to_kvs()
-
         the_jobber = jobber.Jobber(job, FLAGS.partition)
         if not the_jobber.run():
             # TODO (ac): Should we print additional details?
