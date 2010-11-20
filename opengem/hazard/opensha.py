@@ -5,6 +5,7 @@ Wrapper around the OpenSHA-lite java library.
 
 import os
 import random
+import string
 
 import numpy
 
@@ -105,19 +106,25 @@ class MonteCarloMixin: # pylint: disable=W0232
                 stochastic_set_id = "%s!%s" % (i, j)
                 stochastic_set_key = kvs.generate_product_key(
                         self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
-                gmfs = kvs.get_value_json_decoded(stochastic_set_key)
-                if gmfs:
-                    self.write_gmf_files(gmfs)
+                print "Writing output for ses %s" % stochastic_set_key
+                ses = kvs.get_value_json_decoded(stochastic_set_key)
+                if ses:
+                    self.write_gmf_files(ses)
     
-    def write_gmf_files(self, gmfs):
+    def write_gmf_files(self, ses):
         """Generate a GeoTiff file for each GMF"""
-        for gmf in gmfs:
-            for rupture in gmfs[gmf]:
+        for event_set in ses:
+            for rupture in ses[event_set]:
                 # TODO(JMC): Fix rupture and gmf ids into name
+                (hist, real) = [int(x) for x in event_set.split("!")]
                 path = os.path.join(self.base_path, 
-                        self.params['OUTPUT_DIR'], "gmfab.tiff")
-                         # % gmf.keys()[0].replace("!", ""))
-        
+                        self.params['OUTPUT_DIR'], 
+                        "gmf%s%s%s.tiff" % (string.letters[hist],
+                                        string.letters[real],
+                                        string.letters[int(rupture)]))
+                        
+                # (ses[event_set][rupture].keys()[0].replace("!", "")))
+                print "Writing GMF to %s " % path
                 # TODO(JMC): Make this valid region
                 verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
                 # Flips lon and lat, and builds a list of coord tuples
@@ -125,12 +132,12 @@ class MonteCarloMixin: # pylint: disable=W0232
                 region = shapes.Region.from_coordinates(coords)
                 image_grid = region.grid
                 gwriter = geotiff.GeoTiffFile(path, image_grid)
-                for site_key in gmfs[gmf][rupture]:
-                    site = gmfs[gmf][rupture][site_key]
+                for site_key in ses[event_set][rupture]:
+                    site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
                     gwriter.write((point.column, point.row), 
-                        site['mag'])
+                        numpy.exp(site['mag'])*254/2)
                 gwriter.close()
         
         
@@ -245,14 +252,13 @@ class MonteCarloMixin: # pylint: disable=W0232
         key = kvs.generate_product_key(
                     self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
         correlate = (self.params['GROUND_MOTION_CORRELATION'] == "true" and True or False)
-        # correlate = False
-        print "Correlate is %s" % correlate
         java.jclass("HazardCalculator").generateAndSaveGMFs(
                 self.cache, key, stochastic_set_id, jsite_list,
                  self.generate_erf(), 
                 self.generate_gmpe_map(), 
                 java.jclass("Random")(seed), 
                 jpype.JBoolean(correlate))
+
 
 def gmf_id(history_idx, realization_idx, rupture_idx):
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
