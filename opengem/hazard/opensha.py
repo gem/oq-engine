@@ -38,7 +38,7 @@ class MonteCarloMixin: # pylint: disable=W0232
             return fn(self, *args, **kwargs) # pylint: disable=E1102
         return preloader
 
-    def store_source_model(self, config_file):
+    def store_source_model(self, config_file, seed):
         """Generates an Earthquake Rupture Forecast, using the source zones and
         logic trees specified in the job config file. Note that this has to be
         done currently using the file itself, since it has nested references to
@@ -47,9 +47,9 @@ class MonteCarloMixin: # pylint: disable=W0232
         config_file should be an absolute path."""
         engine = java.jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
-        engine.sampleAndSaveERFTree(self.cache, key)
+        engine.sampleAndSaveERFTree(self.cache, key, seed)
     
-    def store_gmpe_map(self, config_file):
+    def store_gmpe_map(self, config_file, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file.
         
@@ -57,7 +57,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         not have any included references."""
         engine = java.jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
-        engine.sampleAndSaveGMPETree(self.cache, key)
+        engine.sampleAndSaveGMPETree(self.cache, key, seed)
 
     def site_list_generator(self):
         """Will subset and yield portions of the region, depending on the 
@@ -75,20 +75,31 @@ class MonteCarloMixin: # pylint: disable=W0232
         Loops through various random realizations, spawning tasks to compute
         GMFs."""
         results = []
-        random.seed(self.params.get('GMF_RANDOM_SEED', None)) 
+        
+        source_model_generator = random.Random()
+        source_model_generator.seed(self.params.get('ERFLT_RANDOM_SEED', None))
+        
+        gmpe_generator = random.Random()
+        gmpe_generator.seed(self.params.get('GMPELT_RANDOM_SEED', None))
+        
+        gmf_generator = random.Random()
+        gmf_generator.seed(self.params.get('GMF_RANDOM_SEED', None))
+        
         histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
         realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
         for i in range(0, histories):
             for j in range(0, realizations):
-                self.store_source_model(self.config_file)
-                self.store_gmpe_map(self.config_file)
+                self.store_source_model(self.config_file,
+                        source_model_generator.getrandbits(32))
+                self.store_gmpe_map(self.config_file,
+                        gmpe_generator.getrandbits(32))
+                
                 for site_list in self.site_list_generator():
                     gmf_id = "%s!%s" % (i, j)
-                    seed = random.getrandbits(32)
                     # pylint: disable=E1101
-                    results.append(tasks.compute_ground_motion_fields.delay( 
+                    results.append(tasks.compute_ground_motion_fields.delay(
                             self.id, site_list, 
-                            gmf_id, seed))
+                            gmf_id, gmf_generator.getrandbits(32)))
         
             for task in results:
                 task.wait()
