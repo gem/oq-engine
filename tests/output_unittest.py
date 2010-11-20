@@ -27,10 +27,12 @@ from opengem.output import geotiff
 # this is made from a shapely polygon, which has (lon, lat) vertices
 TEST_REGION_SMALL = [(0.0, 0.0), (1.0, 0.0), (1.0, 0.5), (0.0, 0.5)]
 TEST_REGION_SQUARE = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+TEST_REGION_LARGE_ASYMMETRIC = [(0.0, 0.0), (10.0, 0.0), (10.0, 5.0), (0.0, 5.0)]
 
 GEOTIFF_FILENAME_WITHOUT_NUMBER = "test.smallregion.tiff"
 GEOTIFF_FILENAME_WITH_NUMBER = "test.smallregion.1.tiff"
 GEOTIFF_FILENAME_SQUARE_REGION = "test.squareregion.tiff"
+GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION = "test.asymmetric.region.tiff"
 
 GEOTIFF_USED_CHANNEL_IDX = 1
 GEOTIFF_TEST_PIXEL_VALUE = 1.0
@@ -38,7 +40,7 @@ GEOTIFF_TEST_PIXEL_VALUE = 1.0
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
 
-    def test_simple_geotiff_generation_and_metadata_validation(self):
+    def test_geotiff_generation_and_metadata_validation(self):
         path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_WITHOUT_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.GeoTiffFile(path, smallregion.grid)
@@ -46,7 +48,7 @@ class OutputTestCase(unittest.TestCase):
 
         self._assert_geotiff_metadata_is_correct(path, smallregion)
     
-    def test_simple_geotiff_generation_with_number_in_filename(self):
+    def test_geotiff_generation_with_number_in_filename(self):
         path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.GeoTiffFile(path, smallregion.grid)
@@ -54,7 +56,7 @@ class OutputTestCase(unittest.TestCase):
 
         self._assert_geotiff_metadata_is_correct(path, smallregion)
 
-    def test_simple_geotiff_generation_initialize_raster(self):
+    def test_geotiff_generation_initialize_raster(self):
         path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.GeoTiffFile(path, smallregion.grid, GEOTIFF_TEST_PIXEL_VALUE)
@@ -68,7 +70,7 @@ class OutputTestCase(unittest.TestCase):
             GEOTIFF_TEST_PIXEL_VALUE, 
             GEOTIFF_TEST_PIXEL_VALUE)
 
-    def test_simple_geotiff_generation_and_raster_validation(self):
+    def test_geotiff_generation_and_simple_raster_validation(self):
         path = os.path.join(test.DATA_DIR, GEOTIFF_FILENAME_SQUARE_REGION)
         squareregion = shapes.Region.from_coordinates(TEST_REGION_SQUARE)
         gwriter = geotiff.GeoTiffFile(path, squareregion.grid)
@@ -76,19 +78,27 @@ class OutputTestCase(unittest.TestCase):
         reference_raster = numpy.zeros((squareregion.grid.rows, 
                                         squareregion.grid.columns), 
                                        dtype=numpy.float)
-
-        for row_idx in xrange(squareregion.grid.rows):
-            for col_idx in xrange(squareregion.grid.columns):
-                gwriter.write((col_idx, row_idx), 
-                               float((row_idx + 1) * (col_idx + 1)))
-                reference_raster[row_idx, col_idx] = float((row_idx + 1) * (col_idx + 1))
-
+        self._fill_rasters(squareregion, gwriter, reference_raster, self._trivial_fill)
         gwriter.close()
 
-        self._assert_geotiff_metadata_is_correct(path, squareregion)
-        self._assert_geotiff_raster_is_correct(path, 
-            GEOTIFF_USED_CHANNEL_IDX, 
-            reference_raster)
+        self._assert_geotiff_metadata_and_raster_is_correct(path, 
+            squareregion, GEOTIFF_USED_CHANNEL_IDX, reference_raster)
+
+    def test_geotiff_generation_asymmetric_pattern(self):
+        path = os.path.join(test.DATA_DIR, 
+                            GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+        gwriter = geotiff.GeoTiffFile(path, asymmetric_region.grid)
+
+        reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                        asymmetric_region.grid.columns),
+                                       dtype=numpy.float)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, self._trivial_fill)
+        gwriter.close()
+
+        self._assert_geotiff_metadata_and_raster_is_correct(path, 
+            asymmetric_region, GEOTIFF_USED_CHANNEL_IDX, reference_raster)
 
     @test.skipit
     def test_geotiff_output(self): 
@@ -156,3 +166,20 @@ class OutputTestCase(unittest.TestCase):
             band_raster[row_idx,:] = tuple_of_floats
 
         self.assertTrue(numpy.allclose(band_raster, raster))
+
+    def _assert_geotiff_metadata_and_raster_is_correct(self, path, region, 
+                                                       band_index, raster):
+        self._assert_geotiff_metadata_is_correct(path, region)
+        self._assert_geotiff_raster_is_correct(path, GEOTIFF_USED_CHANNEL_IDX,
+            raster)
+
+    def _fill_rasters(self, region, writer, reference_raster, fill_function):
+        for row_idx in xrange(region.grid.rows):
+            for col_idx in xrange(region.grid.columns):
+                writer.write((row_idx, col_idx), 
+                    float((row_idx + 1) * (col_idx + 1)))
+                reference_raster[row_idx, col_idx] = fill_function(row_idx, 
+                                                                   col_idx)
+
+    def _trivial_fill(self, row_idx, col_idx):
+        return float((row_idx + 1) * (col_idx + 1))
