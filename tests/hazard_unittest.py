@@ -43,7 +43,6 @@ class HazardEngineTestCase(unittest.TestCase):
     
     def setUp(self):
         self.memcache_client = kvs.get_client(binary=False)
-        # self.memcache_client.flush_all()
 
     def tearDown(self):
         pass
@@ -79,7 +78,6 @@ class HazardEngineTestCase(unittest.TestCase):
             # hazengine.execute()
             # hc = hazengine.compute_hazard_curve(site_id)
 
-    @test.skipit
     def test_basic_generate_erf_keeps_order(self):
         results = []
         for job_id in TASK_JOBID_SIMPLE:
@@ -88,7 +86,6 @@ class HazardEngineTestCase(unittest.TestCase):
         self.assertEqual(TASK_JOBID_SIMPLE,
                          [result.get() for result in results])
 
-    @test.skipit
     def test_generate_erf_returns_erf_via_memcached(self):
         results = []
         result_keys = []

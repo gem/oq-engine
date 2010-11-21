@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Wrapper around the OpenSHA-lite java library.
 
@@ -34,8 +35,8 @@ class MonteCarloMixin: # pylint: disable=W0232
             """Validate job"""
             # assert(self.base_path)
             self.cache = java.jclass("KVS")(
-                    settings.MEMCACHED_HOST, 
-                    settings.MEMCACHED_PORT)
+                    settings.KVS_HOST, 
+                    settings.KVS_PORT)
             self.calc = java.jclass("CommandLineCalculator")(
                     self.cache, self.key)
             return fn(self, *args, **kwargs) # pylint: disable=E1102
@@ -112,34 +113,35 @@ class MonteCarloMixin: # pylint: disable=W0232
                     self.write_gmf_files(ses)
     
     def write_gmf_files(self, ses):
-        """Generate a GeoTiff file for each GMF"""
+        """Generate a GeoTiff file for each GMF."""
         for event_set in ses:
             for rupture in ses[event_set]:
-                # TODO(JMC): Fix rupture and gmf ids into name
-                (hist, real) = [int(x) for x in event_set.split("!")]
-                path = os.path.join(self.base_path, 
-                        self.params['OUTPUT_DIR'], 
-                        "gmf%s%s%s.tiff" % (string.letters[hist],
-                                        string.letters[real],
-                                        string.letters[int(rupture)]))
-                        
-                # (ses[event_set][rupture].keys()[0].replace("!", "")))
-                print "Writing GMF to %s " % path
-                # TODO(JMC): Make this valid region
-                verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+
+                # NOTE(fab): we have to explicitly convert the JSON-decoded 
+                # tokens from Unicode to string, otherwise the path will not
+                # be accepted by the GeoTiffFile constructor
+                path = os.path.join(self.base_path, self.params['OUTPUT_DIR'],
+                        "gmf-%s-%s.tiff" % (str(event_set.replace("!", "_")),
+                                            str(rupture.replace("!", "_"))))
+
+                verts = [
+                    float(x) for x in self.params['REGION_VERTEX'].split(",")]
+                
                 # Flips lon and lat, and builds a list of coord tuples
                 coords = zip(verts[1::2], verts[::2])
+
                 region = shapes.Region.from_coordinates(coords)
                 image_grid = region.grid
+                
                 gwriter = geotiff.GeoTiffFile(path, image_grid)
+                
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
-                    gwriter.write((point.column, point.row), 
-                        numpy.exp(site['mag'])*254/2)
+                    gwriter.write((point.row, point.column), 
+                    numpy.exp(float(site['mag'])))
                 gwriter.close()
-        
         
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored

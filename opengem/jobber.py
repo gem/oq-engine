@@ -100,7 +100,6 @@ class Jobber(object):
         
         # TODO(fab): find out why this works only with binary=False
         self.memcache_client = kvs.get_client(binary=False)
-        self.memcache_client.flush_all()
 
 
 class Block(object):

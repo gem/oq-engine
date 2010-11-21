@@ -6,6 +6,8 @@
 
 """
 
+import os
+
 from celery.exceptions import TimeoutError
 
 from opengem import hazard
@@ -96,8 +98,8 @@ class ProbabilisticEventMixin:
 
         region = self.params[job.INPUT_REGION]
         filter_cell_size = self.params.get("filter cell size", 1.0)
-        self.region_constraint = shapes.RegionConstraint.from_file(
-            self.base_path + region)
+        path = os.path.join(self.base_path, region)
+        self.region_constraint = shapes.RegionConstraint.from_file(path)
         self.region_constraint.cell_size = filter_cell_size
 
     def store_sites_and_hazard_curve(self):
@@ -105,9 +107,7 @@ class ProbabilisticEventMixin:
         """
 
         # load hazard curve file and write to memcache_client
-        # TODO(JMC): Replace this with GMF slicing
-        return
-        
+        # TODO(JMC): Replace this with GMF slicing        
         nrml_parser = hazard.NrmlFile("%s/%s" % (self.base_path,
             self.params[job.HAZARD_CURVES]))
         attribute_constraint = producer.AttributeConstraint({'IMT' : 'MMI'})
