@@ -1,7 +1,7 @@
 ..
       License Header goes here
 
-GEM Seismicsources
+OpenQuake Seismicsources
 =====================================
 The :mod:`seismicsources` Sub-package
 -------------------------------------
