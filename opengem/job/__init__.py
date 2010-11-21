@@ -120,6 +120,18 @@ class Job(object):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
 
+    @property
+    def region(self):
+        """Compute valid region with appropriate cell size from config file."""
+        if not self.has('REGION_VERTEX'):
+            return None
+        verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
+        # Flips lon and lat, and builds a list of coord tuples
+        coords = zip(verts[1::2], verts[::2])
+        region = shapes.RegionConstraint.from_coordinates(coords)
+        region.cell_size = float(self['REGION_GRID_SPACING'])
+        return region
+
     @validate
     def launch(self):
         """ Based on the behaviour specified in the configuration, mix in the
@@ -144,15 +156,16 @@ class Job(object):
 
         sites = []
         self.blocks_keys = []
-        region_constraint = self._read_region_constraint()
+        region_constraint = self.region
         
         # we use the exposure, if specified,
         # otherwise we use the input region
         if self.has(EXPOSURE):
             sites = self._read_sites_from_exposure()
+        elif self.region:
+            sites = self.region.sites
         else:
-            path = os.path.join(self.base_path, self[INPUT_REGION])
-            sites = shapes.Region.from_file(path).sites
+            raise("I don't know how to get the sites!")
 
         if self.partition:
             for block in BlockSplitter(sites, constraint=region_constraint):
@@ -163,14 +176,6 @@ class Job(object):
             self.blocks_keys.append(block.id)
             block.to_kvs()
 
-    def _read_region_constraint(self):
-        """Read the region constraint, if present, from the job definition."""
-        if self.has(INPUT_REGION):
-            path = os.path.join(self.base_path, self[INPUT_REGION])
-            return shapes.RegionConstraint.from_file(path)
-        else:
-            return None
-
     def _read_sites_from_exposure(self):
         """Read the set of sites to compute from the exposure file specified
         in the job definition."""
@@ -178,8 +183,10 @@ class Job(object):
         sites = []
         path = os.path.join(self.base_path, self[EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
-        
-        for asset_data in reader:
+        constraint = self.region
+        if not constraint:
+            constraint = AlwaysTrueConstraint()
+        for asset_data in reader.filter(constraint):
             sites.append(asset_data[0])
 
         return sites
@@ -216,6 +223,11 @@ class Job(object):
         self._slurp_files()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
+
+
+class AlwaysTrueConstraint():
+    def match(self, point):
+        return True
 
 
 class Block(object):
@@ -265,11 +277,7 @@ class BlockSplitter(object):
         self.constraint = constraint
         self.sites_per_block = sites_per_block
     
-        if not self.constraint:
-            class AlwaysTrueConstraint():
-                def match(self, point):
-                    return True
-            
+        if not self.constraint:            
             self.constraint = AlwaysTrueConstraint()
     
     def __iter__(self):
