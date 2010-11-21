@@ -11,6 +11,7 @@ Tasks in the risk engine include the following:
 from celery.decorators import task
 
 from opengem import flags
+from opengem import job
 from opengem import kvs 
 from opengem import risk
 
@@ -51,7 +52,8 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
     # loop over sites for this block
     # assumes that hazard, assets, and output risk grid are the same
     # (no nearest-neighbour search to find hazard)
-    sites_list = kvs.get_sites_from_memcache(job_id, block_id)
+    block = job.Block.from_kvs(block_id)
+    sites_list = block.sites # kvs.get_sites_from_memcache(job_id, block_id)
 
     logger.debug("sites list for this task w/ job_id %s, block_id %s:\n%s" % (
         job_id, block_id, sites_list))

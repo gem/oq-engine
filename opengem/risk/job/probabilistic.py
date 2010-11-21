@@ -37,21 +37,22 @@ class ProbabilisticEventMixin:
     @output
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
-        
-        LOGGER.debug("starting task block, block_id = %s" % self.block_id)
+
+        results = []
+        for block_id in self.blocks_keys:
+            LOGGER.debug("starting task block, block_id = %s" % block_id)
+            # pylint: disable-msg=E1101
+            results.append(tasks.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # memcache).
-
-        # pylint: disable-msg=E1101
-        task = tasks.compute_risk.apply_async(args=[self.id, 
-                                                    self.block_id])
-
-        try:
-            # TODO(chris): Figure out where to put that timeout.
-            return task.wait(timeout=None)
-        except TimeoutError:
-            return None
+        for task in results:
+            try:
+                # TODO(chris): Figure out where to put that timeout.
+                task.wait(timeout=None)
+            except TimeoutError:
+                # TODO(jmc): Cancel and respawn this task
+                return None
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
@@ -142,12 +143,12 @@ class ProbabilisticEventMixin:
                     "jobber: cannot write hazard curve to memcache")
 
         # write site hashes to memcache (JSON)
-        memcache_key_sites = kvs.generate_sites_key(self.id, self.block_id)
+        # memcache_key_sites = kvs.generate_sites_key(self.id, self.block_id)
 
-        success = kvs.set_value_json_encoded(memcache_key_sites, 
-            sites_hash_list)
-        if not success:
-            raise ValueError("jobber: cannot write sites to memcache")
+        #success = kvs.set_value_json_encoded(memcache_key_sites, 
+        #    sites_hash_list)
+        #if not success:
+        #    raise ValueError("jobber: cannot write sites to memcache")
 
     def store_exposure_assets(self):
         """ Load exposure assets and write to memcache """
