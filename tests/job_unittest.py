@@ -9,6 +9,7 @@ from opengem import test
 from opengem import job
 from opengem.job import Job, EXPOSURE, INPUT_REGION
 from opengem.job.mixins import Mixin
+from opengem.risk.job import RiskJobMixin
 from opengem.risk.job.probabilistic import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
@@ -19,6 +20,7 @@ TEST_JOB_FILE = test.smoketest_file('nshmp-california-fault/config.gem')
 SITE = shapes.Site(1.0, 1.0)
 EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.xml"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
+BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
 
 
@@ -31,6 +33,10 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_job_mixes_in_properly(self):
+        with Mixin(self.job, RiskJobMixin, key="risk"):
+            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+            self.assertTrue(ProbabilisticEventMixin in self.job.__class__.__bases__)
+
         with Mixin(self.job, ProbabilisticEventMixin):
             self.assertTrue(ProbabilisticEventMixin in self.job.__class__.__bases__)
 
@@ -59,25 +65,43 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        a_job = Job({EXPOSURE: os.path.join(
-                test.DATA_DIR, EXPOSURE_TEST_FILE),
-                INPUT_REGION: os.path.join(
-                test.DATA_DIR, REGION_EXPOSURE_TEST_FILE)})
+        a_job = Job({EXPOSURE: test.test_file(EXPOSURE_TEST_FILE), 
+                     INPUT_REGION: test.test_file(REGION_EXPOSURE_TEST_FILE)})
         a_job._partition()
         blocks_keys = a_job.blocks_keys
 
-        expected_block = job.Block((shapes.Site(9.15765, 45.13005),
-                shapes.Site(9.15934, 45.133), shapes.Site(9.15876, 45.13805)))
+        print blocks_keys
+        print job.Block.from_kvs(blocks_keys[0]).sites
+            
+        expected_block = job.Block((shapes.Site(9.15, 45.16667),
+                                    shapes.Site(9.15333, 45.122),
+                                    shapes.Site(9.14777, 45.17999),
+                                    shapes.Site(9.15765, 45.13005),
+                                    shapes.Site(9.15934, 45.133),
+                                    shapes.Site(9.15876, 45.13805)))
 
         self.assertEqual(1, len(blocks_keys))
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
     
     def test_prepares_blocks_using_the_input_region(self):
-        region_path = os.path.join(test.DATA_DIR, REGION_TEST_FILE)
-        a_job = Job({INPUT_REGION: region_path})
+        """ This test might be currently catastrophically retarded. If it is
+        blame Lars.
+        """
+
+        block_path = test.test_file(BLOCK_SPLIT_TEST_FILE)
+
+        print "In open job"
+        a_job = Job.from_file(block_path)
+
+        verts = [float(x) for x in a_job.params['REGION_VERTEX'].split(",")]
+        # Flips lon and lat, and builds a list of coord tuples
+        coords = zip(verts[1::2], verts[::2])
+        expected = shapes.RegionConstraint.from_coordinates(coords)
+        expected.cell_size = float(a_job.params['REGION_GRID_SPACING'])
 
         expected_sites = []
-        for site in shapes.Region.from_file(region_path):
+        for site in expected:
+            print site
             expected_sites.append(site)
     
         a_job._partition()
@@ -85,7 +109,7 @@ class JobTestCase(unittest.TestCase):
 
         self.assertEqual(1, len(blocks_keys))
         self.assertEqual(job.Block(expected_sites),
-                job.Block.from_kvs(blocks_keys[0]))
+                         job.Block.from_kvs(blocks_keys[0]))
 
     def test_with_no_partition_we_just_process_a_single_block(self):
         job.SITES_PER_BLOCK = 1
