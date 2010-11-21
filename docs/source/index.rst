@@ -18,6 +18,8 @@ Contents:
    job
    risk
    schema
+   seismicsources
+   utils
 
 Indices and tables
 ==================
