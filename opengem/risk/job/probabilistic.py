@@ -8,6 +8,7 @@
 
 import os
 
+import numpy
 from celery.exceptions import TimeoutError
 
 from opengem import hazard
@@ -19,15 +20,29 @@ from opengem import risk
 from opengem import settings
 from opengem import shapes
 
+from opengem.risk import engines
 from opengem.output.risk import RiskXMLWriter
 from opengem.parser import exposure
-from opengem.parser import hazard
+from opengem.parser import hazard as hazparser
 from opengem.parser import vulnerability
 from opengem.risk import tasks
-from opengem.risk.job import preload, output, RiskJobMixin
+from opengem.risk.job import output, RiskJobMixin
 
 
 LOGGER = logs.LOG
+
+DEFAULT_conditional_loss_poe = 0.01
+
+def preload(fn):
+    """ Preload decorator """
+    def preloader(self, *args, **kwargs):
+        """A decorator for preload steps that must run on the Jobber"""
+
+        self.store_exposure_assets()
+        self.store_vulnerability_model()
+
+        return fn(self, *args, **kwargs)
+    return preloader
 
 
 class ProbabilisticEventMixin:
@@ -40,7 +55,8 @@ class ProbabilisticEventMixin:
 
         results = []
         for block_id in self.blocks_keys:
-            LOGGER.debug("starting task block, block_id = %s" % block_id)
+            LOGGER.debug("starting task block, block_id = %s of %s" 
+                        % (block_id, len(self.blocks_keys)))
             # pylint: disable-msg=E1101
             results.append(tasks.compute_risk.delay(self.id, block_id))
 
@@ -57,98 +73,39 @@ class ProbabilisticEventMixin:
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         # TODO(JMC): Confirm this works regardless of the method of haz calc.
-        histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
-        realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        histories = int(self['NUMBER_OF_SEISMICITY_HISTORIES'])
+        realizations = int(self['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        num_ses = histories * realizations
+        
+        block = job.Block.from_kvs(block_id)
+        sites_list = [x for x in block.sites]
+        gmfs = numpy.zeros((len(sites_list), num_ses))
+        gmf_idx = 0
         for i in range(0, histories):
             for j in range(0, realizations):
-                pass
-
-    def _write_output_for_block(self, job_id, block_id):
-        """note: this is usable only for one block"""
-        
-        # produce output for one block
-        loss_curves = []
-
-        sites = kvs.get_sites_from_memcache(job_id, block_id)
-
-        for (gridpoint, (site_lon, site_lat)) in sites:
-            key = kvs.generate_product_key(job_id, 
-                risk.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
-            loss_curve = self.memcache_client.get(key)
-            loss_curves.append((shapes.Site(site_lon, site_lat), 
-                                loss_curve))
-
-        LOGGER.debug("serializing loss_curves")
-        output_generator = RiskXMLWriter(settings.LOSS_CURVES_OUTPUT_FILE)
-        output_generator.serialize(loss_curves)
-        
-        #output_generator = output.SimpleOutput()
-        #output_generator.serialize(ratio_results)
-        
-        #output_generator = geotiff.GeoTiffFile(output_file, 
-        #    region_constraint.grid)
-        #output_generator.serialize(losses_one_perc)
-
-    def store_region_constraint(self):
-        # pylint: disable-msg=W0201
-        """ set region
-        If there's a region file, use it. Otherwise,
-        get the region of interest as the convex hull of the
-        multipoint collection of the portfolio of assets.
-        """
-
-        region = self.params[job.INPUT_REGION]
-        filter_cell_size = self.params.get("filter cell size", 1.0)
-        path = os.path.join(self.base_path, region)
-        self.region_constraint = shapes.RegionConstraint.from_file(path)
-        self.region_constraint.cell_size = filter_cell_size
-
-    def store_sites_and_hazard_curve(self):
-        """ Get the regions from the region file and store them in memcached
-        """
-
-        # load hazard curve file and write to memcache_client
-        # TODO(JMC): Replace this with GMF slicing        
-        nrml_parser = hazard.NrmlFile("%s/%s" % (self.base_path,
-            self.params[job.HAZARD_CURVES]))
-        attribute_constraint = producer.AttributeConstraint({'IMT' : 'MMI'})
-        sites_hash_list = []
-
-        for site, hazard_curve_data in \
-            nrml_parser.filter(self.region_constraint, attribute_constraint):
-
-            gridpoint = self.region_constraint.grid.point_at(site)
-
-            # store site hashes in memcache
-            # TODO(fab): separate this from hazard curves. Regions of interest
-            # should not be taken from hazard curve input, should be 
-            # idependent from the inputs (hazard, exposure)
-            sites_hash_list.append((str(gridpoint), 
-                                   (site.longitude, site.latitude)))
-
-            hazard_curve = shapes.Curve(zip(hazard_curve_data['IML'], 
-                                                hazard_curve_data['Values']))
-
-            memcache_key_hazard = kvs.generate_product_key(self.id,
-                hazard.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
-
-            LOGGER.debug("Loading hazard curve %s at %s, %s" % (
-                        hazard_curve, site.latitude,  site.longitude))
-
-            success = self.memcache_client.set(memcache_key_hazard, 
-                hazard_curve.to_json())
-
-            if not success:
-                raise ValueError(
-                    "jobber: cannot write hazard curve to memcache")
-
-        # write site hashes to memcache (JSON)
-        # memcache_key_sites = kvs.generate_sites_key(self.id, self.block_id)
-
-        #success = kvs.set_value_json_encoded(memcache_key_sites, 
-        #    sites_hash_list)
-        #if not success:
-        #    raise ValueError("jobber: cannot write sites to memcache")
+                stochastic_set_id = "%s!%s" % (i, j)
+                stochastic_set_key = kvs.generate_product_key(
+                        self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+                ses = kvs.get_value_json_decoded(stochastic_set_key)
+                for event_set in ses:
+                    for rupture in ses[event_set]:
+                        for site_key in ses[event_set][rupture]:
+                            gmf_site = ses[event_set][rupture][site_key]
+                            # TODO(JMC): ACK! Naive, use latlon hash
+                            site_obj = shapes.Site(gmf_site['lon'], gmf_site['lat'])
+                            for (site_idx, (gridpoint, site)) in enumerate(sites_list):
+                                if site == site_obj:
+                                    gmfs[idx][gmf_idx] = float(gmf_site['mag'])
+                        gmf_idx += 1
+        for (site_idx, (gridpoint, site)) in enumerate(sites_list):
+            key_gmf = kvs.generate_product_key(self.id,
+                risk.GMF_KEY_TOKEN, block_id, site_idx)
+            gmf_slice = gmfs[site_idx]
+            timespan = self['INVESTIGATION_TIME']
+            gmf = {"IMLs": gmf_slice, "TSES": num_ses * timespan, 
+            "TimeSpan": timespan}
+            print "Final gmf is %s" % gmf
+            kvs.set_value_json_encoded(key_gmf, gmf)
 
     def store_exposure_assets(self):
         """ Load exposure assets and write to memcache """
@@ -156,11 +113,11 @@ class ProbabilisticEventMixin:
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" % 
             (self.base_path, self.params[job.EXPOSURE]))
 
-        for site, asset in exposure_parser.filter(self.region_constraint):
-            gridpoint = self.region_constraint.grid.point_at(site)
+        for site, asset in exposure_parser.filter(self.region):
+            gridpoint = self.region.grid.point_at(site)
 
             memcache_key_asset = kvs.generate_product_key(
-                self.id, risk.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
+                self.id, risk.EXPOSURE_KEY_TOKEN, gridpoint)
 
             LOGGER.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))
@@ -174,6 +131,77 @@ class ProbabilisticEventMixin:
         """ load vulnerability and write to memcache """
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
+    
+    
+    def compute_risk(self, block_id, conditional_loss_poe=None, **kwargs):
+        """This task computes risk for a block of sites. It requires to have
+        pre-initialized in memcache:
+         1) list of sites
+         2) gmfs
+         3) exposure portfolio (=assets)
+         4) vulnerability
+
+        TODO(fab): make conditional_loss_poe (set of probabilities of exceedance
+        for which the loss computation is done) a list of floats, and read it from
+        the job configuration.
+        """
+
+        self.slice_gmfs(block_id)
+        if conditional_loss_poe is None:
+            conditional_loss_poe = DEFAULT_conditional_loss_poe
+
+        # start up memcache client
+        memcache_client = kvs.get_client(binary=False)
+
+        risk_engine = engines.ProbabilisticEventBasedCalculator(
+                self.id, block_id)
+
+        # TODO(jmc): DONT assumes that hazard, assets, and output risk grid are the same
+        # (no nearest-neighbour search to find hazard)
+        block = job.Block.from_kvs(block_id)
+        sites_list = block.sites # kvs.get_sites_from_memcache(job_id, block_id)
+
+        LOGGER.debug("sites list for job_id %s, block_id %s:\n%s" % (
+            self.id, block_id, sites_list))
+
+        for (gridpoint, site) in sites_list:
+
+            logger.debug("processing gridpoint %s, site %s" % (gridpoint, site))
+            loss_ratio_curve = risk_engine.compute_loss_ratio_curve(gridpoint)
+
+            if loss_ratio_curve is not None:
+
+                # write to memcache: loss_ratio
+                key = kvs.generate_product_key(self.id,
+                    risk.LOSS_RATIO_CURVE_KEY_TOKEN, block_id, gridpoint)
+
+                logger.debug("RESULT: loss ratio curve is %s, write to key %s" % (
+                    loss_ratio_curve, key))
+                memcache_client.set(key, loss_ratio_curve)
+            
+                # compute loss curve
+                loss_curve = risk_engine.compute_loss_curve(gridpoint, 
+                                                            loss_ratio_curve)
+                key = kvs.generate_product_key(self.id, 
+                    risk.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
+
+                logger.debug("RESULT: loss curve is %s, write to key %s" % (
+                    loss_curve, key))
+                memcache_client.set(key, loss_curve)
+            
+                # compute conditional loss
+                loss_conditional = engines.compute_loss(loss_curve, 
+                                                        conditional_loss_poe)
+                key = kvs.generate_product_key(self.id, 
+                    risk.CONDITIONAL_LOSS_KEY_TOKEN, block_id, gridpoint)
+
+                logger.debug("RESULT: conditional loss is %s, write to key %s" % (
+                    loss_conditional, key))
+                memcache_client.set(key, loss_conditional)
+
+        # assembling final product needs to be done by jobber, collecting the
+        # results from all tasks
+        return True
 
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)

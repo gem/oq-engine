@@ -114,25 +114,17 @@ class MonteCarloMixin: # pylint: disable=W0232
     
     def write_gmf_files(self, ses):
         """Generate a GeoTiff file for each GMF."""
+        image_grid = self.region.grid
+        
         for event_set in ses:
             for rupture in ses[event_set]:
 
                 # NOTE(fab): we have to explicitly convert the JSON-decoded 
                 # tokens from Unicode to string, otherwise the path will not
                 # be accepted by the GeoTiffFile constructor
-                path = os.path.join(self.base_path, self.params['OUTPUT_DIR'],
+                path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                         "gmf-%s-%s.tiff" % (str(event_set.replace("!", "_")),
                                             str(rupture.replace("!", "_"))))
-
-                verts = [
-                    float(x) for x in self.params['REGION_VERTEX'].split(",")]
-                
-                # Flips lon and lat, and builds a list of coord tuples
-                coords = zip(verts[1::2], verts[::2])
-
-                region = shapes.Region.from_coordinates(coords)
-                image_grid = region.grid
-                
                 gwriter = geotiff.GeoTiffFile(path, image_grid)
                 
                 for site_key in ses[event_set][rupture]:
@@ -140,7 +132,7 @@ class MonteCarloMixin: # pylint: disable=W0232
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
                     gwriter.write((point.row, point.column), 
-                    numpy.exp(float(site['mag'])))
+                        numpy.exp(float(site['mag'])))
                 gwriter.close()
         
     def generate_erf(self):
