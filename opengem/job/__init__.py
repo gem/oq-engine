@@ -165,7 +165,7 @@ class Job(object):
         elif self.region:
             sites = self.region.sites
         else:
-            raise("I don't know how to get the sites!")
+            raise Exception("I don't know how to get the sites!")
 
         if self.partition:
             for block in BlockSplitter(sites, constraint=region_constraint):
