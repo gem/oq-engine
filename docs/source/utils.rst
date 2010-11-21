@@ -1,7 +1,7 @@
 ..
       License Header goes here
 
-GEM Utils
+OpenQuake Utils
 ===============================
 The :mod:`Utils` Sub-package
 -----------------------------
