@@ -241,7 +241,6 @@ public class GroundMotionFieldCalculator {
      */
     private static double getGaussianDeviate(double standardDeviation,
             double truncationLevel, String truncationType, Random rn) {
-        System.out.println("Inside getGaussianDeviate");
         double dev = rn.nextGaussian();
         if (truncationType
                 .equalsIgnoreCase(SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED)) {

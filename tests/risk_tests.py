@@ -5,6 +5,7 @@ specifically file formats.
 
 """
 
+import json
 import os
 import numpy
 import unittest
@@ -232,6 +233,9 @@ class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
         self.memcached_client.delete(self.key_exposure)
         self.memcached_client.delete(kvs.generate_job_key(JOB_ID))
         self.memcached_client.delete(self.key_gmf)
+
+    def tearDown(self):
+        kvs.get_client().flushdb()
     
     def test_no_loss_curve_with_no_asset_value(self):
         self.assertEqual(None, self.calculator.compute_loss_curve(
