@@ -3,20 +3,25 @@
 """ A single hazard/risk job """
 
 import hashlib
+import math
 import re
 import os
 
 from ConfigParser import ConfigParser
 
 from opengem import kvs
+from opengem import shapes
 from opengem.logs import LOG
 from opengem.job.mixins import Mixin
+from opengem.parser import exposure
 
 
 EXPOSURE = "EXPOSURE"
 INPUT_REGION = "FILTER_REGION"
 HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
+SITES_PER_BLOCK = 100
+
 
 def parse_config_file(config_file):
     """
@@ -45,13 +50,14 @@ def parse_config_file(config_file):
 
     return params
 
+
 def validate(fn):
     """Validate this job before running the decorated function."""
 
     def validator(self, *args):
         """Validate this job before running the decorated function."""
         try:
-            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+            # assert self.has(EXPOSURE) or self.has(INPUT_REGION)
             return fn(self, *args)
         except AssertionError:
             return False
@@ -74,7 +80,6 @@ class Job(object):
         """Return the job in the underlying kvs system with the given id."""
         
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
-
         return Job(params, job_id)
 
     @staticmethod
@@ -93,7 +98,8 @@ class Job(object):
             job_id = kvs.generate_random_id()
         
         self.job_id = job_id
-        self.block_id = 10
+        self.blocks_keys = []
+        self.partition = True
         self.params = params
         self.base_path = base_path
         if base_path:
@@ -119,8 +125,9 @@ class Job(object):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
         """
-
+        
         results = []
+        self._partition()
         for (key, mixin) in Mixin.ordered_mixins():
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
@@ -129,6 +136,53 @@ class Job(object):
                 results.append(self.execute())
 
         return results
+
+    def _partition(self):
+        """Split the set of sites to compute in blocks and store
+        the in the underlying kvs system.
+        """
+
+        sites = []
+        self.blocks_keys = []
+        region_constraint = self._read_region_constraint()
+        
+        # we use the exposure, if specified,
+        # otherwise we use the input region
+        if self.has(EXPOSURE):
+            sites = self._read_sites_from_exposure()
+        else:
+            path = os.path.join(self.base_path, self[INPUT_REGION])
+            sites = shapes.Region.from_file(path).sites
+
+        if self.partition:
+            for block in BlockSplitter(sites, constraint=region_constraint):
+                self.blocks_keys.append(block.id)
+                block.to_kvs()
+        else:
+            block = Block(sites)
+            self.blocks_keys.append(block.id)
+            block.to_kvs()
+
+    def _read_region_constraint(self):
+        """Read the region constraint, if present, from the job definition."""
+        if self.has(INPUT_REGION):
+            path = os.path.join(self.base_path, self[INPUT_REGION])
+            return shapes.RegionConstraint.from_file(path)
+        else:
+            return None
+
+    def _read_sites_from_exposure(self):
+        """Read the set of sites to compute from the exposure file specified
+        in the job definition."""
+
+        sites = []
+        path = os.path.join(self.base_path, self[EXPOSURE])
+        reader = exposure.ExposurePortfolioFile(path)
+        
+        for asset_data in reader:
+            sites.append(asset_data[0])
+
+        return sites
 
     def __getitem__(self, name):
         return self.params[name]
@@ -162,3 +216,78 @@ class Job(object):
         self._slurp_files()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
+
+
+class Block(object):
+    """A block is a collection of sites to compute."""
+
+    def __init__(self, sites):
+        self.sites = tuple(sites)
+        self.block_id = kvs.generate_block_id()
+
+    def __eq__(self, other):
+        return self.sites == other.sites
+
+    @classmethod
+    def from_kvs(cls, block_id):
+        """Return the block in the underlying kvs system with the given id."""
+
+        raw_sites = kvs.get_value_json_decoded(block_id)
+
+        sites = []
+
+        for raw_site in raw_sites:
+            sites.append(shapes.Site(raw_site[0], raw_site[1]))
+
+        return Block(sites)
+
+    def to_kvs(self):
+        """Store this block into the underlying kvs system."""
+
+        raw_sites = []
+
+        for site in self.sites:
+            raw_sites.append(site.coords)
+
+        kvs.set_value_json_encoded(self.id, raw_sites)
+
+    @property
+    def id(self):
+        """Return the id of this block."""
+        return self.block_id
+
+
+class BlockSplitter(object):
+    """Split the sites into a set of blocks."""
+
+    def __init__(self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
+        self.sites = sites
+        self.constraint = constraint
+        self.sites_per_block = sites_per_block
+    
+        if not self.constraint:
+            class AlwaysTrueConstraint():
+                def match(self, point):
+                    return True
+            
+            self.constraint = AlwaysTrueConstraint()
+    
+    def __iter__(self):
+        if not len(self.sites):
+            return
+
+        number_of_blocks = int(math.ceil(len(self.sites) /
+                float(self.sites_per_block)))
+
+        for idx in range(number_of_blocks):
+            filtered_sites = []
+            offset = idx * self.sites_per_block
+            sites = self.sites[offset:offset + self.sites_per_block]
+
+            # TODO (ac): Can be done better using shapely.intersects,
+            # but after the shapes.Site refactoring...
+            for site in sites:
+                if self.constraint.match(site):
+                    filtered_sites.append(site)
+                
+            yield(Block(filtered_sites))

@@ -1,7 +1,7 @@
 [general]
 
 # the region to filter on
-FILTER_REGION = /../../tests/data/rect.region
+FILTER_REGION = ../../tests/data/rect.region
 # the selected for output generation
 OUTPUT_REGION =
 # NOTE: The order of the vertices is to be kept!!!
