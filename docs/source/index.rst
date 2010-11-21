@@ -9,8 +9,6 @@ Welcome to OpenQuake's documentation!
 Contents:
 
 .. toctree::
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
    :maxdepth: 2
    
    architecture
@@ -20,25 +18,6 @@ Contents:
    job
    risk
    schema
-   seismicsources
-   utils
-=======
-=======
->>>>>>> Stashed changes
-    :maxdepth: 2
-   
-    architecture
-    output
-    formats
-    hazard
-    risk
-    seismicsources
-    schema
-    utils
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 
 Indices and tables
 ==================
