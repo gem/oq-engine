@@ -178,7 +178,7 @@ htmlhelp_basename = 'OpenGEMdoc'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'OpenGEM.tex', u'OpenGEM Documentation',
+  ('index', 'OpenGEM.tex', u'OpenQuake Documentation',
    u'GEM Foundation', 'manual'),
 ]
 
@@ -211,6 +211,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'opengem', u'OpenGEM Documentation',
+    ('index', 'opengem', u'OpenQuake Documentation',
      [u'GEM Foundation'], 1)
 ]
