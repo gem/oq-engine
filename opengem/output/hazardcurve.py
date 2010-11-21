@@ -7,6 +7,7 @@ As plotting engine, matplotlib is used.
 The plots are in SVG format.
 """
 
+import geohash
 import matplotlib
 import numpy
 
@@ -15,20 +16,12 @@ matplotlib.use('SVG')
 
 from pylab import *
 
-#from osgeo import osr, gdal
-
 from opengem import shapes
 from opengem import writer
 
 from opengem.parser import hazard as hazard_parser
 
 IMAGE_FORMAT = "SVG"
-
-#GDAL_PIXEL_DATA_TYPE = gdal.GDT_Float32
-#SPATIAL_REFERENCE_SYSTEM = "WGS84"
-#TIFF_BAND = 1
-#TIFF_LONGITUDE_ROTATION = 0
-#TIFF_LATITUDE_ROTATION = 0
 
 class HazardCurvePlot(writer.FileWriter):
     """Plots hazard curves as given in an NRML file."""
@@ -107,35 +100,55 @@ class HazardCurvePlot(writer.FileWriter):
 
         nrml_element = hazard_parser.NrmlFile(hazardcurve_path)
 
+        data = {}
+
+        # we collect hazard curves for one site into one plot
+        # one plot contains hazard curves for several end branches of the logic tree
+        # each end branch can have its own abscissae
+        # for plotting, loop over end branches
         for counter, (nrml_point, nrml_attr) in enumerate(
             nrml_element.filter(region_constraint=None)):
 
-            if counter == 0:
+            if nrml_point.hash() not in data:
+                data[nrml_point.hash()] = {}
+        
+            if nrml_attr['endBranchLabel'] not in data[nrml_point.hash()]:
+                data[nrml_point.hash()][nrml_attr['endBranchLabel']] = {}
 
-                plot(nrml_attr['IMLValues'], nrml_attr['Values'], 
-                     color=self.__plotCurve['colors'][0], 
-                     linestyle=self.__plotCurve['linestyle'][2], 
-                     label=nrml_attr['IDmodel'])
+            data[nrml_point.hash()][nrml_attr['endBranchLabel']] = \
+                {'IMLValues': nrml_attr['IMLValues'], 
+                 'Values': nrml_attr['Values']}
 
-                # set x and y dimension of plot
-                ylim( self.__plotAxes['ymin'],  self.__plotAxes['ymax'] )
-                xmin, xmax = xlim()
-                #xlim(0.0, 3.0)
-            
-                xlabel(nrml_attr['IMT'], self.__plotLabelsFont)
-                ylabel('Probability', self.__plotLabelsFont)
-                title("Hazard Curve for %s" % nrml_point)
+        # select one of the sites
+        selected_site_hash = min(data.keys())
+        selected_branch = '1_1'
 
-                legend( loc = self.__plotLegend['style'],
-                        markerscale = self.__plotLegend['markerscale'],
-                        borderpad = self.__plotLegend['borderpad'],
-                        borderaxespad = self.__plotLegend['borderaxespad'],
-                        handletextpad = self.__plotLegend['handletextpad'],
-                        handlelength = self.__plotLegend['handlelength'],
-                        labelspacing = self.__plotLegend['labelspacing'],
-                        prop = FontProperties(size=self.__plotLegendFont['size'],
-                                                style=self.__plotLegendFont['style'],
-                                                family=self.__plotLegendFont['family'][1]) )
+        plot(data[selected_site_hash][selected_branch]['IMLValues'], 
+             data[selected_site_hash][selected_branch]['Values'], 
+             color=self.__plotCurve['colors'][0], 
+             linestyle=self.__plotCurve['linestyle'][2], 
+             label=selected_branch)
+
+        # set x and y dimension of plot
+        ylim( self.__plotAxes['ymin'],  self.__plotAxes['ymax'] )
+        xmin, xmax = xlim()
+    
+        xlabel(nrml_attr['IMT'], self.__plotLabelsFont)
+        ylabel('Probability', self.__plotLabelsFont)
+
+        site_lat, site_lon = geohash.decode(selected_site_hash)
+        title("Hazard Curves for (%7.3f, %6.3f)" % (site_lon, site_lat))
+
+        legend( loc = self.__plotLegend['style'],
+                markerscale = self.__plotLegend['markerscale'],
+                borderpad = self.__plotLegend['borderpad'],
+                borderaxespad = self.__plotLegend['borderaxespad'],
+                handletextpad = self.__plotLegend['handletextpad'],
+                handlelength = self.__plotLegend['handlelength'],
+                labelspacing = self.__plotLegend['labelspacing'],
+                prop = FontProperties(size=self.__plotLegendFont['size'],
+                                        style=self.__plotLegendFont['style'],
+                                        family=self.__plotLegendFont['family'][1]) )
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
