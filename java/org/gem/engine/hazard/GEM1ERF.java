@@ -461,7 +461,6 @@ public class GEM1ERF extends EqkRupForecast {
         subductionSourceDataList = new ArrayList<GEMSourceData>();
         for (int i = 0; i < allGemSourceDataList.size(); i++) {
             GEMSourceData srcData = allGemSourceDataList.get(i);
-            System.out.println("Separating source " + srcData);
             if (srcData instanceof GEMFaultSourceData)
                 faultSourceDataList.add(srcData);
             else if (srcData instanceof GEMSubductionFaultSourceData)
