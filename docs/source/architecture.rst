@@ -3,11 +3,11 @@ OpenQuake System Architecture
 
 The toughest challenges in addressing OpenQuake architecture are nomenclature: 
 
-System "input" is a combination of data, algorithms, and configuration.
+  System "input" is a combination of data, algorithms, and configuration.
 
 Therefore, system components will be built to work in a variety of fashions:
 
-They will be written as python modules, which if executed from the command line, will accept command line arguments (and optionally STDIN) and return output on STDOUT.
+	They will be written as python modules, which if executed from the command line, will accept command line arguments (and optionally STDIN) and return output on STDOUT.
 	They will support an AMQP consumer/publisher interface, allowing them to run as daemons and consume / deliver messages.
 	(An adapter may be developed that would allow AMQP->CONDOR or GLOBUS bridging, as appropriate)
 	A thin REST API wrapper will be developed that will communicate async with the various components over AMQP.
