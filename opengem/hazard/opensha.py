@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Wrapper around the OpenSHA-lite java library.
 
@@ -115,27 +116,34 @@ class MonteCarloMixin: # pylint: disable=W0232
                     self.write_gmf_file(gmf)
     
     def write_gmf_file(self, gmfs):
-        """Generate a GeoTiff file for each GMF"""
+        """Generate a GeoTiff file for each GMF."""
         for gmf in gmfs:
             for rupture in gmfs[gmf]:
-                # TODO(JMC): Fix rupture and gmf ids into name
-                path = os.path.join(self.base_path, 
-                        self.params['OUTPUT_DIR'], "gmfab.tiff")
-                         # % gmf.keys()[0].replace("!", ""))
-        
+
+                # NOTE(fab): we have to explicitly convert the JSON-decoded 
+                # tokens from Unicode to string, otherwise the path will not
+                # be accepted by the GeoTiffFile constructor
+                path = os.path.join(self.base_path, self.params['OUTPUT_DIR'],
+                        "gmf-%s-%s.tiff" % (str(gmf.replace("!", "_")),
+                                            str(rupture.replace("!", "_"))))
+                
                 # TODO(JMC): Make this valid region
-                verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+                verts = [
+                    float(x) for x in self.params['REGION_VERTEX'].split(",")]
+                
                 # Flips lon and lat, and builds a list of coord tuples
                 coords = zip(verts[1::2], verts[::2])
+
                 region = shapes.Region.from_coordinates(coords)
                 image_grid = region.grid
+                
                 gwriter = geotiff.GeoTiffFile(path, image_grid)
+                
                 for site_key in gmfs[gmf][rupture]:
                     site = gmfs[gmf][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
-                    gwriter.write((point.column, point.row), 
-                        site['mag'])
+                    gwriter.write((point.row, point.column), float(site['mag']))
                 gwriter.close()
         
         
