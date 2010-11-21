@@ -14,7 +14,7 @@ import numpy
 from matplotlib.font_manager import FontProperties
 matplotlib.use('SVG')
 
-from pylab import *
+import pylab
 
 from opengem import shapes
 from opengem import writer
@@ -22,92 +22,73 @@ from opengem import writer
 from opengem.parser import hazard as hazard_parser
 
 IMAGE_FORMAT = "SVG"
+COLOR_CODES = ('k', 'r', 'g', 'b')
 
 class HazardCurvePlot(writer.FileWriter):
     """Plots hazard curves as given in an NRML file."""
     
     image_format = IMAGE_FORMAT
     
-    __plotFig    = { 'figsize' : ( 10, 10 ) }
+    _plotFig = {'figsize': (10, 10)}
 
-    __plotCurve = { 'markersize' : None,
-                    'color': 'r',
-                    'colors': ( 'r', 'b' ),
-                    'linestyle' : ( 'steps', '-', '-' ),
-                    'linewidth' : 1 }
-                    
-    __plotConfidenceBounds = { 'markersize' : None,
-                               'color': 'k',
-                               'facecolor' : '0.80',       # 0.90
-                               'edgecolor' : '0.80',       # 0.90
-                               'alpha': 0.5,
-                               'linestyle' : '--',
-                               'linewidth' : 1,
-                               'shadeLowerLimit': 0.0,     # 0.00
-                               'shadeUpperLimit': 1.0 }    # 0.99
+    _plotCurve = {'markersize': None,
+                  'color': 'r',
+                  'colors': ('r', 'b'),
+                  'linestyle': ('steps', '-', '-'),
+                  'linewidth': 1}
 
-    __plotLabels = { 'ylabel_size'     : None,
-                     'ylabel_rotation' : None }
+    _plotLabels = {'ylabel_size': None,
+                   'ylabel_rotation': None}
                      
-    __plotLabelsFont = { 'fontname'   : 'serif',     # sans
-                         'fontweight' : 'normal',    # bold
-                         'fontsize'   :  13 }
+    _plotLabelsFont = {'fontname': 'serif',       # sans
+                       'fontweight': 'normal',    # bold
+                       'fontsize':  13}
                          
-    __plotAxes = { 'ymin' : 0.0,
-                   'ymax' : 1.0,
-                   'xmin' : 0.0,
-                   'xmax' : None }
+    _plotAxes = {'ymin': 0.0,
+                 'ymax': 1.0,
+                 'xmin': 0.0,
+                 'xmax': None}
                    
-    __plotLegend = { 'style'         : 0,
-                     'borderpad'     : 1.0,
-                     'borderaxespad' : 1.0,
-                     'markerscale'   : 5.0,
-                     'handletextpad' : 0.5,
-                     'handlelength'  : 2.0,
-                     'labelspacing'  : 0.5 }
+    _plotLegend = {'style'        : 0,
+                   'borderpad'    : 1.0,
+                   'borderaxespad': 1.0,
+                   'markerscale'  : 5.0,
+                   'handletextpad': 0.5,
+                   'handlelength' : 2.0,
+                   'labelspacing' : 0.5}
                      
-    __plotLegendFont = { 'size'   : 'small',
-                         'style'  : 'normal',
-                         'family' : ( 'serif', 'sans-serif', 'monospace' )       # sans-serif
+    _plotLegendFont = {'size'  : 'small',
+                       'style' : 'normal',
+                       'family': ('serif', 'sans-serif', 'monospace')
                        }
-                           
-    __plotCanvasFill = { 'facecolor' : '0.90' }
-
-    __plotZOrder = { 'modification' :   1,
-                     'vertical'     :  20,
-                     'grid'         :  25,
-                     'rejection'    :  30,
-                     'curve'        :  40,
-                     'legend'       :  50,
-                     'axes'         : 100 }
 
     def __init__(self, path):
 
         self.target = None
+        self.color_code_generator = _color_code_generator()
         super(HazardCurvePlot, self).__init__(path)
         
     def _init_file(self):
 
-        rcParams['figure.figsize'] = self.__plotFig['figsize']
+        pylab.rcParams['figure.figsize'] = self._plotFig['figsize']
 
-        # clear figure
-        ax = subplot(111)
-        clf()
+        # init and clear figure
+        pylab.ax = pylab.subplot(111)
+        pylab.clf()
 
     def write(self, hazardcurve_path):
         """The method expects a filename of an NRML file 
         with hazard curve(s)."""
 
         nrml_element = hazard_parser.NrmlFile(hazardcurve_path)
-
         data = {}
 
         # we collect hazard curves for one site into one plot
         # one plot contains hazard curves for several end branches of the logic tree
-        # each end branch can have its own abscissae
+        # each end branch can have its own abscissa value set
         # for plotting, loop over end branches
-        for counter, (nrml_point, nrml_attr) in enumerate(
-            nrml_element.filter(region_constraint=None)):
+        for (nrml_point, nrml_attr) in nrml_element.filter(
+            region_constraint=None):
 
             if nrml_point.hash() not in data:
                 data[nrml_point.hash()] = {}
@@ -119,49 +100,52 @@ class HazardCurvePlot(writer.FileWriter):
                 {'IMLValues': nrml_attr['IMLValues'], 
                  'Values': nrml_attr['Values']}
 
-        # select one of the sites
+        # FIXME(fab): select one of the sites manually
         selected_site_hash = min(data.keys())
-        selected_branch = '1_1'
 
-        plot(data[selected_site_hash][selected_branch]['IMLValues'], 
-             data[selected_site_hash][selected_branch]['Values'], 
-             color=self.__plotCurve['colors'][0], 
-             linestyle=self.__plotCurve['linestyle'][2], 
-             label=selected_branch)
+        for end_branch_label in data[selected_site_hash]:
+ 
+            pylab.plot(data[selected_site_hash][end_branch_label]['IMLValues'], 
+                data[selected_site_hash][end_branch_label]['Values'], 
+                color=self.color_code_generator.next(), 
+                linestyle=self._plotCurve['linestyle'][2], 
+                label=end_branch_label)
 
         # set x and y dimension of plot
-        ylim( self.__plotAxes['ymin'],  self.__plotAxes['ymax'] )
-        xmin, xmax = xlim()
+        pylab.ylim(self._plotAxes['ymin'], self._plotAxes['ymax'])
+        xmin, xmax = pylab.xlim()
     
-        xlabel(nrml_attr['IMT'], self.__plotLabelsFont)
-        ylabel('Probability', self.__plotLabelsFont)
+        pylab.xlabel(nrml_attr['IMT'], self._plotLabelsFont)
+        pylab.ylabel('Probability', self._plotLabelsFont)
 
         site_lat, site_lon = geohash.decode(selected_site_hash)
-        title("Hazard Curves for (%7.3f, %6.3f)" % (site_lon, site_lat))
+        pylab.title("Hazard Curves for (%7.3f, %6.3f)" % (site_lon, site_lat))
 
-        legend( loc = self.__plotLegend['style'],
-                markerscale = self.__plotLegend['markerscale'],
-                borderpad = self.__plotLegend['borderpad'],
-                borderaxespad = self.__plotLegend['borderaxespad'],
-                handletextpad = self.__plotLegend['handletextpad'],
-                handlelength = self.__plotLegend['handlelength'],
-                labelspacing = self.__plotLegend['labelspacing'],
-                prop = FontProperties(size=self.__plotLegendFont['size'],
-                                        style=self.__plotLegendFont['style'],
-                                        family=self.__plotLegendFont['family'][1]) )
+        pylab.legend(loc=self._plotLegend['style'],
+                     markerscale=self._plotLegend['markerscale'],
+                     borderpad=self._plotLegend['borderpad'],
+                     borderaxespad=self._plotLegend['borderaxespad'],
+                     handletextpad=self._plotLegend['handletextpad'],
+                     handlelength=self._plotLegend['handlelength'],
+                     labelspacing=self._plotLegend['labelspacing'],
+                     prop=FontProperties(size=self._plotLegendFont['size'],
+                                         style=self._plotLegendFont['style'],
+                                         family=self._plotLegendFont['family'][1]))
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
 
-        savefig(self.path)
-        close()
+        pylab.savefig(self.path)
+        pylab.close()
 
         self.finished.send(True)
+
+def _color_code_generator():
+    """Generator that walks through a sequence of color codes for matplotlib.
+    When reaching the end of the color code list, start at the beginning again."""
+    counter = 0
+    while(True):
+        counter += 1
+        color_index = counter % len(COLOR_CODES)
+        yield COLOR_CODES[color_index-1]
     
-    def serialize(self, iterable):
-        # TODO(JMC): Normalize the values
-        #maxval = max(iterable.values())
-        #for key, val in iterable.items():
-            #self.write((key.column, key.row), val/maxval * 254)
-        #self.close()
-        pass
