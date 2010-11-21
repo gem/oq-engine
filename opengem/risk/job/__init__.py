@@ -1,13 +1,8 @@
-""" Mixin proxy for risk jobs """
+""" Mixin proxy for risk jobs, and associated
+Risk Job Mixin decorators """
 
 from opengem.job.mixins import Mixin
 
-
-#############################
-#                           #
-# Risk Job Mixin decorators #
-#                           #
-#############################
 
 def preload(fn):
     """ Preload decorator """
