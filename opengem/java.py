@@ -15,7 +15,7 @@ flags.DEFINE_boolean('capture_java_debug', True,
 
 JAVA_CLASSES = {
     'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
-    'KVS' : "org.gem.engine.hazard.memcached.Cache",
+    'KVS' : "org.gem.engine.hazard.redis.Cache",
     'JsonSerializer' : "org.gem.JsonSerializer",
     "EventSetGen" : "org.gem.calc.StochasticEventSetGenerator",
     "Random" : "java.util.Random",

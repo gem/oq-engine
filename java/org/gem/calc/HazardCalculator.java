@@ -10,7 +10,7 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.gem.engine.CommandLineCalculator;
-import org.gem.engine.hazard.memcached.Cache;
+import org.gem.engine.hazard.redis.Cache;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;

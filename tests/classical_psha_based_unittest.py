@@ -119,8 +119,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # make this a function that adds a given vuln curve dict
         # to vuln curves in memcached
         self.vulnerability_curves = vulnerability.register_vuln_curves(
-            {self.vuln_curve_code_test: vuln_curve_test,
-             vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE}, 
+            {self.vuln_curve_code_test: vuln_curve_test.to_json(),
+             vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE.to_json()}, 
             self.job_id)
 
     def tearDown(self):
@@ -128,7 +128,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         vulnerability.delete_vuln_curves(self.job_id)
 
     def test_empty_loss_curve(self):
-        """Degenerate case."""
+        """Empty loss curve Degenerate case."""
         
         self.assertEqual(compute_loss_curve(
                 shapes.EMPTY_CURVE, None),
@@ -158,7 +158,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         
     def test_lrem_po_computation(self):
         lrem_po = _compute_lrem_po(
-            self.vulnerability_curves[self.vuln_curve_code_test], 
+            shapes.Curve.from_json(self.vulnerability_curves[self.vuln_curve_code_test]), 
             LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
 
         self.assertAlmostEquals(0.0959, lrem_po[0][0], 4)
@@ -179,10 +179,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
             [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
         
         lrem = _compute_lrem(
-            self.vulnerability_curves[self.vuln_curve_code_test])
+            shapes.Curve.from_json(
+                self.vulnerability_curves[self.vuln_curve_code_test]))
         
         loss_ratio_curve = compute_loss_ratio_curve(
-            self.vulnerability_curves[self.vuln_curve_code_test], 
+            shapes.Curve.from_json(
+                self.vulnerability_curves[self.vuln_curve_code_test]), 
             hazard_curve)
         
         lr_curve_expected = shapes.Curve([(0.0, 0.650), 
@@ -207,10 +209,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                     loss_ratio_curve.ordinate_for(x_value), 3)
     
     def test_empty_matrix(self):
-        """Degenerate case."""
+        """Empty Matrix: Degenerate case."""
         # cself.assertEqual([], _compute_lrem(shapes.EMPTY_CURVE, shapes.EMPTY_CURVE))
         self.assertEqual([None], _compute_lrem(
-            self.vulnerability_curves[vulnerability.EMPTY_CODE], 
+            shapes.Curve.from_json(
+                self.vulnerability_curves[vulnerability.EMPTY_CODE]), 
             shapes.EMPTY_CURVE))
         
     # loss ratios splitting tests

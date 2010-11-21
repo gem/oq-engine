@@ -13,7 +13,7 @@ import java.util.StringTokenizer;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.gem.engine.hazard.memcached.Cache;
+import org.gem.engine.hazard.redis.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeBranchingLevel;

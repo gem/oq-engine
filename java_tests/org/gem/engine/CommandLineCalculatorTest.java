@@ -19,13 +19,13 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.gem.engine.CalculatorConfigHelper.CalculationMode;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
 import org.gem.engine.CalculatorConfigHelper.IntensityMeasure;
-import org.gem.engine.hazard.memcached.BaseMemcachedTest;
+import org.gem.engine.hazard.redis.BaseRedisTest;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
 
-public class CommandLineCalculatorTest extends BaseMemcachedTest {
+public class CommandLineCalculatorTest extends BaseRedisTest {
 
     private static String peerTestSet1Case5ConfigFile =
             "peerSet1Case5/CalculatorConfig.properties";
