@@ -1,16 +1,17 @@
 [general]
 
 # the region to filter on
-FILTER_REGION = ../../tests/data/rect.region
+# FILTER_REGION = ../../tests/data/rect.region
 # the selected for output generation
 OUTPUT_REGION =
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 #REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
-REGION_VERTEX = 35.0, -120.0, 35.0, -115.0, 30.0, -115.0, 30.0, -120.0
+#REGION_VERTEX = 35.0, -120.0, 35.0, -115.0, 30.0, -115.0, 30.0, -120.0
+REGION_VERTEX = 34.12, -118.30, 34.12, -118.18, 34.00, -118.18, 34.00, -118.30
 # degrees
-REGION_GRID_SPACING = 0.1
-
+REGION_GRID_SPACING = 0.02
+#REGION_GRID_SPACING = 1.0
 
 [HAZARD]
 
@@ -147,7 +148,6 @@ EXPOSURE = LA_county_exposure_portfolio.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = Vulnerability_model_Hazus.xml
-
 
 # file containing the hazard curves in nrml format
 HAZARD_CURVES = hazard_curves.xml
