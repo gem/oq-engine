@@ -1,17 +1,26 @@
 # -*- coding: utf-8 -*-
 
+import math
 import os
 import unittest
 
+from opengem import shapes
 from opengem import test
-from opengem.job import Job
+from opengem import job
+from opengem.job import Job, EXPOSURE, INPUT_REGION
 from opengem.job.mixins import Mixin
 from opengem.risk.job.probabilistic import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 
-TEST_JOB_FILE = test.smoketest_file('nshmp-california-fault/config.gem')
+TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
+
+SITE = shapes.Site(1.0, 1.0)
+EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.xml"
+REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
+REGION_TEST_FILE = "small.region"
+
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
@@ -35,3 +44,132 @@ class JobTestCase(unittest.TestCase):
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = Job.from_file(os.path.join(test.DATA_DIR, CONFIG_FILE))
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
+
+    def test_prepares_blocks_using_the_exposure(self):
+        a_job = Job({EXPOSURE: os.path.join(test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        a_job._partition()
+        blocks_keys = a_job.blocks_keys
+        
+        expected_block = job.Block((shapes.Site(9.15000, 45.16667),
+                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999),
+                shapes.Site(9.15765, 45.13005), shapes.Site(9.15934, 45.13300),
+                shapes.Site(9.15876, 45.13805)))
+        
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
+
+    def test_prepares_blocks_using_the_exposure_and_filtering(self):
+        a_job = Job({EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE),
+                INPUT_REGION: os.path.join(
+                test.DATA_DIR, REGION_EXPOSURE_TEST_FILE)})
+        a_job._partition()
+        blocks_keys = a_job.blocks_keys
+
+        expected_block = job.Block((shapes.Site(9.15765, 45.13005),
+                shapes.Site(9.15934, 45.133), shapes.Site(9.15876, 45.13805)))
+
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
+    
+    def test_prepares_blocks_using_the_input_region(self):
+        region_path = os.path.join(test.DATA_DIR, REGION_TEST_FILE)
+        a_job = Job({INPUT_REGION: region_path})
+
+        expected_sites = []
+        for site in shapes.Region.from_file(region_path):
+            expected_sites.append(site)
+    
+        a_job._partition()
+        blocks_keys = a_job.blocks_keys
+
+        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(job.Block(expected_sites),
+                job.Block.from_kvs(blocks_keys[0]))
+
+    def test_with_no_partition_we_just_process_a_single_block(self):
+        job.SITES_PER_BLOCK = 1
+        
+        # test exposure has 6 assets
+        a_job = Job({EXPOSURE: os.path.join(
+                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        
+        a_job._partition()
+        blocks_keys = a_job.blocks_keys
+        
+        # but we have 1 block instead of 6
+        self.assertEqual(1, len(blocks_keys))
+
+
+class BlockTestCase(unittest.TestCase):
+    
+    def test_a_block_has_a_unique_id(self):
+        self.assertTrue(job.Block(()).id)
+        self.assertTrue(job.Block(()).id != job.Block(()).id)
+
+    def test_can_serialize_a_block_into_kvs(self):
+        block = job.Block((SITE, SITE))
+        block.to_kvs()
+
+        self.assertEqual(block, job.Block.from_kvs(block.id))
+
+class BlockSplitterTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.splitter = None
+    
+    def test_an_empty_set_produces_no_blocks(self):
+        self.splitter = job.BlockSplitter(())
+        self._assert_number_of_blocks_is(0)
+
+    def test_splits_the_set_into_a_single_block(self):
+        self.splitter = job.BlockSplitter((SITE,), 3)
+        self._assert_number_of_blocks_is(1)
+
+        self.splitter = job.BlockSplitter((SITE, SITE), 3)
+        self._assert_number_of_blocks_is(1)
+
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
+        self._assert_number_of_blocks_is(1)
+
+    def test_splits_the_set_into_multiple_blocks(self):
+        self.splitter = job.BlockSplitter((SITE, SITE), 1)
+        self._assert_number_of_blocks_is(2)
+
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
+        self._assert_number_of_blocks_is(2)
+
+    def test_generates_the_correct_blocks(self):
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
+        expected_blocks = (job.Block((SITE, SITE, SITE)),)
+        self._assert_blocks_are(expected_blocks)
+
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
+        expected_blocks = (job.Block((SITE, SITE)), job.Block((SITE,)))
+        self._assert_blocks_are(expected_blocks)
+
+    def test_splitting_with_region_intersection(self):
+        region_constraint = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+        
+        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
+            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
+
+        expected_blocks = (
+                job.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
+                job.Block((shapes.Site(2.0, 2.0),)))
+
+        self.splitter = job.BlockSplitter(sites, 2, constraint=region_constraint)
+        self._assert_blocks_are(expected_blocks)
+
+    def _assert_blocks_are(self, expected_blocks):
+        for idx, block in enumerate(self.splitter):
+            self.assertEqual(expected_blocks[idx], block)
+
+    def _assert_number_of_blocks_is(self, number):
+        counter = 0
+        
+        for block in self.splitter:
+            counter += 1
+        
+        self.assertEqual(number, counter)
