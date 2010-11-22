@@ -4,6 +4,7 @@ import os
 import unittest
 import tempfile
 
+from opengem import test
 from opengem import shapes
 
 from opengem import flags
@@ -144,3 +145,21 @@ class ShapesTestCase(unittest.TestCase):
         self.assertEqual(1.0, curve.ordinate_for(0.5))
         self.assertEqual(2.0, curve.ordinate_for(0.4))
         self.assertEqual(2.0, curve.ordinate_for(0.3))
+
+
+class FieldTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.gmf_string = open(test.test_file("gmfs.json")).readline()
+        region = shapes.Region.from_coordinates(
+                 [(-118.30, 34.12), (-118.18, 34.12), 
+                 (-118.18,  34.00), (-118.30,  34.00)] )
+        region.cell_size = 0.02
+        self.grid = region.grid
+        
+    def test_can_serialize_field(self):
+        field_set = shapes.FieldSet.from_json(self.gmf_string, grid=self.grid)
+        for field in field_set:
+            print field.field
+            self.assertTrue(field)
+            print field.get(5,5)

@@ -64,6 +64,10 @@ def get_sites_from_memcache(job_id, block_id):
     memcache_key_sites = generate_sites_key(job_id, block_id)
     return get_value_json_decoded(memcache_key_sites)
 
+def get(key):
+    """ Get value from kvs and json decode """
+    value = get_client(binary=False).get(key)
+    return value
 
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
