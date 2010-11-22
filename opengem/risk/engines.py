@@ -104,26 +104,26 @@ class ProbabilisticEventBasedCalculator(object):
         self.vuln_curves = \
                 vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
 
-    def compute_loss_ratio_curve(self, site):
+    def compute_loss_ratio_curve(self, column, row ): # site_id
         """Compute the loss ratio curve for a single site."""
         key_exposure = kvs.generate_product_key(self.job_id,
-            risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
-
+            risk.EXPOSURE_KEY_TOKEN, column, row)
+        
         asset = kvs.get_value_json_decoded(key_exposure)
 
         vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
 
         key_gmf = kvs.generate_product_key(self.job_id, 
-                risk.GMF_KEY_TOKEN, self.block_id, site)
+                risk.GMF_KEY_TOKEN, column, row)
        
         gmf = kvs.get_value_json_decoded(key_gmf)
         return probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf)
 
-    def compute_loss_curve(self, site, loss_ratio_curve):
+    def compute_loss_curve(self, column, row, loss_ratio_curve):
         """Compute the loss curve for a single site."""
         key_exposure = kvs.generate_product_key(self.job_id,
-            risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
+            risk.EXPOSURE_KEY_TOKEN, column, row)
         
         asset = kvs.get_value_json_decoded(key_exposure)
         

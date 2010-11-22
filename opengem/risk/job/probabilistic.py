@@ -6,6 +6,7 @@
 
 """
 
+import math
 import os
 
 import numpy
@@ -78,9 +79,11 @@ class ProbabilisticEventMixin:
         num_ses = histories * realizations
         
         block = job.Block.from_kvs(block_id)
-        sites_list = [x for x in block.sites]
-        gmfs = numpy.zeros((len(sites_list), num_ses))
-        gmf_idx = 0
+        sites_list = block.sites
+        gmfs = []
+        for x, site in enumerate(sites_list):
+            gmfs.append([])
+            
         for i in range(0, histories):
             for j in range(0, realizations):
                 stochastic_set_id = "%s!%s" % (i, j)
@@ -92,19 +95,26 @@ class ProbabilisticEventMixin:
                         for site_key in ses[event_set][rupture]:
                             gmf_site = ses[event_set][rupture][site_key]
                             # TODO(JMC): ACK! Naive, use latlon hash
-                            site_obj = shapes.Site(gmf_site['lon'], gmf_site['lat'])
-                            for (site_idx, (gridpoint, site)) in enumerate(sites_list):
-                                if site == site_obj:
-                                    gmfs[idx][gmf_idx] = float(gmf_site['mag'])
-                        gmf_idx += 1
-        for (site_idx, (gridpoint, site)) in enumerate(sites_list):
+                            gmf_point = self.region.grid.point_at(
+                                shapes.Site(gmf_site['lon'], gmf_site['lat']))
+                            for site_idx, site in enumerate(sites_list):
+                                risk_point = self.region.grid.point_at(site)
+                                
+                                if (gmf_point.column, gmf_point.row) == (
+                                        risk_point.column, risk_point.row):
+                                    gmfs[site_idx].append(
+                                        math.exp(float(gmf_site['mag'])))
+                                        
+        for site_idx, site in enumerate(sites_list):
+            gridpoint = self.region.grid.point_at(site)
             key_gmf = kvs.generate_product_key(self.id,
-                risk.GMF_KEY_TOKEN, block_id, site_idx)
+                risk.GMF_KEY_TOKEN, gridpoint.column, gridpoint.row)
             gmf_slice = gmfs[site_idx]
-            timespan = self['INVESTIGATION_TIME']
+            print "GMF_SLICE for %s X %s : \n\t%s" % (
+                    site.latitude, site.longitude, gmf_slice )
+            timespan = float(self['INVESTIGATION_TIME'])
             gmf = {"IMLs": gmf_slice, "TSES": num_ses * timespan, 
-            "TimeSpan": timespan}
-            print "Final gmf is %s" % gmf
+                    "TimeSpan": timespan}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
     def store_exposure_assets(self):
@@ -117,7 +127,8 @@ class ProbabilisticEventMixin:
             gridpoint = self.region.grid.point_at(site)
 
             memcache_key_asset = kvs.generate_product_key(
-                self.id, risk.EXPOSURE_KEY_TOKEN, gridpoint)
+                self.id, risk.EXPOSURE_KEY_TOKEN, 
+                    gridpoint.column, gridpoint.row)
 
             LOGGER.debug("Loading asset %s at %s, %s" % (asset,
                 site.longitude,  site.latitude))
@@ -150,9 +161,6 @@ class ProbabilisticEventMixin:
         if conditional_loss_poe is None:
             conditional_loss_poe = DEFAULT_conditional_loss_poe
 
-        # start up memcache client
-        memcache_client = kvs.get_client(binary=False)
-
         risk_engine = engines.ProbabilisticEventBasedCalculator(
                 self.id, block_id)
 
@@ -164,40 +172,43 @@ class ProbabilisticEventMixin:
         LOGGER.debug("sites list for job_id %s, block_id %s:\n%s" % (
             self.id, block_id, sites_list))
 
-        for (gridpoint, site) in sites_list:
+        for site_idx, site in enumerate(sites_list):
+            gridpoint = self.region.grid.point_at(site)
 
-            logger.debug("processing gridpoint %s, site %s" % (gridpoint, site))
-            loss_ratio_curve = risk_engine.compute_loss_ratio_curve(gridpoint)
-
+            LOGGER.debug("processing gridpoint %s, site %s" % (gridpoint, site_idx))
+            loss_ratio_curve = risk_engine.compute_loss_ratio_curve(
+                        gridpoint.column, gridpoint.row)
+            print "Loss ratio curve for site %s is: \n\t %s" % (
+                            site_idx, loss_ratio_curve)
             if loss_ratio_curve is not None:
 
                 # write to memcache: loss_ratio
                 key = kvs.generate_product_key(self.id,
-                    risk.LOSS_RATIO_CURVE_KEY_TOKEN, block_id, gridpoint)
+                    risk.LOSS_RATIO_CURVE_KEY_TOKEN, gridpoint.column, gridpoint.row)
 
-                logger.debug("RESULT: loss ratio curve is %s, write to key %s" % (
+                LOGGER.debug("RESULT: loss ratio curve is %s, write to key %s" % (
                     loss_ratio_curve, key))
-                memcache_client.set(key, loss_ratio_curve)
+                kvs.set(key, loss_ratio_curve.to_json())
             
                 # compute loss curve
-                loss_curve = risk_engine.compute_loss_curve(gridpoint, 
+                loss_curve = risk_engine.compute_loss_curve(gridpoint.column, gridpoint.row, 
                                                             loss_ratio_curve)
                 key = kvs.generate_product_key(self.id, 
-                    risk.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
+                    risk.LOSS_CURVE_KEY_TOKEN, gridpoint.column, gridpoint.row)
 
-                logger.debug("RESULT: loss curve is %s, write to key %s" % (
-                    loss_curve, key))
-                memcache_client.set(key, loss_curve)
+                print "RESULT: loss curve is %s, write to key %s" % (
+                    loss_curve, key)
+                kvs.set(key, loss_curve.to_json())
             
                 # compute conditional loss
                 loss_conditional = engines.compute_loss(loss_curve, 
                                                         conditional_loss_poe)
                 key = kvs.generate_product_key(self.id, 
-                    risk.CONDITIONAL_LOSS_KEY_TOKEN, block_id, gridpoint)
+                    risk.CONDITIONAL_LOSS_KEY_TOKEN, gridpoint.column, gridpoint.row)
 
-                logger.debug("RESULT: conditional loss is %s, write to key %s" % (
-                    loss_conditional, key))
-                memcache_client.set(key, loss_conditional)
+                print "RESULT: conditional loss is %s, write to key %s" % (
+                    loss_conditional, key)
+                kvs.set(key, loss_conditional)
 
         # assembling final product needs to be done by jobber, collecting the
         # results from all tasks
