@@ -135,10 +135,6 @@ NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 2
 NUMBER_OF_SEISMICITY_HISTORIES = 2
 
 
-NUMBER_OF_PROCESSORS = 1
-
-
-
 [RISK]
 
 RISK_CALCULATION_MODE = Probabilistic Event
@@ -150,10 +146,14 @@ EXPOSURE = LA_county_exposure_portfolio_w_VF_code.xml
 VULNERABILITY = Vulnerability_model_Hazus.xml
 
 # file containing the hazard curves in nrml format
-HAZARD_CURVES = hazard_curves.xml
+# HAZARD_CURVES = hazard_curves.xml
 
 # name of the loss map file to generate
 LOSS_MAP = loss_map.tiff
 
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
+
+LOSS_CURVES_OUTPUT_PREFIX = loss_curves
+CONDITIONAL_LOSS_POE = 0.01 
+# TODO(JMC) SUPPORT multiple, 0.02, 0.05

@@ -100,7 +100,7 @@ class ClassicalPSHABasedMixin:
                 loss_conditional = engines.compute_loss(loss_curve, 
                                                         conditional_loss_poe)
                 key = kvs.generate_product_key(job_id, 
-                    risk.CONDITIONAL_LOSS_KEY_TOKEN, block_id, gridpoint)
+                    risk.LOSS_TOKEN(conditional_loss_poe), block_id, gridpoint)
 
                 logger.debug("RESULT: conditional loss is %s, write to key %s" % (
                     loss_conditional, key))

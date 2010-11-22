@@ -1,6 +1,7 @@
 """Wrapper around our use of jpype.
 Includes classpath arguments, and heap size."""
 
+import logging
 import os
 import sys
 
@@ -40,6 +41,7 @@ JAVA_CLASSES = {
     "ProbabilityMassFunctionCalc" : "org.gem.calc.ProbabilityMassFunctionCalc",
 }
 
+logging.getLogger('jpype').setLevel(logging.ERROR)
 
 def jclass(class_key):
     """Wrapper around jpype.JClass for short class names"""

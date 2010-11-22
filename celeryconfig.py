@@ -22,6 +22,6 @@ BROKER_VHOST = "celeryvhost"
 
 CELERY_RESULT_BACKEND = "amqp"
 
-CELERY_IMPORTS = ("opengem.risk.tasks",
+CELERY_IMPORTS = ("opengem.risk.job",
                   "opengem.hazard.tasks",
                   "tests.tasks")
