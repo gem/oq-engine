@@ -145,6 +145,7 @@ class Job(object):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
+                LOG.debug("Job Launching %s for %s" % (mixin, key)) 
                 results.append(self.execute())
 
         return results
@@ -166,11 +167,14 @@ class Job(object):
             sites = self.region.sites
         else:
             raise Exception("I don't know how to get the sites!")
-
         if self.partition:
+            block_count = 0
             for block in BlockSplitter(sites, constraint=region_constraint):
                 self.blocks_keys.append(block.id)
                 block.to_kvs()
+                block_count += 1
+            LOG.debug("Job has partitioned %s sites into %s blocks" % (
+                    len(sites), block_count))
         else:
             block = Block(sites)
             self.blocks_keys.append(block.id)
@@ -283,10 +287,6 @@ class BlockSplitter(object):
             self.constraint = AlwaysTrueConstraint()
     
     def __iter__(self):
-        if not len(self.sites):
-            yield(Block())
-            return
-
         filtered_sites = []
 
         # TODO (ac): Can be done better using shapely.intersects,

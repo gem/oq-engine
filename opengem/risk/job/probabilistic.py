@@ -21,12 +21,12 @@ from opengem import risk
 from opengem import settings
 from opengem import shapes
 
-from opengem.risk import engines
+from opengem.risk import probabilistic_event_based
+from opengem.risk import job as risk_job
 from opengem.output.risk import RiskXMLWriter
 from opengem.parser import exposure
 from opengem.parser import hazard as hazparser
 from opengem.parser import vulnerability
-from opengem.risk import tasks
 from opengem.risk.job import output, RiskJobMixin
 
 
@@ -59,7 +59,7 @@ class ProbabilisticEventMixin:
             LOGGER.debug("starting task block, block_id = %s of %s" 
                         % (block_id, len(self.blocks_keys)))
             # pylint: disable-msg=E1101
-            results.append(tasks.compute_risk.delay(self.id, block_id))
+            results.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # memcache).
@@ -133,8 +133,7 @@ class ProbabilisticEventMixin:
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
     
-    
-    def compute_risk(self, block_id, conditional_loss_poe=None, **kwargs):
+    def compute_risk(self, block_id, **kwargs):
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in memcache:
          1) list of sites
@@ -147,26 +146,22 @@ class ProbabilisticEventMixin:
         the job configuration.
         """
 
+        conditional_loss_poe = float(self.params.get(
+                    'CONDITIONAL_LOSS_POE', 0.01))
         self.slice_gmfs(block_id)
-        if conditional_loss_poe is None:
-            conditional_loss_poe = DEFAULT_conditional_loss_poe
+        self.vuln_curves = \
+                vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
 
-        risk_engine = engines.ProbabilisticEventBasedCalculator(
-                self.id, block_id)
-
-        # TODO(jmc): DONT assumes that hazard, assets, and output risk grid are the same
-        # (no nearest-neighbour search to find hazard)
+        # TODO(jmc): DONT assumes that hazard and risk grid are the same
+        
         block = job.Block.from_kvs(block_id)
-        sites_list = block.sites # kvs.get_sites_from_memcache(job_id, block_id)
-
-        LOGGER.debug("sites list for job_id %s, block_id %s:\n%s" % (
-            self.id, block_id, sites_list))
+        sites_list = block.sites
 
         for site_idx, site in enumerate(sites_list):
             gridpoint = self.region.grid.point_at(site)
 
             LOGGER.debug("processing gridpoint %s, site %s" % (gridpoint, site_idx))
-            loss_ratio_curve = risk_engine.compute_loss_ratio_curve(
+            loss_ratio_curve = self.compute_loss_ratio_curve(
                         gridpoint.column, gridpoint.row)
             print "Loss ratio curve for site %s is: \n\t %s" % (
                             site_idx, loss_ratio_curve)
@@ -181,7 +176,7 @@ class ProbabilisticEventMixin:
                 kvs.set(key, loss_ratio_curve.to_json())
             
                 # compute loss curve
-                loss_curve = risk_engine.compute_loss_curve(gridpoint.column, gridpoint.row, 
+                loss_curve = self.compute_loss_curve(gridpoint.column, gridpoint.row, 
                                                             loss_ratio_curve)
                 key = kvs.generate_product_key(self.id, 
                     risk.LOSS_CURVE_KEY_TOKEN, gridpoint.column, gridpoint.row)
@@ -189,12 +184,11 @@ class ProbabilisticEventMixin:
                 print "RESULT: loss curve is %s, write to key %s" % (
                     loss_curve, key)
                 kvs.set(key, loss_curve.to_json())
-            
-                # compute conditional loss
-                loss_conditional = engines.compute_loss(loss_curve, 
+                loss_conditional = probabilistic_event_based. \
+                            compute_conditional_loss(loss_curve, 
                                                         conditional_loss_poe)
                 key = kvs.generate_product_key(self.id, 
-                    risk.CONDITIONAL_LOSS_KEY_TOKEN, gridpoint.column, gridpoint.row)
+                    risk.LOSS_TOKEN(conditional_loss_poe), gridpoint.column, gridpoint.row)
 
                 print "RESULT: conditional loss is %s, write to key %s" % (
                     loss_conditional, key)
@@ -203,6 +197,34 @@ class ProbabilisticEventMixin:
         # assembling final product needs to be done by jobber, collecting the
         # results from all tasks
         return True
+
+    def compute_loss_ratio_curve(self, column, row ): # site_id
+        """Compute the loss ratio curve for a single site."""
+        key_exposure = kvs.generate_product_key(self.job_id,
+            risk.EXPOSURE_KEY_TOKEN, column, row)
+        
+        asset = kvs.get_value_json_decoded(key_exposure)
+
+        vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
+
+        key = kvs.generate_product_key(self.job_id, 
+                risk.GMF_KEY_TOKEN, column, row)
+       
+        gmf_slice = kvs.get_value_json_decoded(key)
+        return probabilistic_event_based.compute_loss_ratio_curve(
+                vuln_function, gmf_slice)
+
+    def compute_loss_curve(self, column, row, loss_ratio_curve):
+        """Compute the loss curve for a single site."""
+        key_exposure = kvs.generate_product_key(self.job_id,
+            risk.EXPOSURE_KEY_TOKEN, column, row)
+        
+        asset = kvs.get_value_json_decoded(key_exposure)
+        
+        if asset is None:
+            return None
+        
+        return loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
 
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
