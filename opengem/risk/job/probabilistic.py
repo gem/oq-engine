@@ -81,30 +81,23 @@ class ProbabilisticEventMixin:
         block = job.Block.from_kvs(block_id)
         sites_list = block.sites
         gmfs = {}
-        for site in enumerate(sites_list):
+        for site in sites_list:
             risk_point = self.region.grid.point_at(site)
-            key = "%s!%s" % (risk_point.column, risk_point.row)
+            key = "%s!%s" % (risk_point.row, risk_point.column)
             gmfs[key] = []
             
         for i in range(0, histories):
             for j in range(0, realizations):
-                stochastic_set_id = "%s!%s" % (i, j)
-                stochastic_set_key = kvs.generate_product_key(
-                        self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
-                ses = kvs.get_value_json_decoded(stochastic_set_key)
-                for event_set in ses:
-                    for rupture in ses[event_set]:
-                        for site_key in ses[event_set][rupture]:
-                            gmf_site = ses[event_set][rupture][site_key]
-                            # TODO(JMC): ACK! Naive, use latlon hash
-                            gmf_point = self.region.grid.point_at(
-                                shapes.Site(gmf_site['lon'], gmf_site['lat']))
-                            key = "%s!%s" % (gmf_point.column, gmf_point.row)
-                            gmfs[key].append(
-                                        math.exp(float(gmf_site['mag'])))
+                key = kvs.generate_product_key(
+                        self.id, hazard.STOCHASTIC_SET_TOKEN, "%s!%s" % (i, j))
+                fieldset = shapes.FieldSet.from_json(kvs.get(key), self.region.grid)
+                for field in fieldset:
+                    for key in gmfs.keys():
+                        (row, col) = key.split("!")
+                        gmfs[key].append(field.get(int(row), int(col)))
                                         
-        for key, gmf_slice in gmfs.iter():
-            (col, row) = key.split("!")
+        for key, gmf_slice in gmfs.items():
+            (row, col) = key.split("!")
             key_gmf = kvs.generate_product_key(self.id,
                 risk.GMF_KEY_TOKEN, col, row)
             print "GMF_SLICE for %s X %s : \n\t%s" % (
