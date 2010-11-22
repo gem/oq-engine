@@ -15,7 +15,7 @@ from opengem.risk.job.probabilistic import ProbabilisticEventMixin
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 
-TEST_JOB_FILE = test.smoketest_file('nshmp-california-fault/config.gem')
+TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
 SITE = shapes.Site(1.0, 1.0)
 EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.xml"

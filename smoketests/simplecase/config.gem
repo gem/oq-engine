@@ -6,10 +6,11 @@ FILTER_REGION = ../../tests/data/rect.region
 OUTPUT_REGION =
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
+#REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
+REGION_VERTEX = 34.12, -118.30, 34.12, -118.18, 34.00, -118.18, 34.00, -118.30
 # degrees
-REGION_GRID_SPACING = 0.1
-
+#REGION_GRID_SPACING = 0.1
+REGION_GRID_SPACING = 0.02
 
 [HAZARD]
 
@@ -126,14 +127,10 @@ HAZARD_CALCULATION_MODE = Monte Carlo
 
 # (used if Monte Carlo approach is chosen)
 #NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 40
-NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 2
+NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 1
 # (used if probabilistic event based approach is chosen)
 #NUMBER_OF_SEISMICITY_HISTORIES = 8
-NUMBER_OF_SEISMICITY_HISTORIES = 3
-
-
-NUMBER_OF_PROCESSORS = 1
-
+NUMBER_OF_SEISMICITY_HISTORIES = 1
 
 
 [RISK]
@@ -141,14 +138,14 @@ NUMBER_OF_PROCESSORS = 1
 RISK_CALCULATION_MODE = Probabilistic Event
 
 # file containing the exposure in nrml format
-EXPOSURE = exposure.xml
+EXPOSURE = small_exposure.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
 
 
 # file containing the hazard curves in nrml format
-HAZARD_CURVES = hazard_curves.xml
+# HAZARD_CURVES = hazard_curves.xml
 
 # name of the loss map file to generate
 LOSS_MAP = loss_map.tiff
