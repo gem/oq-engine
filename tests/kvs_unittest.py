@@ -260,28 +260,28 @@ class IdentifierTestCase(unittest.TestCase):
     def test_generate_product_key_with_only_job_id_and_product(self):
         key = kvs.generate_product_key(self.job_id, self.product)
 
-        ev = "%s!!!%s" % (self.job_id, self.product)
+        ev = "%s!%s!!" % (self.job_id, self.product)
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_job_id_product_and_block_id(self):
         key = kvs.generate_product_key(self.job_id, self.product, self.block_id)
 
-        ev =  "%s!%s!!%s" % (self.job_id, self.block_id, self.product)
+        ev =  "%s!%s!%s!" % (self.job_id, self.product, self.block_id)
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_job_id_product_and_site(self):
         key = kvs.generate_product_key(self.job_id, self.product, 
             site=self.site)
 
-        ev =  "%s!!%s!%s" % (self.job_id, self.site, self.product)
+        ev =  "%s!%s!!%s" % (self.job_id, self.product, self.site)
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_all_test_data(self):
         key = kvs.generate_product_key(self.job_id, self.product, self.block_id,
             self.site)
 
-        ev = "%s!%s!%s!%s" % (self.job_id, self.block_id, self.site, 
-            self.product) 
+        ev = "%s!%s!%s!%s" % (
+                self.job_id, self.product, self.block_id, self.site) 
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_tokens_from_kvs(self):
@@ -289,7 +289,7 @@ class IdentifierTestCase(unittest.TestCase):
             hazard.ERF_KEY_TOKEN,
             hazard.MGM_KEY_TOKEN,
             hazard.HAZARD_CURVE_KEY_TOKEN,
-            risk.CONDITIONAL_LOSS_KEY_TOKEN,
+            risk.LOSS_TOKEN(0.01),
             risk.EXPOSURE_KEY_TOKEN,
             risk.GMF_KEY_TOKEN,
             risk.LOSS_RATIO_CURVE_KEY_TOKEN,
@@ -301,8 +301,8 @@ class IdentifierTestCase(unittest.TestCase):
             key = kvs.generate_product_key(self.job_id, product,
                 self.block_id, self.site)
 
-            ev = "%s!%s!%s!%s" % (self.job_id, self.block_id, self.site,
-                product)
+            ev = "%s!%s!%s!%s" % (self.job_id, product, 
+                    self.block_id, self.site)
             self.assertEqual(key, ev)
     
     def test_memcached_doesnt_support_spaces_in_keys(self):
@@ -311,5 +311,5 @@ class IdentifierTestCase(unittest.TestCase):
         key = kvs.generate_product_key(self.job_id, self.product, 
             site=self.site)
 
-        ev = "%s!!Testville,TestLand!ATestProduct" % self.job_id
+        ev = "%s!ATestProduct!!Testville,TestLand" % self.job_id
         self.assertEqual(key, ev)
