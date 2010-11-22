@@ -80,9 +80,11 @@ class ProbabilisticEventMixin:
         
         block = job.Block.from_kvs(block_id)
         sites_list = block.sites
-        gmfs = []
-        for x, site in enumerate(sites_list):
-            gmfs.append([])
+        gmfs = {}
+        for site in enumerate(sites_list):
+            risk_point = self.region.grid.point_at(site)
+            key = "%s!%s" % (risk_point.column, risk_point.row)
+            gmfs[key] = []
             
         for i in range(0, histories):
             for j in range(0, realizations):
@@ -97,21 +99,16 @@ class ProbabilisticEventMixin:
                             # TODO(JMC): ACK! Naive, use latlon hash
                             gmf_point = self.region.grid.point_at(
                                 shapes.Site(gmf_site['lon'], gmf_site['lat']))
-                            for site_idx, site in enumerate(sites_list):
-                                risk_point = self.region.grid.point_at(site)
-                                
-                                if (gmf_point.column, gmf_point.row) == (
-                                        risk_point.column, risk_point.row):
-                                    gmfs[site_idx].append(
+                            key = "%s!%s" % (gmf_point.column, gmf_point.row)
+                            gmfs[key].append(
                                         math.exp(float(gmf_site['mag'])))
                                         
-        for site_idx, site in enumerate(sites_list):
-            gridpoint = self.region.grid.point_at(site)
+        for key, gmf_slice in gmfs.iter():
+            (col, row) = key.split("!")
             key_gmf = kvs.generate_product_key(self.id,
-                risk.GMF_KEY_TOKEN, gridpoint.column, gridpoint.row)
-            gmf_slice = gmfs[site_idx]
+                risk.GMF_KEY_TOKEN, col, row)
             print "GMF_SLICE for %s X %s : \n\t%s" % (
-                    site.latitude, site.longitude, gmf_slice )
+                    col, row, gmf_slice )
             timespan = float(self['INVESTIGATION_TIME'])
             gmf = {"IMLs": gmf_slice, "TSES": num_ses * timespan, 
                     "TimeSpan": timespan}
