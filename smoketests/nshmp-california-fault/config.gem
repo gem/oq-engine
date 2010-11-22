@@ -144,7 +144,7 @@ NUMBER_OF_PROCESSORS = 1
 RISK_CALCULATION_MODE = Probabilistic Event
 
 # file containing the exposure in nrml format
-EXPOSURE = LA_county_exposure_portfolio.xml
+EXPOSURE = LA_county_exposure_portfolio_w_VF_code.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = Vulnerability_model_Hazus.xml

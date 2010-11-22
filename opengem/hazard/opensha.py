@@ -4,6 +4,7 @@ Wrapper around the OpenSHA-lite java library.
 
 """
 
+import math
 import os
 import random
 import string
@@ -132,7 +133,7 @@ class MonteCarloMixin: # pylint: disable=W0232
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
                     gwriter.write((point.row, point.column), 
-                        numpy.exp(float(site['mag'])))
+                        math.exp(float(site['mag'])))
                 gwriter.close()
         
     def generate_erf(self):
@@ -142,7 +143,9 @@ class MonteCarloMixin: # pylint: disable=W0232
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
         timespan = float(self.params['INVESTIGATION_TIME'])
-        return java.jclass("GEM1ERF").getGEM1ERF(sources, timespan)
+        erf = java.jclass("GEM1ERF")(sources)
+        self.calc.setGEM1ERFParams(erf)
+        return erf
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""

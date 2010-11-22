@@ -14,11 +14,10 @@ public class PythonOutputStream extends OutputStream {
 
     @Override
     public void write(int arg0) throws IOException {
+        buffer.append((char) arg0);
         if (arg0 == '\n') {
             thispipe.write(buffer.toString());
             buffer = new StringBuilder();
-        } else {
-            buffer.append((char) arg0);
         }
     }
 }
