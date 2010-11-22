@@ -95,6 +95,15 @@ def set_value_json_encoded(key, value):
     return True
 
 
+def set(key, encoded_value):
+    """ Set value in kvs, for objects that have their own encoding method. """
+    try:
+        get_client(binary=False).set(key, encoded_value)
+    except Exception, e:
+        raise RuntimeError("cannot write key %s to memcache - %s" % (key, e))
+    return True
+
+
 def _generate_key(key_list):
     """ Create a kvs key """
     return MEMCACHE_KEY_SEPARATOR.join(key_list)

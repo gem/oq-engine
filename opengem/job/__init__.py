@@ -233,9 +233,11 @@ class AlwaysTrueConstraint():
 class Block(object):
     """A block is a collection of sites to compute."""
 
-    def __init__(self, sites):
+    def __init__(self, sites, block_id=None):
         self.sites = tuple(sites)
-        self.block_id = kvs.generate_block_id()
+        if not block_id:
+            block_id = kvs.generate_block_id()
+        self.block_id = block_id
 
     def __eq__(self, other):
         return self.sites == other.sites
@@ -251,7 +253,7 @@ class Block(object):
         for raw_site in raw_sites:
             sites.append(shapes.Site(raw_site[0], raw_site[1]))
 
-        return Block(sites)
+        return Block(sites, block_id)
 
     def to_kvs(self):
         """Store this block into the underlying kvs system."""
@@ -282,20 +284,19 @@ class BlockSplitter(object):
     
     def __iter__(self):
         if not len(self.sites):
+            yield(Block())
             return
 
-        number_of_blocks = int(math.ceil(len(self.sites) /
-                float(self.sites_per_block)))
+        filtered_sites = []
 
-        for idx in range(number_of_blocks):
-            filtered_sites = []
-            offset = idx * self.sites_per_block
-            sites = self.sites[offset:offset + self.sites_per_block]
-
-            # TODO (ac): Can be done better using shapely.intersects,
-            # but after the shapes.Site refactoring...
-            for site in sites:
-                if self.constraint.match(site):
-                    filtered_sites.append(site)
-                
-            yield(Block(filtered_sites))
+        # TODO (ac): Can be done better using shapely.intersects,
+        # but after the shapes.Site refactoring...
+        for site in self.sites:
+            if self.constraint.match(site):
+                filtered_sites.append(site)
+                if len(filtered_sites) == self.sites_per_block:
+                    yield(Block(filtered_sites))
+                    filtered_sites = []
+        if not filtered_sites:
+            return    
+        yield(Block(filtered_sites))
