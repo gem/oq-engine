@@ -6,9 +6,8 @@ the underlying kvs systems.
 
 import json
 import logging
-import pylibmc
 import uuid
-from opengem import settings
+from opengem.kvs.redis import Redis
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
 
@@ -52,17 +51,14 @@ def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
         length = MAX_LENGTH_RANDOM_ID
     return str(uuid.uuid4())[0:length]
 
-
-def get_client(memcached_host=settings.MEMCACHED_HOST,
-               memcached_port=settings.MEMCACHED_PORT,
-               **kwargs):
+def get_client(**kwargs):
     """possible kwargs:
         binary
     """
-    return pylibmc.Client(["%s:%d" % (memcached_host, memcached_port)], 
-                          **kwargs)
 
-def get_sites_from_memcache(memcache_client, job_id, block_id):
+    return Redis(**kwargs)
+
+def get_sites_from_memcache(job_id, block_id):
     """ Get all of the sites for a block """
 
     memcache_key_sites = generate_sites_key(job_id, block_id)
@@ -71,12 +67,14 @@ def get_sites_from_memcache(memcache_client, job_id, block_id):
 
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
-    value = get_client(binary=False).get(key)
-    decoder = json.JSONDecoder()
-    
     try:
+        value = get_client(binary=False).get(key)
+        decoder = json.JSONDecoder()
         return decoder.decode(value)
-    except Exception:
+    except Exception, e:
+        print "Key was %s" % key
+        print e
+        print "Raw JSON was: %s" % value
         return None
 
 
