@@ -1,7 +1,7 @@
 ..
       License Header goes here
 
-GEM Computational Hazard Engine
+OpenQuake Computational Hazard Engine
 ===============================
 The :mod:`Hazard` Sub-package
 -----------------------------

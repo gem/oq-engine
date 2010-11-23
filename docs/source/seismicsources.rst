@@ -1,20 +1,19 @@
 ..
       License Header goes here
 
-GEM Seismicsources
+OpenQuake Seismicsources
 =====================================
 The :mod:`seismicsources` Sub-package
 -------------------------------------
 
 The seismicsources sub package includes:
 
-:mod:`tasks` CHANGES THIS TEXT
+:mod:`tasks` CHANGE THIS TEXT
 
 
 
 The :mod:`admin` Module
 -----------------------
-
 .. automodule:: opengem.seismicsources.admin
     :members:
     :undoc-members:
@@ -23,7 +22,6 @@ The :mod:`admin` Module
 
 The :mod:`models` Module
 ------------------------
-
 .. automodule:: opengem.seismicsources.models
     :members:
     :undoc-members:
@@ -32,7 +30,6 @@ The :mod:`models` Module
 
 The :mod:`tests` Module
 -----------------------
-
 .. automodule:: opengem.seismicsources.tests
     :members:
     :undoc-members:
@@ -41,7 +38,6 @@ The :mod:`tests` Module
 
 The :mod:`views` Module
 -----------------------
-
 .. automodule:: opengem.seismicsources.views
     :members:
     :undoc-members:
