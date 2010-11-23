@@ -6,7 +6,9 @@ using the probabilistic event based approach.
 """
 
 import math
-import numpy
+from numpy import array # pylint: disable=E1101, E0611
+from numpy import linspace # pylint: disable=E1101, E0611
+from numpy import histogram # pylint: disable=E1101, E0611
 
 from opengem import shapes
 
@@ -30,22 +32,22 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_value))
     
-    return numpy.array(loss_ratios)
+    return array(loss_ratios)
 
 def compute_loss_ratios_range(vuln_function):
     """Compute the range of loss ratios used to build the loss ratio curve."""
     loss_ratios = vuln_function.ordinates[:, 0]
-    return numpy.linspace(0.0, loss_ratios[-1], num=25)
+    return linspace(0.0, loss_ratios[-1], num=25)
     
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
-    histogram = numpy.histogram(loss_ratios, bins=loss_ratios_range)
-    return (histogram[0][::-1].cumsum()[::-1], histogram[1])
+    hist = histogram(loss_ratios, bins=loss_ratios_range)
+    return hist[0][::-1].cumsum()[::-1]
 
 def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
     """Compute the rates of exceedance for the given ground motion
     field and cumulative histogram."""
-    return (numpy.array(cum_histogram).astype(float) 
+    return (array(cum_histogram).astype(float) 
             / ground_motion_field["TSES"])
 
 def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
@@ -57,7 +59,7 @@ def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
                 (rates_of_exceedance[idx] * -1) \
                 *  ground_motion_field["TimeSpan"]))
     
-    return numpy.array(probs_of_exceedance)
+    return array(probs_of_exceedance)
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     """Compute the loss ratio curve using the probailistic event approach."""
@@ -66,7 +68,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range)[0], ground_motion_field),
+            loss_ratios, loss_ratios_range), ground_motion_field),
             ground_motion_field)
     
     data = []
@@ -77,18 +79,37 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     
     return shapes.Curve(data)
 
-def compute_aggregate_histogram_classes(histograms):
-    """Compute the classes used to build the aggregate histogram."""
-    
-    classes = []
-    for histogram in histograms:
-        classes.append(histogram[1])
-    
-    classes = numpy.array(classes)
-    return numpy.linspace(classes.min(), classes.max(), num=25)
+class AggregateHistogram(object):
+    """This class computes an aggregate histogram."""
 
-def compute_aggregate_hisogram(histograms):
-    """Compute the aggregate histogram."""
-    # compute the new classes
-    # loop over the histograms
-    pass
+    def __init__(self, number_of_bins):
+        self.min = 0.0
+        self.max = 0.0
+
+        self.distribution = []
+        self.number_of_bins = number_of_bins
+
+# TODO (ac): Not tested yet, need pre computed test data!
+    def append(self, vuln_function, ground_motion_field):
+        """Append this vulnerability function and gmf to the set
+        of input data used to compute the aggregate histogram."""
+        self._append(compute_loss_ratios(vuln_function, ground_motion_field),
+                compute_loss_ratios_range(vuln_function))
+
+    def _append(self, distribution, bins):
+        """Append this distribution to the set of distributions used
+        to compute the aggregate histogram. Update also (with the given bins)
+        the min/max boundaries used to compute the bins for the
+        aggregate histogram."""
+        self.distribution.extend(distribution)
+
+        if bins[0] < self.min:
+            self.min = bins[0]
+        
+        if bins[-1] > self.max:
+            self.max = bins[-1]
+    
+    def compute(self):
+        """Compute the aggregate histogram."""
+        return histogram(self.distribution, linspace(
+                self.min, self.max, self.number_of_bins))[0]
