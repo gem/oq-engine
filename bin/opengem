@@ -36,7 +36,7 @@ from opengem import flags
 from opengem import jobber
 from opengem import logs
 
-from opengem import config
+from opengem.job import Job
 from opengem.output import geotiff
 from opengem.parser import exposure
 from opengem.parser import vulnerability
@@ -44,8 +44,7 @@ from opengem.parser import vulnerability
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('risk_config', 'risk-config.gem', 'Risk configuration file')
-flags.DEFINE_string('hazard_config', 'hazard-config.gem', 'Hazard configuration file')
+flags.DEFINE_string('config_file', 'opengem-config.gem', 'OpenGEM configuration file')
 
 flags.DEFINE_boolean('profile', False, 'Run profiler?')
 flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
@@ -153,10 +152,11 @@ if __name__ == '__main__':
         # launch celery
         _launch_worker_subprocs()
     else:
-        job = config.Job.from_files(FLAGS.risk_config, FLAGS.hazard_config)
+        job = Job.from_file(FLAGS.config_file)
         job.to_kvs()
-        
-        if not jobber.Jobber(job, FLAGS.partition).run():
+
+        the_jobber = jobber.Jobber(job, FLAGS.partition)
+        if not the_jobber.run():
             # TODO (ac): Should we print additional details?
             logs.LOG.critical("The job configuration is inconsistent, "
                     "aborting computation.")

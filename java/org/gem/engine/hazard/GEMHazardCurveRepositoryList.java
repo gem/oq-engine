@@ -10,7 +10,7 @@ import java.util.StringTokenizer;
 
 import org.gem.UnoptimizedDeepCopy;
 import org.gem.calc.ProbabilityMassFunctionCalc;
-import org.gem.engine.hazard.memcached.Cache;
+import org.gem.engine.hazard.redis.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.opensha.commons.data.DataPoint2D;
 import org.opensha.commons.data.Site;

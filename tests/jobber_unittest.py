@@ -18,7 +18,7 @@ from opengem import logs
 from opengem import kvs
 from opengem import jobber
 from opengem import shapes
-from opengem import config
+from opengem.job import Job, EXPOSURE, INPUT_REGION
 from opengem import test
 
 import tests.tasks as test_tasks
@@ -38,7 +38,6 @@ class JobberTestCase(unittest.TestCase):
 
     def setUp(self):
         self.kvs_client = kvs.get_client(binary=False)
-        self.kvs_client.flush_all()
 
     def tearDown(self):
         pass
@@ -93,9 +92,9 @@ class JobberTestCase(unittest.TestCase):
         expected_dict = {}
         for curr_key in sorted(expected_keys):
             if curr_key.startswith('list.'):
-                expected_dict[curr_key] = [curr_key[5:], curr_key[5:]]
+                expected_dict[curr_key] = str([curr_key[5:], curr_key[5:]])
             elif curr_key.startswith('dict.'):
-                expected_dict[curr_key] = {curr_key[5:]: curr_key[5:]}
+                expected_dict[curr_key] = str({curr_key[5:]: curr_key[5:]})
 
         self.assertEqual(expected_dict, result_values)
 
@@ -128,8 +127,7 @@ class JobberTestCase(unittest.TestCase):
         self.assertEqual(expected_dict, result_dict)
 
     def test_prepares_blocks_using_the_exposure(self):
-        job = config.Job({config.EXPOSURE: os.path.join(
-                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        job = Job({EXPOSURE: os.path.join(test.DATA_DIR, EXPOSURE_TEST_FILE)})
         
         job_manager = jobber.Jobber(job, True)
         blocks_keys = job_manager._partition()
@@ -143,9 +141,9 @@ class JobberTestCase(unittest.TestCase):
         self.assertEqual(expected_block, jobber.Block.from_kvs(blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        job = config.Job({config.EXPOSURE: os.path.join(
+        job = Job({EXPOSURE: os.path.join(
                 test.DATA_DIR, EXPOSURE_TEST_FILE),
-                config.INPUT_REGION: os.path.join(
+                INPUT_REGION: os.path.join(
                 test.DATA_DIR, REGION_EXPOSURE_TEST_FILE)})
     
         job_manager = jobber.Jobber(job, True)
@@ -159,7 +157,7 @@ class JobberTestCase(unittest.TestCase):
     
     def test_prepares_blocks_using_the_input_region(self):
         region_path = os.path.join(test.DATA_DIR, REGION_TEST_FILE)
-        job = config.Job({config.INPUT_REGION: region_path})
+        job = Job({INPUT_REGION: region_path})
 
         expected_sites = []
         for site in shapes.Region.from_file(region_path):
@@ -176,7 +174,7 @@ class JobberTestCase(unittest.TestCase):
         jobber.SITES_PER_BLOCK = 1
         
         # test exposure has 6 assets
-        job = config.Job({config.EXPOSURE: os.path.join(
+        job = Job({EXPOSURE: os.path.join(
                 test.DATA_DIR, EXPOSURE_TEST_FILE)})
         
         job_manager = jobber.Jobber(job, True)
