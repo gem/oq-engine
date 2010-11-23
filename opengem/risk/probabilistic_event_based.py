@@ -2,7 +2,6 @@
 """
 This module defines the functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
-
 """
 
 import math
@@ -12,9 +11,11 @@ from numpy import histogram # pylint: disable=E1101, E0611
 
 from opengem import shapes
 
+
 def compute_loss_ratios(vuln_function, ground_motion_field):
     """Compute loss ratios using the ground motion field passed."""
-    if vuln_function == shapes.EMPTY_CURVE or not ground_motion_field["IMLs"]:
+    if vuln_function == shapes.EMPTY_CURVE or not \
+                        ground_motion_field["IMLs"]:
         return []
     
     imls = vuln_function.abscissae
@@ -34,21 +35,25 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
     
     return array(loss_ratios)
 
+
 def compute_loss_ratios_range(vuln_function):
     """Compute the range of loss ratios used to build the loss ratio curve."""
     loss_ratios = vuln_function.ordinates[:, 0]
     return linspace(0.0, loss_ratios[-1], num=25)
-    
+
+
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     hist = histogram(loss_ratios, bins=loss_ratios_range)
     return hist[0][::-1].cumsum()[::-1]
+
 
 def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
     """Compute the rates of exceedance for the given ground motion
     field and cumulative histogram."""
     return (array(cum_histogram).astype(float) 
             / ground_motion_field["TSES"])
+
 
 def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
     """Compute the probabilities of exceedance for the given ground
@@ -60,6 +65,7 @@ def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
                 *  ground_motion_field["TimeSpan"]))
     
     return array(probs_of_exceedance)
+
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     """Compute the loss ratio curve using the probailistic event approach."""
@@ -78,6 +84,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
         data.append((mean_loss_ratios, probs_of_exceedance[idx]))
     
     return shapes.Curve(data)
+
 
 class AggregateHistogram(object):
     """This class computes an aggregate histogram."""

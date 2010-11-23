@@ -51,8 +51,7 @@ def compute_risk(job_id, block_id, conditional_loss_poe=None, **kwargs):
     # loop over sites for this block
     # assumes that hazard, assets, and output risk grid are the same
     # (no nearest-neighbour search to find hazard)
-    sites_list = kvs.get_sites_from_memcache(memcache_client,
-                                                   job_id, block_id)
+    sites_list = kvs.get_sites_from_memcache(job_id, block_id)
 
     logger.debug("sites list for this task w/ job_id %s, block_id %s:\n%s" % (
         job_id, block_id, sites_list))

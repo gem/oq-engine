@@ -4,7 +4,6 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -14,10 +13,9 @@ import java.util.Map;
 import java.util.Random;
 
 import junit.framework.Assert;
-import net.spy.memcached.MemcachedClient;
 
 import org.gem.engine.CommandLineCalculator;
-import org.gem.engine.hazard.memcached.Cache;
+import org.gem.engine.hazard.redis.Cache;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,9 +56,8 @@ public class HazardCalculatorTest {
     private static Random rn = new Random();
     private static Boolean correlationFlag = false;
     // for memcache tests:
-    private static final int PORT = 11211;
+    private static final int PORT = 6379;
     private static final String LOCALHOST = "localhost";
-    private MemcachedClient client;
     private Cache cache;
 
     @Before
@@ -83,10 +80,6 @@ public class HazardCalculatorTest {
         erf = null;
         gmpeMap = null;
         imlVals = null;
-        if (client != null) {
-            client.shutdown();
-            client = null;
-        }
         if (cache != null) {
             cache.flush();
             cache = null;
@@ -244,13 +237,13 @@ public class HazardCalculatorTest {
         Iterator<String> keyIterator = keys.iterator();
         while (keyIterator.hasNext()) {
             String key = keyIterator.next();
-            Object valueFromCache = client.get(key);
+            Object valueFromCache = cache.get(key);
             assertNotNull(
                     "test storeGroundMotionMapToCache: no value returned from cache",
                     valueFromCache);
             // This is not an assert mehtod, but in error case this cast to
             // Double would cause a ClassCastException and let the test fail.
-            Double value = (Double) valueFromCache;
+            Double value = Double.valueOf((String) valueFromCache);
             // If the ground motion map contains this value, I am satisfied.
             // ...but this may be an equal ground motion value belonging to an
             // different site.
@@ -336,9 +329,9 @@ public class HazardCalculatorTest {
                 CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
                         siteIds, groundMotionFields);
         // converts the groundmotion fields to json and stores them in the cache
-        CommandLineCalculator.gmfToMemcache(memCacheKey, gmfsId, eqkRuptureIds,
-                siteIds, groundMotionFields, cache);
-        String jsonFromMemcache = (String) client.get(memCacheKey);
+        CommandLineCalculator.gmfToMemcache(cache, memCacheKey, gmfsId,
+                eqkRuptureIds, siteIds, groundMotionFields);
+        String jsonFromMemcache = (String) cache.get(memCacheKey);
         assertNotNull("test gmfToMemcacheTest: no value returned from cache",
                 jsonFromMemcache);
         assertTrue(jsonFromGmf.compareTo(jsonFromGmf) == 0);
@@ -444,12 +437,11 @@ public class HazardCalculatorTest {
     }
 
     /**
-     * Set up the MemcachedClient and the cache to access the same host/port.
+     * Set up the cache to access the same host/port.
      * 
      * @throws IOException
      */
     private void setUpMemcache() throws IOException {
-        client = new MemcachedClient(new InetSocketAddress(LOCALHOST, PORT));
         cache = new Cache(LOCALHOST, PORT);
     }
 

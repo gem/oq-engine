@@ -112,5 +112,5 @@ class FileProducerTestCase(unittest.TestCase):
         # In practice these will probably be equal, but in the case of
         # race conditions or something as long as one doesn't completely
         # overwhelm the other
-        self.assert_(first_count > 5)
-        self.assert_(second_count > 5)
+        self.assert_(first_count > 4)
+        self.assert_(second_count > 4)
