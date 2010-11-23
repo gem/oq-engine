@@ -19,16 +19,13 @@ import org.apache.commons.configuration.ConfigurationException;
 import org.gem.engine.CalculatorConfigHelper.CalculationMode;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
 import org.gem.engine.CalculatorConfigHelper.IntensityMeasure;
-import org.gem.engine.hazard.memcached.BaseMemcachedTest;
-import org.gem.engine.hazard.memcached.Cache;
+import org.gem.engine.hazard.redis.BaseRedisTest;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
 
-import com.google.gson.Gson;
-
-public class CommandLineCalculatorTest extends BaseMemcachedTest {
+public class CommandLineCalculatorTest extends BaseRedisTest {
 
     private static String peerTestSet1Case5ConfigFile =
             "peerSet1Case5/CalculatorConfig.properties";
@@ -41,9 +38,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * fail.
      * 
      * @throws ConfigurationException
+     * @throws IOException
      */
     @Test(expected = IllegalArgumentException.class)
-    public void testCalculatorConfig() throws ConfigurationException {
+    public void testCalculatorConfig() throws ConfigurationException,
+            IOException {
 
         /*
          * (state at 2010-10-07): This lets the test fail as expected
@@ -72,10 +71,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * application workflow is not interrupted
      * 
      * @throws ConfigurationException
+     * @throws IOException
      */
     @Test
     public void testDoProbabilisticEventBasedCalcMonteCarlo()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
@@ -96,10 +96,11 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * application workflow is not interrupted
      * 
      * @throws ConfigurationException
+     * @throws IOException
      */
     @Test
     public void testDoProbabilisticEventBasedCalcFull()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         String key = CalculatorConfigHelper.ConfigItems.CALCULATION_MODE.name();
@@ -122,9 +123,10 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      *            event based hazard calculation or for the "Monte Carlo"
      *            approach.
      * @throws ConfigurationException
+     * @throws IOException
      */
     private void testDoProbabilisticEventBasedCalc(CommandLineCalculator clc)
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         Map<Integer, Map<String, Map<EqkRupture, Map<Site, Double>>>> result =
                 clc.doCalculationProbabilisticEventBased();
         Object o = null;
@@ -175,18 +177,6 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
         assertFalse(calc1.equals(calc3));
     }
 
-    @Test
-    public void supportsConfigurationReadingFromCache() {
-        Properties config = new Properties();
-        config.setProperty("KEY", "VALUE");
-        config.setProperty("ANOTHER_KEY", "ANOTHER_VALUE");
-
-        client.set("KEY", EXPIRE_TIME, new Gson().toJson(config));
-
-        assertEquals(new CommandLineCalculator(config),
-                new CommandLineCalculator(new Cache(LOCALHOST, PORT), "KEY"));
-    }
-
     /**
      * Implements PEER test set 1 case 5 (single, planar, vertical fault, with
      * floating ruptures following GR truncated magnitude frequency
@@ -195,7 +185,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      * @throws ConfigurationException
      */
     @Test
-    public void peerSet1Case5ClassicalPSHA() throws ConfigurationException {
+    public void peerSet1Case5ClassicalPSHA() throws ConfigurationException,
+            IOException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
@@ -222,7 +213,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
      */
     @Test
     public void peerSet1Case5UncorrelatedGroundMotionFields()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         double tolerance = 1e-2;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
@@ -248,7 +239,8 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
     }
 
     @Test
-    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException {
+    public void peerSet1Case8aClassicalPSHA() throws ConfigurationException,
+            IOException {
         double tolerance = 1e-3;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case8aConfigFile);
@@ -264,7 +256,7 @@ public class CommandLineCalculatorTest extends BaseMemcachedTest {
 
     @Test
     public void peerSet1Case8aUncorrelatedGroundMotionFields()
-            throws ConfigurationException {
+            throws ConfigurationException, IOException {
         double tolerance = 1e-2;
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case8aConfigFile);

@@ -20,7 +20,9 @@ public class NshmpUsData extends GemFileParser {
         NshmpWusFaultData wusFault =
                 new NshmpWusFaultData(latmin, latmax, lonmin, lonmax);
         NshmpCaliforniaFaultData caliFault =
-                new NshmpCaliforniaFaultData(latmin, latmax, lonmin, lonmax);
+                new NshmpCaliforniaFaultData("nshmp/CA/");
+
+        caliFault.read(latmin, latmax, lonmin, lonmax);
 
         // Western United States Cascadia subduction model (subduction
         // interface)
