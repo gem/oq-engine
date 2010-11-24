@@ -18,6 +18,7 @@ from osgeo import gdal, gdalconst
 from opengem import shapes
 from opengem import test
 from opengem.output import geotiff
+from opengem.output import hazardcurve
 
 # we define some test regions which have a lower-left corner at 0.0/0.0
 # the default grid spacing of 0.1 degrees is used
@@ -41,11 +42,51 @@ GEOTIFF_FILENAME_WITH_NUMBER = "test.smallregion.1.tiff"
 GEOTIFF_FILENAME_SQUARE_REGION = "test.squareregion.tiff"
 GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION = "test.asymmetric.region.tiff"
 
+HAZARDCURVE_PLOT_SIMPLE_FILENAME = "hazard-curves-simple.svg"
+
+HAZARDCURVE_PLOT_FILENAME = "hazard-curves.svg"
+HAZARDCURVE_PLOT_INPUTFILE = "example-hazard-curves-for-plotting.xml"
+
 GEOTIFF_USED_CHANNEL_IDX = 1
 GEOTIFF_TEST_PIXEL_VALUE = 1.0
 
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
+
+    def test_simple_hazardcurve_plot_generation(self):
+        """Create an SVG plot of a single hazard curve for a single site
+        from a dictionary."""
+
+        test_site = shapes.Site(-122, 38)
+        test_end_branch = '1_1'
+        test_hc_data = {test_end_branch: 
+                {'IMLValues': [0.0, 1.0, 1.8],
+                 'Values': [1.0, 0.5, 0.2],
+                 'IMT': 'PGA',
+                 'Site': test_site}}
+
+        path = test.test_file(HAZARDCURVE_PLOT_SIMPLE_FILENAME)
+        plot = hazardcurve.HazardCurvePlot(path)
+        plot.write(test_hc_data)
+        plot.close()
+
+        # assert that file has been created
+        self.assertTrue(os.path.isfile(path))
+
+    def test_hazardcurve_plot_generation_multiple_sites_multiple_curves(self):
+        """Create SVG plots for hazard curves read from an NRML file. The
+        file contains data for several sites, and several end branches of
+        the logic tree. For each site, a separate SVG file is created."""
+
+        path = test.test_file(HAZARDCURVE_PLOT_FILENAME)
+        hazardcurve_path = test.test_file(HAZARDCURVE_PLOT_INPUTFILE)
+
+        plotter = hazardcurve.HazardCurvePlotter(path, hazardcurve_path)
+        plotter.plot()
+
+        # assert that for each site in the NRML file an SVG has been created
+        for svg_file in plotter.filenames():
+            self.assertTrue(os.path.isfile(svg_file))
 
     def test_geotiff_generation_and_metadata_validation(self):
         """Create a GeoTIFF, and check if it has the
