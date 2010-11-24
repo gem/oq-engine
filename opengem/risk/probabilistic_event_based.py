@@ -11,6 +11,7 @@ from numpy import histogram # pylint: disable=E1101, E0611
 
 from opengem import shapes
 
+DEFAULT_NUMBER_OF_SAMPLES = 25
 
 def compute_loss_ratios(vuln_function, ground_motion_field):
     """Compute loss ratios using the ground motion field passed."""
@@ -39,7 +40,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
 def compute_loss_ratios_range(vuln_function):
     """Compute the range of loss ratios used to build the loss ratio curve."""
     loss_ratios = vuln_function.ordinates[:, 0]
-    return linspace(0.0, loss_ratios[-1], num=25)
+    return linspace(0.0, loss_ratios[-1], num=DEFAULT_NUMBER_OF_SAMPLES)
 
 
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
@@ -51,6 +52,9 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
 def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
     """Compute the rates of exceedance for the given ground motion
     field and cumulative histogram."""
+    if ground_motion_field["TSES"] <= 0:
+        raise ValueError("TSES is not supposed to be less than zero!")
+    
     return (array(cum_histogram).astype(float) 
             / ground_motion_field["TSES"])
 
