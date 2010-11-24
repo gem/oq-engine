@@ -7,7 +7,7 @@ from opengem import shapes
 from opengem.risk.probabilistic_event_based import *
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.vuln_function = shapes.Curve([(0.01, (0.001, 1.00)),
                 (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
@@ -180,6 +180,15 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(expected_rates,
                 compute_rates_of_exceedance(
                 self.cum_histogram, self.gmf), atol=0.01))
+
+    def test_TSES_is_not_supposed_to_be_zero_or_less(self):
+        self.gmf["TSES"] = 0.0
+        self.assertRaises(ValueError, compute_rates_of_exceedance,
+                self.cum_histogram, self.gmf)
+        
+        self.gmf["TSES"] = -10.0
+        self.assertRaises(ValueError, compute_rates_of_exceedance,
+                self.cum_histogram, self.gmf)
 
     def test_computes_probs_of_exceedance(self):
         expected_probs = [1.0000, 0.8213, 0.6111, 0.4866, 0.3222, 0.3222,
