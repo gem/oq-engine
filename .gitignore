@@ -10,8 +10,12 @@ build-stamp
 dist/**/*
 tests/data/test.tiff
 tests/data/*.fake
+tests/data/output
+tests/data/output/**/*
 tests/data/loss-curves.xml
 tests/data/loss-ratio-curves.xml
+tests/data/usgs-nshm
+tests/data/usgs-nshm/**/*
 *.tiff
 opengem.db
 coverage.ec
