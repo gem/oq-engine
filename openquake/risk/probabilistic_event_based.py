@@ -90,6 +90,37 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     return shapes.Curve(data)
 
 
+def compute_conditional_loss(loss_curve, probability):
+    """Returns the loss corresponding to the given probability of exceedance.
+    
+    This function returns zero if the probability of exceedance if out of bounds.
+    The same applies for loss ratio curves.
+
+    """
+
+    probabilities = list(loss_curve.ordinates)
+    probabilities.sort(reverse=True)
+    
+    # the probability we want to use is out of bounds
+    if probability > probabilities[0] or probability < probabilities[-1]:
+        return 0.0
+    
+    # find the upper bound
+    for index in range(len(probabilities)):
+        if probabilities[index] > probability:
+            upper_bound = index
+    
+    lower_bound = upper_bound + 1
+    
+    # For more information about the math, check the scientific
+    # model at <http://to_be_defined> (LRM chapter)
+    x = probabilities[lower_bound] - probability
+    x *= loss_curve.abscissa_for(probabilities[upper_bound])       
+    y = (probability - probabilities[upper_bound]) * \
+            loss_curve.abscissa_for(probabilities[lower_bound])
+    
+    return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
+
 class AggregateHistogram(object):
     """This class computes an aggregate histogram."""
 
