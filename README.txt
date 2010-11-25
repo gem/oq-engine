@@ -40,7 +40,7 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
 * Guppy (http://guppy-pe.sourceforge.net)
 
 
-You'll need to mess with PYTHONPATH (in your .bash_profile file), or add a .pth file, both for gdal and for opengem itself.
+You'll need to mess with PYTHONPATH (in your .bash_profile file), or add a .pth file, both for gdal and for openquake itself.
 
 To get RabbitMQ set up, execute the following:
 
@@ -90,7 +90,7 @@ Tools / Services
     ln -s /path/to/git-cl/git-cl /usr/bin/git-cl
     ln -s /path/to/git-cl/upload.py /usr/bin/upload.py
 
-* GitHub (http://github.com/gem/opengem)
+* GitHub (http://github.com/gem/openquake)
 * Rietveld (http://gemreview.appspot.com) - requires a google account
 * PivotalTracker (http://pivotaltracker.com)
 

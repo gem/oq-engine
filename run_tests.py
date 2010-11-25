@@ -20,8 +20,8 @@ Usage Examples:
 import sys
 import unittest
 
-from opengem import logs
-from opengem import flags
+from openquake import logs
+from openquake import flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")

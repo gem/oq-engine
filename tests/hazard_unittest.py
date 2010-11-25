@@ -5,15 +5,15 @@ import logging
 import time
 import unittest
 
-from opengem import hazard
-from opengem import kvs
-from opengem import shapes
-from opengem import test
-from opengem import job
-from opengem.job import mixins
-from opengem.hazard import tasks
-from opengem.hazard import opensha # pylint ignore, needed for register
-import opengem.hazard.job
+from openquake import hazard
+from openquake import kvs
+from openquake import shapes
+from openquake import test
+from openquake import job
+from openquake.job import mixins
+from openquake.hazard import tasks
+from openquake.hazard import opensha # pylint ignore, needed for register
+import openquake.hazard.job
 from tests.jobber_unittest import wait_for_celery_tasks
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
@@ -51,7 +51,7 @@ class HazardEngineTestCase(unittest.TestCase):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from memcached."""
         hazengine = job.Job.from_file(TEST_JOB_FILE)
-        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
             hc = hazengine.execute()
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
@@ -73,7 +73,7 @@ class HazardEngineTestCase(unittest.TestCase):
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_kvs(job_id)
-        with mixins.Mixin(hazengine, opengem.hazard.job.HazJobMixin, key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
             pass
             # hazengine.execute()
             # hc = hazengine.compute_hazard_curve(site_id)

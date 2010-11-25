@@ -9,9 +9,9 @@ PYTHON_PATH = "%s/python/2.6.5" % CELLAR_PATH
 This fab file assists with setting up a developer's environment.
 
 There are two primary functions implemented currently:
-    boostrap - installs required libs and sets up the opengem virtual
+    boostrap - installs required libs and sets up the openquake virtual
 environment
-    virtualenv - only sets up the opengem virtual environment (useful if a
+    virtualenv - only sets up the openquake virtual environment (useful if a
 developer already has dependencies installed)
 """
 
@@ -38,7 +38,7 @@ virtual environment tar ball specific to the platform.
 
 
 def _virtual_env_osx():
-    _setup_venv("http://opengem.cloudfed.com/\
+    _setup_venv("http://openquake.cloudfed.com/\
 documents/10156/11140/virtualenvs_osx.tar.gz")
 
 
@@ -93,7 +93,7 @@ same for Ubuntu and OSX (just a different tarball).
 
 
 def _virtual_env_ubuntu():
-    _setup_venv("http://opengem.cloudfed.com/\
+    _setup_venv("http://openquake.cloudfed.com/\
 documents/10156/11140/virtualenvs_ubuntu.tar.gz")
     
 
@@ -150,13 +150,13 @@ def _bootstrap_linux():
         with cd("~"):
             if not ls(".virtualenvs"):
                 run("mkdir -p .virtualenvs")
-                run("%s mkvirtualenv opengem" % _ubuntu_virtualenv_source())   
+                run("%s mkvirtualenv openquake" % _ubuntu_virtualenv_source())   
 
 
         for venv_package in virtualenv_packages:
-            _pip_install(venv_package, virtualenv="opengem")
+            _pip_install(venv_package, virtualenv="openquake")
 
-        _pip_install("pylibmc", version="0.9.2", virtualenv="opengem")
+        _pip_install("pylibmc", version="0.9.2", virtualenv="openquake")
 
         # GDAL.
         _apt_install(" ".join(gdal_packages))
@@ -164,7 +164,7 @@ def _bootstrap_linux():
         # copy it to the virtualenv
         if not ls("/usr/lib/python2.6/dist-packages/osgeo"):
             run("cp -R /usr/lib/python2.6/dist-packages/osgeo/\
-~/.virtualenvs/opengem/lib/python2.6/site-packages/")
+~/.virtualenvs/openquake/lib/python2.6/site-packages/")
         else:
             print "Couldn't find osgeo module; something is wrong with GDAL."
             sys.exit()
@@ -176,7 +176,7 @@ def _bootstrap_linux():
                 _curl(geohash_url, geohash_file)
                 run("tar xzf %s" % geohash_file)
                 with cd("python-geohash-0.6"):
-                    run("python setup.py install --prefix=~/.virtualenvs/opengem")
+                    run("python setup.py install --prefix=~/.virtualenvs/openquake")
 
         # Install jpype from source
         
@@ -268,14 +268,14 @@ def _bootstrap_osx():
     with cd("~"):
         if not ls(".virtualenvs"):
             run("mkdir -p .virtualenvs")
-            run("%s mkvirtualenv opengem" % _osx_virtualenv_source())
+            run("%s mkvirtualenv openquake" % _osx_virtualenv_source())
 
     virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
                            "python-gflags", "guppy", "celery", "nose", "django",
                            "ordereddict", "pylint"]
 
-    _pip_install(" ".join(virtualenv_packages), virtualenv="opengem")
-    _pip_install("pylibmc", version="0.9.2", virtualenv="opengem")
+    _pip_install(" ".join(virtualenv_packages), virtualenv="openquake")
+    _pip_install("pylibmc", version="0.9.2", virtualenv="openquake")
 
 
     #download and install geohash
@@ -286,7 +286,7 @@ def _bootstrap_osx():
             _curl(geohash_url, geohash_file)
             run("tar xzf %s" % geohash_file)
             with cd("python-geohash-0.6"):
-                run("python setup.py install --prefix=~/.virtualenvs/opengem")
+                run("python setup.py install --prefix=~/.virtualenvs/openquake")
 
     # download and install gfortran
     gfortran_url = "http://r.research.att.com/gfortran-4.2.3.dmg"
@@ -300,7 +300,7 @@ def _bootstrap_osx():
 
     # We install numpy from source because we have to remove the ppc64 line.
     _install_numpy_from_source()
-    _pip_install("scipy", virtualenv="opengem")
+    _pip_install("scipy", virtualenv="openquake")
 
     # Install gdal
     _homebrew_install("gdal")
@@ -310,7 +310,7 @@ def _bootstrap_osx():
             _curl("http://svn.osgeo.org/gdal/branches/1.7/gdal/ogr/swq.h", "swq.h")
             sudo("mv swq.h /usr/local/lib/swq.h")
 
-    _pip_install("gdal", virtualenv="opengem")
+    _pip_install("gdal", virtualenv="openquake")
 
     # Install jpype from source
     _install_jpype_from_source()
@@ -374,8 +374,8 @@ def _adduser_posgresql():
     env.warn_only = False
 
 def _createdb_postgresql():
-    if not _warn_only_run("psql -l | grep opengem"):
-        run("createdb opengem")
+    if not _warn_only_run("psql -l | grep openquake"):
+        run("createdb openquake")
     
 
 def _install_gdal_from_dmg():
@@ -400,7 +400,7 @@ def _install_jpype_from_source(java_home=None):
             _curl(jpype_url, jpype_file) 
             run("unzip %s" % jpype_file)
             with cd("JPype-0.5.4.1"):
-                run("%s python setup.py install --prefix=~/.virtualenvs/opengem" % java_home)
+                run("%s python setup.py install --prefix=~/.virtualenvs/openquake" % java_home)
 
 def _install_numpy_from_source():
     with cd("/tmp"):
@@ -412,7 +412,7 @@ def _install_numpy_from_source():
             run("svn co http://svn.scipy.org/svn/numpy/trunk numpy")
             with cd("numpy"):
                 run("curl %s | patch -p0" % diffurl)
-                run("python setup.py install --prefix=~/.virtualenvs/opengem")
+                run("python setup.py install --prefix=~/.virtualenvs/openquake")
             # Remove the svn directory
             run("rm -rf numpy")
 
@@ -463,7 +463,7 @@ source %s/virtualenvwrapper/2.1.1/bin/virtualenvwrapper.sh
 def _pip_installed(python_package, virtualenv=None):
     python_site_dir="/usr/local/lib/python2.6/site-packages/"
     if virtualenv:
-        python_site_dir="~/.virtualenvs/opengem/lib/python2.6/site-packages/"
+        python_site_dir="~/.virtualenvs/openquake/lib/python2.6/site-packages/"
 
     with cd(python_site_dir):
         env.warn_only = True

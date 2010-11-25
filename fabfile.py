@@ -2,7 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 """
-    Basic deployment script for opengem.
+    Basic deployment script for openquake.
 """
 
 import getpass
@@ -27,14 +27,14 @@ def production():
     env.hosts = ["productionhost1", "productionhost2",
                  "productionhost3", "productionhost4"]
 
-def bootstrap(deploy_dir="/tmp/opengem/"):
+def bootstrap(deploy_dir="/tmp/openquake/"):
     """ Bootstraps an environment for runtime """
     if not ls("%s/releases" % deploy_dir):
         run("mkdir -p %s/releases" % deploy_dir)
 
-def deploy(git_url="git@github.com:gem/opengem.git",
-           deploy_dir="/tmp/opengem/"):
-    """ Deploy opengem to a series of hosts """
+def deploy(git_url="git@github.com:gem/openquake.git",
+           deploy_dir="/tmp/openquake/"):
+    """ Deploy openquake to a series of hosts """
 
     if not env.hosts:
         usage()

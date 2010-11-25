@@ -1,4 +1,4 @@
-Opengem (Geo)Django [Used for Seismic Source Administration]
+OpenQuake (Geo)Django [Used for Seismic Source Administration]
 ============================================================
 Aurea Moemke, 17 Sep 2010
 
@@ -9,7 +9,7 @@ and far from complete. However, I believe it is enough to show the basic
 concepts that can be used to provide a complete solution.
 
 The goal of this story is to illustrate how we can use the Django/GeoDjango
-web framework with Opengem's spatially-enabled database to provide basic 
+web framework with OpenQuake's spatially-enabled database to provide basic 
 RESTful interfaces.  This test makes use of a portion of the Opengemdb Ver 1.4 
 to illustrate the concept. This test borrows heavily from an opensource 
 tutorial application available at http://code.google.com/geodjango-basic apps/
@@ -28,8 +28,8 @@ relational dbms with geospatial extensions.
 
 Here are the steps for installing this distribution:
 
-(1) Check out the seismic_source_admin branch from the opengem github.
-    The project is in opengem/db/seismic_source_admin/.
+(1) Check out the seismic_source_admin branch from the openquake github.
+    The project is in openquake/db/seismic_source_admin/.
     $ git checkout seismic_source_admin
 
 (2) Load all necessary dependencies:
