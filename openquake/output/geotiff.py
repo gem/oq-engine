@@ -34,7 +34,7 @@ class GeoTiffFile(writer.FileWriter):
     format = GDAL_FORMAT
     normalize = True
     
-    def __init__(self, path, image_grid, init_value=numpy.nan, normalize=False):
+    def __init__(self, path, image_grid, init_value=numpy.nan, normalize=True):
         self.grid = image_grid
         self.normalize = normalize
         # NOTE(fab): GDAL initializes the image as columns x rows.
