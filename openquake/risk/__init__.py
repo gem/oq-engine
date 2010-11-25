@@ -20,5 +20,17 @@ def vuln_key(job_id):
     """Generate the key used to store vulnerability curves."""
     return kvs.generate_product_key(job_id, "VULN_CURVES")
 
+def asset_key(job_id, row, col):
+    return kvs._generate_key([job_id, row, col, EXPOSURE_KEY_TOKEN])
+
+def loss_ratio_key(job_id, row, col, asset_id):
+    return kvs._generate_key([job_id, row, col, LOSS_RATIO_CURVE_KEY_TOKEN, asset_id]) 
+
+def loss_curve_key(job_id, row, col, asset_id):
+    return kvs._generate_key([job_id, row, col, LOSS_CURVE_KEY_TOKEN, asset_id]) 
+
+def loss_key(job_id, row, col, asset_id, poe):
+    return kvs._generate_key([job_id, row, col, LOSS_TOKEN(poe), asset_id]) 
+    
 # def asset_list_key(job_id, ):
 #    return kvs._generate_key([job_id, ])

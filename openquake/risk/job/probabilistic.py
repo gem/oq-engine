@@ -8,6 +8,7 @@
 
 import math
 import os
+import json
 
 import numpy
 from celery.exceptions import TimeoutError
@@ -117,19 +118,12 @@ class ProbabilisticEventMixin:
             (self.base_path, self.params[job.EXPOSURE]))
 
         for site, asset in exposure_parser.filter(self.region):
+            # TODO(JMC): This is kludgey
+            asset['lat'] = site.latitude
+            asset['lon'] = site.longitude
             gridpoint = self.region.grid.point_at(site)
-
-            memcache_key_asset = kvs.generate_product_key(
-                self.id, risk.EXPOSURE_KEY_TOKEN, 
-                    gridpoint.column, gridpoint.row)
-
-            LOGGER.debug("Loading asset %s at %s, %s" % (asset,
-                site.longitude,  site.latitude))
-
-            success = kvs.set_value_json_encoded(memcache_key_asset, asset)
-            if not success:
-                raise ValueError(
-                    "jobber: cannot write asset to memcache")
+            asset_key = risk.asset_key(self.id, gridpoint.column, gridpoint.row)
+            kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to memcache """
@@ -149,85 +143,78 @@ class ProbabilisticEventMixin:
         the job configuration.
         """
 
-        conditional_loss_poe = float(self.params.get(
-                    'CONDITIONAL_LOSS_POE', 0.01))
+        conditional_loss_poes = [float(x) for x in self.params.get(
+                    'CONDITIONAL_LOSS_POE', "0.01").split()]
         self.slice_gmfs(block_id)
         self.vuln_curves = \
                 vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
 
         # TODO(jmc): DONT assumes that hazard and risk grid are the same
+        decoder = json.JSONDecoder()
         
         block = job.Block.from_kvs(block_id)
-        sites_list = block.sites
-
-        for site_idx, site in enumerate(sites_list):
-            gridpoint = self.region.grid.point_at(site)
-
-            LOGGER.debug("processing gridpoint %s, site %s" % (gridpoint, site_idx))
-            loss_ratio_curve = self.compute_loss_ratio_curve(
-                        gridpoint.column, gridpoint.row)
-            print "Loss ratio curve for site %s is: \n\t %s" % (
-                            site_idx, loss_ratio_curve)
-            if loss_ratio_curve is not None:
-
-                # write to memcache: loss_ratio
-                key = kvs.generate_product_key(self.id,
-                    risk.LOSS_RATIO_CURVE_KEY_TOKEN, gridpoint.column, gridpoint.row)
-
-                LOGGER.debug("RESULT: loss ratio curve is %s, write to key %s" % (
-                    loss_ratio_curve, key))
-                kvs.set(key, loss_ratio_curve.to_json())
-            
-                # compute loss curve
-                loss_curve = self.compute_loss_curve(gridpoint.column, gridpoint.row, 
-                                                            loss_ratio_curve)
-                key = kvs.generate_product_key(self.id, 
-                    risk.LOSS_CURVE_KEY_TOKEN, gridpoint.column, gridpoint.row)
-
-                print "RESULT: loss curve is %s, write to key %s" % (
-                    loss_curve, key)
-                kvs.set(key, loss_curve.to_json())
-                loss_conditional = probabilistic_event_based. \
-                            compute_conditional_loss(loss_curve, 
-                                                        conditional_loss_poe)
-                key = kvs.generate_product_key(self.id, 
-                    risk.LOSS_TOKEN(conditional_loss_poe), gridpoint.column, gridpoint.row)
-
-                print "RESULT: conditional loss is %s, write to key %s" % (
-                    loss_conditional, key)
-                kvs.set(key, loss_conditional)
-
-        # assembling final product needs to be done by jobber, collecting the
-        # results from all tasks
-        return True
-
-    def compute_loss_ratio_curve(self, column, row ): # site_id
-        """Compute the loss ratio curve for a single site."""
-        key_exposure = kvs.generate_product_key(self.job_id,
-            risk.EXPOSURE_KEY_TOKEN, column, row)
         
-        asset = kvs.get_value_json_decoded(key_exposure)
+        for point in block.grid(self.region):
+            key = kvs.generate_product_key(self.job_id, 
+                risk.GMF_KEY_TOKEN, point.column, point.row)
+            gmf_slice = kvs.get_value_json_decoded(key)
+            
+            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
+            for asset in [decoder.decode(x) for x in asset_list]:
+                LOGGER.debug("processing asset %s" % (asset))
+                loss_ratio_curve = self.compute_loss_ratio_curve(
+                        point.column, point.row, asset, gmf_slice)
+                if loss_ratio_curve is not None:
+
+                    # compute loss curve
+                    loss_curve = self.compute_loss_curve(
+                            point.column, point.row, 
+                            loss_ratio_curve, asset)
+                    
+                    for loss_poe in conditional_loss_poes:
+                        self.compute_conditional_loss(point.column, point.row,
+                                loss_curve, asset, loss_poe)
+        return True
+    
+    def compute_conditional_loss(self, column, row, loss_curve, asset, loss_poe):
+        loss_conditional = probabilistic_event_based. \
+                compute_conditional_loss(loss_curve, loss_poe)
+        key = risk.loss_key(self.id, column, row, asset["AssetID"], loss_poe)
+
+        print "RESULT: conditional loss is %s, write to key %s" % (
+            loss_conditional, key)
+        kvs.set(key, loss_conditional)
+        
+
+    def compute_loss_ratio_curve(self, column, row, asset, gmf_slice ): # site_id
+        """Compute the loss ratio curve for a single site."""
 
         vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
 
-        key = kvs.generate_product_key(self.job_id, 
-                risk.GMF_KEY_TOKEN, column, row)
-       
-        gmf_slice = kvs.get_value_json_decoded(key)
-        return probabilistic_event_based.compute_loss_ratio_curve(
+        loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf_slice)
 
-    def compute_loss_curve(self, column, row, loss_ratio_curve):
+        key = risk.loss_ratio_key(self.id, column, row, asset["AssetID"])
+        
+        LOGGER.debug("RESULT: loss ratio curve is %s, write to key %s" % (
+            loss_ratio_curve, key))
+            
+        kvs.set(key, loss_ratio_curve.to_json())
+        return loss_ratio_curve
+
+    def compute_loss_curve(self, column, row, loss_ratio_curve, asset):
         """Compute the loss curve for a single site."""
-        key_exposure = kvs.generate_product_key(self.job_id,
-            risk.EXPOSURE_KEY_TOKEN, column, row)
-        
-        asset = kvs.get_value_json_decoded(key_exposure)
-        
         if asset is None:
             return None
         
-        return loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
+        loss_curve = loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
+        key = risk.loss_curve_key(self.id, column, row, asset["AssetID"])
+
+        print "RESULT: loss curve is %s, write to key %s" % (
+            loss_curve, key)
+        kvs.set(key, loss_curve.to_json())
+        return loss_curve
 
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
