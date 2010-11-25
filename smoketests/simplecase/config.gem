@@ -143,6 +143,7 @@ EXPOSURE = small_exposure.xml
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
 
+CONDITIONAL_LOSS_POE = 0.01 0.02 0.05
 
 # file containing the hazard curves in nrml format
 # HAZARD_CURVES = hazard_curves.xml
@@ -152,3 +153,5 @@ LOSS_MAP = loss_map.tiff
 
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
+
+RISK_CELL_SIZE = 0.001
