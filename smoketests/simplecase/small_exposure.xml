@@ -1,4 +1,4 @@
-<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
+<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
   <Config>
     <ExposureParameters PortfolioID="LA01" PortfolioDescription="Collection of exposure values for existing building in Los Angeles County, California, US" AssetType="buildings" LossType="economical loss">
     </ExposureParameters>

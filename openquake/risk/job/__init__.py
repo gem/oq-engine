@@ -1,23 +1,30 @@
 """ Mixin proxy for risk jobs, and associated
 Risk Job Mixin decorators """
 
+import os
+
 from openquake import job
 from openquake.job import mixins
 from openquake import kvs 
+from openquake import logs
 from openquake import risk
+from openquake import shapes
+from openquake.output import risk as risk_output
 
 from celery.decorators import task
 
+LOG = logs.LOG
 
 def output(fn):
     """ Decorator for output """
     def output_writer(self, *args, **kwargs):
         """ Write the output of a block to memcached. """
-        result = fn(self, *args, **kwargs)
-        if result:
-            for block_id in self.blocks_keys:
-                _write_output_for_block(self.job_id, self.block_id)
-        return result
+        fn(self, *args, **kwargs)
+        #if result:
+        results = []
+        for block_id in self.blocks_keys:
+            results.extend(self._write_output_for_block(self.job_id, block_id))
+        return results
 
     return output_writer
 
@@ -43,16 +50,17 @@ class RiskJobMixin(mixins.Mixin):
             gridpoint = self.region.grid.point_at(site)
             key = kvs.generate_product_key(job_id, 
                 risk.LOSS_CURVE_KEY_TOKEN, gridpoint.column, gridpoint.row)
-            loss_curve = kvs.get_value_json_decoded(key)
+            loss_curve = shapes.Curve.from_json(kvs.get(key))
             loss_curves.append((site, loss_curve))
 
-        LOGGER.debug("serializing loss_curves")
+        LOG.debug("Serializing loss_curves")
         filename = "%s-block-%s.xml" % (
             self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
         path = os.path.join(self.base_path, filename)
-        output_generator = RiskXMLWriter(path)
+        output_generator = risk_output.RiskXMLWriter(path)
         output_generator.serialize(loss_curves)
-    
+        return [path]
+        
         #output_generator = output.SimpleOutput()
         #output_generator.serialize(ratio_results)
     
