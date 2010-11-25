@@ -181,4 +181,4 @@ newsource
                                               # 	gr aGR(cumulative) bGR mMax 
                                               # 	ch magChar rateChar sigmaChar numSigma  (NOTE: not yet implemented!)
                                               gr 1. 0.8 6.5 9.0
-
+# One more empty line
