@@ -12,28 +12,28 @@ A Job is an object responsible for parsing a configuration, loading the appropri
 
 The :mod:`job` class
 --------------------------
-.. automodule:: opengem.job
+.. automodule:: openquake.job
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`mixin` class
 --------------------------
-.. automodule:: opengem.job.mixins
+.. automodule:: openquake.job.mixins
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`hazard` job proxy and mixins
 --------------------------------------
-.. automodule:: opengem.hazard.job
+.. automodule:: openquake.hazard.job
     :members:
     :undoc-members:
     :show-inheritance:
 
 The :mod:`risk` job proxy and mixins
 ------------------------------------
-.. automodule:: opengem.risk.job
+.. automodule:: openquake.risk.job
     :members:
     :undoc-members:
     :show-inheritance:

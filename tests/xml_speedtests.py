@@ -15,8 +15,8 @@ from xml.sax import saxutils
 import guppy
 from lxml import etree
 
-from opengem import test
-from opengem import flags
+from openquake import test
+from openquake import flags
 FLAGS = flags.FLAGS
 
 TEST_FILE = 'large.xml'

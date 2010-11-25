@@ -21,22 +21,22 @@ import sys
 # it will add the proper directories to the path so that 
 # this script can be run from a checkout
 if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                  'opengem')):
+                  'openquake')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from opengem import converter
-from opengem import flags
-from opengem import logs
+from openquake import converter
+from openquake import flags
+from openquake import logs
 
 FLAGS = flags.FLAGS
 log = logs.LOG
 
 flags.DEFINE_string('convert_input', 'tests/data/nshmp', 
                     'Input file path for Conversion')
-flags.DEFINE_string('convert_type', 'opengem.parser.nshmp',
+flags.DEFINE_string('convert_type', 'openquake.parser.nshmp',
                     'Format of input data')
 flags.DEFINE_string('convert_output', "./", 'Output file path for Conversion')
-flags.DEFINE_string('target_type', 'opengem.parser.nrml',
+flags.DEFINE_string('target_type', 'openquake.parser.nrml',
                     'Format of output data')
 
 

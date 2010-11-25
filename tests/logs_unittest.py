@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from opengem import logs
+from openquake import logs
 
 FAKE_JOB_ID = "8675309"
 LOG_FILE_PATH = os.path.join(os.getcwd(), '%s.log' % FAKE_JOB_ID)
