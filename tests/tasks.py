@@ -9,7 +9,7 @@ import time
 
 from celery.decorators import task
 
-from opengem import kvs
+from openquake import kvs
 
 MAX_WAIT_TIME_MILLISECS = 1200
 

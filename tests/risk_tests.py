@@ -13,16 +13,16 @@ import unittest
 from scipy.interpolate import interp1d
 from shapely import geometry
 
-from opengem import logs
-from opengem import risk
-from opengem import kvs 
-from opengem import shapes
-from opengem import test
+from openquake import logs
+from openquake import risk
+from openquake import kvs 
+from openquake import shapes
+from openquake import test
 
-from opengem.risk import engines
-from opengem.output import risk as risk_output
-from opengem.parser import vulnerability
-from opengem.risk.probabilistic_event_based import *
+from openquake.risk import engines
+from openquake.output import risk as risk_output
+from openquake.parser import vulnerability
+from openquake.risk.probabilistic_event_based import *
 
 logger = logs.RISK_LOG
 

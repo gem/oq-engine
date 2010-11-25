@@ -211,6 +211,6 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'opengem', u'OpenQuake Documentation',
+    ('index', 'openquake', u'OpenQuake Documentation',
      [u'GEM Foundation'], 1)
 ]

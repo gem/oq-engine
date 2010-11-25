@@ -8,8 +8,8 @@ import os
 import unittest
 
 from lxml import etree
-from opengem import test
-from opengem import logs
+from openquake import test
+from openquake import logs
 
 log = logs.LOG
 

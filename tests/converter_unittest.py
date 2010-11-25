@@ -8,9 +8,9 @@ import os
 import sys
 import unittest
 
-from opengem import converter
-from opengem import test
-from opengem import flags
+from openquake import converter
+from openquake import test
+from openquake import flags
 FLAGS = flags.FLAGS
 
 NSHML_DIR = 'usgs-nshm'
@@ -33,8 +33,8 @@ class ConverterTestCase(unittest.TestCase):
         input_path = self.dir
         
         # Extendable with plugins
-        input_type = "opengem.parser.nshmp"
-        output_type = "opengem.parser.nrml"
+        input_type = "openquake.parser.nshmp"
+        output_type = "openquake.parser.nrml"
         __import__(input_type)
         __import__(output_type)
         input_module = sys.modules[input_type]

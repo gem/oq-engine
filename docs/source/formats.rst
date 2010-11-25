@@ -21,27 +21,27 @@ The parser_vulnerability_model
 The :mod:`parser` Sub-package
 -----------------------------
 
-.. automodule:: opengem.parser.esri
+.. automodule:: openquake.parser.esri
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: opengem.parser.exposure
+.. automodule:: openquake.parser.exposure
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: opengem.parser.hazard
+.. automodule:: openquake.parser.hazard
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: opengem.parser.nshmp
+.. automodule:: openquake.parser.nshmp
     :members:
     :undoc-members:
     :show-inheritance:
 
-.. automodule:: opengem.parser.vulnerability
+.. automodule:: openquake.parser.vulnerability
     :members:
     :undoc-members:
     :show-inheritance:

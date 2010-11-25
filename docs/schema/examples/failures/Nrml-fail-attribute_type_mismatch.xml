@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
+<HazardResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
   <Config>
     <HazardProcessing timeSpanDuration="foo" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2">
 	</HazardProcessing>

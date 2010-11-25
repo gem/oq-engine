@@ -15,10 +15,10 @@ import unittest
 
 from osgeo import gdal, gdalconst
 
-from opengem import shapes
-from opengem import test
-from opengem.output import geotiff
-from opengem.output import hazardcurve
+from openquake import shapes
+from openquake import test
+from openquake.output import geotiff
+from openquake.output import hazardcurve
 
 # we define some test regions which have a lower-left corner at 0.0/0.0
 # the default grid spacing of 0.1 degrees is used
