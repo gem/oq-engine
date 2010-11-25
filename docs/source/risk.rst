@@ -19,7 +19,7 @@ The risk sub package includes:
 The :mod:`classical_psha_based` Module
 --------------------------------------
 
-.. automodule:: opengem.risk.classical_psha_based
+.. automodule:: openquake.risk.classical_psha_based
     :members:
     :undoc-members:
     :show-inheritance:
@@ -28,7 +28,7 @@ The :mod:`classical_psha_based` Module
 The :mod:`engines` Module
 -------------------------
 
-.. automodule:: opengem.risk.engines
+.. automodule:: openquake.risk.engines
     :members:
     :undoc-members:
     :show-inheritance:
@@ -37,7 +37,7 @@ The :mod:`engines` Module
 The :mod:`probabilistic_scenario` Module
 ----------------------------------------
 
-.. automodule:: opengem.risk.probabilistic_scenario
+.. automodule:: openquake.risk.probabilistic_scenario
     :members:
     :undoc-members:
     :show-inheritance:
@@ -46,7 +46,7 @@ The :mod:`probabilistic_scenario` Module
 The :mod:`tasks` Module
 -----------------------
 
-.. automodule:: opengem.risk.tasks
+.. automodule:: openquake.risk.tasks
     :members:
     :undoc-members:
     :show-inheritance:

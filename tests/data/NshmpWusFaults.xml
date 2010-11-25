@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<nrml:LogicTree xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns:ns4="http://www.w3.org/1999/xlink" xmlns:ns5="http://www.w3.org/2001/SMIL20/" xmlns:ns6="http://www.w3.org/2001/SMIL20/Language" modelID="org.opengem.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" description="">
+<nrml:LogicTree xmlns:nrml="http://openquake.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns:ns4="http://www.w3.org/1999/xlink" xmlns:ns5="http://www.w3.org/2001/SMIL20/" xmlns:ns6="http://www.w3.org/2001/SMIL20/Language" modelID="org.openquake.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" description="">
     <nrml:BranchingLevelList>
         <nrml:BranchingLevel appliesTo="-1" branchingLabel="SourceModel" level="1">
-            <nrml:Branch value="org.opengem.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" id="1" weight="1.0"/>
+            <nrml:Branch value="org.openquake.codes.hazard.calc.GemModelData.nshmp.us.NshmpUsData" id="1" weight="1.0"/>
         </nrml:BranchingLevel>
     </nrml:BranchingLevelList>
     <nrml:EndBranchMappingList>

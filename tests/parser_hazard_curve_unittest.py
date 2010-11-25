@@ -4,10 +4,10 @@
 import os
 import unittest
 
-from opengem import shapes
-from opengem import test
-from opengem import producer
-from opengem.parser import hazard as hazard_parser
+from openquake import shapes
+from openquake import test
+from openquake import producer
+from openquake.parser import hazard as hazard_parser
 
 FILES_KNOWN_TO_FAIL = ['Nrml-fail-missing_required_attribute.xml',
                        'Nrml-fail-attribute_type_mismatch.xml',

@@ -2,7 +2,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Config for all installed OpenGEM binaries and modules.
-Should be installed by setup.py into /etc/opengem 
+Should be installed by setup.py into /etc/openquake 
 eventually.
 """
 
@@ -18,6 +18,6 @@ BROKER_VHOST = "celeryvhost"
 
 CELERY_RESULT_BACKEND = "amqp"
 
-CELERY_IMPORTS = ("opengem.risk.tasks",
-                  "opengem.hazard.tasks",
+CELERY_IMPORTS = ("openquake.risk.tasks",
+                  "openquake.hazard.tasks",
                   "tests.tasks")

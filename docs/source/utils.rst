@@ -13,7 +13,7 @@ The utils sub package includes:
 The :mod:`inspect_data` Module
 -----------------------
 
-.. automodule:: opengem.utils.inspect_data
+.. automodule:: openquake.utils.inspect_data
     :members:
     :undoc-members:
     :show-inheritance:

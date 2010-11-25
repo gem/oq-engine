@@ -8,12 +8,12 @@ from lxml import etree
 import os
 import unittest
 
-from opengem import logs
-from opengem.risk import engines
-from opengem.output import risk as risk_output
-from opengem import test
-from opengem import shapes
-from opengem import xml
+from openquake import logs
+from openquake.risk import engines
+from openquake.output import risk as risk_output
+from openquake import test
+from openquake import shapes
+from openquake import xml
 
 log = logs.RISK_LOG
 
