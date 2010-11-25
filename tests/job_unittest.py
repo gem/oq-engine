@@ -4,13 +4,13 @@ import math
 import os
 import unittest
 
-from opengem import shapes
-from opengem import test
-from opengem import job
-from opengem.job import Job, EXPOSURE, INPUT_REGION
-from opengem.job.mixins import Mixin
-from opengem.risk.job import RiskJobMixin
-from opengem.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake import shapes
+from openquake import test
+from openquake import job
+from openquake.job import Job, EXPOSURE, INPUT_REGION
+from openquake.job.mixins import Mixin
+from openquake.risk.job import RiskJobMixin
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"

@@ -4,9 +4,9 @@
 import os
 import unittest
 
-from opengem.parser import exposure
-from opengem import shapes
-from opengem import test
+from openquake.parser import exposure
+from openquake import shapes
+from openquake import test
 
 TEST_FILE = 'ExposurePortfolioFile-test.xml'
 

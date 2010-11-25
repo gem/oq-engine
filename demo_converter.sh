@@ -20,8 +20,8 @@ echo "Running converter demo..."
 python bin/gemconvert \
     --debug=debug \
     --convert_input=$SRC_DIR \
-    --convert_type="opengem.parser.nshmp" \
+    --convert_type="openquake.parser.nshmp" \
     --convert_output=$TARGET_DIR \
-    --target_type="opengem.parser.nrml" \
+    --target_type="openquake.parser.nrml" \
     $@
  
