@@ -4,7 +4,7 @@ These include Classical PSHA-based risk analysis,
 and deterministic analysis based on either a set of GMF files,
 or a single GMF file."""
 
-from opengem import kvs
+from openquake import kvs
 
 # risk tokens
 CONDITIONAL_LOSS_KEY_TOKEN = 'LOSS_AT_'

@@ -37,6 +37,8 @@ def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
     return jobobj.id
 
+# TODO(JMC): THIS IS REALLY BITROTTED, DOES NOT REPRESENT CURRENT GOLDEN PATH
+
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
     Most data returned from the engine is via memcached."""
@@ -111,6 +113,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         self.assertEqual(result_values, expected_values)
 
+    @test.skipit
     def test_compute_hazard_curve_all_sites(self):
         results = []
         block_id = 8801

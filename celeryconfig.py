@@ -8,8 +8,8 @@ eventually.
 
 import sys
 
-from opengem import flags
-from opengem import java
+from openquake import flags
+from openquake import java
 flags.FLAGS.capture_java_debug = True
 
 sys.path.append('.')
