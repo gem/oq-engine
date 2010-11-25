@@ -143,7 +143,7 @@ class ProbabilisticEventMixin:
         the job configuration.
         """
 
-        conditional_loss_poes = [float(x) for x in self.params.get(
+        conditional_loss_poes = [float(x) for x in self.hazard.get(
                     'CONDITIONAL_LOSS_POE', "0.01").split()]
         self.slice_gmfs(block_id)
         self.vuln_curves = \
@@ -186,7 +186,6 @@ class ProbabilisticEventMixin:
             loss_conditional, key)
         kvs.set(key, loss_conditional)
         
-
     def compute_loss_ratio_curve(self, column, row, asset, gmf_slice ): # site_id
         """Compute the loss ratio curve for a single site."""
 
@@ -215,6 +214,5 @@ class ProbabilisticEventMixin:
             loss_curve, key)
         kvs.set(key, loss_curve.to_json())
         return loss_curve
-
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
