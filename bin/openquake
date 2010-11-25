@@ -33,7 +33,6 @@ from fabric.api import env, local, run
 from multiprocessing import Process
 
 from openquake import flags
-from openquake import jobber
 from openquake import logs
 
 from openquake.job import Job
@@ -41,6 +40,10 @@ from openquake.output import geotiff
 from openquake.parser import exposure
 from openquake.parser import vulnerability
 
+from openquake.hazard import job
+from openquake.hazard import opensha
+from openquake.risk import job
+from openquake.risk.job import probabilistic
 
 FLAGS = flags.FLAGS
 
@@ -51,9 +54,7 @@ flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
 flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
 
 flags.DEFINE_boolean('partition', False, 'Partition job?')
-
 flags.DEFINE_boolean('server', False, 'Launch memcached and RabbitMQ subprocs')
-
 flags.DEFINE_boolean('worker', False, 'Launch celery subprocs')
 
 def _launch_worker_subprocs():
@@ -152,9 +153,12 @@ if __name__ == '__main__':
         # launch celery
         _launch_worker_subprocs()
     else:
-        job = Job.from_file(FLAGS.config_file)
-        the_jobber = jobber.Jobber(job, FLAGS.partition)
-        if not the_jobber.run():
+        a_job = Job.from_file(FLAGS.config_file)
+        # TODO(JMC): Expose a way to set whether jobs should be partitioned
+        results = a_job.launch()
+        if not results:
             # TODO (ac): Should we print additional details?
             logs.LOG.critical("The job configuration is inconsistent, "
                     "aborting computation.")
+        else:
+            print results

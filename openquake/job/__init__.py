@@ -57,10 +57,12 @@ def validate(fn):
     def validator(self, *args):
         """Validate this job before running the decorated function."""
         try:
-            # assert self.has(EXPOSURE) or self.has(INPUT_REGION)
-            return fn(self, *args)
-        except AssertionError:
-            return False
+            # TODO(JMC): Add good stuff here
+            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
+        except AssertionError, e:
+            LOG.exception(e)
+            return []
+        return fn(self, *args)
 
     return validator
 
@@ -85,6 +87,8 @@ class Job(object):
     @staticmethod
     def from_file(config_file):
         """ Create a job from external configuration files. """
+        
+        LOG.debug("Loading Job from %s" % (config_file)) 
         
         base_path = os.path.dirname(config_file)
         params = parse_config_file(config_file)
@@ -146,7 +150,7 @@ class Job(object):
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
                 LOG.debug("Job Launching %s for %s" % (mixin, key)) 
-                results.append(self.execute())
+                results.extend(self.execute())
 
         return results
 
@@ -163,6 +167,7 @@ class Job(object):
         # otherwise we use the input region
         if self.has(EXPOSURE):
             sites = self._read_sites_from_exposure()
+            LOG.debug("Loaded %s sites from exposure portfolio." % len(sites))
         elif self.region:
             sites = self.region.sites
         else:
@@ -190,6 +195,8 @@ class Job(object):
         constraint = self.region
         if not constraint:
             constraint = AlwaysTrueConstraint()
+        else:
+            LOG.debug("Constraining exposure parsing to %s" % constraint.polygon)
         for asset_data in reader.filter(constraint):
             sites.append(asset_data[0])
 

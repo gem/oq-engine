@@ -28,7 +28,7 @@ from openquake.parser import exposure
 from openquake.parser import hazard as hazparser
 from openquake.parser import vulnerability
 from openquake.risk import tasks
-from openquake.risk.job import preload, output, RiskJobMixin
+from openquake.risk.job import output, RiskJobMixin
 
 
 LOGGER = logs.LOG
@@ -56,21 +56,23 @@ class ProbabilisticEventMixin:
         """ Execute a ProbabilisticLossRatio Job """
 
         results = []
+        tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s" 
                         % (block_id, len(self.blocks_keys)))
             # pylint: disable-msg=E1101
-            results.append(risk_job.compute_risk.delay(self.id, block_id))
+            tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # memcache).
-        for task in results:
+        for task in tasks:
             try:
                 # TODO(chris): Figure out where to put that timeout.
                 task.wait(timeout=None)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
-                return None
+                return []
+        return results # TODO(jmc): Move output from being a decorator
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """

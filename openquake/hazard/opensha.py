@@ -92,6 +92,8 @@ class MonteCarloMixin: # pylint: disable=W0232
         
         histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
         realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        LOG.info("Going to run hazard for %s histories of %s realizations each."
+                % (histories, realizations))
         for i in range(0, histories):
             for j in range(0, realizations):
                 self.store_source_model(self.config_file,
@@ -118,12 +120,13 @@ class MonteCarloMixin: # pylint: disable=W0232
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
-                    self.write_gmf_files(ses)
+                    results.extend(self.write_gmf_files(ses))
+        return results
     
     def write_gmf_files(self, ses):
         """Generate a GeoTiff file for each GMF."""
         image_grid = self.region.grid
-        
+        files = []
         for event_set in ses:
             for rupture in ses[event_set]:
 
@@ -142,6 +145,8 @@ class MonteCarloMixin: # pylint: disable=W0232
                     gwriter.write((point.row, point.column), 
                         math.exp(float(site['mag'])))
                 gwriter.close()
+                files.append(path)
+        return files
         
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
