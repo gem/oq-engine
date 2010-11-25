@@ -13,5 +13,5 @@ tests/data/*.fake
 tests/data/loss-curves.xml
 tests/data/loss-ratio-curves.xml
 *.tiff
-opengem.db
+openquake.db
 coverage.ec

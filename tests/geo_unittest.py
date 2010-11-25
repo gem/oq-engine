@@ -4,9 +4,9 @@ import os
 import unittest
 import tempfile
 
-from opengem import shapes
+from openquake import shapes
 
-from opengem import flags
+from openquake import flags
 FLAGS = flags.FLAGS
 
 
