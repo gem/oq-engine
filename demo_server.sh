@@ -1,6 +1,6 @@
 #!/bin/sh
 
 echo "Running server demo..."
-python bin/opengem \
+python bin/openquake \
   --server 
 

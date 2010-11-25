@@ -5,10 +5,10 @@ import os
 import unittest
 from lxml import etree
 
-from opengem import test
-from opengem import shapes
-from opengem.output import hazard as hazard_output
-from opengem.parser import hazard as hazard_parser
+from openquake import test
+from openquake import shapes
+from openquake.output import hazard as hazard_output
+from openquake.parser import hazard as hazard_parser
 
 TEST_FILE = "hazard-curves.xml"
 XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"

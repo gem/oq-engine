@@ -6,21 +6,21 @@ import time
 import pylibmc
 import unittest
 
-from opengem import hazard
-from opengem import risk
-from opengem import java
-from opengem import logs
-from opengem import kvs
-from opengem import settings
-from opengem import shapes
-from opengem import test
-from opengem import settings
+from openquake import hazard
+from openquake import risk
+from openquake import java
+from openquake import logs
+from openquake import kvs
+from openquake import settings
+from openquake import shapes
+from openquake import test
+from openquake import settings
 
-from opengem.kvs import reader
-from opengem.parser import vulnerability
+from openquake.kvs import reader
+from openquake.parser import vulnerability
 
-from opengem.output import hazard as hazard_output
-from opengem.parser import hazard as hazard_parser
+from openquake.output import hazard as hazard_output
+from openquake.parser import hazard as hazard_parser
 
 LOG = logs.LOG
 

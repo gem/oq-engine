@@ -14,12 +14,12 @@ import random
 import time
 import unittest
 
-from opengem import logs
-from opengem import kvs
-from opengem import jobber
-from opengem import shapes
-from opengem.job import Job, EXPOSURE, INPUT_REGION
-from opengem import test
+from openquake import logs
+from openquake import kvs
+from openquake import jobber
+from openquake import shapes
+from openquake.job import Job, EXPOSURE, INPUT_REGION
+from openquake import test
 
 import tests.tasks as test_tasks
 

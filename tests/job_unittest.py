@@ -3,10 +3,10 @@
 import os
 import unittest
 
-from opengem import test
-from opengem.job import Job
-from opengem.job.mixins import Mixin
-from opengem.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake import test
+from openquake.job import Job
+from openquake.job.mixins import Mixin
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"

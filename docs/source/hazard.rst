@@ -14,7 +14,7 @@ The hazard sub package includes:
 The :mod:`tasks` Module
 -----------------------
 
-.. automodule:: opengem.hazard.tasks
+.. automodule:: openquake.hazard.tasks
     :members:
     :undoc-members:
     :show-inheritance:

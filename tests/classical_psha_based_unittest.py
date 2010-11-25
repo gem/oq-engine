@@ -11,14 +11,14 @@ import unittest
 from decimal import *
 from ordereddict import *
 
-from opengem import logs
-from opengem import kvs 
-from opengem import shapes
-from opengem import test
+from openquake import logs
+from openquake import kvs 
+from openquake import shapes
+from openquake import test
 
-from opengem.parser import vulnerability
-from opengem.risk.classical_psha_based import *
-from opengem.risk.classical_psha_based import _compute_lrem_po, \
+from openquake.parser import vulnerability
+from openquake.risk.classical_psha_based import *
+from openquake.risk.classical_psha_based import _compute_lrem_po, \
     _compute_lrem, _split_loss_ratios, _generate_loss_ratios, \
     _compute_loss_ratio_curve_from_lrem_po
 

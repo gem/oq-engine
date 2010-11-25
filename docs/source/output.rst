@@ -10,7 +10,7 @@ Summarize output modules here.
 The :mod:`output` Module
 -------------------------
 
-.. automodule:: opengem.output
+.. automodule:: openquake.output
     :members:
     :undoc-members:
     :show-inheritance:
@@ -18,7 +18,7 @@ The :mod:`output` Module
 The :mod:`geotiff` Module
 -------------------------
 
-.. automodule:: opengem.output.geotiff
+.. automodule:: openquake.output.geotiff
     :members:
     :undoc-members:
     :show-inheritance:
@@ -27,7 +27,7 @@ The :mod:`geotiff` Module
 The :mod:`hazard` Module
 -------------------------
 
-.. automodule:: opengem.output.hazard
+.. automodule:: openquake.output.hazard
     :members:
     :undoc-members:
     :show-inheritance:
@@ -36,7 +36,7 @@ The :mod:`hazard` Module
 The :mod:`kml` Module
 -------------------------
 
-.. automodule:: opengem.output.kml
+.. automodule:: openquake.output.kml
     :members:
     :undoc-members:
     :show-inheritance:
@@ -45,7 +45,7 @@ The :mod:`kml` Module
 The :mod:`risk` Module
 -------------------------
 
-.. automodule:: opengem.output.risk
+.. automodule:: openquake.output.risk
     :members:
     :undoc-members:
     :show-inheritance:

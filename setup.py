@@ -21,7 +21,7 @@ from setuptools import find_packages
 
 scripts = ["bin/%s" % x for x in os.listdir('bin')]
 scripts.extend(
-    ["opengem/utils/%s" % x for x in os.listdir('opengem/utils')])
+    ["openquake/utils/%s" % x for x in os.listdir('openquake/utils')])
 libs = []
 for x in os.listdir('lib'):
     if x[-4:] == '.jar':
@@ -31,15 +31,15 @@ with os.popen("which gfortran") as gf:
     if not gf:
         raise EnvirontmentError("You need to install gfortran")
 
-setup(name='opengem',
+setup(name='openquake',
       version='0.1.0',
-      description='OpenGEM Platform',
+      description='OpenQuake Platform',
       author='gem-core',
-      author_email='opengem-dev@googlegroups.com',
-      url='http://www.opengem.org/',
-      packages=['opengem','opengem.hazard','opengem.risk',
-                'opengem.output','opengem.parser', 'opengem.seismicsources'],
-      data_files=[('/etc/opengem', ['celeryconfig.py']),
+      author_email='openquake-dev@googlegroups.com',
+      url='http://www.openquake.org/',
+      packages=['openquake','openquake.hazard','openquake.risk',
+                'openquake.output','openquake.parser', 'openquake.seismicsources'],
+      data_files=[('/etc/openquake', ['celeryconfig.py']),
                   ('lib', libs),],
       scripts=scripts,
       install_requires=["pyyaml", "shapely", "python-gflags", "pylibmc==0.9.2",
