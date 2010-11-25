@@ -7,7 +7,7 @@ import math
 import re
 import os
 
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, RawConfigParser
 
 from openquake import kvs
 from openquake import shapes
@@ -39,6 +39,7 @@ def parse_config_file(config_file):
 
     params = {}
     for section in parser.sections():
+        section_params = {}
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
@@ -46,7 +47,9 @@ def parse_config_file(config_file):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
                 params.update(parse_config_file(config_file))
             else:
-                params[key] = value
+                section_params[key] = value
+        if section_params:
+            params[section] = section_params
 
     return params
 
@@ -77,6 +80,10 @@ def guarantee_file(base_path, file_spec):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
+    __default_configs = ["opengem.cfg",        # Sane Defaults
+                         "/etc/opengem.cfg",   # Site level configs
+                         "~/.opengem.cfg"]     # Are we running as a user?
+
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
@@ -91,7 +98,9 @@ class Job(object):
         LOG.debug("Loading Job from %s" % (config_file)) 
         
         base_path = os.path.dirname(config_file)
-        params = parse_config_file(config_file)
+        params = {}
+        for config_file in Job.__default_configs + [config_file]:
+            params.update(parse_config_file(config_file))
 
         job = Job(params, base_path=base_path)
         job.config_file = config_file
@@ -135,6 +144,21 @@ class Job(object):
         region = shapes.RegionConstraint.from_coordinates(coords)
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
+
+    @property
+    def general(self):
+        """ Returns the general params for this job"""
+        return self.params['general']
+
+    @property
+    def hazard(self):
+        """ Returns the hazard params for this job"""
+        return self.params['hazard']
+
+    @property
+    def risk(self):
+        """ Returns the risk params for this job"""
+        return self.params['risk']
 
     @validate
     def launch(self):
@@ -203,14 +227,33 @@ class Job(object):
         return sites
 
     def __getitem__(self, name):
-        return self.params[name]
+        for key, config_dict in self.params.items():
+            if config_dict.has(name):
+                return config_dict[name]
 
     def __eq__(self, other):
         return self.params == other.params
         
     def __str__(self):
         return str(self.params)
-    
+
+    def _write_super_config(self):
+        kvs_client = kvs.get_client(binary=False)
+        conf = RawConfigParser()
+
+        for section, config in self.params.items():
+            conf.add_section(section)
+
+            for key, val in config.items():
+                v = kvs_client.get(val)
+                if v:
+                    key = key[-5:]
+                    val = v
+                conf.set(section, key, val)
+
+        with open("%s-super.gem" % self.job_id, "wb") as configfile:
+            conf.write(configfile)
+
     def _slurp_files(self):
         """Read referenced files and write them into memcached, key'd on their
         sha1s."""
@@ -229,9 +272,11 @@ class Job(object):
                     memcached_client.set(sha1, data_file.read())
                     self.params[key] = sha1
 
-    def to_kvs(self):
+    def to_kvs(self, write_cfg=True):
         """Store this job into memcached."""
         self._slurp_files()
+        if write_cfg:
+            self._write_super_config()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
