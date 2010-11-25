@@ -8,9 +8,9 @@ import tempfile
 from eventlet import greenpool
 from eventlet import timeout
 
-from opengem import producer
-from opengem import shapes
-from opengem import test
+from openquake import producer
+from openquake import shapes
+from openquake import test
 
 
 def generate_data(prefix):

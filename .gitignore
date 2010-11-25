@@ -17,5 +17,5 @@ tests/data/loss-ratio-curves.xml
 tests/data/usgs-nshm
 tests/data/usgs-nshm/**/*
 *.tiff
-opengem.db
+openquake.db
 coverage.ec

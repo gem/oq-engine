@@ -31,9 +31,9 @@
 		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="dependencies" includes="org/**/*.java " srcdir="${src.dir}" />
 	</target>
 
-	<target name="build-opengem-jar" depends="compile-sources">
+	<target name="build-openquake-jar" depends="compile-sources">
 		<mkdir dir="${dist.dir}" />
-		<jar destfile="${dist.dir}/opengem-minimal.jar" basedir="${classes.dir}" includes="**/*.class" />
+		<jar destfile="${dist.dir}/openquake-minimal.jar" basedir="${classes.dir}" includes="**/*.class" />
 	</target>
 
 	<taskdef resource="emma_ant.properties" classpathref="dependencies" />

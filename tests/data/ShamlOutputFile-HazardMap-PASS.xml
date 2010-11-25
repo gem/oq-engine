@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<nrml:HazardResultList xmlns:nrml="http://opengem.org/xmlns/nrml/0.1" 
+<nrml:HazardResultList xmlns:nrml="http://openquake.org/xmlns/nrml/0.1" 
                         xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
     <nrml:Result timeSpanDuration="50.0" IDmodel="PGA_1_1" IMT="PGA">
         <nrml:Descriptor>
