@@ -149,7 +149,7 @@ class Job(object):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                LOG.debug("Job Launching %s for %s" % (mixin, key)) 
+                LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key)) 
                 results.extend(self.execute())
 
         return results
@@ -249,6 +249,16 @@ class Block(object):
         if not block_id:
             block_id = kvs.generate_block_id()
         self.block_id = block_id
+
+    def grid(self, region):
+        """Provides an iterator across the unique grid points within a region,
+         corresponding to the sites within this block."""
+        used_points = []
+        for site in self.sites:
+            point = region.grid.point_at(site)
+            if point not in used_points:
+                used_points.append(point)
+                yield point
 
     def __eq__(self, other):
         return self.sites == other.sites

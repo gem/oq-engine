@@ -199,12 +199,12 @@
       <AssetValue>42.30</AssetValue>
       <StructureType>C2L</StructureType>
       <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
+    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC"> 
       <AssetID>161736</AssetID>
       <AssetValue>79.32</AssetValue>
       <StructureType>C2L</StructureType>
       <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HS">
+    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC"><!-- JOSH changed from HAZUS_C2L_HS -->
       <AssetID>161737</AssetID>
       <AssetValue>163.94</AssetValue>
       <StructureType>C2L</StructureType>
@@ -214,7 +214,7 @@
       <AssetValue>4657.25</AssetValue>
       <StructureType>W1</StructureType>
       <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HS">
+    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC"><!-- JMC changed from HAZUS_W1_HS -->
       <AssetID>161739</AssetID>
       <AssetValue>1020.25</AssetValue>
       <StructureType>W1</StructureType>
