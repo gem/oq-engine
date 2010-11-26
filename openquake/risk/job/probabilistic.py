@@ -143,7 +143,7 @@ class ProbabilisticEventMixin:
         the job configuration.
         """
 
-        conditional_loss_poes = [float(x) for x in self.hazard.get(
+        conditional_loss_poes = [float(x) for x in self.params.get(
                     'CONDITIONAL_LOSS_POE', "0.01").split()]
         self.slice_gmfs(block_id)
         self.vuln_curves = \
