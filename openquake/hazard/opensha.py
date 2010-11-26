@@ -94,6 +94,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
         LOG.info("Going to run hazard for %s histories of %s realizations each."
                 % (histories, realizations))
+
         for i in range(0, histories):
             pending_tasks = []
             for j in range(0, realizations):

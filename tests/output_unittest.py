@@ -124,6 +124,7 @@ class OutputTestCase(unittest.TestCase):
 
         # assert that file has been created and is not empty
         self.assertTrue(os.path.getsize(path) > 0)
+        os.remove(test.test_file(HAZARDCURVE_PLOT_SIMPLE_FILENAME))
 
     def test_hazardcurve_plot_generation_multiple_sites_multiple_curves(self):
         """Create SVG plots for hazard curves read from an NRML file. The
@@ -147,6 +148,7 @@ class OutputTestCase(unittest.TestCase):
         # and is not empty
         for svg_file in plotter.filenames():
             self.assertTrue(os.path.getsize(svg_file) > 0)
+            os.remove(svg_file)
 
     def test_geotiff_generation_and_metadata_validation(self):
         """Create a GeoTIFF, and check if it has the

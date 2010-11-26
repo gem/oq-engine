@@ -1,3 +1,5 @@
+""" Mixins """
+
 def loader(target, mixin):
     """ Load the mixin into the target's class """
     target.__class__.__bases__ += (mixin,)
@@ -11,6 +13,10 @@ def unloader(target, mixin):
 
 
 class Mixin:
+    """ A callable that handles mixing behaviour into a target, and
+    provides the opener api so we can use it with the python with 
+    syntax.
+    """
     mixins = {}
     def __init__(self, target, mixin, key=""):
         self.key = key.upper() + "_CALCULATION_MODE"
@@ -24,23 +30,28 @@ class Mixin:
         self._unload()
 
     def _load(self):
+        """ Load a mixin, if it's a subclass, also load the proxied mixin"""
         if issubclass(self.mixin, Mixin):
             self._load_proxied_mixin()
 
         return loader(self.target, self.mixin)
 
     def _unload(self):
+        """ Unload a mixin, if it's a subclass, also load the proxied mixin"""
         if issubclass(self.mixin, Mixin):
             self._unload_proxied_mixin()
 
         return unloader(self.target, self.mixin)
 
     def _load_proxied_mixin(self):
-        calc_mode = self.target.params[self.key]
+        """ Load the proxied mixin requested by the calculation mode """
+
+        calc_mode = self.target[self.key]
         loader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     def _unload_proxied_mixin(self):
-        calc_mode = self.target.params[self.key]
+        """ Unload the proxied mixin requested by the calculation mode """
+        calc_mode = self.target[self.key]
         unloader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     @classmethod
