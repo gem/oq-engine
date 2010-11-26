@@ -48,8 +48,8 @@ class GeoTiffFile(writer.FileWriter):
         # initialize raster to init_value values (default in NaN)
         self.raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * init_value
-        self.alpha_raster = numpy.zeros((self.grid.rows, self.grid.columns),
-                                 dtype=numpy.float)
+        self.alpha_raster = numpy.ones((self.grid.rows, self.grid.columns),
+                                 dtype=numpy.float) * 32.0
         self.target = None
         super(GeoTiffFile, self).__init__(path)
         
@@ -91,8 +91,8 @@ class GeoTiffFile(writer.FileWriter):
         serialization. Make sure these are zero-based cell addresses."""
         self.raster[int(cell[0]), int(cell[1])] = float(value)
         # Set AlphaLayer
-        if int(value):
-            self.alpha_raster[int(cell[0]), int(cell[1])] = 255
+        if value:
+            self.alpha_raster[int(cell[0]), int(cell[1])] = 255.0
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
@@ -102,8 +102,9 @@ class GeoTiffFile(writer.FileWriter):
         if self.normalize:
             self.raster = self.raster * 254.0 / self.raster.max()
 
-        for band in range(0,3):
-            self.target.GetRasterBand(band + 1).WriteArray(self.raster)
+        self.target.GetRasterBand(1).WriteArray(self.raster)
+        self.target.GetRasterBand(2).Fill(0.0)
+        self.target.GetRasterBand(3).Fill(0.0)
 
         # Write alpha channel
         self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
