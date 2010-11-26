@@ -7,7 +7,7 @@ import math
 import re
 import os
 
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, RawConfigParser
 
 from openquake import kvs
 from openquake import shapes
@@ -47,7 +47,6 @@ def parse_config_file(config_file):
                 params.update(parse_config_file(config_file))
             else:
                 params[key] = value
-
     return params
 
 
@@ -77,6 +76,12 @@ def guarantee_file(base_path, file_spec):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
+    __default_configs = [os.path.join(os.path.dirname(__file__),
+                            "../", "default.cfg"), #package
+                         "opengem.cfg",        # Sane Defaults
+                         "/etc/opengem.cfg",   # Site level configs
+                         "~/.opengem.cfg"]     # Are we running as a user?
+
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
@@ -91,10 +96,12 @@ class Job(object):
         LOG.debug("Loading Job from %s" % (config_file)) 
         
         base_path = os.path.dirname(config_file)
-        params = parse_config_file(config_file)
+        params = {}
+        for config_file in Job.__default_configs + [config_file]:
+            params.update(parse_config_file(config_file))
 
         job = Job(params, base_path=base_path)
-        job.config_file = config_file
+        job.config_file = config_file #pylint: disable-msg=W0201
         return job
 
     def __init__(self, params, job_id=None, base_path=None):
@@ -115,7 +122,7 @@ class Job(object):
         return self.params.has_key(name) and self.params[name] != ""
 
     @property
-    def id(self):
+    def id(self): #pylint: disable-msg=C0103
         """Return the id of this job."""
         return self.job_id
     
@@ -136,6 +143,12 @@ class Job(object):
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
 
+    @property
+    def super_config_path(self):
+        """ Return the path of the super config """
+        filename = "%s-super.gem" % self.job_id
+        return os.path.join(self.base_path or '', "./", filename)
+
     @validate
     def launch(self):
         """ Based on the behaviour specified in the configuration, mix in the
@@ -150,7 +163,7 @@ class Job(object):
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
                 LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key)) 
-                results.extend(self.execute())
+                results.extend(self.execute()) #pylint: disable-msg=E1101
 
         return results
 
@@ -196,7 +209,8 @@ class Job(object):
         if not constraint:
             constraint = AlwaysTrueConstraint()
         else:
-            LOG.debug("Constraining exposure parsing to %s" % constraint.polygon)
+            LOG.debug("Constraining exposure parsing to %s" % 
+                constraint.polygon)
         for asset_data in reader.filter(constraint):
             sites.append(asset_data[0])
 
@@ -210,7 +224,29 @@ class Job(object):
         
     def __str__(self):
         return str(self.params)
-    
+
+    def _write_super_config(self):
+        """
+            Take our params and write them out as a 'super' config file. 
+            Its name is equal to the job_id, which should be the sha1 of
+            the file in production or a random job in dev.
+        """
+
+        kvs_client = kvs.get_client(binary=False)
+        config = RawConfigParser()
+
+        section = 'openquake'
+        config.add_section(section)
+
+        for key, val in self.params.items():
+            v = kvs_client.get(val)
+            if v:
+                val = v
+            config.set(section, key, val)
+
+        with open(self.super_config_path, "wb") as configfile:
+            config.write(configfile)
+
     def _slurp_files(self):
         """Read referenced files and write them into memcached, key'd on their
         sha1s."""
@@ -229,15 +265,21 @@ class Job(object):
                     memcached_client.set(sha1, data_file.read())
                     self.params[key] = sha1
 
-    def to_kvs(self):
+    def to_kvs(self, write_cfg=True):
         """Store this job into memcached."""
         self._slurp_files()
+        if write_cfg:
+            self._write_super_config()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
 
 class AlwaysTrueConstraint():
+    """ A stubbed constraint for block splitting """
+
+    #pylint: disable-msg=W0232,W0613,R0201
     def match(self, point):
+        """ stub a match filter to always return true """
         return True
 
 
@@ -287,7 +329,7 @@ class Block(object):
         kvs.set_value_json_encoded(self.id, raw_sites)
 
     @property
-    def id(self):
+    def id(self): #pylint: disable-msg=C0103
         """Return the id of this block."""
         return self.block_id
 
