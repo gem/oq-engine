@@ -67,10 +67,10 @@ class MonteCarloMixin: # pylint: disable=W0232
     def site_list_generator(self):
         """Will subset and yield portions of the region, depending on the 
         the computation mode."""
-        verts = [float(x) for x in self.general['REGION_VERTEX'].split(",")]
+        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
         coords = zip(verts[1::2], verts[::2])
         region = shapes.Region.from_coordinates(coords)
-        region.cell_size = float(self.general['REGION_GRID_SPACING'])
+        region.cell_size = float(self.params['REGION_GRID_SPACING'])
         yield [site for site in region]
 
     @preload
@@ -82,16 +82,16 @@ class MonteCarloMixin: # pylint: disable=W0232
         results = []
         
         source_model_generator = random.Random()
-        source_model_generator.seed(self.hazard.get('ERFLT_RANDOM_SEED', None))
+        source_model_generator.seed(self.params.get('ERFLT_RANDOM_SEED', None))
         
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.hazard.get('GMPELT_RANDOM_SEED', None))
+        gmpe_generator.seed(self.params.get('GMPELT_RANDOM_SEED', None))
         
         gmf_generator = random.Random()
-        gmf_generator.seed(self.hazard.get('GMF_RANDOM_SEED', None))
+        gmf_generator.seed(self.params.get('GMF_RANDOM_SEED', None))
         
-        histories = int(self.hazard['NUMBER_OF_SEISMICITY_HISTORIES'])
-        realizations = int(self.hazard['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
+        realizations = int(self.params['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
         LOG.info("Going to run hazard for %s histories of %s realizations each."
                 % (histories, realizations))
 
@@ -113,7 +113,7 @@ class MonteCarloMixin: # pylint: disable=W0232
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
                     
-            # if self.hazard['OUTPUT_GMF_FILES']
+            # if self.params['OUTPUT_GMF_FILES']
             for j in range(0, realizations):
                 stochastic_set_id = "%s!%s" % (i, j)
                 stochastic_set_key = kvs.generate_product_key(
@@ -155,7 +155,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
-        timespan = float(self.hazard['INVESTIGATION_TIME'])
+        timespan = float(self.params['INVESTIGATION_TIME'])
         erf = java.jclass("GEM1ERF")(sources)
         self.calc.setGEM1ERFParams(erf)
         return erf
@@ -174,14 +174,14 @@ class MonteCarloMixin: # pylint: disable=W0232
         gmpe_lt_data = self.calc.createGmpeLogicTreeData()
         for tect_region in gmpe_map.keySet():
             gmpe = gmpe_map.get(tect_region)
-            gmpe_lt_data.setGmpeParams(self.hazard['COMPONENT'], 
-                self.hazard['INTENSITY_MEASURE_TYPE'], 
-                jpype.JDouble(float(self.hazard['PERIOD'])), 
-                jpype.JDouble(float(self.hazard['DAMPING'])), 
-                self.hazard['GMPE_TRUNCATION_TYPE'], 
-                jpype.JDouble(float(self.hazard['TRUNCATION_LEVEL'])), 
-                self.hazard['STANDARD_DEVIATION_TYPE'], 
-                jpype.JDouble(float(self.hazard['REFERENCE_VS30_VALUE'])), 
+            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'], 
+                self.params['INTENSITY_MEASURE_TYPE'], 
+                jpype.JDouble(float(self.params['PERIOD'])), 
+                jpype.JDouble(float(self.params['DAMPING'])), 
+                self.params['GMPE_TRUNCATION_TYPE'], 
+                jpype.JDouble(float(self.params['TRUNCATION_LEVEL'])), 
+                self.params['STANDARD_DEVIATION_TYPE'], 
+                jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
                 jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
             gmpe_map.put(tect_region, gmpe)
     
@@ -206,9 +206,9 @@ class MonteCarloMixin: # pylint: disable=W0232
                      }
         
         iml_list = java.jclass("ArrayList")()
-        for val in self.hazard['INTENSITY_MEASURE_LEVELS'].split(","):
+        for val in self.params['INTENSITY_MEASURE_LEVELS'].split(","):
             iml_list.add(
-                iml_vals[self.hazard['INTENSITY_MEASURE_TYPE']](
+                iml_vals[self.params['INTENSITY_MEASURE_TYPE']](
                 float(val)))
         return iml_list
 
@@ -223,12 +223,12 @@ class MonteCarloMixin: # pylint: disable=W0232
             site = x.to_java()
             
             vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
-            vs30.setValue(float(self.hazard['REFERENCE_VS30_VALUE']))
+            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
             depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
             depth25.setValue(float(
-                    self.hazard['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
             sadigh = java.jclass("StringParameter")("Sadigh Site Type")
-            sadigh.setValue(self.hazard['SADIGH_SITE_TYPE'])
+            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
             site.addParameter(vs30)
             site.addParameter(depth25)
             site.addParameter(sadigh)
@@ -245,7 +245,7 @@ class MonteCarloMixin: # pylint: disable=W0232
             self.generate_erf(),
             self.generate_gmpe_map(),
             self.get_iml_list(),
-            float(self.hazard['MAXIMUM_DISTANCE']))
+            float(self.params['MAXIMUM_DISTANCE']))
 
         pmf_calculator = java.jclass("ProbabilityMassFunctionCalc")
         for site in hazard_curves.keySet():
@@ -261,7 +261,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         jsite_list = self.parameterize_sites(site_list)
         key = kvs.generate_product_key(
                     self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
-        correlate = (self.hazard['GROUND_MOTION_CORRELATION'] == "true" and True or False)
+        correlate = (self.params['GROUND_MOTION_CORRELATION'] == "true" and True or False)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
                 self.cache, key, stochastic_set_id, jsite_list,
                  self.generate_erf(), 

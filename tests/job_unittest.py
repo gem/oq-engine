@@ -29,6 +29,8 @@ class JobTestCase(unittest.TestCase):
         self.job = Job.from_file(test.test_file(CONFIG_FILE))
         self.job_with_includes = Job.from_file(test.test_file(CONFIG_WITH_INCLUDES))
 
+    def tearDown(self):
+        [os.remove(f) for f in os.listdir(os.curdir) if f.count("-super.gem")]
 
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 

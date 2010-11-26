@@ -39,7 +39,6 @@ def parse_config_file(config_file):
 
     params = {}
     for section in parser.sections():
-        section_params = {}
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
@@ -47,10 +46,7 @@ def parse_config_file(config_file):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
                 params.update(parse_config_file(config_file))
             else:
-                section_params[key] = value
-        if section_params:
-            params[section] = section_params
-
+                params[key] = value
     return params
 
 
@@ -121,7 +117,7 @@ class Job(object):
     def has(self, name):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
-        return self.params.has_key(name) and self.params[name] != ""
+        return self[name] and self[name] != ""
 
     @property
     def id(self):
@@ -144,21 +140,6 @@ class Job(object):
         region = shapes.RegionConstraint.from_coordinates(coords)
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
-
-    @property
-    def general(self):
-        """ Returns the general params for this job"""
-        return self.params['general']
-
-    @property
-    def hazard(self):
-        """ Returns the hazard params for this job"""
-        return self.params['hazard']
-
-    @property
-    def risk(self):
-        """ Returns the risk params for this job"""
-        return self.params['risk']
 
     @validate
     def launch(self):
@@ -214,6 +195,7 @@ class Job(object):
         in the job definition."""
 
         sites = []
+        print self[EXPOSURE]
         path = os.path.join(self.base_path, self[EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
         constraint = self.region
@@ -227,9 +209,8 @@ class Job(object):
         return sites
 
     def __getitem__(self, name):
-        for key, config_dict in self.params.items():
-            if config_dict.has(name):
-                return config_dict[name]
+        if name in self.params:
+            return self.params[name]
 
     def __eq__(self, other):
         return self.params == other.params
@@ -239,20 +220,19 @@ class Job(object):
 
     def _write_super_config(self):
         kvs_client = kvs.get_client(binary=False)
-        conf = RawConfigParser()
+        config = RawConfigParser()
 
-        for section, config in self.params.items():
-            conf.add_section(section)
+        section = 'openquake'
+        config.add_section(section)
 
-            for key, val in config.items():
-                v = kvs_client.get(val)
-                if v:
-                    key = key[-5:]
-                    val = v
-                conf.set(section, key, val)
+        for key, val in self.params.items():
+            v = kvs_client.get(val)
+            if v:
+                val = v
+            config.set(section, key, val)
 
         with open("%s-super.gem" % self.job_id, "wb") as configfile:
-            conf.write(configfile)
+            config.write(configfile)
 
     def _slurp_files(self):
         """Read referenced files and write them into memcached, key'd on their
