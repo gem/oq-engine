@@ -29,7 +29,7 @@ for x in os.listdir('lib'):
         
 with os.popen("which gfortran") as gf:
     if not gf:
-        raise EnvirontmentError("You need to install gfortran")
+        raise EnvironmentError("You need to install gfortran")
 
 setup(name='openquake',
       version='0.1.0',
@@ -37,8 +37,11 @@ setup(name='openquake',
       author='gem-core',
       author_email='openquake-dev@googlegroups.com',
       url='http://www.openquake.org/',
-      packages=['openquake','openquake.hazard','openquake.risk',
-                'openquake.output','openquake.parser', 'openquake.seismicsources'],
+      packages=['openquake','openquake.hazard','openquake.hazard.job',
+                'openquake.job','openquake.kvs',
+                'openquake.output','openquake.parser',
+                'openquake.risk', 'openquake.risk.job',
+                'openquake.seismicsources'],
       data_files=[('/etc/openquake', ['celeryconfig.py']),
                   ('lib', libs),],
       scripts=scripts,
