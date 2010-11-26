@@ -17,7 +17,7 @@ MEMCACHE_KEY_SEPARATOR = '!'
 
 
 def get(key):
-    """ Get value from kvs and json decode """
+    """Get value from kvs for external decoding"""
     value = get_client(binary=False).get(key)
     return value
 
