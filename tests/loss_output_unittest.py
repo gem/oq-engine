@@ -91,10 +91,10 @@ class LossOutputTestCase(unittest.TestCase):
                 + xml.NRML + "LossCurve//"
                 + xml.NRML + "Values").text.strip().split()
 
-        for idx, val in enumerate(TEST_CURVE.ordinates):
-            self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
         for idx, val in enumerate(TEST_CURVE.abscissae):
-            self.assertEqual(val, float(xml_first_curve_value[idx]))
+            self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
+        for idx, val in enumerate(TEST_CURVE.ordinates):
+            self.assertAlmostEqual(val, float(xml_first_curve_value[idx]), 6)
 
     # TODO(jmc): Test that the lat and lon are correct for each curve
     # Optionally, compare it to another XML file.
@@ -111,8 +111,8 @@ class LossOutputTestCase(unittest.TestCase):
                 + xml.NRML + "LossRatioCurve//"
                 + xml.NRML + "Values").text.strip().split()
 
-        for idx, val in enumerate(TEST_CURVE.ordinates):
-            self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
         for idx, val in enumerate(TEST_CURVE.abscissae):
-            self.assertEqual(val, float(xml_first_curve_value[idx]))
+            self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
+        for idx, val in enumerate(TEST_CURVE.ordinates):
+            self.assertAlmostEqual(val, float(xml_first_curve_value[idx]), 6)
 
