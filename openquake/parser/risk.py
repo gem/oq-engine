@@ -86,6 +86,7 @@ class NrmlFile(producer.FileProducer):
             except Exception:
                 error_str = "invalid or missing %s value" % child_key
                 raise ValueError(error_str) 
-
+        
+        attributes["AssetID"] = element.attrib.get("AssetID", None)
         return attributes
 

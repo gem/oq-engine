@@ -26,7 +26,7 @@ scripts.append('celeryconfig.py')
 
 libs = []
 lib_srcs = ('lib','dist')
-for lib_src:
+for lib_src in lib_srcs:
     for x in os.listdir(lib_src):
         if x[-4:] == '.jar':
             libs.append("%s/%s" % (lib_src, x))

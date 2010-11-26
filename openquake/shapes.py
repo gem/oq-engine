@@ -228,8 +228,8 @@ class Grid(object):
         return Site(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
     def __iter__(self):
-        for row in range(0, self.rows - 1):
-            for col in range(0, self.columns - 1):
+        for row in range(0, self.rows):
+            for col in range(0, self.columns):
                 try:
                     point = GridPoint(self, col, row)
                     self.check_gridpoint(point)

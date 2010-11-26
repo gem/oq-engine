@@ -61,7 +61,7 @@ class RiskJobMixin(mixins.Mixin):
                 loss_ratio_curve = kvs.get(key)
                 if loss_ratio_curve:
                     loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                    loss_ratio_curves.append((site, loss_ratio_curve))
+                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
         LOG.debug("Serializing loss_ratio_curves")
         filename = "%s-block-%s.xml" % (
