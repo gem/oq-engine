@@ -1,5 +1,5 @@
 OpenQuake NRML schema
-===================
+=====================
 
 Documentation
 -------------
