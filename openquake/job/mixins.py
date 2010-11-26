@@ -36,11 +36,11 @@ class Mixin:
         return unloader(self.target, self.mixin)
 
     def _load_proxied_mixin(self):
-        calc_mode = self.target.params[self.key]
+        calc_mode = self.target[self.key]
         loader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     def _unload_proxied_mixin(self):
-        calc_mode = self.target.params[self.key]
+        calc_mode = self.target[self.key]
         unloader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     @classmethod
