@@ -50,7 +50,7 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_runs_with_a_good_config(self):
         job = Job.from_file(TEST_JOB_FILE)
-        #self.assertTrue(job.launch())
+        self.assertTrue(job.launch())
 
     def test_a_job_has_an_identifier(self):
         self.assertEqual(1, Job({}, 1).id)
