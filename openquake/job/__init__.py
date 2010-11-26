@@ -99,7 +99,7 @@ class Job(object):
             params.update(parse_config_file(config_file))
 
         job = Job(params, base_path=base_path)
-        job.config_file = config_file
+        job.config_file = config_file #pylint: disable-msg=W0201
         return job
 
     def __init__(self, params, job_id=None, base_path=None):
@@ -120,7 +120,7 @@ class Job(object):
         return self[name] and self[name] != ""
 
     @property
-    def id(self):
+    def id(self): #pylint: disable-msg=C0103
         """Return the id of this job."""
         return self.job_id
     
@@ -155,7 +155,7 @@ class Job(object):
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
                 LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key)) 
-                results.extend(self.execute())
+                results.extend(self.execute()) #pylint: disable-msg=E1101
 
         return results
 
@@ -195,14 +195,14 @@ class Job(object):
         in the job definition."""
 
         sites = []
-        print self[EXPOSURE]
         path = os.path.join(self.base_path, self[EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
         constraint = self.region
         if not constraint:
             constraint = AlwaysTrueConstraint()
         else:
-            LOG.debug("Constraining exposure parsing to %s" % constraint.polygon)
+            LOG.debug("Constraining exposure parsing to %s" % 
+                constraint.polygon)
         for asset_data in reader.filter(constraint):
             sites.append(asset_data[0])
 
@@ -219,6 +219,12 @@ class Job(object):
         return str(self.params)
 
     def _write_super_config(self):
+        """
+            Take our params and write them out as a 'super' config file. 
+            Its name is equal to the job_id, which should be the sha1 of
+            the file in production or a random job in dev.
+        """
+
         kvs_client = kvs.get_client(binary=False)
         config = RawConfigParser()
 
@@ -262,7 +268,11 @@ class Job(object):
 
 
 class AlwaysTrueConstraint():
+    """ A stubbed constraint for block splitting """
+
+    #pylint: disable-msg=W0232,W0613,R0201
     def match(self, point):
+        """ stub a match filter to always return true """
         return True
 
 
@@ -312,7 +322,7 @@ class Block(object):
         kvs.set_value_json_encoded(self.id, raw_sites)
 
     @property
-    def id(self):
+    def id(self): #pylint: disable-msg=C0103
         """Return the id of this block."""
         return self.block_id
 
