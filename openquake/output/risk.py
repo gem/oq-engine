@@ -52,7 +52,6 @@ class RiskXMLWriter(writer.FileWriter):
         # This use of not None is b/c of the trap w/ ElementTree find
         # for nodes that have no child nodes.
         subnode_pe = self.parent_node.find(NRML + "Common" + "/" + self.abcissa_tag)
-        print "Finding abcissa? %s" % subnode_pe
         if subnode_pe is not None:
             if subnode_pe.find(NRML + "Values").text != pe_values:
                 logger.error("Abcissa doesn't match between \n %s \n %s"

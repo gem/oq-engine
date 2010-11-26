@@ -87,10 +87,7 @@ class GeoTiffFile(writer.FileWriter):
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later 
         serialization. Make sure these are zero-based cell addresses."""
-        LOG.debug("Writing %s by %s of %s" % (
-                int(cell[0]), int(cell[1]), value))
-        if float(value) > self.raster[int(cell[0]), int(cell[1])]:
-            self.raster[int(cell[0]), int(cell[1])] = float(value)
+        self.raster[int(cell[0]), int(cell[1])] = float(value)
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
@@ -98,10 +95,7 @@ class GeoTiffFile(writer.FileWriter):
         # NOTE(fab): numpy raster does not have to be transposed, although
         # it has rows x columns
         if self.normalize:
-            LOG.debug(self.raster)
-            LOG.debug("Raster max is %s" % self.raster.max())
             self.raster = self.raster * 254.0 / self.raster.max()
-        LOG.debug(self.raster)
         self.target.GetRasterBand(1).WriteArray(self.raster)
         self.target = None  # This is required to flush the file
         self.finished.send(True)
