@@ -16,6 +16,7 @@ Contents:
    formats
    hazard
    job
+   jobber
    risk
    schema
 

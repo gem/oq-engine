@@ -31,6 +31,7 @@ def init_logs():
     
     level = LEVELS.get(FLAGS.debug, logging.ERROR)
     logging.basicConfig(level=level)
+    logging.getLogger("amqplib").setLevel(logging.ERROR)
     
     LOG.setLevel(level)
     RISK_LOG.setLevel(level)

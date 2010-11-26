@@ -8,6 +8,10 @@ eventually.
 
 import sys
 
+from openquake import flags
+from openquake import java
+flags.FLAGS.capture_java_debug = True
+
 sys.path.append('.')
 
 BROKER_HOST = "localhost"
@@ -18,6 +22,7 @@ BROKER_VHOST = "celeryvhost"
 
 CELERY_RESULT_BACKEND = "amqp"
 
-CELERY_IMPORTS = ("openquake.risk.tasks",
+
+CELERY_IMPORTS = ("openquake.risk.job",
                   "openquake.hazard.tasks",
                   "tests.tasks")
