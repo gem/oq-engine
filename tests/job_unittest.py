@@ -26,16 +26,23 @@ REGION_TEST_FILE = "small.region"
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
+        self.generated_files = []
         self.job = Job.from_file(test.test_file(CONFIG_FILE))
         self.job_with_includes = Job.from_file(test.test_file(CONFIG_WITH_INCLUDES))
 
+        self.generated_files.append(self.job.super_config_path)
+        self.generated_files.append(self.job_with_includes.super_config_path)
+
     def tearDown(self):
-        [os.remove(f) for f in os.listdir(os.curdir) if f.count("-super.gem")]
+        for cfg in self.generated_files:
+            try:
+                os.remove(cfg)
+            except OSError, e:
+                pass
 
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 
-            config_file = "%s-super.gem" % job.job_id
-            self.assertTrue(os.listdir(os.curdir).count(config_file))
+            self.assertTrue(os.path.isfile(job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
         self.assertEqual(self.job.params, self.job_with_includes.params)
@@ -57,6 +64,7 @@ class JobTestCase(unittest.TestCase):
     
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = Job.from_file(os.path.join(test.DATA_DIR, CONFIG_FILE))
+        self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
     def test_prepares_blocks_using_the_exposure(self):
@@ -75,6 +83,7 @@ class JobTestCase(unittest.TestCase):
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
         a_job = Job({EXPOSURE: test.test_file(EXPOSURE_TEST_FILE), 
                      INPUT_REGION: test.test_file(REGION_EXPOSURE_TEST_FILE)})
+        self.generated_files.append(a_job.super_config_path)
         a_job._partition()
         blocks_keys = a_job.blocks_keys
 
@@ -100,6 +109,7 @@ class JobTestCase(unittest.TestCase):
 
         print "In open job"
         a_job = Job.from_file(block_path)
+        self.generated_files.append(a_job.super_config_path)
 
         verts = [float(x) for x in a_job.params['REGION_VERTEX'].split(",")]
         # Flips lon and lat, and builds a list of coord tuples
@@ -125,6 +135,8 @@ class JobTestCase(unittest.TestCase):
         # test exposure has 6 assets
         a_job = Job({EXPOSURE: os.path.join(
                 test.DATA_DIR, EXPOSURE_TEST_FILE)})
+
+        self.generated_files.append(a_job.super_config_path)
         
         a_job._partition()
         blocks_keys = a_job.blocks_keys
