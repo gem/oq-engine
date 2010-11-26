@@ -73,7 +73,7 @@ class OutputTestCase(unittest.TestCase):
         # assert that file has been created
         self.assertTrue(os.path.isfile(path))
         os.remove(test.test_file(HAZARDCURVE_PLOT_SIMPLE_FILENAME))
-        
+
     def test_hazardcurve_plot_generation_multiple_sites_multiple_curves(self):
         """Create SVG plots for hazard curves read from an NRML file. The
         file contains data for several sites, and several end branches of
