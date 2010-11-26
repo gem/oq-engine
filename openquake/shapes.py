@@ -176,9 +176,9 @@ class Grid(object):
         self.cell_size = cell_size
         self.lower_left_corner = self.region.lower_left_corner
         self.columns = self._longitude_to_column(
-                    self.region.upper_right_corner.longitude)
+                    self.region.upper_right_corner.longitude) + 1
         self.rows = self._latitude_to_row(
-                    self.region.upper_right_corner.latitude)
+                    self.region.upper_right_corner.latitude) + 1
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
@@ -232,8 +232,8 @@ class Grid(object):
         return Site(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
     def __iter__(self):
-        for row in range(1, self.rows):
-            for col in range(1, self.columns):
+        for row in range(0, self.rows - 1):
+            for col in range(0, self.columns - 1):
                 try:
                     point = GridPoint(self, col, row)
                     self.check_gridpoint(point)
@@ -316,6 +316,63 @@ class Site(object):
     def __str__(self):
         return "<Site(%s, %s)>" % (self.longitude, self.latitude)
 
+
+class Field(object):
+    """Uses a 2 dimensional numpy array to store a field of values."""
+    def __init__(self, field=None, rows=1, cols=1):
+        if field is not None:
+            self.field = field
+        else:
+            self.field = numpy.zeros((rows, cols))
+    
+    def get(self, row, col):
+        try:
+            return self.field[row][col]
+        except Exception, e:
+            print "Field with shape [%s] doesn't have value at [%s][%s]" % (
+                self.field.shape, row, col)
+    
+    @classmethod
+    def from_json(cls, json_str, grid=None):
+        """Construct a field from a serialized version in
+        json format."""
+        assert grid
+        as_dict = json.JSONDecoder().decode(json_str)
+        return cls.from_dict(as_dict, grid=grid)
+    
+    @classmethod
+    def from_dict(cls, values, transform=math.exp, grid=None):
+        """Construct a field from a dictionary.
+        """
+        assert grid
+        assert grid.cell_size
+        field = numpy.zeros((grid.rows, grid.columns))
+        
+        for key, field_site in values.items():
+            point = grid.point_at(
+                Site(field_site['lon'], field_site['lat']))
+            field[point.row][point.column] = transform(float(field_site['mag']))
+
+        return cls(field)   
+
+class FieldSet(object):
+    """ An iterator for a set of fields """
+    
+    def __init__(self, as_dict, grid):
+        assert grid
+        self.grid = grid
+        self.fields = as_dict.values()[0] # NOTE: There's a junk wrapper
+    
+    @classmethod
+    def from_json(cls, json_str, grid=None):
+        assert grid
+        as_dict = json.JSONDecoder().decode(json_str)
+        return cls(as_dict, grid=grid)
+    
+    def __iter__(self):
+        """Pop off the fields sequentially"""
+        for field in self.fields.values():
+            yield Field.from_dict(field, grid=self.grid)
 
 class Curve(object):
     """This class defines a curve (discrete function)

@@ -1,4 +1,16 @@
-class Mixin(object):
+def loader(target, mixin):
+    """ Load the mixin into the target's class """
+    target.__class__.__bases__ += (mixin,)
+    return target
+
+def unloader(target, mixin):
+    """ Unload the mixin from the target's class __bases__"""
+    bases = list(target.__class__.__bases__)
+    bases.remove(mixin)
+    target.__class__.__bases__ = tuple(bases)
+
+
+class Mixin:
     mixins = {}
     def __init__(self, target, mixin, key=""):
         self.key = key.upper() + "_CALCULATION_MODE"
@@ -12,20 +24,24 @@ class Mixin(object):
         self._unload()
 
     def _load(self):
-        if issubclass(self.mixin, type(self)):
-            self._proxied_mixin()
+        if issubclass(self.mixin, Mixin):
+            self._load_proxied_mixin()
 
-        self.target.__class__.__bases__ += (self.mixin,)
-        return self.target
+        return loader(self.target, self.mixin)
 
     def _unload(self):
-        bases = list(self.target.__class__.__bases__)
-        bases.remove(self.mixin)
-        self.target.__class__.__bases__ = tuple(bases)
+        if issubclass(self.mixin, Mixin):
+            self._unload_proxied_mixin()
 
-    def _proxied_mixin(self):
-        calculation_mode = self.target.params[self.key]
-        self.mixin = self.mixin.mixins[calculation_mode]['mixin']
+        return unloader(self.target, self.mixin)
+
+    def _load_proxied_mixin(self):
+        calc_mode = self.target.params[self.key]
+        loader(self.target, self.mixin.mixins[calc_mode]['mixin'])
+
+    def _unload_proxied_mixin(self):
+        calc_mode = self.target.params[self.key]
+        unloader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     @classmethod
     def ordered_mixins(cls):
@@ -43,8 +59,3 @@ class Mixin(object):
         proxies."""
         if not key in cls.mixins:
             cls.mixins[key] = {'mixin': mixin, 'order': order }
-
-    @classmethod
-    def unregister(cls, key):
-        """ Remove a mixin by key """
-        del mixins[key]
