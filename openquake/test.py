@@ -27,6 +27,10 @@ SCHEMA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../docs/schema'))
 
 
+WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
+MAX_WAIT_LOOPS = 10
+
+
 def test_file(file_name):
     return os.path.join(DATA_DIR, file_name)
 
@@ -101,3 +105,23 @@ def measureit(method):
     except ImportError, _e:
         pass
     return _measured  
+
+
+def wait_for_celery_tasks(celery_results, 
+                          max_wait_loops=MAX_WAIT_LOOPS, 
+                          wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
+    """celery_results is a list of celery task result objects.
+    This function waits until all tasks have finished.
+    """
+
+    # if a celery task has not yet finished, wait for a second
+    # then check again
+    counter = 0
+    while (False in [result.ready() for result in celery_results]):
+        counter += 1
+
+        if counter > max_wait_loops:
+            raise RuntimeError, "wait too long for celery worker threads"
+
+        time.sleep(wait_time)
+    
