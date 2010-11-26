@@ -85,7 +85,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.gmf = GMF
 
-        self.cum_histogram = numpy.array([216, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1,
+        self.cum_histogram = numpy.array([112, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1,
                 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_an_empty_function_produces_an_empty_set(self):
@@ -203,7 +203,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 compute_loss_ratios_range(self.vuln_function))))
 
     def test_computes_the_rates_of_exceedance(self):
-        expected_rates = numpy.array([0.2400, 0.0344, 0.0189, 0.0133,
+        expected_rates = numpy.array([0.124, 0.0344, 0.0189, 0.0133,
                 0.0078, 0.0078, 0.0056, 0.0044, 0.0044, 0.0044,
                 0.0011, 0.0011, 0.0011, 0.0011, 0.011, 0.0, 0.0,
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
@@ -225,7 +225,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.cum_histogram, gmf)
 
     def test_computes_probs_of_exceedance(self):
-        expected_probs = [1.0000, 0.8213, 0.6111, 0.4866, 0.3222, 0.3222,
+        expected_probs = [0.9980, 0.8213, 0.6111, 0.4866, 0.3222, 0.3222,
                 0.2425, 0.1993, 0.1993, 0.1993, 0.0540,
                 0.0540, 0.0540, 0.0540, 0.0540, 0.0, 0.0, 0.0, 0.0,
                 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -236,7 +236,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_computes_the_loss_ratio_curve(self):
         expected_curve = shapes.Curve([
-                (0.014583333333333332, 0.99999385578764666),
+                (0.014583333333333332, 0.99801517),
                 (0.043749999999999997, 0.82133133505033484),
                 (0.072916666666666657, 0.61110443601077713),
                 (0.10208333333333333, 0.48658288096740798),
@@ -259,6 +259,39 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function, self.gmf))
+
+    def test_loss_ratio_curve_with_null_gmf(self):
+        gmf = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+                "TSES": 900, "TimeSpan": 50}
+        
+        expected_curve = shapes.Curve([
+                (0.014583333333333332, 0.0),
+                (0.043749999999999997, 0.0),
+                (0.072916666666666657, 0.0),
+                (0.10208333333333333, 0.0),
+                (0.13124999999999998, 0.0),
+                (0.16041666666666665, 0.0),
+                (0.18958333333333333, 0.0),
+                (0.21874999999999997, 0.0),
+                (0.24791666666666662, 0.0),
+                (0.27708333333333329, 0.0),
+                (0.30624999999999997, 0.0),
+                (0.33541666666666664, 0.0),
+                (0.36458333333333331, 0.0),
+                (0.39374999999999993, 0.0),
+                (0.42291666666666661, 0.0),
+                (0.45208333333333328, 0.0),
+                (0.48124999999999996, 0.0),
+                (0.5395833333333333, 0.0),
+                (0.59791666666666665, 0.0),
+                (0.51041666666666663, 0.0),
+                (0.56874999999999987, 0.0),
+                (0.62708333333333321, 0.0),
+                (0.65625, 0.0),
+                (0.68541666666666656, 0.0)])
+
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
+                self.vuln_function, gmf))
 
     def test_computes_aggregate_histogram(self):
         # manually computed values by Vitor Silva
