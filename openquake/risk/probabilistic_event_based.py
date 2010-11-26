@@ -57,24 +57,23 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     return hist
 
 
-def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
+def compute_rates_of_exceedance(cum_histogram, tses):
     """Compute the rates of exceedance for the given ground motion
     field and cumulative histogram."""
-    if ground_motion_field["TSES"] <= 0:
+    if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
     
-    return (array(cum_histogram).astype(float) 
-            / ground_motion_field["TSES"])
+    return (array(cum_histogram).astype(float) / tses)
 
 
-def compute_probs_of_exceedance(rates_of_exceedance, ground_motion_field):
+def compute_probs_of_exceedance(rates_of_exceedance, time_span):
     """Compute the probabilities of exceedance for the given ground
     motion field and rates of exceedance."""
     probs_of_exceedance = []
     for idx in xrange(len(rates_of_exceedance)):
         probs_of_exceedance.append(1 - math.exp(
                 (rates_of_exceedance[idx] * -1) \
-                *  ground_motion_field["TimeSpan"]))
+                *  time_span))
     
     return array(probs_of_exceedance)
 
@@ -86,15 +85,33 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
     
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), ground_motion_field),
-            ground_motion_field)
-    
+            loss_ratios, loss_ratios_range), ground_motion_field["TSES"]),
+            ground_motion_field["TimeSpan"])
+
     data = []
     for idx in xrange(len(loss_ratios_range) - 1):
         mean_loss_ratios = (loss_ratios_range[idx] + \
                 loss_ratios_range[idx + 1]) / 2
         data.append((mean_loss_ratios, probs_of_exceedance[idx]))
     
+    return shapes.Curve(data)
+
+
+# TODO (ac): Test with pre computed data!
+def compute_loss_ratio_curve_from_aggregate(aggregate_hist, tses, time_span):
+    probs_of_exceedance = compute_probs_of_exceedance(
+            compute_rates_of_exceedance(aggregate_hist.compute(),
+            tses), time_span)
+
+    print probs_of_exceedance
+
+# TODO (ac): Duplicated from compute_loss_ratio_curve, can be extracted
+    data = []
+    for idx in xrange(len(aggregate_hist.bins) - 1):
+        mean_loss_ratios = (aggregate_hist.bins[idx] + \
+                aggregate_hist.bins[idx + 1]) / 2
+        data.append((mean_loss_ratios, probs_of_exceedance[idx]))
+
     return shapes.Curve(data)
 
 
@@ -139,6 +156,10 @@ class AggregateHistogram(object):
         self.distribution = []
         self.number_of_bins = number_of_bins
 
+    @property
+    def bins(self):
+        return linspace(self.min, self.max, self.number_of_bins)
+
 # TODO (ac): Not tested yet, need pre computed test data!
     def append(self, vuln_function, ground_motion_field):
         """Append this vulnerability function and gmf to the set
@@ -161,5 +182,4 @@ class AggregateHistogram(object):
     
     def compute(self):
         """Compute the aggregate histogram."""
-        return histogram(self.distribution, linspace(
-                self.min, self.max, self.number_of_bins))[0]
+        return histogram(self.distribution, self.bins)[0]
