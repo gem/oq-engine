@@ -8,6 +8,7 @@ import math
 from numpy import array # pylint: disable=E1101, E0611
 from numpy import linspace # pylint: disable=E1101, E0611
 from numpy import histogram # pylint: disable=E1101, E0611
+from numpy import where # pylint: disable=E1101, E0611
 
 from openquake import shapes
 
@@ -45,8 +46,15 @@ def compute_loss_ratios_range(vuln_function):
 
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
+    
+    invalid_ratios = lambda ratios: len(where(ratios <= 0.0)[0])
+    
     hist = histogram(loss_ratios, bins=loss_ratios_range)
-    return hist[0][::-1].cumsum()[::-1]
+    hist = hist[0][::-1].cumsum()[::-1]
+
+    # ratios with value 0.0 must be deleted
+    hist[0] = hist[0] - invalid_ratios(loss_ratios)
+    return hist
 
 
 def compute_rates_of_exceedance(cum_histogram, ground_motion_field):
