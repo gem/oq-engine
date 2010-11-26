@@ -105,8 +105,6 @@ def compute_loss_ratio_curve_from_aggregate(aggregate_hist, tses, time_span):
             compute_rates_of_exceedance(aggregate_hist.compute(),
             tses), time_span)
 
-    print probs_of_exceedance
-
 # TODO (ac): Duplicated from compute_loss_ratio_curve, can be extracted
     data = []
     for idx in xrange(len(aggregate_hist.bins) - 1):
