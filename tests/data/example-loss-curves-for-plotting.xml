@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<RiskResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
+    <Config>Config file details go here.</Config>
+    <LossCurveList>
+        <Common>
+            <LossCurvePE>
+                <Values>0.2 0.02 0.002 0.0002 0.00002</Values>
+            </LossCurvePE>
+        </Common>
+        <LossCurve>
+            <gml:pos>-122.5000 37.5000</gml:pos>
+            <Values>0.0 1280.0 2560.0 3840.0 5120.0</Values>
+        </LossCurve>
+        <LossCurve>
+            <gml:pos>-122.4000 37.5000</gml:pos>
+            <Values>0.0 2280.0 3560.0 4840.0 6120.0</Values>
+        </LossCurve>
+        <LossCurve>
+            <gml:pos>-122.3000 37.5000</gml:pos>
+            <Values>0.0 4280.0 5560.0 6840.0 8120.0</Values>
+        </LossCurve>
+    </LossCurveList>
+</RiskResult>
