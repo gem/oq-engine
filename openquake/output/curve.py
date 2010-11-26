@@ -56,14 +56,14 @@ class CurvePlotter(object):
         If set to false, the displayed ordinate range is 0...1.
         TODO(fab): let user specify abscissa and ordinate range for plot."""
 
-        for site_hash in self.data:
-            plot = CurvePlot(self.data[site_hash]['path'])
-            plot.write(self.data[site_hash]['curves'], autoscale_y)
+        for site_data in self.data.values():
+            plot = CurvePlot(site_data['path'])
+            plot.write(site_data['curves'], autoscale_y)
             plot.close()
 
     def filenames(self):
-        for site_hash in self.data:
-            yield self.data[site_hash]['path']
+        for site_data in self.data.values():
+            yield site_data['path']
 
     def _generate_filename(self, site_hash):
         site_lat, site_lon = geohash.decode(site_hash)
@@ -171,8 +171,11 @@ class HazardCurvePlotter(CurvePlotter):
 
 
 class CurvePlot(writer.FileWriter):
-    """Plots hazard curves for one site. On plot can contain several
-    hazard curves, one for each end branch of a logic tree."""
+    """Creates an SVG  plot containing curve data for one site. 
+    At the moment, the class is used for hazard, loss, and loss ratio curves.
+    One plot can contain several curves. In the case of hazard curves, this
+    would be one curve for each end branch of a logic tree. For loss/loss
+    ratio curves, the multiple curve feature is not applicable."""
 
     image_format = IMAGE_FORMAT
 
@@ -272,8 +275,6 @@ class CurvePlot(writer.FileWriter):
 def _color_code_generator():
     """Generator that walks through a sequence of color codes for matplotlib.
     When reaching the end of the color code list, start at the beginning again."""
-    counter = 0
-    while(True):
-        counter += 1
-        color_index = counter % len(COLOR_CODES)
-        yield COLOR_CODES[color_index-1]
+    while(True): 
+        for code in COLOR_CODES: 
+            yield code
