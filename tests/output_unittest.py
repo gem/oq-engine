@@ -18,7 +18,7 @@ from osgeo import gdal, gdalconst
 from openquake import shapes
 from openquake import test
 from openquake.output import geotiff
-from openquake.output import hazardcurve
+from openquake.output import curve
 
 # we define some test regions which have a lower-left corner at 0.0/0.0
 # the default grid spacing of 0.1 degrees is used
@@ -53,20 +53,22 @@ GEOTIFF_TEST_PIXEL_VALUE = 1.0
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
 
-    def test_simple_hazardcurve_plot_generation(self):
-        """Create an SVG plot of a single hazard curve for a single site
+    def test_simple_curve_plot_generation(self):
+        """Create an SVG plot of a single (hazard) curve for a single site
         from a dictionary."""
 
         test_site = shapes.Site(-122, 38)
         test_end_branch = '1_1'
         test_hc_data = {test_end_branch: 
-                {'IMLValues': [0.0, 1.0, 1.8],
-                 'Values': [1.0, 0.5, 0.2],
-                 'IMT': 'PGA',
+                {'abscissa': [0.0, 1.0, 1.8],
+                 'ordinate': [1.0, 0.5, 0.2],
+                 'abscissa_property': 'PGA',
+                 'ordinate_property': 'Probability of Exceedance',
+                 'curve_title': 'Hazard Curve',
                  'Site': test_site}}
 
         path = test.test_file(HAZARDCURVE_PLOT_SIMPLE_FILENAME)
-        plot = hazardcurve.HazardCurvePlot(path)
+        plot = curve.CurvePlot(path)
         plot.write(test_hc_data)
         plot.close()
 
@@ -81,7 +83,7 @@ class OutputTestCase(unittest.TestCase):
         path = test.test_file(HAZARDCURVE_PLOT_FILENAME)
         hazardcurve_path = test.test_file(HAZARDCURVE_PLOT_INPUTFILE)
 
-        plotter = hazardcurve.HazardCurvePlotter(path, hazardcurve_path)
+        plotter = curve.HazardCurvePlotter(path, hazardcurve_path)
         plotter.plot()
 
         # assert that for each site in the NRML file an SVG has been created
