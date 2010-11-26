@@ -52,7 +52,6 @@ class Region(object):
     @classmethod
     def from_file(cls, path):
         """Load a region from a wkt file with a single polygon"""
-        print path
         with open(path) as wkt_file:
             polygon = wkt.loads(wkt_file.read())
             return cls(polygon=polygon)
@@ -124,7 +123,6 @@ class RegionConstraint(Region):
         if not isinstance(point, geometry.Point): 
             point = geometry.Point(point[0], point[1])
         test = self.polygon.contains(point) or self.polygon.touches(point)
-        # print "Does point match? %s" % (test)
         return test
 
 
@@ -138,8 +136,9 @@ class GridPoint(object):
     def __eq__(self, other):
         if isinstance(other, Site):
             other = self.grid.point_at(other)
-        test = (self.column == other.column and self.row == other.row and self.grid == other.grid)
-        # print "Do gridpoints match? %s" % test
+        test = (self.column == other.column 
+                and self.row == other.row 
+                and self.grid == other.grid)
         return test
     
     @property
@@ -187,7 +186,6 @@ class Grid(object):
     def check_point(self, point):    
         """ Confirm that the point is within the polygon 
         underlying the gridded region"""
-        #print "Checking point at %s" % point.wkt
         if (self.region.polygon.contains(point)):
             return True
         if self.region.polygon.touches(point):
@@ -203,22 +201,20 @@ class Grid(object):
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
-        #print "lat offset = %s" % latitude_offset
-        return int(round(latitude_offset / self.cell_size)) # + 1
+        return int(round(latitude_offset / self.cell_size))
 
     def _row_to_latitude(self, row):
         """Determine latitude from given grid row"""
-        return self.lower_left_corner.latitude + ((row) * self.cell_size) # row - 1
+        return self.lower_left_corner.latitude + ((row) * self.cell_size)
 
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
-        #print "long offset = %s" % longitude_offset
-        return int(round(longitude_offset / self.cell_size)) # +1
+        return int(round(longitude_offset / self.cell_size))
     
     def _column_to_longitude(self, column):
         """Determine longitude from given grid column"""
-        return self.lower_left_corner.longitude + ((column) * self.cell_size) # column -1
+        return self.lower_left_corner.longitude + ((column) * self.cell_size)
 
     def point_at(self, site):
         """Translates a site into a matrix bidimensional point."""
