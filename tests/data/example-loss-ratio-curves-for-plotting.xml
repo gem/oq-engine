@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<RiskResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://opengem.org/xmlns/nrml/0.1">
+<RiskResult xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
     <Config>Config file details go here.</Config>
     <LossRatioCurveList>
         <Common>
             <LossRatioCurvePE>
-                <Values>0.2 0.02 0.002 0.0002 0.00002</Values>
+                <Values>0.2 0.02 0.002 0.0002 0.0001 0.00002</Values>
             </LossRatioCurvePE>
         </Common>
         <LossRatioCurve>
