@@ -47,11 +47,61 @@ HAZARDCURVE_PLOT_SIMPLE_FILENAME = "hazard-curves-simple.svg"
 HAZARDCURVE_PLOT_FILENAME = "hazard-curves.svg"
 HAZARDCURVE_PLOT_INPUTFILE = "example-hazard-curves-for-plotting.xml"
 
+LOSS_CURVE_PLOT_FILENAME = "loss-curves.svg"
+LOSS_CURVE_PLOT_INPUTFILE = "example-loss-curves-for-plotting.xml"
+
+LOSS_RATIO_CURVE_PLOT_FILENAME = "loss-ratio-curves.svg"
+LOSS_RATIO_CURVE_PLOT_INPUTFILE = "example-loss-ratio-curves-for-plotting.xml"
+
 GEOTIFF_USED_CHANNEL_IDX = 1
 GEOTIFF_TEST_PIXEL_VALUE = 1.0
 
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
+
+    def test_loss_ratio_curve_plot_generation_multiple_sites(self):
+        """Create SVG plots for loss ratio curves read from an NRML file. The
+        file contains data for several sites. 
+        For each site, a separate SVG file is created."""
+
+        path = test.test_file(LOSS_RATIO_CURVE_PLOT_FILENAME)
+        loss_ratio_curve_path = test.test_file(LOSS_RATIO_CURVE_PLOT_INPUTFILE)
+
+        plotter = curve.RiskCurvePlotter(path, loss_ratio_curve_path, 
+            mode='loss_ratio')
+
+        # delete expected output files, if existing
+        for svg_file in plotter.filenames():
+            if os.path.isfile(svg_file):
+                os.remove(svg_file)
+
+        plotter.plot(autoscale_y=False)
+
+        # assert that for each site in the NRML file an SVG has been created
+        for svg_file in plotter.filenames():
+            self.assertTrue(os.path.getsize(svg_file) > 0)
+
+    def test_loss_curve_plot_generation_multiple_sites(self):
+        """Create SVG plots for loss curves read from an NRML file. The
+        file contains data for several sites. 
+        For each site, a separate SVG file is created."""
+
+        path = test.test_file(LOSS_CURVE_PLOT_FILENAME)
+        loss_curve_path = test.test_file(LOSS_CURVE_PLOT_INPUTFILE)
+
+        plotter = curve.RiskCurvePlotter(path, loss_curve_path, mode='loss',
+            curve_title="This is a test loss curve")
+
+        # delete expected output files, if existing
+        for svg_file in plotter.filenames():
+            if os.path.isfile(svg_file):
+                os.remove(svg_file)
+
+        plotter.plot(autoscale_y=True)
+
+        # assert that for each site in the NRML file an SVG has been created
+        for svg_file in plotter.filenames():
+            self.assertTrue(os.path.getsize(svg_file) > 0)
 
     def test_simple_curve_plot_generation(self):
         """Create an SVG plot of a single (hazard) curve for a single site
@@ -72,8 +122,8 @@ class OutputTestCase(unittest.TestCase):
         plot.write(test_hc_data)
         plot.close()
 
-        # assert that file has been created
-        self.assertTrue(os.path.isfile(path))
+        # assert that file has been created and is not empty
+        self.assertTrue(os.path.getsize(path) > 0)
 
     def test_hazardcurve_plot_generation_multiple_sites_multiple_curves(self):
         """Create SVG plots for hazard curves read from an NRML file. The
@@ -83,12 +133,20 @@ class OutputTestCase(unittest.TestCase):
         path = test.test_file(HAZARDCURVE_PLOT_FILENAME)
         hazardcurve_path = test.test_file(HAZARDCURVE_PLOT_INPUTFILE)
 
-        plotter = curve.HazardCurvePlotter(path, hazardcurve_path)
+        plotter = curve.HazardCurvePlotter(path, hazardcurve_path,
+            curve_title='Example Hazard Curves')
+
+        # delete expected output files, if existing
+        for svg_file in plotter.filenames():
+            if os.path.isfile(svg_file):
+                os.remove(svg_file)
+
         plotter.plot()
 
         # assert that for each site in the NRML file an SVG has been created
+        # and is not empty
         for svg_file in plotter.filenames():
-            self.assertTrue(os.path.isfile(svg_file))
+            self.assertTrue(os.path.getsize(svg_file) > 0)
 
     def test_geotiff_generation_and_metadata_validation(self):
         """Create a GeoTIFF, and check if it has the
