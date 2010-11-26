@@ -72,7 +72,8 @@ class OutputTestCase(unittest.TestCase):
 
         # assert that file has been created
         self.assertTrue(os.path.isfile(path))
-
+        os.remove(test.test_file(HAZARDCURVE_PLOT_SIMPLE_FILENAME))
+        
     def test_hazardcurve_plot_generation_multiple_sites_multiple_curves(self):
         """Create SVG plots for hazard curves read from an NRML file. The
         file contains data for several sites, and several end branches of
@@ -87,6 +88,7 @@ class OutputTestCase(unittest.TestCase):
         # assert that for each site in the NRML file an SVG has been created
         for svg_file in plotter.filenames():
             self.assertTrue(os.path.isfile(svg_file))
+            os.remove(svg_file)
 
     def test_geotiff_generation_and_metadata_validation(self):
         """Create a GeoTIFF, and check if it has the
