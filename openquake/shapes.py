@@ -138,7 +138,7 @@ class GridPoint(object):
     def __eq__(self, other):
         if isinstance(other, Site):
             other = self.grid.point_at(other)
-        test = (self.__hash__() == other.__hash__())
+        test = (self.column == other.column and self.row == other.row and self.grid == other.grid)
         # print "Do gridpoints match? %s" % test
         return test
     
@@ -204,7 +204,7 @@ class Grid(object):
         """Calculate row from latitude value"""
         latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
         #print "lat offset = %s" % latitude_offset
-        return int((latitude_offset / self.cell_size)) # + 1
+        return int(round(latitude_offset / self.cell_size)) # + 1
 
     def _row_to_latitude(self, row):
         """Determine latitude from given grid row"""
@@ -214,7 +214,7 @@ class Grid(object):
         """Calculate column from longitude value"""
         longitude_offset = longitude - self.lower_left_corner.longitude
         #print "long offset = %s" % longitude_offset
-        return int((longitude_offset / self.cell_size)) # +1
+        return int(round(longitude_offset / self.cell_size)) # +1
     
     def _column_to_longitude(self, column):
         """Determine longitude from given grid column"""

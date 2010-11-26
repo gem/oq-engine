@@ -55,6 +55,8 @@ class RiskXMLWriter(writer.FileWriter):
         print "Finding abcissa? %s" % subnode_pe
         if subnode_pe is not None:
             if subnode_pe.find(NRML + "Values").text != pe_values:
+                logger.error("Abcissa doesn't match between \n %s \n %s"
+                    % (subnode_pe.find(NRML + "Values").text, pe_values))
                 raise Exception("Curves must share the same Abcissa!")
         else:
             common_node = self.parent_node.find(NRML + "Common")
@@ -87,7 +89,7 @@ class LossRatioCurveXMLWriter(RiskXMLWriter):
 
 
 def _curve_pe_as_gmldoublelist(curve_object):
-    return " ".join(map(str, curve_object.ordinates))
+    return " ".join(map(str, curve_object.abscissae)) # ordinates
 
 def _curve_vals_as_gmldoublelist(curve_object):
-    return " ".join(map(str, curve_object.abscissae))
+    return " ".join(map(str, curve_object.ordinates)) # abscissae
