@@ -11,6 +11,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import risk
 from openquake import shapes
+from openquake.output import curve
 from openquake.output import risk as risk_output
 
 from celery.decorators import task
@@ -67,8 +68,20 @@ class RiskJobMixin(mixins.Mixin):
             self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
         path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename)
         output_generator = risk_output.LossRatioCurveXMLWriter(path)
+        # TODO(JMC): Take mean or max for each site
         output_generator.serialize(loss_ratio_curves)
-        return [path]
+        
+        filename = "%s-block-%s.svg" % (
+            self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
+        curve_path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename)
+
+        plotter = curve.RiskCurvePlotter(curve_path, path, 
+            mode='loss_ratio')
+        plotter.plot(autoscale_y=False)
+        
+        results = [path]
+        results.extend(list(plotter.filenames()))
+        return results
     
     def write_loss_map(self, loss_poe):
         """ Iterates through all the assets and maps losses at loss_poe """
