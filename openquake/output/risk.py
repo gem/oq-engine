@@ -21,12 +21,12 @@ class RiskXMLWriter(writer.FileWriter):
     abcissa_tag = NRML + "PE"
     container_tag = NRML + "RiskElementList"
     
-    def write(self, point, curve_object):
+    def write(self, point, val):
         if isinstance(point, shapes.GridPoint):
             point = point.site.point
         if isinstance(point, shapes.Site):
             point = point.point
-        self._append_curve_node(point, curve_object, self.parent_node)
+        self._append_curve_node(point, val, self.parent_node)
 
     def write_header(self):
         """Write out the file header"""
@@ -42,8 +42,10 @@ class RiskXMLWriter(writer.FileWriter):
         et = etree.ElementTree(self.root_node)
         et.write(self.file, pretty_print=True)
     
-    def _append_curve_node(self, point, curve_object, parent_node):
-        node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP)    
+    def _append_curve_node(self, point, val, parent_node):
+        (curve_object, asset_object) = val
+        node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP)
+        node.attrib['AssetID'] = asset_object['AssetID']    
         pos = etree.SubElement(node, GML + "pos", nsmap=NSMAP)
         pos.text = "%s %s" % (str(point.x), str(point.y))
         
@@ -66,7 +68,6 @@ class RiskXMLWriter(writer.FileWriter):
                             self.abcissa_tag, nsmap=NSMAP)
             etree.SubElement(subnode_pe, 
                     NRML + "Values", nsmap=NSMAP).text = pe_values
-        
 
         logger.debug("Writing xml, object is %s", curve_object)
         subnode_loss = etree.SubElement(node, NRML + "Values", nsmap=NSMAP)

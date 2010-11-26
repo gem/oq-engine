@@ -104,6 +104,7 @@ class RiskCurvePlotter(CurvePlotter):
             region_constraint=None):
 
             site_hash = nrml_point.hash()
+            curve_id = nrml_attr['AssetID']
 
             if site_hash not in self.data:
                 self.data[site_hash] = {
@@ -111,10 +112,10 @@ class RiskCurvePlotter(CurvePlotter):
                     'path': self._generate_filename(site_hash),
                     'curves': {}}
 
-            if CURVE_BRANCH_PLACEHOLDER not in self.data[site_hash]['curves']:
-                self.data[site_hash]['curves'][CURVE_BRANCH_PLACEHOLDER] = {}
+            if curve_id not in self.data[site_hash]['curves']:
+                self.data[site_hash]['curves'][curve_id] = {}
 
-            self.data[site_hash]['curves'][CURVE_BRANCH_PLACEHOLDER] = {
+            self.data[site_hash]['curves'][curve_id] = {
                 'abscissa': nrml_attr[nrml_element.abscissa_output_key],
                 'abscissa_property': nrml_element.abscissa_property,
                 'ordinate': nrml_attr[nrml_element.ordinate_output_key],
