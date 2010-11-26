@@ -210,19 +210,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(expected_rates,
                 compute_rates_of_exceedance(
-                self.cum_histogram, self.gmf), atol=0.01))
+                self.cum_histogram, self.gmf["TSES"]), atol=0.01))
 
     def test_TSES_is_not_supposed_to_be_zero_or_less(self):
-        gmf = dict(self.gmf)
-        gmf["TSES"] = 0.0
+        self.assertRaises(ValueError, compute_rates_of_exceedance,
+                self.cum_histogram, 0.0)
         
         self.assertRaises(ValueError, compute_rates_of_exceedance,
-                self.cum_histogram, gmf)
-        
-        gmf["TSES"] = -10.0
-        
-        self.assertRaises(ValueError, compute_rates_of_exceedance,
-                self.cum_histogram, gmf)
+                self.cum_histogram, -10.0)
 
     def test_computes_probs_of_exceedance(self):
         expected_probs = [0.9980, 0.8213, 0.6111, 0.4866, 0.3222, 0.3222,
@@ -232,7 +227,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(expected_probs, 
                 compute_probs_of_exceedance(compute_rates_of_exceedance(
-                self.cum_histogram, self.gmf), self.gmf), atol=0.0001))
+                self.cum_histogram, self.gmf["TSES"]),
+                self.gmf["TimeSpan"]), atol=0.0001))
 
     def test_computes_the_loss_ratio_curve(self):
         expected_curve = shapes.Curve([
