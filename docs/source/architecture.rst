@@ -1,5 +1,5 @@
 OpenQuake System Architecture
-===========================
+=============================
 
 The toughest challenges in addressing OpenQuake architecture are nomenclature: 
 
@@ -44,4 +44,3 @@ The RISK ENGINE is composed of the following calculators:
 The SOCIO-ECONOMIC IMPACT Engine is composed of the following calculators:
  - Agent based model
  - System Economics model
-

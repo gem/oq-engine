@@ -6,15 +6,15 @@ OpenQuake Seismicsources
 The :mod:`seismicsources` Sub-package
 -------------------------------------
 
+
 The seismicsources sub package includes:
 
 :mod:`tasks` CHANGE THIS TEXT
 
 
-
 The :mod:`admin` Module
------------------------
-.. automodule:: openquake.seismicsources.admin
+------------------------
+.. automodule:: openquake.seismicsources.admin.py
     :members:
     :undoc-members:
     :show-inheritance:
