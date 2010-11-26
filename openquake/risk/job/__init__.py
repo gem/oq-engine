@@ -47,30 +47,28 @@ class RiskJobMixin(mixins.Mixin):
     mixins = {}
     
     def _write_output_for_block(self, job_id, block_id):
-        """note: this is usable only for one block"""
         decoder = json.JSONDecoder()
-        loss_curves = []
+        loss_ratio_curves = []
         block = job.Block.from_kvs(block_id)
         for point in block.grid(self.region):
             asset_key = risk.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
                 site = shapes.Site(asset['lon'], asset['lat'])
-                key = risk.loss_curve_key(
+                key = risk.loss_ratio_key(
                         job_id, point.row, point.column, asset["AssetID"])
-                loss_curve = shapes.Curve.from_json(kvs.get(key))
-                loss_curves.append((site, loss_curve))
+                loss_ratio_curve = kvs.get(key)
+                if loss_ratio_curve:
+                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                    loss_ratio_curves.append((site, loss_ratio_curve))
 
-        LOG.debug("Serializing loss_curves")
+        LOG.debug("Serializing loss_ratio_curves")
         filename = "%s-block-%s.xml" % (
             self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
-        path = os.path.join(self.base_path, filename)
-        output_generator = risk_output.LossCurveXMLWriter(path)
-        output_generator.serialize(loss_curves)
+        path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename)
+        output_generator = risk_output.LossRatioCurveXMLWriter(path)
+        output_generator.serialize(loss_ratio_curves)
         return [path]
-        
-        #output_generator = output.SimpleOutput()
-        #output_generator.serialize(ratio_results)
     
     def write_loss_map(self, loss_poe):
         """ Iterates through all the assets and maps losses at loss_poe """
@@ -79,7 +77,7 @@ class RiskJobMixin(mixins.Mixin):
         risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
         filename = "%s-losses_at-%s.tiff" % (
             self.id, loss_poe)
-        path = os.path.join(self.base_path, filename) 
+        path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename) 
         output_generator = geotiff.GeoTiffFile(path, risk_grid, 
                 init_value=0.0, normalize=True)
         for point in self.region.grid:
@@ -89,12 +87,14 @@ class RiskJobMixin(mixins.Mixin):
                 key = risk.loss_key(self.id, point.row, point.column, 
                         asset["AssetID"], loss_poe)
                 loss = kvs.get(key)
+                LOG.debug("Loss for asset %s at %s %s is %s" % 
+                    (asset["AssetID"], asset['lon'], asset['lat'], loss))
                 if loss:
-                    loss = float(loss)
+                    loss_ratio = float(loss) / float(asset["AssetValue"])
                     risk_site = shapes.Site(asset['lon'], asset['lat'])
                     risk_point = risk_grid.point_at(risk_site)
                     output_generator.write(
-                            (risk_point.row, risk_point.column), loss)
+                            (risk_point.row, risk_point.column), loss_ratio)
         output_generator.close()
         return [path]
 

@@ -7,10 +7,10 @@ OUTPUT_REGION =
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 #REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
-REGION_VERTEX = 33.82, -118.30, 33.82, -118.06, 33.76, -118.06, 33.76, -118.30
+REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
 # degrees
 #REGION_GRID_SPACING = 0.1
-REGION_GRID_SPACING = 0.01
+REGION_GRID_SPACING = 0.02
 
 [HAZARD]
 
@@ -143,7 +143,8 @@ EXPOSURE = small_exposure.xml
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
 
-CONDITIONAL_LOSS_POE = 0.01 0.02 0.05
+CONDITIONAL_LOSS_POE = 0.01
+# 0.02 0.05
 
 # file containing the hazard curves in nrml format
 # HAZARD_CURVES = hazard_curves.xml
@@ -154,4 +155,4 @@ LOSS_MAP = loss_map.tiff
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
 
-RISK_CELL_SIZE = 0.001
+RISK_CELL_SIZE = 0.0005

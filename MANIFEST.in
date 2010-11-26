@@ -1,2 +1,3 @@
 include lib/*.jar
+include dist/*.jar
 include celeryconfig.py

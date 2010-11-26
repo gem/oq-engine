@@ -102,6 +102,16 @@ class RegionTestCase(unittest.TestCase):
         switzerland = shapes.Region.from_coordinates(
             [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
 
+class GridTestCase(unittest.TestCase):
+    
+    def test_grid_iterates_all_points(self):
+        constraint = shapes.RegionConstraint.from_simple(
+            (10.0, 10.0), (100.0, 100.0))
+        constraint.cell_size = 10.0
+        grid = constraint.grid
+        for point in grid:
+            print "Point at %s and %s" % (point.row, point.column)
+            # TODO(JMC): assert the sequence is correct
 
 class ShapesTestCase(unittest.TestCase):
     
