@@ -14,7 +14,6 @@ from openquake.job import mixins
 from openquake.hazard import tasks
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
-from tests.jobber_unittest import wait_for_celery_tasks
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
@@ -107,7 +106,7 @@ class HazardEngineTestCase(unittest.TestCase):
             # Spawn our tasks.
             results.append(tasks.generate_erf.apply_async(args=[job_id]))
 
-        wait_for_celery_tasks(results)
+        test.wait_for_celery_tasks(results)
 
         result_values = self.memcache_client.get_multi(result_keys)
 
@@ -122,7 +121,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_hazard_curve.apply_async(
                 args=[job_id, block_id]))
 
-        wait_for_celery_tasks(results)
+        test.wait_for_celery_tasks(results)
 
         for result in results:
             for res in result.get():
@@ -143,7 +142,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
-        wait_for_celery_tasks(results)
+        test.wait_for_celery_tasks(results)
 
         for result in results:
             self.assertEqual(mgm_intensity, result.get())
