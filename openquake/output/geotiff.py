@@ -16,7 +16,10 @@ PYTHONPATH in my .bash_profile file to get them to load.
 import numpy
 from osgeo import osr, gdal
 
+from openquake import logs
 from openquake import writer
+
+LOG = logs.LOG
 
 GDAL_FORMAT = "GTiff"
 GDAL_PIXEL_DATA_TYPE = gdal.GDT_Float32
@@ -24,6 +27,7 @@ SPATIAL_REFERENCE_SYSTEM = "WGS84"
 TIFF_BAND = 1
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
+
 
 class GeoTiffFile(writer.FileWriter):
     """Rough implementation of the GeoTiff format,
@@ -52,8 +56,11 @@ class GeoTiffFile(writer.FileWriter):
         driver = gdal.GetDriverByName(self.format)
 
         # NOTE(fab): use GDAL data type GDT_Float32 for science data
+        pixel_type = GDAL_PIXEL_DATA_TYPE
+        if self.normalize:
+            pixel_type = gdal.GDT_Byte
         self.target = driver.Create(self.path, self.grid.columns, 
-            self.grid.rows, TIFF_BAND, GDAL_PIXEL_DATA_TYPE)
+            self.grid.rows, TIFF_BAND, pixel_type)
         
         corner = self.grid.region.upper_left_corner
 
@@ -89,9 +96,9 @@ class GeoTiffFile(writer.FileWriter):
         # NOTE(fab): numpy raster does not have to be transposed, although
         # it has rows x columns
         if self.normalize:
-            print "Raster max is %s" % self.raster.max()
+            LOG.debug("Raster max is %s" % self.raster.max())
             self.raster = self.raster * 254.0 / self.raster.max()
-        print self.raster
+        LOG.debug(self.raster)
         self.target.GetRasterBand(1).WriteArray(self.raster)
         self.target = None  # This is required to flush the file
         self.finished.send(True)
