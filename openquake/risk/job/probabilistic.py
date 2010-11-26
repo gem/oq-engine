@@ -6,6 +6,11 @@
 
 """
 
+import math
+import os
+import json
+
+import numpy
 from celery.exceptions import TimeoutError
 
 from openquake import hazard
@@ -17,15 +22,30 @@ from openquake import risk
 from openquake import settings
 from openquake import shapes
 
+from openquake.risk import probabilistic_event_based
+from openquake.risk import job as risk_job
 from openquake.output.risk import RiskXMLWriter
 from openquake.parser import exposure
-from openquake.parser import hazard
+from openquake.parser import hazard as hazparser
 from openquake.parser import vulnerability
 from openquake.risk import tasks
-from openquake.risk.job import preload, output, RiskJobMixin
+from openquake.risk.job import output, RiskJobMixin
 
 
 LOGGER = logs.LOG
+
+DEFAULT_conditional_loss_poe = 0.01
+
+def preload(fn):
+    """ Preload decorator """
+    def preloader(self, *args, **kwargs):
+        """A decorator for preload steps that must run on the Jobber"""
+
+        self.store_exposure_assets()
+        self.store_vulnerability_model()
+
+        return fn(self, *args, **kwargs)
+    return preloader
 
 
 class ProbabilisticEventMixin:
@@ -35,108 +55,61 @@ class ProbabilisticEventMixin:
     @output
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
-        
-        LOGGER.debug("starting task block, block_id = %s" % self.block_id)
+
+        results = []
+        tasks = []
+        for block_id in self.blocks_keys:
+            LOGGER.debug("starting task block, block_id = %s of %s" 
+                        % (block_id, len(self.blocks_keys)))
+            # pylint: disable-msg=E1101
+            tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # memcache).
+        for task in tasks:
+            try:
+                # TODO(chris): Figure out where to put that timeout.
+                task.wait(timeout=None)
+            except TimeoutError:
+                # TODO(jmc): Cancel and respawn this task
+                return []
+        return results # TODO(jmc): Move output from being a decorator
 
-        # pylint: disable-msg=E1101
-        task = tasks.compute_risk.apply_async(args=[self.id, 
-                                                    self.block_id])
-
-        try:
-            # TODO(chris): Figure out where to put that timeout.
-            return task.wait(timeout=None)
-        except TimeoutError:
-            return None
-
-    def _write_output_for_block(self, job_id, block_id):
-        """note: this is usable only for one block"""
+    def slice_gmfs(self, block_id):
+        """Load and collate GMF values for all sites in this block. """
+        # TODO(JMC): Confirm this works regardless of the method of haz calc.
+        histories = int(self['NUMBER_OF_SEISMICITY_HISTORIES'])
+        realizations = int(self['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        num_ses = histories * realizations
         
-        # produce output for one block
-        loss_curves = []
-
-        sites = kvs.get_sites_from_memcache(job_id, block_id)
-
-        for (gridpoint, (site_lon, site_lat)) in sites:
-            key = kvs.generate_product_key(job_id, 
-                risk.LOSS_CURVE_KEY_TOKEN, block_id, gridpoint)
-            loss_curve = self.memcache_client.get(key)
-            loss_curves.append((shapes.Site(site_lon, site_lat), 
-                                loss_curve))
-
-        LOGGER.debug("serializing loss_curves")
-        output_generator = RiskXMLWriter(settings.LOSS_CURVES_OUTPUT_FILE)
-        output_generator.serialize(loss_curves)
-        
-        #output_generator = output.SimpleOutput()
-        #output_generator.serialize(ratio_results)
-        
-        #output_generator = geotiff.GeoTiffFile(output_file, 
-        #    region_constraint.grid)
-        #output_generator.serialize(losses_one_perc)
-
-    def store_region_constraint(self):
-        # pylint: disable-msg=W0201
-        """ set region
-        If there's a region file, use it. Otherwise,
-        get the region of interest as the convex hull of the
-        multipoint collection of the portfolio of assets.
-        """
-
-        region = self.params[job.INPUT_REGION]
-        filter_cell_size = self.params.get("filter cell size", 1.0)
-        self.region_constraint = shapes.RegionConstraint.from_file(
-            self.base_path + region)
-        self.region_constraint.cell_size = filter_cell_size
-
-    def store_sites_and_hazard_curve(self):
-        """ Get the regions from the region file and store them in memcached
-        """
-
-        # load hazard curve file and write to memcache_client
-
-        nrml_parser = hazard.NrmlFile("%s/%s" % (self.base_path,
-            self.params[job.HAZARD_CURVES]))
-        attribute_constraint = producer.AttributeConstraint({'IMT' : 'MMI'})
-        sites_hash_list = []
-
-        for site, hazard_curve_data in \
-            nrml_parser.filter(self.region_constraint, attribute_constraint):
-
-            gridpoint = self.region_constraint.grid.point_at(site)
-
-            # store site hashes in memcache
-            # TODO(fab): separate this from hazard curves. Regions of interest
-            # should not be taken from hazard curve input, should be 
-            # idependent from the inputs (hazard, exposure)
-            sites_hash_list.append((str(gridpoint), 
-                                   (site.longitude, site.latitude)))
-
-            hazard_curve = shapes.Curve(zip(hazard_curve_data['IML'], 
-                                                hazard_curve_data['Values']))
-
-            memcache_key_hazard = kvs.generate_product_key(self.id,
-                hazard.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
-
-            LOGGER.debug("Loading hazard curve %s at %s, %s" % (
-                        hazard_curve, site.latitude,  site.longitude))
-
-            success = self.memcache_client.set(memcache_key_hazard, 
-                hazard_curve.to_json())
-
-            if not success:
-                raise ValueError(
-                    "jobber: cannot write hazard curve to memcache")
-
-        # write site hashes to memcache (JSON)
-        memcache_key_sites = kvs.generate_sites_key(self.id, self.block_id)
-
-        success = kvs.set_value_json_encoded(memcache_key_sites, 
-            sites_hash_list)
-        if not success:
-            raise ValueError("jobber: cannot write sites to memcache")
+        block = job.Block.from_kvs(block_id)
+        sites_list = block.sites
+        gmfs = {}
+        for site in sites_list:
+            risk_point = self.region.grid.point_at(site)
+            key = "%s!%s" % (risk_point.row, risk_point.column)
+            gmfs[key] = []
+            
+        for i in range(0, histories):
+            for j in range(0, realizations):
+                key = kvs.generate_product_key(
+                        self.id, hazard.STOCHASTIC_SET_TOKEN, "%s!%s" % (i, j))
+                fieldset = shapes.FieldSet.from_json(kvs.get(key), self.region.grid)
+                for field in fieldset:
+                    for key in gmfs.keys():
+                        (row, col) = key.split("!")
+                        gmfs[key].append(field.get(int(row), int(col)))
+                                        
+        for key, gmf_slice in gmfs.items():
+            (row, col) = key.split("!")
+            key_gmf = kvs.generate_product_key(self.id,
+                risk.GMF_KEY_TOKEN, col, row)
+            print "GMF_SLICE for %s X %s : \n\t%s" % (
+                    col, row, gmf_slice )
+            timespan = float(self['INVESTIGATION_TIME'])
+            gmf = {"IMLs": gmf_slice, "TSES": num_ses * timespan, 
+                    "TimeSpan": timespan}
+            kvs.set_value_json_encoded(key_gmf, gmf)
 
     def store_exposure_assets(self):
         """ Load exposure assets and write to memcache """
@@ -144,24 +117,104 @@ class ProbabilisticEventMixin:
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" % 
             (self.base_path, self.params[job.EXPOSURE]))
 
-        for site, asset in exposure_parser.filter(self.region_constraint):
-            gridpoint = self.region_constraint.grid.point_at(site)
-
-            memcache_key_asset = kvs.generate_product_key(
-                self.id, risk.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
-
-            LOGGER.debug("Loading asset %s at %s, %s" % (asset,
-                site.longitude,  site.latitude))
-
-            success = kvs.set_value_json_encoded(memcache_key_asset, asset)
-            if not success:
-                raise ValueError(
-                    "jobber: cannot write asset to memcache")
+        for site, asset in exposure_parser.filter(self.region):
+            # TODO(JMC): This is kludgey
+            asset['lat'] = site.latitude
+            asset['lon'] = site.longitude
+            gridpoint = self.region.grid.point_at(site)
+            asset_key = risk.asset_key(self.id, gridpoint.column, gridpoint.row)
+            kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to memcache """
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
+    
+    def compute_risk(self, block_id, **kwargs):
+        """This task computes risk for a block of sites. It requires to have
+        pre-initialized in memcache:
+         1) list of sites
+         2) gmfs
+         3) exposure portfolio (=assets)
+         4) vulnerability
+
+        TODO(fab): make conditional_loss_poe (set of probabilities of exceedance
+        for which the loss computation is done) a list of floats, and read it from
+        the job configuration.
+        """
+
+        conditional_loss_poes = [float(x) for x in self.params.get(
+                    'CONDITIONAL_LOSS_POE', "0.01").split()]
+        self.slice_gmfs(block_id)
+        self.vuln_curves = \
+                vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
+
+        # TODO(jmc): DONT assumes that hazard and risk grid are the same
+        decoder = json.JSONDecoder()
+        
+        block = job.Block.from_kvs(block_id)
+        
+        for point in block.grid(self.region):
+            key = kvs.generate_product_key(self.job_id, 
+                risk.GMF_KEY_TOKEN, point.column, point.row)
+            gmf_slice = kvs.get_value_json_decoded(key)
+            
+            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
+            for asset in [decoder.decode(x) for x in asset_list]:
+                LOGGER.debug("processing asset %s" % (asset))
+                loss_ratio_curve = self.compute_loss_ratio_curve(
+                        point.column, point.row, asset, gmf_slice)
+                if loss_ratio_curve is not None:
+
+                    # compute loss curve
+                    loss_curve = self.compute_loss_curve(
+                            point.column, point.row, 
+                            loss_ratio_curve, asset)
+                    
+                    for loss_poe in conditional_loss_poes:
+                        self.compute_conditional_loss(point.column, point.row,
+                                loss_curve, asset, loss_poe)
+        return True
+    
+    def compute_conditional_loss(self, column, row, loss_curve, asset, loss_poe):
+        loss_conditional = probabilistic_event_based. \
+                compute_conditional_loss(loss_curve, loss_poe)
+        key = risk.loss_key(self.id, column, row, asset["AssetID"], loss_poe)
+
+        print "RESULT: conditional loss is %s, write to key %s" % (
+            loss_conditional, key)
+        kvs.set(key, loss_conditional)
+        
+
+    def compute_loss_ratio_curve(self, column, row, asset, gmf_slice ): # site_id
+        """Compute the loss ratio curve for a single site."""
+
+        vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
+
+        loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
+                vuln_function, gmf_slice)
+
+        key = risk.loss_ratio_key(self.id, column, row, asset["AssetID"])
+        
+        LOGGER.debug("RESULT: loss ratio curve is %s, write to key %s" % (
+            loss_ratio_curve, key))
+            
+        kvs.set(key, loss_ratio_curve.to_json())
+        return loss_ratio_curve
+
+    def compute_loss_curve(self, column, row, loss_ratio_curve, asset):
+        """Compute the loss curve for a single site."""
+        if asset is None:
+            return None
+        
+        loss_curve = loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
+        key = risk.loss_curve_key(self.id, column, row, asset["AssetID"])
+
+        print "RESULT: loss curve is %s, write to key %s" % (
+            loss_curve, key)
+        kvs.set(key, loss_curve.to_json())
+        return loss_curve
 
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)

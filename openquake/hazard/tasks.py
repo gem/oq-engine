@@ -12,6 +12,7 @@ import json
 from openquake import job
 from openquake.job import mixins
 from openquake import hazard
+from openquake.hazard import job as hazjob
 from openquake import kvs
 
 from celery.decorators import task
@@ -39,8 +40,15 @@ def generate_erf(job_id):
 def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
     # TODO(JMC): Use a block_id instead of a site_list
     hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazard.job.HazJobMixin, key="hazard"):
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
         hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
+
+
+def write_out_ses(job_file, stochastic_set_key):
+    hazengine = job.Job.from_file(job_file)
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+        ses = kvs.get_value_json_decoded(stochastic_set_key)
+        hazengine.write_gmf_files(ses)
 
 @task
 def compute_hazard_curve(job_id, block_id, site_id=None):

@@ -1,46 +1,97 @@
-""" Mixin proxy for risk jobs """
+""" Mixin proxy for risk jobs, and associated
+Risk Job Mixin decorators """
 
-from openquake.job.mixins import Mixin
+import json
+import os
 
+from openquake.output import geotiff
+from openquake import job
+from openquake.job import mixins
+from openquake import kvs 
+from openquake import logs
+from openquake import risk
+from openquake import shapes
+from openquake.output import risk as risk_output
 
-#############################
-#                           #
-# Risk Job Mixin decorators #
-#                           #
-#############################
+from celery.decorators import task
 
-def preload(fn):
-    """ Preload decorator """
-    def preloader(self, *args, **kwargs):
-        """A decorator for preload steps that must run on the Jobber"""
-        # Do preload stuff
-
-        self.store_region_constraint()
-        self.store_sites_and_hazard_curve()
-        self.store_exposure_assets()
-        self.store_vulnerability_model()
-
-        return fn(self, *args, **kwargs)
-    return preloader
-
+LOG = logs.LOG
 
 def output(fn):
     """ Decorator for output """
     def output_writer(self, *args, **kwargs):
         """ Write the output of a block to memcached. """
-        result = fn(self, *args, **kwargs)
-
-        # TODO(chris): Should we use the returned result?
-        if result:
-            # pylint: disable-msg=W0212
-            self._write_output_for_block(self.job_id, self.block_id)
-        return result
+        fn(self, *args, **kwargs)
+        conditional_loss_poes = [float(x) for x in self.params.get(
+                    'CONDITIONAL_LOSS_POE', "0.01").split()]
+        #if result:
+        results = []
+        for block_id in self.blocks_keys:
+            results.extend(self._write_output_for_block(self.job_id, block_id))
+        for loss_poe in conditional_loss_poes:
+            self.write_loss_map(loss_poe)
+        return results
 
     return output_writer
 
 
-class RiskJobMixin(Mixin):
+@task
+def compute_risk(job_id, block_id, **kwargs):
+    engine = job.Job.from_kvs(job_id)
+    with mixins.Mixin(engine, RiskJobMixin, key="risk") as mixed:
+        mixed.compute_risk(block_id, **kwargs)
+        
+
+class RiskJobMixin(mixins.Mixin):
     """ A mixin proxy for Risk jobs """
     mixins = {}
+    
+    def _write_output_for_block(self, job_id, block_id):
+        """note: this is usable only for one block"""
+        decoder = json.JSONDecoder()
+        loss_curves = []
+        block = job.Block.from_kvs(block_id)
+        for point in block.grid(self.region):
+            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
+            for asset in [decoder.decode(x) for x in asset_list]:
+                site = shapes.Site(asset['lon'], asset['lat'])
+                key = risk.loss_curve_key(
+                        job_id, point.column, point.row, asset["AssetID"])
+                loss_curve = shapes.Curve.from_json(kvs.get(key))
+                loss_curves.append((site, loss_curve))
 
-Mixin.register("Risk", RiskJobMixin, order=1)
+        LOG.debug("Serializing loss_curves")
+        filename = "%s-block-%s.xml" % (
+            self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
+        path = os.path.join(self.base_path, filename)
+        output_generator = risk_output.LossCurveXMLWriter(path)
+        output_generator.serialize(loss_curves)
+        return [path]
+        
+        #output_generator = output.SimpleOutput()
+        #output_generator.serialize(ratio_results)
+        conditional_loss_poes = [float(x) for x in self.params.get(
+                'CONDITIONAL_LOSS_POE', "0.01").split()]
+    
+    def write_loss_map(self, loss_poe):
+        """ Iterates through all the assets and maps losses at loss_poe """
+        # Make a special grid at a higher resolution
+        risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
+        filename = "%s-losses_at-%s.tiff" % (
+            self.id, loss_poe)
+        path = os.path.join(self.base_path, filename) 
+        output_generator = geotiff.GeoTiffFile(path, risk_grid)
+        for point in self.region.grid:
+            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
+            for asset in [decoder.decode(x) for x in asset_list]:
+                key = risk.loss_key(self.id, point.row, point.col, 
+                        asset["ASSET_ID"], loss_poe)
+                loss = kvs.get(key)
+                risk_site = shapes.Site(asset['lon'], asset['lat'])
+                risk_point = risk_grid.point_at(risk_site)
+                output_generator.write((risk_point.row, risk_point.column), loss)
+        output_generator.close()
+
+mixins.Mixin.register("Risk", RiskJobMixin, order=2)

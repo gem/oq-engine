@@ -93,44 +93,6 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         return classical_psha_based.compute_loss_curve(
             loss_ratio_curve, asset['AssetValue'])
 
-class ProbabilisticEventBasedCalculator(object):
-    """Compute loss ratio and loss curves using the probabilistic event
-    based approach."""
-    
-    def __init__(self, job_id, block_id):
-        self.job_id = job_id
-        self.block_id = block_id
-
-        self.vuln_curves = \
-                vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
-
-    def compute_loss_ratio_curve(self, site):
-        """Compute the loss ratio curve for a single site."""
-        key_exposure = kvs.generate_product_key(self.job_id,
-            risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
-
-        asset = kvs.get_value_json_decoded(key_exposure)
-
-        vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
-
-        key_gmf = kvs.generate_product_key(self.job_id, 
-                risk.GMF_KEY_TOKEN, self.block_id, site)
-       
-        gmf = kvs.get_value_json_decoded(key_gmf)
-        return probabilistic_event_based.compute_loss_ratio_curve(
-                vuln_function, gmf)
-
-    def compute_loss_curve(self, site, loss_ratio_curve):
-        """Compute the loss curve for a single site."""
-        key_exposure = kvs.generate_product_key(self.job_id,
-            risk.EXPOSURE_KEY_TOKEN, self.block_id, site)
-        
-        asset = kvs.get_value_json_decoded(key_exposure)
-        
-        if asset is None:
-            return None
-        
-        return loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
 
 def compute_loss(loss_curve, pe_interval):
     """Interpolate loss for a specific probability of exceedance interval"""
