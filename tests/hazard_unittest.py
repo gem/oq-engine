@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import time
 import unittest
 
@@ -43,15 +44,21 @@ class HazardEngineTestCase(unittest.TestCase):
     Most data returned from the engine is via memcached."""
     
     def setUp(self):
+        self.generated_files = []
         self.memcache_client = kvs.get_client(binary=False)
 
     def tearDown(self):
-        pass
+        for cfg in self.generated_files:
+            try:
+                os.remove(cfg)
+            except OSError, e:
+                pass
 
     def test_hazard_engine_jobber_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from memcached."""
         hazengine = job.Job.from_file(TEST_JOB_FILE)
+        self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
             hc = hazengine.execute()
             
@@ -74,6 +81,9 @@ class HazardEngineTestCase(unittest.TestCase):
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_kvs(job_id)
+        self.generated_files.append(
+            os.path.join(test.smoketest_file("simplecase/%s-super.gem" % job_id)))
+        self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
             pass
             # hazengine.execute()

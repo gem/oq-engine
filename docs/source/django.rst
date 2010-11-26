@@ -1,5 +1,5 @@
 OpenQuake (Geo)Django [Used for Seismic Source Administration]
-============================================================
+==============================================================
 Aurea Moemke, 17 Sep 2010
 
 This distribution arose from the user story: Basic Rest Interface (on

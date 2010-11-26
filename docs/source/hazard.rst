@@ -2,7 +2,7 @@
       License Header goes here
 
 OpenQuake Computational Hazard Engine
-===============================
+=====================================
 The :mod:`Hazard` Sub-package
 -----------------------------
 
