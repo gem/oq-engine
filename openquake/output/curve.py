@@ -2,9 +2,8 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 """
-This module plots hazard curves as read from an NRML file.
-As plotting engine, matplotlib is used.
-The plots are in SVG format.
+This module plots curves (hazard/loss/loss ratio) as read from an NRML file.
+As plotting engine, matplotlib is used. The plots are in SVG format.
 """
 
 import geohash
@@ -23,11 +22,11 @@ from openquake.parser import hazard as hazard_parser
 IMAGE_FORMAT = "SVG"
 COLOR_CODES = ('k', 'r', 'g', 'b')
 
-class HazardCurvePlotter(object):
-    """This class plots hazard curves as read from an NRML file. For
-    each Site listed in the NRML file, a separate plot is created. A plot
-    can contain multiple hazard curves, one for each logic tree end branch 
-    given in the NRML file."""
+
+class CurvePlotter(object):
+    """Base class for plotting curves from NRML files to SVG.
+    For a specific curve plot (hazard/loss/loss ratio), 
+    a class has to be derived from this one."""
 
     def __init__(self, output_base_path, nrml_input_path):
 
@@ -41,6 +40,37 @@ class HazardCurvePlotter(object):
         self.svg_filenames = []
 
         self._parse_nrml_file()
+
+    def _parse_nrml_file(self):
+        """Parse curve data from NRML file into a dictionary, has to
+        be implemented by the derived class."""
+        pass
+
+    def plot(self):
+        # create a plot for each site
+        for site_hash in self.data:
+            plot = CurvePlot(self.data[site_hash]['path'])
+            plot.write(self.data[site_hash]['curves'])
+            plot.close()
+
+    def filenames(self):
+        for site_hash in self.data:
+            yield self.data[site_hash]['path']
+
+    def _generate_filename(self, site_hash):
+        site_lat, site_lon = geohash.decode(site_hash)
+        return "%s_%7.3f_%6.3f.svg" % (
+            self.output_base_path, site_lon, site_lat)
+
+
+class HazardCurvePlotter(CurvePlotter):
+    """This class plots hazard curves as read from an NRML file. For
+    each Site listed in the NRML file, a separate plot is created. A plot
+    can contain multiple hazard curves, one for each logic tree end branch 
+    given in the NRML file."""
+
+    def __init__(self, output_base_path, nrml_input_path):
+        super(HazardCurvePlotter, self).__init__(output_base_path, nrml_input_path)
 
     def _parse_nrml_file(self):
         """Parse hazard curve data from NRML file into a dictionary."""
@@ -61,35 +91,21 @@ class HazardCurvePlotter(object):
                 self.data[site_hash] = {
                     # capture SVG filename for each site
                     'path': self._generate_filename(site_hash),
-                    'endBranches': {}}
+                    'curves': {}}
 
-            if ebl not in self.data[site_hash]['endBranches']:
-                self.data[site_hash]['endBranches'][ebl] = {}
+            if ebl not in self.data[site_hash]['curves']:
+                self.data[site_hash]['curves'][ebl] = {}
 
-            self.data[site_hash]['endBranches'][ebl] = {
-                'IMLValues': nrml_attr['IMLValues'], 
-                'Values': nrml_attr['Values'],
-                'IMT': nrml_attr['IMT'],
-                'Site': nrml_point}
-
-    def plot(self):
-        # create a plot for each site
-        for site_hash in self.data:
-            plot = HazardCurvePlot(self.data[site_hash]['path'])
-            plot.write(self.data[site_hash]['endBranches'])
-            plot.close()
-
-    def filenames(self):
-        for site_hash in self.data:
-            yield self.data[site_hash]['path']
-
-    def _generate_filename(self, site_hash):
-        site_lat, site_lon = geohash.decode(site_hash)
-        return "%s_%7.3f_%6.3f.svg" % (
-            self.output_base_path, site_lon, site_lat)
+            self.data[site_hash]['curves'][ebl] = {
+                'abscissa': nrml_attr['IMLValues'], 
+                'abscissa_property': nrml_attr['IMT'],
+                'ordinate': nrml_attr['Values'],
+                'ordinate_property': 'Probability of Exceedance',
+                'Site': nrml_point,
+                'curve_title': 'Hazard Curves'}
 
 
-class HazardCurvePlot(writer.FileWriter):
+class CurvePlot(writer.FileWriter):
     """Plots hazard curves for one site. On plot can contain several
     hazard curves, one for each end branch of a logic tree."""
 
@@ -129,7 +145,7 @@ class HazardCurvePlot(writer.FileWriter):
 
     def __init__(self, path):
         self.color_code_generator = _color_code_generator()
-        super(HazardCurvePlot, self).__init__(path)
+        super(CurvePlot, self).__init__(path)
 
     def _init_file(self):
 
@@ -141,29 +157,30 @@ class HazardCurvePlot(writer.FileWriter):
         pylab.clf()
 
     def write(self, data):
-        """The method expects a dictionary that holds the end branch
-        labels as keys. For each key, the value is a dictionary that holds
-        the lists for IMLValues and Values of the hazard curve(s), the IMT
-        and the site."""
+        """The method expects a dictionary that holds the labels for the
+        separate curves to be plotted as keys. For each key, the corresponding
+        value is a dictionary that holds lists for abscissa and ordinate values,
+        strings for abscissa and ordinate properties, and the title of the plot,
+        and the site as shapes.Site object.."""
 
-        for end_branch_label in data:
- 
-            pylab.plot(data[end_branch_label]['IMLValues'], 
-                       data[end_branch_label]['Values'], 
+        for curve in data:
+            pylab.plot(data[curve]['abscissa'], 
+                       data[curve]['ordinate'], 
                        color=self.color_code_generator.next(), 
                        linestyle=self._plotCurve['linestyle'][2], 
-                       label=end_branch_label)
+                       label=curve)
 
         # set x and y dimension of plot
         pylab.ylim(self._plotAxes['ymin'], self._plotAxes['ymax'])
         xmin, xmax = pylab.xlim()
-    
-        pylab.xlabel(data[end_branch_label]['IMT'], self._plotLabelsFont)
-        pylab.ylabel('Probability', self._plotLabelsFont)
 
-        pylab.title("Hazard Curves for (%7.3f, %6.3f)" % (
-            data[end_branch_label]['Site'].longitude, 
-            data[end_branch_label]['Site'].latitude))
+        pylab.xlabel(data[curve]['abscissa_property'], self._plotLabelsFont)
+        pylab.ylabel(data[curve]['ordinate_property'], self._plotLabelsFont)
+
+        pylab.title("%s for (%7.3f, %6.3f)" % (
+            data[curve]['curve_title'],
+            data[curve]['Site'].longitude, 
+            data[curve]['Site'].latitude))
 
         pylab.legend(loc=self._plotLegend['style'],
                      markerscale=self._plotLegend['markerscale'],
