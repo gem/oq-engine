@@ -45,7 +45,3 @@ The SOCIO-ECONOMIC IMPACT Engine is composed of the following calculators:
  - Agent based model
  - System Economics model
 
-* Viewer's Interface
-* Datastores (with REST interfaces)
-* Job Queue
-* Single-Sign-On Service layer
