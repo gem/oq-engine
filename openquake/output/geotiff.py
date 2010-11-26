@@ -28,7 +28,6 @@ TIFF_BAND = 1
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
 
-
 class GeoTiffFile(writer.FileWriter):
     """Rough implementation of the GeoTiff format,
     based on http://adventuresindevelopment.blogspot.com/2008/12/
@@ -88,7 +87,10 @@ class GeoTiffFile(writer.FileWriter):
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later 
         serialization. Make sure these are zero-based cell addresses."""
-        self.raster[int(cell[0]), int(cell[1])] = float(value)
+        LOG.debug("Writing %s by %s of %s" % (
+                int(cell[0]), int(cell[1]), value))
+        if float(value) > self.raster[int(cell[0]), int(cell[1])]:
+            self.raster[int(cell[0]), int(cell[1])] = float(value)
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
@@ -96,6 +98,7 @@ class GeoTiffFile(writer.FileWriter):
         # NOTE(fab): numpy raster does not have to be transposed, although
         # it has rows x columns
         if self.normalize:
+            LOG.debug(self.raster)
             LOG.debug("Raster max is %s" % self.raster.max())
             self.raster = self.raster * 254.0 / self.raster.max()
         LOG.debug(self.raster)

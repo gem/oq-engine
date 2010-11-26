@@ -9,6 +9,7 @@
 import math
 import os
 import json
+import sys
 
 import numpy
 from celery.exceptions import TimeoutError
@@ -122,7 +123,7 @@ class ProbabilisticEventMixin:
             asset['lat'] = site.latitude
             asset['lon'] = site.longitude
             gridpoint = self.region.grid.point_at(site)
-            asset_key = risk.asset_key(self.id, gridpoint.column, gridpoint.row)
+            asset_key = risk.asset_key(self.id, gridpoint.row, gridpoint.column)
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
@@ -159,7 +160,7 @@ class ProbabilisticEventMixin:
                 risk.GMF_KEY_TOKEN, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
             
-            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_key = risk.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
                 LOGGER.debug("processing asset %s" % (asset))
@@ -180,7 +181,7 @@ class ProbabilisticEventMixin:
     def compute_conditional_loss(self, column, row, loss_curve, asset, loss_poe):
         loss_conditional = probabilistic_event_based. \
                 compute_conditional_loss(loss_curve, loss_poe)
-        key = risk.loss_key(self.id, column, row, asset["AssetID"], loss_poe)
+        key = risk.loss_key(self.id, row, column, asset["AssetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
             loss_conditional, key))
@@ -198,8 +199,10 @@ class ProbabilisticEventMixin:
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf_slice)
-
-        key = risk.loss_ratio_key(self.id, column, row, asset["AssetID"])
+        # NOTE(JMC): Early exit if the loss ratio is all zeros
+        if not False in (loss_ratio_curve.ordinates == 0.0):
+            return None
+        key = risk.loss_ratio_key(self.id, row, column, asset["AssetID"])
         
         LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))
@@ -213,7 +216,7 @@ class ProbabilisticEventMixin:
             return None
         
         loss_curve = loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
-        key = risk.loss_curve_key(self.id, column, row, asset["AssetID"])
+        key = risk.loss_curve_key(self.id, row, column, asset["AssetID"])
 
         LOGGER.warn("RESULT: loss curve is %s, write to key %s" % (
                 loss_curve, key))

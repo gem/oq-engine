@@ -22,17 +22,22 @@ from setuptools import find_packages
 scripts = ["bin/%s" % x for x in os.listdir('bin')]
 scripts.extend(
     ["openquake/utils/%s" % x for x in os.listdir('openquake/utils')])
+scripts.append('celeryconfig.py')
+
 libs = []
-for x in os.listdir('lib'):
-    if x[-4:] == '.jar':
-        libs.append("lib/%s" % x)
+lib_srcs = ('lib','dist')
+for lib_src:
+    for x in os.listdir(lib_src):
+        if x[-4:] == '.jar':
+            libs.append("%s/%s" % (lib_src, x))
+
         
 with os.popen("which gfortran") as gf:
     if not gf:
         raise EnvironmentError("You need to install gfortran")
 
 setup(name='openquake',
-      version='0.1.0',
+      version='0.11',
       description='OpenQuake Platform',
       author='gem-core',
       author_email='openquake-dev@googlegroups.com',
