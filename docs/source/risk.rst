@@ -52,10 +52,6 @@ The :mod:`engines` Module
 The :mod:`probabilistic_scenario` Module
 ----------------------------------------
 
-The :mod:`probabilistic_scenario` Module
-------------------
-
-
 .. automodule:: openquake.risk.probabilistic_scenario
     :members:
     :undoc-members:
