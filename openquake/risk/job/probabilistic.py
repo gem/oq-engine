@@ -104,8 +104,8 @@ class ProbabilisticEventMixin:
             (row, col) = key.split("!")
             key_gmf = kvs.generate_product_key(self.id,
                 risk.GMF_KEY_TOKEN, col, row)
-            print "GMF_SLICE for %s X %s : \n\t%s" % (
-                    col, row, gmf_slice )
+            LOGGER.debug( "GMF_SLICE for %s X %s : \n\t%s" % (
+                    col, row, gmf_slice ))
             timespan = float(self['INVESTIGATION_TIME'])
             gmf = {"IMLs": gmf_slice, "TSES": num_ses * timespan, 
                     "TimeSpan": timespan}
@@ -182,23 +182,27 @@ class ProbabilisticEventMixin:
                 compute_conditional_loss(loss_curve, loss_poe)
         key = risk.loss_key(self.id, column, row, asset["AssetID"], loss_poe)
 
-        print "RESULT: conditional loss is %s, write to key %s" % (
-            loss_conditional, key)
+        LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
+            loss_conditional, key))
         kvs.set(key, loss_conditional)
-        
 
     def compute_loss_ratio_curve(self, column, row, asset, gmf_slice ): # site_id
         """Compute the loss ratio curve for a single site."""
-
-        vuln_function = self.vuln_curves[asset["VulnerabilityFunction"]]
+        # If the asset has a vuln function code we don't have loaded, return fail
+        vuln_function = self.vuln_curves.get(
+                asset["VulnerabilityFunction"], None)
+        if not vuln_function:
+            LOGGER.error("Unknown vulnerability function %s for asset %s"
+                % (asset["VulnerabilityFunction"], asset["AssetID"]))
+            return None
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf_slice)
 
         key = risk.loss_ratio_key(self.id, column, row, asset["AssetID"])
         
-        LOGGER.debug("RESULT: loss ratio curve is %s, write to key %s" % (
-            loss_ratio_curve, key))
+        LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
+                loss_ratio_curve, key))
             
         kvs.set(key, loss_ratio_curve.to_json())
         return loss_ratio_curve
@@ -211,8 +215,8 @@ class ProbabilisticEventMixin:
         loss_curve = loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
         key = risk.loss_curve_key(self.id, column, row, asset["AssetID"])
 
-        print "RESULT: loss curve is %s, write to key %s" % (
-            loss_curve, key)
+        LOGGER.warn("RESULT: loss curve is %s, write to key %s" % (
+                loss_curve, key))
         kvs.set(key, loss_curve.to_json())
         return loss_curve
 

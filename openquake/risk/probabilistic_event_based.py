@@ -27,7 +27,9 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
     # depending if the x_new is below or upon the defined values
     for ground_motion_value in ground_motion_field["IMLs"]:
         if ground_motion_value < imls[0]:
-            loss_ratios.append(0.0)
+            # PATCH VIA VITOR
+            # loss_ratios.append(0.0)
+            continue
         elif ground_motion_value > imls[-1]:
             loss_ratios.append(imls[-1])
         else:
