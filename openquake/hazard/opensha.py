@@ -95,6 +95,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         LOG.info("Going to run hazard for %s histories of %s realizations each."
                 % (histories, realizations))
         for i in range(0, histories):
+            pending_tasks = []
             for j in range(0, realizations):
                 self.store_source_model(self.config_file,
                         source_model_generator.getrandbits(32))
@@ -103,11 +104,11 @@ class MonteCarloMixin: # pylint: disable=W0232
                 for site_list in self.site_list_generator():
                     stochastic_set_id = "%s!%s" % (i, j)
                     # pylint: disable=E1101
-                    results.append(tasks.compute_ground_motion_fields.delay(
+                    pending_tasks.append(tasks.compute_ground_motion_fields.delay(
                             self.id, site_list, 
                             stochastic_set_id, gmf_generator.getrandbits(32)))
         
-            for task in results:
+            for task in pending_tasks:
                 task.wait()
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
@@ -136,7 +137,8 @@ class MonteCarloMixin: # pylint: disable=W0232
                 path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                         "gmf-%s-%s.tiff" % (str(event_set.replace("!", "_")),
                                             str(rupture.replace("!", "_"))))
-                gwriter = geotiff.GeoTiffFile(path, image_grid)
+                gwriter = geotiff.GeoTiffFile(path, image_grid, 
+                        init_value=0.0, normalize=True)
                 
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
