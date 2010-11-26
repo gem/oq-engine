@@ -31,6 +31,7 @@ There are three "Engines", each of which is composed of multiple "calculators":
 
 The HAZARD ENGINE is composed of the following calculators:
 
+<<<<<<< Updated upstream
  - Classic PSHA, The Hazard component will need to produce earthquake rupture forecast (ERF) as it is required in order for the stochastic event set generator.
  - Stochastic Event Set Generator. The Stochastic Event Set Generator is required for the Ground Motion Fields calculator.
  
@@ -44,3 +45,27 @@ The RISK ENGINE is composed of the following calculators:
 The SOCIO-ECONOMIC IMPACT Engine is composed of the following calculators:
  - Agent based model
  - System Economics model
+=======
+ - Classical PSHA calculator. The Hazard component will need to produce earthquake rupture forecast (ERF) as it is required in order for the stochastic event set generator.
+
+ - Stochastic Event Set Generator. The Stochastic Event Set Generator is required for the Ground Motion Fields calculator.
+
+ - Spatially Correlated Ground Motion Fields. Spatially Correlated Ground Motion Fields (GMF) are GMFs that account for the correlation of the uncertainty in the ground motion at pairs of sites (i.e. two sites at a given distance from the fault that are close together are more like to have similar levels of ground shaking than two sites that are at the same distance from the fault but are far apart).
+ 
+The RISK ENGINE is composed of the following calculators:
+
+ - The Classical PSHA Based Risk Assessment. The GEM Risk calculator is capable of computing losses due to all the possible seismic events that might occur within a given time span using a classical PSHA-based approach. The main product from these calculations will be loss/loss ratio curves although, loss/loss ratio maps for different probabilities of exceedance as well as average loss/loss ratio maps can also be computed.
+
+ - Probabilistic Event Based Risk Assessment. The GEM Risk calculator is intended to compute probabilistic event based assessment: using set of ground motion fields (generated through stochastic event set) the risk engine is capable of computing losses per asset and/or the aggregated loss since in this approach it is possible to take into consideration the spatial correlation of the ground motion.
+
+ - Deterministic Event Based Risk Assessment.The GEM Risk calculator is intended to compute Deterministic event-based risk assessment which involves the calculation of losses (or loss ratios) for a given set of exposed assets, for a single deterministic earthquake scenario. It requires a ground-motion field (GMF), discrete vulnerability functions and exposure portfolios. The deterministic event based assessment is intended to produce loss / loss ratio maps and statistical data for a specific site.
+
+The SOCIO-ECONOMIC IMPACT Engine is composed of the following calculators:
+
+        * ??
+
+* Viewer's Interface
+* Datastores (with REST interfaces)
+* Job Queue
+* Single-Sign-On Service layer
+
