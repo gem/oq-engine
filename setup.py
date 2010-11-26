@@ -29,7 +29,7 @@ for x in os.listdir('lib'):
         
 with os.popen("which gfortran") as gf:
     if not gf:
-        raise EnvirontmentError("You need to install gfortran")
+        raise EnvironmentError("You need to install gfortran")
 
 setup(name='openquake',
       version='0.1.0',
