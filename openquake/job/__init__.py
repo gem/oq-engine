@@ -76,7 +76,9 @@ def guarantee_file(base_path, file_spec):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    __default_configs = ["opengem.cfg",        # Sane Defaults
+    __default_configs = [os.path.join(os.path.dirname(__file__),
+                            "../", "default.cfg"), #package
+                         "opengem.cfg",        # Sane Defaults
                          "/etc/opengem.cfg",   # Site level configs
                          "~/.opengem.cfg"]     # Are we running as a user?
 
@@ -117,7 +119,7 @@ class Job(object):
     def has(self, name):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
-        return self[name] and self[name] != ""
+        return self.params.has_key(name) and self.params[name] != ""
 
     @property
     def id(self): #pylint: disable-msg=C0103
@@ -140,6 +142,12 @@ class Job(object):
         region = shapes.RegionConstraint.from_coordinates(coords)
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
+
+    @property
+    def super_config_path(self):
+        """ Return the path of the super config """
+        filename = "%s-super.gem" % self.job_id
+        return os.path.join(self.base_path or '', "./", filename)
 
     @validate
     def launch(self):
@@ -209,8 +217,7 @@ class Job(object):
         return sites
 
     def __getitem__(self, name):
-        if name in self.params:
-            return self.params[name]
+        return self.params[name]
 
     def __eq__(self, other):
         return self.params == other.params
@@ -237,7 +244,7 @@ class Job(object):
                 val = v
             config.set(section, key, val)
 
-        with open("%s-super.gem" % self.job_id, "wb") as configfile:
+        with open(self.super_config_path, "wb") as configfile:
             config.write(configfile)
 
     def _slurp_files(self):
