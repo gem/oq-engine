@@ -223,5 +223,4 @@ class ProbabilisticEventMixin:
         kvs.set(key, loss_curve.to_json())
         return loss_curve
 
-
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
