@@ -32,10 +32,11 @@ class GeoTiffFile(writer.FileWriter):
     """
     
     format = GDAL_FORMAT
+    normalize = True
     
-    def __init__(self, path, image_grid, init_value=numpy.nan):
+    def __init__(self, path, image_grid, init_value=numpy.nan, normalize=False):
         self.grid = image_grid
-
+        self.normalize = normalize
         # NOTE(fab): GDAL initializes the image as columns x rows.
         # numpy arrays, however, have usually rows as first axis,
         # and columns as second axis (as it is the convention for
@@ -80,13 +81,17 @@ class GeoTiffFile(writer.FileWriter):
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later 
         serialization. Make sure these are zero-based cell addresses."""
-        self.raster[int(cell[0]), int(cell[1])] = value
+        self.raster[int(cell[0]), int(cell[1])] = float(value)
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
         
         # NOTE(fab): numpy raster does not have to be transposed, although
         # it has rows x columns
+        if self.normalize:
+            print "Raster max is %s" % self.raster.max()
+            self.raster = self.raster * 254.0 / self.raster.max()
+        print self.raster
         self.target.GetRasterBand(1).WriteArray(self.raster)
         self.target = None  # This is required to flush the file
         self.finished.send(True)
@@ -95,5 +100,7 @@ class GeoTiffFile(writer.FileWriter):
         # TODO(JMC): Normalize the values
         maxval = max(iterable.values())
         for key, val in iterable.items():
-            self.write((key.column, key.row), val/maxval * 254)
+            if self.normalize:
+                val = val/maxval*254
+            self.write((key.column, key.row), val)
         self.close()

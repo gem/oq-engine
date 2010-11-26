@@ -19,13 +19,13 @@ public class Cache {
     private JRedisClient client;
 
     /**
-     * Default client constructor, defaults to database 10.
+     * Default client constructor, defaults to database 0.
      */
     public Cache(String host, int port) {
         try {
             // Do the connection.
             client = new JRedisClient(getConnectionSpec(host, port, 0));
-        } catch (ClientRuntimeException e) { 
+        } catch (ClientRuntimeException e) {
             throw new RuntimeException(e);
         }
     }

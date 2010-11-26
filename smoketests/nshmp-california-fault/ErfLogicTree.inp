@@ -42,57 +42,11 @@ BranchSet
 # uncertainty model type
 inputfile
 # input file name(s)
-src_model1.dat     src_model2.dat
+california-fault.dat
 # input file descriptor(s) (in each descriptor spaces are not allowed)
-source_geometry_model_#1   source_geometry_model_#2
+california_fault_model
 # weight(s)
-0.5  0.5
-
-# We define now the second branching level. This branching level
-# describe uncertainties on the maximum magnitude.
-BranchingLevel
-# branching level number
-2
-# branching label
-maximum magnitude uncertainties
-# applies to
-ALL
-
-# Branch set definition for branching level 2
-BranchSet
-# in this case uncertainties are specified by a rule
-rule
-# rule descriptor (in this case the following numbers represent
-# relative uncertainties (that is to be added) on the maximum magnitude 
-mMaxGRRelative
-# uncertainty values
-0.2 0.0 -0.2
-# uncertainty weights
-0.2 0.6 0.2
-
-# We define now the third branching level. This branching level
-# describe uncertainties on the Gutenberg-Richter b value
-BranchingLevel
-# branching level number
-3
-# branching label
-b value uncertainties
-# applies to
-ALL
-
-# Branch set definition for branching level 3
-BranchSet
-# in this case uncertainties are specified by a rule
-rule
-# rule descriptor (in this case the following numbers represent
-# relative uncertainties (that is to be added) on the maximum magnitude 
-bGRRelative
-# uncertainty values
-0.1 0.0 -0.1
-# uncertainty weights
-0.2 0.6 0.2
-
-
+1.0
 
 
 
