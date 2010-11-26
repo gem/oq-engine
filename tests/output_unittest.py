@@ -54,6 +54,7 @@ LOSS_RATIO_CURVE_PLOT_FILENAME = "loss-ratio-curves.svg"
 LOSS_RATIO_CURVE_PLOT_INPUTFILE = "example-loss-ratio-curves-for-plotting.xml"
 
 GEOTIFF_USED_CHANNEL_IDX = 1
+GEOTIFF_TOTAL_CHANNELS = 4
 GEOTIFF_TEST_PIXEL_VALUE = 1.0
 
 class OutputTestCase(unittest.TestCase):
@@ -253,7 +254,7 @@ class OutputTestCase(unittest.TestCase):
         dataset = gdal.Open(path, gdalconst.GA_ReadOnly)
         self.assertEqual(dataset.RasterXSize, region.grid.columns)
         self.assertEqual(dataset.RasterYSize, region.grid.rows)
-        self.assertEqual(dataset.RasterCount, GEOTIFF_USED_CHANNEL_IDX)
+        self.assertEqual(dataset.RasterCount, GEOTIFF_TOTAL_CHANNELS)
 
         (origin_lon, lon_pixel_size, lon_rotation, origin_lat, lat_rotation, 
             lat_pixel_size ) = dataset.GetGeoTransform()

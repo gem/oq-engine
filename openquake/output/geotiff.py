@@ -24,7 +24,7 @@ LOG = logs.LOG
 GDAL_FORMAT = "GTiff"
 GDAL_PIXEL_DATA_TYPE = gdal.GDT_Float32
 SPATIAL_REFERENCE_SYSTEM = "WGS84"
-TIFF_BAND = 1
+TIFF_BAND = 4
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
 
@@ -48,6 +48,8 @@ class GeoTiffFile(writer.FileWriter):
         # initialize raster to init_value values (default in NaN)
         self.raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * init_value
+        self.alpha_raster = numpy.zeros((self.grid.rows, self.grid.columns),
+                                 dtype=numpy.float)
         self.target = None
         super(GeoTiffFile, self).__init__(path)
         
@@ -88,6 +90,9 @@ class GeoTiffFile(writer.FileWriter):
         """Stores the cell values in the NumPy array for later 
         serialization. Make sure these are zero-based cell addresses."""
         self.raster[int(cell[0]), int(cell[1])] = float(value)
+        # Set AlphaLayer
+        if int(value):
+            self.alpha_raster[int(cell[0]), int(cell[1])] = 255
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
@@ -96,7 +101,13 @@ class GeoTiffFile(writer.FileWriter):
         # it has rows x columns
         if self.normalize:
             self.raster = self.raster * 254.0 / self.raster.max()
-        self.target.GetRasterBand(1).WriteArray(self.raster)
+
+        for band in range(0,3):
+            self.target.GetRasterBand(band + 1).WriteArray(self.raster)
+
+        # Write alpha channel
+        self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
+
         self.target = None  # This is required to flush the file
         self.finished.send(True)
     
