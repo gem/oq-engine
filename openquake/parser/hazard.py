@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-""" This module contains a class that parses instance document files of a
+"""This module contains a class that parses instance document files of a
 specific flavour of the NRML data format. This flavour is NRML the potential
 outcome of the hazard calculations in the engine. The root element of such
 NRML instance documents is <HazardResultList>.

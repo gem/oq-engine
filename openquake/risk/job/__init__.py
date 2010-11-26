@@ -29,7 +29,7 @@ def output(fn):
         for block_id in self.blocks_keys:
             results.extend(self._write_output_for_block(self.job_id, block_id))
         for loss_poe in conditional_loss_poes:
-            self.write_loss_map(loss_poe)
+            results.extend(self.write_loss_map(loss_poe))
         return results
 
     return output_writer
@@ -52,12 +52,12 @@ class RiskJobMixin(mixins.Mixin):
         loss_curves = []
         block = job.Block.from_kvs(block_id)
         for point in block.grid(self.region):
-            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_key = risk.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
                 site = shapes.Site(asset['lon'], asset['lat'])
                 key = risk.loss_curve_key(
-                        job_id, point.column, point.row, asset["AssetID"])
+                        job_id, point.row, point.column, asset["AssetID"])
                 loss_curve = shapes.Curve.from_json(kvs.get(key))
                 loss_curves.append((site, loss_curve))
 
@@ -71,27 +71,32 @@ class RiskJobMixin(mixins.Mixin):
         
         #output_generator = output.SimpleOutput()
         #output_generator.serialize(ratio_results)
-        conditional_loss_poes = [float(x) for x in self.params.get(
-                'CONDITIONAL_LOSS_POE', "0.01").split()]
     
     def write_loss_map(self, loss_poe):
         """ Iterates through all the assets and maps losses at loss_poe """
+        decoder = json.JSONDecoder()
         # Make a special grid at a higher resolution
         risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
         filename = "%s-losses_at-%s.tiff" % (
             self.id, loss_poe)
         path = os.path.join(self.base_path, filename) 
-        output_generator = geotiff.GeoTiffFile(path, risk_grid)
+        output_generator = geotiff.GeoTiffFile(path, risk_grid, 
+                init_value=0.0, normalize=True)
         for point in self.region.grid:
-            asset_key = risk.asset_key(self.id, point.column, point.row)
+            asset_key = risk.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
-                key = risk.loss_key(self.id, point.row, point.col, 
-                        asset["ASSET_ID"], loss_poe)
+                key = risk.loss_key(self.id, point.row, point.column, 
+                        asset["AssetID"], loss_poe)
                 loss = kvs.get(key)
-                risk_site = shapes.Site(asset['lon'], asset['lat'])
-                risk_point = risk_grid.point_at(risk_site)
-                output_generator.write((risk_point.row, risk_point.column), loss)
+                if loss:
+                    loss = float(loss)
+                    risk_site = shapes.Site(asset['lon'], asset['lat'])
+                    risk_point = risk_grid.point_at(risk_site)
+                    output_generator.write(
+                            (risk_point.row, risk_point.column), loss)
         output_generator.close()
+        return [path]
+
 
 mixins.Mixin.register("Risk", RiskJobMixin, order=2)
