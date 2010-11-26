@@ -63,6 +63,8 @@ def jvm(max_mem=4000):
             "-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
             # "-Dlog4j.debug",
             "-Dlog4j.configuration=log4j.properties",
+            "-Dlog4j.rootLogger=%s, A1" % (FLAGS.debug.upper()),
+            # "-Dlog4j.rootLogger=DEBUG, A1",
             "-Xmx%sM" % max_mem)
         
         if FLAGS.capture_java_debug:
