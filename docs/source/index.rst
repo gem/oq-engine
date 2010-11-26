@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to OpenQuake's documentation!
-===================================
+=====================================
 
 Contents:
 
@@ -12,13 +12,24 @@ Contents:
    :maxdepth: 2
    
    architecture
-   output
+   converter
+   flags
    formats
    hazard
+   java
    job
    jobber
+   logs
+   output
+   producer
    risk
    schema
+   seismicsources
+   tasks
+   urls
+   utils
+   writer
+   xml
 
 Indices and tables
 ==================
