@@ -25,12 +25,14 @@ scripts.extend(
 scripts.append('celeryconfig.py')
 
 libs = []
-lib_srcs = ('lib','dist')
-for lib_src in lib_srcs:
-    for x in os.listdir(lib_src):
-        if x[-4:] == '.jar':
-            libs.append("%s/%s" % (lib_src, x))
+for x in os.listdir('lib'):
+    if x[-4:] == '.jar':
+        libs.append("lib/%s" % x))
 
+dist = []
+for x in os.listdir('dist'):
+    if x[-4:] == '.jar':
+        libs.append("dist/%s" % x))
         
 with os.popen("which gfortran") as gf:
     if not gf:
@@ -48,7 +50,7 @@ setup(name='openquake',
                 'openquake.risk', 'openquake.risk.job',
                 'openquake.seismicsources'],
       data_files=[('/etc/openquake', ['celeryconfig.py']),
-                  ('lib', libs),],
+                  ('lib', libs),('dist', dist)],
       scripts=scripts,
       install_requires=["pyyaml", "shapely", "python-gflags", "pylibmc==0.9.2",
                         "lxml", "sphinx", "eventlet", "guppy", "libLAS",
