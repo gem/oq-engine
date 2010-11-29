@@ -347,5 +347,5 @@ class OutputTestCase(unittest.TestCase):
         return row_idx * col_idx / (4.0 * 9.0)
 
     def _colorscale_cuts_fill(self, row_idx, col_idx):
-        """if used with asymmetic region, return value range -1..4"""
-        return ((row_idx + 1) * (col_idx + 1) / 10.0 ) - 1.0
+        """if used with asymmetic region, return value range -1..2.6"""
+        return (row_idx * col_idx / 10.0 ) - 1.0
