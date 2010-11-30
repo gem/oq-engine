@@ -88,8 +88,7 @@ class RiskJobMixin(mixins.Mixin):
         decoder = json.JSONDecoder()
         # Make a special grid at a higher resolution
         risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
-        filename = "%s-losses_at-%s.tiff" % (
-            self.id, loss_poe)
+        filename = "losses_at-%s.tiff" % (loss_poe)
         path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename) 
         output_generator = geotiff.GeoTiffFile(path, risk_grid, 
                 init_value=0.0, normalize=True)
