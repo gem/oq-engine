@@ -32,7 +32,7 @@ for x in os.listdir('lib'):
 dist = []
 for x in os.listdir('dist'):
     if x[-4:] == '.jar':
-        libs.append("dist/%s" % x)
+        dist.append("dist/%s" % x)
         
 with os.popen("which gfortran") as gf:
     if not gf:

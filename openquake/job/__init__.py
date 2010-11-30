@@ -77,10 +77,10 @@ class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     __default_configs = [os.path.join(os.path.dirname(__file__),
-                            "../", "default.cfg"), #package
-                         "opengem.cfg",        # Sane Defaults
-                         "/etc/opengem.cfg",   # Site level configs
-                         "~/.opengem.cfg"]     # Are we running as a user?
+                            "../", "default.gem"), #package
+                         "opengem.gem",        # Sane Defaults
+                         "/etc/opengem.gem",   # Site level configs
+                         "~/.opengem.gem"]     # Are we running as a user?
 
     @staticmethod
     def from_kvs(job_id):
@@ -92,16 +92,17 @@ class Job(object):
     @staticmethod
     def from_file(config_file):
         """ Create a job from external configuration files. """
-        
+        config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file)) 
         
-        base_path = os.path.dirname(config_file)
+        base_path = os.path.abspath(os.path.dirname(config_file))
         params = {}
-        for config_file in Job.__default_configs + [config_file]:
-            params.update(parse_config_file(config_file))
-
+        for each_config_file in Job.__default_configs + [config_file]:
+            params.update(parse_config_file(each_config_file))
+        params['BASE_PATH'] = base_path
         job = Job(params, base_path=base_path)
-        job.config_file = config_file #pylint: disable-msg=W0201
+        job.config_file = config_file               #pylint: disable-msg=W0201
+        # job.config_file = job.super_config_path   #pylint: disable-msg=W0201
         return job
 
     def __init__(self, params, job_id=None, base_path=None):
