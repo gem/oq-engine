@@ -50,6 +50,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         other files.
     
         config_file should be an absolute path."""
+        print "Store source model from %s" % (config_file)
         engine = java.jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
         engine.sampleAndSaveERFTree(self.cache, key, seed)
