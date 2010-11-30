@@ -9,7 +9,7 @@ HTML_TEMPLATE_GREENRED = """<!DOCTYPE html PUBLIC
 </head>
 <body>
 <center>
-<embed width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT" 
+<img width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT" 
     src="PLACEHOLDER_IMAGE_NAME" type="image/tiff" negative="yes"/>
 <br/>
 <table cellspacing="0" border="1" width="20%">
