@@ -88,61 +88,32 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
             loss_ratios, loss_ratios_range), ground_motion_field["TSES"]),
             ground_motion_field["TimeSpan"])
 
+    return _generate_loss_ratio_curve(loss_ratios_range, probs_of_exceedance)
+
+
+def _generate_loss_ratio_curve(loss_ratios, probs_of_exceedance):
+    """Generate a loss ratio curve, given a set of loss ratios
+    and corresponding probabilities of exceedance. This function
+    is intended to be used internally."""
+
     data = []
-    for idx in xrange(len(loss_ratios_range) - 1):
-        mean_loss_ratios = (loss_ratios_range[idx] + \
-                loss_ratios_range[idx + 1]) / 2
+    for idx in xrange(len(loss_ratios) - 1):
+        mean_loss_ratios = (loss_ratios[idx] + \
+                loss_ratios[idx + 1]) / 2
         data.append((mean_loss_ratios, probs_of_exceedance[idx]))
-    
+
     return shapes.Curve(data)
 
 
 # TODO (ac): Test with pre computed data!
 def compute_loss_ratio_curve_from_aggregate(aggregate_hist, tses, time_span):
+    """Compute a loss ratio curve from an aggregate histogram."""
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(aggregate_hist.compute(),
             tses), time_span)
 
-# TODO (ac): Duplicated from compute_loss_ratio_curve, can be extracted
-    data = []
-    for idx in xrange(len(aggregate_hist.bins) - 1):
-        mean_loss_ratios = (aggregate_hist.bins[idx] + \
-                aggregate_hist.bins[idx + 1]) / 2
-        data.append((mean_loss_ratios, probs_of_exceedance[idx]))
+    return _generate_loss_ratio_curve(aggregate_hist.bins, probs_of_exceedance)
 
-    return shapes.Curve(data)
-
-
-def compute_conditional_loss(loss_curve, probability):
-    """Returns the loss corresponding to the given probability of exceedance.
-    
-    This function returns zero if the probability of exceedance if out of bounds.
-    The same applies for loss ratio curves.
-
-    """
-
-    probabilities = list(loss_curve.ordinates)
-    probabilities.sort(reverse=True)
-    
-    # the probability we want to use is out of bounds
-    if probability > probabilities[0] or probability < probabilities[-1]:
-        return 0.0
-    
-    # find the upper bound
-    for index in range(len(probabilities)):
-        if probabilities[index] > probability:
-            upper_bound = index
-    
-    lower_bound = upper_bound + 1
-    
-    # For more information about the math, check the scientific
-    # model at <http://to_be_defined> (LRM chapter)
-    x = probabilities[lower_bound] - probability
-    x *= loss_curve.abscissa_for(probabilities[upper_bound])       
-    y = (probability - probabilities[upper_bound]) * \
-            loss_curve.abscissa_for(probabilities[lower_bound])
-    
-    return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
 
 class AggregateHistogram(object):
     """This class computes an aggregate histogram."""
@@ -156,6 +127,7 @@ class AggregateHistogram(object):
 
     @property
     def bins(self):
+        """Return the bins defined for this histogram."""
         return linspace(self.min, self.max, self.number_of_bins)
 
 # TODO (ac): Not tested yet, need pre computed test data!
