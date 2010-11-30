@@ -186,6 +186,7 @@ class GMFGeoTiffFile(GeoTiffFile):
         # NOTE(fab): doing continuous color scale first
 
         # condense desired value range from IML list to interval 0..1
+        # (because color map segments are given on the interval 0..1)
         self.raster = (self.raster - self.iml_list[0]) / (
             self.iml_list[-1] - self.iml_list[0])
 
