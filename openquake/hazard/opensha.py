@@ -141,9 +141,8 @@ class MonteCarloMixin: # pylint: disable=W0232
                 path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                         "gmf-%s-%s.tiff" % (str(event_set.replace("!", "_")),
                                             str(rupture.replace("!", "_"))))
-                gwriter = geotiff.GeoTiffFile(path, image_grid, 
+                gwriter = geotiff.GMFGeoTiffFile(path, image_grid, 
                         init_value=0.0, normalize=True)
-                
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
@@ -151,6 +150,8 @@ class MonteCarloMixin: # pylint: disable=W0232
                     LOG.debug("Writing GMF %s by %s" % (point.row, point.column))
                     gwriter.write((point.row, point.column), 
                         math.exp(float(site['mag'])))
+
+                # LOG.debug("GMF: %s" % (gwriter.raster))
                 gwriter.close()
                 files.append(path)
         return files
