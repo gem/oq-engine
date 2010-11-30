@@ -41,6 +41,8 @@ GEOTIFF_FILENAME_WITHOUT_NUMBER = "test.smallregion.tiff"
 GEOTIFF_FILENAME_WITH_NUMBER = "test.smallregion.1.tiff"
 GEOTIFF_FILENAME_SQUARE_REGION = "test.squareregion.tiff"
 GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION = "test.asymmetric.region.tiff"
+GEOTIFF_FILENAME_COLORSCALE = "test.colorscale.tiff"
+GEOTIFF_FILENAME_COLORSCALE_CUTS = "test.colorscale-cuts.tiff"
 
 HAZARDCURVE_PLOT_SIMPLE_FILENAME = "hazard-curves-simple.svg"
 
@@ -59,6 +61,34 @@ GEOTIFF_TEST_PIXEL_VALUE = 1.0
 
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
+
+    def test_geotiff_generation_colorscale_cuts(self):
+        """Check RGB geotiff generation with colorscale for GMF."""
+        path = test.test_file(GEOTIFF_FILENAME_COLORSCALE_CUTS)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid)
+
+        reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                        asymmetric_region.grid.columns),
+                                       dtype=numpy.float)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+            self._colorscale_cuts_fill)
+        gwriter.close()
+
+    def test_geotiff_generation_colorscale(self):
+        """Check RGB geotiff generation with colorscale for GMF."""
+        path = test.test_file(GEOTIFF_FILENAME_COLORSCALE)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid)
+
+        reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                        asymmetric_region.grid.columns),
+                                       dtype=numpy.float)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+            self._colorscale_fill)
+        gwriter.close()
 
     def test_loss_ratio_curve_plot_generation_multiple_sites(self):
         """Create SVG plots for loss ratio curves read from an NRML file. The
@@ -311,3 +341,11 @@ class OutputTestCase(unittest.TestCase):
 
     def _trivial_fill(self, row_idx, col_idx):
         return float((row_idx + 1) * (col_idx + 1))
+
+    def _colorscale_fill(self, row_idx, col_idx):
+        """if used with asymmetic region, return value range 0..2"""
+        return row_idx * col_idx / (4.0 * 9.0)
+
+    def _colorscale_cuts_fill(self, row_idx, col_idx):
+        """if used with asymmetic region, return value range -1..2.6"""
+        return (row_idx * col_idx / 10.0 ) - 1.0
