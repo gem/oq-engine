@@ -370,19 +370,20 @@ class FieldSet(object):
         for field in self.fields.values():
             yield Field.from_dict(field, grid=self.grid)
 
+
 class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
 
-    @classmethod
-    def from_json(cls, json_str):
+    @staticmethod
+    def from_json(json_str):
         """Construct a curve from a serialized version in
         json format."""
         as_dict = json.JSONDecoder().decode(json_str)
         return Curve.from_dict(as_dict)
 
-    @classmethod
-    def from_dict(cls, values):
+    @staticmethod
+    def from_dict(values):
         """Construct a curve from a dictionary.
         
         The dictionary keys can be unordered and can be
@@ -479,20 +480,27 @@ class Curve(object):
         return interp1d(self.x_values, y_values)(x_value)
 
     def abscissa_for(self, y_value):
-        """Return the x value corresponding to the given y value.
-        
-        This method only works if this curve is strictly monotonic on the given
-        abscissa values.
+        """Return the x value corresponding to the given y value."""
 
-        """
         y_values = self.y_values
-        
+
         if self.y_values.ndim > 1:
-            #  does not support indexing yet
+            # does not support indexing yet
             y_values = self.y_values[:, 0]
+
+        data = []
+        # inverting the function
+        for x_value in self.abscissae:
+            data.append((self.ordinate_for(x_value), x_value))
         
-        index = numpy.where(y_values==y_value)[0][0]
-        return self.x_values[index]
+        return Curve(data).ordinate_for(y_value)
+
+    def ordinate_out_of_bounds(self, y_value):
+        """Check if the given value is outside the codomain boundaries."""
+        ordinates = list(self.ordinates)
+        ordinates.sort()
+        
+        return y_value < ordinates[0] or y_value > ordinates[-1]
 
     def to_json(self):
         """Serialize this curve in json format."""
