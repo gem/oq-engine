@@ -32,6 +32,8 @@ TIFF_BAND = 4
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
 
+SCALE_UP = 8
+
 class GeoTiffFile(writer.FileWriter):
     """Rough implementation of the GeoTiff format,
     based on http://adventuresindevelopment.blogspot.com/2008/12/
@@ -190,8 +192,8 @@ class GMFGeoTiffFile(GeoTiffFile):
 
         # replace placeholders in HTML template with filename, height, width
         html_string = template.generate_html(os.path.basename(self.path), 
-                                             str(self.target.RasterXSize),
-                                             str(self.target.RasterYSize))
+                                             str(self.target.RasterXSize * SCALE_UP),
+                                             str(self.target.RasterYSize * SCALE_UP))
 
         with open(html_path, 'w') as f:
             f.write(html_string)
