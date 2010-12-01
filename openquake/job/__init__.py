@@ -168,7 +168,9 @@ class Job(object):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
         """
-        
+        output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
         results = []
         self._partition()
         for (key, mixin) in Mixin.ordered_mixins():
