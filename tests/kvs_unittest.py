@@ -3,7 +3,6 @@
 
 import os
 import time
-import pylibmc
 import unittest
 
 from openquake import hazard
