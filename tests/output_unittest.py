@@ -43,6 +43,8 @@ GEOTIFF_FILENAME_SQUARE_REGION = "test.squareregion.tiff"
 GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION = "test.asymmetric.region.tiff"
 GEOTIFF_FILENAME_COLORSCALE = "test.colorscale.tiff"
 GEOTIFF_FILENAME_COLORSCALE_CUTS = "test.colorscale-cuts.tiff"
+GEOTIFF_FILENAME_EXPLICIT_COLORSCALE_BINS = "test.colorscale-bins.tiff"
+GEOTIFF_FILENAME_NONDEFAULT_COLORSCALE = "test.colorscale-nondefault.tiff"
 
 HAZARDCURVE_PLOT_SIMPLE_FILENAME = "hazard-curves-simple.svg"
 
@@ -61,6 +63,44 @@ GEOTIFF_TEST_PIXEL_VALUE = 1.0
 
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
+
+    def test_geotiff_generation_nondefault_colorscale(self):
+        """Check RGB geotiff generation with colorscale for GMF. Use
+        alternative colorscale."""
+        path = test.test_file(GEOTIFF_FILENAME_NONDEFAULT_COLORSCALE)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
+            iml_list=None, colormap='gmt-green-red')
+
+        reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                        asymmetric_region.grid.columns),
+                                       dtype=numpy.float)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+            self._colorscale_cuts_fill)
+        gwriter.close()
+
+    def test_geotiff_generation_explicit_colorscale_bins(self):
+        """Check RGB geotiff generation with colorscale for GMF. Limits 
+        and bins of colorscale are explicitly given."""
+        path = test.test_file(GEOTIFF_FILENAME_EXPLICIT_COLORSCALE_BINS)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+
+        for test_number, test_list in enumerate(([0.9, 0.95, 1.0, 1.05], 
+                                                 None)):
+        
+            curr_path = "%s.%s.tiff" % (path[0:-5], test_number)
+            gwriter = geotiff.GMFGeoTiffFile(curr_path, asymmetric_region.grid,
+                iml_list=test_list)
+
+            reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                            asymmetric_region.grid.columns),
+                                           dtype=numpy.float)
+            self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+                self._colorscale_cuts_fill)
+            gwriter.close()
 
     def test_geotiff_generation_colorscale_cuts(self):
         """Check RGB geotiff generation with colorscale for GMF."""
@@ -343,9 +383,10 @@ class OutputTestCase(unittest.TestCase):
         return float((row_idx + 1) * (col_idx + 1))
 
     def _colorscale_fill(self, row_idx, col_idx):
-        """if used with asymmetic region, return value range 0..2"""
-        return row_idx * col_idx / (4.0 * 9.0)
+        """if used with asymmetic large region, return value range 0..2"""
+        return row_idx * col_idx / (5.0 * 10.0 * 100.0)
 
     def _colorscale_cuts_fill(self, row_idx, col_idx):
-        """if used with asymmetic region, return value range -1..2.6"""
-        return (row_idx * col_idx / 10.0 ) - 1.0
+        """if used with asymmetic large region, return value 
+        range -1..4"""
+        return (row_idx * col_idx / (10.0 * 100.0)) - 1.0
