@@ -1,5 +1,3 @@
-
-from classical_psha_based_unittest import *
 from converter_unittest import *
 from geo_unittest import *
 from hazard_nrml_unittest import *
