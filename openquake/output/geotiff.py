@@ -188,12 +188,16 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.iml_step = None
 
         # set image rasters
-        # NOTE(fab): in write() method of base class, alpha raster is set
-        # to 255 (fully opaque) for raster points that have values
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
         self.raster_g = numpy.zeros_like(self.raster_r)
         self.raster_b = numpy.zeros_like(self.raster_r)
+
+    def write(self, cell, value):
+        """This method is redefined, because the one from the base class
+        sets transparency to a high level for zero values. For GMF plots,
+        we want fully opaque images."""
+        self.raster[int(cell[0]), int(cell[1])] = float(value)
 
     def _normalize(self):
         """ Normalize the raster matrix """
@@ -233,8 +237,8 @@ class GMFGeoTiffFile(GeoTiffFile):
         self.target.GetRasterBand(2).WriteArray(self.raster_g)
         self.target.GetRasterBand(3).WriteArray(self.raster_b)
 
-        # Write alpha channel
-        self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
+        # set alpha channel to fully opaque
+        self.target.GetRasterBand(4).Fill(255)
 
         # write wrapper before closing file, so that raster dimensions are
         # still accessible
