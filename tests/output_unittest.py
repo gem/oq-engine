@@ -70,7 +70,7 @@ class OutputTestCase(unittest.TestCase):
 
     def test_geotiff_generation_discrete_colorscale_custom_bins(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
-        multisegment colorscale."""
+        discrete colorscale based on IML values, with custom IML."""
         path = test.test_output_file(
             GEOTIFF_FILENAME_DISCRETE_CUSTOMBIN_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
@@ -92,7 +92,7 @@ class OutputTestCase(unittest.TestCase):
 
     def test_geotiff_generation_discrete_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
-        multisegment colorscale."""
+        discrete colorscale based on IML values, with default IML."""
         path = test.test_output_file(GEOTIFF_FILENAME_DISCRETE_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
