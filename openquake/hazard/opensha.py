@@ -129,8 +129,11 @@ class MonteCarloMixin: # pylint: disable=W0232
     def write_gmf_files(self, ses):
         """Generate a GeoTiff file for each GMF."""
         image_grid = self.region.grid
+        iml_list = map(float, 
+            self.params['INTENSITY_MEASURE_LEVELS'].split(","))
         print "Generating GMF image, grid is %s col by %s rows" % (
                 image_grid.columns, image_grid.rows)
+        LOG.debug("IML: %s" % (iml_list))
         files = []
         for event_set in ses:
             for rupture in ses[event_set]:
@@ -142,7 +145,8 @@ class MonteCarloMixin: # pylint: disable=W0232
                         "gmf-%s-%s.tiff" % (str(event_set.replace("!", "_")),
                                             str(rupture.replace("!", "_"))))
                 gwriter = geotiff.GMFGeoTiffFile(path, image_grid, 
-                        init_value=0.0, normalize=True)
+                    init_value=0.0, normalize=True, iml_list=iml_list,
+                    discrete=True)
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
