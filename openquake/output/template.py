@@ -1,90 +1,31 @@
 # -*- coding: utf-8 -*-
 """HTML template to embed geotiffs of GMF maps."""
 
-HTML_TEMPLATE_GREENRED = """<!DOCTYPE html PUBLIC 
+HTML_TEMPLATE_HEADER = """<!DOCTYPE html PUBLIC 
     "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<title>GMF</title>
+<title>PLACEHOLDER_TITLE</title>
 </head>
 <body>
 <center>
+"""
+
+HTML_TEMPLATE_IMAGE = """
 <img width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT" 
     src="PLACEHOLDER_IMAGE_NAME" type="image/tiff" negative="yes"/>
+"""
+
+HTML_TEMPLATE_TABLE_START = """
 <br/>
 <table cellspacing="0" border="1" width="20%">
 <tr>
 <th width="10%">Color</th>
-<th width="10%">PGA/g</th>
+<th width="10%">PLACEHOLDER_IMT</th>
 </tr>
-<tr>
-<td bgcolor="#00FF00">&nbsp;</td>
-<td>0.0</td>
-</tr>
-<tr>
-<td bgcolor="#0FF00">&nbsp;</td>
-<td>0.125</td>
-</tr>
-<tr>
-<td bgcolor="#1FE000">&nbsp;</td>
-<td>0.25</td>
-</tr>
-<tr>
-<td bgcolor="#2FD000">&nbsp;</td>
-<td>0.375</td>
-</tr>
-<tr>
-<td bgcolor="#3FC000">&nbsp;</td>
-<td>0.5</td>
-</tr>
-<tr>
-<td bgcolor="#4FB000">&nbsp;</td>
-<td>0.625</td>
-</tr>
-<tr>
-<td bgcolor="#5FA000">&nbsp;</td>
-<td>0.75</td>
-</tr>
-<tr>
-<td bgcolor="#6F9000">&nbsp;</td>
-<td>0.875</td>
-</tr>
-<tr>
-<td bgcolor="#7F8000">&nbsp;</td>
-<td>1.0</td>
-</tr>
-<tr>
-<td bgcolor="#8F7000">&nbsp;</td>
-<td>1.125</td>
-</tr>
-<tr>
-<td bgcolor="#9F6000">&nbsp;</td>
-<td>1.25</td>
-</tr>
-<tr>
-<td bgcolor="#AF5000">&nbsp;</td>
-<td>1.375</td>
-</tr>
-<tr>
-<td bgcolor="#BF4000">&nbsp;</td>
-<td>1.5</td>
-</tr>
-<tr>
-<td bgcolor="#CF3000">&nbsp;</td>
-<td>1.625</td>
-</tr>
-<tr>
-<td bgcolor="#DF2000">&nbsp;</td>
-<td>1.75</td>
-</tr>
-<tr>
-<td bgcolor="#EF1000">&nbsp;</td>
-<td>1.875</td>
-</tr>
-<tr>
-<td bgcolor="#FF0000">&nbsp;</td>
-<td>2.0</td>
-</tr>
+"""
+
+HTML_TEMPLATE_FOOTER = """
 </table>
 <br/>
 </center>
@@ -92,11 +33,37 @@ HTML_TEMPLATE_GREENRED = """<!DOCTYPE html PUBLIC
 </html>
 """
 
-def generate_html(path, width="", height=""):
-    curr_html = HTML_TEMPLATE_GREENRED
-    for (token, new_value) in (
-        ('PLACEHOLDER_IMAGE_NAME', path), ('PLACEHOLDER_WIDTH', width),
-        ('PLACEHOLDER_HEIGHT', height)):
-        curr_html = curr_html.replace(token, new_value)
-    return curr_html
+HTML_TEMPLATE_TABLE_ROW = """
+<tr>
+<td bgcolor="PLACEHOLDER_COLOR_HEX_CODE">&nbsp;</td>
+<td>PLACEHOLDER_IML_VALUE</td>
+</tr>
+"""
+
+def generate_html(path, width="", height="", colorscale=None, imt='PGA/g',
+                  title=""):
+
+    curr_html = HTML_TEMPLATE_HEADER
+    header_html = curr_html.replace('PLACEHOLDER_TITLE', title)
+
+    curr_html = HTML_TEMPLATE_IMAGE
+    curr_html = curr_html.replace('PLACEHOLDER_IMAGE_NAME', path)
+    curr_html = curr_html.replace('PLACEHOLDER_WIDTH', width)
+    curr_html = curr_html.replace('PLACEHOLDER_HEIGHT', height)
+    image_html = curr_html
+
+    curr_html = HTML_TEMPLATE_TABLE_START 
+    table_start_html = curr_html.replace('PLACEHOLDER_IMT', imt)
+
+    table_body_html = '' 
+    for curr_color in colorscale:
+        curr_row_html = HTML_TEMPLATE_TABLE_ROW
+        curr_row_html = curr_row_html.replace('PLACEHOLDER_COLOR_HEX_CODE', 
+                                              curr_color[0])
+        curr_row_html = curr_row_html.replace('PLACEHOLDER_IML_VALUE', 
+                                              curr_color[1])
+        table_body_html += curr_row_html
+
+    return ''.join((header_html, image_html, table_start_html, 
+                    table_body_html, HTML_TEMPLATE_FOOTER))
     
