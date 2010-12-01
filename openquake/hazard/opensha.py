@@ -131,8 +131,8 @@ class MonteCarloMixin: # pylint: disable=W0232
         image_grid = self.region.grid
         iml_list = map(float, 
             self.params['INTENSITY_MEASURE_LEVELS'].split(","))
-        print "Generating GMF image, grid is %s col by %s rows" % (
-                image_grid.columns, image_grid.rows)
+        LOG.debug("Generating GMF image, grid is %s col by %s rows" % (
+                image_grid.columns, image_grid.rows))
         LOG.debug("IML: %s" % (iml_list))
         files = []
         for event_set in ses:
@@ -151,13 +151,12 @@ class MonteCarloMixin: # pylint: disable=W0232
                     site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
-                    LOG.debug("Writing GMF %s by %s" % (point.row, point.column))
                     gwriter.write((point.row, point.column), 
                         math.exp(float(site['mag'])))
 
-                # LOG.debug("GMF: %s" % (gwriter.raster))
                 gwriter.close()
                 files.append(path)
+                files.append(gwriter.html_path)
         return files
         
     def generate_erf(self):
