@@ -28,13 +28,13 @@ from openquake.output import curve
 # N-S direction is rows, W-E direction is columns of the underlying
 # numpy array
 
-# 10x5 (numpy array: 5x10) test region
+# 11x6 px (numpy array: 6x11) test region
 TEST_REGION_SMALL = [(0.0, 0.0), (1.0, 0.0), (1.0, 0.5), (0.0, 0.5)]
 
-# 10x10 test region
+# 11x11 px test region
 TEST_REGION_SQUARE = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
 
-# 100x50 (numpy array: 50x100) test region
+# 101x51 px (numpy array: 51x101) test region
 TEST_REGION_LARGE_ASYMMETRIC = [(0.0, 0.0), (10.0, 0.0), (10.0, 5.0), (0.0, 5.0)]
 
 GEOTIFF_FILENAME_WITHOUT_NUMBER = "test.smallregion.tiff"
@@ -46,6 +46,9 @@ GEOTIFF_FILENAME_COLORSCALE_CUTS = "test.colorscale-cuts.tiff"
 GEOTIFF_FILENAME_EXPLICIT_COLORSCALE_BINS = "test.colorscale-bins.tiff"
 GEOTIFF_FILENAME_NONDEFAULT_COLORSCALE = "test.colorscale-nondefault.tiff"
 GEOTIFF_FILENAME_MULTISEGMENT_COLORSCALE = "test.colorscale-multisegment.tiff"
+GEOTIFF_FILENAME_DISCRETE_COLORSCALE = "test.colorscale-discrete.tiff"
+GEOTIFF_FILENAME_DISCRETE_CUSTOMBIN_COLORSCALE = \
+    "test.colorscale-discrete-custombins.tiff"
 
 HAZARDCURVE_PLOT_SIMPLE_FILENAME = "hazard-curves-simple.svg"
 
@@ -65,6 +68,45 @@ GEOTIFF_TEST_PIXEL_VALUE = 1.0
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
 
+    def test_geotiff_generation_discrete_colorscale_custom_bins(self):
+        """Check RGB geotiff generation with colorscale for GMF. Use
+        multisegment colorscale."""
+        path = test.test_output_file(
+            GEOTIFF_FILENAME_DISCRETE_CUSTOMBIN_COLORSCALE)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+
+        iml_list = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 
+                    0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 
+                    0.556, 0.778, 1.09, 1.52, 2.13]
+
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
+            iml_list=iml_list, discrete=True, colormap='matlab-polar')
+
+        reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                        asymmetric_region.grid.columns),
+                                       dtype=numpy.float)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+            self._colorscale_cuts_fill)
+        gwriter.close()
+
+    def test_geotiff_generation_discrete_colorscale(self):
+        """Check RGB geotiff generation with colorscale for GMF. Use
+        multisegment colorscale."""
+        path = test.test_output_file(GEOTIFF_FILENAME_DISCRETE_COLORSCALE)
+        asymmetric_region = shapes.Region.from_coordinates(
+            TEST_REGION_LARGE_ASYMMETRIC)
+
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
+            iml_list=None, discrete=True, colormap='gmt-seis')
+
+        reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
+                                        asymmetric_region.grid.columns),
+                                       dtype=numpy.float)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+            self._colorscale_cuts_fill)
+        gwriter.close()
+
     def test_geotiff_generation_multisegment_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
         multisegment colorscale."""
@@ -73,7 +115,7 @@ class OutputTestCase(unittest.TestCase):
             TEST_REGION_LARGE_ASYMMETRIC)
 
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, colormap='gmt-seis')
+            iml_list=None, discrete=False, colormap='gmt-seis')
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                         asymmetric_region.grid.columns),
@@ -90,7 +132,7 @@ class OutputTestCase(unittest.TestCase):
             TEST_REGION_LARGE_ASYMMETRIC)
 
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, colormap='gmt-green-red')
+            iml_list=None, discrete=False, colormap='gmt-green-red')
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                         asymmetric_region.grid.columns),
@@ -111,7 +153,7 @@ class OutputTestCase(unittest.TestCase):
         
             curr_path = "%s.%s.tiff" % (path[0:-5], test_number)
             gwriter = geotiff.GMFGeoTiffFile(curr_path, asymmetric_region.grid,
-                iml_list=test_list)
+                iml_list=test_list, discrete=False)
 
             reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                             asymmetric_region.grid.columns),
@@ -125,7 +167,8 @@ class OutputTestCase(unittest.TestCase):
         path = test.test_output_file(GEOTIFF_FILENAME_COLORSCALE_CUTS)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
-        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid)
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid, 
+            discrete=False)
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                         asymmetric_region.grid.columns),
@@ -139,7 +182,8 @@ class OutputTestCase(unittest.TestCase):
         path = test.test_output_file(GEOTIFF_FILENAME_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
-        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid)
+        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid, 
+            discrete=False)
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                         asymmetric_region.grid.columns),
