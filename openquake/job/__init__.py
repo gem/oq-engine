@@ -23,6 +23,19 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
 
+def run_job(job_file):
+        a_job = Job.from_file(job_file)
+        # TODO(JMC): Expose a way to set whether jobs should be partitioned
+        results = a_job.launch()
+        if not results:
+            # TODO (ac): Should we print additional details?
+            LOG.critical("The job configuration is inconsistent, "
+                    "aborting computation.")
+        else:
+            for filepath in results:
+                print filepath
+
+
 def parse_config_file(config_file):
     """
     We have a single configuration file which may contain a risk section and
@@ -77,10 +90,10 @@ class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     __default_configs = [os.path.join(os.path.dirname(__file__),
-                            "../", "default.cfg"), #package
-                         "opengem.cfg",        # Sane Defaults
-                         "/etc/opengem.cfg",   # Site level configs
-                         "~/.opengem.cfg"]     # Are we running as a user?
+                            "../", "default.gem"), #package
+                         "opengem.gem",        # Sane Defaults
+                         "/etc/opengem.gem",   # Site level configs
+                         "~/.opengem.gem"]     # Are we running as a user?
 
     @staticmethod
     def from_kvs(job_id):
@@ -92,16 +105,17 @@ class Job(object):
     @staticmethod
     def from_file(config_file):
         """ Create a job from external configuration files. """
-        
+        config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file)) 
         
-        base_path = os.path.dirname(config_file)
+        base_path = os.path.abspath(os.path.dirname(config_file))
         params = {}
-        for config_file in Job.__default_configs + [config_file]:
-            params.update(parse_config_file(config_file))
-
+        for each_config_file in Job.__default_configs + [config_file]:
+            params.update(parse_config_file(each_config_file))
+        params['BASE_PATH'] = base_path
         job = Job(params, base_path=base_path)
-        job.config_file = config_file #pylint: disable-msg=W0201
+        job.config_file = config_file               #pylint: disable-msg=W0201
+        # job.config_file = job.super_config_path   #pylint: disable-msg=W0201
         return job
 
     def __init__(self, params, job_id=None, base_path=None):
