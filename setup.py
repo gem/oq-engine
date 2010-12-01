@@ -25,14 +25,16 @@ scripts.extend(
 scripts.append('celeryconfig.py')
 
 libs = []
-for x in os.listdir('lib'):
-    if x[-4:] == '.jar':
-        libs.append("lib/%s" % x)
+if os.path.exists('lib'):
+    for x in os.listdir('lib'):
+        if x[-4:] == '.jar':
+            libs.append("lib/%s" % x)
 
 dist = []
-for x in os.listdir('dist'):
-    if x[-4:] == '.jar':
-        dist.append("dist/%s" % x)
+if os.path.exists('dist'):
+    for x in os.listdir('dist'):
+        if x[-4:] == '.jar':
+            dist.append("dist/%s" % x)
         
 with os.popen("which gfortran") as gf:
     if not gf:
