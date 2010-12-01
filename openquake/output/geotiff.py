@@ -174,8 +174,6 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.color_buckets = len(iml_list) - 1
             self.iml_step = None
 
-        print self.iml_list
-
         # set image rasters (RGB and alpha)
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
@@ -191,7 +189,7 @@ class GMFGeoTiffFile(GeoTiffFile):
         # (because color map segments are given on the interval 0..1)
         self.raster = (self.raster - self.iml_list[0]) / (
             self.iml_list[-1] - self.iml_list[0])
-
+        
         # cut values to 0.0-0.1 range (remove outliers)
         numpy.putmask(self.raster, self.raster < 0.0, 0.0)
         numpy.putmask(self.raster, self.raster > 1.0, 1.0)
@@ -202,7 +200,7 @@ class GMFGeoTiffFile(GeoTiffFile):
         # no need to set transparency to 32 here, make image opaque
         # NOTE(fab): write method of parent class sets transparency 
         # to 255 if value is present
-        self.alpha_raster[:] = 0
+        self.alpha_raster[:] = 255
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
@@ -222,21 +220,23 @@ class GMFGeoTiffFile(GeoTiffFile):
 
         self.target = None  # This is required to flush the file
         self.finished.send(True)
+    
+    @property
+    def html_path(self):
+        """Path to the generated html file"""
+        if self.path.endswith(('tiff', 'TIFF')):
+            return ''.join((self.path[0:-4], 'html'))
+        else:
+            return ''.join((self.path, '.html'))       
 
     def _write_html_wrapper(self):
         """write an html wrapper that <embed>s the geotiff."""
-
-        if self.path.endswith(('tiff', 'TIFF')):
-            html_path = ''.join((self.path[0:-4], 'html'))
-        else:
-            html_path = ''.join((self.path, '.html'))
-
         # replace placeholders in HTML template with filename, height, width
         html_string = template.generate_html(os.path.basename(self.path), 
                                              str(self.target.RasterXSize * SCALE_UP),
                                              str(self.target.RasterYSize * SCALE_UP))
 
-        with open(html_path, 'w') as f:
+        with open(self.html_path, 'w') as f:
             f.write(html_string)
 
 def _rgb_for(fractional_values, colormap):
