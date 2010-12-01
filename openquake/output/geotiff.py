@@ -17,6 +17,8 @@ import numpy
 import os
 
 from osgeo import osr, gdal
+from scipy.interpolate import interp1d
+
 
 from openquake import logs
 from openquake import writer
@@ -32,10 +34,21 @@ TIFF_BAND = 4
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
 
+RGB_SEGMENTS, RGB_RED_BAND, RGB_GREEN_BAND, RGB_BLUE_BAND = range(0, 4)
+
+# these are some continuous colormaps, as found on
+# http://soliton.vm.bytemark.co.uk/pub/cpt-city/index.html
 COLORMAP = {'green-red': numpy.array( 
     ((0.0, 1.0), (0.0, 255.0), (255.0, 0.0), (0.0, 0.0))),
             'gmt-green-red': numpy.array( 
-    ((0.0, 1.0), (0.0, 128.0), (255.0, 0.0), (0.0, 0.0)))
+    ((0.0, 1.0), (0.0, 128.0), (255.0, 0.0), (0.0, 0.0))),
+            'matlab-polar': numpy.array( 
+    ((0.0, 0.5, 1.0), (0, 255, 255), (0, 255, 0), (255, 255, 0))),
+            'gmt-seis': numpy.array( 
+  ((0.0, 0.1115, 0.2225, 0.3335, 0.4445, 0.5555, 0.6665, 0.7775, 0.8885, 1.0),
+     (170, 255, 255, 255, 255, 255, 90, 0, 0, 0), 
+     (0, 0, 85, 170, 255, 255, 255, 240, 80, 0), 
+     (0, 0, 0, 0, 0, 0, 30, 110, 255, 205)))
             }
 
 COLORMAP_DEFAULT = 'green-red'
@@ -174,9 +187,9 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.color_buckets = len(iml_list) - 1
             self.iml_step = None
 
-        print self.iml_list
-
-        # set image rasters (RGB and alpha)
+        # set image rasters
+        # NOTE(fab): alpha raster is set to 255 (fully opaque) for raster
+        # points that have values
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
         self.raster_g = numpy.zeros_like(self.raster_r)
@@ -199,10 +212,6 @@ class GMFGeoTiffFile(GeoTiffFile):
         self.raster_r, self.raster_g, self.raster_b = _rgb_for(
             self.raster, COLORMAP[self.colormap])
 
-        # no need to set transparency to 32 here, make image opaque
-        # NOTE(fab): write method of parent class sets transparency 
-        # to 255 if value is present
-        self.alpha_raster[:] = 0
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
@@ -241,28 +250,22 @@ class GMFGeoTiffFile(GeoTiffFile):
 
 def _rgb_for(fractional_values, colormap):
     """Return a triple (r, g, b) of numpy arrays with R, G, and B 
-    color values between 0
-    and 255, respectively, for a given numpy array fractional_values between
-    0 and 1. colormap is a 2-dim. numpy array with fractional values in the
-    first row, and R, G, B corner values in the second, third, and fourth
-    row, respectively."""
-    return (_interpolate_color(fractional_values, colormap[1]),
-            _interpolate_color(fractional_values, colormap[2]),
-            _interpolate_color(fractional_values, colormap[3]))
+    color values between 0 and 255, respectively, for a given numpy array
+    fractional_values between 0 and 1. 
+    colormap is a 2-dim. numpy array with fractional values describing the 
+    color segments in the first row, and R, G, B corner values in the second,
+    third, and fourth row, respectively."""
+    return (_interpolate_color(fractional_values, colormap, RGB_RED_BAND),
+            _interpolate_color(fractional_values, colormap, RGB_GREEN_BAND),
+            _interpolate_color(fractional_values, colormap, RGB_BLUE_BAND))
 
-def _interpolate_color(fractional_values, color_pair):
-    """Compute/create numpy array of rgb color value between two corner 
-    values. numpy array fractional_values is assumed to hold values 
-    between 0 and 1"""
+def _interpolate_color(fractional_values, colormap, rgb_band):
+    """Compute/create numpy array of rgb color value as interpolated
+    from color map. numpy array fractional_values is assumed to hold values
+    between 0 and 1. rgb_band can be 1,2,3 for red, green, and blue color
+    bands, respectively."""
 
-    color_difference = color_pair[1] - color_pair[0]
+    color_interpolate = interp1d(colormap[RGB_SEGMENTS], colormap[rgb_band])
+    return numpy.reshape(color_interpolate(fractional_values.flatten()), 
+                         fractional_values.shape)
 
-    # NOTE(fab): equality check for floats can be assumed safe here, since
-    # the color values are given in textual representation and not computed
-    if color_difference == 0.0:
-        color_value = numpy.ones_like(fractional_values) * color_pair[0]
-    else:
-        color_value = fractional_values * color_difference + color_pair[0]
-
-    return color_value
-        

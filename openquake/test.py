@@ -23,6 +23,9 @@ flags.DEFINE_boolean('download_test_data', True,
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
 
+OUTPUT_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '../tests/data/output'))
+
 SCHEMA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../docs/schema'))
 
@@ -33,6 +36,9 @@ MAX_WAIT_LOOPS = 10
 
 def test_file(file_name):
     return os.path.join(DATA_DIR, file_name)
+
+def test_output_file(file_name):
+    return os.path.join(OUTPUT_DIR, file_name)
 
 def smoketest_file(file_name):
     return os.path.join(os.path.dirname(__file__), "../smoketests", file_name)
