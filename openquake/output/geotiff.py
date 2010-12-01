@@ -198,8 +198,22 @@ class GMFGeoTiffFile(GeoTiffFile):
     def _normalize(self):
         """ Normalize the raster matrix """
 
-        # condense desired value range from IML list to interval 0..1
-        # (because color map segments are given on the interval 0..1)
+        # for discrete color scale, digitize raster values into 
+        # IML list values
+        if self.discrete is True:
+            index_raster = numpy.digitize(self.raster.flatten(), self.iml_list)
+
+            # fix out-of-bounds values (set to first/last bin)
+            # NOTE(fab): doing so, the upper end of the color scale is 
+            # never reached
+            numpy.putmask(index_raster, index_raster < 1, 1)
+            numpy.putmask(index_raster, index_raster > len(index_raster)-1,
+                len(index_raster)-1)
+            self.raster = numpy.reshape(self.iml_list[index_raster-1], 
+                                        self.raster.shape)
+
+        # condense desired target value range given in IML list to 
+        # interval 0..1 (because color map segments are given in this scale)
         self.raster = (self.raster - self.iml_list[0]) / (
             self.iml_list[-1] - self.iml_list[0])
         
