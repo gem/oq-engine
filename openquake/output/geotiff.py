@@ -39,9 +39,9 @@ RGB_SEGMENTS, RGB_RED_BAND, RGB_GREEN_BAND, RGB_BLUE_BAND = range(0, 4)
 # these are some continuous colormaps, as found on
 # http://soliton.vm.bytemark.co.uk/pub/cpt-city/index.html
 COLORMAP = {'green-red': numpy.array( 
-    ((0.0, 1.0), (0.0, 255.0), (255.0, 0.0), (0.0, 0.0))),
+    ((0.0, 1.0), (0, 255), (255, 0), (0, 0))),
             'gmt-green-red': numpy.array( 
-    ((0.0, 1.0), (0.0, 128.0), (255.0, 0.0), (0.0, 0.0))),
+    ((0.0, 1.0), (0, 128), (255, 0), (0, 0))),
             'matlab-polar': numpy.array( 
     ((0.0, 0.5, 1.0), (0, 255, 255), (0, 255, 0), (255, 255, 0))),
             'gmt-seis': numpy.array( 
@@ -187,6 +187,10 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.color_buckets = len(iml_list) - 1
             self.iml_step = None
 
+        # list with pairs of RGB color hex codes and corresponding
+        # floats as values
+        self.colorscale_values = self._generate_colorscale()
+
         # set image rasters
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
@@ -218,12 +222,8 @@ class GMFGeoTiffFile(GeoTiffFile):
 
         # condense desired target value range given in IML list to 
         # interval 0..1 (because color map segments are given in this scale)
-        self.raster = (self.raster - self.iml_list[0]) / (
-            self.iml_list[-1] - self.iml_list[0])
-        
-        # cut values to 0.0-0.1 range (remove outliers)
-        numpy.putmask(self.raster, self.raster < 0.0, 0.0)
-        numpy.putmask(self.raster, self.raster > 1.0, 1.0)
+        self.raster = self._condense_iml_range_to_unity(
+            self.raster, remove_outliers=True)
 
         self.raster_r, self.raster_g, self.raster_b = _rgb_for(
             self.raster, COLORMAP[self.colormap])
@@ -256,14 +256,45 @@ class GMFGeoTiffFile(GeoTiffFile):
             return ''.join((self.path, '.html'))       
 
     def _write_html_wrapper(self):
-        """write an html wrapper that <embed>s the geotiff."""
+        """Write an html wrapper that embeds the geotiff in an <img> tag.
+        NOTE: this cannot be viewed out-of-the-box in all browsers."""
+
         # replace placeholders in HTML template with filename, height, width
-        html_string = template.generate_html(os.path.basename(self.path), 
-                                             str(self.target.RasterXSize * SCALE_UP),
-                                             str(self.target.RasterYSize * SCALE_UP))
+        # TODO(fab): read IMT from config
+        html_string = template.generate_html(
+            os.path.basename(self.path), 
+            width=str(self.target.RasterXSize * SCALE_UP),
+            height=str(self.target.RasterYSize * SCALE_UP),
+            colorscale=self.colorscale_values,
+            imt='PGA/g')
 
         with open(self.html_path, 'w') as f:
             f.write(html_string)
+
+    def _condense_iml_range_to_unity(self, array, remove_outliers=False):
+        """Requires a one- or multi-dim. numpy array as argument."""
+        array = (array - self.iml_list[0]) / (
+            self.iml_list[-1] - self.iml_list[0])
+
+        if remove_outliers is True:
+            # cut values to 0.0-0.1 range (remove outliers)
+            numpy.putmask(array, array < 0.0, 0.0)
+            numpy.putmask(array, array > 1.0, 1.0)
+
+        return array
+
+    def _generate_colorscale(self):
+        """Generate a list of pairs of corresponding RGB hex values and
+        IML values for the colorscale in HTML output."""
+        colorscale = []
+        r, g, b = _rgb_for(self._condense_iml_range_to_unity(self.iml_list),
+                           COLORMAP[self.colormap])
+
+        for idx, iml_value in enumerate(self.iml_list):
+            colorscale.append(("#%02x%02x%02x" % (int(r[idx]), int(g[idx]), 
+                int(b[idx])), str(self.iml_list[idx])))
+
+        return colorscale
 
 def _rgb_for(fractional_values, colormap):
     """Return a triple (r, g, b) of numpy arrays with R, G, and B 
