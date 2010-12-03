@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+""" Read objects from kvs and translate them into our object model. """
+
 import json
 import math
 from openquake import shapes
@@ -68,12 +70,10 @@ class Reader(object):
                 data["endBranchLabel"] = \
                         decoded_model["endBranchLabels"][set_counter]
                 
-                """
-                Longitude and latitude and stored internally in the Java side
-                in radians. That object (org.opensha.commons.geo.Location) is
-                heavily used in the hazard engine and we don't have unit
-                tests, so I prefer to convert to decimal degrees here.
-                """
+                # Longitude and latitude and stored internally in the Java side
+                # in radians. That object (org.opensha.commons.geo.Location) is
+                # heavily used in the hazard engine and we don't have unit
+                # tests, so I prefer to convert to decimal degrees here.
                 lon = raw_curves["gridNode"][curve_counter]["location"]["lon"]
                 lat = raw_curves["gridNode"][curve_counter]["location"]["lat"]
                 

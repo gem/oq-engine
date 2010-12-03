@@ -1,3 +1,7 @@
+"""
+jpype config stuff for Java NSHMP stuff
+"""
+
 
 import os
 from openquake import logs
@@ -19,6 +23,8 @@ JAVA_MODELS = [(JAVA_NAMESPACE +"NshmpWusFaultData", "WUS/WUSfaults"),
                 ]
 
 def init_paths(base_path, jpype):
+    """ Init the java paths """
+
     for class_name, subdir in JAVA_MODELS:
         path = os.path.abspath("%s/%s" % (base_path, subdir))
         java_class = jpype.JClass(class_name)

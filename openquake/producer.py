@@ -27,6 +27,12 @@ class AttributeConstraint(object):
         self.attribute = attribute
 
     def match(self, compared_attribute):
+        """ Compare self.attribute against the passed in compared_attribute
+        dict. If the compared_attribute dict does not contain all of the 
+        key/value pais from self.attribute, we return false. compared_attribute
+        may have additional key/value pairs.
+        """
+
         for k, v in self.attribute.items():
             if not ( k in compared_attribute and compared_attribute[k] == v ):
                 return False
