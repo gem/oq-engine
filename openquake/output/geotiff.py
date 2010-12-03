@@ -233,8 +233,8 @@ class GMFGeoTiffFile(GeoTiffFile):
         """write an html wrapper that <embed>s the geotiff."""
         # replace placeholders in HTML template with filename, height, width
         html_string = template.generate_html(os.path.basename(self.path), 
-                                             str(self.target.RasterXSize * SCALE_UP),
-                                             str(self.target.RasterYSize * SCALE_UP))
+             str(self.target.RasterXSize * SCALE_UP),
+             str(self.target.RasterYSize * SCALE_UP))
 
         with open(self.html_path, 'w') as f:
             f.write(html_string)

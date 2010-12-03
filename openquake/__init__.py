@@ -8,7 +8,7 @@ For more information, please see the website at http://www.globalquakemodel.org
 This software may be downloaded at http://github.com/gem/openquake
 
 The continuous integration server is at http://openquake.globalquakemodel.org
-Up-to-date sphinx documentation is at http://openquake.globalquakemodel.org/docs/
+Up-to-date sphinx documentation is at http://openquake.globalquakemodel.org/docs
 
 This software is licensed under the LGPL license, for more details 
 please see the LICENSE file.

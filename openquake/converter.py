@@ -1,7 +1,20 @@
+# pylint: disable-all
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 Converter library, takes things and makes other things.
+
+This library is completely bitrotted and needs to be fixed/refactored.
+It should use the openquake.java module instead of the jpype package,
+I'm pretty certain that most of the conversion can be done on the python
+side instead of the Java side so we could possibly get rid of the java
+import altogether.
+
+There's a unit test that is skipped, so we need to also expand that test
+suite.
 """
+
+
+
 
 import os
 
