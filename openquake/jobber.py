@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 Main jobber module.
+
+This needs to be written to daemonise, pull a job from the queue, execute it
+and then move on to the next one.
 """
 
 
@@ -12,10 +15,6 @@ Main jobber module.
 # dddddd  eeeee pp      rr      eeeee  ccccc  aaa aa  tttt  eeeee  dddddd
 #               pp
 
-import math
-import os
-
-from openquake import job
 from openquake import logs
 
 LOGGER = logs.LOG

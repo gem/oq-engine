@@ -4,10 +4,12 @@ In the future, we may extend this to use either cement, or the nova
 gflags extensions.
 """
 
-from gflags import *  # pylint: disable=F0401
-from gflags import FLAGS # pylint: disable=F0401
-from gflags import DEFINE_string # pylint: disable=F0401
-from gflags import DEFINE_boolean, DEFINE_integer # pylint: disable=F0401
+# pylint: disable=W0401, W0622, W0614
+
+from gflags import * 
+from gflags import FLAGS
+from gflags import DEFINE_string
+from gflags import DEFINE_boolean, DEFINE_integer
 
 (_, _, _, _) = FLAGS, DEFINE_boolean, DEFINE_integer, DEFINE_string
 
