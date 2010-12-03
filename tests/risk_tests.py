@@ -256,6 +256,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function, self.gmf))
 
+    def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
+        gmfs = dict(self.gmf)
+        gmfs["IMLs"] = ()
+
+        curve = compute_loss_ratio_curve(self.vuln_function, gmfs)
+        self.assertEqual(shapes.EMPTY_CURVE, curve)
+
     def test_loss_ratio_curve_with_null_gmf(self):
         gmf = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 "TSES": 900, "TimeSpan": 50}
