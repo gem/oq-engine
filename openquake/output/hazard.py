@@ -1,20 +1,32 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
-This modules serializes objects in nrml format.
+This module provides classes that serialize hazard-related objects
+to NRML format.
 
-It currently takes all the lxml object model in memory
+Hazard curves:
+
+For the serialization of hazard curves, it currently takes 
+all the lxml object model in memory
 due to the fact that curves can be grouped by IDmodel and
 IML. Couldn't find a way to do so writing an object at a
 time without making a restriction to the order on which
 objects are received.
 
+Ground Motion Fields (GMFs):
+
+GMFs are serialized per object (=Site) as implemented in the base class.
 """
 
 from lxml import etree
 
+from openquake import logs
+from openquake import shapes
 from openquake import writer
+
 from openquake.xml import NSMAP, NRML, GML
+
+LOGGER = logs.HAZARD_LOG
 
 class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the nrml format."""
@@ -106,3 +118,79 @@ class HazardCurveXMLWriter(writer.FileWriter):
         # <nrml:Values />
         curve_values_tag = etree.SubElement(curve_tag, NRML + "Values")
         curve_values_tag.text = " ".join([str(x) for x in values["Values"]])
+
+
+class GMFXMLWriter(writer.FileWriter):
+    """This class serializes ground motion field (GMF) informatiuon
+    to NRML format.
+
+    As of now, only the field information is supported. GMPEParameters is
+    serialized as a stub with the only attribute that is formally required
+    (but doesn't have a useful definition in the schema).
+    Rupture information and full GMPEParameters are currently 
+    not supported."""
+
+    root_tag = NRML + "HazardResult"
+    config_tag = NRML + "Config"
+    gmpe_params_tag = NRML + "GMPEParameters"
+    container_tag = NRML + "GroundMotionFieldSet"
+    field_tag = NRML + "field"
+    site_tag = NRML + "site"
+    pos_tag = GML + "pos"
+    ground_motion_attr = "groundMotion"
+
+    def write(self, point, val):
+        """Writes GMF for one site.
+
+        point must be of type shapes.Site
+        val is a dictionary:
+
+        {'groundMotion': 0.8}
+        """
+        if isinstance(point, shapes.GridPoint):
+            point = point.site.point
+        if isinstance(point, shapes.Site):
+            point = point.point
+        self._append_curve_node(point, val, self.parent_node)
+
+    def write_header(self):
+        """Write out the file header"""
+        self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
+        config_node = etree.SubElement(self.root_node, self.config_tag, 
+                                       nsmap=NSMAP)
+        config_node.text = "Config file details go here."
+
+        gmpe_params_node = etree.SubElement(self.root_node, 
+                                            self.gmpe_params_tag, nsmap=NSMAP)
+        
+        # add required attribute stub
+        gmpe_params_node.attrib['vs30method'] = 'None'
+
+        self.parent_node = etree.SubElement(self.root_node, 
+                           self.container_tag , nsmap=NSMAP)
+
+    def write_footer(self):
+        """Write out the file footer"""
+        et = etree.ElementTree(self.root_node)
+        et.write(self.file, pretty_print=True, xml_declaration=True,
+                 encoding="UTF-8")
+    
+    def _append_curve_node(self, point, val, parent_node):
+        
+        # TODO(fab): support rupture element (not implemented so far)
+        # TODO(fab): support full GMPEParameters (not implemented so far)
+
+        # field element
+        field_node = etree.SubElement(parent_node, self.field_tag, 
+                                      nsmap=NSMAP)
+        outer_site_node = etree.SubElement(field_node, self.site_tag, 
+                                           nsmap=NSMAP)
+        inner_site_node = etree.SubElement(outer_site_node, self.site_tag,
+                                           nsmap=NSMAP)
+        inner_site_node.attrib[self.ground_motion_attr] = str(
+            val[self.ground_motion_attr])
+        
+        pos_node = etree.SubElement(inner_site_node, self.pos_tag, 
+                                    nsmap=NSMAP)
+        pos_node.text = "%s %s" % (str(point.x), str(point.y))
+

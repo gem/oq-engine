@@ -5,17 +5,40 @@ import os
 import unittest
 from lxml import etree
 
+from openquake import logs
 from openquake import test
 from openquake import shapes
+
 from openquake.output import hazard as hazard_output
 from openquake.parser import hazard as hazard_parser
+
+LOG = logs.LOG
 
 TEST_FILE = "hazard-curves.xml"
 XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 
 
+GMF_NORUPTURE_TEST_FILE = "gmf.xml"
+GMF_NORUPTURE_TEST_DATA = [
+    (shapes.Site(-117, 40), {'groundMotion': 0.0}), 
+    (shapes.Site(-116, 40), {'groundMotion': 0.1}),
+    (shapes.Site(-116, 41), {'groundMotion': 0.2}),
+    (shapes.Site(-117, 41), {'groundMotion': 0.3})]
+
+class GMFXMLWriterTestCase(unittest.TestCase):
+    """Unit tests for the GMFXMLWriter class, which serializes
+    ground motion fields to NRML."""
+
+    def test_serializes_gmf(self):
+        path = test.test_file(GMF_NORUPTURE_TEST_FILE)
+        writer = hazard_output.GMFXMLWriter(path)
+        writer.serialize(GMF_NORUPTURE_TEST_DATA)
+
+
 class HazardCurveXMLWriterTestCase(unittest.TestCase):
-    
+    """Unit tests for the HazardCurveXMLWriter class, which serializes
+    hazard curves to NRML."""
+
     def setUp(self):
         self._delete_test_file()
         self.writer = hazard_output.HazardCurveXMLWriter(
