@@ -93,6 +93,8 @@ HTML_TEMPLATE_GREENRED = """<!DOCTYPE html PUBLIC
 """
 
 def generate_html(path, width="", height=""):
+    """ Method takes an HTML template and returns the HTML with a GEOTIFF 
+    linked """
     curr_html = HTML_TEMPLATE_GREENRED
     for (token, new_value) in (
         ('PLACEHOLDER_IMAGE_NAME', path), ('PLACEHOLDER_WIDTH', width),

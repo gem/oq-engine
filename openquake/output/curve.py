@@ -9,14 +9,11 @@ As plotting engine, matplotlib is used. The plots are in SVG format.
 import geohash
 import matplotlib
 matplotlib.use('SVG')
-import numpy
 import pylab
 
 from matplotlib.font_manager import FontProperties
 
-from openquake import shapes
 from openquake import writer
-
 from openquake.parser import hazard as hazard_parser
 from openquake.parser import risk as risk_parser
 
@@ -62,10 +59,12 @@ class CurvePlotter(object):
             plot.close()
 
     def filenames(self):
+        """ Generator yields the path value for each dict in self.data """
         for site_data in self.data.values():
             yield site_data['path']
 
     def _generate_filename(self, site_hash):
+        """ Return a file name string """
         site_lat, site_lon = geohash.decode(site_hash)
         return "%s_%7.3f_%6.3f.svg" % (
             self.output_base_path, site_lon, site_lat)
@@ -96,7 +95,8 @@ class RiskCurvePlotter(CurvePlotter):
     def _parse_nrml_file(self):
         """Parse loss/loss ratio curve data from NRML file into a dictionary."""
 
-        nrml_element = risk_parser.NrmlFile(self.nrml_input_path, mode=self.mode)
+        nrml_element = risk_parser.NrmlFile(self.nrml_input_path,
+            mode=self.mode)
 
         # loss/loss ratio curves have a common *ordinate* for all curves
         # in an NRML file
@@ -232,20 +232,19 @@ class CurvePlot(writer.FileWriter):
         strings for abscissa and ordinate properties, and the title of the plot,
         and the site as shapes.Site object.."""
 
-        for curve in data:
+        for curve in data: 
+            #pylint: disable=E1101
             pylab.plot(data[curve]['abscissa'], 
                        data[curve]['ordinate'], 
-                       color=self.color_code_generator.next(), 
+                       color=self.color_code_generator.next(),
                        linestyle=self._plotCurve['linestyle'][2], 
                        label=curve)
 
         # set x and y dimension of plot
         if autoscale_y is False:
             pylab.ylim(self._plotAxes['ymin'], self._plotAxes['ymax'])
-        else:
-            ymin, ymax = pylab.ylim()
-        xmin, xmax = pylab.xlim()
 
+        curve = data.keys()[0] # We apparently only need to get this once?
         pylab.xlabel(data[curve]['abscissa_property'], self._plotLabelsFont)
         pylab.ylabel(data[curve]['ordinate_property'], self._plotLabelsFont)
 
@@ -275,7 +274,8 @@ class CurvePlot(writer.FileWriter):
 
 def _color_code_generator():
     """Generator that walks through a sequence of color codes for matplotlib.
-    When reaching the end of the color code list, start at the beginning again."""
+    When reaching the end of the color code list, start at the beginning again.
+    """
     while(True): 
         for code in COLOR_CODES: 
             yield code

@@ -24,16 +24,17 @@ SITES_PER_BLOCK = 100
 
 
 def run_job(job_file):
-        a_job = Job.from_file(job_file)
-        # TODO(JMC): Expose a way to set whether jobs should be partitioned
-        results = a_job.launch()
-        if not results:
-            # TODO (ac): Should we print additional details?
-            LOG.critical("The job configuration is inconsistent, "
-                    "aborting computation.")
-        else:
-            for filepath in results:
-                print filepath
+    """ Given a job_file, run the job. If we don't get results log it """
+    a_job = Job.from_file(job_file)
+    # TODO(JMC): Expose a way to set whether jobs should be partitioned
+    results = a_job.launch()
+    if not results:
+        # TODO (ac): Should we print additional details?
+        LOG.critical("The job configuration is inconsistent, "
+                "aborting computation.")
+    else:
+        for filepath in results:
+            print filepath
 
 
 def parse_config_file(config_file):

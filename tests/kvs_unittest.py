@@ -288,11 +288,11 @@ class IdentifierTestCase(unittest.TestCase):
             hazard.ERF_KEY_TOKEN,
             hazard.MGM_KEY_TOKEN,
             hazard.HAZARD_CURVE_KEY_TOKEN,
-            risk.LOSS_TOKEN(0.01),
             risk.EXPOSURE_KEY_TOKEN,
             risk.GMF_KEY_TOKEN,
             risk.LOSS_RATIO_CURVE_KEY_TOKEN,
             risk.LOSS_CURVE_KEY_TOKEN,
+            risk.loss_token(0.01),
             vulnerability.VULNERABILITY_CURVE_KEY_TOKEN,
         ]
 
