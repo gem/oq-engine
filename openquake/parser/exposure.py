@@ -13,6 +13,22 @@ from openquake.xml import NRML, GML
 # do not use namespace for now
 RISKML_NS = ''
 
+
+def _to_site(element):
+    """Convert current GML attributes to Site object"""
+    # lon/lat are in XML attribute gml:pos
+    # consider them as mandatory
+
+    pos = element.find("%spos" % GML).text
+    
+    try:
+        lat, lon = [float(x.strip()) for x in pos.split()]
+        return shapes.Site(lon, lat)
+    except Exception:
+        error_str = "element AssetInstance: no valid lon/lat coordinates"
+        raise ValueError(error_str)
+
+
 class ExposurePortfolioFile(producer.FileProducer):
     """ This class parses an ExposurePortfolio XML (part of riskML?) file.
     The contents of such a file is meant to be used as input for the risk 
@@ -52,22 +68,8 @@ class ExposurePortfolioFile(producer.FileProducer):
 
                 self._set_meta(element)
             elif event == 'end' and element.tag == '%sAssetInstance' % NRML:
-                yield (self._to_site(element), 
+                yield (_to_site(element), 
                        self._to_site_attributes(element))
-
-    def _to_site(self, element):
-        """Convert current GML attributes to Site object"""
-        # lon/lat are in XML attribute gml:pos
-        # consider them as mandatory
-
-        pos = element.find("%spos" % GML).text
-        
-        try:
-            lat, lon = [float(x.strip()) for x in pos.split()]
-            return shapes.Site(lon, lat)
-        except Exception:
-            error_str = "element AssetInstance: no valid lon/lat coordinates"
-            raise ValueError(error_str)
 
     def _to_site_attributes(self, element):
         """Build a dict of all node attributes"""
