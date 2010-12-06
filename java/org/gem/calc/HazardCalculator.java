@@ -221,7 +221,7 @@ public class HazardCalculator {
      * 
      * @return
      */
-    public static String gmfToJson(String gmfId, String[] eqkRuptureIds,
+    protected static String gmfToJson(String gmfId, String[] eqkRuptureIds,
             String[] siteIds,
             Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
         StringBuilder result = new StringBuilder();
@@ -307,7 +307,7 @@ public class HazardCalculator {
      * @param cache
      *            The memcache
      */
-    public static void gmfToMemcache(Cache cache, String memCacheKey,
+    protected static void gmfToMemcache(Cache cache, String memCacheKey,
             String gmfId, String[] eqkRuptureIds, String[] siteIds,
             Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
         String json =
