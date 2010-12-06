@@ -125,6 +125,7 @@ class JobTestCase(unittest.TestCase):
     
         a_job._partition()
         blocks_keys = a_job.blocks_keys
+        print blocks_keys
 
         self.assertEqual(1, len(blocks_keys))
         self.assertEqual(job.Block(expected_sites),

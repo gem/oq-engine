@@ -93,7 +93,7 @@ class RiskJobMixin(mixins.Mixin):
         risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
         filename = "losses_at-%s.tiff" % (loss_poe)
         path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename) 
-        output_generator = geotiff.GeoTiffFile(path, risk_grid, 
+        output_generator = geotiff.LossMapGeoTiffFile(path, risk_grid, 
                 init_value=0.0, normalize=True)
         for point in self.region.grid:
             asset_key = risk.asset_key(self.id, point.row, point.column)
