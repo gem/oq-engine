@@ -52,9 +52,14 @@ public class GroundMotionFieldCalculator {
     }
 
     /**
-     * Compute stochastic ground motion field by adding to the mean ground
+     * Computes stochastic ground motion field by adding to the mean ground
      * motion field Gaussian deviates which takes into account the truncation
-     * level and the truncation type.
+     * level and the truncation type. If the attenuation relationship supports
+     * inter and intra event standard deviations, the method computes ground
+     * motion field by first generating the inter-event residual (the same for
+     * all the sites) and then sum the intra-event residuals (different for each
+     * site), otherwise generate residuals for each site according to the total
+     * standard deviation
      * 
      * @param attenRel
      *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
@@ -80,25 +85,41 @@ public class GroundMotionFieldCalculator {
         validateInput(attenRel, rup, sites);
         Map<Site, Double> groundMotionField =
                 getMeanGroundMotionField(attenRel, rup, sites);
-        attenRel.setEqkRupture(rup);
-        double standardDeviation = Double.NaN;
-        double truncationLevel =
-                (Double) attenRel.getParameter(SigmaTruncLevelParam.NAME)
-                        .getValue();
-        String truncationType =
-                (String) attenRel.getParameter(SigmaTruncTypeParam.NAME)
-                        .getValue();
+        if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
+                .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER)
+                && attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
+                        .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTRA)) {
+            addInterEventResidual(attenRel, sites, rn, groundMotionField);
+            attenRel.setEqkRupture(rup);
+            attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                    StdDevTypeParam.STD_DEV_TYPE_INTRA);
+            addSiteDependentResidual(attenRel, sites, rn, groundMotionField);
+        } else {
+            attenRel.setEqkRupture(rup);
+            attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                    StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+            addSiteDependentResidual(attenRel, sites, rn, groundMotionField);
+        }
+
+        return groundMotionField;
+    }
+
+    private static void addSiteDependentResidual(
+            ScalarIntensityMeasureRelationshipAPI attenRel, List<Site> sites,
+            Random rn, Map<Site, Double> groundMotionField) {
         for (Site site : sites) {
             attenRel.setSite(site);
-            standardDeviation = attenRel.getStdDev();
             Double val = groundMotionField.get(site);
             double deviate =
-                    getGaussianDeviate(standardDeviation, truncationLevel,
-                            truncationType, rn);
+                    getGaussianDeviate(
+                            attenRel.getStdDev(),
+                            (Double) attenRel.getParameter(
+                                    SigmaTruncLevelParam.NAME).getValue(),
+                            (String) attenRel.getParameter(
+                                    SigmaTruncTypeParam.NAME).getValue(), rn);
             val = val + deviate;
             groundMotionField.put(site, val);
         }
-        return groundMotionField;
     }
 
     /**
@@ -108,7 +129,7 @@ public class GroundMotionFieldCalculator {
      * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
      * The algorithm is structured according to the following steps: 1) Compute
      * mean ground motion values, 2) Stochastically generate inter-event
-     * residuals (which follow a univariate normal distribution), 3)
+     * residual (which follow a univariate normal distribution), 3)
      * Stochastically generate intra-event residuals (following the proposed
      * correlation model) 4) Combine the three terms generated in steps 1-3.
      * 
@@ -168,20 +189,7 @@ public class GroundMotionFieldCalculator {
         Map<Site, Double> groundMotionField =
                 getMeanGroundMotionField(attenRel, rup, sites);
         if (inter_event == true) {
-            attenRel.getParameter(StdDevTypeParam.NAME).setValue(
-                    StdDevTypeParam.STD_DEV_TYPE_INTER);
-            attenRel.setEqkRupture(rup);
-            double interEventResidual =
-                    getGaussianDeviate(
-                            attenRel.getStdDev(),
-                            (Double) attenRel.getParameter(
-                                    SigmaTruncLevelParam.NAME).getValue(),
-                            (String) attenRel.getParameter(
-                                    SigmaTruncTypeParam.NAME).getValue(), rn);
-            for (Site site : sites) {
-                double val = groundMotionField.get(site);
-                groundMotionField.put(site, val + interEventResidual);
-            }
+            addInterEventResidual(attenRel, sites, rn, groundMotionField);
         }
         System.out.println("Finished interevent.");
 
@@ -222,6 +230,23 @@ public class GroundMotionFieldCalculator {
         }
 
         return groundMotionField;
+    }
+
+    private static void addInterEventResidual(
+            ScalarIntensityMeasureRelationshipAPI attenRel, List<Site> sites,
+            Random rn, Map<Site, Double> groundMotionField) {
+        attenRel.getParameter(StdDevTypeParam.NAME).setValue(
+                StdDevTypeParam.STD_DEV_TYPE_INTER);
+        double interEventResidual =
+                getGaussianDeviate(attenRel.getStdDev(), (Double) attenRel
+                        .getParameter(SigmaTruncLevelParam.NAME).getValue(),
+                        (String) attenRel
+                                .getParameter(SigmaTruncTypeParam.NAME)
+                                .getValue(), rn);
+        for (Site site : sites) {
+            double val = groundMotionField.get(site);
+            groundMotionField.put(site, val + interEventResidual);
+        }
     }
 
     /**
