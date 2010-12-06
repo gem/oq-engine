@@ -151,23 +151,31 @@ class GMFXMLWriter(writer.FileWriter):
             point = point.site.point
         if isinstance(point, shapes.Site):
             point = point.point
-        self._append_curve_node(point, val, self.parent_node)
+        self._append_site_node(point, val, self.parent_node)
 
     def write_header(self):
         """Write out the file header"""
+
+        # TODO(fab): support rupture element (not implemented so far)
+        # TODO(fab): support full GMPEParameters (not implemented so far)
+
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
         config_node = etree.SubElement(self.root_node, self.config_tag, 
                                        nsmap=NSMAP)
         config_node.text = "Config file details go here."
 
-        gmpe_params_node = etree.SubElement(self.root_node, 
+        container_node = etree.SubElement(self.root_node, 
+                                          self.container_tag, nsmap=NSMAP)
+
+        gmpe_params_node = etree.SubElement(container_node, 
                                             self.gmpe_params_tag, nsmap=NSMAP)
         
         # add required attribute stub
         gmpe_params_node.attrib['vs30method'] = 'None'
 
-        self.parent_node = etree.SubElement(self.root_node, 
-                           self.container_tag , nsmap=NSMAP)
+        # field element
+        self.parent_node = etree.SubElement(container_node, self.field_tag, 
+                                            nsmap=NSMAP)
 
     def write_footer(self):
         """Write out the file footer"""
@@ -175,15 +183,10 @@ class GMFXMLWriter(writer.FileWriter):
         et.write(self.file, pretty_print=True, xml_declaration=True,
                  encoding="UTF-8")
     
-    def _append_curve_node(self, point, val, parent_node):
-        
-        # TODO(fab): support rupture element (not implemented so far)
-        # TODO(fab): support full GMPEParameters (not implemented so far)
-
-        # field element
-        field_node = etree.SubElement(parent_node, self.field_tag, 
-                                      nsmap=NSMAP)
-        outer_site_node = etree.SubElement(field_node, self.site_tag, 
+    def _append_site_node(self, point, val, parent_node):
+        """Write outer and inner 'site' elements, with lon/lat coordinates
+        and groundMotion attribute."""
+        outer_site_node = etree.SubElement(parent_node, self.site_tag, 
                                            nsmap=NSMAP)
         inner_site_node = etree.SubElement(outer_site_node, self.site_tag,
                                            nsmap=NSMAP)
