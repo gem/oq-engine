@@ -2,15 +2,11 @@ package org.gem.engine;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
-import java.util.Set;
 
 import org.apache.commons.configuration.AbstractFileConfiguration;
 import org.apache.commons.configuration.Configuration;
@@ -29,9 +25,7 @@ import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
-import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
-import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSourceData;
@@ -47,26 +41,21 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
 public class CommandLineCalculator {
-    //
-    // Apache commons logging, not log4j specifically
-    // Note that for application code, declaring the log member as "static" is
-    // more efficient as one Log object is created per class, and is
-    // recommended. However this is not safe to do for a class which may be
-    // deployed via a "shared" classloader in a servlet or j2ee container or
-    // similar environment. If the class may end up invoked with different
-    // thread-context-classloader values set then the member must not be
-    // declared static. The use of "static" should therefore be avoided in
-    // code within any "library" type project.
+
+    /*
+     * Apache commons logging, not log4j specifically Note that for application
+     * code, declaring the log member as "static" is more efficient as one Log
+     * object is created per class, and is recommended. However this is not safe
+     * to do for a class which may be deployed via a "shared" classloader in a
+     * servlet or j2ee container or similar environment. If the class may end up
+     * invoked with different thread-context-classloader values set then the
+     * member must not be declared static. The use of "static" should therefore
+     * be avoided in code within any "library" type project.
+     */
     private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
-    // random is to access through its getter method
     private final Configuration config;
     private Boolean hasPath = false;
     private Cache kvs;
-
-    // output file names hazard curves
-    public static String MEAN_HAZARD_CURVES = "meanHazardCurves.dat";
-    public static String INDIVIDUAL_HAZARD_CURVES =
-            "individualHazardCurves.dat";
 
     public CommandLineCalculator(Properties p) {
         config = ConfigurationConverter.getConfiguration(p);
@@ -119,185 +108,6 @@ public class CommandLineCalculator {
 
         return thisConfig.equals(otherConfig);
     }
-
-    /**
-     * From a ground motion field this method serializes only the data that is
-     * needed to a json string.<br>
-     * The suggested format for a jsonized GMF is<br>
-     * {'gmf_id' : { 'eqkrupture_id' : { 'site_id' : {'lat' : lat_val, 'lon' :
-     * lon_val, 'mag' : double_val}}, { 'site_id' : { ...}} , {...} }}
-     * 
-     * From identifiers.py, these are what the expected keys look like (this
-     * makes no expectation of the values), the keys are after the colon.
-     * 
-     * sites: job_id!block_id!!sites gmf: job_id!block_id!!gmf gmf:
-     * job_id!block_id!site!gmf
-     * 
-     * @return
-     */
-    public static String gmfToJson(String gmfId, String[] eqkRuptureIds,
-            String[] siteIds,
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
-        StringBuilder result = new StringBuilder();
-        Gson gson = new Gson();
-        result.append("{");
-        result.append(gson.toJson(gmfId));
-        result.append(":{");
-        // TODO:
-        // The EqkRupture memcache keys must be known here.
-        // For now behave, as if the map object is ordered.
-        //
-        Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
-        int indexEqkRupture = 0;
-        for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
-            if (indexEqkRupture > 0) {
-                result.append(",");
-            }
-            result.append(gson.toJson(eqkRuptureIds[indexEqkRupture++]));
-            // start the eqk json object
-            result.append(":");
-            Map<Site, Double> groundMotionField =
-                    groundMotionFields.get(eqkRupture);
-            // TODO:
-            // The sites' memcache keys must be known here.
-            // For now behave, as if the map object is ordered.
-            Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
-            int indexSite = 0;
-            StringBuilder siteListString = new StringBuilder();
-            siteListString.append("{");
-            DecimalFormat df = new DecimalFormat("0.########E0");
-            for (Site s : groundMotionFieldKeys) {
-                if (indexSite > 0) {
-                    siteListString.append(",");
-                }
-                StringBuilder siteString = new StringBuilder();
-                siteString.append(gson.toJson(siteIds[indexSite++]));
-                // start the json site's value object
-                siteString.append(":{");
-                siteString.append(gson.toJson("lat") + ":"
-                        + df.format(s.getLocation().getLatitude()));
-                siteString.append(",");
-                siteString.append(gson.toJson("lon") + ":"
-                        + df.format(s.getLocation().getLongitude()));
-                siteString.append(",");
-                siteString.append(gson.toJson("mag") + ":"
-                        + df.format(groundMotionField.get(s)));
-                // close the the json site's value object and the site json
-                // object
-                siteString.append("}");
-                siteListString.append(siteString);
-            } // for
-            siteListString.append("}");
-            // close the eqk json object
-            result.append(siteListString);
-        } // for
-        result.append("}}");
-        return result.toString();
-    }
-
-    /**
-     * Saves a ground motion map to a Cache object.<br>
-     * <br>
-     * 1) Converts the <code>groundMotionFields</code> into json format.<br>
-     * E.g.<br>
-     * {"gmf_id":<br>
-     * {"eqkRupture_id_0":<br>
-     * {"site_id_0":{"lat":35.0,"lon":37.6,"mag":-4.7}},
-     * {"site_id_1":{"lat":37.5,"lon":35.6,"mag":-2.8}},...
-     * 
-     * 2) Saves the json string to memCache.
-     * 
-     * @param memCacheKey
-     * @param gmfId
-     *            The "json key" for the GMF (ground motion field)
-     * @param eqkRuptureIds
-     *            The "json key" for the the ruptures contained in
-     *            groundMotionFields
-     * @param siteIds
-     *            The "json key" for all the sites contained in
-     *            groundMotionFields
-     * @param groundMotionFields
-     *            The GMF to be saved to memcache
-     * @param cache
-     *            The memcache
-     */
-    public static void gmfToMemcache(Cache cache, String memCacheKey,
-            String gmfId, String[] eqkRuptureIds, String[] siteIds,
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields) {
-        String json =
-                gmfToJson(gmfId, eqkRuptureIds, siteIds, groundMotionFields);
-        logger.debug("Saving GMF to " + memCacheKey);
-        cache.set(memCacheKey, json);
-    }
-
-    /**
-     * Saves a ground motion map to a Cache object.
-     * 
-     * The approach of this method will probably never be used:<br>
-     * Every GMF (double-)value is stored to the cache with its own key. (The
-     * key consists of a continuous number given to each rupture and the site's
-     * coordinates.)
-     * 
-     * @param cache
-     *            the cache to store the ground motion map
-     * @return a List<String> object containing all keys used as key in the
-     *         cache's hash map
-     * @deprecated use { @see storeToMemcache()} instead.
-     */
-    @Deprecated
-    public static List<String> gmfValuesToMemcache(
-            Map<EqkRupture, Map<Site, Double>> groundMotionFields, Cache cache) {
-        ArrayList<String> allKeys = new ArrayList<String>();
-        StringBuilder key = null;
-        Set<EqkRupture> groundMotionFieldsKeys = groundMotionFields.keySet();
-        int indexEqkRupture = 0;
-        for (EqkRupture eqkRupture : groundMotionFieldsKeys) {
-            ++indexEqkRupture;
-            Map<Site, Double> groundMotionField =
-                    groundMotionFields.get(eqkRupture);
-            Set<Site> groundMotionFieldKeys = groundMotionField.keySet();
-            for (Site s : groundMotionFieldKeys) {
-                key = new StringBuilder();
-                key.append(indexEqkRupture);
-                key.append('_');
-                key.append(s.getLocation().getLatitude());
-                key.append('_');
-                key.append(s.getLocation().getLongitude());
-                cache.set(key.toString(), groundMotionField.get(s).toString());
-                allKeys.add(key.toString());
-            }
-        }
-        return allKeys;
-    }
-
-    // private void saveGroundMotionMapToAsciiFile(String outfile,
-    // ArrayList<Double> map, ArrayList<Site> siteList) {
-    // try {
-    // File file = new File(outfile);
-    // FileOutputStream oOutFIS =
-    // new FileOutputStream(file.getAbsolutePath());
-    // BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
-    // BufferedWriter oWriter =
-    // new BufferedWriter(new OutputStreamWriter(oOutBIS));
-    // // loop over grid points
-    // for (int i = 0; i < siteList.size(); i++) {
-    // double lon = siteList.get(i).getLocation().getLongitude();
-    // double lat = siteList.get(i).getLocation().getLatitude();
-    // double gmv = map.get(i);
-    // oWriter.write(String.format("%+8.4f %+7.4f %7.4e \n", lon, lat,
-    // gmv));
-    // }
-    // oWriter.close();
-    // oOutBIS.close();
-    // oOutFIS.close();
-    // } catch (FileNotFoundException e) {
-    // // TODO Auto-generated catch block
-    // e.printStackTrace();
-    // } catch (IOException e) {
-    // // TODO Auto-generated catch block
-    // e.printStackTrace();
-    // }
-    // } // saveGroundMotionMapToGMTAsciiFile()
 
     public void sampleAndSaveERFTree(Cache cache, String key, long seed)
             throws IOException {
@@ -1004,3 +814,32 @@ public class CommandLineCalculator {
     } // createGmpeLogicTreeData()
 
 } // class CommandLineCalculatorWithProperties
+
+// private void saveGroundMotionMapToAsciiFile(String outfile,
+// ArrayList<Double> map, ArrayList<Site> siteList) {
+// try {
+// File file = new File(outfile);
+// FileOutputStream oOutFIS =
+// new FileOutputStream(file.getAbsolutePath());
+// BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
+// BufferedWriter oWriter =
+// new BufferedWriter(new OutputStreamWriter(oOutBIS));
+// // loop over grid points
+// for (int i = 0; i < siteList.size(); i++) {
+// double lon = siteList.get(i).getLocation().getLongitude();
+// double lat = siteList.get(i).getLocation().getLatitude();
+// double gmv = map.get(i);
+// oWriter.write(String.format("%+8.4f %+7.4f %7.4e \n", lon, lat,
+// gmv));
+// }
+// oWriter.close();
+// oOutBIS.close();
+// oOutFIS.close();
+// } catch (FileNotFoundException e) {
+// // TODO Auto-generated catch block
+// e.printStackTrace();
+// } catch (IOException e) {
+// // TODO Auto-generated catch block
+// e.printStackTrace();
+// }
+// } // saveGroundMotionMapToGMTAsciiFile()
