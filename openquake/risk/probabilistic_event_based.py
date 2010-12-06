@@ -14,10 +14,10 @@ from openquake import shapes
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
-def compute_loss_ratios(vuln_function, ground_motion_field):
+def compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field passed."""
     if vuln_function == shapes.EMPTY_CURVE or not \
-                        ground_motion_field["IMLs"]:
+                        ground_motion_field_set["IMLs"]:
         return []
     
     imls = vuln_function.abscissae
@@ -26,14 +26,14 @@ def compute_loss_ratios(vuln_function, ground_motion_field):
     # seems like with numpy you can only specify a single fill value
     # if the x_new is outside the range. Here we need two different values,
     # depending if the x_new is below or upon the defined values
-    for ground_motion_value in ground_motion_field["IMLs"]:
-        if ground_motion_value < imls[0]:
+    for ground_motion_field in ground_motion_field_set["IMLs"]:
+        if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
-        elif ground_motion_value > imls[-1]:
+        elif ground_motion_field > imls[-1]:
             loss_ratios.append(imls[-1])
         else:
             loss_ratios.append(vuln_function.ordinate_for(
-                    ground_motion_value))
+                    ground_motion_field))
     
     return array(loss_ratios)
 
@@ -78,15 +78,15 @@ def compute_probs_of_exceedance(rates_of_exceedance, time_span):
     return array(probs_of_exceedance)
 
 
-def compute_loss_ratio_curve(vuln_function, ground_motion_field):
+def compute_loss_ratio_curve(vuln_function, ground_motion_field_set):
     """Compute the loss ratio curve using the probailistic event approach."""
-    loss_ratios = compute_loss_ratios(vuln_function, ground_motion_field)
+    loss_ratios = compute_loss_ratios(vuln_function, ground_motion_field_set)
     loss_ratios_range = compute_loss_ratios_range(vuln_function)
     
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), ground_motion_field["TSES"]),
-            ground_motion_field["TimeSpan"])
+            loss_ratios, loss_ratios_range), ground_motion_field_set["TSES"]),
+            ground_motion_field_set["TimeSpan"])
 
     return _generate_loss_ratio_curve(loss_ratios_range, probs_of_exceedance)
 
@@ -131,10 +131,10 @@ class AggregateHistogram(object):
         return linspace(self.min, self.max, self.number_of_bins)
 
 # TODO (ac): Not tested yet, need pre computed test data!
-    def append(self, vuln_function, ground_motion_field):
+    def append(self, vuln_function, ground_motion_field_set):
         """Append this vulnerability function and gmf to the set
         of input data used to compute the aggregate histogram."""
-        self._append(compute_loss_ratios(vuln_function, ground_motion_field),
+        self._append(compute_loss_ratios(vuln_function, ground_motion_field_set),
                 compute_loss_ratios_range(vuln_function))
 
     def _append(self, distribution, bins):
