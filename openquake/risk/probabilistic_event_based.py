@@ -4,6 +4,8 @@ This module defines the functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
 """
 
+#
+
 import math
 from numpy import array # pylint: disable=E1101, E0611
 from numpy import linspace # pylint: disable=E1101, E0611
@@ -48,10 +50,11 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     
     def invalid_ratios(ratios):
+        """ Return the number of invalid ratios or None """
         invalids = where(ratios <= 0.0)
         # TODO(JMC): I think this is wrong. where doesn't return zero values
         if invalids:
-         return len(invalids[0])
+            return len(invalids[0])
         return None
     
     hist = histogram(loss_ratios, bins=loss_ratios_range)
@@ -104,6 +107,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field):
 
 # TODO (ac): Test with pre computed data!
 def compute_loss_ratio_curve_from_aggregate(aggregate_hist, tses, time_span):
+    """ Return curve from aggregate """ 
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(aggregate_hist.compute(),
             tses), time_span)
@@ -161,6 +165,7 @@ class AggregateHistogram(object):
 
     @property
     def bins(self):
+        """ Histogram Bins """
         return linspace(self.min, self.max, self.number_of_bins)
 
 # TODO (ac): Not tested yet, need pre computed test data!
