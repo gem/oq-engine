@@ -18,6 +18,7 @@ from openquake.hazard import tasks
 from openquake import kvs
 from openquake import settings
 from openquake.output import geotiff
+from openquake.output import hazard as hazard_output
 from openquake import logs
 
 LOG = logs.LOG
@@ -128,7 +129,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         return results
     
     def write_gmf_files(self, ses):
-        """Generate a GeoTiff file for each GMF."""
+        """Generate a GeoTiff file and a NRML file for each GMF."""
         image_grid = self.region.grid
         iml_list = [float(param) 
                     for param
@@ -144,22 +145,30 @@ class MonteCarloMixin: # pylint: disable=W0232
                 # NOTE(fab): we have to explicitly convert the JSON-decoded 
                 # tokens from Unicode to string, otherwise the path will not
                 # be accepted by the GeoTiffFile constructor
-                path = os.path.join(self.base_path, self['OUTPUT_DIR'],
-                        "gmf-%s-%s.tiff" % (str(event_set.replace("!", "_")),
-                                            str(rupture.replace("!", "_"))))
-                gwriter = geotiff.GMFGeoTiffFile(path, image_grid, 
+                common_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
+                        "gmf-%s-%s" % (str(event_set.replace("!", "_")),
+                                       str(rupture.replace("!", "_"))))
+                tiff_path = "%s.tiff" % common_path
+                nrml_path = "%s.xml" % common_path
+                gwriter = geotiff.GMFGeoTiffFile(tiff_path, image_grid, 
                     init_value=0.0, normalize=True, iml_list=iml_list,
                     discrete=True)
+                xmlwriter = hazard_output.GMFXMLWriter(nrml_path)
+                gmf_data = {}
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
                     point = image_grid.point_at(site_obj)
                     gwriter.write((point.row, point.column), 
                         math.exp(float(site['mag'])))
+                    gmf_data[site_obj] = \
+                        {'groundMotion': math.exp(float(site['mag']))}
 
                 gwriter.close()
-                files.append(path)
+                xmlwriter.serialize(gmf_data)
+                files.append(tiff_path)
                 files.append(gwriter.html_path)
+                files.append(nrml_path)
         return files
         
     def generate_erf(self):
