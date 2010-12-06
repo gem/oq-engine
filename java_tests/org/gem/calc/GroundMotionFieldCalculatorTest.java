@@ -14,7 +14,6 @@ import java.util.Random;
 import org.apache.commons.math.linear.RealMatrix;
 import org.apache.commons.math.stat.correlation.Covariance;
 import org.apache.commons.math.stat.correlation.PearsonsCorrelation;
-import org.gem.calc.GroundMotionFieldCalculator;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.data.Site;
@@ -50,7 +49,7 @@ public class GroundMotionFieldCalculatorTest implements
 
     double tolerance = 1e-2;
     long seed = 123456789;
-    int numRealizations = 200000;
+    int numRealizations = 3000;
 
     @Before
     public void setUp() {
@@ -189,7 +188,7 @@ public class GroundMotionFieldCalculatorTest implements
          * correlation matrix.
          */
         Random rn = new Random(seed);
-        int numRealizations = 50000;
+        int numRealizations = 10000;// 50000;
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
@@ -260,7 +259,7 @@ public class GroundMotionFieldCalculatorTest implements
          * standard deviations for sites i and j
          */
         Random rn = new Random(seed);
-        int numRealizations = 50000;
+        int numRealizations = 10000;
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
