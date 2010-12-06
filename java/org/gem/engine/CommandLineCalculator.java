@@ -53,13 +53,14 @@ public class CommandLineCalculator {
      * be avoided in code within any "library" type project.
      */
     private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
+
     private final Configuration config;
-    private Boolean hasPath = false;
+    private boolean hasPath;
     private Cache kvs;
 
     public CommandLineCalculator(Properties p) {
         config = ConfigurationConverter.getConfiguration(p);
-    } // constructor
+    }
 
     public CommandLineCalculator(String calcConfigFile)
             throws ConfigurationException {
@@ -67,7 +68,7 @@ public class CommandLineCalculator {
         ((PropertiesConfiguration) config).load(calcConfigFile);
         System.out.println(config);
         hasPath = true;
-    } // constructor
+    }
 
     public CommandLineCalculator(Cache cache, String key) {
         kvs = cache;
@@ -811,35 +812,6 @@ public class CommandLineCalculator {
         }
 
         return gmpeLogicTree;
-    } // createGmpeLogicTreeData()
+    }
 
-} // class CommandLineCalculatorWithProperties
-
-// private void saveGroundMotionMapToAsciiFile(String outfile,
-// ArrayList<Double> map, ArrayList<Site> siteList) {
-// try {
-// File file = new File(outfile);
-// FileOutputStream oOutFIS =
-// new FileOutputStream(file.getAbsolutePath());
-// BufferedOutputStream oOutBIS = new BufferedOutputStream(oOutFIS);
-// BufferedWriter oWriter =
-// new BufferedWriter(new OutputStreamWriter(oOutBIS));
-// // loop over grid points
-// for (int i = 0; i < siteList.size(); i++) {
-// double lon = siteList.get(i).getLocation().getLongitude();
-// double lat = siteList.get(i).getLocation().getLatitude();
-// double gmv = map.get(i);
-// oWriter.write(String.format("%+8.4f %+7.4f %7.4e \n", lon, lat,
-// gmv));
-// }
-// oWriter.close();
-// oOutBIS.close();
-// oOutFIS.close();
-// } catch (FileNotFoundException e) {
-// // TODO Auto-generated catch block
-// e.printStackTrace();
-// } catch (IOException e) {
-// // TODO Auto-generated catch block
-// e.printStackTrace();
-// }
-// } // saveGroundMotionMapToGMTAsciiFile()
+}
