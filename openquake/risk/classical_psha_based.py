@@ -71,7 +71,7 @@ from scipy import log # pylint: disable=F0401,E0611
 from openquake import logs
 from openquake import shapes
 
-logger = logs.RISK_LOG
+LOGGER = logs.RISK_LOG
 
 STEPS_PER_INTERVAL = 5
 
@@ -117,8 +117,7 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     
     return lrem_po
 
-
-def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
+def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po): 
     """Computes the loss ratio curve."""
     
     loss_ratio_curve_values = []
@@ -136,7 +135,7 @@ def _generate_loss_ratios(vuln_function):
 
     if vuln_function.is_multi_value:
         # means on first position
-        loss_ratios = list(vuln_function.ordinates[:,0])
+        loss_ratios = list(vuln_function.ordinates[:, 0])
     else:
         loss_ratios = list(vuln_function.ordinates)
     
@@ -253,9 +252,11 @@ def compute_conditional_loss(loss_curve, probability):
     return (x + y) / (probabilities[lower_bound] - probabilities[upper_bound])
 
 def compute_mid_mean_pe(loss_ratio_pe_curve):
-    # compute mean PE values 
-    # This function needs to take the first two values of the LR and compute 
-    # the mean, then iterate to the next two, and so on
+    """
+    compute mean PE values 
+    This function needs to take the first two values of the LR and compute 
+    the mean, then iterate to the next two, and so on
+    """
     loss_ratio_pe_mid_curve = []
     pe_values = loss_ratio_pe_curve.ordinates
 
@@ -269,7 +270,7 @@ def compute_mid_mean_pe(loss_ratio_pe_curve):
     return loss_ratio_pe_mid_curve
           
 def compute_mid_po(loss_ratio_pe_mid_curve):
-    # compute the PO values
+    """ compute the PO values """
     loss_ratio_po_mid_curve = []
     
     for j in xrange(len(loss_ratio_pe_mid_curve)-1):
@@ -281,12 +282,14 @@ def compute_mid_po(loss_ratio_pe_mid_curve):
     return loss_ratio_po_mid_curve
         
 def compute_mean_loss(loss_ratio_pe_curve, loss_ratio_po_mid_curve):
-    # compute sum of every PO and LR
+    """ compute sum of every PO and LR """
     mean_loss_ratio = []
   
-    loss_ratio_pe_curve_float = map(float, loss_ratio_pe_curve.domain)
+    loss_ratio_pe_curve_float = [float(pe_curve) 
+                                 for pe_curve 
+                                 in loss_ratio_pe_curve.domain]
 
     mean_loss_ratio = sum(i*j for i, j in zip(loss_ratio_pe_curve_float, 
         loss_ratio_po_mid_curve))
 
-    logger.debug('%s= mean_loss_ratio', mean_loss_ratio)
+    LOGGER.debug('%s= mean_loss_ratio', mean_loss_ratio)
