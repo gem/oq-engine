@@ -15,6 +15,75 @@ from time import gmtime, strftime
 # We really don't care about warnings.
 fabric_output.warnings = False
 
+# temporary
+OPENQUAKE_DEMO_PKG_URL = "http://gemsun04.ethz.ch/geonode-client/temp/\
+openquake-0.11.tar.gz"
+
+@hosts('gemsun04.ethz.ch')
+def server():
+    """Restart redis-server and rabbitmq-server.
+
+    Note: This function assumes rabbitmq and redis are already installed."""
+    # Note: the target host of this deploy script should configure sudoer
+    # privileges of env.user such that the following commands (such as 
+    # rabbitmqctl, apt-get, etc.) can be run as sudo without a password.
+    env.user = 'gemadmin'
+    if not _pip_is_installed():
+        _install_pip()
+
+    redis = 'redis-server'
+    rabbitmq = 'rabbitmq-server'
+    
+    # stop server processes
+    _stop(redis)
+    _stop(rabbitmq)
+
+    # update the openquake package
+    _install_openquake()
+
+    # restart server processes
+    _start(redis)
+    _start(rabbitmq) 
+
+
+@hosts('gemsun03.ethz.ch', 'gemsun04.ethz.ch')
+def worker():
+    """Update and restart celery.
+
+    Note: This function assumes that celery is already installed and configured
+    on the client."""
+    
+    env.user = 'gemadmin'
+    if not _pip_is_installed():
+        _install_pip()
+    # kill celeryd processes
+    _stop('celeryd')
+    
+    # update openquake package
+    _install_openquake() 
+    
+    # restart celery
+    _start('celeryd')
+
+def _pip_is_installed():
+    return _warn_only(run, 'which pip')
+
+def _install_pip():
+    _sudo_no_shell('apt-get install python-pip -y')
+
+def _install_openquake():
+    _sudo_no_shell('pip install openquake -f %s' % OPENQUAKE_DEMO_PKG_URL)
+
+def _sudo_no_shell(command):
+    sudo(command, shell=False)
+
+def _start(service):
+    """Start a service (as sudo) using its init script."""
+    _sudo_no_shell('/etc/init.d/%s start' % service)
+
+def _stop(service):
+    """Stop a service (as sudo) using its init script."""
+    _sudo_no_shell('/etc/init.d/%s stop' % service)
 
 def development():
     """ Specify development hosts """
