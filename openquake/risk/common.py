@@ -14,8 +14,6 @@ def compute_conditional_loss(curve, probability):
     of exceedance if out of bounds.
     """
 
-# TODO (ac): If the probability is smaller than the min PoE we
-# need to return the maximum value of the losses
     if curve.ordinate_out_of_bounds(probability):
         return 0.0
 

@@ -23,6 +23,7 @@ from openquake import risk
 from openquake import settings
 from openquake import shapes
 
+from openquake.risk import common
 from openquake.risk import probabilistic_event_based
 from openquake.risk import job as risk_job
 from openquake.output.risk import RiskXMLWriter
@@ -179,8 +180,7 @@ class ProbabilisticEventMixin:
         return True
     
     def compute_conditional_loss(self, column, row, loss_curve, asset, loss_poe):
-        loss_conditional = probabilistic_event_based. \
-                compute_conditional_loss(loss_curve, loss_poe)
+        loss_conditional = common.compute_conditional_loss(loss_curve, loss_poe)
         key = risk.loss_key(self.id, row, column, asset["AssetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
