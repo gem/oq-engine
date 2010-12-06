@@ -19,11 +19,11 @@ XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 
 
 GMF_NORUPTURE_TEST_FILE = "gmf.xml"
-GMF_NORUPTURE_TEST_DATA = [
-    (shapes.Site(-117, 40), {'groundMotion': 0.0}), 
-    (shapes.Site(-116, 40), {'groundMotion': 0.1}),
-    (shapes.Site(-116, 41), {'groundMotion': 0.2}),
-    (shapes.Site(-117, 41), {'groundMotion': 0.3})]
+GMF_NORUPTURE_TEST_DATA = {
+    shapes.Site(-117, 40): {'groundMotion': 0.0}, 
+    shapes.Site(-116, 40): {'groundMotion': 0.1},
+    shapes.Site(-116, 41): {'groundMotion': 0.2},
+    shapes.Site(-117, 41): {'groundMotion': 0.3}}
 
 class GMFXMLWriterTestCase(unittest.TestCase):
     """Unit tests for the GMFXMLWriter class, which serializes
