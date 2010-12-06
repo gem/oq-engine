@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Test the output of Loss Curve and Loss Ratio Curve as XML.
 
@@ -47,9 +48,8 @@ class LossOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.path = os.path.join(test.DATA_DIR, LOSS_XML_OUTPUT_FILE)
-        self.ratio_path = os.path.join(test.DATA_DIR, 
-            LOSS_RATIO_XML_OUTPUT_FILE)
+        self.path = test.test_output_file(LOSS_XML_OUTPUT_FILE)
+        self.ratio_path = test.test_output_file(LOSS_RATIO_XML_OUTPUT_FILE)
         self.schema_path = os.path.join(test.SCHEMA_DIR, LOSS_SCHEMA_FILE)
 
         # Build up some sample loss curves here
