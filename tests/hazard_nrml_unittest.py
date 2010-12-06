@@ -17,7 +17,6 @@ LOG = logs.LOG
 TEST_FILE = "hazard-curves.xml"
 XML_METADATA = "<?xml version='1.0' encoding='UTF-8'?>"
 
-
 GMF_NORUPTURE_TEST_FILE = "gmf.xml"
 GMF_NORUPTURE_TEST_DATA = {
     shapes.Site(-117, 40): {'groundMotion': 0.0}, 
@@ -30,10 +29,16 @@ class GMFXMLWriterTestCase(unittest.TestCase):
     ground motion fields to NRML."""
 
     def test_serializes_gmf(self):
-        path = test.test_file(GMF_NORUPTURE_TEST_FILE)
+        path = test.test_output_file(GMF_NORUPTURE_TEST_FILE)
         writer = hazard_output.GMFXMLWriter(path)
         writer.serialize(GMF_NORUPTURE_TEST_DATA)
 
+        check_data = {}
+        reader = hazard_parser.GMFReader(path)
+        for curr_site, curr_attribute in reader:
+            check_data[curr_site] = curr_attribute
+
+        self.assertEqual(check_data, GMF_NORUPTURE_TEST_DATA)
 
 class HazardCurveXMLWriterTestCase(unittest.TestCase):
     """Unit tests for the HazardCurveXMLWriter class, which serializes
@@ -42,13 +47,13 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     def setUp(self):
         self._delete_test_file()
         self.writer = hazard_output.HazardCurveXMLWriter(
-                os.path.join(test.DATA_DIR, TEST_FILE))
+                test.test_output_file(TEST_FILE))
 
     def tearDown(self):
         self._delete_test_file()
 
     def _is_xml_valid(self):
-        xml_doc = etree.parse(os.path.join(test.DATA_DIR, TEST_FILE))
+        xml_doc = etree.parse(test.test_output_file(TEST_FILE))
 
         # test that the doc matches the schema
         schema_path = os.path.join(test.SCHEMA_DIR, "nrml.xsd")
@@ -182,7 +187,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     #@test.skipit
     def _delete_test_file(self):
         try:
-            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
+            os.remove(test.test_output_file(TEST_FILE))
         except OSError:
             pass
     
@@ -202,14 +207,12 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         constraint = shapes.RegionConstraint.from_simple(
                 upper_left_cor, lower_right_cor)
 
-        reader = hazard_parser.NrmlFile(
-                os.path.join(test.DATA_DIR, TEST_FILE))
-        
+        reader = hazard_parser.NrmlFile(test.test_output_file(TEST_FILE))
         return reader.filter(constraint)
 
     def _result_as_string(self):
         try:
-            result = open(os.path.join(test.DATA_DIR, TEST_FILE))
+            result = open(test.test_output_file(TEST_FILE))
             return result.read()
         finally:
             result.close()

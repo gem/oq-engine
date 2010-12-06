@@ -26,9 +26,6 @@ from openquake.risk.probabilistic_event_based import *
 
 logger = logs.RISK_LOG
 
-LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
-LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
-
 EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
 VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
 

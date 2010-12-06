@@ -15,7 +15,8 @@ from openquake import producer
 from openquake import shapes
 
 from openquake.xml import NRML_NS, GML_NS, NRML
-                
+
+LOG = logs.LOG
 
 def _to_site(element):
     """Convert current GML attributes to Site object"""
@@ -25,8 +26,6 @@ def _to_site(element):
     coord = [float(x) for x in pos_el[0].text.strip().split()]
     return shapes.Site(coord[0], coord[1])
 
-
-LOG = logs.LOG
 
 class NrmlFile(producer.FileProducer):
     """ This class parses a NRML hazard curve file. The contents of a NRML
@@ -75,7 +74,7 @@ class NrmlFile(producer.FileProducer):
              #raise NotImplementedError(error_str)    
             elif event == 'end' and element.tag == NRML + 'HazardCurve':
                 yield (_to_site(element), 
-                            self._to_attributes(element))
+                       self._to_attributes(element))
     
     def _hazard_curve_meta(self, element):
         """ Hazard curve metadata from the element """
@@ -104,7 +103,7 @@ class NrmlFile(producer.FileProducer):
             ('../nrml:Common/nrml:IMLValues','IMLValues', float_strip),
             ('../nrml:Common/nrml:IMT', 'IMT', string_strip)):
             child_node = element.xpath(child_el, 
-                namespaces={"gml":GML_NS,"nrml":NRML_NS})
+                namespaces={"gml": GML_NS, "nrml": NRML_NS})
 
             try:
                 attributes[child_key] = etl(child_node)
@@ -139,7 +138,52 @@ class NrmlFile(producer.FileProducer):
     #                attribute_constraint.match(next)):
     #            yield next
 
+
+class GMFReader(producer.FileProducer):
+    """ This class parses a NRML GMF (ground motion field) file. 
+    The class is implemented as a generator. For each 'site' element 
+    in the parsed instance document, it yields a pair of objects, of 
+    which the first one is a shapes object of type Site (representing a
+    geographical site as WGS84 lon/lat), and the second one
+    is a dictionary with GMF-related attribute values for this site.
+
+    The attribute dictionary looks like
+    {'groundMotion': 0.8}
+    """
+
+    def __init__(self, path):
+        super(GMFReader, self).__init__(path)
+
+    def _parse(self):
+        site_nesting_level = 0
+        for event, element in etree.iterparse(
+                self.file, events=('start', 'end')):
+            if event == 'start' and element.tag == NRML + 'HazardResult':
+                self._gmf_attributes()
+            elif event == 'start' and element.tag == NRML + 'site':
+                site_nesting_level += 1
+            elif event == 'end' and element.tag == NRML + 'site':
+                site_nesting_level -= 1
+
+                # yield only for outer site elements
+                if site_nesting_level == 0:
+                    yield (self._to_site_data(element))
+
+    def _gmf_attributes(self):
+        """TODO(fab): Collect instance-wide attributes here."""
+        pass
+
+    def _to_site_data(self, element):
+        """this is called on the outer 'site' elements"""
         
+        attributes = {}
+        (inner_site_node,) = element.xpath('nrml:site', 
+                namespaces={"gml": GML_NS, "nrml": NRML_NS})
+        attributes['groundMotion'] = float(
+            inner_site_node.get('groundMotion'))
+        return (_to_site(inner_site_node), attributes)
+
+
 class HazardConstraint(object):
     """ This class represents a constraint that can be used to filter
     VulnerabilityFunction elements from an VulnerabilityModel XML instance 
@@ -157,6 +201,6 @@ class HazardConstraint(object):
         may have additional key/value pairs.
         """
         for k, v in self.attribute.items():
-            if not ( k in compared_attribute and compared_attribute[k] == v ):
+            if not (k in compared_attribute and compared_attribute[k] == v):
                 return False
         return True
