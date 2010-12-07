@@ -12,6 +12,16 @@ from lxml import etree
 from openquake import producer
 from openquake import shapes
 from openquake.xml import NRML_NS, GML_NS, NRML
+                
+
+def _to_site(element):
+    """Convert current GML attributes to Site object"""
+    # lon/lat are in XML attributes 'Longitude' and 'Latitude'
+    # consider them as mandatory
+    pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
+    coord = [float(x) for x in pos_el[0].text.strip().split()]
+    return shapes.Site(coord[0], coord[1])
+
 
 class NrmlFile(producer.FileProducer):
     """ This class parses a NRML hazard curve file. The contents of a NRML
@@ -59,19 +69,12 @@ class NrmlFile(producer.FileProducer):
              #error_str = "parsing of HazardMap elements is not yet implemented"
              #raise NotImplementedError(error_str)    
             elif event == 'end' and element.tag == NRML + 'HazardCurve':
-                yield (self._to_site(element), 
+                yield (_to_site(element), 
                             self._to_attributes(element))
-                
-    def _to_site(self, element):
-        """Convert current GML attributes to Site object"""
-        # lon/lat are in XML attributes 'Longitude' and 'Latitude'
-        # consider them as mandatory
-        pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
-        coord = [float(x) for x in pos_el[0].text.strip().split()]
-        return shapes.Site(coord[0], coord[1])
     
     def _hazard_curve_meta(self, element):
-        self._current_hazard_meta = {}
+        """ Hazard curve metadata from the element """
+        self._current_hazard_meta = {} #pylint: disable=W0201
         for (required_attribute, attrib_type) in self.PROCESSING_ATTRIBUTES:
             id_model_value = element.get(required_attribute)
             if id_model_value is not None:
@@ -83,10 +86,11 @@ class NrmlFile(producer.FileProducer):
                 raise ValueError(error_str)
 
     def _to_attributes(self, element):
+        """ Build an attributes dict from XML element """
         
         attributes = {}
         
-        float_strip = lambda x: map(float, x[0].text.strip().split())
+        float_strip = lambda x: [float(o) for o in x[0].text.strip().split()]
         string_strip = lambda x: x[0].text.strip()
         # TODO(JMC): This is hardly efficient, but it's simple for the moment...
         
@@ -142,6 +146,11 @@ class HazardConstraint(object):
         self.attribute = attribute
 
     def match(self, compared_attribute):
+        """ Compare self.attribute against the passed in compared_attribute
+        dict. If the compared_attribute dict does not contain all of the 
+        key/value pais from self.attribute, we return false. compared_attribute
+        may have additional key/value pairs.
+        """
         for k, v in self.attribute.items():
             if not ( k in compared_attribute and compared_attribute[k] == v ):
                 return False
