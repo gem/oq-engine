@@ -184,15 +184,16 @@ class GMFXMLWriter(writer.FileWriter):
                  encoding="UTF-8")
     
     def _append_site_node(self, point, val, parent_node):
-        """Write outer and inner 'site' elements, with lon/lat coordinates
-        and groundMotion attribute."""
+        """Write outer and inner 'site' elements. Outer 'site' elements have
+        attribute 'groundMotion', inner 'site' elements have child element
+        <gml:pos> with lon/lat coordinates."""
         outer_site_node = etree.SubElement(parent_node, self.site_tag, 
                                            nsmap=NSMAP)
+        outer_site_node.attrib[self.ground_motion_attr] = str(
+            val[self.ground_motion_attr])
+
         inner_site_node = etree.SubElement(outer_site_node, self.site_tag,
                                            nsmap=NSMAP)
-        inner_site_node.attrib[self.ground_motion_attr] = str(
-            val[self.ground_motion_attr])
-        
         pos_node = etree.SubElement(inner_site_node, self.pos_tag, 
                                     nsmap=NSMAP)
         pos_node.text = "%s %s" % (str(point.x), str(point.y))
