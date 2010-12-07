@@ -28,6 +28,7 @@ def output(fn):
         #if result:
         results = []
         for block_id in self.blocks_keys:
+            #pylint: disable=W0212
             results.extend(self._write_output_for_block(self.job_id, block_id))
         for loss_poe in conditional_loss_poes:
             results.extend(self.write_loss_map(loss_poe))
@@ -38,6 +39,7 @@ def output(fn):
 
 @task
 def compute_risk(job_id, block_id, **kwargs):
+    """ A task for computing risk, calls the mixed in compute_risk method """
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin, key="risk") as mixed:
         mixed.compute_risk(block_id, **kwargs)
@@ -48,6 +50,7 @@ class RiskJobMixin(mixins.Mixin):
     mixins = {}
     
     def _write_output_for_block(self, job_id, block_id):
+        """ Given a job and a block, write out a plotted curve """
         decoder = json.JSONDecoder()
         loss_ratio_curves = []
         block = job.Block.from_kvs(block_id)
@@ -90,7 +93,7 @@ class RiskJobMixin(mixins.Mixin):
         risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
         filename = "losses_at-%s.tiff" % (loss_poe)
         path = os.path.join(self.base_path, self['OUTPUT_DIR'], filename) 
-        output_generator = geotiff.GeoTiffFile(path, risk_grid, 
+        output_generator = geotiff.LossMapGeoTiffFile(path, risk_grid, 
                 init_value=0.0, normalize=True)
         for point in self.region.grid:
             asset_key = risk.asset_key(self.id, point.row, point.column)

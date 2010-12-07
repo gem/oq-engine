@@ -595,7 +595,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 #                 (0.37, (0.405, 1.0)), (0.52, (0.700, 1.0))])
 #         
 #         # ugly, it shouldn't take the json format
-#         vulnerability.write_vulnerability_curves_to_kvs(JOB_ID,
+#         vulnerability.write_vuln_curves_to_kvs(JOB_ID,
 #             {"Type1": vuln_curve.to_json()})
 #         
 #         # recreate the calculator to get the vuln function

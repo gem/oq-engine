@@ -17,6 +17,8 @@ import numpy
 import os
 
 from osgeo import osr, gdal
+from scipy.interpolate import interp1d
+
 
 from openquake import logs
 from openquake import writer
@@ -32,10 +34,21 @@ TIFF_BAND = 4
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
 
+RGB_SEGMENTS, RGB_RED_BAND, RGB_GREEN_BAND, RGB_BLUE_BAND = range(0, 4)
+
+# these are some continuous colormaps, as found on
+# http://soliton.vm.bytemark.co.uk/pub/cpt-city/index.html
 COLORMAP = {'green-red': numpy.array( 
-    ((0.0, 1.0), (0.0, 255.0), (255.0, 0.0), (0.0, 0.0))),
+    ((0.0, 1.0), (0, 255), (255, 0), (0, 0))),
             'gmt-green-red': numpy.array( 
-    ((0.0, 1.0), (0.0, 128.0), (255.0, 0.0), (0.0, 0.0)))
+    ((0.0, 1.0), (0, 128), (255, 0), (0, 0))),
+            'matlab-polar': numpy.array( 
+    ((0.0, 0.5, 1.0), (0, 255, 255), (0, 255, 0), (255, 255, 0))),
+            'gmt-seis': numpy.array( 
+  ((0.0, 0.1115, 0.2225, 0.3335, 0.4445, 0.5555, 0.6665, 0.7775, 0.8885, 1.0),
+     (170, 255, 255, 255, 255, 255, 90, 0, 0, 0), 
+     (0, 0, 85, 170, 255, 255, 255, 240, 80, 0), 
+     (0, 0, 0, 0, 0, 0, 30, 110, 255, 205)))
             }
 
 COLORMAP_DEFAULT = 'green-red'
@@ -110,7 +123,6 @@ class GeoTiffFile(writer.FileWriter):
 
     def _normalize(self):
         """ Normalize the raster matrix """
-        
         # NOTE(fab): numpy raster does not have to be transposed, although
         # it has rows x columns
         if self.normalize:
@@ -118,7 +130,6 @@ class GeoTiffFile(writer.FileWriter):
 
     def close(self):
         """Make sure the file is flushed, and send exit event"""
-        
         self._normalize()
 
         self.target.GetRasterBand(1).WriteArray(self.raster)
@@ -128,8 +139,18 @@ class GeoTiffFile(writer.FileWriter):
         # Write alpha channel
         self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
 
+        # Try to write the HTML wrapper
+        try:
+            self._write_html_wrapper()
+        except AttributeError:
+            pass
+
         self.target = None  # This is required to flush the file
         self.finished.send(True)
+
+    def _write_html_wrapper(self):
+        """write an html wrapper that embeds the geotiff."""
+        pass
     
     def serialize(self, iterable):
         # TODO(JMC): Normalize the values
@@ -139,6 +160,50 @@ class GeoTiffFile(writer.FileWriter):
                 val = val/maxval*254
             self.write((key.column, key.row), val)
         self.close()
+
+
+class LossMapGeoTiffFile(GeoTiffFile):
+    """ Write RGBA geotiff images for loss maps. Color scale is from
+    0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
+    the TIFF with a color-scale legend."""
+
+    def write(self, cell, value):
+        """Stores the cell values in the NumPy array for later 
+        serialization. Make sure these are zero-based cell addresses."""
+        self.raster[int(cell[0]), int(cell[1])] = float(value)
+
+        # Set AlphaLayer
+        if value:
+            # 0x10 less than full opacity
+            self.alpha_raster[int(cell[0]), int(cell[1])] = float(0xfa)
+
+    def _normalize(self):
+        """ Normalize the raster matrix """
+        if self.normalize:
+            # This gives us a color scale of 0 to 100 with a 16 step.
+            self.raster = numpy.abs((255 * self.raster) / 100.0)
+            modulo = self.raster % 0x10
+            self.raster -= modulo
+
+    def _write_html_wrapper(self):
+        """write an html wrapper that <embed>s the geotiff."""
+
+        if self.path.endswith(('tiff', 'TIFF')):
+            html_path = ''.join((self.path[0:-4], 'html'))
+        else:
+            html_path = ''.join((self.path, '.html'))
+
+        # replace placeholders in HTML template with filename, height, width
+        html_string = template.generate_html(
+            os.path.basename(self.path),
+            width=str(self.target.RasterXSize * SCALE_UP),
+            height=str(self.target.RasterYSize * SCALE_UP),
+            imt='Loss Ratio/percent',
+            template=template.HTML_TEMPLATE_LOSSRATIO)
+
+        with open(html_path, 'w') as f:
+            f.write(html_string)
+
 
 class GMFGeoTiffFile(GeoTiffFile):
     """Writes RGB GeoTIFF image for ground motion fields. Color scale is
@@ -174,47 +239,57 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.color_buckets = len(iml_list) - 1
             self.iml_step = None
 
-        print self.iml_list
+        # list with pairs of RGB color hex codes and corresponding
+        # floats as values
+        self.colorscale_values = self._generate_colorscale()
 
-        # set image rasters (RGB and alpha)
+        # set image rasters
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
         self.raster_g = numpy.zeros_like(self.raster_r)
         self.raster_b = numpy.zeros_like(self.raster_r)
 
+    def write(self, cell, value):
+        """This method is redefined, because the one from the base class
+        sets transparency to a high level for zero values. For GMF plots,
+        we want fully opaque images."""
+        self.raster[int(cell[0]), int(cell[1])] = float(value)
+
     def _normalize(self):
         """ Normalize the raster matrix """
 
-        # NOTE(fab): doing continuous color scale first
+        # for discrete color scale, digitize raster values into 
+        # IML list values
+        if self.discrete is True:
+            index_raster = numpy.digitize(self.raster.flatten(), self.iml_list)
 
-        # condense desired value range from IML list to interval 0..1
-        # (because color map segments are given on the interval 0..1)
-        self.raster = (self.raster - self.iml_list[0]) / (
-            self.iml_list[-1] - self.iml_list[0])
+            # fix out-of-bounds values (set to first/last bin)
+            # NOTE(fab): doing so, the upper end of the color scale is 
+            # never reached
+            numpy.putmask(index_raster, index_raster < 1, 1)
+            numpy.putmask(index_raster, index_raster > len(index_raster)-1,
+                len(index_raster)-1)
+            self.raster = numpy.reshape(self.iml_list[index_raster-1], 
+                                        self.raster.shape)
 
-        # cut values to 0.0-0.1 range (remove outliers)
-        numpy.putmask(self.raster, self.raster < 0.0, 0.0)
-        numpy.putmask(self.raster, self.raster > 1.0, 1.0)
+        # condense desired target value range given in IML list to 
+        # interval 0..1 (because color map segments are given in this scale)
+        self.raster = self._condense_iml_range_to_unity(
+            self.raster, remove_outliers=True)
 
         self.raster_r, self.raster_g, self.raster_b = _rgb_for(
             self.raster, COLORMAP[self.colormap])
 
-        # no need to set transparency to 32 here, make image opaque
-        # NOTE(fab): write method of parent class sets transparency 
-        # to 255 if value is present
-        self.alpha_raster[:] = 0
-
     def close(self):
         """Make sure the file is flushed, and send exit event"""
-
         self._normalize()
 
         self.target.GetRasterBand(1).WriteArray(self.raster_r)
         self.target.GetRasterBand(2).WriteArray(self.raster_g)
         self.target.GetRasterBand(3).WriteArray(self.raster_b)
 
-        # Write alpha channel
-        self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
+        # set alpha channel to fully opaque
+        self.target.GetRasterBand(4).Fill(255)
 
         # write wrapper before closing file, so that raster dimensions are
         # still accessible
@@ -222,47 +297,74 @@ class GMFGeoTiffFile(GeoTiffFile):
 
         self.target = None  # This is required to flush the file
         self.finished.send(True)
+    
+    @property
+    def html_path(self):
+        """Path to the generated html file"""
+        if self.path.endswith(('tiff', 'TIFF')):
+            return ''.join((self.path[0:-4], 'html'))
+        else:
+            return ''.join((self.path, '.html'))       
 
     def _write_html_wrapper(self):
-        """write an html wrapper that <embed>s the geotiff."""
-
-        if self.path.endswith(('tiff', 'TIFF')):
-            html_path = ''.join((self.path[0:-4], 'html'))
-        else:
-            html_path = ''.join((self.path, '.html'))
+        """Write an html wrapper that embeds the geotiff in an <img> tag.
+        NOTE: this cannot be viewed out-of-the-box in all browsers."""
 
         # replace placeholders in HTML template with filename, height, width
-        html_string = template.generate_html(os.path.basename(self.path), 
-                                             str(self.target.RasterXSize * SCALE_UP),
-                                             str(self.target.RasterYSize * SCALE_UP))
+        # TODO(fab): read IMT from config
+        html_string = template.generate_html(
+            os.path.basename(self.path), 
+            width=str(self.target.RasterXSize * SCALE_UP),
+            height=str(self.target.RasterYSize * SCALE_UP),
+            colorscale=self.colorscale_values,
+            imt='PGA/g')
 
-        with open(html_path, 'w') as f:
+        with open(self.html_path, 'w') as f:
             f.write(html_string)
+
+    def _condense_iml_range_to_unity(self, array, remove_outliers=False):
+        """Requires a one- or multi-dim. numpy array as argument."""
+        array = (array - self.iml_list[0]) / (
+            self.iml_list[-1] - self.iml_list[0])
+
+        if remove_outliers is True:
+            # cut values to 0.0-0.1 range (remove outliers)
+            numpy.putmask(array, array < 0.0, 0.0)
+            numpy.putmask(array, array > 1.0, 1.0)
+
+        return array
+
+    def _generate_colorscale(self):
+        """Generate a list of pairs of corresponding RGB hex values and
+        IML values for the colorscale in HTML output."""
+        colorscale = []
+        r, g, b = _rgb_for(self._condense_iml_range_to_unity(self.iml_list),
+                           COLORMAP[self.colormap])
+
+        for idx, iml_value in enumerate(self.iml_list):
+            colorscale.append(("#%02x%02x%02x" % (int(r[idx]), int(g[idx]), 
+                int(b[idx])), str(self.iml_list[idx])))
+
+        return colorscale
 
 def _rgb_for(fractional_values, colormap):
     """Return a triple (r, g, b) of numpy arrays with R, G, and B 
-    color values between 0
-    and 255, respectively, for a given numpy array fractional_values between
-    0 and 1. colormap is a 2-dim. numpy array with fractional values in the
-    first row, and R, G, B corner values in the second, third, and fourth
-    row, respectively."""
-    return (_interpolate_color(fractional_values, colormap[1]),
-            _interpolate_color(fractional_values, colormap[2]),
-            _interpolate_color(fractional_values, colormap[3]))
+    color values between 0 and 255, respectively, for a given numpy array
+    fractional_values between 0 and 1. 
+    colormap is a 2-dim. numpy array with fractional values describing the 
+    color segments in the first row, and R, G, B corner values in the second,
+    third, and fourth row, respectively."""
+    return (_interpolate_color(fractional_values, colormap, RGB_RED_BAND),
+            _interpolate_color(fractional_values, colormap, RGB_GREEN_BAND),
+            _interpolate_color(fractional_values, colormap, RGB_BLUE_BAND))
 
-def _interpolate_color(fractional_values, color_pair):
-    """Compute/create numpy array of rgb color value between two corner 
-    values. numpy array fractional_values is assumed to hold values 
-    between 0 and 1"""
+def _interpolate_color(fractional_values, colormap, rgb_band):
+    """Compute/create numpy array of rgb color value as interpolated
+    from color map. numpy array fractional_values is assumed to hold values
+    between 0 and 1. rgb_band can be 1,2,3 for red, green, and blue color
+    bands, respectively."""
 
-    color_difference = color_pair[1] - color_pair[0]
+    color_interpolate = interp1d(colormap[RGB_SEGMENTS], colormap[rgb_band])
+    return numpy.reshape(color_interpolate(fractional_values.flatten()), 
+                         fractional_values.shape)
 
-    # NOTE(fab): equality check for floats can be assumed safe here, since
-    # the color values are given in textual representation and not computed
-    if color_difference == 0.0:
-        color_value = numpy.ones_like(fractional_values) * color_pair[0]
-    else:
-        color_value = fractional_values * color_difference + color_pair[0]
-
-    return color_value
-        
