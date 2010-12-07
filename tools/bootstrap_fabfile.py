@@ -38,7 +38,7 @@ virtual environment tar ball specific to the platform.
 
 
 def _virtual_env_osx():
-    _setup_venv("http://openquake.cloudfed.com/\
+    _setup_venv("http://opengem.cloudfed.com/\
 documents/10156/11140/virtualenvs_osx.tar.gz")
 
 
@@ -93,7 +93,7 @@ same for Ubuntu and OSX (just a different tarball).
 
 
 def _virtual_env_ubuntu():
-    _setup_venv("http://openquake.cloudfed.com/\
+    _setup_venv("http://opengem.cloudfed.com/\
 documents/10156/11140/virtualenvs_ubuntu.tar.gz")
     
 
@@ -129,13 +129,13 @@ def _bootstrap_linux():
                         "rabbitmq-server", "memcached", "libmemcache-dev", 
                         "libmemcached-dev", "postgresql", "postgis",
                         "libxml2-dev", "libxslt-dev", "libblas-dev",
-                        "liblapack-dev", "pylint", "unzip"] 
+                        "liblapack-dev", "pylint", "unzip", "apt-file"] 
         gdal_packages = ["gdal-bin", "libgdal1-dev", "python-gdal"]
-        pip_packages = ["virtualenv", "virtualenvwrapper"]
+        pip_packages = ["virtualenv", "virtualenvwrapper",]
         virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
                                "eventlet", "python-gflags", "guppy", 
                                "libLAS", "numpy", "scipy", "celery",
-                               "nose", "django", "ordereddict"] 
+                               "nose", "django", "ordereddict", "stdeb"] 
 
         _apt_install(" ".join(apt_packages)) 
         _pip_install(" ".join(pip_packages))
