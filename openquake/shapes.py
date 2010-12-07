@@ -99,6 +99,7 @@ class Region(object):
     
     @property
     def sites(self):
+        """ Returns a list of sites created from iterating over self """
         sites = []
         
         for site in self:
@@ -322,9 +323,13 @@ class Field(object):
             self.field = numpy.zeros((rows, cols))
     
     def get(self, row, col):
+        """ Return the value at self.field[row][col] 
+            :param row
+            :param col
+        """
         try:
             return self.field[row][col]
-        except Exception, e:
+        except IndexError:
             print "Field with shape [%s] doesn't have value at [%s][%s]" % (
                 self.field.shape, row, col)
     
@@ -344,7 +349,7 @@ class Field(object):
         assert grid.cell_size
         field = numpy.zeros((grid.rows, grid.columns))
         
-        for key, field_site in values.items():
+        for key, field_site in values.items(): #pylint: disable=W0612
             point = grid.point_at(
                 Site(field_site['lon'], field_site['lat']))
             field[point.row][point.column] = transform(float(field_site['mag']))
@@ -361,6 +366,7 @@ class FieldSet(object):
     
     @classmethod
     def from_json(cls, json_str, grid=None):
+        """ Construct a field set from a serialized version in json format """
         assert grid
         as_dict = json.JSONDecoder().decode(json_str)
         return cls(as_dict, grid=grid)
@@ -468,7 +474,7 @@ class Curve(object):
         """Return true if this curve describes multiple ordinate values,
         false otherwise."""
         return self.y_values.ndim > 1
-    
+
     def ordinate_for(self, x_value, y_index=0):
         """Return the y value corresponding to the given x value."""
         

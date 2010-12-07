@@ -1,4 +1,4 @@
-# pylint: disable-msg=W0232
+# pylint: disable=W0232
 
 """ Probabilistic Event Mixin: 
 
@@ -6,37 +6,28 @@
 
 """
 
-import math
-import os
 import json
-import sys
 
-import numpy
 from celery.exceptions import TimeoutError
 
 from openquake import hazard
 from openquake import job
 from openquake import kvs
 from openquake import logs
-from openquake import producer
 from openquake import risk
-from openquake import settings
 from openquake import shapes
 
 from openquake.risk import common
 from openquake.risk import probabilistic_event_based
 from openquake.risk import job as risk_job
-from openquake.output.risk import RiskXMLWriter
 from openquake.parser import exposure
-from openquake.parser import hazard as hazparser
 from openquake.parser import vulnerability
-from openquake.risk import tasks
 from openquake.risk.job import output, RiskJobMixin
 
 
 LOGGER = logs.LOG
 
-DEFAULT_conditional_loss_poe = 0.01
+DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
 def preload(fn):
     """ Preload decorator """
@@ -96,7 +87,9 @@ class ProbabilisticEventMixin:
             for j in range(0, realizations):
                 key = kvs.generate_product_key(
                         self.id, hazard.STOCHASTIC_SET_TOKEN, "%s!%s" % (i, j))
-                fieldset = shapes.FieldSet.from_json(kvs.get(key), self.region.grid)
+                fieldset = shapes.FieldSet.from_json(kvs.get(key), 
+                    self.region.grid)
+
                 for field in fieldset:
                     for key in gmfs.keys():
                         (row, col) = key.split("!")
@@ -132,7 +125,7 @@ class ProbabilisticEventMixin:
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
     
-    def compute_risk(self, block_id, **kwargs):
+    def compute_risk(self, block_id, **kwargs): #pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in memcache:
          1) list of sites
@@ -148,12 +141,12 @@ class ProbabilisticEventMixin:
         conditional_loss_poes = [float(x) for x in self.params.get(
                     'CONDITIONAL_LOSS_POE', "0.01").split()]
         self.slice_gmfs(block_id)
+
+        #pylint: disable=W0201 
         self.vuln_curves = \
-                vulnerability.load_vulnerability_curves_from_kvs(self.job_id)
+                vulnerability.load_vuln_curves_from_kvs(self.job_id)
 
         # TODO(jmc): DONT assumes that hazard and risk grid are the same
-        decoder = json.JSONDecoder()
-        
         block = job.Block.from_kvs(block_id)
         
         for point in block.grid(self.region):
@@ -163,7 +156,7 @@ class ProbabilisticEventMixin:
             
             asset_key = risk.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [decoder.decode(x) for x in asset_list]:
+            for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
                 LOGGER.debug("processing asset %s" % (asset))
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                         point.column, point.row, asset, gmf_slice)
@@ -179,17 +172,21 @@ class ProbabilisticEventMixin:
                                 loss_curve, asset, loss_poe)
         return True
     
-    def compute_conditional_loss(self, column, row, loss_curve, asset, loss_poe):
+    def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):
+        """ Compute the conditional loss for a loss curve and probability of 
+        exceedance """
+
         loss_conditional = common.compute_conditional_loss(loss_curve, loss_poe)
-        key = risk.loss_key(self.id, row, column, asset["AssetID"], loss_poe)
+        key = risk.loss_key(self.id, row, col, asset["AssetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
             loss_conditional, key))
         kvs.set(key, loss_conditional)
 
-    def compute_loss_ratio_curve(self, column, row, asset, gmf_slice ): # site_id
+    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice ): # site_id
         """Compute the loss ratio curve for a single site."""
-        # If the asset has a vuln function code we don't have loaded, return fail
+        # If the asset has a vuln function code we don't have loaded, return
+        # fail
         vuln_function = self.vuln_curves.get(
                 asset["VulnerabilityFunction"], None)
         if not vuln_function:
@@ -202,7 +199,7 @@ class ProbabilisticEventMixin:
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None
-        key = risk.loss_ratio_key(self.id, row, column, asset["AssetID"])
+        key = risk.loss_ratio_key(self.id, row, col, asset["AssetID"])
         
         LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))

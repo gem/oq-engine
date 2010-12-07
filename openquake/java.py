@@ -52,12 +52,14 @@ def jclass(class_key):
 def jvm(max_mem=4000):
     """Return the jpype module, after guaranteeing the JVM is running and 
     the classpath has been loaded properly."""
-    jarpaths = (os.path.abspath(os.path.join(os.path.dirname(__file__), "../lib")), 
-                os.path.abspath(os.path.join(os.path.dirname(__file__), "../dist")))
+    jarpaths = (os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "../lib")),
+                os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "../dist")))
     # TODO(JMC): Make sure these directories exist
     # LOG.debug("Jarpath is %s", jarpaths)
     if not jpype.isJVMStarted():
-        print "Default JVM path is %s" % jpype.getDefaultJVMPath()
+        LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(), 
             "-Djava.ext.dirs=%s:%s" % jarpaths, 
             "-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
@@ -83,5 +85,7 @@ def jvm(max_mem=4000):
 
 
 # TODO(JMC): Use this later for logging:
-# self.PropertyConfigurator = jpype.JClass('org.apache.log4j.PropertyConfigurator')
-# object.__getattribute__(self, 'PropertyConfigurator').configure(settings.LOG4J_PROPERTIES)
+# self.PropertyConfigurator = jpype.JClass(
+#    'org.apache.log4j.PropertyConfigurator')
+# object.__getattribute__(self, 
+#    'PropertyConfigurator').configure(settings.LOG4J_PROPERTIES)

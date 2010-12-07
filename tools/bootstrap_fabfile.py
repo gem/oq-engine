@@ -129,13 +129,13 @@ def _bootstrap_linux():
                         "rabbitmq-server", "memcached", "libmemcache-dev", 
                         "libmemcached-dev", "postgresql", "postgis",
                         "libxml2-dev", "libxslt-dev", "libblas-dev",
-                        "liblapack-dev", "pylint", "unzip"] 
+                        "liblapack-dev", "pylint", "unzip", "apt-file"] 
         gdal_packages = ["gdal-bin", "libgdal1-dev", "python-gdal"]
-        pip_packages = ["virtualenv", "virtualenvwrapper"]
+        pip_packages = ["virtualenv", "virtualenvwrapper",]
         virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
                                "eventlet", "python-gflags", "guppy", 
                                "libLAS", "numpy", "scipy", "celery",
-                               "nose", "django", "ordereddict"] 
+                               "nose", "django", "ordereddict", "stdeb"] 
 
         _apt_install(" ".join(apt_packages)) 
         _pip_install(" ".join(pip_packages))
