@@ -23,6 +23,9 @@ flags.DEFINE_boolean('download_test_data', True,
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../tests/data'))
 
+OUTPUT_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), '../tests/data/output'))
+
 SCHEMA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../docs/schema'))
 
@@ -34,7 +37,12 @@ MAX_WAIT_LOOPS = 10
 def test_file(file_name):
     return os.path.join(DATA_DIR, file_name)
 
+def test_output_file(file_name):
+    return os.path.join(OUTPUT_DIR, file_name)
+
 def smoketest_file(file_name):
+    """ Take a file name and return the full path to the file in the smoketests
+    directory """
     return os.path.join(os.path.dirname(__file__), "../smoketests", file_name)
 
 class WordProducer(producer.FileProducer):
@@ -83,6 +91,7 @@ def skipit(method):
         from nose.plugins.skip import SkipTest
     except ImportError, _e:
         def skip_me(*_args, **_kw):
+            """The skipped method"""
             print "Can't raise nose SkipTest error, silently skipping %r" % (
                 method.__name__)
         return skip_me
@@ -96,6 +105,7 @@ def skipit(method):
 def measureit(method):
     """Decorator that profiles memory usage"""
     def _measured(*args, **kw):
+        """Decorator that profiles memory usage"""
         result =  method(*args, **kw)
         print guppy.hpy().heap()
         return result
