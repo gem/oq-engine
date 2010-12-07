@@ -23,8 +23,8 @@ class FileWriter(object):
         self.file = tpool.Proxy(open(self.path, "w"))
 
     def write(self, point, value):
-       """Write out an individual point (unimplemented)"""
-       raise NotImplementedError
+        """Write out an individual point (unimplemented)"""
+        raise NotImplementedError
 
     def write_header(self):
         """Write out the file header"""

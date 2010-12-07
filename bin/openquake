@@ -99,7 +99,7 @@ def _launch_server_subprocs():
     # launch rabbitmq if it's not already running
     if not _is_running('[r]abbitmq'):
         print "Starting rabbitmq..."
-        Process(target=local, args=('sudo /usr/local/sbin/rabbitmq-server',)).start()
+        Process(target=local, args=('sudo rabbitmq-server',)).start()
 
  
     # launch memcached if it's not already running
