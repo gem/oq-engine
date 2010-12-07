@@ -38,7 +38,7 @@ virtual environment tar ball specific to the platform.
 
 
 def _virtual_env_osx():
-    _setup_venv("http://openquake.cloudfed.com/\
+    _setup_venv("http://opengem.cloudfed.com/\
 documents/10156/11140/virtualenvs_osx.tar.gz")
 
 
@@ -93,7 +93,7 @@ same for Ubuntu and OSX (just a different tarball).
 
 
 def _virtual_env_ubuntu():
-    _setup_venv("http://openquake.cloudfed.com/\
+    _setup_venv("http://opengem.cloudfed.com/\
 documents/10156/11140/virtualenvs_ubuntu.tar.gz")
     
 
