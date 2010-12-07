@@ -13,6 +13,14 @@ from openquake import producer
 from openquake import shapes
 from openquake.xml import NRML_NS, GML_NS, NRML
 
+def _to_site(element):
+    """Convert current GML attributes to Site object."""
+    # lon/lat are in XML attributes 'Longitude' and 'Latitude'
+    # consider them as mandatory
+    pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
+    coord = [float(x) for x in pos_el[0].text.strip().split()]
+    return shapes.Site(coord[0], coord[1])
+
 class NrmlFile(producer.FileProducer):
     """ This class parses a NRML loss/loss ratio curve file. 
     The class is implemented as a generator. 
@@ -54,22 +62,15 @@ class NrmlFile(producer.FileProducer):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
             if event == 'end' and element.tag == NRML + self.abscissa_container:
-                yield (self._to_site(element), 
+                yield (_to_site(element), 
                        self._to_attributes(element))
 
-    def _to_site(self, element):
-        """Convert current GML attributes to Site object."""
-        # lon/lat are in XML attributes 'Longitude' and 'Latitude'
-        # consider them as mandatory
-        pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
-        coord = [float(x) for x in pos_el[0].text.strip().split()]
-        return shapes.Site(coord[0], coord[1])
-
     def _to_attributes(self, element):
+        """ Build an attributes dict from XML element """
         
         attributes = {self.property_output_key: self.abscissa_property}
         
-        float_strip = lambda x: map(float, x[0].text.strip().split())
+        float_strip = lambda x: [float(o) for o in x[0].text.strip().split()]
         # TODO(JMC): This is hardly efficient, but it's simple for the moment...
         
         for (child_el, child_key, etl) in (

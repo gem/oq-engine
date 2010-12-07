@@ -18,13 +18,16 @@ class Grid:
         self.no_data_value = no_data_value
 
     def is_no_data_value(self, val):
+        """ Return true if the value matches our grid no_data_value """
         return val == self.no_data_value
         
     def check_column(self, point):
+        """ Raise if the point is out of bounds """
         if (self.columns < point.column or point.column < 1):
             raise Exception("Point is not on the Grid")
             
     def check_row(self, point):
+        """ Raise if the point is out of bounds """
         if (self.rows < point.row or point.row < 1):
             raise Exception("Point is not on the Grid")
 
@@ -40,7 +43,7 @@ class Site:
         self.latitude = latitude
         self.longitude = longitude
 
-class BaseExposureReader:
+class BaseExposureReader(object):
     """Base class for reading exposure data from file formats."""
     def __init__(self, filename, exposure_definition):
         self.filename = filename
@@ -55,6 +58,7 @@ class ESRIBinaryFileExposureReader(BaseExposureReader):
                 filename, exposure_definition)
     
     def read_at(self, site):
+        """ Return the unpacked value of the point at the site """
         point = self.definition.point_at(site)
         position = self.position_of(point)
         print "pos is %s" % position
@@ -63,12 +67,14 @@ class ESRIBinaryFileExposureReader(BaseExposureReader):
         return float(struct.unpack("<f", val)[0])
         
     def position_of(self, point):
+        """ Return the row/column of the point in bytes """
         rows_offset = (point.row - 1) * self.definition.grid.columns
         rows_offset_in_bytes = rows_offset * 4 # All points are doubles
         columns_offset_in_bytes = (point.column - 1) * 4
         return rows_offset_in_bytes + columns_offset_in_bytes
 
 class AsciiFileHazardIMLReader(BaseExposureReader):
+    """ Stubbed reader for Ascii Hazard IML """
     pass
 
 class ESRIRasterMetadata():
@@ -80,6 +86,7 @@ class ESRIRasterMetadata():
     
     @classmethod
     def load_esri_header(cls, filename):
+        """ Build an ESRIRasterMetadata object from an ESRI header file """
         with open(filename, "r") as header_file:
             columns = int(header_file.readline().split()[1])
             rows = int(header_file.readline().split()[1])
@@ -94,6 +101,7 @@ class ESRIRasterMetadata():
         
     @classmethod
     def load_hazard_iml(cls, filename):
+        """ Build an ESRIRasterMetadata object from an hazard IML file """
         with open(filename, "r") as header_file:
             header_file.readline() # Skip one line
             tokens = header_file.readline().split()
