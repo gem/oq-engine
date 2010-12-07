@@ -177,10 +177,9 @@ class GMFReader(producer.FileProducer):
         """this is called on the outer 'site' elements"""
         
         attributes = {}
+        attributes['groundMotion'] = float(element.get('groundMotion'))
         (inner_site_node,) = element.xpath('nrml:site', 
                 namespaces={"gml": GML_NS, "nrml": NRML_NS})
-        attributes['groundMotion'] = float(
-            inner_site_node.get('groundMotion'))
         return (_to_site(inner_site_node), attributes)
 
 
