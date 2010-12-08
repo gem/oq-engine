@@ -169,9 +169,6 @@ class GMFXMLWriter(writer.FileWriter):
 
         gmpe_params_node = etree.SubElement(container_node, 
                                             self.gmpe_params_tag, nsmap=NSMAP)
-        
-        # add required attribute stub
-        gmpe_params_node.attrib['vs30method'] = 'None'
 
         # field element
         self.parent_node = etree.SubElement(container_node, self.field_tag, 
