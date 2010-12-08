@@ -718,11 +718,98 @@ a complex fault data
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+    
+    <xs:complexType name="truncatedGutenbergRichterType">
+        <xs:sequence>
+            <xs:element name="aValueCumulative" type="xs:double"></xs:element>
+            <xs:element name="bValue">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="minMagnitude">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="maxMagnitude">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="evenlyDiscretizedIncrementalMagFreqDistType">
+        <xs:sequence>
+            <xs:element name="minMagnitude">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="maxMagnitude">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="numValues">
+                <xs:simpleType>
+                    <xs:restriction base="xs:int">
+                        <xs:minInclusive value="1"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="occurrenceRates" type="gml:doubleList"></xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:element name="magnitudeFrequencyDistribution" abstract="true"></xs:element>
+    <xs:element name="truncatedGutenbergRichter" type="nrml:truncatedGutenbergRichterType" substitutionGroup="nrml:magnitudeFrequencyDistribution"></xs:element>
+    <xs:element name="evenlyDiscretizedIncrementalMagFreqDist" type="nrml:evenlyDiscretizedIncrementalMagFreqDistType" substitutionGroup="nrml:magnitudeFrequencyDistribution"></xs:element>
+
+    <xs:complexType name="focalMechanism">
+        <xs:sequence>
+            <xs:element name="strike">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                        <xs:maxInclusive value="360.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="dip">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="0.0"/>
+                        <xs:maxInclusive value="90.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+            <xs:element name="rake">
+                <xs:simpleType>
+                    <xs:restriction base="xs:double">
+                        <xs:minInclusive value="-180.0"/>
+                        <xs:maxInclusive value="+180.0"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
 
     <xs:complexType name="ruptureRateModelType">
         <xs:sequence>
-            <xs:element name="magnitudeFrequencyDistribution" type="nrml:MFDType"/>
-            <xs:element name="focalMechanism" type="nrml:FocalMechanismType"/>
+            <xs:element ref="nrml:magnitudeFrequencyDistribution"/>
+            <xs:element name="focalMechanism" type="nrml:focalMechanism"/>
             <xs:element name="ruptureDepthDistribution"
                 type="nrml:EvenlyDiscretizedTopRuptureDepthDistType"/>
         </xs:sequence>
