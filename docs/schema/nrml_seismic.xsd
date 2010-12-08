@@ -598,4 +598,151 @@ a complex fault data
             </xs:simpleType>
         </xs:attribute>
     </xs:complexType>
+
+
+    <xs:complexType name="seismicSourceDataType">
+        <xs:sequence>
+            <xs:element name="sourceName" type="xs:string"/>
+            <xs:element name="sourceID" type="xs:string"/>
+            <xs:element name="tectonicRegionType">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:enumeration value="Active Shallow Crust"/>
+                        <xs:enumeration value="Stable Shallow Crust"/>
+                        <xs:enumeration value="Subduction Interface"/>
+                        <xs:enumeration value="Subduction IntraSlab"/>
+                        <xs:enumeration value="Volcanic"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="simpleFaultDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:seismicSourceDataType">
+                <xs:sequence>
+                    <xs:element name="faultTrace" type="gml:doubleList"/>
+                    <xs:element name="faultDip">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="0.0"/>
+                                <xs:maxInclusive value="90.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="faultRake">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="-180.0"/>
+                                <xs:maxInclusive value="+180.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="upperSeismogenicDepth">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="0.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="lowerSeismogenicDepth">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="0.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="magnitudeFrequencyDistribution" type="nrml:MFDType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="complexFaultDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:seismicSourceDataType">
+                <xs:sequence>
+                    <xs:element name="faultTopEdge" type="gml:doubleList"/>
+                    <xs:element name="faultBottomEdge" type="gml:doubleList"/>
+                    <xs:element name="faultRake">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="-180.0"/>
+                                <xs:maxInclusive value="+180.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="magnitudeFrequencyDistribution" type="nrml:MFDType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="areaDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:seismicSourceDataType">
+                <xs:sequence>
+                    <xs:element name="areaBoundary" type="gml:doubleList"/>
+                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="ruptureRateModel" type="nrml:ruptureRateModelType"/>
+                    </xs:sequence>
+                    <xs:element name="hypocentralDepth">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="0.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="pointDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:seismicSourceDataType">
+                <xs:sequence>
+                    <xs:element name="pointLocation" type="gml:doubleList"/>
+                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="ruptureRateModel" type="nrml:ruptureRateModelType"/>
+                    </xs:sequence>
+                    <xs:element name="hypocentralDepth">
+                        <xs:simpleType>
+                            <xs:restriction base="xs:double">
+                                <xs:minInclusive value="0.0"/>
+                            </xs:restriction>
+                        </xs:simpleType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ruptureRateModelType">
+        <xs:sequence>
+            <xs:element name="magnitudeFrequencyDistribution" type="nrml:MFDType"/>
+            <xs:element name="focalMechanism" type="nrml:FocalMechanismType"/>
+            <xs:element name="ruptureDepthDistribution"
+                type="nrml:EvenlyDiscretizedTopRuptureDepthDistType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="seismicSource" abstract="true"/>
+    <xs:element name="simpleFault" type="nrml:simpleFaultDataType"
+        substitutionGroup="nrml:seismicSource"/>
+    <xs:element name="complexFault" type="nrml:complexFaultDataType"
+        substitutionGroup="nrml:seismicSource"/>
+    <xs:element name="area" type="nrml:areaDataType" substitutionGroup="nrml:seismicSource"/>
+    <xs:element name="point" type="nrml:pointDataType" substitutionGroup="nrml:seismicSource"/>
+
+    <xs:complexType name="sourceModelType">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element ref="nrml:seismicSource"/>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:element name="sourceModel" type="nrml:sourceModelType"></xs:element>
+
+
 </xs:schema>
