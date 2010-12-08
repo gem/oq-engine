@@ -250,6 +250,43 @@
         substitutionGroup="nrml:rupture"/>    
     <xs:element name="arbitrarilyComplexRupture" type="nrml:arbitrarilyComplexRuptureType"
         substitutionGroup="nrml:rupture"/>
+    
+    <xs:attribute name="uncertaintyType">
+        <xs:simpleType>        
+            <xs:restriction base="xs:string">
+            <xs:enumeration value="gmpeModel"/>    
+            <xs:enumeration value="sourceModel"/>
+            <xs:enumeration value="maxMagnitudeGutenbergRichterRelative"/>
+            <xs:enumeration value="bValueGutenbergRichterRelative"/>
+        </xs:restriction></xs:simpleType>
+    </xs:attribute>
+    
+    <xs:complexType name="logicTreeBranchType">
+        <xs:sequence>
+            <xs:element name="uncertaintyModel" type="xs:string"></xs:element>
+            <xs:element name="uncertaintyWeight" type="xs:double"></xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="logicTreeBranchSetType">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranch" type="nrml:logicTreeBranchType"></xs:element>
+        </xs:sequence>
+        <xs:attribute ref="nrml:uncertaintyType"></xs:attribute>
+    </xs:complexType>
+    
+    <xs:complexType name="logicTreeType">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranchSet" type="nrml:logicTreeBranchSetType"></xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:complexType name="gmpeLogicTreeType">
+        <xs:sequence>
+            <xs:element name="gmpeLogicTree" type="nrml:logicTreeType"></xs:element>
+        </xs:sequence>
+        <xs:attribute name="tectonicRegion" type="nrml:tectonicRegionType"></xs:attribute>
+    </xs:complexType>
 
 
 </xs:schema>
