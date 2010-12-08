@@ -3,24 +3,21 @@
  xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
  xmlns:ns3="http://www.w3.org/1999/xlink"
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
- xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/openquake/docs/schema/nrml_hazard.xsd">
-    <ns2:ComplexFaultRupture>
-        <ns2:magnitude value="9.0"/>
-        <complexFaultData AverageRake="0.0" TectonicRegionType="Subduction Interface">
-            <ns2:TopFaultTrace>
-                <ns1:posList>40.363  -124.704  0.5493260E+01 42.096  -125.140  0.4897340E+01 43.852  -125.257  0.4871280E+01 45.458  -125.416  0.4410880E+01 46.642  -125.746  0.3797400E+01 47.289  -126.015  0.3650670E+01 47.994  -126.422  0.3907950E+01 49.279  -127.605  0.4761580E+01</ns1:posList>
-            </ns2:TopFaultTrace>
-            <ns2:BottomFaultTrace>
-                <ns1:posList>40.347000 -124.041500 15.550000 42.109500 -124.474000 13.440000 43.861000 -124.515000 14.190000 45.487000 -124.434000 16.570000 46.774500 -124.169000 20.000000 47.669000 -124.095500 20.100000 47.669000 -124.095500 20.100000 49.594500 -127.084000 17.370000</ns1:posList>
-            </ns2:BottomFaultTrace>
-        </complexFaultData>
-    </ns2:ComplexFaultRupture>
-    <ns2:GMPEParameters IMT="PGA" vs30method="None" groundMotionComponent="average"
-         truncationType="None" stdDevType="total"/>
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_hazard.xsd">
+    <ns2:complexFaultRupture>
+            <magnitude>9.0</magnitude>
+            <tectonicRegionType>Active Shallow Crust</tectonicRegionType>
+            <complexFaultGeometry>
+                <faultTopEdge>40.363  -124.704  0.5493260E+01 42.096  -125.140  0.4897340E+01 43.852  -125.257  0.4871280E+01 45.458  -125.416  0.4410880E+01 46.642  -125.746  0.3797400E+01 47.289  -126.015  0.3650670E+01 47.994  -126.422  0.3907950E+01 49.279  -127.605  0.4761580E+01</faultTopEdge>
+                <faultBottomEdge>40.347000 -124.041500 15.550000 42.109500 -124.474000 13.440000 43.861000 -124.515000 14.190000 45.487000 -124.434000 16.570000 46.774500 -124.169000 20.000000 47.669000 -124.095500 20.100000 47.669000 -124.095500 20.100000 49.594500 -127.084000 17.370000</faultBottomEdge>
+            </complexFaultGeometry>
+            <rake>0</rake>
+    </ns2:complexFaultRupture>
+    <ns2:GMPEParameters/>
     <ns2:field>
         <ns2:site groundMotion="0.5">
             <ns2:site>
-                    <ns1:pos>40.3 -124.7</ns1:pos>
+                <ns1:pos>40.3 -124.7</ns1:pos>
             </ns2:site>
         </ns2:site>
     </ns2:field>
