@@ -290,58 +290,37 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
                 self.vuln_function, gmfs))
 
-    def test_computes_aggregate_histogram(self):
-        # manually computed values by Vitor Silva
-        distribution_1 = [59, 34, 79, 27, 99, 79, 38, 75, 13, 81,
-                85, 31, 78, 86, 90,
-                1, 97, 20, 64, 85, 79, 65, 28, 31, 41, 43,
-                58, 60, 36, 34, 44, 25,
-                29, 76, 50, 94, 28, 54, 59, 30, 94,
-                40, 27, 22, 27, 23, 86, 45, 88,
-                35, 88, 15, 60, 26, 31, 19, 47, 62,
-                36, 4, 0, 46, 7, 81, 94, 9, 99,
-                54, 22, 11, 64, 28, 38, 62, 54, 54,
-                99, 72, 2, 87, 89, 84, 84, 82,
-                14, 35, 99, 64, 33, 19, 95, 32,
-                43, 4, 24, 33, 90, 15, 55, 41]
+    def test_losses_aggregation(self):
+        # we don't care about PoEs in this case
+        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
+                (3.0, 0.0), (4.0, 0.0)])
 
-        distribution_2 = [49, 67, 51, 116, 45, 14, 48, 39,
-                46, 75, 75, 28, 2, 126, 143,
-                107, 4, 82, 115, 22, 51, 48, 132, 72, 5,
-                118, 149, 18, 4, 113, 119, 130,
-                15, 95, 102, 8, 11, 131, 30, 82, 60, 73,
-                9, 29, 78, 56, 136, 144, 4, 34,
-                87, 71, 63, 114, 19, 141, 96, 3, 49, 94,
-                32, 130, 14, 36, 123, 45, 82, 81,
-                111, 66, 112, 40, 37, 107, 69, 21, 125,
-                122, 92, 84, 7, 138, 112, 125, 31,
-                149, 147, 104, 148, 145, 106, 29, 107,
-                133, 48, 39, 149, 92, 13, 146]
+        loss_curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
+                (7.0, 0.0), (8.0, 0.0)])
 
-        distribution_3 = [52, 120, 24, 161, 172, 17, 34, 72,
-                108, 42, 45, 154, 179, 4, 165,
-                118, 197, 11, 76, 39, 121, 22, 163, 5, 147,
-                13, 174, 66, 56, 9, 81, 72, 153,
-                39, 142, 149, 197, 141, 41, 13, 105, 139,
-                118, 116, 14, 190, 71, 166, 70,
-                194, 39, 48, 64, 20, 145, 199, 27, 40, 88, 
-                135, 52, 33, 195, 89, 57, 86, 55,
-                36, 158, 168, 167, 63, 113, 54, 193, 122, 8,
-                49, 119, 98, 103, 149, 183, 25,
-                106, 172, 169, 142, 161, 54, 51, 63, 91,
-                64, 77, 121, 198, 11, 173, 75]
+        loss_curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
+                (11.0, 0.0), (12.0, 0.0)])
 
-        aggregator = prob.AggregateHistogram(11)
-        aggregator._append(distribution_1, numpy.linspace(0, 99, num=11))
-        aggregator._append(distribution_2, numpy.linspace(2, 149, num=11))
-        aggregator._append(distribution_3, numpy.linspace(4, 199, num=11))
+        aggregator = prob.Aggregator()
+        aggregator.append(loss_curve_1)
+        aggregator.append(loss_curve_2)
+        aggregator.append(loss_curve_3)
 
-        expected_histrogram = numpy.array(
-                [40, 53, 44, 38, 41, 24, 18, 20, 13, 9])
+        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
+        self.assertTrue(numpy.allclose(expected_losses, aggregator.losses))
 
-        self.assertTrue(numpy.allclose(
-                expected_histrogram, aggregator.compute(), atol=0.0001))
+    def test_losses_aggregation_with_empty_input_set(self):
+        aggregator = prob.Aggregator()
+        self.assertEqual([], aggregator.losses)
 
+    def test_input_loss_curves_must_be_of_same_size(self):
+        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0)])
+        loss_curve_2 = shapes.Curve([(5.0, 0.0)])
+
+        aggregator = prob.Aggregator()
+        aggregator.append(loss_curve_1)
+
+        self.assertRaises(ValueError, aggregator.append, loss_curve_2)
 
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
@@ -358,7 +337,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 self.job_id)
 
     def tearDown(self):
-        # flush vulnerability curves in memcache
+        # flush vulnerability curves in kvs
         vulnerability.delete_vuln_curves(self.job_id)
 
     def test_empty_loss_curve(self):
