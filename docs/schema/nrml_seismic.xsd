@@ -282,11 +282,17 @@
     </xs:complexType>
     
     <xs:complexType name="gmpeLogicTreeType">
-        <xs:sequence>
-            <xs:element name="gmpeLogicTree" type="nrml:logicTreeType"></xs:element>
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTree" type="nrml:logicTreeType"></xs:element>
+            <xs:element name="tectonicRegion" type="nrml:tectonicRegionType"></xs:element>
         </xs:sequence>
-        <xs:attribute name="tectonicRegion" type="nrml:tectonicRegionType"></xs:attribute>
     </xs:complexType>
+    
+    <xs:element name="logicTree" abstract="true"></xs:element>
+    <xs:element name="sourceModelLogicTree" type="nrml:logicTreeType"
+        substitutionGroup="nrml:logicTree"/>
+    <xs:element name="gmpeLogicTree" type="nrml:gmpeLogicTreeType" substitutionGroup="nrml:logicTree"></xs:element>
+    
 
 
 </xs:schema>
