@@ -94,68 +94,64 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set):
             loss_ratios, loss_ratios_range), ground_motion_field_set["TSES"]),
             ground_motion_field_set["TimeSpan"])
 
-    return _generate_loss_ratio_curve(loss_ratios_range, probs_of_exceedance)
+    return _generate_curve(loss_ratios_range, probs_of_exceedance)
 
 
-def _generate_loss_ratio_curve(loss_ratios, probs_of_exceedance):
-    """Generate a loss ratio curve, given a set of loss ratios
+def _generate_curve(losses, probs_of_exceedance):
+    """Generate a loss ratio (or loss) curve, given a set of losses
     and corresponding probabilities of exceedance. This function
     is intended to be used internally."""
 
     data = []
-    for idx in xrange(len(loss_ratios) - 1):
-        mean_loss_ratios = (loss_ratios[idx] + \
-                loss_ratios[idx + 1]) / 2
+    for idx in xrange(len(losses) - 1):
+        mean_loss_ratios = (losses[idx] + \
+                losses[idx + 1]) / 2
         data.append((mean_loss_ratios, probs_of_exceedance[idx]))
 
     return shapes.Curve(data)
 
 
-# TODO (ac): Test with pre computed data!
-def compute_loss_ratio_curve_from_aggregate(aggregate_hist, tses, time_span):
-    """Compute a loss ratio curve from an aggregate histogram."""
-    probs_of_exceedance = compute_probs_of_exceedance(
-            compute_rates_of_exceedance(aggregate_hist.compute(),
-            tses), time_span)
+class Aggregator(object):
+    """Aggregate set of losses and produce the resulting loss curve."""
 
-    return _generate_loss_ratio_curve(aggregate_hist.bins, probs_of_exceedance)
+    def __init__(self):
+        self.size = None
+        self.values = []
 
-
-class AggregateHistogram(object):
-    """This class computes an aggregate histogram."""
-
-    def __init__(self, number_of_bins):
-        self.min = 0.0
-        self.max = 0.0
-
-        self.distribution = []
-        self.number_of_bins = number_of_bins
+    def append(self, loss_curve):
+        """Add the given loss curve to the set of curves used to 
+        compute the final aggregate curve."""
+        
+        size = len(loss_curve.abscissae)
+        
+        if self.size is None:
+            self.size = size
+        
+        if size != self.size:
+            raise ValueError("Loss curves must be of the same size, \
+                    expected %s, but was %s" % (self.size, size))
+        
+        self.values.append(loss_curve.abscissae)
 
     @property
-    def bins(self):
-        """Return the bins defined for this histogram."""
-        return linspace(self.min, self.max, self.number_of_bins)
+    def losses(self):
+        """Return the losses used to compute the aggregate curve."""
+        result = []
 
-# TODO (ac): Not tested yet, need pre computed test data!
-    def append(self, vuln_function, ground_motion_field_set):
-        """Append this vulnerability function and gmf to the set
-        of input data used to compute the aggregate histogram."""
-        self._append(compute_loss_ratios(vuln_function, ground_motion_field_set),
-                compute_loss_ratios_range(vuln_function))
+        if not self.values:
+            return result
 
-    def _append(self, distribution, bins):
-        """Append this distribution to the set of distributions used
-        to compute the aggregate histogram. Update also (with the given bins)
-        the min/max boundaries used to compute the bins for the
-        aggregate histogram."""
-        self.distribution.extend(distribution)
+        return array(self.values).sum(axis=0)
 
-        if bins[0] < self.min:
-            self.min = bins[0]
-        
-        if bins[-1] > self.max:
-            self.max = bins[-1]
-    
-    def compute(self):
-        """Compute the aggregate histogram."""
-        return histogram(self.distribution, self.bins)[0]
+# TODO (ac): Test with pre computed data
+    def compute(self, tses, time_span):
+        """Compute the aggregate loss curve."""
+        losses = self.losses
+        loss_range = linspace(losses.min(), losses.max(),
+                num=DEFAULT_NUMBER_OF_SAMPLES)
+
+        probs_of_exceedance = compute_probs_of_exceedance(
+                compute_rates_of_exceedance(compute_cumulative_histogram(
+                losses, loss_range), tses, time_span))
+
+        return _generate_curve(losses, probs_of_exceedance)
