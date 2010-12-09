@@ -7,14 +7,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 import junit.framework.Assert;
 
-import org.gem.engine.CommandLineCalculator;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.After;
 import org.junit.Before;
@@ -222,36 +220,6 @@ public class HazardCalculatorTest {
                 correlationFlag);
     }
 
-    /**
-     * Test storing a ground motion map
-     */
-    @Test
-    public void storeGroundMotionMapToCache() {
-        Map<EqkRupture, Map<Site, Double>> groundMotionFields =
-                HazardCalculator.getGroundMotionFields(siteList, erf, gmpeMap,
-                        rn, correlationFlag);
-        List<String> keys =
-                CommandLineCalculator.gmfValuesToMemcache(groundMotionFields,
-                        cache);
-        // now find a Double object for each key
-        Iterator<String> keyIterator = keys.iterator();
-        while (keyIterator.hasNext()) {
-            String key = keyIterator.next();
-            Object valueFromCache = cache.get(key);
-            assertNotNull(
-                    "test storeGroundMotionMapToCache: no value returned from cache",
-                    valueFromCache);
-            // This is not an assert mehtod, but in error case this cast to
-            // Double would cause a ClassCastException and let the test fail.
-            Double value = Double.valueOf((String) valueFromCache);
-            // If the ground motion map contains this value, I am satisfied.
-            // ...but this may be an equal ground motion value belonging to an
-            // different site.
-            // ...An accurate test has to construct a Site object from the keys
-            // and use that "Site" to retrieve the value from the map.
-        } // while
-    }
-
     @Test
     public void gmfToJsonTest() {
         int maxTries = 111;
@@ -270,8 +238,11 @@ public class HazardCalculatorTest {
         }
         if (groundMotionFields == null
                 || groundMotionFields.values().size() == 0) {
-            Assert.fail("HazardCalculator did not return ground motion fields after "
-                    + maxTries + " runs." + groundMotionFields.toString());
+            Assert
+                    .fail("HazardCalculator did not return ground motion fields after "
+                            + maxTries
+                            + " runs."
+                            + groundMotionFields.toString());
 
         }
         String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
@@ -285,8 +256,8 @@ public class HazardCalculatorTest {
             siteIds[i] = "site_id_" + i;
         }
         String jsonString =
-                CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
-                        siteIds, groundMotionFields);
+                HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
+                        groundMotionFields);
         assertNotNull("jsonString is expected to not to be null", jsonString);
     }
 
@@ -308,8 +279,11 @@ public class HazardCalculatorTest {
         }
         if (groundMotionFields == null
                 || groundMotionFields.values().size() == 0) {
-            Assert.fail("HazardCalculator did not return ground motion fields after "
-                    + maxTries + " runs." + groundMotionFields.toString());
+            Assert
+                    .fail("HazardCalculator did not return ground motion fields after "
+                            + maxTries
+                            + " runs."
+                            + groundMotionFields.toString());
 
         }
         Map<Site, Double> firstGmf =
@@ -326,10 +300,10 @@ public class HazardCalculatorTest {
         String memCacheKey = "memCache_key";
         // this is what we expect to find in memcache later
         String jsonFromGmf =
-                CommandLineCalculator.gmfToJson("gmf_id", eqkRuptureIds,
-                        siteIds, groundMotionFields);
+                HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
+                        groundMotionFields);
         // converts the groundmotion fields to json and stores them in the cache
-        CommandLineCalculator.gmfToMemcache(cache, memCacheKey, gmfsId,
+        HazardCalculator.gmfToMemcache(cache, memCacheKey, gmfsId,
                 eqkRuptureIds, siteIds, groundMotionFields);
         String jsonFromMemcache = (String) cache.get(memCacheKey);
         assertNotNull("test gmfToMemcacheTest: no value returned from cache",
