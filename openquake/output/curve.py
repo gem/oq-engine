@@ -248,10 +248,7 @@ class CurvePlot(writer.FileWriter):
         pylab.xlabel(data[curve]['abscissa_property'], self._plotLabelsFont)
         pylab.ylabel(data[curve]['ordinate_property'], self._plotLabelsFont)
 
-        pylab.title("%s for (%7.3f, %6.3f)" % (
-            data[curve]['curve_title'],
-            data[curve]['Site'].longitude, 
-            data[curve]['Site'].latitude))
+        self._set_title(curve, data)
 
         pylab.legend(loc=self._plotLegend['style'],
                      markerscale=self._plotLegend['markerscale'],
@@ -264,6 +261,18 @@ class CurvePlot(writer.FileWriter):
                         size=self._plotLegendFont['size'],
                         style=self._plotLegendFont['style'],
                         family=self._plotLegendFont['family'][1]))
+
+    def _set_title(self, curve, data):
+        """Set the title of this plot using the given site. Use just
+        the title in case there's not site related."""
+        try:
+            pylab.title("%s for (%7.3f, %6.3f)" % (
+                    data[curve]['curve_title'],
+                    data[curve]['Site'].longitude, 
+                    data[curve]['Site'].latitude))
+        except KeyError:
+            # no site related to this curve
+            pylab.title("%s" % data[curve]['curve_title'])
 
     def close(self):
         """Make sure the file is flushed, and send exit event."""

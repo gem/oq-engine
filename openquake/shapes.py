@@ -14,6 +14,7 @@ from shapely import geometry
 from shapely import wkt
 from scipy.interpolate import interp1d
 
+from openquake import kvs
 from openquake import flags
 from openquake import java
 
@@ -488,12 +489,6 @@ class Curve(object):
     def abscissa_for(self, y_value):
         """Return the x value corresponding to the given y value."""
 
-        y_values = self.y_values
-
-        if self.y_values.ndim > 1:
-            # does not support indexing yet
-            y_values = self.y_values[:, 0]
-
         data = []
         # inverting the function
         for x_value in self.abscissae:
@@ -519,6 +514,51 @@ class Curve(object):
                 as_dict[str(x_value)] = self.y_values[index]
 
         return json.JSONEncoder().encode(as_dict)
+
+
+class CurveSet(object):
+    """This class defines a set of curves."""
+
+    @staticmethod
+    def from_kvs(key):
+        """Return the set in the underlying kvs system,
+        using the given key."""
+        json_curves = kvs.get_value_json_decoded(key)
+        
+        curves = CurveSet()
+        for json_curve in json_curves:
+            curves.append(Curve.from_json(json_curve))
+        
+        return curves
+
+    @staticmethod
+    def kvs_append(key, curve):
+        """Update a set stored in the kvs system, by adding the given curve."""
+        curves = CurveSet.from_kvs(key)
+        curves.append(curve)
+        curves.to_kvs(key)
+
+    def __init__(self):
+        self.curves = []
+
+    def __iter__(self):
+        return self.curves.__iter__()
+
+    def __eq__(self, other):
+        return self.curves == other.curves
+
+    def append(self, curve):
+        """Add the given curve to the set."""
+        self.curves.append(curve)
+
+    def to_kvs(self, key):
+        """Store this set of curves into the underlying kvs system."""
+        as_json = []
+        
+        for curve in self.curves:
+            as_json.append(curve.to_json())
+        
+        kvs.set_value_json_encoded(key, as_json)
 
 
 EMPTY_CURVE = Curve(())
