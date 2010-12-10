@@ -5,6 +5,7 @@ import re
 import socket
 
 from httplib import HTTPConnection, HTTPSConnection
+from paramiko import AuthenticationException, BadAuthenticationType
 
 CREDENTIALS_RE = re.compile("(?P<username>.*?):(?P<password>.*)@")
 HOST_PORT_RE = re.compile("(?:(?:.*@)?)(?P<host>.*?)(?::(?P<port>\d+)|$)")
@@ -90,7 +91,7 @@ class SFTPHandler(Handler):
             try:
                 transport = paramiko.Transport((host, int(port)))
                 transport.connect(username=username, password=password)
-            except paramiko.BadAuthenticationType, e:
+            except (BadAuthenticationType, AuthenticationException), e:
                 if transport:
                     transport.close()
                 raise HandlerError("Could not login. Bad Credentials")
