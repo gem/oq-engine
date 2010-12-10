@@ -65,17 +65,17 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
     public void eqkRuptureSerialisation() throws ConfigurationException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
-        EqkRuptureDataForMemcache dataToCache =
-                clc.new EqkRuptureDataForMemcache();
         EqkRupture rupture = PredictionEquationTestHelper.getElsinoreRupture();
-        dataToCache.init(rupture);
+        EqkRuptureDataForMemcache dataToCache =
+                clc.new EqkRuptureDataForMemcache(rupture);
         // dataToCache.initTestwise();
         Gson gson = new Gson();
         String expected = "";
         String json = gson.toJson(dataToCache);
-        System.out.println("xxr expected = " + expected);
-        System.out.println("xxr json = " + json);
-        assertTrue("Zampano sais: ", expected.compareTo(json) == 0);
+        System.out.println("xxr eqkRuptureSerialisation() expected = "
+                + expected);
+        System.out.println("xxr eqkRuptureSerialisation() json = " + json);
+        assertTrue("Zampano says: ", expected.compareTo(json) == 0);
     }
 
 } // class CommandLineCalculatorTest
