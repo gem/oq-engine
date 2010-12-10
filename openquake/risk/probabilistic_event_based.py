@@ -111,8 +111,18 @@ def _generate_curve(losses, probs_of_exceedance):
     return shapes.Curve(data)
 
 
-class Aggregator(object):
-    """Aggregate a set of losses and produce the resulting loss curve."""
+class AggregateLossCurve(object):
+    """Aggregate a set of loss curves and produce the resulting loss curve."""
+
+    @staticmethod
+    def from_curve_set(curves):
+        """Return an aggregate curve using the given curve set."""
+        aggregate_curve = AggregateLossCurve()
+        
+        for curve in curves:
+            aggregate_curve.append(curve)
+        
+        return aggregate_curve
 
     def __init__(self):
         self.size = None
