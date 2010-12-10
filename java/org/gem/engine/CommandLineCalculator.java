@@ -5,8 +5,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
@@ -119,61 +117,22 @@ public class CommandLineCalculator {
 
     }
 
+    /**
+     * A class ready to be converted by gson. That conversion by gson is
+     * supposed to result in a json String that is optimal to be read into a
+     * numpy array.
+     */
     public class EqkRuptureDataForMemcache {
-        // attributes of the NRML:ArbitrarilyComplexRuptureType
-        private double averageRake;
+        private final double averageRake;
         private String tectonicRegion;
-        // elements of the NRML:ArbitrarilyComplexRuptureType
-        private double magRupture;
-        // data
-        private SiteDataForMemcache[] arrayOfSites;
-        private Map<String, SiteDataForMemcache> mapOfSites;
-        private List<SiteDataForMemcache> listOfSites;
-        private Map mapOfEqkRupture = null;
-        private Location[] arrayOfLocations;
+        private final double magRupture;
+        int countCols;
+        int countRows;
+        private final double[] lat;
+        private final double[] lon;
+        private final double[] depth;
 
-        // TODO: magnitude to rupture or to site?
-
-        public class SiteDataForMemcache {
-            private final double lat;
-            private final double lon;
-            private final double depth;
-            // TODO: magnitude to rupture or to site?
-            private final double mag;
-            /*
-             * The matrixIndex represents the position of the site in a matrix.
-             * Index 0 saves the row, index 1 saves the column.
-             */
-            private final int[] matrixIndex = new int[2];
-
-            public SiteDataForMemcache(double longitude, double latitude,
-                    double deepness, double magnitude) {
-                lon = longitude;
-                lat = latitude;
-                this.depth = deepness;
-                mag = magnitude;
-            }
-
-            /**
-             * For our purposes, a set of sites define a grid, where the sites
-             * are the edges of the grid's polygons. The grid can be described
-             * as a matrix of sites. The internal matrixIndex (array of
-             * integers) represents the position of the site in that matrix.
-             * Index 0 saves the row, index 1 saves the column.
-             * 
-             * @param row
-             * @param column
-             */
-            public void setMatrixIndex(int row, int column) {
-                matrixIndex[0] = row;
-                matrixIndex[1] = column;
-            } // setMatrixIndex()
-        } // class SiteDataForMemcache
-
-        public EqkRuptureDataForMemcache() {
-        }
-
-        public void init(EqkRupture rup) {
+        public EqkRuptureDataForMemcache(EqkRupture rup) {
             averageRake = rup.getAveRake();
             // TODO: needed?
             // grid.getAveDip();
@@ -190,45 +149,24 @@ public class CommandLineCalculator {
             /*
              * the site data
              */
-            mapOfSites = new HashMap();
-            int countCols = grid.getNumCols();
-            int countRows = grid.getNumRows();
-            for (int col = 0; col < countCols; col++) {
-                for (int row = 0; row < countRows; row++) {
-                    Location l = grid.get(row, col);
-                    SiteDataForMemcache s =
-                            new SiteDataForMemcache(l.getLongitude(), l
-                                    .getLatitude(), l.getDepth(), magRupture);
-                    s.setMatrixIndex(row, col);
-                    mapOfSites.put("site_" + row + "_" + col, s);
+            countCols = grid.getNumCols();
+            countRows = grid.getNumRows();
+            int countSites = countCols * countRows;
+            lat = new double[countSites];
+            lon = new double[countSites];
+            depth = new double[countSites];
+            for (int col = 1; col <= countCols; col++) {
+                for (int row = 1; row <= countRows; row++) {
+                    Location l = grid.get(row - 1, col - 1);
+                    int index = (row * col) - 1;
+                    lat[index] = l.getLatitude();
+                    lon[index] = l.getLongitude();
+                    depth[index] = l.getDepth();
+
                 } // for rows
             } // for columns
-        } // init()
-
-        /**
-         * For tests
-         */
-        public void initTestwise() {
-            arrayOfLocations =
-                    new Location[] { new Location(12, 34), new Location(56, 78) };
-            // ruptures
-            mapOfEqkRupture = new HashMap();
-            mapOfEqkRupture.put("site_id_0", new Location(12, 34));
-            mapOfEqkRupture.put("site_id_1", new Location(56, 78));
-            // sites
-            SiteDataForMemcache s1 = new SiteDataForMemcache(12, 34, 56, 1);
-            s1.setMatrixIndex(333, 444);
-            SiteDataForMemcache s2 = new SiteDataForMemcache(9, 8, 7, 1.1);
-            s2.setMatrixIndex(555, 666);
-            arrayOfSites = new SiteDataForMemcache[] { s1, s2 };
-            mapOfSites = new HashMap();
-            mapOfSites.put("site_id_0", s1);
-            mapOfSites.put("site_id_1", s2);
-            listOfSites = new ArrayList<SiteDataForMemcache>();
-            listOfSites.add(s1);
-            listOfSites.add(s2);
-        } // initTestwise()
-    } // class GmfDataForMemcache
+        } // constructor()
+    } // class EqkRuptureDataForMemcache
 
     public void sampleAndSaveERFTree(Cache cache, String key, long seed)
             throws IOException {
