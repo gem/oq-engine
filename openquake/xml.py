@@ -7,4 +7,4 @@ NRML_NS = 'http://openquake.org/xmlns/nrml/0.1'
 GML_NS = 'http://www.opengis.net/gml/profile/sfgml/1.0'
 GML = "{%s}" % GML_NS
 NRML = "{%s}" % NRML_NS
-NSMAP = { None: NRML_NS, "gml" : GML_NS}
+NSMAP = {None: NRML_NS, "gml": GML_NS}
