@@ -12,12 +12,14 @@ import unittest
 from scipy.interpolate import interp1d
 from shapely import geometry
 
+from openquake import job
 from openquake import logs
 from openquake import risk
 from openquake import kvs 
 from openquake import shapes
 from openquake import test
 
+from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk import engines
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
@@ -301,26 +303,47 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         loss_curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
                 (11.0, 0.0), (12.0, 0.0)])
 
-        aggregator = prob.Aggregator()
-        aggregator.append(loss_curve_1)
-        aggregator.append(loss_curve_2)
-        aggregator.append(loss_curve_3)
+        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve.append(loss_curve_1)
+        aggregate_curve.append(loss_curve_2)
+        aggregate_curve.append(loss_curve_3)
 
         expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
-        self.assertTrue(numpy.allclose(expected_losses, aggregator.losses))
+        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
 
     def test_losses_aggregation_with_empty_input_set(self):
-        aggregator = prob.Aggregator()
-        self.assertEqual([], aggregator.losses)
+        aggregate_curve = prob.AggregateLossCurve()
+        self.assertEqual([], aggregate_curve.losses)
 
     def test_input_loss_curves_must_be_of_same_size(self):
         loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0)])
         loss_curve_2 = shapes.Curve([(5.0, 0.0)])
 
-        aggregator = prob.Aggregator()
-        aggregator.append(loss_curve_1)
+        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve.append(loss_curve_1)
 
-        self.assertRaises(ValueError, aggregator.append, loss_curve_2)
+        self.assertRaises(ValueError, aggregate_curve.append, loss_curve_2)
+
+    def test_can_build_an_aggregate_curve_from_a_curve_set(self):
+        curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
+                (3.0, 0.0), (4.0, 0.0)])
+
+        curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
+                (7.0, 0.0), (8.0, 0.0)])
+
+        curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
+                (11.0, 0.0), (12.0, 0.0)])
+
+        curves = shapes.CurveSet()
+        curves.append(curve_1)
+        curves.append(curve_2)
+        curves.append(curve_3)
+        
+        aggregate_curve = prob.AggregateLossCurve.from_curve_set(curves)
+
+        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
+        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
+
 
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
@@ -522,6 +545,88 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                 common.compute_mean_loss(loss_ratio_curve), 3)
+
+
+class CurveSetTestCase(unittest.TestCase):
+    
+    def test_can_store_a_set_into_kvs(self):
+        curves = shapes.CurveSet()
+        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
+        curves.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
+        
+        curves.to_kvs("KEY")
+        self.assertEqual(curves, shapes.CurveSet.from_kvs("KEY"))
+
+    def test_can_update_a_set_in_kvs(self):
+        curves = shapes.CurveSet()
+        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
+
+        curves.to_kvs("KEY")
+        shapes.CurveSet.kvs_append("KEY",
+                shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
+
+        another_set = shapes.CurveSet()
+        another_set.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
+        another_set.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
+
+        self.assertEqual(another_set, shapes.CurveSet.from_kvs("KEY"))
+
+
+class AggregateLossCurveMixinTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        # job parameters
+        self.id = 1234
+        self.base_path = "."
+
+        self.params = {}
+        self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
+        
+        # parameters needed to compute tses and time span
+        self.params["NUMBER_OF_SEISMICITY_HISTORIES"] = 10
+        self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"] = 2
+        self.params["INVESTIGATION_TIME"] = 50.0
+        
+        # deleting old file
+        self._delete_test_file()
+    
+    def _delete_test_file(self):
+        try:
+            os.remove(os.path.join(test.OUTPUT_DIR, aggregate.filename(self.id)))
+        except OSError:
+            pass
+    
+    def _execute_mixin(self):
+        with job.Mixin(self, aggregate.AggregateLossCurveMixin):
+            self.execute()
+    
+    def test_curve_to_plot_interface_translation(self):
+        curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
+        
+        expected_data = {}
+        expected_data["AggregatedLossCurve"] = {}
+        expected_data["AggregatedLossCurve"]["abscissa"] = (0.1, 0.2)
+        expected_data["AggregatedLossCurve"]["ordinate"] = (1.0, 2.0)
+        expected_data["AggregatedLossCurve"]["abscissa_property"] = "Losses"
+        expected_data["AggregatedLossCurve"]["ordinate_property"] = "PoEs"
+        expected_data["AggregatedLossCurve"]["curve_title"] = "Aggregated Loss Curve"
+
+        self.assertEqual(expected_data, aggregate.for_plotting(curve))
+
+    def test_plots_the_aggregate_curve(self):
+        curves = shapes.CurveSet()
+        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
+        curves.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
+        curves.append(shapes.Curve([(0.5, 5.0), (0.6, 6.0)]))
+        
+        curves.to_kvs(aggregate.KVS_KEY)
+        self._execute_mixin()
+
+        self._assert_plot_is_produced()
+
+    def _assert_plot_is_produced(self):
+        self.assertTrue(os.path.exists(
+                os.path.join(test.OUTPUT_DIR, aggregate.filename(self.id))))
 
 
 # LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
