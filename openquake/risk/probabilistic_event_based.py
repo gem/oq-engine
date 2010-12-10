@@ -15,7 +15,7 @@ from openquake import shapes
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 def compute_loss_ratios(vuln_function, ground_motion_field_set):
-    """Compute loss ratios using the ground motion field passed."""
+    """Compute loss ratios using the ground motion field set passed."""
     if vuln_function == shapes.EMPTY_CURVE or not \
                         ground_motion_field_set["IMLs"]:
         return []
@@ -64,8 +64,8 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
 
 
 def compute_rates_of_exceedance(cum_histogram, tses):
-    """Compute the rates of exceedance for the given ground motion
-    field and cumulative histogram."""
+    """Compute the rates of exceedance for the given cumulative histogram
+    using the passed tses (tses is time span * number of realizations)."""
     if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
     
@@ -73,8 +73,8 @@ def compute_rates_of_exceedance(cum_histogram, tses):
 
 
 def compute_probs_of_exceedance(rates_of_exceedance, time_span):
-    """Compute the probabilities of exceedance for the given ground
-    motion field and rates of exceedance."""
+    """Compute the probabilities of exceedance using the given rates of
+    exceedance unsing the passed time span."""
     probs_of_exceedance = []
     for idx in xrange(len(rates_of_exceedance)):
         probs_of_exceedance.append(1 - math.exp(
@@ -112,7 +112,7 @@ def _generate_curve(losses, probs_of_exceedance):
 
 
 class Aggregator(object):
-    """Aggregate set of losses and produce the resulting loss curve."""
+    """Aggregate a set of losses and produce the resulting loss curve."""
 
     def __init__(self):
         self.size = None
@@ -152,6 +152,6 @@ class Aggregator(object):
 
         probs_of_exceedance = compute_probs_of_exceedance(
                 compute_rates_of_exceedance(compute_cumulative_histogram(
-                losses, loss_range), tses, time_span))
+                losses, loss_range), tses), time_span)
 
         return _generate_curve(losses, probs_of_exceedance)
