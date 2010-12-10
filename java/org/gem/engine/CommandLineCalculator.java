@@ -113,56 +113,63 @@ public class CommandLineCalculator {
         return thisConfig.equals(otherConfig);
     }
 
-    public static void serializeEqkRuptureToMemCache() {
-
+    /**
+     * Extracts from an EqkRupture object all data to be contained by a NRML
+     * instance. This is then converted to json format, and saved in the KVS
+     * with the passed key.
+     * 
+     * @param rup
+     * @param key
+     * @param cache
+     */
+    public void serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
+        Gson g = new Gson();
+        String jsonData = g.toJson(new EqkRuptureDataForKvs(rup));
+        cache.set(key, jsonData);
     }
 
     /**
-     * A class ready to be converted by gson. That conversion by gson is
-     * supposed to result in a json String that is optimal to be read into a
-     * numpy array.
+     * A class ready to be converted by gson. This class extracts from an
+     * EqkRupture object all data to be contained by a NRML instance. That
+     * conversion by gson is supposed to result in a json String that is optimal
+     * to be read into a numpy array.
      */
-    public class EqkRuptureDataForMemcache {
+    public class EqkRuptureDataForKvs {
+        private transient final String unknownTectonicRegionType = "Unknown";
         private final double averageRake;
         private String tectonicRegion;
         private final double magRupture;
-        int countCols;
-        int countRows;
-        private final double[] lat;
-        private final double[] lon;
-        private final double[] depth;
+        int numberOfColumns;
+        int numberOfRows;
+        private final double[] latGrid;
+        private final double[] lonGrid;
+        private final double[] depthGrid;
 
-        public EqkRuptureDataForMemcache(EqkRupture rup) {
+        public EqkRuptureDataForKvs(EqkRupture rup) {
             averageRake = rup.getAveRake();
-            // TODO: needed?
-            // grid.getAveDip();
-            // grid.getAveStrike();
-
-            // TODO: correct type from config?
             if (rup.getTectRegType() != null) {
                 tectonicRegion = rup.getTectRegType().toString();
             } else {
-                tectonicRegion = "UNKNOWN";
+                tectonicRegion = unknownTectonicRegionType;
             }
             magRupture = rup.getMag();
             EvenlyGriddedSurfaceAPI grid = rup.getRuptureSurface();
             /*
              * the site data
              */
-            countCols = grid.getNumCols();
-            countRows = grid.getNumRows();
-            int countSites = countCols * countRows;
-            lat = new double[countSites];
-            lon = new double[countSites];
-            depth = new double[countSites];
-            for (int col = 1; col <= countCols; col++) {
-                for (int row = 1; row <= countRows; row++) {
+            numberOfColumns = grid.getNumCols();
+            numberOfRows = grid.getNumRows();
+            int countSites = numberOfColumns * numberOfRows;
+            latGrid = new double[countSites];
+            lonGrid = new double[countSites];
+            depthGrid = new double[countSites];
+            for (int col = 1; col <= numberOfColumns; col++) {
+                for (int row = 1; row <= numberOfRows; row++) {
                     Location l = grid.get(row - 1, col - 1);
                     int index = (row * col) - 1;
-                    lat[index] = l.getLatitude();
-                    lon[index] = l.getLongitude();
-                    depth[index] = l.getDepth();
-
+                    latGrid[index] = l.getLatitude();
+                    lonGrid[index] = l.getLongitude();
+                    depthGrid[index] = l.getDepth();
                 } // for rows
             } // for columns
         } // constructor()
