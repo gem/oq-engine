@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-# TODO (ac): Document
+A mixin that is able to compute and plot an aggregate loss curve.
 """
 
 import os
@@ -13,12 +13,14 @@ from openquake.risk import probabilistic_event_based as prob
 KVS_KEY = "aggregated_curve"
 
 def filename(job_id):
+    """Return the name of the generated file."""
     return "%s-aggregate-loss-curve.svg" % job_id
 
-# TODO (ac): Document
 def for_plotting(curve):
+    """Translate a loss curve into a dictionary compatible to
+    the interface defined in CurvePlot.write."""
     data = {}
-    
+
     data["AggregatedLossCurve"] = {}
     data["AggregatedLossCurve"]["abscissa"] = tuple(curve.abscissae)
     data["AggregatedLossCurve"]["ordinate"] = tuple(curve.ordinates)
@@ -29,8 +31,11 @@ def for_plotting(curve):
     return data
 
 class AggregateLossCurveMixin:
+    """This class computes and plots an aggregate loss curve given a set
+    of pre computed curves stored in the underlying kvs system."""
     
     def tses(self):
+        """Return the tses parameter, using the mixed config file."""
         histories = int(self.params["NUMBER_OF_SEISMICITY_HISTORIES"])
         realizations = int(self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"])
         
@@ -38,9 +43,11 @@ class AggregateLossCurveMixin:
         return num_ses * self.time_span()
 
     def time_span(self):
+        """Return the time span parameter, using the mixed config file."""
         return float(self.params["INVESTIGATION_TIME"])
 
     def execute(self):
+        """Execute the logic of this mixin."""
         curves = shapes.CurveSet.from_kvs(KVS_KEY)
         aggregate_loss_curve = prob.AggregateLossCurve.from_curve_set(curves)
         
