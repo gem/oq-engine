@@ -5,16 +5,18 @@
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
  xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_hazard.xsd">
     <ns2:pointRupture>
-            <magnitude>6.5</magnitude>
-            <tectonicRegionType>Active Shallow Crust</tectonicRegionType>
-            <focalMechanism>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-            </focalMechanism>
-            <hypocenterLocation>
-                <ns1:pos>35.4 20.3 20.0</ns1:pos>
-            </hypocenterLocation>
+            <ns2:magnitude>6.5</ns2:magnitude>
+            <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
+            <ns2:focalMechanism>
+                <ns2:strike>0.0</ns2:strike>
+                <ns2:dip>90.0</ns2:dip>
+                <ns2:rake>0.0</ns2:rake>
+            </ns2:focalMechanism>
+            <ns2:hypocenterLocation>
+                <latitude>35.4</latitude>
+                <longitude>20.3</longitude>
+                <depth>20.0</depth>
+            </ns2:hypocenterLocation>
     </ns2:pointRupture>
     <ns2:GMPEParameters/>
     <ns2:field>
