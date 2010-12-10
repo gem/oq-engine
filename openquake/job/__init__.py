@@ -4,14 +4,16 @@
 
 import hashlib
 import math
-import re
 import os
+import re
+import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
 
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
+from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
@@ -83,8 +85,9 @@ def validate(fn):
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
-    # TODO(JMC): Parse out git, http, or full paths here...
-    return os.path.join(base_path, file_spec)
+
+    url = urlparse.urlparse(file_spec)
+    return resolve_handler(url, base_path).get()
 
 
 class Job(object):
