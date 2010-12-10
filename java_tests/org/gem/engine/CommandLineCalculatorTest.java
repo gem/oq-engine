@@ -1,14 +1,16 @@
 // package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 package org.gem.engine;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Properties;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.gem.engine.CommandLineCalculator.EqkRuptureDataForMemcache;
+import org.gem.engine.CommandLineCalculator.EqkRuptureDataForKvs;
 import org.gem.engine.hazard.redis.BaseRedisTest;
+import org.gem.engine.hazard.redis.Cache;
 import org.gem.ipe.PredictionEquationTestHelper;
 import org.junit.Test;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -63,19 +65,34 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
 
     @Test
     public void eqkRuptureSerialisation() throws ConfigurationException {
+        final int PORT = 6379;
+        final int EXPIRE_TIME = 3600;
+        final String LOCALHOST = "localhost";
+        final String key = "theKeyForRuptureData";
+        Cache client;
+        client = new Cache(LOCALHOST, PORT);
+        client.flush(); // clear the server side cache
+
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
         EqkRupture rupture = PredictionEquationTestHelper.getElsinoreRupture();
-        EqkRuptureDataForMemcache dataToCache =
-                clc.new EqkRuptureDataForMemcache(rupture);
-        // dataToCache.initTestwise();
+        clc.serializeEqkRuptureToKvs(rupture, key, client);
+
+        EqkRuptureDataForKvs dataToCache =
+                clc.new EqkRuptureDataForKvs(rupture);
         Gson gson = new Gson();
-        String expected = "";
-        String json = gson.toJson(dataToCache);
+        String expected = gson.toJson(dataToCache);
+        Object obj = client.get(key);
+        String fromKvs = "''";
+        if (obj instanceof String) {
+            fromKvs = client.get(key).toString();
+        }
         System.out.println("xxr eqkRuptureSerialisation() expected = "
                 + expected);
-        System.out.println("xxr eqkRuptureSerialisation() json = " + json);
-        assertTrue("Zampano says: ", expected.compareTo(json) == 0);
+        System.out
+                .println("xxr eqkRuptureSerialisation() fromKvs = " + fromKvs);
+        assertEquals(expected, fromKvs);
+        // assertTrue("Zampano says: ", expected.compareTo(json) == 0);
     }
 
 } // class CommandLineCalculatorTest
