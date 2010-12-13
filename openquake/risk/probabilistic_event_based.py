@@ -10,7 +10,10 @@ from numpy import linspace # pylint: disable=E1101, E0611
 from numpy import histogram # pylint: disable=E1101, E0611
 from numpy import where # pylint: disable=E1101, E0611
 
+from openquake import kvs
+from openquake import risk
 from openquake import shapes
+from openquake.logs import LOG
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
@@ -115,12 +118,18 @@ class AggregateLossCurve(object):
     """Aggregate a set of loss curves and produce the resulting loss curve."""
 
     @staticmethod
-    def from_curve_set(curves):
-        """Return an aggregate curve using the given curve set."""
+    def from_kvs(job_id):
+        """Return an aggregate curve using the computed
+        loss curves in the kvs system."""
+        client = kvs.get_client(binary=False)
+        keys = client.keys("%s*%s*" % (job_id, risk.LOSS_CURVE_KEY_TOKEN))
+
+        LOG.debug("Found %s stored loss curves..." % len(keys))
+
         aggregate_curve = AggregateLossCurve()
-        
-        for curve in curves:
-            aggregate_curve.append(curve)
+
+        for key in keys:
+            aggregate_curve.append(shapes.Curve.from_json(kvs.get(key)))
         
         return aggregate_curve
 
