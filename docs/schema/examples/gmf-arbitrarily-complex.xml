@@ -1,0 +1,76 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" 
+      xmlns="http://openquake.org/xmlns/nrml/0.1">
+    <!-- this is a proposal for NRML refactoring 
+         fab, 2010-12-13 -->
+    <hazardResult>
+        <config>Config file details go here</config>
+        
+        <groundMotionFieldSet>
+        
+            <arbitrarilyComplexRupture>
+                <!-- arbitrarilyComplexRupture is a gml:Feature -->
+                
+                <!-- non-geospatial properties -->
+                <magnitude type="Mw">8.0</magnitude>
+                <rake>0.0</rake>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+               
+                <!-- geospatial property -->
+                <gml:surfaceProperty>
+                    <gml:Surface>
+                        <gml:patches>
+                            <gml:PolygonPatch>
+                                <gml:exterior>
+                                    <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4979">
+                                        <!-- TODO: find appropriate reference system. The third (vertical)
+                                             coordinate is the local depth, measured from gound
+                                             (positive: downward direction) -->
+                                        <gml:posList>-119.0 40.0 5.0 -120.0 39.0 5.0 -118.0 39.0 5.0 -119.0 40.0 5.0</gml:posList>
+                                    </gml:LinearRing>
+                                </gml:exterior>
+                            </gml:PolygonPatch>
+                            <gml:PolygonPatch>
+                                <gml:exterior>
+                                    <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4979">
+                                        <gml:posList>-120.0 40.0 5.0 -121.0 39.0 5.0 -119.0 39.0 5.0 -120.0 40.0 5.0</gml:posList>
+                                    </gml:LinearRing>
+                                </gml:exterior>
+                            </gml:PolygonPatch>
+                        </gml:patches>
+                    </gml:Surface>
+                </gml:surfaceProperty>
+             </arbitrarilyComplexRupture>
+             
+            <GMPEParameters IMT="PGA"/>
+            
+            <GMF>
+                <!-- gmf is a gml:FeatureCollection -->
+                <gml:featureMembers>
+                    <site>
+                        <!-- site is a gml:Feature -->
+                        <groundMotion>0.2</groundMotion>
+                        
+                        <gml:position>
+                            <gml:Point srsName="epsg:4326">
+                                <gml:pos>-116.0 41.0</gml:pos>
+                            </gml:Point>
+                        </gml:position> 
+                    </site>
+                    
+                    <site>
+                        <groundMotion>0.3</groundMotion>
+                        
+                        <gml:position>
+                            <gml:Point srsName="epsg:4326">
+                                <gml:pos>-118.0 41.0</gml:pos>
+                            </gml:Point>
+                        </gml:position>
+                    </site>
+                </gml:featureMembers>
+            </GMF>
+
+        </groundMotionFieldSet>
+        
+    </hazardResult>
+</nrml>

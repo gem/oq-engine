@@ -1,26 +1,60 @@
-<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
-	<Config>
-    	<ExposureParameters PortfolioID="PAV01" PortfolioDescription="Collection of existing building in downtown Pavia" AssetType="buildings" LossType="economical loss">
-		</ExposureParameters>
-	</Config>
-	<ExposureList>
-		<AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
-			<AssetID>01</AssetID>
-		  	<StructureType>RC-LR-PC</StructureType>
-	      	<gml:pos>45.16667 9.15000</gml:pos>
-	      	<AssetValue>150000</AssetValue>
-		</AssetInstance>
-	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
-		  <AssetID>02</AssetID>
-		  <StructureType>RC-LR-PC</StructureType>
-	      <gml:pos>45.12200 9.15333</gml:pos>
-	      <AssetValue>250000</AssetValue>
-	    </AssetInstance>
-	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
-		  <AssetID>03</AssetID>
-		  <StructureType>RC-LR-PC</StructureType>
-	      <gml:pos>45.17999 9.14777</gml:pos>
-	      <AssetValue>500000</AssetValue>
-	    </AssetInstance>
-	</ExposureList>
-</ExposurePortfolio>
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" 
+      xmlns="http://openquake.org/xmlns/nrml/0.1">
+    <!-- this is a proposal for NRML refactoring 
+         fab, 2010-12-13 -->
+    <exposurePortfolio>
+        <config>Config file details go here</config>
+        
+        <!-- for attributes assetType and lossType, classification from the
+             Taxonomy and Ontology working group is needed -->
+        <exposureList portfolioID="PAV01" assetType="buildings" lossType="economical loss">
+            <!-- exposureList is a gml:FeatureCollection -->
+            
+            <portfolioDescription>Collection of existing building in downtown Pavia</portfolioDescription>
+            
+            <gml:featureMembers>
+            
+                <asset assetID="01">
+                    <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                    <vulnerabilityFunctionRef>RC/DMRF-D/LR</vulnerabilityFunctionRef>
+                    <structureType>RC-LR-PC</structureType>
+                    <assetValue unit="EUR">150000</assetValue>
+                    
+                    <gml:position>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>9.15000 45.16667</gml:pos>
+                        </gml:Point>
+                    </gml:position>
+                </asset>
+                
+                <asset assetID="02">
+                    <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                    <vulnerabilityFunctionRef>RC/DMRF-D/LR</vulnerabilityFunctionRef>
+                    <structureType>RC-LR-PC</structureType>
+                    <assetValue unit="EUR">250000</assetValue>
+                    
+                    <gml:position>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>9.15333 45.12200</gml:pos>
+                        </gml:Point>
+                    </gml:position>
+                </asset>
+                
+                <asset assetID="03">
+                    <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                    <vulnerabilityFunctionRef>RC/DMRF-D/LR</vulnerabilityFunctionRef>
+                    <structureType>RC-LR-PC</structureType>
+                    <assetValue unit="EUR">500000</assetValue>
+                    
+                    <gml:position>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>9.14777 45.17999</gml:pos>
+                        </gml:Point>
+                    </gml:position>
+                </asset>
+
+            </gml:featureMembers>
+        </exposureList>
+    </exposurePortfolio>
+</nrml>
