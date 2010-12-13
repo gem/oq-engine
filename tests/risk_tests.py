@@ -597,8 +597,8 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         expected_data["AggregateLossCurve"] = {}
         expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
         expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
-        expected_data["AggregateLossCurve"]["abscissa_property"] = "Losses"
-        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoEs"
+        expected_data["AggregateLossCurve"]["abscissa_property"] = "Loss"
+        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE"
         expected_data["AggregateLossCurve"] \
                 ["curve_title"] = "Aggregate Loss Curve"
 

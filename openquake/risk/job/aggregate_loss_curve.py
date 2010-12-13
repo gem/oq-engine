@@ -22,8 +22,8 @@ def for_plotting(loss_curve):
     data["AggregateLossCurve"] = {}
     data["AggregateLossCurve"]["abscissa"] = tuple(loss_curve.abscissae)
     data["AggregateLossCurve"]["ordinate"] = tuple(loss_curve.ordinates)
-    data["AggregateLossCurve"]["abscissa_property"] = "Losses"
-    data["AggregateLossCurve"]["ordinate_property"] = "PoEs"
+    data["AggregateLossCurve"]["abscissa_property"] = "Loss"
+    data["AggregateLossCurve"]["ordinate_property"] = "PoE"
     data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
     
     return data
