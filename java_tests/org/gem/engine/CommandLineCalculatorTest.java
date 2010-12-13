@@ -13,7 +13,9 @@ import org.gem.engine.hazard.redis.BaseRedisTest;
 import org.gem.engine.hazard.redis.Cache;
 import org.gem.ipe.PredictionEquationTestHelper;
 import org.junit.Test;
+import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 
 import com.google.gson.Gson;
 
@@ -63,6 +65,64 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         assertFalse(calc1.equals(calc3));
     }
 
+    /**
+     * Tests if lon, lat, depth of a gridded surface of a EqkRupture has
+     * correctly been extracted to a data object ("EqkRuptureDataForKvs") so
+     * that the content of the json string (generated with gson) will be
+     * correct.<br>
+     * Only one samle is tested. The index of that sample is determined
+     * randomly.
+     * 
+     * @throws ConfigurationException
+     */
+    @Test
+    public void eqkRuptureKvsData() throws ConfigurationException {
+        CommandLineCalculator clc =
+                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
+        EqkRupture rupture = PredictionEquationTestHelper.getElsinoreRupture();
+        EqkRuptureDataForKvs data = clc.new EqkRuptureDataForKvs(rupture);
+        EvenlyGriddedSurfaceAPI grid = rupture.getRuptureSurface();
+        int numberOfColumns = grid.getNumCols();
+        int numberOfRows = grid.getNumRows();
+        /*
+         * random indices randomRow/randomCol:<br> closest int to the argument,
+         * where the argument is a double between 0 and max. index (i.e. number
+         * of rows or columns minus one)
+         */
+        int randomRow =
+                (int) Math.floor((Math.random() * (numberOfRows - 1)) + 0.5d);
+        int randomCol =
+                (int) Math
+                        .floor((Math.random() * (numberOfColumns - 1)) + 0.5d);
+        Location randomLocation = grid.getLocation(randomRow, randomCol);
+        /*
+         * the site data
+         */
+        // int flatIndex = (randomRow - 1) * numberOfColumns + (randomCol - 1);
+        int flatIndex = randomRow * numberOfColumns + randomCol;
+        double[] lonGrid = data.getLonGrid();
+        double[] latGrid = data.getLatGrid();
+        double[] depthGrid = data.getDepthGrid();
+        /*
+         * debug - there is no logger in this class, so if you are searching for
+         * errors or if you want to see this information, uncomment these
+         * System.out lines.
+         */
+        // System.out.println("randomLon = '" + randomCol + "'");
+        // System.out.println("randomRow = '" + randomRow + "'");
+        // System.out.println("flatIndex = '" + flatIndex + "'");
+        // System.out.println("lonGrid[flatIndex] = '" + lonGrid[flatIndex] +
+        // "'");
+        // System.out.println("randomLocation.getLongitude() = '"
+        // + randomLocation.getLongitude() + "'");
+        /*
+         * compare
+         */
+        assertEquals(lonGrid[flatIndex], randomLocation.getLongitude(), 0.0);
+        assertEquals(latGrid[flatIndex], randomLocation.getLatitude(), 0.0);
+        assertEquals(depthGrid[flatIndex], randomLocation.getDepth(), 0.0);
+    }
+
     @Test
     public void eqkRuptureSerialisation() throws ConfigurationException {
         final int PORT = 6379;
@@ -87,12 +147,14 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         if (obj instanceof String) {
             fromKvs = client.get(key).toString();
         }
-        System.out.println("xxr eqkRuptureSerialisation() expected = "
-                + expected);
-        System.out
-                .println("xxr eqkRuptureSerialisation() fromKvs = " + fromKvs);
+        /*
+         * debug - if you want to have a look, print it to the console:
+         */
+        // System.out.println("eqkRuptureSerialisation() expected = "
+        // + expected);
+        // System.out
+        // .println("eqkRuptureSerialisation() fromKvs = " + fromKvs);
         assertEquals(expected, fromKvs);
-        // assertTrue("Zampano says: ", expected.compareTo(json) == 0);
     }
 
 } // class CommandLineCalculatorTest
