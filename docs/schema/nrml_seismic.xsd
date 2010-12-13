@@ -75,7 +75,6 @@
         <xs:sequence>
             <xs:element ref="nrml:magnitudeFrequencyDistribution"/>
             <xs:element name="focalMechanism" type="nrml:FocalMechanismType"/>
-            <xs:element name="ruptureDepthDistribution" type="nrml:ArbitrarilyDiscretizedDistType"/>
         </xs:sequence>
     </xs:complexType>
 
@@ -135,6 +134,7 @@
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
                     </xs:sequence>
+                    <xs:element name="ruptureDepthDistribution" type="nrml:ArbitrarilyDiscretizedDistType"/>
                     <xs:element name="hypocentralDepth" type="nrml:NonNegativeDoubleType"/>
                 </xs:sequence>
             </xs:extension>
@@ -149,6 +149,7 @@
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
                     </xs:sequence>
+                    <xs:element name="ruptureDepthDistribution" type="nrml:ArbitrarilyDiscretizedDistType"/>
                     <xs:element name="hypocentralDepth" type="nrml:NonNegativeDoubleType"/>
                 </xs:sequence>
             </xs:extension>
