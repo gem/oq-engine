@@ -124,7 +124,7 @@ public class CommandLineCalculator {
      */
     public void serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
         Gson g = new Gson();
-        String jsonData = g.toJson(new EqkRuptureDataForKvs(rup));
+        String jsonData = g.toJson(new EqkRuptureDataForNrml(rup));
         cache.set(key, jsonData);
     }
 
@@ -134,7 +134,7 @@ public class CommandLineCalculator {
      * conversion by gson is supposed to result in a json String that is optimal
      * to be read into a numpy array.
      */
-    public class EqkRuptureDataForKvs {
+    public class EqkRuptureDataForNrml {
         private transient final String unknownTectonicRegionType = "Unknown";
         private final double averageRake;
         private String tectonicRegion;
@@ -145,7 +145,7 @@ public class CommandLineCalculator {
         private final double[] lonGrid;
         private final double[] depthGrid;
 
-        public EqkRuptureDataForKvs(EqkRupture rup) {
+        public EqkRuptureDataForNrml(EqkRupture rup) {
             averageRake = rup.getAveRake();
             if (rup.getTectRegType() != null) {
                 tectonicRegion = rup.getTectRegType().toString();
