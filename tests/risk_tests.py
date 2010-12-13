@@ -575,10 +575,8 @@ class CurveSetTestCase(unittest.TestCase):
 class AggregateLossCurveMixinTestCase(unittest.TestCase):
     
     def setUp(self):
-        # job parameters
-        self.id = 1234
-        self.base_path = "."
-
+        self.job_id = 1234
+        
         self.params = {}
         self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
         
@@ -586,19 +584,34 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         self.params["NUMBER_OF_SEISMICITY_HISTORIES"] = 10
         self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"] = 2
         self.params["INVESTIGATION_TIME"] = 50.0
+        self.params["AGGREGATE_LOSS_CURVE"] = 1
+
+        self.engine = job.Job(self.params,  self.job_id, ".")
+        
+        # adding the curves to kvs
+        curves = shapes.CurveSet()
+        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
+        curves.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
+        curves.append(shapes.Curve([(0.5, 5.0), (0.6, 6.0)]))
+        
+        curves.to_kvs(risk.loss_curves_key(self.job_id))
         
         # deleting old file
         self._delete_test_file()
     
+    def tearDown(self):
+        self._delete_test_file()
+
     def _delete_test_file(self):
         try:
-            os.remove(os.path.join(test.OUTPUT_DIR, aggregate.filename(self.id)))
+            os.remove(os.path.join(test.OUTPUT_DIR, 
+                    aggregate.filename(self.job_id)))
         except OSError:
             pass
     
     def _execute_mixin(self):
-        with job.Mixin(self, aggregate.AggregateLossCurveMixin):
-            self.execute()
+        with job.Mixin(self.engine, aggregate.AggregateLossCurveMixin):
+            self.engine.execute()
     
     def test_curve_to_plot_interface_translation(self):
         curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
@@ -609,24 +622,30 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         expected_data["AggregatedLossCurve"]["ordinate"] = (1.0, 2.0)
         expected_data["AggregatedLossCurve"]["abscissa_property"] = "Losses"
         expected_data["AggregatedLossCurve"]["ordinate_property"] = "PoEs"
-        expected_data["AggregatedLossCurve"]["curve_title"] = "Aggregated Loss Curve"
+        expected_data["AggregatedLossCurve"] \
+                ["curve_title"] = "Aggregated Loss Curve"
 
         self.assertEqual(expected_data, aggregate.for_plotting(curve))
 
     def test_plots_the_aggregate_curve(self):
-        curves = shapes.CurveSet()
-        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
-        curves.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
-        curves.append(shapes.Curve([(0.5, 5.0), (0.6, 6.0)]))
-        
-        curves.to_kvs(aggregate.KVS_KEY)
         self._execute_mixin()
-
         self._assert_plot_is_produced()
+
+    def test_plots_the_aggregate_curve_only_if_specified(self):
+        del(self.params["AGGREGATE_LOSS_CURVE"])
+
+        self._execute_mixin()
+        self._assert_plot_is_not_produced()
+
+    def _assert_plot_is_not_produced(self):
+        self.assertFalse(os.path.exists(
+                os.path.join(test.OUTPUT_DIR,
+                aggregate.filename(self.job_id))))
 
     def _assert_plot_is_produced(self):
         self.assertTrue(os.path.exists(
-                os.path.join(test.OUTPUT_DIR, aggregate.filename(self.id))))
+                os.path.join(test.OUTPUT_DIR,
+                aggregate.filename(self.job_id))))
 
 
 # LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
