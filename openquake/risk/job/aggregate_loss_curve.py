@@ -5,12 +5,11 @@ A mixin that is able to compute and plot an aggregate loss curve.
 
 import os
 
+from openquake import risk
 from openquake import shapes
 from openquake.output import curve
 from openquake.risk import probabilistic_event_based as prob
 
-# TODO (ac): Move and use also the job id!
-KVS_KEY = "aggregated_curve"
 
 def filename(job_id):
     """Return the name of the generated file."""
@@ -48,7 +47,13 @@ class AggregateLossCurveMixin:
 
     def execute(self):
         """Execute the logic of this mixin."""
-        curves = shapes.CurveSet.from_kvs(KVS_KEY)
+        
+        # could be optimized by adding this flag in the probablistic mixin
+        if not self.has("AGGREGATE_LOSS_CURVE"):
+            return
+
+        key = risk.loss_curves_key(self.id)
+        curves = shapes.CurveSet.from_kvs(key)
         aggregate_loss_curve = prob.AggregateLossCurve.from_curve_set(curves)
         
         path = os.path.join(self.base_path,
