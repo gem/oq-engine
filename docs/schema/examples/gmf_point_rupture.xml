@@ -13,9 +13,7 @@
                 <ns2:rake>0.0</ns2:rake>
             </ns2:focalMechanism>
             <ns2:hypocenterLocation>
-                <latitude>35.4</latitude>
-                <longitude>20.3</longitude>
-                <depth>20.0</depth>
+                <ns1:pos>35.4 20.3 20.0</ns1:pos>
             </ns2:hypocenterLocation>
     </ns2:pointRupture>
     <ns2:GMPEParameters/>
