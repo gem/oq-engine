@@ -8,7 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Properties;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.gem.engine.CommandLineCalculator.EqkRuptureDataForKvs;
+import org.gem.engine.CommandLineCalculator.EqkRuptureDataForNrml;
 import org.gem.engine.hazard.redis.BaseRedisTest;
 import org.gem.engine.hazard.redis.Cache;
 import org.gem.ipe.PredictionEquationTestHelper;
@@ -70,8 +70,6 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
      * correctly been extracted to a data object ("EqkRuptureDataForKvs") so
      * that the content of the json string (generated with gson) will be
      * correct.<br>
-     * Only one samle is tested. The index of that sample is determined
-     * randomly.
      * 
      * @throws ConfigurationException
      */
@@ -79,48 +77,37 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
     public void eqkRuptureKvsData() throws ConfigurationException {
         CommandLineCalculator clc =
                 new CommandLineCalculator(peerTestSet1Case5ConfigFile);
+        /*
+         * Not to big test data:
+         */
         EqkRupture rupture = PredictionEquationTestHelper.getElsinoreRupture();
-        EqkRuptureDataForKvs data = clc.new EqkRuptureDataForKvs(rupture);
+        EqkRuptureDataForNrml dataFromEqkRuptureNeededForNrml =
+                clc.new EqkRuptureDataForNrml(rupture);
         EvenlyGriddedSurfaceAPI grid = rupture.getRuptureSurface();
         int numberOfColumns = grid.getNumCols();
         int numberOfRows = grid.getNumRows();
-        /*
-         * random indices randomRow/randomCol:<br> closest int to the argument,
-         * where the argument is a double between 0 and max. index (i.e. number
-         * of rows or columns minus one)
-         */
-        int randomRow =
-                (int) Math.floor((Math.random() * (numberOfRows - 1)) + 0.5d);
-        int randomCol =
-                (int) Math
-                        .floor((Math.random() * (numberOfColumns - 1)) + 0.5d);
-        Location randomLocation = grid.getLocation(randomRow, randomCol);
-        /*
-         * the site data
-         */
-        // int flatIndex = (randomRow - 1) * numberOfColumns + (randomCol - 1);
-        int flatIndex = randomRow * numberOfColumns + randomCol;
-        double[] lonGrid = data.getLonGrid();
-        double[] latGrid = data.getLatGrid();
-        double[] depthGrid = data.getDepthGrid();
-        /*
-         * debug - there is no logger in this class, so if you are searching for
-         * errors or if you want to see this information, uncomment these
-         * System.out lines.
-         */
-        // System.out.println("randomLon = '" + randomCol + "'");
-        // System.out.println("randomRow = '" + randomRow + "'");
-        // System.out.println("flatIndex = '" + flatIndex + "'");
-        // System.out.println("lonGrid[flatIndex] = '" + lonGrid[flatIndex] +
-        // "'");
-        // System.out.println("randomLocation.getLongitude() = '"
-        // + randomLocation.getLongitude() + "'");
-        /*
-         * compare
-         */
-        assertEquals(lonGrid[flatIndex], randomLocation.getLongitude(), 0.0);
-        assertEquals(latGrid[flatIndex], randomLocation.getLatitude(), 0.0);
-        assertEquals(depthGrid[flatIndex], randomLocation.getDepth(), 0.0);
+        double[] lonGrid = dataFromEqkRuptureNeededForNrml.getLonGrid();
+        double[] latGrid = dataFromEqkRuptureNeededForNrml.getLatGrid();
+        double[] depthGrid = dataFromEqkRuptureNeededForNrml.getDepthGrid();
+        int row = 0;
+        int col = 0;
+        for (int indexOfFlatArray = 0; indexOfFlatArray < numberOfRows
+                * numberOfColumns; ++indexOfFlatArray) {
+            Location location = grid.getLocation(row, col);
+            /*
+             * System.out for debug only Use System.out commands because there
+             * is no logging in this class.
+             */
+            // System.out.println("indexOfFlatArray = " + indexOfFlatArray);
+            // System.out.println("col = " + col);
+            // System.out.println("row = " + row);
+            assertEquals(lonGrid[indexOfFlatArray], location.getLongitude(),
+                    0.0);
+            assertEquals(latGrid[indexOfFlatArray], location.getLatitude(), 0.0);
+            assertEquals(depthGrid[indexOfFlatArray], location.getDepth(), 0.0);
+            col = (col + 1) % numberOfColumns;
+            row = col == 0 ? (row + 1) : row;
+        }
     }
 
     @Test
@@ -138,8 +125,8 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         EqkRupture rupture = PredictionEquationTestHelper.getElsinoreRupture();
         clc.serializeEqkRuptureToKvs(rupture, key, client);
 
-        EqkRuptureDataForKvs dataToCache =
-                clc.new EqkRuptureDataForKvs(rupture);
+        EqkRuptureDataForNrml dataToCache =
+                clc.new EqkRuptureDataForNrml(rupture);
         Gson gson = new Gson();
         String expected = gson.toJson(dataToCache);
         Object obj = client.get(key);
