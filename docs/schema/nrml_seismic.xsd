@@ -89,7 +89,7 @@
 
     <xs:complexType name="SimpleFaultGeometryType">
         <xs:sequence>
-            <xs:element name="faultTrace" type="nrml:LocationListType"/>
+            <xs:element name="faultTrace" type="gml:LineStringType"/>
             <xs:element name="dip" type="nrml:DipType"/>
             <xs:element name="upperSeismogenicDepth" type="nrml:NonNegativeDoubleType"/>
             <xs:element name="lowerSeismogenicDepth" type="nrml:NonNegativeDoubleType"/>
@@ -110,8 +110,8 @@
 
     <xs:complexType name="ComplexFaultGeometryType">
         <xs:sequence>
-            <xs:element name="faultTopEdge" type="nrml:LocationListType"/>
-            <xs:element name="faultBottomEdge" type="nrml:LocationListType"/>
+            <xs:element name="faultTopEdge" type="gml:LineStringType"/>
+            <xs:element name="faultBottomEdge" type="gml:LineStringType"/>
         </xs:sequence>
     </xs:complexType>
 
@@ -131,7 +131,7 @@
         <xs:complexContent>
             <xs:extension base="nrml:SourceDataType">
                 <xs:sequence>
-                    <xs:element name="areaBoundary" type="nrml:LocationListType"/>
+                    <xs:element name="areaBoundary" type="gml:PolygonType"/>
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
                     </xs:sequence>
@@ -145,7 +145,7 @@
         <xs:complexContent>
             <xs:extension base="nrml:SourceDataType">
                 <xs:sequence>
-                    <xs:element name="pointLocation" type="nrml:LocationType"/>
+                    <xs:element name="pointLocation" type="gml:PointType"/>
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
                     </xs:sequence>
@@ -183,7 +183,7 @@
             <xs:extension base="nrml:RuptureType">
                 <xs:sequence>
                     <xs:element name="focalMechanism" type="nrml:FocalMechanismType"/>
-                    <xs:element name="hypocenterLocation" type="nrml:LocationType"/>
+                    <xs:element name="hypocenterLocation" type="gml:PointType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>

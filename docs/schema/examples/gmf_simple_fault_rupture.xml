@@ -9,26 +9,10 @@
             <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
             <ns2:simpleFaultGeometry>
                 <ns2:faultTrace>
-                    <location>
-                        <latitude>37.00045</latitude>
-                        <longitude>-115.16809</longitude>
-                    </location>
-                    <location>
-                        <latitude>36.95481</latitude>
-                        <longitude>-115.16899</longitude>
-                    </location>
-                    <location>
-                        <latitude>36.89462</latitude>
-                        <longitude>-115.13593</longitude>
-                    </location>
-                    <location>
-                        <latitude>36.83856</latitude>
-                        <longitude>-115.12964</longitude>
-                    </location>        
-                    <location>
-                        <latitude>36.80487</latitude>
-                        <longitude>-115.13485</longitude>
-                    </location>    
+                    <ns1:posList>
+                        37.73010 -121.82290 0.0
+                        37.87710 -122.03880 0.0
+                    </ns1:posList>
                 </ns2:faultTrace>
                 <ns2:dip>50</ns2:dip>
                 <ns2:upperSeismogenicDepth>0</ns2:upperSeismogenicDepth>

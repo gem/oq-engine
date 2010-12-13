@@ -193,32 +193,4 @@
 		</xs:restriction>
 	</xs:simpleType>
 	
-	<xs:simpleType name="LatitudeType">
-		<xs:restriction base="xs:double">
-			<xs:minInclusive value="-90.0"/>
-			<xs:maxInclusive value="+90.0"/>
-		</xs:restriction>
-	</xs:simpleType>
-	
-	<xs:simpleType name="LongitudeType">
-		<xs:restriction base="xs:double">
-			<xs:minInclusive value="-180.0"/>
-			<xs:maxInclusive value="+180.0"/>
-		</xs:restriction>
-	</xs:simpleType>
-	
-	<xs:complexType name="LocationType">
-		<xs:sequence>
-			<xs:element name="latitude" type="nrml:LatitudeType"></xs:element>
-			<xs:element name="longitude" type="nrml:LongitudeType"></xs:element>
-			<xs:element name="depth" type="nrml:NonNegativeDoubleType" minOccurs="0"></xs:element>
-		</xs:sequence>
-	</xs:complexType>
-	
-	<xs:complexType name="LocationListType">
-		<xs:sequence maxOccurs="unbounded">
-			<xs:element name="location" type="nrml:LocationType"></xs:element>
-		</xs:sequence>
-	</xs:complexType>
-	
 </xs:schema>
