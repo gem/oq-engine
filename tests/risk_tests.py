@@ -324,7 +324,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertRaises(ValueError, aggregate_curve.append, loss_curve_2)
 
-    def test_can_build_an_aggregate_curve_from_a_curve_set(self):
+    def test_can_build_an_aggregate_curve_from_kvs(self):
         curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
                 (3.0, 0.0), (4.0, 0.0)])
 
@@ -333,13 +333,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
                 (11.0, 0.0), (12.0, 0.0)])
-
-        curves = shapes.CurveSet()
-        curves.append(curve_1)
-        curves.append(curve_2)
-        curves.append(curve_3)
         
-        aggregate_curve = prob.AggregateLossCurve.from_curve_set(curves)
+        job_id = 1234
+        kvs.set(risk.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
+        kvs.set(risk.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
+        kvs.set(risk.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
+
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(job_id)
 
         expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
         self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
@@ -547,31 +547,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 common.compute_mean_loss(loss_ratio_curve), 3)
 
 
-class CurveSetTestCase(unittest.TestCase):
-    
-    def test_can_store_a_set_into_kvs(self):
-        curves = shapes.CurveSet()
-        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
-        curves.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
-        
-        curves.to_kvs("KEY")
-        self.assertEqual(curves, shapes.CurveSet.from_kvs("KEY"))
-
-    def test_can_update_a_set_in_kvs(self):
-        curves = shapes.CurveSet()
-        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
-
-        curves.to_kvs("KEY")
-        shapes.CurveSet.kvs_append("KEY",
-                shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
-
-        another_set = shapes.CurveSet()
-        another_set.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
-        another_set.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
-
-        self.assertEqual(another_set, shapes.CurveSet.from_kvs("KEY"))
-
-
 class AggregateLossCurveMixinTestCase(unittest.TestCase):
     
     def setUp(self):
@@ -589,12 +564,14 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         self.engine = job.Job(self.params,  self.job_id, ".")
         
         # adding the curves to kvs
-        curves = shapes.CurveSet()
-        curves.append(shapes.Curve([(0.1, 1.0), (0.2, 2.0)]))
-        curves.append(shapes.Curve([(0.3, 3.0), (0.4, 4.0)]))
-        curves.append(shapes.Curve([(0.5, 5.0), (0.6, 6.0)]))
-        
-        curves.to_kvs(risk.loss_curves_key(self.job_id))
+        kvs.set(risk.loss_curve_key(self.job_id, 1, 1, 5),
+                shapes.Curve([(0.1, 1.0), (0.2, 2.0)]).to_json())
+
+        kvs.set(risk.loss_curve_key(self.job_id, 1, 2, 5),
+                shapes.Curve([(0.3, 3.0), (0.4, 4.0)]).to_json())
+
+        kvs.set(risk.loss_curve_key(self.job_id, 1, 3, 5),
+                shapes.Curve([(0.5, 5.0), (0.6, 6.0)]).to_json())
         
         # deleting old file
         self._delete_test_file()
@@ -617,13 +594,13 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
         
         expected_data = {}
-        expected_data["AggregatedLossCurve"] = {}
-        expected_data["AggregatedLossCurve"]["abscissa"] = (0.1, 0.2)
-        expected_data["AggregatedLossCurve"]["ordinate"] = (1.0, 2.0)
-        expected_data["AggregatedLossCurve"]["abscissa_property"] = "Losses"
-        expected_data["AggregatedLossCurve"]["ordinate_property"] = "PoEs"
-        expected_data["AggregatedLossCurve"] \
-                ["curve_title"] = "Aggregated Loss Curve"
+        expected_data["AggregateLossCurve"] = {}
+        expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
+        expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
+        expected_data["AggregateLossCurve"]["abscissa_property"] = "Losses"
+        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoEs"
+        expected_data["AggregateLossCurve"] \
+                ["curve_title"] = "Aggregate Loss Curve"
 
         self.assertEqual(expected_data, aggregate.for_plotting(curve))
 
