@@ -7,6 +7,7 @@ the underlying kvs systems.
 import json
 import logging
 import uuid
+import openquake.kvs.tokens
 from openquake.kvs.redis import Redis
 
 DEFAULT_LENGTH_RANDOM_ID = 8
