@@ -163,17 +163,38 @@ public class CommandLineCalculator {
             latGrid = new double[countSites];
             lonGrid = new double[countSites];
             depthGrid = new double[countSites];
-            for (int col = 1; col <= numberOfColumns; col++) {
-                for (int row = 1; row <= numberOfRows; row++) {
-                    Location l = grid.get(row - 1, col - 1);
-                    int index = (row * col) - 1;
+            for (int row = 0; row < numberOfRows; row++) {
+                for (int col = 0; col < numberOfColumns; col++) {
+                    Location l = grid.get(row, col);
+                    int index = (row) * numberOfColumns + (col);
                     latGrid[index] = l.getLatitude();
                     lonGrid[index] = l.getLongitude();
                     depthGrid[index] = l.getDepth();
-                } // for rows
-            } // for columns
+                } // for columns
+            } // for rows
         } // constructor()
-    } // class EqkRuptureDataForMemcache
+
+        /**
+         * Getters and setters - may help, also when searching errors
+         */
+        public double[] getLatGrid() {
+            return latGrid;
+        }
+
+        /**
+         * Getters and setters - may help, also when searching errors
+         */
+        public double[] getLonGrid() {
+            return lonGrid;
+        }
+
+        /**
+         * Getters and setters - may help, also when searching errors
+         */
+        public double[] getDepthGrid() {
+            return depthGrid;
+        }
+    } // class EqkRuptureDataForKvs
 
     public void sampleAndSaveERFTree(Cache cache, String key, long seed)
             throws IOException {
