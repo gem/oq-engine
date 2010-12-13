@@ -10,11 +10,9 @@ import json
 
 from celery.exceptions import TimeoutError
 
-from openquake import hazard
 from openquake import job
 from openquake import kvs
 from openquake import logs
-from openquake import risk
 from openquake import shapes
 
 from openquake.risk import probabilistic_event_based
@@ -85,7 +83,8 @@ class ProbabilisticEventMixin:
         for i in range(0, histories):
             for j in range(0, realizations):
                 key = kvs.generate_product_key(
-                        self.id, hazard.STOCHASTIC_SET_TOKEN, "%s!%s" % (i, j))
+                        self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, "%s!%s" % 
+                            (i, j))
                 fieldset = shapes.FieldSet.from_json(kvs.get(key), 
                     self.region.grid)
 
@@ -97,7 +96,7 @@ class ProbabilisticEventMixin:
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
             key_gmf = kvs.generate_product_key(self.id,
-                risk.GMF_KEY_TOKEN, col, row)
+                kvs.tokens.GMF_KEY_TOKEN, col, row)
             LOGGER.debug( "GMF_SLICE for %s X %s : \n\t%s" % (
                     col, row, gmf_slice ))
             timespan = float(self['INVESTIGATION_TIME'])
@@ -116,7 +115,8 @@ class ProbabilisticEventMixin:
             asset['lat'] = site.latitude
             asset['lon'] = site.longitude
             gridpoint = self.region.grid.point_at(site)
-            asset_key = risk.asset_key(self.id, gridpoint.row, gridpoint.column)
+            asset_key = kvs.tokens.asset_key(self.id, gridpoint.row, 
+                gridpoint.column)
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
@@ -150,10 +150,10 @@ class ProbabilisticEventMixin:
         
         for point in block.grid(self.region):
             key = kvs.generate_product_key(self.job_id, 
-                risk.GMF_KEY_TOKEN, point.column, point.row)
+                kvs.tokens.GMF_KEY_TOKEN, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
             
-            asset_key = risk.asset_key(self.id, point.row, point.column)
+            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
                 LOGGER.debug("processing asset %s" % (asset))
@@ -177,7 +177,7 @@ class ProbabilisticEventMixin:
 
         loss_conditional = probabilistic_event_based. \
                 compute_conditional_loss(loss_curve, loss_poe)
-        key = risk.loss_key(self.id, row, col, asset["AssetID"], loss_poe)
+        key = kvs.tokens.loss_key(self.id, row, col, asset["AssetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
             loss_conditional, key))
@@ -199,7 +199,7 @@ class ProbabilisticEventMixin:
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None
-        key = risk.loss_ratio_key(self.id, row, col, asset["AssetID"])
+        key = kvs.tokens.loss_ratio_key(self.id, row, col, asset["AssetID"])
         
         LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))
@@ -213,7 +213,7 @@ class ProbabilisticEventMixin:
             return None
         
         loss_curve = loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
-        key = risk.loss_curve_key(self.id, row, column, asset["AssetID"])
+        key = kvs.tokens.loss_curve_key(self.id, row, column, asset["AssetID"])
 
         LOGGER.warn("RESULT: loss curve is %s, write to key %s" % (
                 loss_curve, key))
