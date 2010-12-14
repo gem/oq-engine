@@ -105,7 +105,8 @@ public class SourceModelReader {
             e.printStackTrace();
         }
         Element root = doc.getRootElement();
-        for (Iterator i = root.elements().iterator(); i.hasNext();) {
+        Iterator i = root.elements().iterator();
+        while (i.hasNext()) {
             Element elem = (Element) i.next();
             String elemName = elem.getName();
             if (elemName.equalsIgnoreCase(SIMPLE_FAULT)) {
@@ -128,42 +129,21 @@ public class SourceModelReader {
         TectonicRegionType tectRegType =
                 TectonicRegionType.getTypeForName((String) elem.element(
                         TECTONIC_REGION).getData());
-        String pointCoords =
-                (String) elem.element(POINT_LOCATION).element(POS).getData();
-        StringTokenizer st = new StringTokenizer(pointCoords);
-        double longitude = Double.valueOf(st.nextToken());
-        double latitude = Double.valueOf(st.nextToken());
-        Location pointLoc = new Location(latitude, longitude);
-        List<IncrementalMagFreqDist> mfdList =
-                new ArrayList<IncrementalMagFreqDist>();
-        List<FocalMechanism> focMechList = new ArrayList<FocalMechanism>();
-        for (Iterator j = elem.elementIterator(RUPTURE_RATE_MODEL); j.hasNext();) {
-            Element e = (Element) j.next();
-            IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, e);
-            mfdList.add(magFreqDist);
-            FocalMechanism focMech =
-                    getFocalMechanism(e.element(FOCAL_MECHANISM));
-            focMechList.add(focMech);
-        }
-        IncrementalMagFreqDist[] mfdArray =
-                new IncrementalMagFreqDist[mfdList.size()];
-        FocalMechanism[] fmArray = new FocalMechanism[focMechList.size()];
-        for (int ii = 0; ii < mfdList.size(); ii++) {
-            mfdArray[ii] = mfdList.get(ii);
-            fmArray[ii] = focMechList.get(ii);
-        }
+        Location pointLoc = getPointLocation(elem.element(POINT_LOCATION));
+        MagFreqDistsForFocalMechs magfreqDistFocMech =
+                getMagFreqDistsForFocalMechs(deltaMFD, elem);
         HypoMagFreqDistAtLoc hypoMagFreqDistAtLoc =
-                new HypoMagFreqDistAtLoc(mfdArray, pointLoc, fmArray);
+                new HypoMagFreqDistAtLoc(
+                        magfreqDistFocMech.getMagFreqDistList(), pointLoc,
+                        magfreqDistFocMech.getFocalMechanismList());
         ArbitrarilyDiscretizedFunc rupDepthDist =
                 getRuptureDepthDistribution(elem
                         .element(RUPTURE_DEPTH_DISTRIBUTION));
         double hypocentralDepth =
                 Double.valueOf((String) elem.element(HYPOCENTRAL_DEPTH)
                         .getData());
-        GEMPointSourceData pointSrc =
-                new GEMPointSourceData(srcID, srcName, tectRegType,
-                        hypoMagFreqDistAtLoc, rupDepthDist, hypocentralDepth);
-        return pointSrc;
+        return new GEMPointSourceData(srcID, srcName, tectRegType,
+                hypoMagFreqDistAtLoc, rupDepthDist, hypocentralDepth);
     }
 
     private GEMAreaSourceData getAreaSourceData(double deltaMFD, Element elem) {
@@ -176,37 +156,16 @@ public class SourceModelReader {
                 new Region(get2DLocList(elem.element(AREA_BOUNDARY)
                         .element(EXTERIOR).element(LINEAR_RING)
                         .element(POS_LIST)), borderType);
-        List<IncrementalMagFreqDist> mfdList =
-                new ArrayList<IncrementalMagFreqDist>();
-        List<FocalMechanism> focMechList = new ArrayList<FocalMechanism>();
-        for (Iterator j = elem.elementIterator(RUPTURE_RATE_MODEL); j.hasNext();) {
-            Element e = (Element) j.next();
-            IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, e);
-            mfdList.add(magFreqDist);
-            FocalMechanism focMech =
-                    getFocalMechanism(e.element(FOCAL_MECHANISM));
-            focMechList.add(focMech);
-        }
-        IncrementalMagFreqDist[] mfdArray =
-                new IncrementalMagFreqDist[mfdList.size()];
-        FocalMechanism[] fmArray = new FocalMechanism[focMechList.size()];
-        for (int ii = 0; ii < mfdList.size(); ii++) {
-            mfdArray[ii] = mfdList.get(ii);
-            fmArray[ii] = focMechList.get(ii);
-        }
-
         MagFreqDistsForFocalMechs magfreqDistFocMech =
-                new MagFreqDistsForFocalMechs(mfdArray, fmArray);
+                getMagFreqDistsForFocalMechs(deltaMFD, elem);
         ArbitrarilyDiscretizedFunc rupDepthDist =
                 getRuptureDepthDistribution(elem
                         .element(RUPTURE_DEPTH_DISTRIBUTION));
         double hypocentralDepth =
                 Double.valueOf((String) elem.element(HYPOCENTRAL_DEPTH)
                         .getData());
-        GEMAreaSourceData areaSrc =
-                new GEMAreaSourceData(srcID, srcName, tectRegType, reg,
-                        magfreqDistFocMech, rupDepthDist, hypocentralDepth);
-        return areaSrc;
+        return new GEMAreaSourceData(srcID, srcName, tectRegType, reg,
+                magfreqDistFocMech, rupDepthDist, hypocentralDepth);
     }
 
     private GEMSubductionFaultSourceData getComplexFaultSourceData(
@@ -225,10 +184,8 @@ public class SourceModelReader {
                         .element(POS_LIST));
         double rake = Double.valueOf((String) elem.element(RAKE).getData());
         IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
-        GEMSubductionFaultSourceData src =
-                new GEMSubductionFaultSourceData(srcID, srcName, tectRegType,
-                        faultTopEdge, faultBottomEdge, rake, magFreqDist, true);
-        return src;
+        return new GEMSubductionFaultSourceData(srcID, srcName, tectRegType,
+                faultTopEdge, faultBottomEdge, rake, magFreqDist, true);
     }
 
     private GEMFaultSourceData getSimpleFaultSourceData(double deltaMFD,
@@ -263,6 +220,29 @@ public class SourceModelReader {
         LocationList locList = get3DLocList(trace);
         faultTrace.addAll(locList);
         return faultTrace;
+    }
+
+    private MagFreqDistsForFocalMechs getMagFreqDistsForFocalMechs(
+            double deltaMFD, Element elem) {
+        List<IncrementalMagFreqDist> mfdList =
+                new ArrayList<IncrementalMagFreqDist>();
+        List<FocalMechanism> focMechList = new ArrayList<FocalMechanism>();
+        for (Iterator j = elem.elementIterator(RUPTURE_RATE_MODEL); j.hasNext();) {
+            Element e = (Element) j.next();
+            IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, e);
+            mfdList.add(magFreqDist);
+            FocalMechanism focMech =
+                    getFocalMechanism(e.element(FOCAL_MECHANISM));
+            focMechList.add(focMech);
+        }
+        IncrementalMagFreqDist[] mfdArray =
+                new IncrementalMagFreqDist[mfdList.size()];
+        FocalMechanism[] fmArray = new FocalMechanism[focMechList.size()];
+        for (int ii = 0; ii < mfdList.size(); ii++) {
+            mfdArray[ii] = mfdList.get(ii);
+            fmArray[ii] = focMechList.get(ii);
+        }
+        return new MagFreqDistsForFocalMechs(mfdArray, fmArray);
     }
 
     private IncrementalMagFreqDist
@@ -370,6 +350,14 @@ public class SourceModelReader {
             locList.add(new Location(lat, lon));
         }
         return locList;
+    }
+
+    private Location getPointLocation(Element pointLocation) {
+        String pointCoords = (String) pointLocation.element(POS).getData();
+        StringTokenizer st = new StringTokenizer(pointCoords);
+        double longitude = Double.valueOf(st.nextToken());
+        double latitude = Double.valueOf(st.nextToken());
+        return new Location(latitude, longitude);
     }
 
     private GutenbergRichterMagFreqDist createGrMfd(double aVal, double bVal,
