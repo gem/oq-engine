@@ -279,8 +279,6 @@ class CurvePlot(writer.FileWriter):
         pylab.savefig(self.path)
         pylab.close()
 
-        self.finished.send(True)
-
 def _color_code_generator():
     """Generator that walks through a sequence of color codes for matplotlib.
     When reaching the end of the color code list, start at the beginning again.
