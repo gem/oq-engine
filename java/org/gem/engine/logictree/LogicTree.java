@@ -272,4 +272,15 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
         return sample;
     }
 
+    @Override
+    public boolean equals(Object obj) {
+
+        if (!(obj instanceof LogicTree))
+            return false;
+
+        LogicTree other = (LogicTree) obj;
+
+        return branLevLst.equals(other.branLevLst);
+    }
+
 }

@@ -6,7 +6,10 @@ public enum LogicTreeRuleParam {
     mMaxGRRelative("mMaxGRRelative"),
 
     /** uncertainties on GR b value */
-    bGRRelative("bGRRelative");
+    bGRRelative("bGRRelative"),
+
+    /** no uncertainties */
+    NONE("noUncertainties");
 
     private String name;
 

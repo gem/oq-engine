@@ -14,12 +14,12 @@ public class LogicTreeBranch implements Serializable {
 
     }
 
-    public LogicTreeBranch(int relativeID, String branchingValue,
-            double weight) {
+    public LogicTreeBranch(int relativeID, String branchingValue, double weight) {
         this.relativeID = relativeID;
         this.branchingValue = branchingValue;
         this.weight = weight;
-
+        nameInputFile = "";
+        rule = new LogicTreeRule(LogicTreeRuleParam.NONE, 0.0);
     }
 
     public int getRelativeID() {
@@ -68,6 +68,20 @@ public class LogicTreeBranch implements Serializable {
 
     public void setRule(LogicTreeRule rule) {
         this.rule = rule;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof LogicTreeBranch))
+            return false;
+
+        LogicTreeBranch other = (LogicTreeBranch) obj;
+
+        return relativeID == other.relativeID
+                && branchingValue.equals(other.branchingValue)
+                && weight == other.weight
+                && nameInputFile.equals(other.nameInputFile)
+                && rule.equals(other.rule);
     }
 
 }

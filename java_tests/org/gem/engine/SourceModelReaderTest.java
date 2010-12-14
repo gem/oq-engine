@@ -33,8 +33,8 @@ public class SourceModelReaderTest {
         List<GEMSourceData> srcList = new ArrayList<GEMSourceData>();
         srcList.add(getFaultSourceData());
         srcList.add(getComplexFaultData());
-        srcList.add(getAreaSource());
-        srcList.add(getPointSource());
+        srcList.add(getAreaSourceData());
+        srcList.add(getPointSourceData());
 
         SourceModelReader srcModelReader =
                 new SourceModelReader("java_tests/data/source_model.xml", 0.1);
@@ -47,7 +47,7 @@ public class SourceModelReaderTest {
 
     }
 
-    private GEMPointSourceData getPointSource() {
+    private GEMPointSourceData getPointSourceData() {
         String ID = "src04";
         String name = "point";
         TectonicRegionType tectReg = TectonicRegionType.ACTIVE_SHALLOW;
@@ -81,7 +81,7 @@ public class SourceModelReaderTest {
 
     }
 
-    private GEMAreaSourceData getAreaSource() {
+    private GEMAreaSourceData getAreaSourceData() {
         String ID = "src03";
         String name = "Quito";
         TectonicRegionType tectReg = TectonicRegionType.ACTIVE_SHALLOW;
@@ -96,15 +96,23 @@ public class SourceModelReaderTest {
         double min = 5.0;
         double max = 7.0;
         double delta = 0.1;
-        IncrementalMagFreqDist magFreqDist =
+        IncrementalMagFreqDist[] magFreqDistList =
+                new IncrementalMagFreqDist[2];
+        FocalMechanism[] focMechList = new FocalMechanism[2];
+        magFreqDistList[0] =
+                getGutenbergRichterMagFreqDist(bValue, aValueCumulative, min,
+                        max, delta);
+        magFreqDistList[1] =
                 getGutenbergRichterMagFreqDist(bValue, aValueCumulative, min,
                         max, delta);
         double strike = 0.0;
         double dip = 90.0;
         double rake = 0.0;
-        FocalMechanism focalMechanism = new FocalMechanism(strike, dip, rake);
+        focMechList[0] = new FocalMechanism(strike, dip, rake);
+        strike = 90.0;
+        focMechList[1] = new FocalMechanism(strike, dip, rake);
         MagFreqDistsForFocalMechs magfreqDistFocMech =
-                new MagFreqDistsForFocalMechs(magFreqDist, focalMechanism);
+                new MagFreqDistsForFocalMechs(magFreqDistList, focMechList);
         ArbitrarilyDiscretizedFunc aveRupTopVsMag =
                 new ArbitrarilyDiscretizedFunc();
         aveRupTopVsMag.set(6.0, 5.0);

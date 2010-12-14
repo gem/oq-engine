@@ -107,6 +107,19 @@
                         <ns2:rake>0.0</ns2:rake>
                     </ns2:focalMechanism>
                 </ns2:ruptureRateModel>
+        <ns2:ruptureRateModel>
+            <ns2:truncatedGutenbergRichter>
+                <ns2:aValueCumulative>5.0</ns2:aValueCumulative>
+                <ns2:bValue>0.8</ns2:bValue>
+                <ns2:minMagnitude>5.0</ns2:minMagnitude>
+                <ns2:maxMagnitude>7.0</ns2:maxMagnitude>
+            </ns2:truncatedGutenbergRichter>
+            <ns2:focalMechanism>
+                <ns2:strike>90.0</ns2:strike>
+                <ns2:dip>90.0</ns2:dip>
+                <ns2:rake>0.0</ns2:rake>
+            </ns2:focalMechanism>
+        </ns2:ruptureRateModel>
              <ns2:ruptureDepthDistribution>
                   <XValues>6.0 6.5 7.0</XValues>
                   <YValues>5.0 3.0 0.0</YValues>
