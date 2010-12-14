@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is a basic set of tests for risk engine,
-specifically file formats.
+This is a basic set of tests for risk engine.
 """
 
 import json
@@ -92,7 +91,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual([], prob.compute_loss_ratios(
                 shapes.EMPTY_CURVE, self.gmfs))
 
-    def test_an_empty_gmf_produces_an_empty_set(self):
+    def test_an_empty_gmfs_produces_an_empty_set(self):
         self.assertEqual([], prob.compute_loss_ratios(
                 self.vuln_function, {"IMLs": ()}))
 
@@ -109,7 +108,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 prob.compute_loss_ratios(self.vuln_function,
                 {"IMLs": (0.525, 0.53)})))
 
-    def test_loss_ratios_computation_using_gmf(self):
+    def test_loss_ratios_computation_using_gmfs(self):
         # manually computed values by Vitor Silva
         expected_loss_ratios = numpy.array([0.0605584000000000,
                 0.273100266666667,
@@ -259,6 +258,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
                 self.vuln_function, self.gmfs))
 
+    def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
+        gmfs = dict(self.gmfs)
+        gmfs["IMLs"] = ()
+
+        curve = prob.compute_loss_ratio_curve(self.vuln_function, gmfs)
+        self.assertEqual(shapes.EMPTY_CURVE, curve)
+
     def test_loss_ratio_curve_with_null_gmf(self):
         gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 "TSES": 900, "TimeSpan": 50}
@@ -335,9 +341,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (11.0, 0.0), (12.0, 0.0)])
         
         job_id = 1234
-        kvs.set(risk.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
-        kvs.set(risk.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
-        kvs.set(risk.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
+        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
+        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
+        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
 
         aggregate_curve = prob.AggregateLossCurve.from_kvs(job_id)
 
@@ -564,14 +570,14 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         self.engine = job.Job(self.params,  self.job_id, ".")
         
         # adding the curves to kvs
-        kvs.set(risk.loss_curve_key(self.job_id, 1, 1, 5),
-                shapes.Curve([(0.1, 1.0), (0.2, 2.0)]).to_json())
+        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 1, 5),
+                shapes.Curve([(1.0, 0.1), (2.0, 0.1)]).to_json())
 
-        kvs.set(risk.loss_curve_key(self.job_id, 1, 2, 5),
-                shapes.Curve([(0.3, 3.0), (0.4, 4.0)]).to_json())
+        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 2, 5),
+                shapes.Curve([(3.0, 0.1), (4.0, 0.1)]).to_json())
 
-        kvs.set(risk.loss_curve_key(self.job_id, 1, 3, 5),
-                shapes.Curve([(0.5, 5.0), (0.6, 6.0)]).to_json())
+        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 3, 5),
+                shapes.Curve([(5.0, 0.1), (6.0, 0.1)]).to_json())
         
         # deleting old file
         self._delete_test_file()
