@@ -6,7 +6,7 @@ CELLAR_PATH = "/usr/local/Cellar"
 PYTHON_PATH = "%s/python/2.6.5" % CELLAR_PATH
 SITE_PKG_PATH = "~/.virtualenvs/openquake/lib/python2.6/site-packages/"
 
-VIRTUALENV_PACKAGES = ["lxml", "pyyaml", "sphinx", "shapely",
+VIRTUALENV_PACKAGES = ["lxml", "sphinx", "shapely",
     "eventlet", "python-gflags", "guppy",
     "libLAS", "numpy", "scipy", "celery==2.0.3",
     "nose", "django", "ordereddict", "redis"]
@@ -162,7 +162,7 @@ def _bootstrap_linux():
                         "liblapack-dev", "pylint", "unzip", "apt-file"]
         gdal_packages = ["gdal-bin", "libgeos-dev", "libgdal1-dev", "python-gdal"]
         pip_packages = ["virtualenv", "virtualenvwrapper",]
-        virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
+        virtualenv_packages = ["lxml", "sphinx", "shapely", 
                                "eventlet", "python-gflags", "guppy", 
                                "libLAS", "numpy", "scipy", "celery",
                                "nose", "django", "ordereddict", "stdeb"] 

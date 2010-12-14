@@ -8,5 +8,4 @@ python-gflags
 guppy
 shapely
 ordereddict
-pylibmc==0.9.2
 http://python-geohash.googlecode.com/files/python-geohash-0.6.tar.gz
