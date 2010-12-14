@@ -134,7 +134,8 @@
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
                     </xs:sequence>
-                    <xs:element name="ruptureDepthDistribution" type="nrml:ArbitrarilyDiscretizedDistType"/>
+                    <xs:element name="ruptureDepthDistribution"
+                        type="nrml:ArbitrarilyDiscretizedDistType"/>
                     <xs:element name="hypocentralDepth" type="nrml:NonNegativeDoubleType"/>
                 </xs:sequence>
             </xs:extension>
@@ -149,7 +150,8 @@
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
                     </xs:sequence>
-                    <xs:element name="ruptureDepthDistribution" type="nrml:ArbitrarilyDiscretizedDistType"/>
+                    <xs:element name="ruptureDepthDistribution"
+                        type="nrml:ArbitrarilyDiscretizedDistType"/>
                     <xs:element name="hypocentralDepth" type="nrml:NonNegativeDoubleType"/>
                 </xs:sequence>
             </xs:extension>
@@ -258,24 +260,18 @@
     </xs:complexType>
 
     <xs:complexType name="LogicTreeType">
-        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+        <xs:sequence maxOccurs="unbounded">
             <xs:element name="logicTreeBranchSet" type="nrml:LogicTreeBranchSetType"/>
         </xs:sequence>
+        <xs:attribute name="tectonicRegion" type="nrml:TectonicRegionType" use="optional"/>
     </xs:complexType>
-
-    <xs:complexType name="GmpeLogicTreeType">
-        <xs:sequence minOccurs="1" maxOccurs="unbounded">
-            <xs:element name="logicTree" type="nrml:LogicTreeType"/>
-            <xs:element name="tectonicRegion" type="nrml:TectonicRegionType"/>
+    
+    <xs:complexType name="LogicTreeSetType">
+        <xs:sequence maxOccurs="unbounded">
+            <xs:element name="logicTree" type="nrml:LogicTreeType"></xs:element>
         </xs:sequence>
     </xs:complexType>
-
-    <xs:element name="logicTree" abstract="true"/>
-    <xs:element name="sourceModelLogicTree" type="nrml:LogicTreeType"
-        substitutionGroup="nrml:logicTree"/>
-    <xs:element name="gmpeLogicTree" type="nrml:GmpeLogicTreeType"
-        substitutionGroup="nrml:logicTree"/>
-
-
+    
+    <xs:element name="logicTreeSet" type="nrml:LogicTreeSetType"></xs:element>
 
 </xs:schema>

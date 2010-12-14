@@ -87,4 +87,16 @@ public class LogicTreeBranchingLevel implements Serializable {
         return this.treeBranchList.get(idx);
     }
 
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof LogicTreeBranchingLevel))
+            return false;
+
+        LogicTreeBranchingLevel other = (LogicTreeBranchingLevel) obj;
+
+        return treeBranchList.equals(other.treeBranchList)
+                && level == other.level
+                && branchingLabel.equals(other.branchingLabel)
+                && appliesTo == other.appliesTo;
+    }
 }
