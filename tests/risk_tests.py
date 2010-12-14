@@ -433,8 +433,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def test_empty_lrem(self):
         self.assertEqual(0, psha._compute_lrem(shapes.Curve.from_json(
-            self.vulnerability_curves[vulnerability.EMPTY_CODE]),
-            shapes.EMPTY_CURVE).size)
+                self.vulnerability_curves[vulnerability.EMPTY_CODE]),
+                shapes.EMPTY_CURVE).size)
 
     def test_splits_single_interval_with_no_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),
