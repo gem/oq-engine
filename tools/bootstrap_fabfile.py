@@ -133,9 +133,9 @@ def _bootstrap_linux():
         gdal_packages = ["gdal-bin", "libgdal1-dev", "python-gdal"]
         pip_packages = ["virtualenv", "virtualenvwrapper",]
         virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
-                               "eventlet", "python-gflags", "guppy", 
+                               "python-gflags", "guppy", 
                                "libLAS", "numpy", "scipy", "celery",
-                               "nose", "django", "ordereddict", "stdeb"] 
+                               "nose", "django", "stdeb"] 
 
         _apt_install(" ".join(apt_packages)) 
         _pip_install(" ".join(pip_packages))
@@ -270,9 +270,9 @@ def _bootstrap_osx():
             run("mkdir -p .virtualenvs")
             run("%s mkvirtualenv openquake" % _osx_virtualenv_source())
 
-    virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
+    virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely",
                            "python-gflags", "guppy", "celery", "nose", "django",
-                           "ordereddict", "pylint"]
+                           "pylint"]
 
     _pip_install(" ".join(virtualenv_packages), virtualenv="openquake")
     _pip_install("pylibmc", version="0.9.2", virtualenv="openquake")
