@@ -388,8 +388,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 loss_curve)
 
     def test_empty_lrem_po(self):
-        self.assertEqual([], psha._compute_lrem_po(
-                shapes.EMPTY_CURVE, [], None))
+        self.assertEqual(0, psha._compute_lrem_po(
+                shapes.EMPTY_CURVE, [], None).size)
 
     def test_lrem_po_computation(self):
         lrem_po = psha._compute_lrem_po(shapes.Curve.from_json(
@@ -432,9 +432,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                     loss_ratio_curve.ordinate_for(x_value), 3)
 
     def test_empty_lrem(self):
-        self.assertEqual([None], psha._compute_lrem(shapes.Curve.from_json(
+        self.assertEqual(0, psha._compute_lrem(shapes.Curve.from_json(
             self.vulnerability_curves[vulnerability.EMPTY_CODE]),
-            shapes.EMPTY_CURVE))
+            shapes.EMPTY_CURVE).size)
 
     def test_splits_single_interval_with_no_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),
