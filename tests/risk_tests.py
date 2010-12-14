@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is a basic set of tests for risk engine,
-specifically file formats.
-
+This is a basic set of tests for risk engine.
 """
 
 import json
@@ -13,30 +11,31 @@ import unittest
 from scipy.interpolate import interp1d
 from shapely import geometry
 
+from openquake import job
 from openquake import logs
 from openquake import risk
 from openquake import kvs 
 from openquake import shapes
 from openquake import test
 
+from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk import engines
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
-from openquake.risk.probabilistic_event_based import *
+from openquake.risk import probabilistic_event_based as prob
+from openquake.risk import classical_psha_based as psha
+from openquake.risk import common
 
-logger = logs.RISK_LOG
+ASSET_VALUE = 5.0
+INVALID_ASSET_VALUE = 0.0
 
-LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
-LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
+HAZARD_CURVE = shapes.Curve([(5.0, 0.138), (6.0, 0.099),
+        (7.0, 0.068), (8.0, 0.041)])
 
-EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
-VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
+LOSS_RATIO_EXCEEDANCE_MATRIX = [[0.695, 0.858, 0.990, 1.000],
+        [0.266, 0.510, 0.841, 0.999]]
 
-JOB_ID = 1
-BLOCK_ID = 1
-SITE = shapes.Site(1.0, 1.0)
-
-GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
+GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.04336, 0.099552, 0.071968, 0.003456, 0.030704, 0.011744,
         0.024176, 0.002224, 0.008912, 0.004224, 0.033584, 0.041088,
         0.012864, 0.001728, 0.06648, 0.000736, 0.01992, 0.011616,
@@ -72,7 +71,7 @@ GMF = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
         0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
         "TSES": 900, "TimeSpan": 50}
-    # TSES = TimeSpan times number of Realizations
+# TSES = TimeSpan times number of Realizations
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
@@ -83,32 +82,33 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.22, (0.200, 1.0)), (0.37, (0.405, 1.0)),
                 (0.52, (0.700, 1.0))])
 
-        self.gmf = GMF
+        self.gmfs = GMFs
 
         self.cum_histogram = numpy.array([112, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1,
                 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_an_empty_function_produces_an_empty_set(self):
-        self.assertEqual([], compute_loss_ratios(shapes.EMPTY_CURVE, self.gmf))
+        self.assertEqual([], prob.compute_loss_ratios(
+                shapes.EMPTY_CURVE, self.gmfs))
 
-    def test_an_empty_gmf_produces_an_empty_set(self):
-        self.assertEqual([], compute_loss_ratios(
+    def test_an_empty_gmfs_produces_an_empty_set(self):
+        self.assertEqual([], prob.compute_loss_ratios(
                 self.vuln_function, {"IMLs": ()}))
 
     def test_loss_ratios_boundaries(self):
         # loss ratio is zero if the gmf iml is below the minimum iml
         # defined by the function min iml in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-                compute_loss_ratios(self.vuln_function,
+                prob.compute_loss_ratios(self.vuln_function,
                 {"IMLs": (0.0001, 0.0002, 0.0003)})))
 
         # loss ratio is equal to the maximum iml defined by the
         # function is greater than that max iml in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.52, 0.52]),
-                compute_loss_ratios(self.vuln_function,
+                prob.compute_loss_ratios(self.vuln_function,
                 {"IMLs": (0.525, 0.53)})))
 
-    def test_loss_ratios_computation_using_gmf(self):
+    def test_loss_ratios_computation_using_gmfs(self):
         # manually computed values by Vitor Silva
         expected_loss_ratios = numpy.array([0.0605584000000000,
                 0.273100266666667,
@@ -185,7 +185,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-                compute_loss_ratios(self.vuln_function, self.gmf)))
+                prob.compute_loss_ratios(self.vuln_function, self.gmfs)))
 
     def test_loss_ratios_range_generation(self):
         expected_range = numpy.array([0.0000, 0.0292, 0.0583, 0.0875, 0.1167,
@@ -194,13 +194,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.5542, 0.5833, 0.6125, 0.6417, 0.6708, 0.700])
 
         self.assertTrue(numpy.allclose(expected_range,
-                compute_loss_ratios_range(self.vuln_function), atol=0.0001))
+                prob.compute_loss_ratios_range(self.vuln_function),
+                atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
         self.assertTrue(numpy.allclose(self.cum_histogram,
-                compute_cumulative_histogram(
-                compute_loss_ratios(self.vuln_function, self.gmf),
-                compute_loss_ratios_range(self.vuln_function))))
+                prob.compute_cumulative_histogram(
+                prob.compute_loss_ratios(self.vuln_function, self.gmfs),
+                prob.compute_loss_ratios_range(self.vuln_function))))
 
     def test_computes_the_rates_of_exceedance(self):
         expected_rates = numpy.array([0.124, 0.0344, 0.0189, 0.0133,
@@ -209,14 +210,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
         self.assertTrue(numpy.allclose(expected_rates,
-                compute_rates_of_exceedance(
-                self.cum_histogram, self.gmf["TSES"]), atol=0.01))
+                prob.compute_rates_of_exceedance(
+                self.cum_histogram, self.gmfs["TSES"]), atol=0.01))
 
     def test_TSES_is_not_supposed_to_be_zero_or_less(self):
-        self.assertRaises(ValueError, compute_rates_of_exceedance,
+        self.assertRaises(ValueError, prob.compute_rates_of_exceedance,
                 self.cum_histogram, 0.0)
         
-        self.assertRaises(ValueError, compute_rates_of_exceedance,
+        self.assertRaises(ValueError, prob.compute_rates_of_exceedance,
                 self.cum_histogram, -10.0)
 
     def test_computes_probs_of_exceedance(self):
@@ -226,9 +227,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.0, 0.0, 0.0, 0.0, 0.0]
 
         self.assertTrue(numpy.allclose(expected_probs, 
-                compute_probs_of_exceedance(compute_rates_of_exceedance(
-                self.cum_histogram, self.gmf["TSES"]),
-                self.gmf["TimeSpan"]), atol=0.0001))
+                prob.compute_probs_of_exceedance(
+                prob.compute_rates_of_exceedance(
+                self.cum_histogram, self.gmfs["TSES"]),
+                self.gmfs["TimeSpan"]), atol=0.0001))
 
     def test_computes_the_loss_ratio_curve(self):
         expected_curve = shapes.Curve([
@@ -253,11 +255,18 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.62708333333333321, 0.0), (0.65625, 0.0),
                 (0.68541666666666656, 0.0)])
 
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-                self.vuln_function, self.gmf))
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function, self.gmfs))
+
+    def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
+        gmfs = dict(self.gmfs)
+        gmfs["IMLs"] = ()
+
+        curve = prob.compute_loss_ratio_curve(self.vuln_function, gmfs)
+        self.assertEqual(shapes.EMPTY_CURVE, curve)
 
     def test_loss_ratio_curve_with_null_gmf(self):
-        gmf = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 "TSES": 900, "TimeSpan": 50}
         
         expected_curve = shapes.Curve([
@@ -286,62 +295,351 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.65625, 0.0),
                 (0.68541666666666656, 0.0)])
 
-        self.assertEqual(expected_curve, compute_loss_ratio_curve(
-                self.vuln_function, gmf))
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function, gmfs))
 
-    def test_computes_aggregate_histogram(self):
+    def test_losses_aggregation(self):
+        # we don't care about PoEs in this case
+        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
+                (3.0, 0.0), (4.0, 0.0)])
+
+        loss_curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
+                (7.0, 0.0), (8.0, 0.0)])
+
+        loss_curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
+                (11.0, 0.0), (12.0, 0.0)])
+
+        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve.append(loss_curve_1)
+        aggregate_curve.append(loss_curve_2)
+        aggregate_curve.append(loss_curve_3)
+
+        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
+        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
+
+    def test_losses_aggregation_with_empty_input_set(self):
+        aggregate_curve = prob.AggregateLossCurve()
+        self.assertEqual([], aggregate_curve.losses)
+
+    def test_input_loss_curves_must_be_of_same_size(self):
+        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0)])
+        loss_curve_2 = shapes.Curve([(5.0, 0.0)])
+
+        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve.append(loss_curve_1)
+
+        self.assertRaises(ValueError, aggregate_curve.append, loss_curve_2)
+
+    def test_can_build_an_aggregate_curve_from_kvs(self):
+        curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
+                (3.0, 0.0), (4.0, 0.0)])
+
+        curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
+                (7.0, 0.0), (8.0, 0.0)])
+
+        curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
+                (11.0, 0.0), (12.0, 0.0)])
+        
+        job_id = 1234
+        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
+        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
+        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
+
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(job_id)
+
+        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
+        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
+
+
+class ClassicalPSHABasedTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.job_id = kvs.generate_random_id()
+
+        self.vuln_curve_code_test = "TEST"
+        vuln_curve_test = shapes.Curve([(5.0, (0.25, 0.5)),
+                (6.0, (0.4, 0.4)), (7.0, (0.6, 0.3))])
+
+        self.vulnerability_curves = vulnerability.register_vuln_curves(
+                {self.vuln_curve_code_test: vuln_curve_test.to_json(),
+                vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE.to_json()}, 
+                self.job_id)
+
+    def tearDown(self):
+        # flush vulnerability curves in kvs
+        vulnerability.delete_vuln_curves(self.job_id)
+
+    def test_empty_loss_curve(self):
+        self.assertEqual(common.compute_loss_curve(shapes.EMPTY_CURVE, None),
+                shapes.EMPTY_CURVE)
+
+    def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
+        self.assertEqual(common.compute_loss_curve(
+                shapes.Curve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
+                INVALID_ASSET_VALUE),
+                shapes.EMPTY_CURVE)
+
+    def test_loss_curve_computation(self):
+        loss_ratio_curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)])
+        loss_curve = common.compute_loss_curve(loss_ratio_curve, ASSET_VALUE)
+
+        self.assertEqual(shapes.Curve([(0.1 * ASSET_VALUE, 1.0),
+                (0.2 * ASSET_VALUE, 2.0), (0.3 * ASSET_VALUE, 3.0)]),
+                loss_curve)
+
+    def test_empty_lrem_po(self):
+        self.assertEqual([], psha._compute_lrem_po(
+                shapes.EMPTY_CURVE, [], None))
+
+    def test_lrem_po_computation(self):
+        lrem_po = psha._compute_lrem_po(shapes.Curve.from_json(
+                self.vulnerability_curves[self.vuln_curve_code_test]), 
+                LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
+
+        self.assertAlmostEquals(0.0959, lrem_po[0][0], 4)
+        self.assertAlmostEquals(0.0367, lrem_po[1][0], 4)
+        self.assertAlmostEquals(0.0849, lrem_po[0][1], 4)
+        self.assertAlmostEquals(0.05049, lrem_po[1][1], 4)
+        self.assertAlmostEquals(0.0673, lrem_po[0][2], 4)
+        self.assertAlmostEquals(0.05718, lrem_po[1][2], 4)
+
+    def test_empty_loss_ratio_curve(self):
+        self.assertEqual(shapes.EMPTY_CURVE,
+                psha.compute_loss_ratio_curve(None, []))
+
+    def test_end_to_end(self):
         # manually computed values by Vitor Silva
-        distribution_1 = [59, 34, 79, 27, 99, 79, 38, 75, 13, 81,
-                85, 31, 78, 86, 90,
-                1, 97, 20, 64, 85, 79, 65, 28, 31, 41, 43,
-                58, 60, 36, 34, 44, 25,
-                29, 76, 50, 94, 28, 54, 59, 30, 94,
-                40, 27, 22, 27, 23, 86, 45, 88,
-                35, 88, 15, 60, 26, 31, 19, 47, 62,
-                36, 4, 0, 46, 7, 81, 94, 9, 99,
-                54, 22, 11, 64, 28, 38, 62, 54, 54,
-                99, 72, 2, 87, 89, 84, 84, 82,
-                14, 35, 99, 64, 33, 19, 95, 32,
-                43, 4, 24, 33, 90, 15, 55, 41]
+        hazard_curve = shapes.Curve(
+                [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
 
-        distribution_2 = [49, 67, 51, 116, 45, 14, 48, 39,
-                46, 75, 75, 28, 2, 126, 143,
-                107, 4, 82, 115, 22, 51, 48, 132, 72, 5,
-                118, 149, 18, 4, 113, 119, 130,
-                15, 95, 102, 8, 11, 131, 30, 82, 60, 73,
-                9, 29, 78, 56, 136, 144, 4, 34,
-                87, 71, 63, 114, 19, 141, 96, 3, 49, 94,
-                32, 130, 14, 36, 123, 45, 82, 81,
-                111, 66, 112, 40, 37, 107, 69, 21, 125,
-                122, 92, 84, 7, 138, 112, 125, 31,
-                149, 147, 104, 148, 145, 106, 29, 107,
-                133, 48, 39, 149, 92, 13, 146]
+        lrem = psha._compute_lrem(shapes.Curve.from_json(
+                self.vulnerability_curves[self.vuln_curve_code_test]))
 
-        distribution_3 = [52, 120, 24, 161, 172, 17, 34, 72,
-                108, 42, 45, 154, 179, 4, 165,
-                118, 197, 11, 76, 39, 121, 22, 163, 5, 147,
-                13, 174, 66, 56, 9, 81, 72, 153,
-                39, 142, 149, 197, 141, 41, 13, 105, 139,
-                118, 116, 14, 190, 71, 166, 70,
-                194, 39, 48, 64, 20, 145, 199, 27, 40, 88, 
-                135, 52, 33, 195, 89, 57, 86, 55,
-                36, 158, 168, 167, 63, 113, 54, 193, 122, 8,
-                49, 119, 98, 103, 149, 183, 25,
-                106, 172, 169, 142, 161, 54, 51, 63, 91,
-                64, 77, 121, 198, 11, 173, 75]
+        loss_ratio_curve = psha.compute_loss_ratio_curve(
+                shapes.Curve.from_json(
+                self.vulnerability_curves[self.vuln_curve_code_test]),
+                hazard_curve)
 
-        aggregator = AggregateHistogram(11)
-        aggregator._append(distribution_1, numpy.linspace(0, 99, num=11))
-        aggregator._append(distribution_2, numpy.linspace(2, 149, num=11))
-        aggregator._append(distribution_3, numpy.linspace(4, 199, num=11))
+        lr_curve_expected = shapes.Curve([(0.0, 0.650), 
+                (0.05, 0.650), (0.10, 0.632), (0.15, 0.569),
+                (0.20, 0.477), (0.25, 0.382), (0.28, 0.330),
+                (0.31, 0.283), (0.34, 0.241), (0.37, 0.205),
+                (0.40, 0.173), (0.44, 0.137), (0.48, 0.108),
+                (0.52, 0.085), (0.56, 0.066), (0.60, 0.051)])
 
-        expected_histrogram = numpy.array(
-                [40, 53, 44, 38, 41, 24, 18, 20, 13, 9])
+        for x_value in lr_curve_expected.abscissae:
+            self.assertAlmostEqual(lr_curve_expected.ordinate_for(x_value),
+                    loss_ratio_curve.ordinate_for(x_value), 3)
 
-        self.assertTrue(numpy.allclose(
-                expected_histrogram, aggregator.compute(), atol=0.0001))
+    def test_empty_lrem(self):
+        self.assertEqual([None], psha._compute_lrem(shapes.Curve.from_json(
+            self.vulnerability_curves[vulnerability.EMPTY_CODE]),
+            shapes.EMPTY_CURVE))
 
-# 
+    def test_splits_single_interval_with_no_steps_between(self):
+        self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),
+                psha._split_loss_ratios([1.0, 2.0], 1)))
+
+    def test_splits_single_interval_with_a_step_between(self):
+        self.assertTrue(numpy.allclose(numpy.array([1.0, 1.5, 2.0]),
+                psha._split_loss_ratios([1.0, 2.0], 2)))
+
+    def test_splits_single_interval_with_steps_between(self):
+        self.assertTrue(numpy.allclose(numpy.array(
+                [1.0, 1.25, 1.50, 1.75, 2.0]),
+                psha._split_loss_ratios([1.0, 2.0], 4)))
+
+    def test_splits_multiple_intervals_with_a_step_between(self):
+        self.assertTrue(numpy.allclose(numpy.array(
+                [1.0, 1.5, 2.0, 2.5, 3.0]),
+                psha._split_loss_ratios([1.0, 2.0, 3.0], 2)))
+
+    def test_splits_multiple_intervals_with_steps_between(self):
+        self.assertTrue(numpy.allclose(numpy.array(
+                [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]),
+                psha._split_loss_ratios([1.0, 2.0, 3.0], 4)))
+
+    def test_splits_with_real_values_from_turkey(self):
+        loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
+                7.16E-05, 7.96E-04, 5.37E-03, 2.39E-02, 7.51E-02, 1.77E-01]
+
+        result =  [0.0, 3.9199999999999996e-16,
+                7.8399999999999992e-16,
+                1.1759999999999998e-15, 1.5679999999999998e-15,
+                1.9599999999999999e-15, 5.0756799999999998e-13,
+                1.0131759999999998e-12, 1.5187839999999998e-12,
+                2.024392e-12, 2.5299999999999999e-12,
+                1.6202400000000001e-10,
+                3.2151800000000003e-10, 4.8101199999999999e-10,
+                6.4050600000000006e-10, 8.0000000000000003e-10,
+                1.726e-08, 3.372e-08, 5.0179999999999997e-08,
+                6.6639999999999993e-08, 8.3099999999999996e-08,
+                7.7048000000000005e-07, 1.4578600000000002e-06,
+                2.1452400000000005e-06, 2.8326200000000003e-06,
+                3.5200000000000002e-06, 1.7136000000000003e-05,
+                3.0752000000000006e-05, 4.4368000000000013e-05,
+                5.7984000000000013e-05, 7.1600000000000006e-05,
+                0.00021648000000000001, 0.00036136000000000002,
+                0.00050624000000000003, 0.00065112000000000004,
+                0.00079600000000000005, 0.0017108000000000002,
+                0.0026256000000000001, 0.0035404, 0.0044552000000000003,
+                0.0053699999999999998, 0.0090760000000000007, 0.012782,
+                0.016487999999999999, 0.020194, 0.023900000000000001,
+                0.034140000000000004, 0.044380000000000003,
+                0.054620000000000002, 0.064860000000000001, 0.0751,
+                0.095479999999999995, 0.11585999999999999, 0.13624,
+                0.15661999999999998, 0.17699999999999999]
+
+        self.assertTrue(numpy.allclose(numpy.array(result),
+                psha._split_loss_ratios(loss_ratios)))
+
+    def test_splits_with_real_values_from_taiwan(self):
+        loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
+                2.495E-11, 2.769E-09, 1.372E-07, 3.481E-06,
+                5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
+
+        # testing just the length of the result
+        self.assertEqual(56, len(psha._split_loss_ratios(loss_ratios)))
+
+    # TODO (bw): Should we check also if the curve has no values?
+    def test_ratio_is_zero_if_probability_is_out_of_bounds(self):
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
+                (0.27, 0.089), (0.30, 0.066)])
+
+        self.assertEqual(0.0,
+                common.compute_conditional_loss(loss_curve, 0.050))
+
+        self.assertEqual(0.0,
+                common.compute_conditional_loss(loss_curve, 0.200))        
+
+    def test_conditional_loss_computation(self):
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
+                (0.27, 0.089), (0.30, 0.066)])
+
+        self.assertAlmostEqual(0.2526, common.compute_conditional_loss(
+                loss_curve, 0.100), 4)
+
+    def test_loss_ratio_pe_mid_curve_computation(self):
+        loss_ratio_curve = shapes.Curve([(0, 0.3460), (0.06, 0.12),
+                (0.12, 0.057), (0.18, 0.04),
+                (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
+
+        expected_curve = shapes.Curve([(0.0300, 0.2330), (0.0900, 0.0885),
+                (0.1500, 0.0485), (0.2100, 0.0295),
+                (0.2700, 0.0140), (0.3750, 0.0045)])
+
+        self.assertEqual(expected_curve,
+                common._compute_mid_mean_pe(loss_ratio_curve))
+
+    def test_loss_ratio_po_computation(self):
+        loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330), 
+                (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295), 
+                (0.2700, 0.0140), (0.3750, 0.0045)])
+
+        expected_curve = shapes.Curve([(0.0600, 0.1445),
+                (0.1200, 0.0400), (0.1800, 0.0190), (0.2400, 0.0155), 
+                (0.3225, 0.0095)])
+
+        self.assertEqual(expected_curve,
+                common._compute_mid_po(loss_ratio_pe_mid_curve))
+
+    def test_mean_loss_ratio_computation(self):
+        loss_ratio_curve = shapes.Curve([(0, 0.3460), (0.06, 0.12),
+                (0.12, 0.057), (0.18, 0.04),
+                (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
+
+# TODO (ac): Check the difference between 0.023305 and 0.023673
+        self.assertAlmostEqual(0.023305,
+                common.compute_mean_loss(loss_ratio_curve), 3)
+
+
+class AggregateLossCurveMixinTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.job_id = 1234
+        
+        self.params = {}
+        self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
+        
+        # parameters needed to compute tses and time span
+        self.params["NUMBER_OF_SEISMICITY_HISTORIES"] = 10
+        self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"] = 2
+        self.params["INVESTIGATION_TIME"] = 50.0
+        self.params["AGGREGATE_LOSS_CURVE"] = 1
+
+        self.engine = job.Job(self.params,  self.job_id, ".")
+        
+        # adding the curves to kvs
+        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 1, 5),
+                shapes.Curve([(1.0, 0.1), (2.0, 0.1)]).to_json())
+
+        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 2, 5),
+                shapes.Curve([(3.0, 0.1), (4.0, 0.1)]).to_json())
+
+        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 3, 5),
+                shapes.Curve([(5.0, 0.1), (6.0, 0.1)]).to_json())
+        
+        # deleting old file
+        self._delete_test_file()
+    
+    def tearDown(self):
+        self._delete_test_file()
+
+    def _delete_test_file(self):
+        try:
+            os.remove(os.path.join(test.OUTPUT_DIR, 
+                    aggregate.filename(self.job_id)))
+        except OSError:
+            pass
+    
+    def _execute_mixin(self):
+        with job.Mixin(self.engine, aggregate.AggregateLossCurveMixin):
+            self.engine.execute()
+    
+    def test_curve_to_plot_interface_translation(self):
+        curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
+        
+        expected_data = {}
+        expected_data["AggregateLossCurve"] = {}
+        expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
+        expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
+        expected_data["AggregateLossCurve"]["abscissa_property"] = "Loss"
+        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE"
+        expected_data["AggregateLossCurve"] \
+                ["curve_title"] = "Aggregate Loss Curve"
+
+        self.assertEqual(expected_data, aggregate.for_plotting(curve))
+
+    def test_plots_the_aggregate_curve(self):
+        self._execute_mixin()
+        self._assert_plot_is_produced()
+
+    def test_plots_the_aggregate_curve_only_if_specified(self):
+        del(self.params["AGGREGATE_LOSS_CURVE"])
+
+        self._execute_mixin()
+        self._assert_plot_is_not_produced()
+
+    def _assert_plot_is_not_produced(self):
+        self.assertFalse(os.path.exists(
+                os.path.join(test.OUTPUT_DIR,
+                aggregate.filename(self.job_id))))
+
+    def _assert_plot_is_produced(self):
+        self.assertTrue(os.path.exists(
+                os.path.join(test.OUTPUT_DIR,
+                aggregate.filename(self.job_id))))
+
+
+# LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
+# LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
+# EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
+# VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
+#
+# JOB_ID = 1
+# BLOCK_ID = 1
+# SITE = shapes.Site(1.0, 1.0)
+#
 # class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 #     
 #     def setUp(self):
