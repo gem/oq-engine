@@ -63,14 +63,14 @@ class HazardEngineTestCase(unittest.TestCase):
             hc = hazengine.execute()
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
-                                hazard.SOURCE_MODEL_TOKEN)
+                                kvs.tokens.SOURCE_MODEL_TOKEN)
             source_model = self.memcache_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
             
             gmpe_key = kvs.generate_product_key(hazengine.id, 
-                                hazard.GMPE_TOKEN)
+                                kvs.tokens.GMPE_TOKEN)
             gmpe_model = self.memcache_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
@@ -102,10 +102,10 @@ class HazardEngineTestCase(unittest.TestCase):
         result_keys = []
         expected_values = {}
 
-        print hazard.ERF_KEY_TOKEN
+        print kvs.tokens.ERF_KEY_TOKEN
         
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = kvs.generate_product_key(job_id, hazard.ERF_KEY_TOKEN)
+            erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
 
             # Build the expected values
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
@@ -145,7 +145,7 @@ class HazardEngineTestCase(unittest.TestCase):
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = kvs.generate_product_key(job_id, hazard.MGM_KEY_TOKEN, 
+            mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN, 
                 block_id, site)
             self.memcache_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
@@ -166,7 +166,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         for site in sites:
             site_key = kvs.generate_product_key(job_id,
-                hazard.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
+                kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
             self.memcache_client.set(site_key, ONE_CURVE_MODEL)
 

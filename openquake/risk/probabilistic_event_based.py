@@ -47,14 +47,9 @@ def compute_loss_ratios_range(vuln_function):
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     
-    def invalid_ratios(ratios):
-        """ Return the number of invalid ratios or None """
-        invalids = where(ratios <= 0.0)
-        # TODO(JMC): I think this is wrong. where doesn't return zero values
-        if invalids:
-            return len(invalids[0])
-        return None
-    
+    # TODO(JMC): I think this is wrong. where doesn't return zero values.
+    invalid_ratios = lambda ratios: len(where(array(ratios) <= 0.0)[0])
+
     hist = histogram(loss_ratios, bins=loss_ratios_range)
     hist = hist[0][::-1].cumsum()[::-1]
 
@@ -86,9 +81,14 @@ def compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set):
     """Compute the loss ratio curve using the probailistic event approach."""
+
+    # with no gmfs (no earthquakes), an empty curve is enough
+    if not ground_motion_field_set["IMLs"]:
+        return shapes.EMPTY_CURVE
+
     loss_ratios = compute_loss_ratios(vuln_function, ground_motion_field_set)
     loss_ratios_range = compute_loss_ratios_range(vuln_function)
-    
+
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(compute_cumulative_histogram(
             loss_ratios, loss_ratios_range), ground_motion_field_set["TSES"]),
@@ -140,7 +140,8 @@ class AggregateHistogram(object):
     def append(self, vuln_function, ground_motion_field_set):
         """Append this vulnerability function and gmf to the set
         of input data used to compute the aggregate histogram."""
-        self._append(compute_loss_ratios(vuln_function, ground_motion_field_set),
+        self._append(compute_loss_ratios(vuln_function,
+                ground_motion_field_set),
                 compute_loss_ratios_range(vuln_function))
 
     def _append(self, distribution, bins):
