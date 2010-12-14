@@ -7,18 +7,18 @@ Wrapper around the OpenSHA-lite java library.
 import math
 import os
 import random
-
 import numpy
 
-from openquake import hazard
+
 from openquake import java
+from openquake import kvs
+from openquake import logs
+from openquake import settings
 from openquake import shapes
+
 from openquake.hazard import job
 from openquake.hazard import tasks
-from openquake import kvs
-from openquake import settings
 from openquake.output import geotiff
-from openquake import logs
 
 LOG = logs.LOG
 
@@ -51,7 +51,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         config_file should be an absolute path."""
         print "Store source model from %s" % (config_file)
         engine = java.jclass("CommandLineCalculator")(config_file)
-        key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
+        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
         engine.sampleAndSaveERFTree(self.cache, key, seed)
     
     def store_gmpe_map(self, config_file, seed):
@@ -61,7 +61,7 @@ class MonteCarloMixin: # pylint: disable=W0232
         In the future, this file *could* be passed as a string, since it does 
         not have any included references."""
         engine = java.jclass("CommandLineCalculator")(config_file)
-        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         engine.sampleAndSaveGMPETree(self.cache, key, seed)
 
     def site_list_generator(self):
@@ -120,7 +120,7 @@ class MonteCarloMixin: # pylint: disable=W0232
             for j in range(0, realizations):
                 stochastic_set_id = "%s!%s" % (i, j)
                 stochastic_set_key = kvs.generate_product_key(
-                        self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+                    self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -165,7 +165,7 @@ class MonteCarloMixin: # pylint: disable=W0232
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
-        key = kvs.generate_product_key(self.id, hazard.SOURCE_MODEL_TOKEN)
+        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
         erf = java.jclass("GEM1ERF")(sources)
@@ -174,7 +174,7 @@ class MonteCarloMixin: # pylint: disable=W0232
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.generate_product_key(self.id, hazard.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         gmpe_map = java.jclass("JsonSerializer").getGmpeMapFromCache(
                                                     self.cache,key)
         self.set_gmpe_params(gmpe_map)
@@ -272,7 +272,7 @@ class MonteCarloMixin: # pylint: disable=W0232
 
         jsite_list = self.parameterize_sites(site_list)
         key = kvs.generate_product_key(
-                    self.id, hazard.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+                    self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
         gmc = self.params['GROUND_MOTION_CORRELATION']
         correlate = (gmc == "true" and True or False)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
