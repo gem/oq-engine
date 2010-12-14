@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This is a basic set of tests for risk engine,
-specifically file formats.
+This is a basic set of tests for risk engine.
 """
 
 import json
@@ -90,7 +89,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual([], prob.compute_loss_ratios(
                 shapes.EMPTY_CURVE, self.gmfs))
 
-    def test_an_empty_gmf_produces_an_empty_set(self):
+    def test_an_empty_gmfs_produces_an_empty_set(self):
         self.assertEqual([], prob.compute_loss_ratios(
                 self.vuln_function, {"IMLs": ()}))
 
@@ -107,7 +106,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 prob.compute_loss_ratios(self.vuln_function,
                 {"IMLs": (0.525, 0.53)})))
 
-    def test_loss_ratios_computation_using_gmf(self):
+    def test_loss_ratios_computation_using_gmfs(self):
         # manually computed values by Vitor Silva
         expected_loss_ratios = numpy.array([0.0605584000000000,
                 0.273100266666667,
@@ -256,6 +255,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
                 self.vuln_function, self.gmfs))
+
+    def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
+        gmfs = dict(self.gmfs)
+        gmfs["IMLs"] = ()
+
+        curve = prob.compute_loss_ratio_curve(self.vuln_function, gmfs)
+        self.assertEqual(shapes.EMPTY_CURVE, curve)
 
     def test_loss_ratio_curve_with_null_gmf(self):
         gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
