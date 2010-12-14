@@ -49,7 +49,7 @@ def compute_loss_ratios_range(vuln_function):
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     
-    # TODO(JMC): I think this is wrong. where doesn't return zero values
+    # TODO(JMC): I think this is wrong. where doesn't return zero values.
     invalid_ratios = lambda ratios: len(where(array(ratios) <= 0.0)[0])
 
     hist = histogram(loss_ratios, bins=loss_ratios_range)
