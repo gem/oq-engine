@@ -7,6 +7,7 @@ using the classical psha based approach.
 from numpy import linspace # pylint: disable=F0401,E0611
 import scipy # pylint: disable=F0401
 
+from numpy import empty # pylint: disable=F0401,E0611
 from numpy import isnan # pylint: disable=F0401,E0611
 from scipy import sqrt # pylint: disable=F0401,E0611
 from scipy import stats # pylint: disable=F0401,E0611
@@ -34,34 +35,22 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
-    """Compute the loss ratio * probability of occurrence matrix.""" 
+    """Compute the loss ratio * PoEs matrix.""" 
 
-    current_column = 0
-    lrem_po = [None] * len(lrem)
-    imls = vuln_function.imls
+    lrem_po = empty((len(lrem), len(vuln_function.imls)), float)
 
-    for iml in imls:
-        prob_occ = hazard_curve.ordinate_for(iml)
+    for idx, value in enumerate(vuln_function):
+        prob_occ = hazard_curve.ordinate_for(value[0])
+
         for row in range(len(lrem_po)):
-            if not lrem_po[row]: 
-                lrem_po[row] = [None] * len(vuln_function.imls)
-            lrem_po[row][current_column] = lrem[row][current_column] * prob_occ
-        current_column += 1
-    
+            lrem_po[row][idx] = lrem[row][idx] * prob_occ
+
     return lrem_po
 
 
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     """Compute the loss ratio curve."""
-    
-    data = []
-    for row in range(len(lrem_po)-1):
-        prob_occ = 0.0
-        for column in range(len(lrem_po[row])):
-            prob_occ += lrem_po[row][column]
-        data.append((loss_ratios[row], prob_occ))
-
-    return shapes.Curve(data)
+    return shapes.Curve(zip(loss_ratios, lrem_po.sum(axis=1)[:-1]))
 
 
 # @state.memoize
@@ -81,12 +70,11 @@ def _compute_lrem(vuln_function, distribution=None):
         # this is so we can memoize the thing
 
     loss_ratios = _generate_loss_ratios(vuln_function)
+    loss_ratios.append(1.0) # last loss ratio is fixed to be 1
+    lrem = empty((len(loss_ratios), len(vuln_function.imls)), float)
 
-    current_column = 0
-    lrem = [None] * (len(loss_ratios)+1)
-
-    def fix_value(prob):
-        """Fix negative probabilities for values close to zero."""
+    def fix_prob(prob):
+        """Fix probabilities for values close to zero."""
         if isnan(prob):
             return 0.0
         if prob < 0.00001: 
@@ -94,29 +82,18 @@ def _compute_lrem(vuln_function, distribution=None):
         else: 
             return prob
 
-    for iml in vuln_function.imls:
-        mean = vuln_function.mean_for(iml)
-        cov = vuln_function.cov_for(iml)
+    for idx, value in enumerate(vuln_function):
+        iml, mean, cov = value
         stddev = cov * mean
         variance = stddev ** 2.0
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )
         sigma = sqrt(log((variance / mean ** 2.0) + 1.0))
         
-        for row in range(len(loss_ratios)+1):
-            if not lrem[row]: 
-                lrem[row] = [None] * len(vuln_function.imls)
-            # last loss ratio is fixed to be 1
-            if row < len(loss_ratios): 
-                next_ratio = loss_ratios[row]
-            else: 
-                next_ratio = 1.0
-            
-            lrem[row][current_column] = fix_value(
-                    distribution.sf(next_ratio, 
+        for row in range(len(lrem)):
+            lrem[row][idx] = fix_prob(
+                    distribution.sf(loss_ratios[row],
                     sigma, scale=scipy.exp(mu)))
-
-        current_column += 1
-
+    
     return lrem
 
 
@@ -133,7 +110,8 @@ def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
 
     splitted_ratios = set()
     for idx in range(len(loss_ratios) - 1):
-        splitted_ratios.update(linspace(
-                loss_ratios[idx], loss_ratios[idx + 1], steps + 1))
+        splitted_ratios.update(
+                linspace(loss_ratios[idx],
+                loss_ratios[idx + 1], steps + 1))
 
     return list(sorted(splitted_ratios))
