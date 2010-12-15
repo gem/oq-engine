@@ -53,7 +53,7 @@ setup(name='openquake',
       data_files=[('/etc/openquake', ['celeryconfig.py']),
                   ('lib', libs),('dist', dist)],
       scripts=scripts,
-      install_requires=["shapely", "python-gflags",
+      install_requires=["pyyaml", "shapely", "python-gflags",
                         "lxml", "sphinx", "eventlet", "guppy", "libLAS",
                         "numpy", "scipy", "celery", "nose", "django",
                         "ordereddict"])
