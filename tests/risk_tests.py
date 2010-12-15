@@ -76,7 +76,8 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.vuln_function = shapes.Curve([(0.01, (0.001, 1.00)),
+        self.vuln_function = shapes.VulnerabilityFunction(
+                [(0.01, (0.001, 1.00)),
                 (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
                 (0.10, (0.080, 1.0)), (0.12, (0.100, 1.0)),
                 (0.22, (0.200, 1.0)), (0.37, (0.405, 1.0)),
@@ -357,13 +358,13 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.job_id = kvs.generate_random_id()
 
         self.vuln_curve_code_test = "TEST"
-        vuln_curve_test = shapes.Curve([(5.0, (0.25, 0.5)),
-                (6.0, (0.4, 0.4)), (7.0, (0.6, 0.3))])
+        vuln_curve_test = shapes.VulnerabilityFunction(
+                [(5.0, (0.25, 0.5)), (6.0, (0.4, 0.4)), (7.0, (0.6, 0.3))])
 
         self.vulnerability_curves = vulnerability.register_vuln_curves(
                 {self.vuln_curve_code_test: vuln_curve_test.to_json(),
-                vulnerability.EMPTY_CODE: shapes.EMPTY_CURVE.to_json()}, 
-                self.job_id)
+                vulnerability.EMPTY_CODE:
+                shapes.EMPTY_VULN_FUNCTION.to_json()}, self.job_id)
 
     def tearDown(self):
         # flush vulnerability curves in kvs
@@ -389,10 +390,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def test_empty_lrem_po(self):
         self.assertEqual([], psha._compute_lrem_po(
-                shapes.EMPTY_CURVE, [], None))
+                shapes.EMPTY_VULN_FUNCTION, [], None))
 
     def test_lrem_po_computation(self):
-        lrem_po = psha._compute_lrem_po(shapes.Curve.from_json(
+        lrem_po = psha._compute_lrem_po(
+                shapes.VulnerabilityFunction.from_json(
                 self.vulnerability_curves[self.vuln_curve_code_test]), 
                 LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
 
@@ -412,12 +414,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         hazard_curve = shapes.Curve(
                 [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
 
-        lrem = psha._compute_lrem(shapes.Curve.from_json(
-                self.vulnerability_curves[self.vuln_curve_code_test]))
+        vuln_function = shapes.VulnerabilityFunction.from_json(
+                self.vulnerability_curves[self.vuln_curve_code_test])
 
-        loss_ratio_curve = psha.compute_loss_ratio_curve(
-                shapes.Curve.from_json(
-                self.vulnerability_curves[self.vuln_curve_code_test]),
+        loss_ratio_curve = psha.compute_loss_ratio_curve(vuln_function,
                 hazard_curve)
 
         lr_curve_expected = shapes.Curve([(0.0, 0.650), 
@@ -432,9 +432,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                     loss_ratio_curve.ordinate_for(x_value), 3)
 
     def test_empty_lrem(self):
-        self.assertEqual([None], psha._compute_lrem(shapes.Curve.from_json(
-            self.vulnerability_curves[vulnerability.EMPTY_CODE]),
-            shapes.EMPTY_CURVE))
+        self.assertEqual([None], psha._compute_lrem(
+                shapes.VulnerabilityFunction.from_json(
+                self.vulnerability_curves[vulnerability.EMPTY_CODE]),
+                shapes.EMPTY_CURVE))
 
     def test_splits_single_interval_with_no_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),

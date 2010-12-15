@@ -18,11 +18,11 @@ DEFAULT_NUMBER_OF_SAMPLES = 25
 
 def compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field set passed."""
-    if vuln_function == shapes.EMPTY_CURVE or not \
+    if vuln_function == shapes.EMPTY_VULN_FUNCTION or not \
                         ground_motion_field_set["IMLs"]:
         return []
     
-    imls = vuln_function.abscissae
+    imls = vuln_function.imls
     loss_ratios = []
     
     # seems like with numpy you can only specify a single fill value
@@ -42,7 +42,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set):
 
 def compute_loss_ratios_range(vuln_function):
     """Compute the range of loss ratios used to build the loss ratio curve."""
-    loss_ratios = vuln_function.ordinates[:, 0]
+    loss_ratios = vuln_function.means
     return linspace(0.0, loss_ratios[-1], num=DEFAULT_NUMBER_OF_SAMPLES)
 
 
@@ -106,9 +106,9 @@ def _generate_curve(losses, probs_of_exceedance):
 
     data = []
     for idx in xrange(len(losses) - 1):
-        mean_loss_ratios = (losses[idx] + \
+        mean_loss_ratio = (losses[idx] + \
                 losses[idx + 1]) / 2
-        data.append((mean_loss_ratios, probs_of_exceedance[idx]))
+        data.append((mean_loss_ratio, probs_of_exceedance[idx]))
 
     return shapes.Curve(data)
 
