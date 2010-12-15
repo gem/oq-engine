@@ -538,6 +538,14 @@ class VulnerabilityFunction(Curve):
         else:
             return self.ordinates[:, 0]
 
+    def __iter__(self):
+        """Iterate on the values of this function, returning triples
+        in the form of (iml, mean loss ratio, cov)."""
+        for idx in range(len(self.abscissae)):
+            yield((self.abscissae[idx], 
+                    self.ordinates[idx][0],
+                    self.ordinates[idx][1]))
+
     @property
     def imls(self):
         """Return the imls of this function."""
@@ -547,14 +555,6 @@ class VulnerabilityFunction(Curve):
     def covs(self):
         """Return the covs of this function."""
         return self.ordinates[:, 1]
-
-    def mean_for(self, iml):
-        """Return the mean loss ratio for the given iml."""
-        return self.ordinate_for(iml)
-
-    def cov_for(self, iml):
-        """Return the cov for the given iml."""
-        return self.ordinate_for(iml, 1)
 
 
 EMPTY_CURVE = Curve(())
