@@ -16,12 +16,13 @@ from openquake import shapes
 
 STEPS_PER_INTERVAL = 5
 
+
 def compute_loss_ratio_curve(vuln_function, hazard_curve):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function."""
 
     if vuln_function is None:
-        vuln_function = shapes.EMPTY_CURVE
+        vuln_function = shapes.EMPTY_VULN_FUNCTION
 
     lrem = _compute_lrem(vuln_function)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
@@ -37,13 +38,13 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
 
     current_column = 0
     lrem_po = [None] * len(lrem)
-    imls = vuln_function.abscissae
+    imls = vuln_function.imls
 
     for iml in imls:
         prob_occ = hazard_curve.ordinate_for(iml)
         for row in range(len(lrem_po)):
             if not lrem_po[row]: 
-                lrem_po[row] = [None] * len(vuln_function.abscissae)
+                lrem_po[row] = [None] * len(vuln_function.imls)
             lrem_po[row][current_column] = lrem[row][current_column] * prob_occ
         current_column += 1
     
@@ -66,15 +67,7 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
 # @state.memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve."""
-
-# TODO (ac): We should always have covs, fix the caller
-# TODO (ac): Extract domain, something like vuln_function.means
-    if vuln_function.is_multi_value:
-        loss_ratios = list(vuln_function.ordinates[:, 0])
-    else:
-        loss_ratios = list(vuln_function.ordinates)
-
-    # we need to add 0.0 as first value
+    loss_ratios = list(vuln_function.means)
     loss_ratios.insert(0, 0.0)
     return _split_loss_ratios(loss_ratios)
 
@@ -101,9 +94,9 @@ def _compute_lrem(vuln_function, distribution=None):
         else: 
             return prob
 
-    for iml in vuln_function.abscissae:
-        mean = vuln_function.ordinate_for(iml)
-        cov = vuln_function.ordinate_for(iml, 1)
+    for iml in vuln_function.imls:
+        mean = vuln_function.mean_for(iml)
+        cov = vuln_function.cov_for(iml)
         stddev = cov * mean
         variance = stddev ** 2.0
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )
@@ -111,7 +104,7 @@ def _compute_lrem(vuln_function, distribution=None):
         
         for row in range(len(loss_ratios)+1):
             if not lrem[row]: 
-                lrem[row] = [None] * len(vuln_function.abscissae)
+                lrem[row] = [None] * len(vuln_function.imls)
             # last loss ratio is fixed to be 1
             if row < len(loss_ratios): 
                 next_ratio = loss_ratios[row]
