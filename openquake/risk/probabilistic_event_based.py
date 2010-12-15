@@ -16,6 +16,7 @@ from openquake.logs import LOG
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
+
 def compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field set passed."""
     if vuln_function == shapes.EMPTY_VULN_FUNCTION or not \
