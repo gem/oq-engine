@@ -1,8 +1,10 @@
 package org.gem.engine;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
@@ -14,6 +16,11 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class LogicTreeReaderTest {
 
+    /**
+     * Compares source model logic tree as derived by reading nrML file with
+     * source model logic tree defined by hand with the same data contained in
+     * the nrML file
+     */
     @Test
     public void readSourceModelLogicTreeTest() {
 
@@ -23,15 +30,21 @@ public class LogicTreeReaderTest {
         LogicTreeReader sourceModelLogicTreeReader =
                 new LogicTreeReader(
                         "java_tests/data/source_model_logic_tree.xml");
+        Map<String, LogicTree> sourceModelLogicTreeHashMapRead =
+                sourceModelLogicTreeReader.read();
 
-        assertTrue(sourceModelLogicTreeHashMap.keySet().size() == sourceModelLogicTreeReader
-                .getLogicTreeHashMap().keySet().size());
+        assertTrue(sourceModelLogicTreeHashMap.keySet().size() == sourceModelLogicTreeHashMapRead
+                .keySet().size());
         for (String key : sourceModelLogicTreeHashMap.keySet())
-            assertTrue(sourceModelLogicTreeHashMap.get(key).equals(
-                    sourceModelLogicTreeReader.getLogicTreeHashMap().get(key)));
+            assertEquals(sourceModelLogicTreeHashMap.get(key),
+                    sourceModelLogicTreeHashMapRead.get(key));
 
     }
 
+    /**
+     * Compares gmpe logic tree as derived by reading nrML file with gmpe logic
+     * tree defined by hand with the same data contained in the nrML file
+     */
     @Test
     public void readGmpeLogicTreeTest() {
         HashMap<String, LogicTree> gmpeLogicTreeHashMap =
@@ -39,14 +52,23 @@ public class LogicTreeReaderTest {
 
         LogicTreeReader gmpeLogicTreeReader =
                 new LogicTreeReader("java_tests/data/gmpe_logic_tree.xml");
+        Map<String, LogicTree> gmpeLogicTreeHashMapRead =
+                gmpeLogicTreeReader.read();
 
-        assertTrue(gmpeLogicTreeHashMap.keySet().size() == gmpeLogicTreeReader
-                .getLogicTreeHashMap().keySet().size());
+        assertTrue(gmpeLogicTreeHashMap.keySet().size() == gmpeLogicTreeHashMapRead
+                .keySet().size());
         for (String key : gmpeLogicTreeHashMap.keySet())
-            assertTrue(gmpeLogicTreeHashMap.get(key).equals(
-                    gmpeLogicTreeReader.getLogicTreeHashMap().get(key)));
+            assertEquals(gmpeLogicTreeHashMap.get(key),
+                    gmpeLogicTreeHashMapRead.get(key));
     }
 
+    /**
+     * Defines and gets hash map containing two logic trees for GMPEs, for two
+     * different tectonic settings (active shallow crust, subduction interface).
+     * The logic tree for active shallow crust contains two GMPEs with equal
+     * weight, while the logic tree for subduction interface contains only one
+     * gmpe with full weight
+     */
     private HashMap<String, LogicTree> getGmpeLogicTreeHashMap() {
 
         HashMap<String, LogicTree> gmpeLogicTreeHashMap =
@@ -75,6 +97,13 @@ public class LogicTreeReaderTest {
         return gmpeLogicTreeHashMap;
     }
 
+    /**
+     * Defines and gets hash map containing one source model logic tree. The
+     * source model logic tree containes three branching levels, the first
+     * describing two alternative source models, the second branching level
+     * defines uncertainties on the Gutenberg-Richter maximum magnitude, while
+     * the third uncertainties on Gutenberg-Richter b value
+     */
     private HashMap<String, LogicTree> getSourceModelLogicTree() {
 
         LogicTree sourceModelLogicTree = new LogicTree();

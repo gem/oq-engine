@@ -1,13 +1,11 @@
 package org.gem.engine;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
 import org.dom4j.Document;
-import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.gem.engine.logictree.LogicTree;
@@ -16,37 +14,67 @@ import org.gem.engine.logictree.LogicTreeBranchingLevel;
 import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
 
+/**
+ * Class for reading logic tree data in a nrML format file. The constructor of
+ * this class takes the path of the file to read from.
+ * 
+ */
 public class LogicTreeReader {
 
-    private static Map<String, LogicTree> logicTreeHashMap;
+    private final String path;
 
-    private static String TECTONIC_REGION = "tectonicRegion";
-    private static String UNCERTAINTY_TYPE = "uncertaintyType";
-    private static String UNCERTAINTY_MODEL = "uncertaintyModel";
-    private static String UNCERTAINTY_WEIGHT = "uncertaintyWeight";
-    private static String SOURCE_MODEL = "sourceModel";
-    private static String MAX_MAGNITUDE_GUTENBERG_RICHTER_RELATIVE =
+    private final Map<String, LogicTree> logicTreeHashMap;
+
+    private static final String TECTONIC_REGION = "tectonicRegion";
+    private static final String UNCERTAINTY_TYPE = "uncertaintyType";
+    private static final String UNCERTAINTY_MODEL = "uncertaintyModel";
+    private static final String UNCERTAINTY_WEIGHT = "uncertaintyWeight";
+    private static final String SOURCE_MODEL = "sourceModel";
+    private static final String MAX_MAGNITUDE_GUTENBERG_RICHTER_RELATIVE =
             "maxMagnitudeGutenbergRichterRelative";
-    private static String B_VALUE_GUTENBERG_RICHTER_RELATIVE =
+    private static final String B_VALUE_GUTENBERG_RICHTER_RELATIVE =
             "bValueGutenbergRichterRelative";
 
-    public LogicTreeReader(String gmpeLogicTreeFile) {
-
+    /**
+     * Creates a new LogicTreeReader given the path of the file to read from.
+     */
+    public LogicTreeReader(String path) {
+        this.path = path;
         logicTreeHashMap = new HashMap<String, LogicTree>();
+    }
 
-        File xml = new File(gmpeLogicTreeFile);
+    /**
+     * Reads file and returns logic tree data. The method loops over the
+     * possible logic trees defined in the file. For each logic tree definition,
+     * it creates a corresponding {@link LogicTree} object and stores it in a
+     * map with a key that is the logic tree number or the tectonic region type
+     * (if defined in the file).
+     */
+    public Map<String, LogicTree> read() {
+
+        File xml = new File(path);
         SAXReader reader = new SAXReader();
         Document doc = null;
         try {
             doc = reader.read(xml);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (DocumentException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         Element root = doc.getRootElement();
-        Iterator i = root.elements().iterator();
+
+        /**
+         * Makes a loop over the possible logic trees defined in the file. In
+         * case of the GMPE logic tree file, multiple logic trees are defined,
+         * one for each tectonic region implied by the source model. For the
+         * source model logic tree file, currently only one logic tree is
+         * defined. For each logic tree definition, creates a logic tree object.
+         * Depending on the uncertainty type, additional attributed of the
+         * branch class must be edited. In case of source model uncertainties, a
+         * source model file must be specified. In case of parameter
+         * uncertainties, a logic tree rule must be defined.
+         */
         int indexLogicTree = 1;
+        Iterator i = root.elements().iterator();
         while (i.hasNext()) {
             Element logicTreeElem = (Element) i.next();
             String key = Integer.toString(indexLogicTree);
@@ -62,6 +90,7 @@ public class LogicTreeReader {
                         branchSetElem.attributeValue(UNCERTAINTY_TYPE);
                 LogicTreeBranchingLevel branchingLevel =
                         new LogicTreeBranchingLevel(indexBranchingLevel, "", 0);
+
                 int indexBranch = 1;
                 Iterator k = branchSetElem.elementIterator();
                 while (k.hasNext()) {
@@ -96,10 +125,7 @@ public class LogicTreeReader {
             logicTreeHashMap.put(key, logicTree);
             indexLogicTree = indexLogicTree + 1;
         }
-    }
-
-    public Map<String, LogicTree> getLogicTreeHashMap() {
-        return this.logicTreeHashMap;
+        return logicTreeHashMap;
     }
 
 }
