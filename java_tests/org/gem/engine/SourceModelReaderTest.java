@@ -27,6 +27,10 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class SourceModelReaderTest {
 
+    /**
+     * Compares source model as derived by reading nrML file with source model
+     * defined by hand with the same data contained in the nrML file
+     */
     @Test
     public void readSourceModel() {
 
@@ -38,15 +42,18 @@ public class SourceModelReaderTest {
 
         SourceModelReader srcModelReader =
                 new SourceModelReader("java_tests/data/source_model.xml", 0.1);
+        List<GEMSourceData> srcListRead = srcModelReader.read();
 
-        assertEquals(srcList.size(), srcModelReader.getSourceList().size());
+        assertEquals(srcList.size(), srcListRead.size());
         for (int i = 0; i < srcList.size(); i++) {
-            assertTrue(srcModelReader.getSourceList().get(i)
-                    .equals(srcList.get(i)));
+            assertTrue(srcListRead.get(i).equals(srcList.get(i)));
         }
 
     }
 
+    /**
+     * Defines and gets point source data
+     */
     private GEMPointSourceData getPointSourceData() {
         String ID = "src04";
         String name = "point";
@@ -81,6 +88,9 @@ public class SourceModelReaderTest {
 
     }
 
+    /**
+     * Defines and gets area source data
+     */
     private GEMAreaSourceData getAreaSourceData() {
         String ID = "src03";
         String name = "Quito";
@@ -125,6 +135,9 @@ public class SourceModelReaderTest {
         return areaSrc;
     }
 
+    /**
+     * Defines and get complex fault source data
+     */
     private GEMSubductionFaultSourceData getComplexFaultData() {
         String name = "Cascadia Megathrust";
         String ID = "src02";
@@ -181,6 +194,21 @@ public class SourceModelReaderTest {
         return complexFaultSrc;
     }
 
+    /**
+     * Computes Gutenberg-Richter magnitude frequency distribution
+     * 
+     * @param bValue
+     *            : b value
+     * @param aValueCumulative
+     *            : cumulative a value
+     * @param min
+     *            : minimum magnitude
+     * @param max
+     *            : maximum magnitude
+     * @param delta
+     *            : discretization interval
+     * @return {@link GutenbergRichterMagFreqDist}
+     */
     private GutenbergRichterMagFreqDist getGutenbergRichterMagFreqDist(
             double bValue, double aValueCumulative, double min, double max,
             double delta) {
@@ -194,6 +222,9 @@ public class SourceModelReaderTest {
                 num);
     }
 
+    /**
+     * Defines and get simple fault source data
+     */
     private GEMFaultSourceData getFaultSourceData() {
         String name = "Mount Diablo Thrust";
         String ID = "src01";

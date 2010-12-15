@@ -1,14 +1,12 @@
 package org.gem.engine;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
 import org.dom4j.Document;
-import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -29,9 +27,17 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+/**
+ * Class for reading source model data in a nrML format file. The constructor of
+ * this class takes the path of the file to read from.
+ * 
+ */
 public class SourceModelReader {
 
-    private static List<GEMSourceData> sourceList;
+    private final List<GEMSourceData> sourceList;
+
+    private final String path;
+    private final double deltaMFD;
 
     // border type for area source definition
     private static BorderType borderType = BorderType.GREAT_CIRCLE;
@@ -90,19 +96,29 @@ public class SourceModelReader {
     private static String MIN_MAGNITUDE = "minMagnitude";
     private static String MAX_MAGNITUDE = "maxMagnitude";
 
-    public SourceModelReader(String sourceModelFile, double deltaMFD) {
+    /**
+     * Creates a new SourceModelReader given the path of the file to read from
+     * and the bin width for the magnitude frequency distribution definition
+     */
+    public SourceModelReader(String path, double deltaMFD) {
+        this.path = path;
+        this.sourceList = new ArrayList<GEMSourceData>();
+        this.deltaMFD = deltaMFD;
+    }
 
-        sourceList = new ArrayList<GEMSourceData>();
+    /**
+     * Reads file and returns source model data. For each source definition, a
+     * {@link GEMSourceData} is created and stored in a list.
+     */
+    public List<GEMSourceData> read() {
 
-        File xml = new File(sourceModelFile);
+        File xml = new File(path);
         SAXReader reader = new SAXReader();
         Document doc = null;
         try {
             doc = reader.read(xml);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (DocumentException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
         Element root = doc.getRootElement();
         Iterator i = root.elements().iterator();
@@ -119,9 +135,12 @@ public class SourceModelReader {
                 sourceList.add(getPointSourceData(deltaMFD, elem));
             }
         }
-
+        return sourceList;
     }
 
+    /**
+     * Reads and return point source data
+     */
     private GEMPointSourceData
             getPointSourceData(double deltaMFD, Element elem) {
         String srcName = (String) elem.element(SOURCE_NAME).getData();
@@ -146,6 +165,9 @@ public class SourceModelReader {
                 hypoMagFreqDistAtLoc, rupDepthDist, hypocentralDepth);
     }
 
+    /**
+     * Reads and returns area source data
+     */
     private GEMAreaSourceData getAreaSourceData(double deltaMFD, Element elem) {
         String srcName = (String) elem.element(SOURCE_NAME).getData();
         String srcID = (String) elem.element(SOURCE_ID).getData();
@@ -168,6 +190,9 @@ public class SourceModelReader {
                 magfreqDistFocMech, rupDepthDist, hypocentralDepth);
     }
 
+    /**
+     * Reads and returns complex fault source data
+     */
     private GEMSubductionFaultSourceData getComplexFaultSourceData(
             double deltaMFD, Element elem) {
         String srcName = (String) elem.element(SOURCE_NAME).getData();
@@ -188,6 +213,9 @@ public class SourceModelReader {
                 faultTopEdge, faultBottomEdge, rake, magFreqDist, true);
     }
 
+    /**
+     * Reads and return simple fault source data
+     */
     private GEMFaultSourceData getSimpleFaultSourceData(double deltaMFD,
             Element elem) {
         String srcName = (String) elem.element(SOURCE_NAME).getData();
@@ -215,6 +243,10 @@ public class SourceModelReader {
                 upperSeismogenicDepth, true);
     }
 
+    /**
+     * Reads fault trace coordinates (Each point being specified by a triplet
+     * (longitude, latitude, depth)) and returns {@link FaultTrace}
+     */
     private FaultTrace getFaultTrace(Element trace) {
         FaultTrace faultTrace = new FaultTrace("");
         LocationList locList = get3DLocList(trace);
@@ -222,6 +254,10 @@ public class SourceModelReader {
         return faultTrace;
     }
 
+    /**
+     * Reads magnitude frequency distribution/focal mechanism pairs and returns
+     * {@link MagFreqDistsForFocalMechs}
+     */
     private MagFreqDistsForFocalMechs getMagFreqDistsForFocalMechs(
             double deltaMFD, Element elem) {
         List<IncrementalMagFreqDist> mfdList =
@@ -245,6 +281,11 @@ public class SourceModelReader {
         return new MagFreqDistsForFocalMechs(mfdArray, fmArray);
     }
 
+    /**
+     * Reads magnitude frequency distribution data (truncated Gutenberg-Richter
+     * or incremental evenly discretized) and returns
+     * {@link IncrementalMagFreqDist}
+     */
     private IncrementalMagFreqDist
             getMagFreqDist(double deltaMFD, Element elem) {
         IncrementalMagFreqDist magFreqDist = null;
@@ -260,6 +301,10 @@ public class SourceModelReader {
         return magFreqDist;
     }
 
+    /**
+     * Reads incremental evenly discretized magnitude frequency distribution
+     * data and returns {@link IncrementalMagFreqDist}
+     */
     private IncrementalMagFreqDist getEvenlyDiscretizedMagFreqDist(
             Element evenlyDiscretizedMagFreqDist) {
         IncrementalMagFreqDist magFreqDist;
@@ -285,9 +330,13 @@ public class SourceModelReader {
         return magFreqDist;
     }
 
-    private IncrementalMagFreqDist getGutenbergRichterMagFreqDist(
+    /**
+     * Reads Gutenberg-Richter magnitude frequency distribution data and returns
+     * {@link GutenbergRichterMagFreqDist}
+     */
+    private GutenbergRichterMagFreqDist getGutenbergRichterMagFreqDist(
             double deltaMFD, Element gutenbergRichter) {
-        IncrementalMagFreqDist magFreqDist;
+        GutenbergRichterMagFreqDist magFreqDist;
         double aVal =
                 Double.valueOf((String) gutenbergRichter.element(
                         a_VALUE_CUMULATIVE).getData());
@@ -304,6 +353,10 @@ public class SourceModelReader {
         return magFreqDist;
     }
 
+    /**
+     * Reads focal mechanism data (strike, dip and rake) and returns
+     * {@link FocalMechanism}
+     */
     private FocalMechanism getFocalMechanism(Element focalMech) {
         double strike =
                 Double.valueOf((String) focalMech.element(STRIKE).getData());
@@ -313,6 +366,10 @@ public class SourceModelReader {
         return new FocalMechanism(strike, dip, rake);
     }
 
+    /**
+     * Reads rupture depth distribution data (rupture magnitude vs. rupture
+     * depth) and returns an {@link ArbitrarilyDiscretizedFunc}
+     */
     private ArbitrarilyDiscretizedFunc getRuptureDepthDistribution(
             Element ruptureDepthDist) {
         ArbitrarilyDiscretizedFunc rupDepthDist =
@@ -327,6 +384,10 @@ public class SourceModelReader {
         return rupDepthDist;
     }
 
+    /**
+     * Reads location list (each location being specified by a triplet
+     * (longitude,latitude,depth)) and returns {@link LocationList}
+     */
     private LocationList get3DLocList(Element posList) {
         LocationList locList = new LocationList();
         String positionList = (String) posList.getData();
@@ -340,6 +401,10 @@ public class SourceModelReader {
         return locList;
     }
 
+    /**
+     * Reads location list (each location being specified by a doublet
+     * (longitude,latitude)) and returns a {@link LocationList}
+     */
     private LocationList get2DLocList(Element posList) {
         LocationList locList = new LocationList();
         String positionList = (String) posList.getData();
@@ -352,6 +417,9 @@ public class SourceModelReader {
         return locList;
     }
 
+    /**
+     * Reads single location (longitude,latitude). Returns {@link Location}
+     */
     private Location getPointLocation(Element pointLocation) {
         String pointCoords = (String) pointLocation.element(POS).getData();
         StringTokenizer st = new StringTokenizer(pointCoords);
@@ -360,6 +428,21 @@ public class SourceModelReader {
         return new Location(latitude, longitude);
     }
 
+    /**
+     * Defines truncated Gutenberg-Richter magnitude frequency distribution
+     * 
+     * @param aVal
+     *            : cumulative a value
+     * @param bVal
+     *            : b value
+     * @param mMin
+     *            : minimum magnitude
+     * @param mMax
+     *            : maximum magnitude
+     * @param deltaMFD
+     *            : discretization interval
+     * @return {@link GutenbergRichterMagFreqDist}
+     */
     private GutenbergRichterMagFreqDist createGrMfd(double aVal, double bVal,
             double mMin, double mMax, double deltaMFD) {
         GutenbergRichterMagFreqDist mfd = null;
@@ -373,7 +456,8 @@ public class SourceModelReader {
                     Math.pow(10, aVal - bVal * mMin)
                             - Math.pow(10, aVal - bVal * mMax);
         } else {
-            // compute incremental a value
+            // compute incremental a value and calculate rate corresponding to
+            // minimum magnitude
             double aIncr = aVal + Math.log10(bVal * Math.log(10));
             totCumRate = Math.pow(10, aIncr - bVal * mMin);
         }
@@ -387,9 +471,5 @@ public class SourceModelReader {
                 new GutenbergRichterMagFreqDist(bVal, totCumRate, mMin, mMax,
                         numVal);
         return mfd;
-    }
-
-    public List<GEMSourceData> getSourceList() {
-        return sourceList;
     }
 }
