@@ -79,7 +79,8 @@ def _compute_lrem(vuln_function, distribution=None):
         # this is so we can memoize the thing
 
     loss_ratios = _generate_loss_ratios(vuln_function)
-    lrem = empty((len(loss_ratios) + 1, len(vuln_function.abscissae)), float)
+    loss_ratios.append(1.0) # last loss ratio is fixed to be 1
+    lrem = empty((len(loss_ratios), len(vuln_function.abscissae)), float)
 
     def fix_prob(prob):
         """Fix probabilities for values close to zero."""
@@ -100,13 +101,8 @@ def _compute_lrem(vuln_function, distribution=None):
         sigma = sqrt(log((variance / mean ** 2.0) + 1.0))
 
         for row in range(len(lrem)):
-            # last loss ratio is fixed to be 1
-            if row < len(loss_ratios): 
-                next_ratio = loss_ratios[row]
-            else: 
-                next_ratio = 1.0
-            
-            lrem[row][idx] = fix_prob(distribution.sf(next_ratio,
+            lrem[row][idx] = fix_prob(
+                    distribution.sf(loss_ratios[row],
                     sigma, scale=scipy.exp(mu)))
 
     return lrem
