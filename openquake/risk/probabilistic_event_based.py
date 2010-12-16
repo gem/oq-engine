@@ -5,6 +5,7 @@ using the probabilistic event based approach.
 """
 
 import math
+from numpy import zeros # pylint: disable=E1101, E0611
 from numpy import array # pylint: disable=E1101, E0611
 from numpy import linspace # pylint: disable=E1101, E0611
 from numpy import histogram # pylint: disable=E1101, E0611
@@ -49,7 +50,10 @@ def compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     
-    print loss_ratios
+    # ruptures (earthquake) occured but probably due to distance,
+    # magnitude and soil conditions, no ground motion was felt at that location
+    if (loss_ratios <= 0.0).all():
+        return zeros(len(loss_ratios_range) - 1)
     
     # TODO(JMC): I think this is wrong. where doesn't return zero values.
     invalid_ratios = lambda ratios: len(where(array(ratios) <= 0.0)[0])
