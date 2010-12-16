@@ -32,9 +32,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
 
     private final ArrayList<LogicTreeBranchingLevel> branLevLst;
     protected HashMap<String, Element> ebMap;
-    private static String modelName;
-
-    private final Boolean D = false;
+    private String modelName;
 
     /**
      * Creates and empty logic tree
