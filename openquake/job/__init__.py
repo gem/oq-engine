@@ -31,7 +31,6 @@ def run_job(job_file):
     # TODO(JMC): Expose a way to set whether jobs should be partitioned
     results = a_job.launch()
     if not results:
-        # TODO (ac): Should we print additional details?
         LOG.critical("The job configuration is inconsistent, "
                 "aborting computation.")
     else:
@@ -368,8 +367,6 @@ class BlockSplitter(object):
     def __iter__(self):
         filtered_sites = []
 
-        # TODO (ac): Can be done better using shapely.intersects,
-        # but after the shapes.Site refactoring...
         for site in self.sites:
             if self.constraint.match(site):
                 filtered_sites.append(site)
