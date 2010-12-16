@@ -35,18 +35,6 @@ class AggregateLossCurveMixin:
     def __init__(self):
         pass
     
-    def tses(self):
-        """Return the tses parameter, using the mixed config file."""
-        histories = int(self.params["NUMBER_OF_SEISMICITY_HISTORIES"])
-        realizations = int(self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"])
-        
-        num_ses = histories * realizations
-        return num_ses * self.time_span()
-
-    def time_span(self):
-        """Return the time span parameter, using the mixed config file."""
-        return float(self.params["INVESTIGATION_TIME"])
-
     def execute(self):
         """Execute the logic of this mixin."""
 
@@ -62,8 +50,8 @@ class AggregateLossCurveMixin:
                 self.params["OUTPUT_DIR"], filename(self.id))
 
         plotter = curve.CurvePlot(path)
-        plotter.write(for_plotting(aggregate_loss_curve.compute(
-                self.tses(), self.time_span())), autoscale_y=False)
+        plotter.write(for_plotting(
+                aggregate_loss_curve.compute()), autoscale_y=False)
 
         plotter.close()
         LOG.debug("Aggregate loss curve stored at %s" % path)
