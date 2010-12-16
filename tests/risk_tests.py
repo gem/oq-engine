@@ -500,6 +500,21 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 aggregate_curve.append, {
                 "IMLs": (1.0,), "TSES": 1, "TimeSpan": 1}, asset)
 
+    def test_from_kvs_gets_the_vuln_functions_from_kvs(self):
+        vulnerability.write_vuln_curves_to_kvs(1234,
+                {"ID": self.vuln_function_1.to_json()})
+
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(1234);
+
+        self.assertEqual(self.vuln_function_1,
+                aggregate_curve.vuln_functions["ID"])
+
+    def test_from_kvs_gets_all_the_gmfs_from_kvs(self):
+        pass
+
+    def test_from_kvs_gets_all_the_related_sites(self):
+        pass
+
     @test.skipit
     def test_can_build_an_aggregate_curve_from_kvs(self):
         curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
@@ -731,25 +746,10 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         
         self.params = {}
         self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
-        
-        # parameters needed to compute tses and time span
-        self.params["NUMBER_OF_SEISMICITY_HISTORIES"] = 10
-        self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"] = 2
-        self.params["INVESTIGATION_TIME"] = 50.0
         self.params["AGGREGATE_LOSS_CURVE"] = 1
 
         self.engine = job.Job(self.params,  self.job_id, ".")
-        
-        # adding the curves to kvs
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 1, 5),
-                shapes.Curve([(1.0, 0.1), (2.0, 0.1)]).to_json())
 
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 2, 5),
-                shapes.Curve([(3.0, 0.1), (4.0, 0.1)]).to_json())
-
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 3, 5),
-                shapes.Curve([(5.0, 0.1), (6.0, 0.1)]).to_json())
-        
         # deleting old file
         self._delete_test_file()
     
