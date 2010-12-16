@@ -363,14 +363,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
                 self.vuln_function_2, gmfs, 6))
 
-    def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
+    def test_with_not_earthquakes_we_have_an_empty_curve(self):
         gmfs = dict(self.gmfs)
         gmfs["IMLs"] = ()
 
         curve = prob.compute_loss_ratio_curve(self.vuln_function_1, gmfs)
         self.assertEqual(shapes.EMPTY_CURVE, curve)
 
-    def test_loss_ratio_curve_with_null_gmf(self):
+    def test_with_no_ground_motion_the_curve_degenerates_to_a_single_point(self):
         gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 "TSES": 900, "TimeSpan": 50}
 
@@ -459,7 +459,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, aggregate_curve.compute(6))
 
-    def test_losses_aggregation_with_empty_input_set(self):
+    def test_no_distribution_without_gmfs(self):
         aggregate_curve = prob.AggregateLossCurve({})
         self.assertEqual([], aggregate_curve.losses)
 
