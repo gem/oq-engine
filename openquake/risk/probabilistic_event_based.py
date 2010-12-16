@@ -38,11 +38,16 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set):
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_field))
     
+    print loss_ratios
+    
     return array(loss_ratios)
 
 
 def compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute the range of loss ratios used to build the loss ratio curve."""
+    
+    print linspace(loss_ratios.min(), loss_ratios.max(), num)
+    
     return linspace(loss_ratios.min(), loss_ratios.max(), num)
 
 
@@ -57,6 +62,9 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
 
     # ratios with value 0.0 must be deleted
     hist[0] = hist[0] - invalid_ratios(loss_ratios)
+    
+    print hist
+    
     return hist
 
 
@@ -107,8 +115,7 @@ def _generate_curve(losses, probs_of_exceedance):
 
     data = []
     for idx in xrange(len(losses) - 1):
-        mean_loss_ratio = (losses[idx] + \
-                losses[idx + 1]) / 2
+        mean_loss_ratio = (losses[idx] + losses[idx + 1]) / 2
         data.append((mean_loss_ratio, probs_of_exceedance[idx]))
 
     return shapes.Curve(data)
@@ -134,44 +141,74 @@ class AggregateLossCurve(object):
         
         return aggregate_curve
 
-    def __init__(self):
-        self.size = None
-        self.values = []
+    def __init__(self, vuln_functions):
+        self.tses = None
+        self.time_span = None
+        self.gmfs_length = None
 
-    def append(self, loss_curve):
-        """Add the given loss curve to the set of curves used to 
+        self.distribution = []
+        self.vuln_functions = vuln_functions
+
+    def append(self, gmfs, asset):
+        """Add the given loss distribution to the set of losses used to
         compute the final aggregate curve."""
-        
-        size = len(loss_curve.abscissae)
-        
-        if self.size is None:
-            self.size = size
-        
-        if size != self.size:
-            raise ValueError("Loss curves must be of the same size, \
-                    expected %s, but was %s" % (self.size, size))
-        
-        self.values.append(loss_curve.abscissae)
+
+        if self.time_span is None:
+            self.time_span = gmfs["TimeSpan"]
+
+        if self.tses is None:
+            self.tses = gmfs["TSES"]
+
+        if self.gmfs_length is None:
+            self.gmfs_length = len(gmfs["IMLs"])
+
+        self._check_gmfs_length(gmfs)
+        self._check_parameter(self.tses, gmfs, "TSES")
+        self._check_parameter(self.time_span, gmfs, "TimeSpan")
+
+        loss_ratios = compute_loss_ratios(self.vuln_functions[
+                asset["VulnerabilityFunction"]], gmfs)
+
+        if len(loss_ratios):
+            self.distribution.append(loss_ratios * asset["AssetValue"])
+
+    def _check_gmfs_length(self, gmfs):
+        """Check if the GMFs passed has the same length of
+        the stored GMFs."""
+
+        if self.gmfs_length != len(gmfs["IMLs"]):
+            raise ValueError("GMFs must be of the same size. " \
+                    "Expected %s, but was %s" % (
+                    self.gmfs_length, len(gmfs["IMLs"])))
+
+    def _check_parameter(self, value, gmfs, name):
+        """Check if the parameter of the GMFs passed is the
+        same of the stored GMFs."""
+
+        if value != gmfs[name]:
+            raise ValueError("%s parameter must be the same for all " \
+                    "the GMFs used. Expected %s, but was %s"
+                    % (name, self.tses, gmfs[name]))
 
     @property
     def losses(self):
         """Return the losses used to compute the aggregate curve."""
-        result = []
+        if not self.distribution:
+            return []
 
-        if not self.values:
-            return result
+        return array(self.distribution).sum(axis=0)
 
-        return array(self.values).sum(axis=0)
-
-# TODO (ac): Test with pre computed data
-    def compute(self, tses, time_span):
+    def compute(self, num=DEFAULT_NUMBER_OF_SAMPLES):
         """Compute the aggregate loss curve."""
         losses = self.losses
-        loss_range = linspace(losses.min(), losses.max(),
-                num=DEFAULT_NUMBER_OF_SAMPLES)
+        
+        if not len(losses):
+            return shapes.EMPTY_CURVE
+
+        loss_range = compute_loss_ratios_range(losses, num)
 
         probs_of_exceedance = compute_probs_of_exceedance(
                 compute_rates_of_exceedance(compute_cumulative_histogram(
-                losses, loss_range), tses), time_span)
+                losses, loss_range), self.tses), self.time_span)
 
-        return _generate_curve(losses, probs_of_exceedance)
+        return _generate_curve(loss_range, probs_of_exceedance)
