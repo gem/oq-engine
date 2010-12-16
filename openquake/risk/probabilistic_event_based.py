@@ -38,16 +38,11 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set):
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_field))
     
-    print loss_ratios
-    
     return array(loss_ratios)
 
 
 def compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute the range of loss ratios used to build the loss ratio curve."""
-    
-    print linspace(loss_ratios.min(), loss_ratios.max(), num)
-    
     return linspace(loss_ratios.min(), loss_ratios.max(), num)
 
 
@@ -62,9 +57,6 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
 
     # ratios with value 0.0 must be deleted
     hist[0] = hist[0] - invalid_ratios(loss_ratios)
-    
-    print hist
-    
     return hist
 
 
