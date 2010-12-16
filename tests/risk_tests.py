@@ -370,8 +370,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         curve = prob.compute_loss_ratio_curve(self.vuln_function_1, gmfs)
         self.assertEqual(shapes.EMPTY_CURVE, curve)
 
-# TODO (ac): Find out with Vitor what's the expected loss ratio curve
-    @test.skipit
     def test_loss_ratio_curve_with_null_gmf(self):
         gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 "TSES": 900, "TimeSpan": 50}

@@ -49,13 +49,15 @@ def compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     
+    print loss_ratios
+    
     # TODO(JMC): I think this is wrong. where doesn't return zero values.
     invalid_ratios = lambda ratios: len(where(array(ratios) <= 0.0)[0])
 
     hist = histogram(loss_ratios, bins=loss_ratios_range)
     hist = hist[0][::-1].cumsum()[::-1]
 
-    # ratios with value 0.0 must be deleted
+    # ratios with value 0.0 must be deleted on the first bin
     hist[0] = hist[0] - invalid_ratios(loss_ratios)
     return hist
 
