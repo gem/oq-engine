@@ -76,7 +76,7 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.vuln_function = shapes.VulnerabilityFunction(
+        self.vuln_function_1 = shapes.VulnerabilityFunction(
                 [(0.01, (0.001, 1.00)),
                 (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
                 (0.10, (0.080, 1.0)), (0.12, (0.100, 1.0)),
@@ -88,6 +88,58 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.cum_histogram = numpy.array([112, 46, 26, 18, 14,
                 12, 8, 7, 7, 6, 5, 4, 4, 4, 4, 4, 2, 1,
                 1, 1, 1, 1, 1, 1])
+        
+        self.vuln_function_2 = shapes.VulnerabilityFunction([
+                (0.00, (0.00, 0.30)), (0.04, (0.00, 0.30)),
+                (0.08, (0.00, 0.30)), (0.12, (0.01, 0.30)),
+                (0.16, (0.04, 0.30)), (0.20, (0.07, 0.30)),
+                (0.24, (0.11, 0.30)), (0.28, (0.15, 0.30)),
+                (0.32, (0.20, 0.30)), (0.36, (0.25, 0.30)),
+                (0.40, (0.30, 0.30)), (0.44, (0.35, 0.30)),
+                (0.48, (0.39, 0.30)), (0.53, (0.43, 0.30)),
+                (0.57, (0.47, 0.30)), (0.61, (0.51, 0.30)),
+                (0.65, (0.55, 0.30)), (0.69, (0.58, 0.30)),
+                (0.73, (0.61, 0.30)), (0.77, (0.64, 0.30)),
+                (0.81, (0.67, 0.30)), (0.85, (0.69, 0.30)),
+                (0.89, (0.71, 0.30)), (0.93, (0.73, 0.30)),
+                (0.97, (0.75, 0.30)), (1.01, (0.77, 0.30)),
+                (1.05, (0.79, 0.30)), (1.09, (0.80, 0.30)),
+                (1.13, (0.81, 0.30)), (1.17, (0.83, 0.30)),
+                (1.21, (0.84, 0.30)), (1.25, (0.85, 0.30)),
+                (1.29, (0.86, 0.30)), (1.33, (0.87, 0.30)),
+                (1.37, (0.88, 0.30)), (1.41, (0.89, 0.30)),
+                (1.45, (0.89, 0.30)), (1.49, (0.90, 0.30)),
+                (1.54, (0.91, 0.30)), (1.58, (0.91, 0.30)),
+                (1.62, (0.92, 0.30)), (1.66, (0.92, 0.30)),
+                (1.70, (0.93, 0.30)), (1.74, (0.93, 0.30)),
+                (1.78, (0.94, 0.30)), (1.82, (0.94, 0.30)),
+                (1.86, (0.94, 0.30)), (1.90, (0.95, 0.30)),
+                (1.94, (0.95, 0.30)), (1.98, (0.95, 0.30)),
+                (2.02, (0.95, 0.30)), (2.06, (0.96, 0.30)),
+                (2.10, (0.96, 0.30)), (2.14, (0.96, 0.30)),
+                (2.18, (0.96, 0.30)), (2.22, (0.97, 0.30)),
+                (2.26, (0.97, 0.30)), (2.30, (0.97, 0.30)),
+                (2.34, (0.97, 0.30)), (2.38, (0.97, 0.30)),
+                (2.42, (0.97, 0.30)), (2.46, (0.98, 0.30)),
+                (2.51, (0.98, 0.30)), (2.55, (0.98, 0.30)),
+                (2.59, (0.98, 0.30)), (2.63, (0.98, 0.30)),
+                (2.67, (0.98, 0.30)), (2.71, (0.98, 0.30)),
+                (2.75, (0.98, 0.30)), (2.79, (0.98, 0.30)),
+                (2.83, (0.98, 0.30)), (2.87, (0.99, 0.30)),
+                (2.91, (0.99, 0.30)), (2.95, (0.99, 0.30)),
+                (2.99, (0.99, 0.30)), (3.03, (0.99, 0.30)),
+                (3.07, (0.99, 0.30)), (3.11, (0.99, 0.30)),
+                (3.15, (0.99, 0.30)), (3.19, (0.99, 0.30)),
+                (3.23, (0.99, 0.30)), (3.27, (0.99, 0.30)),
+                (3.31, (0.99, 0.30)), (3.35, (0.99, 0.30)),
+                (3.39, (0.99, 0.30)), (3.43, (0.99, 0.30)),
+                (3.47, (0.99, 0.30)), (3.52, (0.99, 0.30)),
+                (3.56, (0.99, 0.30)), (3.60, (0.99, 0.30)),
+                (3.64, (0.99, 0.30)), (3.68, (0.99, 0.30)),
+                (3.72, (0.99, 0.30)), (3.76, (0.99, 0.30)),
+                (3.80, (0.99, 0.30)), (3.84, (1.00, 0.30)),
+                (3.88, (1.00, 0.30)), (3.92, (1.00, 0.30)),
+                (3.96, (1.00, 0.30)), (4.00, (1.00, 0.30))])
 
     def test_an_empty_function_produces_an_empty_set(self):
         self.assertEqual([], prob.compute_loss_ratios(
@@ -95,19 +147,19 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
         self.assertEqual([], prob.compute_loss_ratios(
-                self.vuln_function, {"IMLs": ()}))
+                self.vuln_function_1, {"IMLs": ()}))
 
     def test_loss_ratios_boundaries(self):
         # loss ratio is zero if the gmf iml is below the minimum iml
         # defined by the function min iml in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-                prob.compute_loss_ratios(self.vuln_function,
+                prob.compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.0001, 0.0002, 0.0003)})))
 
         # loss ratio is equal to the maximum iml defined by the
         # function is greater than that max iml in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.52, 0.52]),
-                prob.compute_loss_ratios(self.vuln_function,
+                prob.compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.525, 0.53)})))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -187,7 +239,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-                prob.compute_loss_ratios(self.vuln_function, self.gmfs)))
+                prob.compute_loss_ratios(self.vuln_function_1, self.gmfs)))
 
     def test_loss_ratios_range_generation(self):
         loss_ratios = numpy.array([0.0, 2.0])
@@ -198,7 +250,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
-        loss_ratios = prob.compute_loss_ratios(self.vuln_function, self.gmfs)
+        loss_ratios = prob.compute_loss_ratios(self.vuln_function_1, self.gmfs)
         loss_ratios_range = prob.compute_loss_ratios_range(loss_ratios)
         
         self.assertTrue(numpy.allclose(self.cum_histogram,
@@ -244,64 +296,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.6355, 0.0721, 0.2475, 0.1601, 0.3544, 0.1756),
                 "TSES": 200, "TimeSpan": 50}
 
-        vuln_function = shapes.VulnerabilityFunction([
-                (0.00, (0.00, 0.30)), (0.04, (0.00, 0.30)),
-                (0.08, (0.00, 0.30)), (0.12, (0.01, 0.30)),
-                (0.16, (0.04, 0.30)), (0.20, (0.07, 0.30)),
-                (0.24, (0.11, 0.30)), (0.28, (0.15, 0.30)),
-                (0.32, (0.20, 0.30)), (0.36, (0.25, 0.30)),
-                (0.40, (0.30, 0.30)), (0.44, (0.35, 0.30)),
-                (0.48, (0.39, 0.30)), (0.53, (0.43, 0.30)),
-                (0.57, (0.47, 0.30)), (0.61, (0.51, 0.30)),
-                (0.65, (0.55, 0.30)), (0.69, (0.58, 0.30)),
-                (0.73, (0.61, 0.30)), (0.77, (0.64, 0.30)),
-                (0.81, (0.67, 0.30)), (0.85, (0.69, 0.30)),
-                (0.89, (0.71, 0.30)), (0.93, (0.73, 0.30)),
-                (0.97, (0.75, 0.30)), (1.01, (0.77, 0.30)),
-                (1.05, (0.79, 0.30)), (1.09, (0.80, 0.30)),
-                (1.13, (0.81, 0.30)), (1.17, (0.83, 0.30)),
-                (1.21, (0.84, 0.30)), (1.25, (0.85, 0.30)),
-                (1.29, (0.86, 0.30)), (1.33, (0.87, 0.30)),
-                (1.37, (0.88, 0.30)), (1.41, (0.89, 0.30)),
-                (1.45, (0.89, 0.30)), (1.49, (0.90, 0.30)),
-                (1.54, (0.91, 0.30)), (1.58, (0.91, 0.30)),
-                (1.62, (0.92, 0.30)), (1.66, (0.92, 0.30)),
-                (1.70, (0.93, 0.30)), (1.74, (0.93, 0.30)),
-                (1.78, (0.94, 0.30)), (1.82, (0.94, 0.30)),
-                (1.86, (0.94, 0.30)), (1.90, (0.95, 0.30)),
-                (1.94, (0.95, 0.30)), (1.98, (0.95, 0.30)),
-                (2.02, (0.95, 0.30)), (2.06, (0.96, 0.30)),
-                (2.10, (0.96, 0.30)), (2.14, (0.96, 0.30)),
-                (2.18, (0.96, 0.30)), (2.22, (0.97, 0.30)),
-                (2.26, (0.97, 0.30)), (2.30, (0.97, 0.30)),
-                (2.34, (0.97, 0.30)), (2.38, (0.97, 0.30)),
-                (2.42, (0.97, 0.30)), (2.46, (0.98, 0.30)),
-                (2.51, (0.98, 0.30)), (2.55, (0.98, 0.30)),
-                (2.59, (0.98, 0.30)), (2.63, (0.98, 0.30)),
-                (2.67, (0.98, 0.30)), (2.71, (0.98, 0.30)),
-                (2.75, (0.98, 0.30)), (2.79, (0.98, 0.30)),
-                (2.83, (0.98, 0.30)), (2.87, (0.99, 0.30)),
-                (2.91, (0.99, 0.30)), (2.95, (0.99, 0.30)),
-                (2.99, (0.99, 0.30)), (3.03, (0.99, 0.30)),
-                (3.07, (0.99, 0.30)), (3.11, (0.99, 0.30)),
-                (3.15, (0.99, 0.30)), (3.19, (0.99, 0.30)),
-                (3.23, (0.99, 0.30)), (3.27, (0.99, 0.30)),
-                (3.31, (0.99, 0.30)), (3.35, (0.99, 0.30)),
-                (3.39, (0.99, 0.30)), (3.43, (0.99, 0.30)),
-                (3.47, (0.99, 0.30)), (3.52, (0.99, 0.30)),
-                (3.56, (0.99, 0.30)), (3.60, (0.99, 0.30)),
-                (3.64, (0.99, 0.30)), (3.68, (0.99, 0.30)),
-                (3.72, (0.99, 0.30)), (3.76, (0.99, 0.30)),
-                (3.80, (0.99, 0.30)), (3.84, (1.00, 0.30)),
-                (3.88, (1.00, 0.30)), (3.92, (1.00, 0.30)),
-                (3.96, (1.00, 0.30)), (4.00, (1.00, 0.30))])
-
         expected_curve = shapes.Curve([(0.085255, 0.988891),
                 (0.255765, 0.82622606), (0.426275, 0.77686984),
                 (0.596785, 0.52763345), (0.767295, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                vuln_function, gmfs, 6))
+                self.vuln_function_2, gmfs, 6))
 
         gmfs = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172, 0.6604, 0.1182,
                 0.1545, 0.7613, 0.5246, 0.2428, 0.2882, 0.2179, 1.2939,
@@ -313,7 +313,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.6051575, 0.52763345), (0.7757025, 0.22119922)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                vuln_function, gmfs, 6))
+                self.vuln_function_2, gmfs, 6))
 
         gmfs = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862, 0.1438,
                 0.2114, 0.5101, 1.0097, 0.226, 0.3443, 0.1693, 1.0754,
@@ -325,7 +325,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.5658, 0.39346934), (0.7195, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                vuln_function, gmfs, 6))
+                self.vuln_function_2, gmfs, 6))
 
         gmfs = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313, 0.9297, 0.2337,
                 0.2862, 0.5278, 0.6603, 0.3537, 0.2997, 0.1097, 1.1875,
@@ -337,7 +337,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.58629, 0.52763345), (0.75168, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                vuln_function, gmfs, 6))
+                self.vuln_function_2, gmfs, 6))
 
         gmfs = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763, 0.2189,
                 0.3324, 0.3215, 0.6406, 0.5014, 0.3877, 0.1318, 1.0545,
@@ -349,7 +349,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.55438, 0.52763345), (0.71221, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                vuln_function, gmfs, 6))
+                self.vuln_function_2, gmfs, 6))
 
         gmfs = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633, 0.2095,
                 0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
@@ -361,13 +361,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.4951675, 0.77686984), (0.6363225, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                vuln_function, gmfs, 6))
+                self.vuln_function_2, gmfs, 6))
 
     def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
         gmfs = dict(self.gmfs)
         gmfs["IMLs"] = ()
 
-        curve = prob.compute_loss_ratio_curve(self.vuln_function, gmfs)
+        curve = prob.compute_loss_ratio_curve(self.vuln_function_1, gmfs)
         self.assertEqual(shapes.EMPTY_CURVE, curve)
 
 # TODO (ac): Find out with Vitor what's the expected loss ratio curve
@@ -403,40 +403,121 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.68541666666666656, 0.0)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function, gmfs))
+                self.vuln_function_1, gmfs))
 
-    def test_losses_aggregation(self):
-        # we don't care about PoEs in this case
-        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
-                (3.0, 0.0), (4.0, 0.0)])
+    def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
+        self.assertEqual(shapes.EMPTY_CURVE,
+                prob.AggregateLossCurve({}).compute())
 
-        loss_curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
-                (7.0, 0.0), (8.0, 0.0)])
+    def test_computes_the_aggregate_loss_curve(self):
+        gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177, 0.6039, 0.0618,
+                0.186, 0.5512, 1.2602, 0.2824, 0.2693, 0.1705, 0.8453,
+                0.6355, 0.0721, 0.2475, 0.1601, 0.3544, 0.1756),
+                "TSES": 200, "TimeSpan": 50}
+        
+        asset_1 = {"VulnerabilityFunction": "ID", "AssetValue": 22.61}
+        
+        gmfs_2 = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172, 0.6604, 0.1182,
+                0.1545, 0.7613, 0.5246, 0.2428, 0.2882, 0.2179, 1.2939,
+                0.6042, 0.1418, 0.3637, 0.222, 0.3613, 0.113),
+                "TSES": 200, "TimeSpan": 50}
 
-        loss_curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
-                (11.0, 0.0), (12.0, 0.0)])
+        asset_2 = {"VulnerabilityFunction": "ID", "AssetValue": 124.27}
 
-        aggregate_curve = prob.AggregateLossCurve()
-        aggregate_curve.append(loss_curve_1)
-        aggregate_curve.append(loss_curve_2)
-        aggregate_curve.append(loss_curve_3)
+        gmfs_3 = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862, 0.1438,
+                0.2114, 0.5101, 1.0097, 0.226, 0.3443, 0.1693, 1.0754,
+                0.3533, 0.1461, 0.347, 0.2665, 0.2977, 0.2925),
+                "TSES": 200, "TimeSpan": 50}
 
-        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
-        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
+        asset_3 = {"VulnerabilityFunction": "ID", "AssetValue": 42.93}
+
+        gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313, 0.9297, 0.2337,
+                0.2862, 0.5278, 0.6603, 0.3537, 0.2997, 0.1097, 1.1875,
+                0.4752, 0.1575, 0.4009, 0.2519, 0.2653, 0.1394),
+                "TSES": 200, "TimeSpan": 50}
+
+        asset_4 = {"VulnerabilityFunction": "ID", "AssetValue": 29.37}
+
+        gmfs_5 = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763, 0.2189,
+                0.3324, 0.3215, 0.6406, 0.5014, 0.3877, 0.1318, 1.0545,
+                0.3035, 0.1118, 0.2981, 0.3492, 0.2406, 0.1043),
+                "TSES": 200, "TimeSpan": 50}
+
+        asset_5 = {"VulnerabilityFunction": "ID", "AssetValue": 40.68}
+
+        gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633, 0.2095,
+                0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
+                0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
+                "TSES": 200, "TimeSpan": 50}
+
+        asset_6 = {"VulnerabilityFunction": "ID", "AssetValue": 178.47}
+
+        vuln_functions = {"ID": self.vuln_function_2}
+
+        aggregate_curve = prob.AggregateLossCurve(vuln_functions)
+        aggregate_curve.append(gmfs_1, asset_1)
+        aggregate_curve.append(gmfs_2, asset_2)
+        aggregate_curve.append(gmfs_3, asset_3)
+        aggregate_curve.append(gmfs_4, asset_4)
+        aggregate_curve.append(gmfs_5, asset_5)
+        aggregate_curve.append(gmfs_6, asset_6)
+
+        expected_losses = numpy.array((7.2636, 57.9264, 187.4893, 66.9082,
+                47.0280, 248.7796, 23.2329, 121.3514, 177.4167, 259.2902,
+                77.7080, 127.7417, 18.9470, 339.5774, 151.1763, 6.1881,
+                71.9168, 97.9514, 56.4720, 11.6513))
+
+        self.assertTrue(numpy.allclose(
+                expected_losses, aggregate_curve.losses))
+        
+        expected_curve = shapes.Curve([(39.52702042, 0.99326205),
+                (106.20489077, 0.917915), (172.88276113, 0.77686984),
+                (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
+
+        self.assertEqual(expected_curve, aggregate_curve.compute(6))
 
     def test_losses_aggregation_with_empty_input_set(self):
-        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve = prob.AggregateLossCurve({})
         self.assertEqual([], aggregate_curve.losses)
 
-    def test_input_loss_curves_must_be_of_same_size(self):
-        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0)])
-        loss_curve_2 = shapes.Curve([(5.0, 0.0)])
+    def test_tses_parameter_must_be_congruent(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
 
-        aggregate_curve = prob.AggregateLossCurve()
-        aggregate_curve.append(loss_curve_1)
+        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
 
-        self.assertRaises(ValueError, aggregate_curve.append, loss_curve_2)
+        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
 
+        self.assertRaises(ValueError,
+                aggregate_curve.append, {
+                "TSES": 2, "TimeSpan": 1, "IMLs": ()}, asset)
+
+    def test_time_span_parameter_must_be_congruent(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
+
+        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+
+        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
+
+        self.assertRaises(ValueError,
+                aggregate_curve.append, {
+                "TSES": 1, "TimeSpan": 2, "IMLs": ()}, asset)
+
+    def test_gmfs_length_must_be_congruent(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
+
+        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+        
+        aggregate_curve.append({
+                "IMLs": (), "TSES": 1, "TimeSpan": 1}, asset)
+
+        self.assertRaises(ValueError,
+                aggregate_curve.append, {
+                "IMLs": (1.0,), "TSES": 1, "TimeSpan": 1}, asset)
+
+    @test.skipit
     def test_can_build_an_aggregate_curve_from_kvs(self):
         curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
                 (3.0, 0.0), (4.0, 0.0)])
