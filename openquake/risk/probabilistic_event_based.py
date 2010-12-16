@@ -41,10 +41,9 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set):
     return array(loss_ratios)
 
 
-def compute_loss_ratios_range(vuln_function):
+def compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute the range of loss ratios used to build the loss ratio curve."""
-    loss_ratios = vuln_function.means
-    return linspace(0.0, loss_ratios[-1], num=DEFAULT_NUMBER_OF_SAMPLES)
+    return linspace(loss_ratios.min(), loss_ratios.max(), num)
 
 
 def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
@@ -82,7 +81,8 @@ def compute_probs_of_exceedance(rates_of_exceedance, time_span):
     return array(probs_of_exceedance)
 
 
-def compute_loss_ratio_curve(vuln_function, ground_motion_field_set):
+def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
+        num=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute the loss ratio curve using the probailistic event approach."""
 
     # with no gmfs (no earthquakes), an empty curve is enough
@@ -90,7 +90,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set):
         return shapes.EMPTY_CURVE
 
     loss_ratios = compute_loss_ratios(vuln_function, ground_motion_field_set)
-    loss_ratios_range = compute_loss_ratios_range(vuln_function)
+    loss_ratios_range = compute_loss_ratios_range(loss_ratios, num)
 
     probs_of_exceedance = compute_probs_of_exceedance(
             compute_rates_of_exceedance(compute_cumulative_histogram(
