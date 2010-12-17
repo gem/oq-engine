@@ -26,7 +26,6 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
  * sudo pip install gdal (FAILS, so):
  * Use the package from http://www.kyngchaos.com/software:frameworks
 * osgeo (pip install)
-* eventlet
 * jpype
 * lxml
 * PyYAML
