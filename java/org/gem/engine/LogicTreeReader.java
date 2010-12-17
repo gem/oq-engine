@@ -22,8 +22,7 @@ import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
 
 /**
- * Class for reading logic tree data in a nrML format file. The constructor of
- * this class takes the path of the file to read from.
+ * Class for reading logic tree data in a nrML format file.
  * 
  */
 public class LogicTreeReader {
@@ -71,6 +70,14 @@ public class LogicTreeReader {
                 new BufferedInputStream(byteis);
         this.bufferedReader =
                 new BufferedReader(new InputStreamReader(bufferedInputStream));
+        logicTreeHashMap = new HashMap<String, LogicTree>();
+    }
+
+    /**
+     * Creates a new LogicTreeReader given BufferedReader to read from
+     */
+    public LogicTreeReader(BufferedReader bufferedReader) {
+        this.bufferedReader = bufferedReader;
         logicTreeHashMap = new HashMap<String, LogicTree>();
     }
 

@@ -16,12 +16,4 @@
             </ns2:logicTreeBranch>
         </ns2:logicTreeBranchSet>
     </ns2:logicTree>
-    <ns2:logicTree tectonicRegion="Subduction Interface">
-        <ns2:logicTreeBranchSet ns2:uncertaintyType="gmpeModel">
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>McVerryetal_2000_AttenRel</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>1.0</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-        </ns2:logicTreeBranchSet>
-    </ns2:logicTree>
 </ns2:logicTreeSet>
