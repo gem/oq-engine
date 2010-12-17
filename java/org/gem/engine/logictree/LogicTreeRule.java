@@ -2,11 +2,15 @@ package org.gem.engine.logictree;
 
 import java.io.Serializable;
 
+/**
+ * Classes for defining uncertainty in terms of a rule
+ * {@link LogicTreeRuleParam}
+ */
 public class LogicTreeRule implements Serializable {
 
-    private LogicTreeRuleParam rule;
+    private final LogicTreeRuleParam rule;
 
-    private double val;
+    private final double val;
 
     public LogicTreeRule(LogicTreeRuleParam rule, double val) {
 
@@ -21,6 +25,17 @@ public class LogicTreeRule implements Serializable {
 
     public double getVal() {
         return val;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof LogicTreeRule)) {
+            return false;
+        }
+
+        LogicTreeRule other = (LogicTreeRule) obj;
+
+        return val == other.val && rule.equals(other.rule);
     }
 
 }
