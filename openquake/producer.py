@@ -11,8 +11,6 @@ the same format.
 
 from openquake import logs
 
-from eventlet import event
-from eventlet import tpool
 
 class AttributeConstraint(object):
     """A constraint that can be used to filter input elements based on some
@@ -45,7 +43,6 @@ class FileProducer(object):
     a file, and returning a sequence of objects.
     
     TODO(jmc): fold the attributes filter in here somewhere.
-    TODO(jmc): do we really need to be using eventlet here?
     """
 
     # required attributes for metadata parsing
@@ -56,30 +53,20 @@ class FileProducer(object):
 
     def __init__(self, path):
         logs.LOG.debug('Found data at %s', path)
-        self.finished = event.Event()
         self.path = path
 
-        # file i/o will tend to block, wrap it in a thread so it will
-        # play nice with ohters
-        self.file = tpool.Proxy(open(self.path, 'r'))
+        self.file = open(self.path, 'r')
 
         # contains the metadata of the node currently parsed
         self._current_meta = {}
 
     def __iter__(self):
-        try:
-            for rv in self._parse():
-                yield rv
-        except Exception, e:
-            self.finished.send_exception(e)
-            raise
-
-        self.finished.send(True)
+        for rv in self._parse():
+            yield rv
     
     def reset(self):
         """Sometimes we like to iterate the filter more than once."""
         self.file.seek(0)
-        self.finished = event.Event()
         # contains the metadata of the node currently parsed
         self._current_meta = {}
 

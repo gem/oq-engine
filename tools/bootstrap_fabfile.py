@@ -7,9 +7,9 @@ PYTHON_PATH = "%s/python/2.6.5" % CELLAR_PATH
 SITE_PKG_PATH = "~/.virtualenvs/openquake/lib/python2.6/site-packages/"
 
 VIRTUALENV_PACKAGES = ["lxml", "pyyaml", "sphinx", "shapely",
-    "eventlet", "python-gflags", "guppy",
+    "python-gflags", "guppy",
     "libLAS", "numpy", "scipy", "celery==2.0.3",
-    "nose", "django", "ordereddict", "redis"]
+    "nose", "django", "redis"]
 
 """
 This fab file assists with setting up a developer's environment.
@@ -163,9 +163,9 @@ def _bootstrap_linux():
         gdal_packages = ["gdal-bin", "libgeos-dev", "libgdal1-dev", "python-gdal"]
         pip_packages = ["virtualenv", "virtualenvwrapper",]
         virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
-                               "eventlet", "python-gflags", "guppy", 
+                               "python-gflags", "guppy", 
                                "libLAS", "numpy", "scipy", "celery",
-                               "nose", "django", "ordereddict", "stdeb"] 
+                               "nose", "django", "stdeb"] 
 
         _apt_install(" ".join(apt_packages))
         _pip_install(" ".join(pip_packages))
