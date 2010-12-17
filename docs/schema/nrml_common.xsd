@@ -186,4 +186,11 @@
 			<xs:element name="YValues" type="gml:doubleList"/>
 		</xs:all>
 	</xs:complexType>
+	
+	<xs:simpleType name="NonNegativeDoubleType">
+		<xs:restriction base="xs:double">
+			<xs:minInclusive value="0.0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
 </xs:schema>
