@@ -114,9 +114,9 @@ public class CommandLineCalculator {
     public void sampleAndSaveERFTree(Cache cache, String key, long seed)
             throws IOException {
         logger.warn("Random seed for ERFLT is " + Long.toString(seed));
-        List<GEMSourceData> sources =
-                sampleSourceModelLogicTree(createErfLogicTreeData(), seed);
-        ArrayList<GEMSourceData> arrayListSources = new ArrayList(sources);
+        ArrayList<GEMSourceData> arrayListSources =
+                new ArrayList(sampleSourceModelLogicTree(
+                        createErfLogicTreeData(), seed));
         JsonSerializer.serializeSourceList(cache, key, arrayListSources);
     }
 
