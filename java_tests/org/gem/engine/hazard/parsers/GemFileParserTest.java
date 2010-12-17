@@ -4,11 +4,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.gem.engine.InputModelData;
 import org.gem.engine.SourceModelReader;
 import org.gem.engine.hazard.models.nshmp.us.NshmpCaliforniaFaultData;
 import org.junit.After;
@@ -28,21 +26,6 @@ public class GemFileParserTest {
     @After
     public void tearDown() {
         // new File(FILENAME).delete();
-    }
-
-    @Test
-    public void serializesCaliforniaFaultData() throws Exception {
-        NshmpCaliforniaFaultData faults =
-                new NshmpCaliforniaFaultData("java_tests/data/nshmp/CA/");
-
-        faults.read(-90.0, +90.0, -180.0, +180.0);
-
-        faults.writeSource2CLformat(new FileWriter(FILENAME));
-        ArrayList<GEMSourceData> sources =
-                new InputModelData(FILENAME, 0.1).getSourceList();
-
-        assertEquals(faults.getList().size(), sources.size());
-        assertSourcesAreEqual(faults.getList(), sources);
     }
 
     /**
