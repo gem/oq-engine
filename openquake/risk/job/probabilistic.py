@@ -15,6 +15,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
+from openquake.risk import common
 from openquake.risk import probabilistic_event_based
 from openquake.risk import job as risk_job
 from openquake.parser import exposure
@@ -175,8 +176,7 @@ class ProbabilisticEventMixin:
         """ Compute the conditional loss for a loss curve and probability of 
         exceedance """
 
-        loss_conditional = probabilistic_event_based. \
-                compute_conditional_loss(loss_curve, loss_poe)
+        loss_conditional = common.compute_conditional_loss(loss_curve, loss_poe)
         key = kvs.tokens.loss_key(self.id, row, col, asset["AssetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
