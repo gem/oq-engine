@@ -757,7 +757,6 @@ public class CommandLineCalculator {
             sampleGemLogicTreeGMPE(
                     HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE,
                     long seed) {
-        // TODO(JMC): Do I do anything with the N?
 
         Random rn = null;
         if (seed != 0) {
@@ -779,6 +778,8 @@ public class CommandLineCalculator {
             // get corresponding logic tree
             LogicTree<ScalarIntensityMeasureRelationshipAPI> ltGMPE =
                     listLtGMPE.get(trt);
+
+            ltGMPE.printGemLogicTreeStructure();
 
             // sample the first branching level
             int branch = ltGMPE.sampleBranchingLevel(0, rn);
@@ -830,20 +831,17 @@ public class CommandLineCalculator {
         if (hasPath == true) {
             String relativePath =
                     getRelativePath(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
-            gmpeLogicTree =
-                    new GmpeLogicTreeData(relativePath, component,
-                            intensityMeasureType, period, damping,
-                            gmpeTruncationType, truncationLevel,
-                            standardDeviationType, referenceVs30Value);
+            gmpeLogicTree = new GmpeLogicTreeData(relativePath);
+            gmpeLogicTree.parse_tree(component, intensityMeasureType, period,
+                    damping, gmpeTruncationType, truncationLevel,
+                    standardDeviationType, referenceVs30Value);
         } else {
             String gmpeSha =
                     config.getString(ConfigItems.GMPE_LOGIC_TREE_FILE.name());
-            logger.debug("Loading GMPE LT from " + gmpeSha);
-            gmpeLogicTree =
-                    new GmpeLogicTreeData(kvs, gmpeSha, component,
-                            intensityMeasureType, period, damping,
-                            gmpeTruncationType, truncationLevel,
-                            standardDeviationType, referenceVs30Value);
+            gmpeLogicTree = new GmpeLogicTreeData(kvs, gmpeSha);
+            gmpeLogicTree.parse_tree(component, intensityMeasureType, period,
+                    damping, gmpeTruncationType, truncationLevel,
+                    standardDeviationType, referenceVs30Value);
         }
 
         return gmpeLogicTree;
