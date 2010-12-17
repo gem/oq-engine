@@ -6,7 +6,10 @@ public enum LogicTreeRuleParam {
     mMaxGRRelative("mMaxGRRelative"),
 
     /** uncertainties on GR b value */
-    bGRRelative("bGRRelative");
+    bGRRelative("bGRRelative"),
+
+    /** no uncertainties */
+    NONE("noUncertainties");
 
     private String name;
 
@@ -40,8 +43,10 @@ public enum LogicTreeRuleParam {
     public static boolean isValidType(String name) {
         boolean answer = false;
         for (LogicTreeRuleParam trt : LogicTreeRuleParam.values()) {
-            if (trt.name.equals(name))
+            if (trt.name.equals(name)) {
                 answer = true;
+                break;
+            }
         }
         return answer;
     }
