@@ -89,25 +89,15 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         double[] lonGrid = dataFromEqkRuptureNeededForNrml.getLonGrid();
         double[] latGrid = dataFromEqkRuptureNeededForNrml.getLatGrid();
         double[] depthGrid = dataFromEqkRuptureNeededForNrml.getDepthGrid();
-        int row = 0;
-        int col = 0;
-        for (int indexOfFlatArray = 0; indexOfFlatArray < numberOfRows
-                * numberOfColumns; ++indexOfFlatArray) {
-            Location location = grid.getLocation(row, col);
-            /*
-             * System.out for debug only Use System.out commands because there
-             * is no logging in this class.
-             */
-            // System.out.println("indexOfFlatArray = " + indexOfFlatArray);
-            // System.out.println("col = " + col);
-            // System.out.println("row = " + row);
-            assertEquals(lonGrid[indexOfFlatArray], location.getLongitude(),
-                    0.0);
-            assertEquals(latGrid[indexOfFlatArray], location.getLatitude(), 0.0);
-            assertEquals(depthGrid[indexOfFlatArray], location.getDepth(), 0.0);
-            col = (col + 1) % numberOfColumns;
-            row = col == 0 ? (row + 1) : row;
-        }
+        for (int row = 0; row < numberOfRows; row++) {
+            for (int col = 0; col < numberOfColumns; col++) {
+                Location l = grid.get(row, col);
+                int indexOfFlatArray = (row) * numberOfColumns + (col);
+                assertEquals(lonGrid[indexOfFlatArray], l.getLongitude(), 0.0);
+                assertEquals(latGrid[indexOfFlatArray], l.getLatitude(), 0.0);
+                assertEquals(depthGrid[indexOfFlatArray], l.getDepth(), 0.0);
+            } // for columns
+        } // for rows
     }
 
     @Test
