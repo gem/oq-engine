@@ -8,6 +8,7 @@ from numpy import mean # pylint: disable=E1101, E0611
 
 from openquake import shapes
 
+
 def compute_conditional_loss(curve, probability):
     """Return the loss (or loss ratio) corresponding to the given
     probability of exceedance. Return zero if the probability
@@ -56,7 +57,7 @@ def _compute_mid_po(loss_ratio_pe_mid_curve):
         data.append((mean([loss_ratios[idx],
                 loss_ratios[idx + 1]]), pes[idx] - pes[idx + 1]))
 
-    return  shapes.Curve(data)
+    return shapes.Curve(data)
 
 
 def compute_mean_loss(curve):
