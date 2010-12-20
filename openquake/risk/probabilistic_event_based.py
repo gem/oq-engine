@@ -209,7 +209,7 @@ class AggregateLossCurve(object):
         """Return the losses used to compute the aggregate curve."""
         if not self.distribution:
             return array([])
-        else: # if needed because numpy return a scalar if the list is empty
+        else: # if needed because numpy returns a scalar if the list is empty
             return array(self.distribution).sum(axis=0)
 
     def compute(self, num=DEFAULT_NUMBER_OF_SAMPLES):
