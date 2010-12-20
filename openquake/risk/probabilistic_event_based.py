@@ -24,8 +24,8 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field set passed."""
     if vuln_function == shapes.EMPTY_VULN_FUNCTION or not \
                         ground_motion_field_set["IMLs"]:
-        return []
-    
+        return array([])
+
     imls = vuln_function.imls
     loss_ratios = []
     
@@ -90,7 +90,11 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
         num=DEFAULT_NUMBER_OF_SAMPLES):
-    """Compute the loss ratio curve using the probailistic event approach."""
+    """Compute a loss ratio curve using the probailistic event approach.
+    
+    A loss ratio curve is a function that has loss ratios as X values
+    and PoEs (Probabilities of Exceendance) as Y values.
+    """
 
     # with no gmfs (no earthquakes), an empty curve is enough
     if not ground_motion_field_set["IMLs"]:
@@ -155,25 +159,17 @@ class AggregateLossCurve(object):
         return aggregate_curve
 
     def __init__(self, vuln_model):
-        self._tses = None
-        self._time_span = None
-        self._gmfs_length = None
-
         self.distribution = []
+        self.initialized = False
         self.vuln_model = vuln_model
 
     def append(self, gmfs, asset):
         """Add the losses distribution identified by the given GMFs
         and asset to the set used to compute the aggregate curve."""
 
-        if self._time_span is None:
-            self._time_span = gmfs["TimeSpan"]
-
-        if self._tses is None:
-            self._tses = gmfs["TSES"]
-
-        if self._gmfs_length is None:
-            self._gmfs_length = len(gmfs["IMLs"])
+        if not self.initialized:
+            self.initialized = True
+            self._initialize_parameters(gmfs)
 
         self._check_gmfs_length(gmfs)
         self._check_parameter(self._tses, gmfs, "TSES")
@@ -182,8 +178,13 @@ class AggregateLossCurve(object):
         loss_ratios = _compute_loss_ratios(self.vuln_model[
                 asset["VulnerabilityFunction"]], gmfs)
 
-        if len(loss_ratios):
-            self.distribution.append(loss_ratios * asset["AssetValue"])
+        self.distribution.append(loss_ratios * asset["AssetValue"])
+
+    def _initialize_parameters(self, gmfs):
+        """Initialize the GMFs parameters."""
+        self._tses = gmfs["TSES"]
+        self._time_span = gmfs["TimeSpan"]
+        self._gmfs_length = len(gmfs["IMLs"])
 
     def _check_gmfs_length(self, gmfs):
         """Check if the GMFs passed has the same length of
@@ -207,9 +208,9 @@ class AggregateLossCurve(object):
     def losses(self):
         """Return the losses used to compute the aggregate curve."""
         if not self.distribution:
-            return []
-
-        return array(self.distribution).sum(axis=0)
+            return array([])
+        else: # if needed because numpy return a scalar if the list is empty
+            return array(self.distribution).sum(axis=0)
 
     def compute(self, num=DEFAULT_NUMBER_OF_SAMPLES):
         """Compute the aggregate loss curve."""
