@@ -27,11 +27,14 @@ import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
 import org.opensha.commons.data.TimeSpan;
+import org.opensha.commons.geo.Location;
+import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
+import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -110,6 +113,89 @@ public class CommandLineCalculator {
 
         return thisConfig.equals(otherConfig);
     }
+
+    /**
+     * Extracts from an EqkRupture object all data to be contained by a NRML
+     * instance. This is then converted to json format, and saved in the KVS
+     * with the passed key.
+     * 
+     * @param rup
+     * @param key
+     * @param cache
+     */
+    public void serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
+        Gson g = new Gson();
+        String jsonData = g.toJson(new EqkRuptureDataForNrml(rup));
+        cache.set(key, jsonData);
+    }
+
+    /**
+     * A class ready to be converted by gson. This class extracts from an
+     * EqkRupture object all data to be contained by a NRML instance. That
+     * conversion by gson is supposed to result in a json String that is optimal
+     * to be read into a numpy array.
+     */
+    public class EqkRuptureDataForNrml {
+        private transient final String unknownTectonicRegionType = "Unknown";
+        private final double averageRake;
+        private String tectonicRegion;
+        private final double magRupture;
+        int numberOfColumns;
+        int numberOfRows;
+        private final double[] latGrid;
+        private final double[] lonGrid;
+        private final double[] depthGrid;
+
+        public EqkRuptureDataForNrml(EqkRupture rup) {
+            averageRake = rup.getAveRake();
+            if (rup.getTectRegType() != null) {
+                tectonicRegion = rup.getTectRegType().toString();
+            } else {
+                tectonicRegion = unknownTectonicRegionType;
+            }
+            magRupture = rup.getMag();
+            EvenlyGriddedSurfaceAPI grid = rup.getRuptureSurface();
+            /*
+             * the site data
+             */
+            numberOfColumns = grid.getNumCols();
+            numberOfRows = grid.getNumRows();
+            int countSites = numberOfColumns * numberOfRows;
+            latGrid = new double[countSites];
+            lonGrid = new double[countSites];
+            depthGrid = new double[countSites];
+            for (int row = 0; row < numberOfRows; row++) {
+                for (int col = 0; col < numberOfColumns; col++) {
+                    Location l = grid.get(row, col);
+                    int index = (row) * numberOfColumns + (col);
+                    latGrid[index] = l.getLatitude();
+                    lonGrid[index] = l.getLongitude();
+                    depthGrid[index] = l.getDepth();
+                } // for columns
+            } // for rows
+        } // constructor()
+
+        /**
+         * Getters and setters - may help, also when searching errors
+         */
+        public double[] getLatGrid() {
+            return latGrid;
+        }
+
+        /**
+         * Getters and setters - may help, also when searching errors
+         */
+        public double[] getLonGrid() {
+            return lonGrid;
+        }
+
+        /**
+         * Getters and setters - may help, also when searching errors
+         */
+        public double[] getDepthGrid() {
+            return depthGrid;
+        }
+    } // class EqkRuptureDataForKvs
 
     public void sampleAndSaveERFTree(Cache cache, String key, long seed)
             throws IOException {
