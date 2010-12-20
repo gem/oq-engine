@@ -123,7 +123,8 @@ public class CommandLineCalculator {
      * @param key
      * @param cache
      */
-    public void serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
+    public void
+            serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
         Gson g = new Gson();
         String jsonData = g.toJson(new EqkRuptureDataForNrml(rup));
         cache.set(key, jsonData);
@@ -881,7 +882,19 @@ public class CommandLineCalculator {
 
     }
 
+    /**
+     * Reads source model logic tree data and returns a {@link LogicTree} object
+     * representing epistemic uncertainties in the source model. Logic Tree data
+     * are expected in nrml format and read using a {@link LogicTreeReader}
+     * object. Logic Tree data can be read from file or kvs. The method assumes
+     * that only one source model logic tree is defined and therefore only the
+     * first logic tree read is returned.
+     */
     public LogicTree createErfLogicTreeData() throws IOException {
+        // Distinguish between reading from file or from kvs. Use a
+        // LogicTreeReader object to read logic tree data and returns the first
+        // logic tree read (this because currently epistemic uncertainties in
+        // the source model are assumed to be described by only one logic tree).
         if (hasPath == true) {
             LogicTreeReader logicTreeReader =
                     new LogicTreeReader(
@@ -897,8 +910,15 @@ public class CommandLineCalculator {
         }
     }
 
+    /**
+     * Reads GMPE logic tree data and returns a {@link GmpeLogicTreeData}
+     * containing {@link LogicTree} object(s) defining epistemic uncertainties
+     * on GMPES.
+     */
     public GmpeLogicTreeData createGmpeLogicTreeData() throws IOException {
-        // load GMPE logic tree data
+        // read GMPE params from config file. Distinguish between reading from
+        // file or kvs. Then read and instantiate logic tree objects using a
+        // GmpeLogicTreeData object.
         String component = config.getString(ConfigItems.COMPONENT.name());
         String intensityMeasureType =
                 config.getString(ConfigItems.INTENSITY_MEASURE_TYPE.name());
