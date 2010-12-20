@@ -20,7 +20,7 @@ from openquake.logs import LOG
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 
-def compute_loss_ratios(vuln_function, ground_motion_field_set):
+def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field set passed."""
     if vuln_function == shapes.EMPTY_VULN_FUNCTION or not \
                         ground_motion_field_set["IMLs"]:
@@ -44,12 +44,12 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set):
     return array(loss_ratios)
 
 
-def compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
+def _compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute the range of loss ratios used to build the loss ratio curve."""
     return linspace(loss_ratios.min(), loss_ratios.max(), num)
 
 
-def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
+def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
     
     # ruptures (earthquake) occured but probably due to distance,
@@ -57,7 +57,6 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     if (loss_ratios <= 0.0).all():
         return zeros(len(loss_ratios_range) - 1)
     
-    # TODO(JMC): I think this is wrong. where doesn't return zero values.
     invalid_ratios = lambda ratios: len(where(array(ratios) <= 0.0)[0])
 
     hist = histogram(loss_ratios, bins=loss_ratios_range)
@@ -68,7 +67,7 @@ def compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     return hist
 
 
-def compute_rates_of_exceedance(cum_histogram, tses):
+def _compute_rates_of_exceedance(cum_histogram, tses):
     """Compute the rates of exceedance for the given cumulative histogram
     using the passed tses (tses is time span * number of realizations)."""
     if tses <= 0:
@@ -77,7 +76,7 @@ def compute_rates_of_exceedance(cum_histogram, tses):
     return (array(cum_histogram).astype(float) / tses)
 
 
-def compute_probs_of_exceedance(rates_of_exceedance, time_span):
+def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
     """Compute the probabilities of exceedance using the given rates of
     exceedance unsing the passed time span."""
     probs_of_exceedance = []
@@ -97,11 +96,11 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     if not ground_motion_field_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
-    loss_ratios = compute_loss_ratios(vuln_function, ground_motion_field_set)
-    loss_ratios_range = compute_loss_ratios_range(loss_ratios, num)
+    loss_ratios = _compute_loss_ratios(vuln_function, ground_motion_field_set)
+    loss_ratios_range = _compute_loss_ratios_range(loss_ratios, num)
 
-    probs_of_exceedance = compute_probs_of_exceedance(
-            compute_rates_of_exceedance(compute_cumulative_histogram(
+    probs_of_exceedance = _compute_probs_of_exceedance(
+            _compute_rates_of_exceedance(_compute_cumulative_histogram(
             loss_ratios, loss_ratios_range), ground_motion_field_set["TSES"]),
             ground_motion_field_set["TimeSpan"])
 
@@ -110,7 +109,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
 
 def _generate_curve(losses, probs_of_exceedance):
     """Generate a loss ratio (or loss) curve, given a set of losses
-    and corresponding probabilities of exceedance. This function
+    and corresponding PoEs (Probabilities of Exceedance). This function
     is intended to be used internally."""
 
     data = []
@@ -134,12 +133,12 @@ def _asset_for_gmfs(job_id, gmfs_key):
 
 
 class AggregateLossCurve(object):
-    """Aggregate a set of loss curves and produce the resulting loss curve."""
+    """Aggregate a set of losses and produce the resulting loss curve."""
 
     @staticmethod
     def from_kvs(job_id):
-        """Return an aggregate curve using the gmfs and assets
-        stored in the kvs system."""
+        """Return an aggregate curve using the GMFs and assets
+        stored in the underlying kvs system."""
         
         vuln_model = vulnerability.load_vuln_curves_from_kvs(job_id)
         aggregate_curve = AggregateLossCurve(vuln_model)
@@ -149,39 +148,38 @@ class AggregateLossCurve(object):
         LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
 
         for gmfs_key in gmfs_keys: # O(2*n)
-            gmfs = kvs.get_value_json_decoded(gmfs_key)
             asset = _asset_for_gmfs(job_id, gmfs_key)
-
+            gmfs = kvs.get_value_json_decoded(gmfs_key)
             aggregate_curve.append(gmfs, asset)
         
         return aggregate_curve
 
     def __init__(self, vuln_model):
-        self.tses = None
-        self.time_span = None
-        self.gmfs_length = None
+        self._tses = None
+        self._time_span = None
+        self._gmfs_length = None
 
         self.distribution = []
         self.vuln_model = vuln_model
 
     def append(self, gmfs, asset):
-        """Add the given loss distribution to the set of losses used to
-        compute the final aggregate curve."""
+        """Add the losses distribution identified by the given GMFs
+        and asset to the set used to compute the aggregate curve."""
 
-        if self.time_span is None:
-            self.time_span = gmfs["TimeSpan"]
+        if self._time_span is None:
+            self._time_span = gmfs["TimeSpan"]
 
-        if self.tses is None:
-            self.tses = gmfs["TSES"]
+        if self._tses is None:
+            self._tses = gmfs["TSES"]
 
-        if self.gmfs_length is None:
-            self.gmfs_length = len(gmfs["IMLs"])
+        if self._gmfs_length is None:
+            self._gmfs_length = len(gmfs["IMLs"])
 
         self._check_gmfs_length(gmfs)
-        self._check_parameter(self.tses, gmfs, "TSES")
-        self._check_parameter(self.time_span, gmfs, "TimeSpan")
+        self._check_parameter(self._tses, gmfs, "TSES")
+        self._check_parameter(self._time_span, gmfs, "TimeSpan")
 
-        loss_ratios = compute_loss_ratios(self.vuln_model[
+        loss_ratios = _compute_loss_ratios(self.vuln_model[
                 asset["VulnerabilityFunction"]], gmfs)
 
         if len(loss_ratios):
@@ -191,10 +189,10 @@ class AggregateLossCurve(object):
         """Check if the GMFs passed has the same length of
         the stored GMFs."""
 
-        if self.gmfs_length != len(gmfs["IMLs"]):
+        if self._gmfs_length != len(gmfs["IMLs"]):
             raise ValueError("GMFs must be of the same size. " \
                     "Expected %s, but was %s" % (
-                    self.gmfs_length, len(gmfs["IMLs"])))
+                    self._gmfs_length, len(gmfs["IMLs"])))
 
     def _check_parameter(self, value, gmfs, name):
         """Check if the parameter of the GMFs passed is the
@@ -203,7 +201,7 @@ class AggregateLossCurve(object):
         if value != gmfs[name]:
             raise ValueError("%s parameter must be the same for all " \
                     "the GMFs used. Expected %s, but was %s"
-                    % (name, self.tses, gmfs[name]))
+                    % (name, value, gmfs[name]))
 
     @property
     def losses(self):
@@ -220,10 +218,10 @@ class AggregateLossCurve(object):
         if not len(losses):
             return shapes.EMPTY_CURVE
 
-        loss_range = compute_loss_ratios_range(losses, num)
+        loss_range = _compute_loss_ratios_range(losses, num)
 
-        probs_of_exceedance = compute_probs_of_exceedance(
-                compute_rates_of_exceedance(compute_cumulative_histogram(
-                losses, loss_range), self.tses), self.time_span)
+        probs_of_exceedance = _compute_probs_of_exceedance(
+                _compute_rates_of_exceedance(_compute_cumulative_histogram(
+                losses, loss_range), self._tses), self._time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
