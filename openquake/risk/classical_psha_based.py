@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module defines the functions used to compute loss ratio and loss curves
+This module defines the functions used to compute loss ratio curves
 using the classical psha based approach.
 """
 
@@ -20,7 +20,11 @@ STEPS_PER_INTERVAL = 5
 
 def compute_loss_ratio_curve(vuln_function, hazard_curve):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
-    by applying a given vulnerability function."""
+    by applying a given vulnerability function.
+
+    A loss ratio curve is a function that has loss ratios as X values
+    and PoEs (Probabilities of Exceendance) as Y values.
+    """
 
     if vuln_function is None:
         vuln_function = shapes.EMPTY_VULN_FUNCTION
@@ -35,7 +39,7 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
-    """Compute the loss ratio * PoEs matrix.""" 
+    """Compute the LREM * PoOs matrix.""" 
 
     lrem_po = empty((len(lrem), len(vuln_function.imls)), float)
 
@@ -49,11 +53,10 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
 
 
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
-    """Compute the loss ratio curve."""
+    """Compute the final loss ratio curve."""
     return shapes.Curve(zip(loss_ratios, lrem_po.sum(axis=1)[:-1]))
 
 
-# @state.memoize
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve."""
     loss_ratios = list(vuln_function.means)
@@ -61,9 +64,8 @@ def _generate_loss_ratios(vuln_function):
     return _split_loss_ratios(loss_ratios)
 
 
-# @state.memoize
 def _compute_lrem(vuln_function, distribution=None):
-    """Compute the loss ratio exceedance matrix."""
+    """Compute the LREM (Loss Ratio Exceedance Matrix)."""
 
     if not distribution:
         distribution = stats.lognorm

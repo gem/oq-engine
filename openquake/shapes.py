@@ -526,8 +526,8 @@ class VulnerabilityFunction(Curve):
     """This class represents a vulnerability fuction.
 
     A vulnerability fuction has IMLs (Intensity Measure Levels) as
-    abscissae and MLRs, CVs (Mean Loss Ratio and Coefficent of Variation)
-    as ordinates.
+    X values and MLRs, CVs (Mean Loss Ratio and Coefficent of Variation)
+    as Y values.
     """
 
     @property
