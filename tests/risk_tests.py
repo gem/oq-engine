@@ -222,12 +222,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
-        self.assertEqual([], prob._compute_loss_ratios(
-                shapes.EMPTY_CURVE, self.gmfs))
+        self.assertEqual(0, prob._compute_loss_ratios(
+                shapes.EMPTY_CURVE, self.gmfs).size)
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
-        self.assertEqual([], prob._compute_loss_ratios(
-                self.vuln_function_1, {"IMLs": ()}))
+        self.assertEqual(0, prob._compute_loss_ratios(
+                self.vuln_function_1, {"IMLs": ()}).size)
 
     def test_loss_ratios_boundaries(self):
         # loss ratio is zero if the gmf iml is below the minimum iml
@@ -469,7 +469,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_no_distribution_without_gmfs(self):
         aggregate_curve = prob.AggregateLossCurve({})
-        self.assertEqual([], aggregate_curve.losses)
+        self.assertEqual(0, aggregate_curve.losses.size)
 
     def test_tses_parameter_must_be_congruent(self):
         aggregate_curve = prob.AggregateLossCurve(
