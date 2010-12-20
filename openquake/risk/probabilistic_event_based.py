@@ -22,8 +22,7 @@ DEFAULT_NUMBER_OF_SAMPLES = 25
 
 def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field set passed."""
-    if vuln_function == shapes.EMPTY_VULN_FUNCTION or not \
-                        ground_motion_field_set["IMLs"]:
+    if vuln_function == shapes.EMPTY_VULN_FUNCTION:
         return array([])
 
     imls = vuln_function.imls
