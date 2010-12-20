@@ -11,8 +11,8 @@ from openquake import shapes
 
 def compute_conditional_loss(curve, probability):
     """Return the loss (or loss ratio) corresponding to the given
-    probability of exceedance. Return zero if the probability
-    of exceedance if out of bounds.
+    PoE (Probability of Exceendance). Return zero if the probability
+    if out of bounds.
     """
 
     if curve.ordinate_out_of_bounds(probability):
@@ -22,7 +22,11 @@ def compute_conditional_loss(curve, probability):
 
 
 def compute_loss_curve(loss_ratio_curve, asset):
-    """Compute the loss curve for a specific asset value."""
+    """Compute the loss curve for a specific asset value.
+    
+    A loss curve is obtained from a loss ratio curve by
+    multiplying each X value (loss ratio) for the given asset.
+    """
 
     if not asset: 
         return shapes.EMPTY_CURVE
@@ -46,8 +50,8 @@ def _compute_mid_mean_pe(loss_ratio_curve):
 
 
 def _compute_mid_po(loss_ratio_pe_mid_curve):
-    """Compute a loss ratio curve that has probabilities of occurrence
-    as ordinate values."""
+    """Compute a loss ratio curve that has PoOs
+    (Probabilities of Occurrence) as Y values."""
 
     data = []
     loss_ratios = loss_ratio_pe_mid_curve.abscissae
@@ -61,7 +65,7 @@ def _compute_mid_po(loss_ratio_pe_mid_curve):
 
 
 def compute_mean_loss(curve):
-    """Compute the mean loss (or loss ratio)."""
+    """Compute the mean loss (or loss ratio) for the given curve."""
 
     mid_pos_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
 
