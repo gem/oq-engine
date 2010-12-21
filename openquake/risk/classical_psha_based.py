@@ -31,7 +31,7 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
-    """Compute the LREM * PoOs matrix.""" 
+    """Compute the LREM * PoOs matrix."""
 
     lrem = array(lrem)
     lrem_po = empty((len(lrem), len(vuln_function.imls)), float)
@@ -61,7 +61,7 @@ def _generate_loss_ratios(vuln_function):
 def _compute_lrem(vuln_function, distribution=None):
     """Compute the LREM (Loss Ratio Exceedance Matrix)."""
 
-    if not distribution:
+    if distribution is None:
         distribution = stats.lognorm
         # this is so we can memoize the thing
 
@@ -84,7 +84,7 @@ def _compute_lrem(vuln_function, distribution=None):
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )
         sigma = sqrt(log((variance / mean ** 2.0) + 1.0))
         
-        for row in range(len(lrem)):
+        for row in xrange(len(lrem)):
             lrem[row][idx] = fix_prob(
                     distribution.sf(loss_ratios[row],
                     sigma, scale=exp(mu)))
@@ -104,7 +104,7 @@ def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
     """
 
     splitted_ratios = set()
-    for idx in range(len(loss_ratios) - 1):
+    for idx in xrange(len(loss_ratios) - 1):
         splitted_ratios.update(
                 linspace(loss_ratios[idx],
                 loss_ratios[idx + 1], steps + 1))
