@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module defines the functions that can be applied to loss ratio
+This module defines functions that can be applied to loss ratio
 or loss curves.
 """
 
