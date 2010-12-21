@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module defines the functions to compute loss ratio curves
+This module defines functions to compute loss ratio curves
 using the classical psha based approach.
 """
 
@@ -24,28 +24,19 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
     lrem = _compute_lrem(vuln_function)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
     loss_ratios = _generate_loss_ratios(vuln_function)
-    loss_ratio_curve = _compute_loss_ratio_curve_from_lrem_po(
-                            loss_ratios, lrem_po)
-
-    return loss_ratio_curve
+    return shapes.Curve(zip(loss_ratios, lrem_po.sum(axis=1)[:-1]))
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     """Compute the LREM * PoOs matrix."""
 
-    lrem = array(lrem)
-    lrem_po = empty((len(lrem), len(vuln_function.imls)), float)
+    lrem_po = empty(array(lrem).shape)
 
     for idx, value in enumerate(vuln_function):
         prob_occ = hazard_curve.ordinate_for(value[0]) # iml
-        lrem_po[:, idx] = lrem[:, idx] * prob_occ
+        lrem_po[:, idx] = array(lrem)[:, idx] * prob_occ
 
     return lrem_po
-
-
-def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
-    """Compute the final loss ratio curve."""
-    return shapes.Curve(zip(loss_ratios, lrem_po.sum(axis=1)[:-1]))
 
 
 def _generate_loss_ratios(vuln_function):
@@ -62,16 +53,17 @@ def _compute_lrem(vuln_function, distribution=None):
     """Compute the LREM (Loss Ratio Exceedance Matrix)."""
 
     if distribution is None:
-        distribution = stats.lognorm
         # this is so we can memoize the thing
+        distribution = stats.lognorm
 
     loss_ratios = _generate_loss_ratios(vuln_function)
+
+    # LREM has number of rows equal to the number of loss ratios
+    # and number of columns equal to the number if imls
     lrem = empty((len(loss_ratios), len(vuln_function.imls)), float)
 
     def fix_prob(prob):
         """Fix probabilities for values close to zero."""
-        if isnan(prob):
-            return 0.0
         if prob < 0.00001: 
             return 0.0
         else: 
