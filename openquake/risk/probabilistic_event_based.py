@@ -6,14 +6,10 @@ using the probabilistic event based approach.
 
 import math
 
-from numpy import zeros # pylint: disable=E1101, E0611
-from numpy import array # pylint: disable=E1101, E0611
-from numpy import linspace # pylint: disable=E1101, E0611
-from numpy import histogram # pylint: disable=E1101, E0611
-from numpy import where # pylint: disable=E1101, E0611
+from numpy import zeros, array, linspace # pylint: disable=E1101, E0611
+from numpy import histogram, where # pylint: disable=E1101, E0611
 
-from openquake import kvs
-from openquake import shapes
+from openquake import kvs, shapes
 from openquake.parser import vulnerability
 from openquake.logs import LOG
 
@@ -22,7 +18,8 @@ DEFAULT_NUMBER_OF_SAMPLES = 25
 
 def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     """Compute loss ratios using the ground motion field set passed."""
-    if vuln_function == shapes.EMPTY_VULN_FUNCTION:
+
+    if vuln_function.is_empty:
         return array([])
 
     imls = vuln_function.imls
@@ -158,21 +155,21 @@ class AggregateLossCurve(object):
         return aggregate_curve
 
     def __init__(self, vuln_model):
+        self._tses, self._time_span, self._gmfs_length = (None, None, None)
+
         self.distribution = []
-        self.initialized = False
         self.vuln_model = vuln_model
 
     def append(self, gmfs, asset):
         """Add the losses distribution identified by the given GMFs
         and asset to the set used to compute the aggregate curve."""
 
-        if not self.initialized:
-            self.initialized = True
+        if self.empty:
             self._initialize_parameters(gmfs)
 
-        self._check_gmfs_length(gmfs)
-        self._check_parameter(self._tses, gmfs, "TSES")
-        self._check_parameter(self._time_span, gmfs, "TimeSpan")
+        assert gmfs["TimeSpan"] is self._time_span
+        assert gmfs["TSES"] is self._tses
+        assert len(gmfs["IMLs"]) is self._gmfs_length
 
         loss_ratios = _compute_loss_ratios(self.vuln_model[
                 asset["VulnerabilityFunction"]], gmfs)
@@ -185,39 +182,27 @@ class AggregateLossCurve(object):
         self._time_span = gmfs["TimeSpan"]
         self._gmfs_length = len(gmfs["IMLs"])
 
-    def _check_gmfs_length(self, gmfs):
-        """Check if the GMFs passed has the same length of
-        the stored GMFs."""
-
-        if self._gmfs_length != len(gmfs["IMLs"]):
-            raise ValueError("GMFs must be of the same size. " \
-                    "Expected %s, but was %s" % (
-                    self._gmfs_length, len(gmfs["IMLs"])))
-
-    def _check_parameter(self, value, gmfs, name):
-        """Check if the parameter of the GMFs passed is the
-        same of the stored GMFs."""
-
-        if value != gmfs[name]:
-            raise ValueError("%s parameter must be the same for all " \
-                    "the GMFs used. Expected %s, but was %s"
-                    % (name, value, gmfs[name]))
+    @property
+    def empty(self):
+        """Return true is this aggregate curve has no losses
+        associated, false otherwise."""
+        return len(self.distribution) == 0
 
     @property
     def losses(self):
         """Return the losses used to compute the aggregate curve."""
-        if not self.distribution:
+        if self.empty:
             return array([])
         else: # if needed because numpy returns a scalar if the list is empty
             return array(self.distribution).sum(axis=0)
 
     def compute(self, num=DEFAULT_NUMBER_OF_SAMPLES):
         """Compute the aggregate loss curve."""
-        losses = self.losses
         
-        if not len(losses):
+        if self.empty:
             return shapes.EMPTY_CURVE
 
+        losses = self.losses
         loss_range = _compute_loss_ratios_range(losses, num)
 
         probs_of_exceedance = _compute_probs_of_exceedance(

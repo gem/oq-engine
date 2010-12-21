@@ -479,7 +479,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
 
-        self.assertRaises(ValueError,
+        self.assertRaises(AssertionError,
                 aggregate_curve.append, {
                 "TSES": 2, "TimeSpan": 1, "IMLs": ()}, asset)
 
@@ -491,7 +491,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
 
-        self.assertRaises(ValueError,
+        self.assertRaises(AssertionError,
                 aggregate_curve.append, {
                 "TSES": 1, "TimeSpan": 2, "IMLs": ()}, asset)
 
@@ -504,7 +504,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         aggregate_curve.append({
                 "IMLs": (), "TSES": 1, "TimeSpan": 1}, asset)
 
-        self.assertRaises(ValueError,
+        self.assertRaises(AssertionError,
                 aggregate_curve.append, {
                 "IMLs": (1.0,), "TSES": 1, "TimeSpan": 1}, asset)
 
