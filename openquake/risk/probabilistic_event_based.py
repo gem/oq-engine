@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-This module defines the functions used to compute loss ratio and loss curves
+This module defines functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
 """
 
