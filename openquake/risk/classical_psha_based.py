@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-This module defines the functions used to compute loss ratio curves
+This module defines the functions to compute loss ratio curves
 using the classical psha based approach.
 """
 
-from numpy import linspace # pylint: disable=F0401,E0611
-import scipy # pylint: disable=F0401
-
-from numpy import empty # pylint: disable=F0401,E0611
-from numpy import isnan # pylint: disable=F0401,E0611
-from scipy import sqrt # pylint: disable=F0401,E0611
-from scipy import stats # pylint: disable=F0401,E0611
-from scipy import log # pylint: disable=F0401,E0611
+from scipy import sqrt, stats, log, exp # pylint: disable=F0401,E0611
+from numpy import isnan, empty, linspace # pylint: disable=F0401,E0611
+from numpy import array, concatenate # pylint: disable=F0401,E0611
 
 from openquake import shapes
 
@@ -26,9 +21,6 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
     and PoEs (Probabilities of Exceendance) as Y values.
     """
 
-    if vuln_function is None:
-        vuln_function = shapes.EMPTY_VULN_FUNCTION
-
     lrem = _compute_lrem(vuln_function)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
     loss_ratios = _generate_loss_ratios(vuln_function)
@@ -41,13 +33,12 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     """Compute the LREM * PoOs matrix.""" 
 
+    lrem = array(lrem)
     lrem_po = empty((len(lrem), len(vuln_function.imls)), float)
 
     for idx, value in enumerate(vuln_function):
-        prob_occ = hazard_curve.ordinate_for(value[0])
-
-        for row in range(len(lrem_po)):
-            lrem_po[row][idx] = lrem[row][idx] * prob_occ
+        prob_occ = hazard_curve.ordinate_for(value[0]) # iml
+        lrem_po[:, idx] = lrem[:, idx] * prob_occ
 
     return lrem_po
 
@@ -59,9 +50,12 @@ def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
 
 def _generate_loss_ratios(vuln_function):
     """Loss ratios are a function of the vulnerability curve."""
-    loss_ratios = list(vuln_function.means)
-    loss_ratios.insert(0, 0.0)
-    return _split_loss_ratios(loss_ratios)
+    # we manually add 0.0 as first loss ratio
+    loss_ratios = _split_loss_ratios(
+            concatenate((array([0.0]), vuln_function.means)))
+    
+    # and 1.0 as last loss ratio
+    return concatenate((loss_ratios, array([1.0])))
 
 
 def _compute_lrem(vuln_function, distribution=None):
@@ -72,7 +66,6 @@ def _compute_lrem(vuln_function, distribution=None):
         # this is so we can memoize the thing
 
     loss_ratios = _generate_loss_ratios(vuln_function)
-    loss_ratios.append(1.0) # last loss ratio is fixed to be 1
     lrem = empty((len(loss_ratios), len(vuln_function.imls)), float)
 
     def fix_prob(prob):
@@ -94,7 +87,7 @@ def _compute_lrem(vuln_function, distribution=None):
         for row in range(len(lrem)):
             lrem[row][idx] = fix_prob(
                     distribution.sf(loss_ratios[row],
-                    sigma, scale=scipy.exp(mu)))
+                    sigma, scale=exp(mu)))
     
     return lrem
 
@@ -116,4 +109,4 @@ def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
                 linspace(loss_ratios[idx],
                 loss_ratios[idx + 1], steps + 1))
 
-    return list(sorted(splitted_ratios))
+    return array(sorted(splitted_ratios))

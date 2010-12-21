@@ -585,7 +585,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def test_empty_loss_ratio_curve(self):
         self.assertEqual(shapes.EMPTY_CURVE,
-                psha.compute_loss_ratio_curve(None, []))
+                psha.compute_loss_ratio_curve(
+                shapes.EMPTY_VULN_FUNCTION, None))
 
     def test_end_to_end(self):
         # manually computed values by Vitor Silva
