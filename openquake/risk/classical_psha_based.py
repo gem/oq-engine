@@ -5,7 +5,7 @@ using the classical psha based approach.
 """
 
 from scipy import sqrt, stats, log, exp # pylint: disable=F0401,E0611
-from numpy import isnan, empty, linspace # pylint: disable=F0401,E0611
+from numpy import empty, linspace # pylint: disable=F0401,E0611
 from numpy import array, concatenate # pylint: disable=F0401,E0611
 
 from openquake import shapes
@@ -60,14 +60,7 @@ def _compute_lrem(vuln_function, distribution=None):
 
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number if imls
-    lrem = empty((len(loss_ratios), len(vuln_function.imls)), float)
-
-    def fix_prob(prob):
-        """Fix probabilities for values close to zero."""
-        if prob < 0.00001: 
-            return 0.0
-        else: 
-            return prob
+    lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
 
     for idx, value in enumerate(vuln_function):
         iml, mean, cov = value
@@ -77,9 +70,8 @@ def _compute_lrem(vuln_function, distribution=None):
         sigma = sqrt(log((variance / mean ** 2.0) + 1.0))
         
         for row in xrange(len(lrem)):
-            lrem[row][idx] = fix_prob(
-                    distribution.sf(loss_ratios[row],
-                    sigma, scale=exp(mu)))
+            lrem[row][idx] = distribution.sf(loss_ratios[row],
+                    sigma, scale=exp(mu))
     
     return lrem
 
