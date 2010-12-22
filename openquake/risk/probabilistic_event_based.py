@@ -7,7 +7,7 @@ using the probabilistic event based approach.
 import math
 
 from numpy import zeros, array, linspace # pylint: disable=E1101, E0611
-from numpy import histogram, where # pylint: disable=E1101, E0611
+from numpy import histogram, where, mean # pylint: disable=E1101, E0611
 
 from openquake import kvs, shapes
 from openquake.parser import vulnerability
@@ -51,9 +51,9 @@ def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     # ruptures (earthquake) occured but probably due to distance,
     # magnitude and soil conditions, no ground motion was felt at that location
     if (loss_ratios <= 0.0).all():
-        return zeros(len(loss_ratios_range) - 1)
+        return zeros(loss_ratios_range.size - 1)
     
-    invalid_ratios = lambda ratios: len(where(array(ratios) <= 0.0)[0])
+    invalid_ratios = lambda ratios: where(array(ratios) <= 0.0)[0].size
 
     hist = histogram(loss_ratios, bins=loss_ratios_range)
     hist = hist[0][::-1].cumsum()[::-1]
@@ -75,12 +75,12 @@ def _compute_rates_of_exceedance(cum_histogram, tses):
 def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
     """Compute the probabilities of exceedance using the given rates of
     exceedance unsing the passed time span."""
+
     probs_of_exceedance = []
-    for idx in xrange(len(rates_of_exceedance)):
-        probs_of_exceedance.append(1 - math.exp(
-                (rates_of_exceedance[idx] * -1) \
-                *  time_span))
-    
+
+    for rate in rates_of_exceedance:
+        probs_of_exceedance.append(1 - math.exp((rate * -1) *  time_span))
+
     return array(probs_of_exceedance)
 
 
@@ -113,8 +113,9 @@ def _generate_curve(losses, probs_of_exceedance):
     is intended to be used internally."""
 
     data = []
-    for idx in xrange(len(losses) - 1):
-        mean_loss_ratio = (losses[idx] + losses[idx + 1]) / 2
+
+    for idx in xrange(losses.size - 1):
+        mean_loss_ratio = mean([losses[idx], losses[idx + 1]])
         data.append((mean_loss_ratio, probs_of_exceedance[idx]))
 
     return shapes.Curve(data)
