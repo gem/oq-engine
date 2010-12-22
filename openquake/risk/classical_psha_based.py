@@ -30,11 +30,12 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     """Compute the LREM * PoOs matrix."""
 
-    lrem_po = empty(array(lrem).shape)
+    lrem = array(lrem)
+    lrem_po = empty(lrem.shape)
 
     for idx, value in enumerate(vuln_function):
         prob_occ = hazard_curve.ordinate_for(value[0]) # iml
-        lrem_po[:, idx] = array(lrem)[:, idx] * prob_occ
+        lrem_po[:, idx] = lrem[:, idx] * prob_occ
 
     return lrem_po
 
@@ -64,12 +65,13 @@ def _compute_lrem(vuln_function, distribution=None):
 
     for idx, value in enumerate(vuln_function):
         iml, mean, cov = value
+
         stddev = cov * mean
         variance = stddev ** 2.0
         mu = log(mean ** 2.0 / sqrt(variance + mean ** 2.0) )
         sigma = sqrt(log((variance / mean ** 2.0) + 1.0))
         
-        for row in xrange(len(lrem)):
+        for row, value in enumerate(lrem):
             lrem[row][idx] = distribution.sf(loss_ratios[row],
                     sigma, scale=exp(mu))
     
@@ -88,9 +90,10 @@ def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
     """
 
     splitted_ratios = set()
-    for idx in xrange(len(loss_ratios) - 1):
-        splitted_ratios.update(
-                linspace(loss_ratios[idx],
-                loss_ratios[idx + 1], steps + 1))
+    loss_ratios = array(loss_ratios)
+
+    for idx in xrange(loss_ratios.size - 1):
+        splitted_ratios.update(linspace(
+                loss_ratios[idx], loss_ratios[idx + 1], steps + 1))
 
     return array(sorted(splitted_ratios))
