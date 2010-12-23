@@ -24,6 +24,7 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
     lrem = _compute_lrem(vuln_function)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
     loss_ratios = _generate_loss_ratios(vuln_function)
+
     return shapes.Curve(zip(loss_ratios, lrem_po.sum(axis=1)[:-1]))
 
 
@@ -79,10 +80,11 @@ def _compute_lrem(vuln_function, distribution=None):
 
 
 def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
-    """Split the loss ratios.
+    """Split the loss ratios, producing a new set of loss ratios.
 
-    steps is the number of steps we make to go from one loss
-    ratio to the other. For example, if we have [1.0, 2.0]:
+    Keyword arguments:
+    steps -- the number of steps we make to go from one loss
+    ratio to the next. For example, if we have [1.0, 2.0]:
 
         steps = 1 produces [1.0, 2.0]
         steps = 2 produces [1.0, 1.5, 2.0]
@@ -93,7 +95,7 @@ def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
     loss_ratios = array(loss_ratios)
 
     for idx in xrange(loss_ratios.size - 1):
-        splitted_ratios.update(linspace(
-                loss_ratios[idx], loss_ratios[idx + 1], steps + 1))
+        splitted_ratios.update(linspace(loss_ratios[idx],
+                loss_ratios[idx + 1], steps + 1))
 
     return array(sorted(splitted_ratios))

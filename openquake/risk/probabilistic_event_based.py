@@ -65,7 +65,8 @@ def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
 
 def _compute_rates_of_exceedance(cum_histogram, tses):
     """Compute the rates of exceedance for the given cumulative histogram
-    using the passed tses (tses is time span * number of realizations)."""
+    using the given tses (tses is time span * number of realizations)."""
+
     if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
     
@@ -74,14 +75,10 @@ def _compute_rates_of_exceedance(cum_histogram, tses):
 
 def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
     """Compute the probabilities of exceedance using the given rates of
-    exceedance unsing the passed time span."""
+    exceedance and the given time span."""
 
-    probs_of_exceedance = []
-
-    for rate in rates_of_exceedance:
-        probs_of_exceedance.append(1 - math.exp((rate * -1) *  time_span))
-
-    return array(probs_of_exceedance)
+    poe = lambda rate: 1 - math.exp((rate * -1) *  time_span)
+    return array([poe(rate) for rate in rates_of_exceedance])
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
@@ -109,16 +106,17 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
 
 def _generate_curve(losses, probs_of_exceedance):
     """Generate a loss ratio (or loss) curve, given a set of losses
-    and corresponding PoEs (Probabilities of Exceedance). This function
-    is intended to be used internally."""
+    and corresponding PoEs (Probabilities of Exceedance).
+    
+    This function is intended to be used internally.
+    """
 
-    data = []
+    mean_losses = []
 
     for idx in xrange(losses.size - 1):
-        mean_loss_ratio = mean([losses[idx], losses[idx + 1]])
-        data.append((mean_loss_ratio, probs_of_exceedance[idx]))
+        mean_losses.append(mean([losses[idx], losses[idx + 1]]))
 
-    return shapes.Curve(data)
+    return shapes.Curve(zip(mean_losses, probs_of_exceedance))
 
 
 def _asset_for_gmfs(job_id, gmfs_key):
