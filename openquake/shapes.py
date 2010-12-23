@@ -395,11 +395,10 @@ class Curve(object):
     def from_dict(cls, values):
         """Construct a curve from a dictionary.
         
-        The dictionary keys can be unordered and can be
+        The dictionary keys can be unordered and of
         whatever type can be converted to float with float().
-
         """
-        
+
         data = []
         
         for key, val in values.items():
@@ -411,21 +410,15 @@ class Curve(object):
         """Construct a curve from a sequence of tuples.
         
         The value on the first position of the tuple is the x value,
-        the value(s) on the second position is the y value(s).
-        
-        This class supports multiple y values for the same
-        x value, for example:
+        the value(s) on the second position is the y value(s). This class
+        supports multiple y values for the same x value, for example:
         
         Curve([(0.1, 1.0), (0.2, 2.0)]) # single y value
         Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.5))]) # multiple y values
         
-        or, with lists:
-        
+        You can also pass lists instead of tuples, like:
+
         Curve([(0.1, [1.0, 0.5]), (0.2, [2.0, 0.5])])
-        
-        The values can be in any order, for axample:
-        
-        Curve([(0.4, 1.0), (0.2, 2.0), (0.3, 2.0)])
         """
 
         # sort the values on x axis
@@ -525,7 +518,7 @@ class Curve(object):
 class VulnerabilityFunction(Curve):
     """This class represents a vulnerability fuction.
 
-    A vulnerability fuction has IMLs (Intensity Measure Levels) as
+    A vulnerability function has IMLs (Intensity Measure Levels) as
     X values and MLRs, CVs (Mean Loss Ratio and Coefficent of Variation)
     as Y values.
     """
