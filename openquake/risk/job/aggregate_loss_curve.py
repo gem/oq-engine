@@ -14,6 +14,7 @@ def filename(job_id):
     """Return the name of the generated file."""
     return "%s-aggregate-loss-curve.svg" % job_id
 
+
 def for_plotting(loss_curve):
     """Translate a loss curve into a dictionary compatible to
     the interface defined in CurvePlot.write."""
@@ -27,6 +28,7 @@ def for_plotting(loss_curve):
     data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
     
     return data
+
 
 class AggregateLossCurveMixin:
     """This class computes and plots an aggregate loss curve given a set

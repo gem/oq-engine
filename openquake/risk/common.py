@@ -42,9 +42,8 @@ def _compute_mid_mean_pe(loss_ratio_curve):
     loss_ratios = loss_ratio_curve.abscissae
     pes = loss_ratio_curve.ordinates
 
-    for idx in xrange(len(loss_ratios) - 1):
-        data.append((mean([loss_ratios[idx],
-                loss_ratios[idx + 1]]),
+    for idx in xrange(loss_ratios.size - 1):
+        data.append((mean([loss_ratios[idx], loss_ratios[idx + 1]]),
                 mean([pes[idx], pes[idx + 1]])))
 
     return shapes.Curve(data)
@@ -58,9 +57,9 @@ def _compute_mid_po(loss_ratio_pe_mid_curve):
     loss_ratios = loss_ratio_pe_mid_curve.abscissae
     pes = loss_ratio_pe_mid_curve.ordinates
 
-    for idx in xrange(len(loss_ratios) - 1):
-        data.append((mean([loss_ratios[idx],
-                loss_ratios[idx + 1]]), pes[idx] - pes[idx + 1]))
+    for idx in xrange(loss_ratios.size - 1):
+        data.append((mean([loss_ratios[idx], loss_ratios[idx + 1]]),
+                pes[idx] - pes[idx + 1]))
 
     return shapes.Curve(data)
 
@@ -68,7 +67,5 @@ def _compute_mid_po(loss_ratio_pe_mid_curve):
 def compute_mean_loss(curve):
     """Compute the mean loss (or loss ratio) for the given curve."""
 
-    mid_pos_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
-
-    return sum(i*j for i, j in zip(
-            mid_pos_curve.abscissae, mid_pos_curve.ordinates))
+    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
+    return sum(i*j for i, j in zip(mid_curve.abscissae, mid_curve.ordinates))
