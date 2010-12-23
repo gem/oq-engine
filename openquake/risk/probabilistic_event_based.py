@@ -40,9 +40,10 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     return array(loss_ratios)
 
 
-def _compute_loss_ratios_range(loss_ratios, num=DEFAULT_NUMBER_OF_SAMPLES):
+def _compute_loss_ratios_range(loss_ratios,
+        number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute the range of loss ratios used to build the loss ratio curve."""
-    return linspace(loss_ratios.min(), loss_ratios.max(), num)
+    return linspace(loss_ratios.min(), loss_ratios.max(), number_of_samples)
 
 
 def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
@@ -82,8 +83,8 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
-        num=DEFAULT_NUMBER_OF_SAMPLES):
-    """Compute a loss ratio curve using the probailistic event approach.
+        number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
+    """Compute a loss ratio curve using the probabilistic event based approach.
     
     A loss ratio curve is a function that has loss ratios as X values
     and PoEs (Probabilities of Exceendance) as Y values.
@@ -93,8 +94,11 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     if not ground_motion_field_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
-    loss_ratios = _compute_loss_ratios(vuln_function, ground_motion_field_set)
-    loss_ratios_range = _compute_loss_ratios_range(loss_ratios, num)
+    loss_ratios = _compute_loss_ratios(
+            vuln_function, ground_motion_field_set)
+
+    loss_ratios_range = _compute_loss_ratios_range(
+            loss_ratios, number_of_samples)
 
     probs_of_exceedance = _compute_probs_of_exceedance(
             _compute_rates_of_exceedance(_compute_cumulative_histogram(
@@ -195,14 +199,14 @@ class AggregateLossCurve(object):
         else: # if needed because numpy returns a scalar if the list is empty
             return array(self.distribution).sum(axis=0)
 
-    def compute(self, num=DEFAULT_NUMBER_OF_SAMPLES):
+    def compute(self, number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
         """Compute the aggregate loss curve."""
         
         if self.empty:
             return shapes.EMPTY_CURVE
 
         losses = self.losses
-        loss_range = _compute_loss_ratios_range(losses, num)
+        loss_range = _compute_loss_ratios_range(losses, number_of_samples)
 
         probs_of_exceedance = _compute_probs_of_exceedance(
                 _compute_rates_of_exceedance(_compute_cumulative_histogram(
