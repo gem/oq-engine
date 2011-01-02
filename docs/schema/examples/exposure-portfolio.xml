@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" 
+<nrml xmlns:gml="http://www.opengis.net/gml" 
       xmlns="http://openquake.org/xmlns/nrml/0.1">
     <!-- this is a proposal for NRML refactoring 
          fab, 2010-12-13 -->
@@ -8,53 +8,47 @@
         
         <!-- for attributes assetType and lossType, classification from the
              Taxonomy and Ontology working group is needed -->
-        <exposureList portfolioID="PAV01" assetType="buildings" lossType="economical loss">
-            <!-- exposureList is a gml:FeatureCollection -->
+        <exposureList gml:id="PAV01" assetCategory="buildings" lossCategory="economical loss">
+            <!-- exposureList is a gml:Feature -->
             
             <portfolioDescription>Collection of existing building in downtown Pavia</portfolioDescription>
             
-            <gml:featureMembers>
+            <assetDefinition gml:id="asset_01">
+                <!-- assetDefinition is a gml:Feature -->
+                
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>9.15000 45.16667</gml:pos>
+                </gml:Point>
+                
+                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
+                <structureCategory>RC-LR-PC</structureCategory>
+                <assetValue unit="EUR">150000</assetValue>
+            </assetDefinition>
             
-                <asset assetID="01">
-                    <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
-                    <vulnerabilityFunctionRef>RC/DMRF-D/LR</vulnerabilityFunctionRef>
-                    <structureType>RC-LR-PC</structureType>
-                    <assetValue unit="EUR">150000</assetValue>
-                    
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>9.15000 45.16667</gml:pos>
-                        </gml:Point>
-                    </gml:position>
-                </asset>
+            <assetDefinition gml:id="asset_02">
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>9.15333 45.12200</gml:pos>
+                </gml:Point>
                 
-                <asset assetID="02">
-                    <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
-                    <vulnerabilityFunctionRef>RC/DMRF-D/LR</vulnerabilityFunctionRef>
-                    <structureType>RC-LR-PC</structureType>
-                    <assetValue unit="EUR">250000</assetValue>
-                    
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>9.15333 45.12200</gml:pos>
-                        </gml:Point>
-                    </gml:position>
-                </asset>
+                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
+                <structureCategory>RC-LR-PC</structureCategory>
+                <assetValue unit="EUR">250000</assetValue>
+            </assetDefinition>
+            
+            <assetDefinition gml:id="asset_03">
+            
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>9.14777 45.17999</gml:pos>
+                </gml:Point>
                 
-                <asset assetID="03">
-                    <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
-                    <vulnerabilityFunctionRef>RC/DMRF-D/LR</vulnerabilityFunctionRef>
-                    <structureType>RC-LR-PC</structureType>
-                    <assetValue unit="EUR">500000</assetValue>
-                    
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>9.14777 45.17999</gml:pos>
-                        </gml:Point>
-                    </gml:position>
-                </asset>
+                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
+                <structureCategory>RC-LR-PC</structureCategory>
+                <assetValue unit="EUR">500000</assetValue>
+            </assetDefinition>
 
-            </gml:featureMembers>
         </exposureList>
     </exposurePortfolio>
 </nrml>

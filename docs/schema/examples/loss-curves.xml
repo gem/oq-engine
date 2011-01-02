@@ -1,45 +1,47 @@
 <?xml version="1.0"?>
-<nrml xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" 
+<nrml xmlns:gml="http://www.opengis.net/gml" 
       xmlns="http://openquake.org/xmlns/nrml/0.1">
     <!-- this is a proposal for NRML refactoring 
          fab, 2010-12-13 -->
     <riskResult>
         <config>Config file details go here</config>
         
-        <lossCurveList>
-            <!-- lossCurveList is a gml:FeatureCollection -->
+        <lossCurveList gml:id="lossCurveList_1">
+            <!-- lossCurveList is a gml:FeatureCollection
+                  profile: Feature -->
             
             <!-- Note: lossCurve does not have a "common" setting of loss values
                  outside of featureMembers -->
             
-            <gml:featureMembers>
+<!--             <gml:featureMembers> -->
                 <!-- asset is a gml:Feature -->
-                <asset assetID="asset_1">
+                <asset gml:id="asset_1">
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 30.0</gml:pos>
+                    </gml:Point>
+                        
                     <lossCurve>
                         <loss vf="vf_1">0.0 100.0 200.0</loss>
                         <loss vf="vf_2">0.0 200.0 400.0</loss>
                         <poE vf="vf_1">0.4 0.2 0.1</poE>
                         <poE vf="vf_2">0.2 0.1 0.05</poE>
                     </lossCurve>
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>-117.0 30.0</gml:pos>
-                        </gml:Point>
-                    </gml:position> 
+                        
                 </asset>
 
-                <asset assetID="asset_2">
+                <asset gml:id="asset_2">
+<!--                     <gml:position> -->
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-117.0 35.0</gml:pos>
+                        </gml:Point>
+<!--                     </gml:position> -->
                     <lossCurve>
                         <loss vf="vf_3">0.0 1000.0 2000.0</loss>
                         <poE vf="vf_3">0.6 0.3 0.1</poE>
                     </lossCurve>
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>-117.0 35.0</gml:pos>
-                        </gml:Point>
-                    </gml:position> 
+                        
                 </asset>
-            </gml:featureMembers>
+<!--             </gml:featureMembers> -->
             
         </lossCurveList>
     </riskResult>
