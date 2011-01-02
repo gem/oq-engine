@@ -1,15 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://openquake.org/xmlns/nrml/0.1"
-	xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
-	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+           xmlns="http://openquake.org/xmlns/nrml/0.1"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.1"
+           elementFormDefault="qualified">
+
 	<!-- import -->
-	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+	<!-- <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> -->
+    <!-- <xs:import namespace="http://www.opengis.net/gml/3.2" schemaLocation="./gml-3.2.1/gml.xsd"/> -->
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
 
 	<xs:include schemaLocation="nrml_common.xsd"/>
-
 	<xs:include schemaLocation="nrml_seismic.xsd"/>
+	
+	
 	<xs:element name="HazardCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
 	<xs:element name="HazardCurvePGA" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
 	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>

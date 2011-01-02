@@ -1,14 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://openquake.org/xmlns/nrml/0.1" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0"
-	xmlns:nrml="http://openquake.org/xmlns/nrml/0.1">
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+           xmlns="http://openquake.org/xmlns/nrml/0.1"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.1"
+           elementFormDefault="qualified">
 
 	<!-- -->
-	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
-	<!-- -->
+	<!-- <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> -->
+    <!-- <xs:import namespace="http://www.opengis.net/gml/3.2" schemaLocation="./gml-3.2.1/gml.xsd"/> -->
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+
+    <!-- ============================================================= -->
+	<!-- REMOVE-->
 	
-	<xs:complexType name="AssetType">
+    <!-- removed: xs:complexType name="CurveListType" -->
+
+    <!--
+    <xs:complexType name="CurveType">
+        <xs:all>
+            <xs:element ref="nrml:Values"/>
+            <xs:element minOccurs="0" ref="gml:pos"/>
+        </xs:all>
+        <xs:anyAttribute namespace="##any" processContents="lax"/>
+    </xs:complexType>
+
+    <xs:element name="Curve" type="nrml:CurveType"/>
+
+    <xs:element name="LossRatios" type="gml:doubleList"/>
+    <xs:element name="Values" type="gml:doubleList"/>
+    
+    <xs:element name="IMLValues" type="gml:doubleList"/>
+    
+    <xs:complexType name="CommonType">
+        <xs:sequence maxOccurs="unbounded" minOccurs="0">
+            <xs:any namespace="##any"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:element name="Common" type="nrml:CommonType"/>
+    
+    -->
+
+    <!-- ============================================================= -->
+	<!-- ASSET -->
+
+    <!--
+    <xs:complexType name="AssetType">
 	<xs:all>
 		<xs:element ref="nrml:AssetID"/>
 		<xs:element ref="nrml:StructureType"/>
@@ -30,34 +68,17 @@
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	
-	
-	<xs:complexType name="CurveType">
-		<xs:all>
-			<xs:element ref="nrml:Values"/>
-			<xs:element minOccurs="0" ref="gml:pos"/>
-		</xs:all>
-		<xs:anyAttribute namespace="##any" processContents="lax"/>
-	</xs:complexType>
-
-	<xs:element name="Curve" type="nrml:CurveType"/>
-	
-    <xs:complexType name="CommonType">
-        <xs:sequence maxOccurs="unbounded" minOccurs="0">
-    		<xs:any namespace="##any"/>
-        </xs:sequence>
-    </xs:complexType>
-    <xs:element name="Common" type="nrml:CommonType"/>
+    -->
     
-	<xs:complexType name="CurveListType">
-		<xs:sequence>
-            <xs:element ref="nrml:Common" minOccurs="0"/>
-    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
-    				<xs:element ref="nrml:Curve"/>
-    		</xs:sequence>
-    	</xs:sequence>
-		<xs:anyAttribute namespace="##any" processContents="lax"/>
-	</xs:complexType>
-	
+
+	<!-- ============================================================= -->
+
+    <xs:element name="config"/>
+    
+	<!-- ============================================================= -->
+    <!-- VULNERABILITY -->
+
+    <!--
 	<xs:complexType name="ModelType">
 		<xs:sequence>
 			<xs:element ref="nrml:LossRatios"/>
@@ -78,26 +99,37 @@
 		<xs:anyAttribute namespace="##any" processContents="lax"/>
 	</xs:complexType>
 	
-	<xs:element name="Config"/>
+    <xs:element name="CoefficientsVariation" type="gml:doubleList"/>
+    -->
+    
+	<!-- ============================================================= -->
 
-	<xs:element name="AssetID" type="xs:string"/>
-	<xs:element name="AssetValue" type="xs:double"/>
-	<xs:element name="CoefficientsVariation" type="gml:doubleList"/>
-	<xs:element name="IMLValues" type="gml:doubleList"/>
-	<xs:element name="IMT">
-		<xs:simpleType>
-			<xs:restriction base="xs:string">
-				<xs:enumeration value="PGA"/>
-				<xs:enumeration value="PGD"/>
-				<xs:enumeration value="PGV"/>
-				<xs:enumeration value="SA"/>
-				<xs:enumeration value="MMI"/>
-			</xs:restriction>
-		</xs:simpleType>
-	</xs:element>
-	<xs:element name="LossRatios" type="gml:doubleList"/>
-	<xs:element name="StructureType" type="xs:string"/>
-	<xs:element name="Values" type="gml:doubleList"/>
+    <!-- CDATA doubleList, attribute IMT (mandatory) -->
+    <xs:complexType name="IMLType">
+        <xs:simpleContent>
+            <xs:extension base="gml:doubleList">
+                <xs:attribute name="IMT" type="IMTType"  use="required"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:simpleType name="IMTType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PGA"/>
+            <xs:enumeration value="PGV"/>
+            <xs:enumeration value="PGD"/>
+            <xs:enumeration value="SA"/>
+            <xs:enumeration value="MMI"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="ProbabilisticDistributionType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="LN"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <!-- ============================================================= -->
 
 	<xs:complexType name="EvenlyDiscretizedDistType">
 		<xs:annotation>
@@ -186,4 +218,13 @@
 			<xs:element name="YValues" type="gml:doubleList"/>
 		</xs:all>
 	</xs:complexType>
+	
+    <!-- ============================================================= -->
+
+	<xs:simpleType name="NonNegativeDoubleType">
+		<xs:restriction base="xs:double">
+			<xs:minInclusive value="0.0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
 </xs:schema>
