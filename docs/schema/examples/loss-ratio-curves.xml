@@ -2,45 +2,48 @@
 <nrml xmlns:gml="http://www.opengis.net/gml" 
       xmlns="http://openquake.org/xmlns/nrml/0.1">
       
-    <!-- http://www.opengis.net/gml/profile/sfgml/1.0 -->
-      
     <!-- this is a proposal for NRML refactoring 
          fab, 2010-12-13 -->
     <riskResult>
         <config>Config file details go here</config>
         
         <lossRatioCurveList gml:id="lossRatioCurveList_1">
+        
             <asset gml:id="asset_1">
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-117.0 30.0</gml:pos>
                 </gml:Point>
-                <lossRatioCurve>
-                    <poE vf="vf_1">0.4 0.2 0.1</poE>
-                    <poE vf="vf_2">0.2 0.1 0.05</poE>
-                </lossRatioCurve>
+                <lossRatioCurves>
+                    <lossRatioCurve vf="vf_1">
+                        <lossRatio>0.0 0.2 0.4</lossRatio>
+                        <poE>0.4 0.2 0.1</poE>
+                    </lossRatioCurve>
+                    <lossRatioCurve vf="vf_2">
+                        <lossRatio>0.0 0.5 0.8</lossRatio>
+                        <poE>0.2 0.1 0.05</poE>
+                    </lossRatioCurve>
+                </lossRatioCurves>
             </asset>
 
             <asset gml:id="asset_2">
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-117.0 35.0</gml:pos>
                 </gml:Point>
-                <lossRatioCurve>
-                    <!-- explicit lossRatio elements in lossRatioCurve possible,
-                            overrides lossRatio settings from outside of
-                            featureMembers -->
-                    <lossRatio vf="vf_3">0.0 0.0001 0.0002</lossRatio>
-                    <poE vf="vf_3">0.6 0.3 0.1</poE>
-                </lossRatioCurve>
+                <lossRatioCurves>
+                    <lossRatioCurve vf="vf_3">
+                        <lossRatio>0.0 0.0001 0.0002</lossRatio>
+                        <poE>0.6 0.3 0.1</poE>
+                    </lossRatioCurve>
+                    
+                    <!-- loss ratio curve with no explicit vuln function, should this be allowed? 
+                         Could be useful to "just plot" a loss ratio curve --->
+                    <lossRatioCurve>
+                        <lossRatio>0.0 0.0004 0.0008</lossRatio>
+                        <poE>0.5 0.2 0.05</poE>
+                    </lossRatioCurve>
+                </lossRatioCurves>
             </asset>
-            
-            <!-- Note: "common" element has been removed.
-                 Since these lossRatio elements are outside the featureMembers, 
-                 it's implicit that they are "common" to all assets
-                 Note: the elements have to go after the featureMembers,
-                 because of the type extension -->
-            <lossRatio vf="vf_1">0.0 0.2 0.4</lossRatio>
-            <lossRatio vf="vf_2">0.0 0.5 0.8</lossRatio>
-            
+
         </lossRatioCurveList>
     </riskResult>
 </nrml>
