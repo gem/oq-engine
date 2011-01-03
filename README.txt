@@ -1,6 +1,15 @@
 OpenQuake System
 ==============
 
+Until we get this updated, you should please follow the instructions here for installation: 
+http://openquake.org/documentation/installation/
+
+
+
+
+
+THE BELOW INSTRUCTIONS ARE DEPRECATED:
+
 Dependencies
 ------------
 
