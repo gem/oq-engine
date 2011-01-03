@@ -6,11 +6,11 @@
     <riskResult>
         <config>Config file details go here</config>
         
-        <lossCurveList>
+        <lossCurveList gml:id="lossCurveList_1">
             <!-- lossCurveList is a gml:Feature -->
             
             <!-- asset is a gml:Feature -->
-            <asset assetID="asset_1">
+            <asset gml:id="asset_1">
                 
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-117.0 30.0</gml:pos>
@@ -23,7 +23,7 @@
                 </lossCurves>
             </asset>
 
-            <asset assetID="asset_2">
+            <asset gml:id="asset_2">
                 
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-117.0 35.0</gml:pos>
@@ -36,7 +36,7 @@
                 </lossCurves>
             </asset>
             
-            <asset assetID="asset_3">
+            <asset gml:id="asset_3">
                 
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-117.0 40.0</gml:pos>
@@ -49,7 +49,7 @@
                 </lossCurves>
             </asset>
             
-            <asset assetID="asset_4">
+            <asset gml:id="asset_4">
                 
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-116.0 30.0</gml:pos>
@@ -62,7 +62,7 @@
                 </lossCurves>
             </asset>
 
-            <asset assetID="asset_5">
+            <asset gml:id="asset_5">
                 
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-116.0 35.0</gml:pos>
@@ -75,7 +75,7 @@
                 </lossCurves>
             </asset>
             
-            <asset assetID="asset_6">
+            <asset gml:id="asset_6">
                 
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-116.0 40.0</gml:pos>
