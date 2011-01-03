@@ -1,5 +1,14 @@
-OpenGEM System
+OpenQuake System
 ==============
+
+Until we get this updated, you should please follow the instructions here for installation: 
+http://openquake.org/documentation/installation/
+
+
+
+
+
+THE BELOW INSTRUCTIONS ARE DEPRECATED:
 
 Dependencies
 ------------
@@ -12,8 +21,11 @@ For the most part the Python packages in here can be installed using `pip`
  * gfortran
  * python-numpy
  * python-scipy
- * libmemcache-dev
- 
+
+Is it recommended that you install the following Python packages with
+easy_install (http://pypi.python.org/pypi/setuptools).
+
+ * matplotlib
 
 On OS X a good way to install the pieces that are not Python (if you don't
 already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebrew/
@@ -23,7 +35,6 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
  * sudo pip install gdal (FAILS, so):
  * Use the package from http://www.kyngchaos.com/software:frameworks
 * osgeo (pip install)
-* eventlet
 * jpype
 * lxml
 * PyYAML

@@ -7,7 +7,7 @@ import unittest
 from openquake import shapes
 from openquake import test
 from openquake import job
-from openquake.job import Job, EXPOSURE, INPUT_REGION
+from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
 from openquake.job.mixins import Mixin
 from openquake.risk.job import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
@@ -39,6 +39,27 @@ class JobTestCase(unittest.TestCase):
                 os.remove(cfg)
             except OSError, e:
                 pass
+
+    def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
+        class call_logger(object):
+            def __init__(self, method):
+                self.called = False
+                self.method = method
+
+            def __call__(self, *args, **kwargs):
+                try:
+                    return self.method(*args, **kwargs)
+                finally:
+                    self.called = True
+
+        good_defaults = Job._Job__defaults
+        Job._Job__defaults = ["/tmp/sbfalds"]
+        LOG.warning = call_logger(LOG.warning)
+        self.assertFalse(LOG.warning.called)
+        Job.default_configs()
+        self.assertTrue(LOG.warning.called)
+        good_defaults = Job._Job__defaults
+        Job.__defaults = good_defaults
 
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 

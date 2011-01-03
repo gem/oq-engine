@@ -14,22 +14,38 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Random;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.gem.engine.CommandLineCalculator;
 import org.gem.engine.hazard.GemComputeHazardLogicTree;
 
+/**
+ * Class for logic tree definition. A logic tree is defined in terms of a list
+ * of {@link LogicTreeBranchingLevel} objects (each containing one or more
+ * {@link LogicTreeBranch} objects (each defining an uncertainty model)) plus a
+ * map storing end-branch models (HashMap<String, Element>). A name can be also
+ * provided.
+ */
 public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
+
+    private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
 
     private final ArrayList<LogicTreeBranchingLevel> branLevLst;
     protected HashMap<String, Element> ebMap;
-    private static String modelName;
+    private String modelName;
 
-    private final Boolean D = false;
-
+    /**
+     * Creates and empty logic tree
+     */
     public LogicTree() {
         this.branLevLst = new ArrayList<LogicTreeBranchingLevel>();
         this.ebMap = new HashMap<String, Element>();
         this.modelName = "";
     }
 
+    /**
+     * Creates logic tree from file
+     */
     public LogicTree(String fileName) throws IOException,
             ClassNotFoundException {
 
@@ -40,9 +56,9 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
             // f_in = new FileInputStream(fileName);
             f_in = new FileInputStream(file.getPath());
         } catch (FileNotFoundException e) {
-            System.out.println(file.getPath() + " not found!!");
-            e.printStackTrace();
-            System.exit(0);
+            String msg = file.getPath() + " not found!!";
+            logger.info(msg);
+            throw new RuntimeException(msg);
         }
 
         // Read object using ObjectInputStream.
@@ -60,56 +76,56 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
     }
 
     /**
-	 * 
-	 */
+     * Adds branching level
+     */
     @Override
     public void addBranchingLevel(LogicTreeBranchingLevel branLev) {
         this.branLevLst.add(branLev);
     }
 
     /**
-	 * 
-	 */
+     * Adds end branch model
+     */
     @Override
     public void addEBMapping(String str, Element obj) {
         this.ebMap.put(str, obj);
     }
 
     /**
-	 * 
-	 */
+     * Gets list of branching levels
+     */
     @Override
     public ArrayList<LogicTreeBranchingLevel> getBranchingLevelsList() {
         return this.branLevLst;
     }
 
     /**
-	 * 
-	 */
+     * Gets branching level of index idx
+     */
     @Override
     public LogicTreeBranchingLevel getBranchingLevel(int idx) {
         return this.branLevLst.get(idx);
     }
 
     /**
-	 * 
-	 */
+     * Sets logic tree name
+     */
     @Override
     public void setModelName(String str) {
         this.modelName = str;
     }
 
     /**
-	 * 
-	 */
+     * Gets logic tree name
+     */
     @Override
     public String getModelName() {
         return this.modelName;
     }
 
     /**
-	 * 
-	 */
+     * Gets weight for end-branch model specified by string lab
+     */
     @Override
     public double getWeight(String lab) {
         String[] strarr = lab.split("_");
@@ -120,8 +136,9 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
     }
 
     /**
-	 * 
-	 */
+     * Gets total weight (product of weights) for end-branch model specified by
+     * string lab
+     */
     @Override
     public double getTotWeight(String lab) {
         double weight = 1.0;
@@ -135,16 +152,25 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
         return weight;
     }
 
+    /**
+     * Returns end-branch models map
+     */
     @Override
     public HashMap<String, Element> getEBMap() {
         return ebMap;
     }
 
+    /**
+     * Iterator over end-branch models
+     */
     @Override
     public Iterator<Element> iterator() {
         return ebMap.values().iterator();
     }
 
+    /**
+     * Serialize Logic Tree to file
+     */
     @Override
     public void saveGemLogicTreeModel(String fileName) throws Exception {
 
@@ -170,16 +196,15 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
         // total number of branching levels
         int numBranchingLevels = this.branLevLst.size();
 
-        System.out
-                .println("Total number of branching levels in the logic tree: "
-                        + numBranchingLevels + "\n");
+        logger.info("Total number of branching levels in the logic tree: "
+                + numBranchingLevels + "\n");
         // loop over branching levels
         for (int i = 0; i < numBranchingLevels; i++) {
 
             LogicTreeBranchingLevel braLev = this.branLevLst.get(i);
-            System.out.println("Branching level: " + braLev.getLevel()
-                    + ", label: " + braLev.getBranchingLabel()
-                    + ", appliesTo: " + braLev.getAppliesTo());
+            logger.info("Branching level: " + braLev.getLevel() + ", label: "
+                    + braLev.getBranchingLabel() + ", appliesTo: "
+                    + braLev.getAppliesTo());
 
             // number of branches
             int numBranches = braLev.getBranchList().size();
@@ -188,21 +213,20 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
 
                 LogicTreeBranch bra = braLev.getBranch(j);
 
-                System.out.println("Branch number: " + bra.getRelativeID()
+                logger.info("Branch number: " + bra.getRelativeID()
                         + ", label: " + bra.getBranchingValue() + ", weight: "
                         + bra.getWeight());
                 if (bra.getNameInputFile() != null)
-                    System.out.println("Associated file: "
-                            + bra.getNameInputFile());
+                    logger.info("Associated file: " + bra.getNameInputFile());
                 if (bra.getRule() != null) {
-                    System.out.println("Associated rule: "
+                    logger.info("Associated rule: "
                             + bra.getRule().getRuleName());
-                    System.out.println("Associated uncertainty value: "
+                    logger.info("Associated uncertainty value: "
                             + bra.getRule().getVal());
                 }
 
             }
-            System.out.println("\n\n");
+            logger.info("\n\n");
 
         }
     }
@@ -232,8 +256,7 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
 
             x[i] = b.getRelativeID();
             p[i] = b.getWeight();
-            if (D)
-                System.out.println("label, prob: " + x[i] + " " + p[i]);
+            logger.debug("label, prob: " + x[i] + " " + p[i]);
 
             i = i + 1;
 
@@ -248,16 +271,13 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
             for (int j = 0; j <= i; j++)
                 cdf[i] = cdf[i] + p[j];
         }
-        if (D)
-            System.out.println("Cumulative distribution:");
-        if (D)
-            for (i = 0; i < cdf.length; i++)
-                System.out.println(cdf[i]);
+        logger.debug("Cumulative distribution:");
+        for (i = 0; i < cdf.length; i++)
+            logger.debug(cdf[i]);
 
         // generate uniform random number between 0 and 1
         double rand = rn.nextDouble();
-        if (D)
-            System.out.println("Random number: " + rand);
+        logger.debug("Random number: " + rand);
 
         // loop over probabilities
         for (int j = 0; j < p.length; j++) {
@@ -270,6 +290,18 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
         }// end loop over probabilities
 
         return sample;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+
+        if (!(obj instanceof LogicTree)) {
+            return false;
+        }
+
+        LogicTree other = (LogicTree) obj;
+
+        return branLevLst.equals(other.branLevLst);
     }
 
 }
