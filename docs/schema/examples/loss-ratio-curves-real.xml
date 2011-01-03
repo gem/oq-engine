@@ -49,7 +49,7 @@
             <asset gml:id="asset_4">
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-116.0 30.0</gml:pos>
-                </gml:Point>$
+                </gml:Point>
                 <lossRatioCurves>
                     <lossRatioCurve vf="CL1">
                         <lossRatio>0.0248    0.0743    0.1238    0.1733    0.2228    0.2722    0.3217    0.3712    0.4208    0.4703    0.5197    0.5693    0.6187    0.6683    0.7177    0.7672    0.8167 0.8662    0.9157    0.9652</lossRatio>
