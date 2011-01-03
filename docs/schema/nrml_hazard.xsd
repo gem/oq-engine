@@ -26,6 +26,7 @@
 	<xs:element name="ArbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType"
 		substitutionGroup="nrml:Rupture"/>
 
+
 	<xs:simpleType name="GroundMotionType">
 		<xs:restriction base="xs:double"/>
 	</xs:simpleType>
@@ -112,7 +113,7 @@
 			<xs:documentation>Describes a set of Ground Motion Fields</xs:documentation>
 		</xs:annotation>
 		<xs:sequence>
-			<xs:element ref="nrml:Rupture"/>
+			<xs:element ref="nrml:rupture"/>
 			<xs:element name="GMPEParameters" type="nrml:GMPEParametersType"/>
 			<xs:element maxOccurs="unbounded" name="field" type="nrml:GroundMotionFieldType"/>
 		</xs:sequence>

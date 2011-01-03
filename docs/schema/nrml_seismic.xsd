@@ -14,7 +14,7 @@
     <!-- import -->
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
     <xs:include schemaLocation="nrml_common.xsd"/>
-    
+
     <!-- ============================================================= -->
 
     <xs:simpleType name="StrikeType">
@@ -258,24 +258,19 @@
     </xs:complexType>
 
     <xs:complexType name="LogicTreeType">
-        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+
+        <xs:sequence maxOccurs="unbounded">
             <xs:element name="logicTreeBranchSet" type="nrml:LogicTreeBranchSetType"/>
         </xs:sequence>
+        <xs:attribute name="tectonicRegion" type="nrml:TectonicRegionType" use="optional"/>
     </xs:complexType>
-
-    <xs:complexType name="GmpeLogicTreeType">
-        <xs:sequence minOccurs="1" maxOccurs="unbounded">
-            <xs:element name="logicTree" type="nrml:LogicTreeType"/>
-            <xs:element name="tectonicRegion" type="nrml:TectonicRegionType"/>
+    
+    <xs:complexType name="LogicTreeSetType">
+        <xs:sequence maxOccurs="unbounded">
+            <xs:element name="logicTree" type="nrml:LogicTreeType"></xs:element>
         </xs:sequence>
     </xs:complexType>
-
-    <xs:element name="logicTree" abstract="true"/>
-    <xs:element name="sourceModelLogicTree" type="nrml:LogicTreeType"
-        substitutionGroup="nrml:logicTree"/>
-    <xs:element name="gmpeLogicTree" type="nrml:GmpeLogicTreeType"
-        substitutionGroup="nrml:logicTree"/>
-
-
+    
+    <xs:element name="logicTreeSet" type="nrml:LogicTreeSetType"></xs:element>
 
 </xs:schema>

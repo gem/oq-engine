@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<project name="GEM Java Tests" default="junit-tests-with-coverage" basedir=".">
+<project name="GEM Java Tests" default="help" basedir=".">
 
 	<property name="lib.dir" value="lib" />
 	<property name="src.dir" value="java" />
@@ -17,28 +17,34 @@
 		<fileset dir="${lib.dir}" includes="*.jar" />
 	</path>
 
-	<target name="clean">
+    <target name="help" description="Display detailed usage information">
+        <exec executable="ant">
+            <arg value="-p"/>
+        </exec>
+    </target>
+
+	<target name="clean" description="Clean build directories">
 		<delete dir="${dist.dir}" />
 		<delete dir="${build.dir}" />
 	</target>
 
-	<target name="javadoc">
+	<target name="javadoc" description="Build the documentation for the Java classes">
 		<javadoc classpathref="dependencies" packagenames="org.gem.engine.*" sourcepath="${src.dir}" destdir="${javadoc.report.dir}" author="true" version="true" use="true" windowtitle="OpenGEM Java Core API" />
 	</target>
 
-	<target name="compile-sources" depends="clean">
+	<target name="compile-sources" depends="clean" description="Compile the Java classes">
 		<mkdir dir="${classes.dir}" />
 		<javac fork="no" debug="true" destdir="${classes.dir}" classpathref="dependencies" includes="org/**/*.java " srcdir="${src.dir}" />
 	</target>
 
-	<target name="build-openquake-jar" depends="compile-sources">
+	<target name="build-openquake-jar" depends="compile-sources" description="Build the OpenQuake jar">
 		<mkdir dir="${dist.dir}" />
 		<jar destfile="${dist.dir}/openquake-minimal.jar" basedir="${classes.dir}" includes="**/*.class" />
 	</target>
 
 	<taskdef resource="emma_ant.properties" classpathref="dependencies" />
 	
-	<target name="junit-tests-with-coverage" depends="compile-sources">
+	<target name="junit-tests-with-coverage" depends="compile-sources" description="Run the test suite and check the code coverage">
 		<mkdir dir="${coverage.dir}" />
 		<mkdir dir="${tests.report.dir}" />
 

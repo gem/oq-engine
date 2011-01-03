@@ -4,6 +4,12 @@ from fabric.state import output as fabric_output
 
 CELLAR_PATH = "/usr/local/Cellar"
 PYTHON_PATH = "%s/python/2.6.5" % CELLAR_PATH
+SITE_PKG_PATH = "~/.virtualenvs/openquake/lib/python2.6/site-packages/"
+
+VIRTUALENV_PACKAGES = ["lxml", "pyyaml", "sphinx", "shapely",
+    "python-gflags", "guppy",
+    "libLAS", "numpy", "scipy", "celery==2.0.3",
+    "nose", "django", "redis"]
 
 """
 This fab file assists with setting up a developer's environment.
@@ -17,6 +23,20 @@ developer already has dependencies installed)
 
 
 def bootstrap():
+    """Prior to running this bootstrap, you may need to perform a few 
+    prerequisite steps. See platform notes below.
+
+    Mac OS X:
+        * None yet determined
+
+    Ubuntu (10.04):
+        * sudo apt-get update
+        * sudo apt-get install python-setuptools build-essential python-dev postgresql-8.4
+        * sudo easy_install fabric
+        * sudo easy_install pip
+    """
+    _assert_we_can_remote_login()
+    
     def _detect_os():
         platforms = {'Darwin': _bootstrap_osx, 'Linux': _bootstrap_linux}
         return platforms.get(run('uname'), _bootstrap_other)
@@ -29,6 +49,9 @@ def virtualenv():
     """This method installs virtualenv, virtualenvwrapper, and pre-built
 virtual environment tar ball specific to the platform.
     """
+    
+    _assert_we_can_remote_login()
+ 
     def _detect_os():
         platforms = {'Darwin': _virtual_env_osx, 'Linux': _virtual_env_linux}
         return platforms.get(run('uname'), _virtual_env_other)
@@ -110,6 +133,7 @@ def _distro_is_ubuntu():
 
 
 def _bootstrap_linux():
+ 
     def _detect_distro():
         if _distro_is_ubuntu():
             version = run("lsb_release -a | grep Release | sed -e 's/Release: *//'")
@@ -124,21 +148,42 @@ def _bootstrap_linux():
             raise "I don't know this distro."
 
     def _bootstrap_ubuntu():
-        apt_packages = ["build-essential", "python2.6", "python2.6-dev", 
-                        "python-setuptools", "python-pip", "gfortran", 
-                        "rabbitmq-server", "memcached", "libmemcache-dev", 
-                        "libmemcached-dev", "postgresql", "postgis",
+        
+        # we need easy_install
+        if not run('which easy_install'):
+            print "easy_install is required, but could not be found."
+            print "Visit http://pypi.python.org/pypi/setuptools for more info."
+            sys.exit()
+        apt_packages = ["default-jdk", "build-essential", "python-matplotlib",
+                        "erlang-inets", "erlang-os-mon", "erlang-nox",
+                        "python2.6-dev", "python-setuptools", "python-pip",
+                        "gfortran", "postgresql", "postgis", "python2.6",
                         "libxml2-dev", "libxslt-dev", "libblas-dev",
-                        "liblapack-dev", "pylint", "unzip", "apt-file"] 
-        gdal_packages = ["gdal-bin", "libgdal1-dev", "python-gdal"]
+                        "liblapack-dev", "pylint", "unzip", "apt-file"]
+        gdal_packages = ["gdal-bin", "libgeos-dev", "libgdal1-dev", "python-gdal"]
         pip_packages = ["virtualenv", "virtualenvwrapper",]
         virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", 
-                               "eventlet", "python-gflags", "guppy", 
+                               "python-gflags", "guppy", 
                                "libLAS", "numpy", "scipy", "celery",
-                               "nose", "django", "ordereddict", "stdeb"] 
+                               "nose", "django", "stdeb"] 
 
-        _apt_install(" ".join(apt_packages)) 
+        _apt_install(" ".join(apt_packages))
         _pip_install(" ".join(pip_packages))
+
+        # For Ubuntu 10.04, we need to install redis-server and rabbitmq-server
+        # from src/deb packages to get the versions we want
+        _ubuntu_install_rabbit()
+        _ubuntu_install_redis()
+
+        # Build the virtual environment
+        with cd("~"):
+            if not ls(".virtualenvs"):
+                run("mkdir -p .virtualenvs")
+                run("%s; mkvirtualenv openquake" % _ubuntu_virtualenv_source())
+      
+        if "PYTHONPATH" not in _warn_only_run("cat ~/.profile"): 
+            run('echo export PYTHONPATH="%s:$PYTHONPATH" >> ~/.profile' % SITE_PKG_PATH)
+	
         sudo("rm -rf ~/build/")
 
         _configure_postgresql(pgsql_path="/usr/lib/postgresql/8.4/bin/")
@@ -146,24 +191,17 @@ def _bootstrap_linux():
         _adduser_posgresql()
         _createdb_postgresql()
 
-        # Build the environment
-        with cd("~"):
-            if not ls(".virtualenvs"):
-                run("mkdir -p .virtualenvs")
-                run("%s mkvirtualenv openquake" % _ubuntu_virtualenv_source())   
-
-
-        for venv_package in virtualenv_packages:
+        run('source ~/.profile')
+        venv_packages = VIRTUALENV_PACKAGES
+        for venv_package in venv_packages:
             _pip_install(venv_package, virtualenv="openquake")
-
-        _pip_install("pylibmc", version="0.9.2", virtualenv="openquake")
 
         # GDAL.
         _apt_install(" ".join(gdal_packages))
         # GDAL installs to /usr/lib/python2.6/
         # copy it to the virtualenv
-        if not ls("/usr/lib/python2.6/dist-packages/osgeo"):
-            run("cp -R /usr/lib/python2.6/dist-packages/osgeo/\
+        if ls("/usr/lib/python2.6/dist-packages/osgeo"):
+            run("cp -R /usr/lib/python2.6/dist-packages/osgeo/ \
 ~/.virtualenvs/openquake/lib/python2.6/site-packages/")
         else:
             print "Couldn't find osgeo module; something is wrong with GDAL."
@@ -180,26 +218,23 @@ def _bootstrap_linux():
 
         # Install jpype from source
         
-        # larsbutler: We'll try to look for the jvm in two places.
-        # /usr/lib/jvm/java-6-sun-1.6.0.15/ was the default previously,
-        # although I don't really like that because it's a very specific
-        # version number.
-        # However, on a fresh Ubuntu slice apt-get does not install java
-        # to this directory. Try both. Yes, I know it's kind of ugly;
-        # I'm going for minimal impact here.
-        jvm_locs = ["/usr/lib/jvm/java-6-sun-1.6.0.15/",\
-"/usr/lib/jvm/default-java/"]
+        # First, try to find a jvm. Search the most likely places.
+        jvm_locs = ["/usr/lib/jvm/java-6-sun", "/usr/lib/jvm/default-java/"]
         jvm = ''
         # look for an existing jvm dir
         for loc in jvm_locs:
-            if not ls(loc):
+            if ls(loc):
                 # if the jvm dir exists, use it
                 jvm = loc
+		# set java home in .profile
+		if "JAVA_HOME" not in _warn_only_run("cat ~/.profile"):
+			run('echo export JAVA_HOME="%s:$JAVA_HOME" >> ~/.profile' % jvm)
                 break
         _install_jpype_from_source(java_home=jvm)
         # Add virtualenv source to .profile
         if "virtualenvwrapper.sh" not in _warn_only_run("cat ~/.profile"):
-            run("echo %s >> ~/.profile" % _ubuntu_virtualenv_source())
+            run("echo %s >> ~/.profile" % \
+                _ubuntu_virtualenv_source().replace('\n', ''))
 
     def _bootstrap_fedora():
         pass
@@ -207,7 +242,46 @@ def _bootstrap_linux():
     bootstrap_fn = _detect_distro()
     bootstrap_fn()
 
+def _ubuntu_install_rabbit():
+    env.warn_only = True
+    print "Installing rabbitmq-server..."
+    rabbit_deb = 'rabbitmq-server_2.2.0-1_all.deb'
+    rabbit_url = 'http://www.rabbitmq.com/releases/rabbitmq-server/v2.2.0/%s' \
+% rabbit_deb
+    _deb_install(rabbit_url, rabbit_deb)
+    # now configure rabbit
+    _ubuntu_config_rabbit()
+    print "Finished installing rabbitmq-server."
+    env.warn_only = False
 
+def _ubuntu_config_rabbit(): 
+    env.warn_only = True
+    rabbit_cfg = ['rabbitmqctl add_user celeryuser celery',
+        'rabbitmqctl add_vhost celeryvhost',
+        'rabbitmqctl set_permissions -p celeryvhost celeryuser ".*" ".*" ".*"',
+        '/etc/init.d/rabbitmq-server restart']
+    for cfg in rabbit_cfg:
+        sudo(cfg)
+    env.warn_only = False
+
+def _ubuntu_install_redis():
+    env.warn_only = True
+    print "Installing redis-server..."
+    redis_deb = 'redis-server_2.0.1-2_amd64.deb'
+    redis_url = 'http://ubuntu.linux-bg.org/ubuntu//pool/universe/r/redis/%s' \
+% redis_deb
+    _deb_install(redis_url, redis_deb)
+    sudo('/etc/init.d/redis-server restart')
+    env.warn_only = False
+    print "Finished installing redis-server."
+
+def _deb_install(url, file):
+    with cd('~'):
+        run('curl %s -o %s' % (url, file))
+        sudo('dpkg -i %s' % file)
+        # clean up
+        run('rm %s' % file)
+           
 def _bootstrap_osx():
     """
     Bootstrap development environment in MacOSX. Requires HomeBrew.
@@ -216,37 +290,32 @@ def _bootstrap_osx():
         python2.6.x
         pip
     """
-
+    
     # We really don't care about warnings.
     fabric_output.warnings = False
 
     if not _homebrew_is_installed():
-        print "You need to install Homebrew to bootstrap_osx"
+        print "You need to install Homebrew to bootstrap osx"
         print 
+        print "Suggestion:"
         print 'ruby -e "$(curl -fsS https://gist.github.com/raw/323731/install_homebrew.rb)"'
         sys.exit()
 
+    if not run('which easy_install'):
+        print "easy_install is required, but could not be found."
+        print "Visit http://pypi.python.org/pypi/setuptools for more info."
+        sys.exit() 
+    
     # Install python2.6
     _install_python()
 
     _homebrew_install("pip")
+    _homebrew_install("redis")
 
     # Install rabbitmq
     _homebrew_install("rabbitmq")
     _start_rabbitmq()
     _configure_rabbitmq_auth()
-
-    # Install memcached
-    _homebrew_install("memcached")
-    with cd("/tmp"):
-        libmcd_url = "http://download.tangent.org/libmemcached-0.38.tar.gz"
-        libmcd_file = "libmemcached-0.38.tar.gz"
-        if not ls(libmcd_file):
-            _curl(libmcd_url, libmcd_file)
-            run("tar xzf %s" % libmcd_file)
-            with cd("libmemcached-0.38"):
-                run("./configure `brew diy`")
-                sudo("make && make install && brew ln libmemcached")
 
     # Install virtualenv
     _pip_install("virtualenv")
@@ -268,14 +337,13 @@ def _bootstrap_osx():
     with cd("~"):
         if not ls(".virtualenvs"):
             run("mkdir -p .virtualenvs")
-            run("%s mkvirtualenv openquake" % _osx_virtualenv_source())
+            run("mkvirtualenv openquake")
 
-    virtualenv_packages = ["lxml", "pyyaml", "sphinx", "shapely", "eventlet",
-                           "python-gflags", "guppy", "celery", "nose", "django",
-                           "ordereddict", "pylint"]
-
-    _pip_install(" ".join(virtualenv_packages), virtualenv="openquake")
-    _pip_install("pylibmc", version="0.9.2", virtualenv="openquake")
+    easy_install_packages = ["matplotlib"]
+    
+    for pkg in easy_install_packages:
+        _easy_install(pkg, to_venv=True)
+    _pip_install(" ".join(VIRTUALENV_PACKAGES), virtualenv="openquake")
 
 
     #download and install geohash
@@ -436,8 +504,17 @@ def _homebrew_exists(package):
 
     return True
 
+def _easy_install(package, to_venv=False):
+    """Set to_venv=True to install this package to your virtual environment."""
+    if to_venv:
+        return sudo("PYTHONPATH=%s easy_install \
+--install-dir=~/.virtualenvs/openquake/lib/python2.6/site-packages/ %s" \
+% (SITE_PKG_PATH, package), pty=True)
+    else:
+        return sudo("easy install %s" % package, pty=True)
+
 def _apt_install(package):
-    return sudo("apt-get -y install %s" % package, pty=True)
+    return sudo("DEBIAN_FRONTEND=noninteractive apt-get -q -y install %s" % package, pty=True)
 
 def _homebrew_install(package):
     if not _homebrew_exists(package):
@@ -511,3 +588,54 @@ def _install_python():
 
     _homebrew_install("python")
 
+def _assert_we_can_remote_login():
+    """Remote login is required for running bootstrap/virtualenv setup  on 
+    localhost. This function verifies that remote login is enabled.
+    If it is not, the script will print an error message and exit.
+
+    If fabric's env.hosts == ['localhost'], no check is performed.""" 
+   
+    if env.hosts != ['localhost']:
+        return
+    
+    with os.popen("uname") as fp:
+        platform = fp.read()
+    platform = platform.strip('\n')
+ 
+    REMOTE_LOGIN_NOT_ENABLED = "It looks like remote login is not enabled on \
+the local machine."
+    
+    def _osx():
+        with os.popen("sudo systemsetup -getremotelogin") as fp:
+            result = fp.read()
+    
+        if result != 'Remote Login: On\n':
+            print
+            print REMOTE_LOGIN_NOT_ENABLED
+            print
+            print "You need to enable it to continue."
+            print "To do so, select Apple -> System \
+Preferences -> Sharing and make sure 'Remote Login' is checked."
+            sys.exit()
+
+    def _linux():
+        with os.popen("ps aux | grep [s]shd") as fp:
+            result = fp.read()
+
+        if result == '':
+            print
+            print REMOTE_LOGIN_NOT_ENABLED
+            print
+            print "Please start sshd and try again."
+            sys.exit()
+
+    if platform == 'Darwin':
+        _osx()
+    elif platform == 'Linux':
+        _linux()
+    else:
+        print
+        print "Unknown platform '%s'" % platform
+        print
+        print "This is probably a bug."
+        sys.exit()
