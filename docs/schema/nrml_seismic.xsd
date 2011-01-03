@@ -6,21 +6,16 @@
            targetNamespace="http://openquake.org/xmlns/nrml/0.1"
            elementFormDefault="qualified">
 
-    <!-- include common types-->
     <xs:annotation>
         <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
         </xs:documentation>
     </xs:annotation>
-    <!-- -->
 
     <!-- import -->
-    <!-- <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-        schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> -->
-    <!-- <xs:import namespace="http://www.opengis.net/gml/3.2" schemaLocation="./gml-3.2.1/gml.xsd"/> -->
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
-
     <xs:include schemaLocation="nrml_common.xsd"/>
-    <!-- -->
+    
+    <!-- ============================================================= -->
 
     <xs:simpleType name="StrikeType">
         <xs:restriction base="xs:double">

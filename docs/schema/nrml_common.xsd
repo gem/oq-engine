@@ -6,101 +6,11 @@
            targetNamespace="http://openquake.org/xmlns/nrml/0.1"
            elementFormDefault="qualified">
 
-	<!-- -->
-	<!-- <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-	    schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/> -->
-    <!-- <xs:import namespace="http://www.opengis.net/gml/3.2" schemaLocation="./gml-3.2.1/gml.xsd"/> -->
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
 
     <!-- ============================================================= -->
-	<!-- REMOVE-->
-	
-    <!-- removed: xs:complexType name="CurveListType" -->
-
-    <!--
-    <xs:complexType name="CurveType">
-        <xs:all>
-            <xs:element ref="nrml:Values"/>
-            <xs:element minOccurs="0" ref="gml:pos"/>
-        </xs:all>
-        <xs:anyAttribute namespace="##any" processContents="lax"/>
-    </xs:complexType>
-
-    <xs:element name="Curve" type="nrml:CurveType"/>
-
-    <xs:element name="LossRatios" type="gml:doubleList"/>
-    <xs:element name="Values" type="gml:doubleList"/>
-    
-    <xs:element name="IMLValues" type="gml:doubleList"/>
-    
-    <xs:complexType name="CommonType">
-        <xs:sequence maxOccurs="unbounded" minOccurs="0">
-            <xs:any namespace="##any"/>
-        </xs:sequence>
-    </xs:complexType>
-    <xs:element name="Common" type="nrml:CommonType"/>
-    
-    -->
-
-    <!-- ============================================================= -->
-	<!-- ASSET -->
-
-    <!--
-    <xs:complexType name="AssetType">
-	<xs:all>
-		<xs:element ref="nrml:AssetID"/>
-		<xs:element ref="nrml:StructureType"/>
-		<xs:element minOccurs="0" ref="gml:pos"/>
-		<xs:element ref="nrml:AssetValue"/>
-	</xs:all>
-		<xs:anyAttribute namespace="##any" processContents="lax"/>
-	</xs:complexType>
-	
-	<xs:element name="Asset" type="nrml:AssetType"/>
-	
-	<xs:complexType name="AssetPortfolioType">
-		<xs:sequence>
-            <xs:element ref="nrml:Common" minOccurs="0"/>
-    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
-    				<xs:element ref="nrml:Asset"/>
-    		</xs:sequence>
-    	</xs:sequence>
-		<xs:anyAttribute namespace="##any" processContents="lax"/>
-	</xs:complexType>
-	
-    -->
-    
-
-	<!-- ============================================================= -->
 
     <xs:element name="config"/>
-    
-	<!-- ============================================================= -->
-    <!-- VULNERABILITY -->
-
-    <!--
-	<xs:complexType name="ModelType">
-		<xs:sequence>
-			<xs:element ref="nrml:LossRatios"/>
-			<xs:element ref="nrml:CoefficientsVariation"/>
-		</xs:sequence>
-		<xs:anyAttribute namespace="##any" processContents="lax"/>
-	</xs:complexType>
-
-	<xs:element name="Model" type="nrml:ModelType"/>
-	
-	<xs:complexType name="ModelListType">
-		<xs:sequence>
-            <xs:element ref="nrml:Common" minOccurs="0"/>
-    		<xs:sequence minOccurs="0" maxOccurs="unbounded">
-    				<xs:element ref="nrml:Model"/>
-    		</xs:sequence>
-    	</xs:sequence>
-		<xs:anyAttribute namespace="##any" processContents="lax"/>
-	</xs:complexType>
-	
-    <xs:element name="CoefficientsVariation" type="gml:doubleList"/>
-    -->
     
 	<!-- ============================================================= -->
 
