@@ -17,13 +17,13 @@
 
     <!-- Include schemas being part of NRML -->
     <xs:include schemaLocation="./nrml_common.xsd"/>
-    <!-- <xs:include schemaLocation="./nrml_seismic.xsd"/> -->
-    <!-- <xs:include schemaLocation="./nrml_hazard.xsd"/> -->
+    <xs:include schemaLocation="./nrml_seismic.xsd"/>
+    <xs:include schemaLocation="./nrml_hazard.xsd"/>
     <xs:include schemaLocation="./nrml_risk.xsd"/>
 
     <xs:complexType name="NRML">
         <xs:choice  minOccurs="0" maxOccurs="1">
-            <!-- <xs:element ref="hazardResult"/> -->
+            <xs:element ref="hazardResult"/>
             <xs:element ref="riskResult"/>
             <xs:element ref="exposurePortfolio"/>
             <xs:element ref="vulnerabilityModel"/>
