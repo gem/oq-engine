@@ -110,7 +110,6 @@
         <!-- TODO: make this a non-negative list between 0..1 -->
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
-                <xs:attribute name="vf" type="xs:string"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -119,7 +118,6 @@
         <!-- TODO: make this a non-negative list -->
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
-                <xs:attribute name="vf" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -128,7 +126,6 @@
         <!-- TODO: make this a non-negative list between 0..1 -->
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
-                <xs:attribute name="vf" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -138,6 +135,7 @@
             <xs:element name="lossRatio" type="LossRatio" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="PoE" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
+        <xs:attribute name="vf" type="xs:string"/>
     </xs:complexType>
 
     <xs:complexType name="LossCurve">
@@ -145,9 +143,23 @@
             <xs:element name="loss" type="Loss" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="PoE" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
+        <xs:attribute name="vf" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="LossRatioCurves">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="lossRatioCurve" type="LossRatioCurve"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="LossCurves">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="lossCurve" type="LossCurve"/>
+        </xs:sequence>
     </xs:complexType>
 
     <!-- GML substitution groups -->
+
     <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="ExposureList">
         <xs:complexContent>
@@ -162,10 +174,10 @@
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:element name="lossCurveList" type="LossCurveList" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="LossCurveList">
+    <xs:element name="lossCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
+    <xs:element name="lossRatioCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="AssetList">
         <xs:complexContent>
-            <!-- <xs:extension base="gml:AbstractFeatureCollectionType"/> -->
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element ref="asset" minOccurs="0" maxOccurs="unbounded"/>
@@ -173,19 +185,7 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
-    <xs:element name="lossRatioCurveList" type="LossRatioCurveList" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="LossRatioCurveList">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element ref="asset" minOccurs="0" maxOccurs="unbounded"/>
-                    <xs:element name="lossRatio" type="LossRatio" minOccurs="0" maxOccurs="unbounded"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
+    
     <xs:element name="_abstractAsset" type="AbstractAssetType" substitutionGroup="gml:_Feature" abstract="true"/>
     <xs:complexType name="AbstractAssetType" abstract="true">
         <xs:complexContent>
@@ -203,8 +203,8 @@
             <xs:extension base="AbstractAssetType">
                 <xs:sequence>
                     <xs:choice minOccurs="0" maxOccurs="2">
-                        <xs:element name="lossRatioCurve" type="LossRatioCurve"/>
-                        <xs:element name="lossCurve" type="LossCurve"/>
+                        <xs:element name="lossRatioCurves" type="LossRatioCurves"/>
+                        <xs:element name="lossCurves" type="LossCurves"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
