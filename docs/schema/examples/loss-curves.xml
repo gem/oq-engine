@@ -7,41 +7,55 @@
         <config>Config file details go here</config>
         
         <lossCurveList gml:id="lossCurveList_1">
-            <!-- lossCurveList is a gml:FeatureCollection
-                  profile: Feature -->
-            
-            <!-- Note: lossCurve does not have a "common" setting of loss values
-                 outside of featureMembers -->
-            
-<!--             <gml:featureMembers> -->
-                <!-- asset is a gml:Feature -->
-                <asset gml:id="asset_1">
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>-117.0 30.0</gml:pos>
-                    </gml:Point>
-                        
-                    <lossCurve>
-                        <loss vf="vf_1">0.0 100.0 200.0</loss>
-                        <loss vf="vf_2">0.0 200.0 400.0</loss>
-                        <poE vf="vf_1">0.4 0.2 0.1</poE>
-                        <poE vf="vf_2">0.2 0.1 0.05</poE>
-                    </lossCurve>
-                        
-                </asset>
+            <!-- lossCurveList is a gml:Feature (due to simple features profile)
+                 in full GML, it should be a gml:FeatureCollection -->
 
-                <asset gml:id="asset_2">
-<!--                     <gml:position> -->
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>-117.0 35.0</gml:pos>
-                        </gml:Point>
-<!--                     </gml:position> -->
-                    <lossCurve>
-                        <loss vf="vf_3">0.0 1000.0 2000.0</loss>
-                        <poE vf="vf_3">0.6 0.3 0.1</poE>
+            <!-- asset is a gml:Feature -->
+            <asset gml:id="asset_1">
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-117.0 30.0</gml:pos>
+                </gml:Point>
+                    
+                <!-- initial idea
+                <lossCurve>
+                    <loss vf="vf_1">0.0 100.0 200.0</loss>
+                    <loss vf="vf_2">0.0 200.0 400.0</loss>
+                    <poE vf="vf_1">0.4 0.2 0.1</poE>
+                    <poE vf="vf_2">0.2 0.1 0.05</poE>
+                </lossCurve>
+                -->
+                
+                <lossCurves>
+                    <lossCurve vf="vf_1">
+                        <loss>0.0 100.0 200.0</loss>
+                        <poE>0.4 0.2 0.1</poE>
                     </lossCurve>
-                        
-                </asset>
-<!--             </gml:featureMembers> -->
+                    <lossCurve vf="vf_2">
+                        <loss>0.0 200.0 400.0</loss>
+                        <poE>0.2 0.1 0.05</poE>
+                    </lossCurve>
+                </lossCurves>
+                    
+            </asset>
+
+            <asset gml:id="asset_2">
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-117.0 35.0</gml:pos>
+                </gml:Point>
+                <lossCurves>
+                    <lossCurve vf="vf_3">
+                        <loss>0.0 1000.0 2000.0</loss>
+                        <poE>0.6 0.3 0.1</poE>
+                    </lossCurve>
+                    
+                    <!-- loss curve with no explicit vuln function, should this be allowed? 
+                         Could be useful to "just plot" a loss curve --->
+                    <lossCurve>
+                        <loss>0.0 5000.0 10000.0</loss>
+                        <poE>0.1 0.01 0.001</poE>
+                    </lossCurve>
+                </lossCurves>
+            </asset>
             
         </lossCurveList>
     </riskResult>
