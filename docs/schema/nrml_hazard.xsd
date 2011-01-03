@@ -15,40 +15,12 @@
 	<xs:include schemaLocation="nrml_common.xsd"/>
 	<xs:include schemaLocation="nrml_seismic.xsd"/>
 	
-	
-	<xs:element name="HazardCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-	<xs:element name="HazardCurvePGA" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>
-	<xs:element name="HazardResult">
-		<xs:complexType>
-			<xs:sequence minOccurs="1">
-				<xs:element ref="nrml:Config"/>
-				<xs:choice>
-					<xs:sequence maxOccurs="unbounded">
-						<xs:element ref="nrml:HazardCurveList"/>
-					</xs:sequence>
-					<xs:element name="GroundMotionFieldSet" type="nrml:GroundMotionFieldSetType"/>
-				</xs:choice>
-			</xs:sequence>
-		</xs:complexType>
-	</xs:element>
-	<xs:attribute name="endBranchLabel" type="xs:string"/>
-
+	<!-- ============================================================= -->
+    <!-- REMOVED -->
 
 	<!-- Hazard shakemap definition -->
-	<xs:simpleType name="IntensityMeasureTypeType">
-		<xs:annotation>
-			<xs:documentation>Describe the valid IMT values</xs:documentation>
-		</xs:annotation>
-		<xs:restriction base="xs:string">
-			<xs:enumeration value="PGA"/>
-			<xs:enumeration value="PGD"/>
-			<xs:enumeration value="PGV"/>
-			<xs:enumeration value="MMI"/>
-			<xs:enumeration value="SA"/>
-		</xs:restriction>
-	</xs:simpleType>
-
+	
+	<!--
 	<xs:element name="Rupture" abstract="true"/>
 	<xs:element name="PointRupture" type="nrml:PointRuptureType" substitutionGroup="nrml:Rupture"/>
 	<xs:element name="SimpleFaultRupture" type="nrml:SimpleFaultRuptureType"
@@ -58,11 +30,10 @@
 	<xs:element name="ArbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType"
 		substitutionGroup="nrml:Rupture"/>
 
-	<xs:element name="IntensityMeasureType" type="nrml:IntensityMeasureTypeType"/>
-
 	<xs:simpleType name="GroundMotionType">
 		<xs:restriction base="xs:double"/>
 	</xs:simpleType>
+	
 	<xs:element name="GroundMotion" type="nrml:GroundMotionType"/>
 
 	<xs:simpleType name="Vs30MethodType">
@@ -74,7 +45,11 @@
 		</xs:restriction>
 	</xs:simpleType>
 
+    -->
+    
 	<!-- Type of equation seems missing in the config file defined in OpenSHA -->
+	
+	<!--
 	<xs:complexType name="GMPEParametersType">
 		<xs:annotation>
 			<xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
@@ -147,4 +122,62 @@
 		</xs:sequence>
 	</xs:complexType>
 	<xs:element name="GroundMotionFieldSet" type="nrml:GroundMotionFieldSetType"/>
+	
+	-->
+	
+	<!-- ============================================================= -->
+	
+	<!-- TODO: complete ground motion field description -->
+	<xs:element name="groundMotionFieldSet"/>
+	
+	<xs:complexType name="HazardValues">
+        <xs:sequence>
+            <xs:element name="poE" type="PoE"/>
+        </xs:sequence>
+    </xs:complexType>
+	
+	<!-- GML substitution groups -->
+	
+	<xs:element name="hazardCurve" type="HazardCurve" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardCurve">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="gml:Point"/>
+                    <xs:element name="hazardValues" type="HazardValues"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+	<xs:element name="hazardCurveList" type="HazardCurveList" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardCurveList">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="IML" type="IMLType"/>
+                    <xs:element ref="hazardCurve" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                
+                <!-- does attribute endBranchLabel have to be required? -->
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- child elements of nrml -->
+    <xs:element name="hazardResult" type="HazardResult"/>
+    <xs:complexType name="HazardResult">
+        <xs:sequence>
+            <xs:element ref="config"/>
+            <xs:choice>
+                <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                    <xs:element ref="hazardCurveList"/>
+                </xs:sequence>
+                <!-- <xs:element name="groundMotionFieldSet" type="GroundMotionFieldSet"/> -->
+                <xs:element ref="groundMotionFieldSet"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+    
 </xs:schema>

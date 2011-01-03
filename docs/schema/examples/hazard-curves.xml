@@ -2,7 +2,6 @@
 <nrml xmlns:gml="http://www.opengis.net/gml" 
       xmlns="http://openquake.org/xmlns/nrml/0.1">
       
-    <!-- http://www.opengis.net/gml/profile/sfgml/1.0 -->
     <!-- this is a proposal for NRML refactoring 
          fab, 2010-12-13 -->
 
@@ -13,65 +12,49 @@
             <hazardProcessing timeSpanDuration="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2"/>
         </config>
         
-        <!-- one hazardResult instance file can contain several
-             hazardCurveList elements -->
-        <hazardCurveList endBranchLabel="1_1">
-            <!-- hazardCurveList is a gml:FeatureCollection -->
+        <!-- one hazardResult instance file can contain several hazardCurveList elements -->
+        <hazardCurveList gml:id="hcl_1_1" endBranchLabel="1_1">
+            <!-- hazardCurveList is a gml:Feature -->
             
             <IML IMT="PGA">5.0000e-03 7.0000e-03 1.3700e-02</IML>
             
-            <gml:featureMembers>
-                <hazardCurve>
-                    <!-- hazardCurve is a gml:Feature -->
-                    <hazardValues>
-                        <!-- according to Damiano, there is no need to allow
-                             to re-define the IMLs inside hazardValues -->
-                        <poE>9.8728e-01 9.8266e-01 9.4957e-01</poE>
-                    </hazardValues>
-                    
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>-122.5000 37.5000</gml:pos>
-                        </gml:Point>
-                    </gml:position>
-                </hazardCurve>
+            <!-- hazardCurve is a gml:Feature -->
+            <hazardCurve gml:id="hc1">
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-122.5000 37.5000</gml:pos>
+                </gml:Point>
                 
-                <hazardCurve>
-                    <hazardValues>
-                        <poE>9.8728e-02 9.8266e-02 9.4957e-02</poE>
-                    </hazardValues>
-                    
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>-123.5000 37.5000</gml:pos>
-                        </gml:Point>
-                    </gml:position>
-                </hazardCurve>
-            </gml:featureMembers>
+                <hazardValues>
+                    <!-- according to Damiano, there is no need to allow
+                         to re-define the IMLs inside hazardValues -->
+                    <poE>9.8728e-01 9.8266e-01 9.4957e-01</poE>
+                </hazardValues>
+            </hazardCurve>
+            
+            <hazardCurve gml:id="hc2">
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-123.5000 37.5000</gml:pos>
+                </gml:Point>
+                <hazardValues>
+                    <poE>9.8728e-02 9.8266e-02 9.4957e-02</poE>
+                </hazardValues>
+            </hazardCurve>
             
         </hazardCurveList>
         
         <!-- second hazardCurveList, for a different endBranchLabel -->
-        <hazardCurveList endBranchLabel="1_2">
+        <hazardCurveList gml:id="hcl_1_2" endBranchLabel="1_2">
             
-            <common>
-                <IML>0.0001 0.0002 0.0003</IML>
-                <IMT>PGA</IMT>
-            </common>
+            <IML IMT="PGA">0.0001 0.0002 0.0003</IML>
             
-            <gml:featureMembers>
-                <hazardCurve>
-                    <hazardValues>
-                        <poE>9.3e-01 9.2e-01 9.1e-01</poE>
-                    </hazardValues>
-                    
-                    <gml:position>
-                        <gml:Point srsName="epsg:4326">
-                            <gml:pos>-125.5000 37.5000</gml:pos>
-                        </gml:Point>
-                    </gml:position>
-                </hazardCurve>
-            </gml:featureMembers>
+            <hazardCurve gml:id="hc3">
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-125.5000 37.5000</gml:pos>
+                </gml:Point>
+                <hazardValues>
+                    <poE>9.3e-01 9.2e-01 9.1e-01</poE>
+                </hazardValues>
+            </hazardCurve>
             
         </hazardCurveList>
     </hazardResult>

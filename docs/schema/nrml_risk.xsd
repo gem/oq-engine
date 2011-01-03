@@ -121,15 +121,7 @@
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
-    
-    <xs:complexType name="PoE">
-        <!-- TODO: make this a non-negative list between 0..1 -->
-        <xs:simpleContent>
-            <xs:extension base="gml:doubleList">
-            </xs:extension>
-        </xs:simpleContent>
-    </xs:complexType>
-    
+
     <xs:complexType name="LossRatioCurve">
         <xs:sequence>
             <xs:element name="lossRatio" type="LossRatio" minOccurs="0" maxOccurs="unbounded"/>
