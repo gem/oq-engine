@@ -1,5 +1,5 @@
 """
-OpenGEM is an open-source platform for the calculation of hazard, risk, 
+OpenQuake is an open-source platform for the calculation of hazard, risk, 
 and socio-economic impact. It is a project of the Global Earthquake Model, 
 nd may be extended by other organizations to address additional classes 
 of peril.
