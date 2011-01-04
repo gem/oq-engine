@@ -95,9 +95,9 @@ class Job(object):
 
     __cwd = os.path.dirname(__file__)
     __defaults = [os.path.join(__cwd, "../", "default.gem"), #package
-                    "opengem.gem",        # Sane Defaults
-                    "/etc/opengem.gem",   # Site level configs
-                    "~/.opengem.gem"]     # Are we running as a user?
+                    "openquake.gem",        # Sane Defaults
+                    "/etc/openquake.gem",   # Site level configs
+                    "~/.openquake.gem"]     # Are we running as a user?
 
     @classmethod
     def default_configs(cls):
