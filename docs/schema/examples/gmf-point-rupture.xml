@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.1">
+    <!-- this is a proposal for NRML refactoring 
+         fab, 2010-12-13 -->
+    <hazardResult>
+        <config>Config file details go here</config>
+        
+        <!-- groundMotionFieldSet is a gml:Feature -->
+        <groundMotionFieldSet gml:id="gmfs_1">
+            
+            <!-- pointRupture is a gml:Feature -->
+            <pointRupture gml:id="pr_1">
+                
+                <!-- non-geospatial properties -->
+                <magnitude type="Mw">6.5</magnitude>
+                <tectonicRegion>active_shallow_crust</tectonicRegion>
+
+                <focalMechanism>
+                    <!-- NOTE: shouldn't this be encapsulated in a nodal plane element (like in QuakeML)? -->
+                    <strike>0.0</strike>
+                    <dip>90.0</dip>
+                    <rake>0.0</rake>
+                </focalMechanism>
+                
+                <!-- geospatial property: restriction of gml:PointPropertyType -->
+                <hypocenterLocation>
+                    <gml:Point srsName="urn:ogc:def:crs:EPSG::4979">
+                        <gml:pos>-124.704 40.363 30.0</gml:pos>
+                    </gml:Point>
+                </hypocenterLocation>
+            </pointRupture>
+             
+            <GMPEParameters IMT="PGA"/>
+            
+            <!-- gmf is a gml:Feature -->
+            <GMF gml:id="gmf_1">
+                
+                <!-- site is a gml:Feature -->
+                <site gml:id="s_1">
+                    <!-- here we need a wrapper element which is a restriction of gml:PointPropertyType -->
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 41.0</gml:pos>
+                    </gml:Point>
+                    <groundMotion>0.2</groundMotion>
+                </site>
+                
+                <site gml:id="s_2">
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-118.0 41.0</gml:pos>
+                    </gml:Point>
+                    <groundMotion>0.3</groundMotion>
+                </site>
+                
+                <!-- TODO: move decription element to groundMotionFieldSet -->
+                <description>Optional description element</description>
+            </GMF>
+
+        </groundMotionFieldSet>
+        
+    </hazardResult>
+</nrml>
