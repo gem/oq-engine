@@ -169,4 +169,19 @@
 		</xs:restriction>
 	</xs:simpleType>
 	
+	<xs:simpleType name="NormalizedDoubleType">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="1.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+	
+	<xs:simpleType name="NonNegativeDoubleList">
+        <xs:list itemType="NonNegativeDoubleType"/>
+	</xs:simpleType>
+	
+	<xs:simpleType name="NormalizedDoubleList">
+        <xs:list itemType="NormalizedDoubleType"/>
+    </xs:simpleType>
+    
 </xs:schema>
