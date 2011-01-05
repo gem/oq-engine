@@ -57,7 +57,7 @@
     
     <xs:complexType name="DiscreteVulnerability">
         <xs:sequence>
-            <xs:element name="lossRatio" type="LossRatio"/>
+            <xs:element name="lossRatio" type="NormalizedDoubleList"/>
             <xs:element name="coefficientsVariation" type="gml:doubleList"/>
         </xs:sequence>
         <xs:attribute name="vulnerabilityFunctionID" type="xs:string" use="required"/>
@@ -73,26 +73,10 @@
     </xs:complexType>
     
     <!-- ============================================================= -->
-     
-    <xs:complexType name="LossRatio">
-        <!-- TODO: make this a non-negative list between 0..1 -->
-        <xs:simpleContent>
-            <xs:extension base="gml:doubleList">
-            </xs:extension>
-        </xs:simpleContent>
-    </xs:complexType>
-    
-    <xs:complexType name="Loss">
-        <!-- TODO: make this a non-negative list -->
-        <xs:simpleContent>
-            <xs:extension base="gml:doubleList">
-            </xs:extension>
-        </xs:simpleContent>
-    </xs:complexType>
 
     <xs:complexType name="LossRatioCurve">
         <xs:sequence>
-            <xs:element name="lossRatio" type="LossRatio" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="PoE" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="vf" type="xs:string"/>
@@ -100,7 +84,7 @@
 
     <xs:complexType name="LossCurve">
         <xs:sequence>
-            <xs:element name="loss" type="Loss" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="PoE" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="vf" type="xs:string"/>
