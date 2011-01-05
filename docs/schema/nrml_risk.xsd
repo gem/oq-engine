@@ -6,37 +6,9 @@
            targetNamespace="http://openquake.org/xmlns/nrml/0.1"
            elementFormDefault="qualified">
 
-	<!-- import -->
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
 	<xs:include schemaLocation="nrml_common.xsd"/>
 
-    <!-- ============================================================= -->
-    <!-- REMOVED -->
-    
-    <!--
-    <xs:complexType name="CurveListType">
-        <xs:sequence>
-            <xs:element ref="nrml:Common" minOccurs="0"/>
-            <xs:sequence minOccurs="0" maxOccurs="unbounded">
-                    <xs:element ref="nrml:Curve"/>
-            </xs:sequence>
-        </xs:sequence>
-        <xs:anyAttribute namespace="##any" processContents="lax"/>
-    </xs:complexType>
-
-    <xs:element name="DiscreteVulnerability" type="nrml:ModelType" substitutionGroup="nrml:Model"/>
-    
-        <xs:element name="IntensityMeasureLevels" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-    <xs:element name="LossCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-    <xs:element name="LossCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-    <xs:element name="LossRatioCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-    <xs:element name="LossRatioCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-    
-    <xs:element name="ExposureList" type="nrml:AssetPortfolioType"/>    
-        
-    <xs:element name="AssetInstance" type="nrml:AssetType" substitutionGroup="nrml:Asset"/>
-    -->
-    
     <!-- ============================================================= -->
     
     <xs:complexType name="AssetValue">
@@ -59,7 +31,7 @@
     <xs:simpleType name="LossCategory">
         <xs:restriction base="xs:string">
             <xs:enumeration value="people"/>
-            <xs:enumeration value="economical loss"/>
+            <xs:enumeration value="economical_loss"/>
         </xs:restriction>
     </xs:simpleType>
     

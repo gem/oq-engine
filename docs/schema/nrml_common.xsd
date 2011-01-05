@@ -41,6 +41,25 @@
         </xs:restriction>
     </xs:simpleType>
 
+    <xs:complexType name="Magnitude">
+        <xs:simpleContent>
+            <!-- NOTE: should magnitude be restricted to non-negative values? -->
+            <xs:extension base="xs:double">
+                <!-- NOTE: do we need a free-text field for magnitude type, since
+                     there are so many magnitude definitions? -->
+                <xs:attribute name="type" type="MagnitudeType"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <!-- TODO: add magnitude types (Taxonomy&Ontology group) -->
+    <xs:simpleType name="MagnitudeType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ML"/>
+            <xs:enumeration value="Mw"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
     <xs:simpleType name="ProbabilisticDistributionType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="LN"/>
@@ -49,19 +68,19 @@
     
     <!-- ============================================================= -->
 
-	<xs:complexType name="EvenlyDiscretizedDistType">
+	<xs:complexType name="EvenlyDiscretizedDist">
 		<xs:annotation>
 			<xs:documentation>Describes an evenly discretized distribution </xs:documentation>
 		</xs:annotation>
 		<xs:all>
-			<xs:element name="DistributionValues" type="gml:doubleList"/>
+			<xs:element name="distributionValues" type="gml:doubleList"/>
 		</xs:all>
 		<xs:attribute name="binSize" type="xs:double"/>
 		<xs:attribute name="minVal" type="xs:double"/>
 		<xs:attribute name="binCount" type="xs:integer"/>
 	</xs:complexType>
-	<!-- -->
-	<xs:complexType name="GrdSpecsType">
+
+	<xs:complexType name="GrdSpecs">
 		<xs:attribute name="minX" type="xs:double"/>
 		<xs:attribute name="minY" type="xs:double"/>
 		<xs:attribute name="maxX" type="xs:double"/>
@@ -70,28 +89,31 @@
 		<xs:attribute name="spacingY" type="xs:double"/>
 		<xs:attribute name="isRegular" type="xs:boolean"/>
 	</xs:complexType>
-	<xs:complexType name="GrdFieldSetType">
+	
+	<xs:complexType name="GrdFieldSet">
 		<xs:sequence>
-			<xs:element maxOccurs="unbounded" name="GrdField" type="nrml:GrdFieldType"/>
+			<xs:element name="grdField" type="GrdField" maxOccurs="unbounded" />
 		</xs:sequence>
 	</xs:complexType>
-	<xs:complexType mixed="true" name="GrdDataType">
+	
+	<xs:complexType name="GrdData" mixed="true">
 		<xs:complexContent>
 			<xs:extension base="xs:anyType"> </xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
+	
 	<!--Grid type -->
 	<xs:complexType name="GrdType">
 		<xs:all>
-			<xs:element name="GrdSpecs" type="nrml:GrdSpecsType"/>
-			<xs:element maxOccurs="1" name="GrdFieldSet" type="nrml:GrdFieldSetType"/>
-			<xs:element name="GrdDataArray" type="nrml:GrdDataType"/>
+			<xs:element name="grdSpecs" type="GrdSpecs"/>
+			<xs:element name="grdFieldSet" type="GrdFieldSet"/>
+			<xs:element name="grdData" type="GrdData"/>
 		</xs:all>
 	</xs:complexType>
-	<!-- -->
-	<xs:complexType name="GrdFieldType">
+
+	<xs:complexType name="GrdField">
 		<xs:attribute name="index" type="xs:int"/>
-		<xs:attribute name="name" type="nrml:paramType"/>
+		<xs:attribute name="name" type="paramType"/>
 		<xs:attribute name="refValue" type="xs:double">
 			<xs:annotation>
 				<xs:documentation>This attribute allows to specify a value associated with one layer of the grid file. For example, in the case of a multi-layered grid with several layers each one containing the rate of occurrence [events/year] for a specific magnitude interval, through this attribute is possible to specify the corresponding magnitude value (as a standard: the value in the middle of the interval). </xs:documentation>
@@ -100,7 +122,7 @@
 		<xs:attribute name="lowExt" type="xs:double"/>
 		<xs:attribute name="uppExt" type="xs:double"/>
 	</xs:complexType>
-	<!-- -->
+
 	<xs:simpleType name="paramType">
 		<xs:annotation>
 			<xs:documentation>Labels that can be used to describe the parameters to be used in NRML.</xs:documentation>
@@ -127,7 +149,8 @@
 			<xs:enumeration value="si"/>
 		</xs:restriction>
 	</xs:simpleType>
-	<xs:complexType name="ArbitrarilyDiscretizedDistType">
+	
+	<xs:complexType name="ArbitrarilyDiscretizedDist">
 		<xs:annotation>
 			<xs:documentation>This complex type allows to define a whatever discretized function</xs:documentation>
 		</xs:annotation>
