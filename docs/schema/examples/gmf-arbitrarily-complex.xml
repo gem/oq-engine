@@ -45,27 +45,32 @@
              
             <GMPEParameters IMT="PGA"/>
             
+            <!-- gmf is a gml:Feature -->
             <GMF gml:id="gmf_1">
                 
-                <!-- gmf is a gml:Feature -->
+                <!-- site is a gml:Feature -->
                 <site gml:id="s_1">
-                    <!-- site is a gml:Feature -->
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>-116.0 41.0</gml:pos>
-                    </gml:Point>
+                    <location>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-116.0 41.0</gml:pos>
+                        </gml:Point>
+                    </location>
+                    
                     <groundMotion>0.2</groundMotion>
                 </site>
                 
                 <site gml:id="s_2">
-                    <gml:Point srsName="epsg:4326">
-                        <gml:pos>-118.0 41.0</gml:pos>
-                    </gml:Point>
+                    <location>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-118.0 41.0</gml:pos>
+                        </gml:Point>
+                    </location>
                     <groundMotion>0.3</groundMotion>
                 </site>
                 
-                <description>Optional description element</description>
             </GMF>
 
+            <description>Optional description element</description>
         </groundMotionFieldSet>
         
     </hazardResult>
