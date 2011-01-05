@@ -11,10 +11,12 @@
             
             <!-- asset is a gml:Feature -->
             <asset gml:id="asset_1">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 30.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 30.0</gml:pos>
-                </gml:Point>
                 <lossCurves>
                     <lossCurve vf="W1">
                         <loss>15.3952   46.1857   76.9762  107.7667  138.5572  169.3477  200.1382  230.9286  261.7191  292.5096  323.3001  354.0906  384.8811  415.6715  446.4620  477.2525  508.0430  538.8335  569.6240  600.4145</loss>
@@ -24,10 +26,12 @@
             </asset>
 
             <asset gml:id="asset_2">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 35.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 35.0</gml:pos>
-                </gml:Point>
                 <lossCurves>
                     <lossCurve vf="W1">
                         <loss>13.9530   11.8590   19.7650   27.6710   35.5770   43.4830   51.3890   59.2950   67.2010   75.1070   83.0130   90.9190   98.8250  106.7310  114.6370  122.5430  130.4490  138.3550  146.2610  154.1670</loss>
@@ -37,10 +41,12 @@
             </asset>
             
             <asset gml:id="asset_3">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 40.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 40.0</gml:pos>
-                </gml:Point>
                 <lossCurves>
                     <lossCurve vf="W1">
                         <loss>0.2510    0.7529    1.2548    1.7568    2.2587    2.7606    3.2625    3.7645    4.2664    4.7683    5.2703    5.7722    6.2741    6.7761    7.2780    7.7799    8.2818    8.7838    9.2857    9.7876</loss>
@@ -50,10 +56,12 @@
             </asset>
             
             <asset gml:id="asset_4">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 30.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-116.0 30.0</gml:pos>
-                </gml:Point>
                 <lossCurves>
                     <lossCurve vf="CL1">
                         <loss>0.7269    2.1807    3.6345    5.0884    6.5422    7.9960    9.4498   10.9036   12.3574   13.8112   15.2651   16.7189   18.1727   19.6265   21.0803   22.5341   23.9879   25.4418   26.8956   28.3494</loss>
@@ -63,10 +71,12 @@
             </asset>
 
             <asset gml:id="asset_5">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 35.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-116.0 35.0</gml:pos>
-                </gml:Point>
                 <lossCurves>
                     <lossCurve vf="CL1">
                         <loss>1.0170    3.0510    5.0850    7.1190    9.1530   11.1870   13.2210   15.2550   17.2890   19.3230   21.3570   23.3910   25.4250   27.4590   29.4930   31.5270   33.5610   35.5950   37.6290   39.6630</loss>
@@ -76,10 +86,12 @@
             </asset>
             
             <asset gml:id="asset_6">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 40.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-116.0 40.0</gml:pos>
-                </gml:Point>
                 <lossCurves>
                     <lossCurve vf="CL1">
                         <loss>4.4171   13.2514   22.0857   30.9199   39.7542   48.5885   57.4227   66.2570   75.0913   83.9255   92.7598  101.5940  110.4283  119.2626  128.0968  136.9311  145.7654   154.5996  163.4339  172.2682</loss>

@@ -6,24 +6,17 @@
     <riskResult>
         <config>Config file details go here</config>
         
-        <lossCurveList gml:id="lossCurveList_1">
-            <!-- lossCurveList is a gml:Feature (due to simple features profile)
+        <!-- lossCurveList is a gml:Feature (due to simple features profile)
                  in full GML, it should be a gml:FeatureCollection -->
-
+        <lossCurveList gml:id="lossCurveList_1">
+            
             <!-- asset is a gml:Feature -->
             <asset gml:id="asset_1">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 30.0</gml:pos>
-                </gml:Point>
-                    
-                <!-- initial idea
-                <lossCurve>
-                    <loss vf="vf_1">0.0 100.0 200.0</loss>
-                    <loss vf="vf_2">0.0 200.0 400.0</loss>
-                    <poE vf="vf_1">0.4 0.2 0.1</poE>
-                    <poE vf="vf_2">0.2 0.1 0.05</poE>
-                </lossCurve>
-                -->
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 30.0</gml:pos>
+                    </gml:Point>
+                </location>
                 
                 <lossCurves>
                     <lossCurve vf="vf_1">
@@ -39,9 +32,12 @@
             </asset>
 
             <asset gml:id="asset_2">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 35.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 35.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossCurves>
                     <lossCurve vf="vf_3">
                         <loss>0.0 1000.0 2000.0</loss>
