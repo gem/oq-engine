@@ -9,7 +9,7 @@
         <groundMotionFieldSet gml:id="gmfs_1">
             <!-- groundMotionFieldSet is a gml:Feature -->
             
-            <complexFaultRupture gml:id="acr_1">
+            <complexFaultRupture gml:id="cfr_1">
                 <!-- complexFaultRupture is a gml:Feature -->
                 
                 <!-- non-geospatial properties -->
