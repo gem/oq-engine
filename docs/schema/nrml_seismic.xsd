@@ -89,21 +89,47 @@
         </xs:sequence>
     </xs:complexType>
 
+    <!-- ============================================================= -->
     <!-- seismic source geometry -->
     
-    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry" substitutionGroup="gml:_Feature"/>
+    <!-- complex fault -->
+    
+    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
     <xs:complexType name="ComplexFaultGeometry">
         <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
+            <xs:restriction base="gml:MultiGeometryPropertyType">
                 <xs:sequence>
-                    <!-- TODO -->
-                    <xs:element name="faultTopEdge" type="gml:LineStringType"/>
-                    <xs:element name="faultBottomEdge" type="gml:LineStringType"/>
+                    <xs:element ref="faultEdges"/>
                 </xs:sequence>
-            </xs:extension>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="faultEdges" type="FaultEdges" substitutionGroup="gml:MultiCurve"/>
+    <xs:complexType name="FaultEdges">
+        <xs:complexContent>
+            <xs:restriction base="gml:MultiCurveType">
+                <xs:sequence>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="faultBottomEdge"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:complexType name="FaultEdge">
+        <xs:complexContent>
+            <xs:restriction base="gml:CurvePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:LineString"/>
+                </xs:sequence>
+            </xs:restriction>
         </xs:complexContent>
     </xs:complexType>
 
+    <!-- simple fault -->
     
     <xs:complexType name="SimpleFaultGeometry">
         <xs:sequence>
@@ -126,20 +152,18 @@
         </xs:complexContent>
     </xs:complexType>
 
-    
-
     <xs:complexType name="ComplexFaultSourceData">
         <xs:complexContent>
             <xs:extension base="SourceData">
                 <xs:sequence>
-                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
+                    <xs:element ref="complexFaultGeometry"/>
                     <xs:element name="rake" type="Rake"/>
                     <xs:element ref="magnitudeFrequencyDistribution"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
+    
     <xs:complexType name="AreaSourceData">
         <xs:complexContent>
             <xs:extension base="SourceData">
@@ -170,6 +194,7 @@
         </xs:complexContent>
     </xs:complexType>
 
+    <!-- ============================================================= -->
     <!-- seismic source -->
     
     <xs:element name="seismicSource" abstract="true"/>
@@ -184,7 +209,8 @@
             <xs:element ref="seismicSource"/>
         </xs:sequence>
     </xs:complexType>
-
+    
+    <!-- ============================================================= -->
     <!-- rupture -->
 
     <xs:element name="rupture" type="Rupture" substitutionGroup="gml:_Feature" abstract="true"/>
@@ -233,9 +259,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
-                    
-                    <!-- TODO: use correct geospatial type -->
-                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
+                    <xs:element ref="complexFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -253,6 +277,7 @@
         </xs:complexContent>
     </xs:complexType>
 
+    <!-- ============================================================= -->
     <!-- logic tree -->
     
     <!-- TODO: rename attribute, name is too general for global attribute (make attribute local) -->
