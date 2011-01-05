@@ -6,11 +6,11 @@
     <hazardResult>
         <config>Config file details go here</config>
         
+        <!-- groundMotionFieldSet is a gml:Feature -->
         <groundMotionFieldSet gml:id="gmfs_1">
-            <!-- groundMotionFieldSet is a gml:Feature -->
             
+            <!-- complexFaultRupture is a gml:Feature -->
             <complexFaultRupture gml:id="cfr_1">
-                <!-- complexFaultRupture is a gml:Feature -->
                 
                 <!-- non-geospatial properties -->
                 <magnitude type="Mw">9.0</magnitude>
