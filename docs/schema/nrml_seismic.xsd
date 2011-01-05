@@ -89,6 +89,22 @@
         </xs:sequence>
     </xs:complexType>
 
+    <!-- seismic source geometry -->
+    
+    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="ComplexFaultGeometry">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <!-- TODO -->
+                    <xs:element name="faultTopEdge" type="gml:LineStringType"/>
+                    <xs:element name="faultBottomEdge" type="gml:LineStringType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    
     <xs:complexType name="SimpleFaultGeometry">
         <xs:sequence>
             <xs:element name="faultTrace" type="gml:LineStringType"/>
@@ -110,12 +126,7 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="ComplexFaultGeometry">
-        <xs:sequence>
-            <xs:element name="faultTopEdge" type="gml:LineStringType"/>
-            <xs:element name="faultBottomEdge" type="gml:LineStringType"/>
-        </xs:sequence>
-    </xs:complexType>
+    
 
     <xs:complexType name="ComplexFaultSourceData">
         <xs:complexContent>
