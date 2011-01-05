@@ -8,12 +8,15 @@
         <config>Config file details go here</config>
         
         <lossRatioCurveList gml:id="lossRatioCurveList_1">
+        
             <!-- asset is a gml:Feature -->
-
             <asset gml:id="asset_1">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 30.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 30.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossRatioCurves>
                     <lossRatioCurve vf="W1">
                         <lossRatio>0.0248    0.0743    0.1238    0.1733    0.2228    0.2722    0.3217    0.3712    0.4208    0.4703    0.5197    0.5693    0.6187    0.6683    0.7177    0.7672    0.8167 0.8662    0.9157    0.9652</lossRatio>
@@ -23,9 +26,12 @@
             </asset>
             
             <asset gml:id="asset_2">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 35.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 35.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossRatioCurves>
                     <lossRatioCurve vf="W1">
                         <lossRatio>0.0250    0.0750    0.1250    0.1750    0.2250    0.2750    0.3250    0.3750    0.4250    0.4750    0.5250    0.5750    0.6250    0.6750    0.7250    0.7750    0.8250 0.8750    0.9250    0.9750</lossRatio>
@@ -35,9 +41,12 @@
             </asset>
             
             <asset gml:id="asset_3">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-117.0 40.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 40.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossRatioCurves>
                     <lossRatioCurve vf="W1">
                         <lossRatio>0.0248    0.0743    0.1238    0.1733    0.2228    0.2722    0.3217    0.3712    0.4208    0.4703    0.5197    0.5693    0.6187    0.6683    0.7177    0.7672    0.8167 0.8662    0.9157    0.9652</lossRatio>
@@ -47,9 +56,12 @@
             </asset>
             
             <asset gml:id="asset_4">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-116.0 30.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 30.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossRatioCurves>
                     <lossRatioCurve vf="CL1">
                         <lossRatio>0.0248    0.0743    0.1238    0.1733    0.2228    0.2722    0.3217    0.3712    0.4208    0.4703    0.5197    0.5693    0.6187    0.6683    0.7177    0.7672    0.8167 0.8662    0.9157    0.9652</lossRatio>
@@ -59,9 +71,12 @@
             </asset>
             
             <asset gml:id="asset_5">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-116.0 35.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 35.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossRatioCurves>
                     <lossRatioCurve vf="CL1">
                         <lossRatio>0.0250    0.0750    0.1250    0.1750    0.2250    0.2750    0.3250    0.3750    0.4250    0.4750    0.5250    0.5750    0.6250    0.6750    0.7250    0.7750    0.8250 0.8750    0.9250    0.9750</lossRatio>
@@ -71,9 +86,12 @@
             </asset>
             
             <asset gml:id="asset_6">
-                <gml:Point srsName="epsg:4326">
-                    <gml:pos>-116.0 40.0</gml:pos>
-                </gml:Point>
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 40.0</gml:pos>
+                    </gml:Point>
+                </location>
+                
                 <lossRatioCurves>
                     <lossRatioCurve vf="CL1">
                         <lossRatio>0.0248    0.0743    0.1238    0.1733    0.2228    0.2722    0.3217    0.3712    0.4208    0.4703    0.5197    0.5693    0.6187    0.6683    0.7177    0.7672    0.8167 0.8662    0.9157    0.9652</lossRatio>
