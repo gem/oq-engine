@@ -4,10 +4,11 @@
            xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
            xmlns="http://openquake.org/xmlns/nrml/0.1"
            targetNamespace="http://openquake.org/xmlns/nrml/0.1"
-           elementFormDefault="qualified">
+           elementFormDefault="qualified"
+           xml:lang="en">
 
     <xs:annotation>
-        <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
+        <xs:documentation>Schema describing the XML structure of files containing information pertinent with the creation of ERF.
         </xs:documentation>
     </xs:annotation>
 
