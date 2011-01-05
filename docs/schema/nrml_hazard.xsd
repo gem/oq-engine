@@ -90,6 +90,11 @@
                     <xs:element ref="rupture"/>
                     <xs:element name="GMPEParameters" type="GMPEParametersType"/>
                     <xs:element ref="GMF"/>
+                    
+                    
+                    <!-- NOTE: moved this from XML attribute of old 'field' element to child element
+                         of groundMotionFieldSet -->
+                    <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -101,9 +106,6 @@
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element ref="site" minOccurs="1" maxOccurs="unbounded"/>
-                    
-                    <!-- NOTE: changed this from XML attribute to child element -->
-                    <xs:element name="description" type="xs:string"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -114,7 +116,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="gml:Point"/>
+                    <xs:element name="location" type="gml:PointPropertyType"/>
                     <xs:element name="groundMotion" type="xs:double"/>
                 </xs:sequence>
             </xs:extension>
@@ -126,7 +128,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="gml:Point"/>
+                    <xs:element name="location" type="gml:PointPropertyType"/>
                     <xs:element name="hazardValues" type="HazardValues"/>
                 </xs:sequence>
             </xs:extension>
