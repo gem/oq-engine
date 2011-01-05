@@ -94,7 +94,6 @@
     
     <!-- complex fault -->
     
-    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
     <xs:complexType name="ComplexFaultGeometry">
         <xs:complexContent>
             <xs:restriction base="gml:MultiGeometryPropertyType">
@@ -131,20 +130,25 @@
 
     <!-- simple fault -->
     
+    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="SimpleFaultGeometry">
-        <xs:sequence>
-            <xs:element name="faultTrace" type="gml:LineStringType"/>
-            <xs:element name="dip" type="nrml:Dip"/>
-            <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
-            <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
-        </xs:sequence>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="faultTrace" type="FaultEdge"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-
+    
     <xs:complexType name="SimpleFaultSourceData">
         <xs:complexContent>
             <xs:extension base="SourceData">
                 <xs:sequence>
-                    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry"/>
+                    <xs:element ref="simpleFaultGeometry"/>
                     <xs:element name="rake" type="Rake"/>
                     <xs:element ref="magnitudeFrequencyDistribution"/>
                 </xs:sequence>
@@ -156,7 +160,7 @@
         <xs:complexContent>
             <xs:extension base="SourceData">
                 <xs:sequence>
-                    <xs:element ref="complexFaultGeometry"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
                     <xs:element name="rake" type="Rake"/>
                     <xs:element ref="magnitudeFrequencyDistribution"/>
                 </xs:sequence>
@@ -245,9 +249,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
-                    
-                    <!-- TODO: use correct geospatial type -->
-                    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry"/>
+                    <xs:element ref="simpleFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -259,7 +261,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
-                    <xs:element ref="complexFaultGeometry"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
