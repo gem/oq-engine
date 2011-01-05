@@ -6,18 +6,19 @@
     <hazardResult>
         <config>Config file details go here</config>
         
-        <groundMotionFieldSet>
-        
-            <arbitrarilyComplexRupture>
+        <groundMotionFieldSet gml:id="gmfs_1">
+            <!-- groundMotionFieldSet is a gml:Feature -->
+            
+            <arbitrarilyComplexRupture gml:id="acr_1">
                 <!-- arbitrarilyComplexRupture is a gml:Feature -->
                 
                 <!-- non-geospatial properties -->
                 <magnitude type="Mw">8.0</magnitude>
-                <rake>0.0</rake>
                 <tectonicRegion>Active Shallow Crust</tectonicRegion>
-               
+                <rake>0.0</rake>
+
                 <!-- geospatial property -->
-                <gml:surfaceProperty>
+                <ruptureSurface>
                     <gml:Surface>
                         <gml:patches>
                             <gml:PolygonPatch>
@@ -39,35 +40,30 @@
                             </gml:PolygonPatch>
                         </gml:patches>
                     </gml:Surface>
-                </gml:surfaceProperty>
-             </arbitrarilyComplexRupture>
+                </ruptureSurface>
+            </arbitrarilyComplexRupture>
              
             <GMPEParameters IMT="PGA"/>
             
-            <GMF>
-                <!-- gmf is a gml:FeatureCollection -->
-                <gml:featureMembers>
-                    <site>
-                        <!-- site is a gml:Feature -->
-                        <groundMotion>0.2</groundMotion>
-                        
-                        <gml:position>
-                            <gml:Point srsName="epsg:4326">
-                                <gml:pos>-116.0 41.0</gml:pos>
-                            </gml:Point>
-                        </gml:position> 
-                    </site>
-                    
-                    <site>
-                        <groundMotion>0.3</groundMotion>
-                        
-                        <gml:position>
-                            <gml:Point srsName="epsg:4326">
-                                <gml:pos>-118.0 41.0</gml:pos>
-                            </gml:Point>
-                        </gml:position>
-                    </site>
-                </gml:featureMembers>
+            <GMF gml:id="gmf_1">
+                
+                <!-- gmf is a gml:Feature -->
+                <site gml:id="s_1">
+                    <!-- site is a gml:Feature -->
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 41.0</gml:pos>
+                    </gml:Point>
+                    <groundMotion>0.2</groundMotion>
+                </site>
+                
+                <site gml:id="s_2">
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-118.0 41.0</gml:pos>
+                    </gml:Point>
+                    <groundMotion>0.3</groundMotion>
+                </site>
+                
+                <description>Optional description element</description>
             </GMF>
 
         </groundMotionFieldSet>
