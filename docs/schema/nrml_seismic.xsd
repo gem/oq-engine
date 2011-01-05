@@ -144,18 +144,10 @@
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:complexType name="SimpleFaultSourceData">
-        <xs:complexContent>
-            <xs:extension base="SourceData">
-                <xs:sequence>
-                    <xs:element ref="simpleFaultGeometry"/>
-                    <xs:element name="rake" type="Rake"/>
-                    <xs:element ref="magnitudeFrequencyDistribution"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
+    <!-- ============================================================= -->
+    <!-- source data -->
+    
+    <!-- TODO: maybe use named group here -->
     <xs:complexType name="ComplexFaultSourceData">
         <xs:complexContent>
             <xs:extension base="SourceData">
@@ -168,6 +160,18 @@
         </xs:complexContent>
     </xs:complexType>
     
+    <xs:complexType name="SimpleFaultSourceData">
+        <xs:complexContent>
+            <xs:extension base="SourceData">
+                <xs:sequence>
+                    <xs:element ref="simpleFaultGeometry"/>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element ref="magnitudeFrequencyDistribution"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
     <xs:complexType name="AreaSourceData">
         <xs:complexContent>
             <xs:extension base="SourceData">
@@ -235,9 +239,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="focalMechanism" type="FocalMechanism"/>
-                    
-                    <!-- TODO: use correct geospatial type -->
-                    <xs:element name="hypocenterLocation" type="gml:PointType"/>
+                    <xs:element name="hypocenterLocation" type="gml:PointPropertyType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
