@@ -3,11 +3,13 @@
            xmlns="http://openquake.org/xmlns/nrml/0.1"
            xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
            xmlns:gmlsf="http://www.opengis.net/gmlsf"
+           xmlns:gml="http://www.opengis.net/gml"
            targetNamespace="http://openquake.org/xmlns/nrml/0.1"
            elementFormDefault="qualified"
            xml:lang="en"> 
 
     <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gmlsfLevels.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
 
     <xs:annotation>
         <xs:appinfo>
@@ -22,14 +24,20 @@
     <xs:include schemaLocation="./nrml_hazard.xsd"/>
     <xs:include schemaLocation="./nrml_risk.xsd"/>
 
+    <xs:element name="nrml" type="NRML" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="NRML">
-        <xs:choice  minOccurs="0" maxOccurs="1">
-            <xs:element ref="hazardResult"/>
-            <xs:element ref="riskResult"/>
-            <xs:element ref="exposurePortfolio"/>
-            <xs:element ref="vulnerabilityModel"/>
-        </xs:choice>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:choice minOccurs="0" maxOccurs="1">
+                        <xs:element ref="hazardResult"/>
+                        <xs:element ref="riskResult"/>
+                        <xs:element ref="exposurePortfolio"/>
+                        <xs:element ref="vulnerabilityModel"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
 
-    <xs:element name="nrml" type="NRML"/>
 </xs:schema>

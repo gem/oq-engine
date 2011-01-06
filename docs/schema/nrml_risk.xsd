@@ -170,23 +170,31 @@
     </xs:complexType>
     
     <!-- child elements of nrml -->
-    <xs:element name="riskResult" type="RiskResult"/>
+    <xs:element name="riskResult" type="RiskResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="RiskResult">
-        <xs:sequence>
-            <xs:element ref="config"/>
-            <xs:choice>
-                <xs:element ref="lossCurveList"/>
-                <xs:element ref="lossRatioCurveList"/>
-            </xs:choice>
-        </xs:sequence>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="config"/>
+                    <xs:choice>
+                        <xs:element ref="lossCurveList"/>
+                        <xs:element ref="lossRatioCurveList"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
 
-    <xs:element name="exposurePortfolio" type="ExposurePortfolio"/>
+    <xs:element name="exposurePortfolio" type="ExposurePortfolio" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="ExposurePortfolio">
-        <xs:sequence>
-            <xs:element ref="config"/>
-            <xs:element ref="exposureList"/>
-        </xs:sequence>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="config"/>
+                    <xs:element ref="exposureList"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
     
     <xs:element name="vulnerabilityModel" type="VulnerabilityModel"/>
