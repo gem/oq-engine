@@ -1,9 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" 
-      xmlns="http://openquake.org/xmlns/nrml/0.1">
-    <!-- this is a proposal for NRML refactoring 
-         fab, 2010-12-13 -->
-    <hazardResult>
+      xmlns="http://openquake.org/xmlns/nrml/0.1"
+      gml:id="n1">
+      
+    <!-- hazardResult is a gml:Feature -->
+    <hazardResult gml:id="hr1">
         <config>Config file details go here</config>
         
         <groundMotionFieldSet gml:id="gmfs_1">
