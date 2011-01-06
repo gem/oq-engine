@@ -1,9 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml" 
-      xmlns="http://openquake.org/xmlns/nrml/0.1">
-    <!-- this is a proposal for NRML refactoring 
-         fab, 2010-12-13 -->
-    <exposurePortfolio>
+      xmlns="http://openquake.org/xmlns/nrml/0.1"
+      gml:id="n1">
+    
+    <!-- exposurePortfolio is a gml:Feature -->
+    <exposurePortfolio gml:id="ep1">
         <config>Config file details go here</config>
         
         <!-- for attributes assetType and lossType, classification from the

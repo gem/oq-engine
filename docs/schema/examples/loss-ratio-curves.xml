@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml" 
-      xmlns="http://openquake.org/xmlns/nrml/0.1">
+      xmlns="http://openquake.org/xmlns/nrml/0.1"
+      gml:id="n1">
       
-    <!-- this is a proposal for NRML refactoring 
-         fab, 2010-12-13 -->
-    <riskResult>
+    <!-- riskResult is a gml:Feature -->
+    <riskResult gml:id="rr1">
         <config>Config file details go here</config>
         
         <lossRatioCurveList gml:id="lossRatioCurveList_1">
