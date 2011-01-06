@@ -151,17 +151,21 @@
     </xs:complexType>
 
     <!-- child elements of nrml -->
-    <xs:element name="hazardResult" type="HazardResult"/>
+    <xs:element name="hazardResult" type="HazardResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="HazardResult">
-        <xs:sequence>
-            <xs:element ref="config"/>
-            <xs:choice>
-                <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                    <xs:element ref="hazardCurveList"/>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="config"/>
+                    <xs:choice>
+                        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                            <xs:element ref="hazardCurveList"/>
+                        </xs:sequence>
+                        <xs:element ref="groundMotionFieldSet"/>
+                    </xs:choice>
                 </xs:sequence>
-                <xs:element ref="groundMotionFieldSet"/>
-            </xs:choice>
-        </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
     
 </xs:schema>
