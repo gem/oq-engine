@@ -20,11 +20,11 @@
                 </location>
                 
                 <lossCurves>
-                    <lossCurve vf="vf_1">
+                    <lossCurve endBranchLabel="vf_1">
                         <loss>0.0 100.0 200.0</loss>
                         <poE>0.4 0.2 0.1</poE>
                     </lossCurve>
-                    <lossCurve vf="vf_2">
+                    <lossCurve endBranchLabel="vf_2">
                         <loss>0.0 200.0 400.0</loss>
                         <poE>0.2 0.1 0.05</poE>
                     </lossCurve>
@@ -40,7 +40,7 @@
                 </location>
                 
                 <lossCurves>
-                    <lossCurve vf="vf_3">
+                    <lossCurve endBranchLabel="vf_3">
                         <loss>0.0 1000.0 2000.0</loss>
                         <poE>0.6 0.3 0.1</poE>
                     </lossCurve>
