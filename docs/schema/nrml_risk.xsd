@@ -77,7 +77,7 @@
     <xs:complexType name="LossRatioCurve">
         <xs:sequence>
             <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="poE" type="PoE" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="vf" type="xs:string"/>
     </xs:complexType>
@@ -85,7 +85,7 @@
     <xs:complexType name="LossCurve">
         <xs:sequence>
             <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="0" maxOccurs="unbounded"/>
-            <xs:element name="poE" type="PoE" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="vf" type="xs:string"/>
     </xs:complexType>
