@@ -10,7 +10,7 @@
         <!-- for attributes assetType and lossType, classification from the
              Taxonomy and Ontology working group is needed -->
         <!-- exposureList is a gml:Feature -->
-        <exposureList gml:id="PAV01" assetCategory="buildings" lossCategory="economical_loss">
+        <exposureList gml:id="PAV01" assetCategory="buildings" lossCategory="economic_loss">
             
             <portfolioDescription>Collection of existing building in downtown Pavia</portfolioDescription>
             

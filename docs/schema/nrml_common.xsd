@@ -19,7 +19,7 @@
     <xs:complexType name="IMLType">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
-                <xs:attribute name="IMT" type="IMTType"  use="required"/>
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -61,18 +61,34 @@
     
     <!-- ============================================================= -->
 
-	<xs:complexType name="EvenlyDiscretizedDist">
-		<xs:annotation>
-			<xs:documentation>Describes an evenly discretized distribution </xs:documentation>
-		</xs:annotation>
-		<xs:all>
-			<xs:element name="distributionValues" type="gml:doubleList"/>
-		</xs:all>
-		<xs:attribute name="binSize" type="xs:double"/>
-		<xs:attribute name="minVal" type="xs:double"/>
-		<xs:attribute name="binCount" type="xs:integer"/>
-	</xs:complexType>
+    <xs:complexType name="EvenlyDiscretizedDistribution">
+        <xs:annotation>
+            <xs:documentation>Describes an evenly discretized distribution.</xs:documentation>
+        </xs:annotation>
+        <xs:simpleContent>
+            <!-- NOTE: removed child element 'distributionValues', since it's not required -->
+            <xs:extension base="gml:doubleList">
+                <xs:attribute name="minVal" type="xs:double" use="required"/>
+                <xs:attribute name="binSize" type="NonNegativeDoubleType" use="required"/>
+                
+                <!-- NOTE: removed attribute 'binCount', since it's given implicitly throgh the
+                    number of values given in the element -->
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
 
+    <xs:complexType name="ArbitrarilyDiscretizedDistribution">
+        <xs:annotation>
+            <xs:documentation>This complex type allows to define a whatever discretized function</xs:documentation>
+        </xs:annotation>
+        <xs:all>
+            <xs:element name="abscissa" type="gml:doubleList"/>
+            <xs:element name="ordinate" type="gml:doubleList"/>
+        </xs:all>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    
 	<xs:complexType name="GrdSpecs">
 		<xs:attribute name="minX" type="xs:double"/>
 		<xs:attribute name="minY" type="xs:double"/>
@@ -142,16 +158,6 @@
 			<xs:enumeration value="si"/>
 		</xs:restriction>
 	</xs:simpleType>
-	
-	<xs:complexType name="ArbitrarilyDiscretizedDist">
-		<xs:annotation>
-			<xs:documentation>This complex type allows to define a whatever discretized function</xs:documentation>
-		</xs:annotation>
-		<xs:all>
-			<xs:element name="XValues" type="gml:doubleList"/>
-			<xs:element name="YValues" type="gml:doubleList"/>
-		</xs:all>
-	</xs:complexType>
 	
     <!-- ============================================================= -->
 

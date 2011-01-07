@@ -17,11 +17,11 @@
                 </location>
                 
                 <lossRatioCurves>
-                    <lossRatioCurve vf="vf_1">
+                    <lossRatioCurve endBranchLabel="vf_1">
                         <lossRatio>0.0 0.2 0.4</lossRatio>
                         <poE>0.4 0.2 0.1</poE>
                     </lossRatioCurve>
-                    <lossRatioCurve vf="vf_2">
+                    <lossRatioCurve endBranchLabel="vf_2">
                         <lossRatio>0.0 0.5 0.8</lossRatio>
                         <poE>0.2 0.1 0.05</poE>
                     </lossRatioCurve>
@@ -36,7 +36,7 @@
                 </location>
                 
                 <lossRatioCurves>
-                    <lossRatioCurve vf="vf_3">
+                    <lossRatioCurve endBranchLabel="vf_3">
                         <lossRatio>0.0 0.0001 0.0002</lossRatio>
                         <poE>0.6 0.3 0.1</poE>
                     </lossRatioCurve>
