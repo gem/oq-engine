@@ -112,80 +112,81 @@
     <!-- ============================================================= -->
     <!-- seismic source -->
     
-    <!-- NOTE: no explicit type! -->
-    <xs:element name="seismicSource" abstract="true"/>
-    
-    <xs:element name="point" type="PointSourceData" substitutionGroup="seismicSource"/>
-    <xs:element name="area" type="AreaSourceData" substitutionGroup="seismicSource"/>
-    <xs:element name="simpleFault" type="SimpleFaultSourceData" substitutionGroup="seismicSource"/>
-    <xs:element name="complexFault" type="ComplexFaultSourceData" substitutionGroup="seismicSource"/>
-    
-    <!-- ============================================================= -->
-    <!-- source data -->
-    
-    <!-- TODO: maybe use named group here -->
-    <xs:complexType name="SourceData">
-        <xs:sequence>
-            <xs:element name="sourceName" type="xs:string"/>
-            <xs:element name="sourceID" type="xs:string"/>
-            <xs:element name="tectonicRegion" type="TectonicRegion"/>
-        </xs:sequence>
+    <xs:element name="_seismicSource" type="AbstractSeismicSource" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:complexType name="AbstractSeismicSource" abstract="true">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="tectonicRegion" type="TectonicRegion"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="PointSourceData">
+    <xs:element name="pointSource" type="PointSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="PointSource">
         <xs:complexContent>
-            <xs:extension base="SourceData">
+            <xs:extension base="AbstractSeismicSource">
                 <xs:sequence>
                     <xs:element name="pointLocation" type="gml:PointType"/>
+                    
+                    <!-- TODO: make the next 3 elements a named group -->
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
                     </xs:sequence>
-                    <xs:element name="ruptureDepthDistribution" type="ArbitrarilyDiscretizedDist"/>
+                    <xs:element name="ruptureDepthDistribution" type="ArbitrarilyDiscretizedDistribution"/>
                     <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:complexType name="AreaSourceData">
+    <xs:element name="areaSource" type="AreaSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="AreaSource">
         <xs:complexContent>
-            <xs:extension base="SourceData">
+            <xs:extension base="AbstractSeismicSource">
                 <xs:sequence>
                     <xs:element name="areaBoundary" type="gml:PolygonType"/>
+                    
+                    <!-- TODO: use named group from above -->
                     <xs:sequence minOccurs="1" maxOccurs="unbounded">
                         <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
                     </xs:sequence>
-                    <xs:element name="ruptureDepthDistribution" type="ArbitrarilyDiscretizedDist"/>
+                    <xs:element name="ruptureDepthDistribution" type="ArbitrarilyDiscretizedDistribution"/>
                     <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:complexType name="SimpleFaultSourceData">
+    <xs:element name="simpleFaultSource" type="SimpleFaultSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="SimpleFaultSource">
         <xs:complexContent>
-            <xs:extension base="SourceData">
+            <xs:extension base="AbstractSeismicSource">
                 <xs:sequence>
-                    <xs:element ref="simpleFaultGeometry"/>
                     <xs:element name="rake" type="Rake"/>
                     <xs:element ref="magnitudeFrequencyDistribution"/>
+                    <xs:element ref="simpleFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:complexType name="ComplexFaultSourceData">
+    <xs:element name="complexFaultSource" type="ComplexFaultSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="ComplexFaultSource">
         <xs:complexContent>
-            <xs:extension base="SourceData">
+            <xs:extension base="AbstractSeismicSource">
                 <xs:sequence>
-                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
                     <xs:element name="rake" type="Rake"/>
                     <xs:element ref="magnitudeFrequencyDistribution"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
 
+    <!-- ============================================================= -->
+    
     <xs:complexType name="RuptureRateModel">
         <xs:sequence>
             <xs:element ref="magnitudeFrequencyDistribution"/>
@@ -198,7 +199,7 @@
     
     <xs:element name="truncatedGutenbergRichter" type="TruncatedGutenbergRichter"
         substitutionGroup="magnitudeFrequencyDistribution"/>
-    <xs:element name="evenlyDiscretizedIncrementalMagFreqDist" type="EvenlyDiscretizedDist"
+    <xs:element name="evenlyDiscretizedIncrementalMFD" type="EvenlyDiscretizedDistribution"
         substitutionGroup="magnitudeFrequencyDistribution"/>
 
     <xs:complexType name="TruncatedGutenbergRichter">
@@ -318,7 +319,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                    <xs:element ref="seismicSource"/>
+                    <xs:element ref="_seismicSource"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>

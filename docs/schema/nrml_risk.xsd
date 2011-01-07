@@ -31,8 +31,8 @@
     
     <xs:simpleType name="LossCategory">
         <xs:restriction base="xs:string">
-            <xs:enumeration value="people"/>
-            <xs:enumeration value="economical_loss"/>
+            <xs:enumeration value="fatalities"/>
+            <xs:enumeration value="economic_loss"/>
         </xs:restriction>
     </xs:simpleType>
     
@@ -79,7 +79,7 @@
             <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
-        <xs:attribute name="vf" type="xs:string"/>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
     </xs:complexType>
 
     <xs:complexType name="LossCurve">
@@ -87,7 +87,7 @@
             <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
-        <xs:attribute name="vf" type="xs:string"/>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
     </xs:complexType>
 
     <xs:complexType name="LossRatioCurves">
