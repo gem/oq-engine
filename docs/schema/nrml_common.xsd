@@ -15,14 +15,6 @@
     
 	<!-- ============================================================= -->
 
-    <xs:complexType name="PoE">
-        <!-- TODO: make this a non-negative list between 0..1 -->
-        <xs:simpleContent>
-            <xs:extension base="gml:doubleList">
-            </xs:extension>
-        </xs:simpleContent>
-    </xs:complexType>
-    
     <!-- CDATA doubleList, attribute IMT (mandatory) -->
     <xs:complexType name="IMLType">
         <xs:simpleContent>
