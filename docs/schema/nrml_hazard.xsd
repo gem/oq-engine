@@ -87,14 +87,12 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
+                    <!-- NOTE: the description attribute of old 'field' element can go into
+                         the optional gml:description element of the groundMotionFieldSet feature -->
                     <xs:element ref="rupture"/>
                     <xs:element name="GMPEParameters" type="GMPEParametersType"/>
                     <xs:element ref="GMF"/>
                     
-                    
-                    <!-- NOTE: moved this from XML attribute of old 'field' element to child element
-                         of groundMotionFieldSet -->
-                    <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
