@@ -73,7 +73,7 @@
     
 	<xs:complexType name="HazardValues">
         <xs:sequence>
-            <xs:element name="poE" type="PoE"/>
+            <xs:element name="poE" type="NormalizedDoubleList"/>
         </xs:sequence>
     </xs:complexType>
 
