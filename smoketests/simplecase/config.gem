@@ -20,9 +20,9 @@ GMPELT_RANDOM_SEED = 5
 GMF_RANDOM_SEED = 3
 
 # file containing erf logic tree structure
-ERF_LOGIC_TREE_FILE = ErfLogicTree.inp
+ERF_LOGIC_TREE_FILE = source_model_logic_tree.xml
 # file containing gmpe logic tree structure
-GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
+GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
 # output directory - relative to this file
 OUTPUT_DIR = computed_output
 
