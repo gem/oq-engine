@@ -496,7 +496,7 @@ class Curve(object):
         return Curve(data).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
-        """Check if the given value is outside the codomain boundaries."""
+        """Check if the given value is outside the Y values boundaries."""
         ordinates = list(self.ordinates)
         ordinates.sort()
         

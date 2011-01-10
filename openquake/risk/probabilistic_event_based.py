@@ -158,7 +158,7 @@ class AggregateLossCurve(object):
         return aggregate_curve
 
     def __init__(self, vuln_model):
-        self._tses, self._time_span, self._gmfs_length = (None, None, None)
+        self._tses = self._time_span = self._gmfs_length = None
 
         self.distribution = []
         self.vuln_model = vuln_model
