@@ -7,7 +7,7 @@
     <hazardResult gml:id="hr1">
     
         <config>
-            <!-- don't like this! -->
+            <!-- TODO: not yet in schema! don't like this! -->
             <hazardProcessing timeSpanDuration="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2"/>
         </config>
         

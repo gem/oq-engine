@@ -36,16 +36,15 @@
 
     <xs:complexType name="Magnitude">
         <xs:simpleContent>
-            <!-- NOTE: should magnitude be restricted to non-negative values? -->
             <xs:extension base="xs:double">
-                <!-- NOTE: do we need a free-text field for magnitude type, since
-                     there are so many magnitude definitions? -->
-                <xs:attribute name="type" type="MagnitudeType"/>
+                <!-- NOTE: using free-text field for magnitude type, like in QuakeML -->
+                <xs:attribute name="type" type="xs:string"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
     
-    <!-- TODO: add magnitude types (Taxonomy&Ontology group) -->
+    <!-- TODO: add magnitude types (Taxonomy&Ontology group), possibly IASPEI-defined list -->
+    <!-- NOTE: not used at the moment -->
     <xs:simpleType name="MagnitudeType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="ML"/>
