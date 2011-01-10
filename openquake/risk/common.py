@@ -38,30 +38,26 @@ def compute_loss_curve(loss_ratio_curve, asset):
 def _compute_mid_mean_pe(loss_ratio_curve):
     """Compute a new loss ratio curve taking the mean values."""
 
-    data = []
     loss_ratios = loss_ratio_curve.abscissae
     pes = loss_ratio_curve.ordinates
 
-    for idx in xrange(loss_ratios.size - 1):
-        data.append((mean([loss_ratios[idx], loss_ratios[idx + 1]]),
-                mean([pes[idx], pes[idx + 1]])))
+    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
+    mid_pes = collect(loop(pes, lambda x, y: mean([x, y])))
 
-    return shapes.Curve(data)
+    return shapes.Curve(zip(ratios, mid_pes))
 
 
 def _compute_mid_po(loss_ratio_pe_mid_curve):
     """Compute a loss ratio curve that has PoOs
     (Probabilities of Occurrence) as Y values."""
 
-    data = []
     loss_ratios = loss_ratio_pe_mid_curve.abscissae
     pes = loss_ratio_pe_mid_curve.ordinates
 
-    for idx in xrange(loss_ratios.size - 1):
-        data.append((mean([loss_ratios[idx], loss_ratios[idx + 1]]),
-                pes[idx] - pes[idx + 1]))
+    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
+    pos = collect(loop(pes, lambda x, y: x - y))
 
-    return shapes.Curve(data)
+    return shapes.Curve(zip(ratios, pos))
 
 
 def compute_mean_loss(curve):
@@ -69,3 +65,19 @@ def compute_mean_loss(curve):
 
     mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
     return sum(i*j for i, j in zip(mid_curve.abscissae, mid_curve.ordinates))
+
+
+def loop(elements, func, *args):
+    """Loop over the given elements, yielding func(current, next, *args)."""
+    for idx in xrange(elements.size - 1):
+        yield func(elements[idx], elements[idx + 1], *args)
+
+
+def collect(iterator):
+    """Simply collect the data taken from the given iterator."""
+    data = []
+
+    for element in iterator:
+        data.append(element)
+    
+    return data
