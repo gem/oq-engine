@@ -54,16 +54,20 @@ def parse_config_file(config_file):
     parser.read(config_file)
 
     params = {}
+    sections = []
     for section in parser.sections():
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
-                params.update(parse_config_file(config_file))
+                new_sections, new_params = parse_config_file(config_file)
+                sections.extend(new_sections)
+                params.update(new_params)
             else:
+                sections.append(section)
                 params[key] = value
-    return params
+    return sections, params
 
 
 def validate(fn):
@@ -126,15 +130,18 @@ class Job(object):
         
         base_path = os.path.abspath(os.path.dirname(config_file))
         params = {}
+        sections = []
         for each_config_file in Job.default_configs() + [config_file]:
-            params.update(parse_config_file(each_config_file))
+            new_sections, new_params = parse_config_file(each_config_file)
+            sections.extend(new_sections)
+            params.update(new_params)
         params['BASE_PATH'] = base_path
-        job = Job(params, base_path=base_path)
+        job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file               #pylint: disable=W0201
         # job.config_file = job.super_config_path   #pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, base_path=None):
+    def __init__(self, params, job_id=None, sections=[], base_path=None):
         if job_id is None:
             job_id = kvs.generate_random_id()
         
@@ -142,6 +149,7 @@ class Job(object):
         self.blocks_keys = []
         self.partition = True
         self.params = params
+        self.sections = list(set(sections)) # uniquify
         self.base_path = base_path
         if base_path:
             self.to_kvs()
@@ -190,6 +198,9 @@ class Job(object):
         results = []
         self._partition()
         for (key, mixin) in Mixin.ordered_mixins():
+            if key not in self.sections:
+                next
+
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
