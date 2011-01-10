@@ -53,16 +53,20 @@ def parse_config_file(config_file):
     parser.read(config_file)
 
     params = {}
+    sections = []
     for section in parser.sections():
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
-                params.update(parse_config_file(config_file))
+                new_sections, new_params = parse_config_file(config_file)
+                sections.extend(new_sections)
+                params.update(new_params)
             else:
+                sections.append(section)
                 params[key] = value
-    return params
+    return sections, params
 
 
 def validate(fn):
@@ -92,11 +96,24 @@ def guarantee_file(base_path, file_spec):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    __default_configs = [os.path.join(os.path.dirname(__file__),
-                            "../", "default.gem"), #package
-                         "opengem.gem",        # Sane Defaults
-                         "/etc/opengem.gem",   # Site level configs
-                         "~/.opengem.gem"]     # Are we running as a user?
+    __cwd = os.path.dirname(__file__)
+    __defaults = [os.path.join(__cwd, "../", "default.gem"), #package
+                    "openquake.gem",        # Sane Defaults
+                    "/etc/openquake.gem",   # Site level configs
+                    "~/.openquake.gem"]     # Are we running as a user?
+
+    @classmethod
+    def default_configs(cls):
+        """ 
+         Default job configuration files, writes a warning if they don't exist.
+        """
+
+        if cls.__defaults and not any([os.path.exists(cfg) for cfg 
+                                                           in cls.__defaults]):
+            LOG.warning("No default configuration! If your job config doesn't "
+                        "define all of the expected properties things might "
+                        "break.")
+        return cls.__defaults
 
     @staticmethod
     def from_kvs(job_id):
@@ -113,15 +130,18 @@ class Job(object):
         
         base_path = os.path.abspath(os.path.dirname(config_file))
         params = {}
-        for each_config_file in Job.__default_configs + [config_file]:
-            params.update(parse_config_file(each_config_file))
+        sections = []
+        for each_config_file in Job.default_configs() + [config_file]:
+            new_sections, new_params = parse_config_file(each_config_file)
+            sections.extend(new_sections)
+            params.update(new_params)
         params['BASE_PATH'] = base_path
-        job = Job(params, base_path=base_path)
-        job.config_file = config_file               #pylint: disable-msg=W0201
-        # job.config_file = job.super_config_path   #pylint: disable-msg=W0201
+        job = Job(params, sections=sections, base_path=base_path)
+        job.config_file = config_file               #pylint: disable=W0201
+        # job.config_file = job.super_config_path   #pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, base_path=None):
+    def __init__(self, params, job_id=None, sections=list(), base_path=None):
         if job_id is None:
             job_id = kvs.generate_random_id()
         
@@ -129,6 +149,7 @@ class Job(object):
         self.blocks_keys = []
         self.partition = True
         self.params = params
+        self.sections = list(set(sections)) # uniquify
         self.base_path = base_path
         if base_path:
             self.to_kvs()
@@ -139,7 +160,7 @@ class Job(object):
         return self.params.has_key(name) and self.params[name] != ""
 
     @property
-    def id(self): #pylint: disable-msg=C0103
+    def id(self): #pylint: disable=C0103
         """Return the id of this job."""
         return self.job_id
     
@@ -177,12 +198,15 @@ class Job(object):
         results = []
         self._partition()
         for (key, mixin) in Mixin.ordered_mixins():
+            if key.upper() not in self.sections:
+                continue
+
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
                 LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key)) 
-                results.extend(self.execute()) #pylint: disable-msg=E1101
+                results.extend(self.execute()) #pylint: disable=E1101
 
         return results
 
@@ -296,7 +320,8 @@ class Job(object):
 class AlwaysTrueConstraint():
     """ A stubbed constraint for block splitting """
 
-    #pylint: disable-msg=W0232,W0613,R0201
+    #pylint: disable=W0232,W0613,R0201
+
     def match(self, point):
         """ stub a match filter to always return true """
         return True
@@ -348,7 +373,7 @@ class Block(object):
         kvs.set_value_json_encoded(self.id, raw_sites)
 
     @property
-    def id(self): #pylint: disable-msg=C0103
+    def id(self): #pylint: disable=C0103
         """Return the id of this block."""
         return self.block_id
 
