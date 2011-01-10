@@ -5,19 +5,23 @@
       
     <!-- hazardResult is a gml:Feature -->
     <hazardResult gml:id="hr1">
-        <config>Config file details go here</config>
+        <config>
+            <!-- TODO: rename "timeSpanDuration"! Where do we put it? -->
+            <hazardProcessing timeSpanDuration="50.0"/>
+        </config>
         
         <!-- groundMotionFieldSet is a gml:Feature -->
         <groundMotionFieldSet gml:id="gmfs_1">
             
             <gml:description>Optional description element</gml:description>
+            <GMPEParameters IMT="PGA"/>
             
             <!-- arbitrarilyComplexRupture is a gml:Feature -->
             <arbitrarilyComplexRupture gml:id="acr_1">
                 
                 <!-- non-geospatial properties -->
                 <magnitude type="Mw">8.0</magnitude>
-                <tectonicRegion>active_shallow_crust</tectonicRegion>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
                 <rake>0.0</rake>
 
                 <!-- geospatial property -->
@@ -45,31 +49,28 @@
                     </gml:Surface>
                 </ruptureSurface>
             </arbitrarilyComplexRupture>
-             
-            <GMPEParameters IMT="PGA"/>
             
             <!-- gmf is a gml:Feature -->
-            <GMF gml:id="gmf_1">
+            <GMF gml:id="gmf_1" ruptureReference="acr_1">
                 
-                <!-- site is a gml:Feature -->
-                <site gml:id="s_1">
+                <!-- node is a gml:Feature -->
+                <node gml:id="s_1">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-116.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
-                    
                     <groundMotion>0.2</groundMotion>
-                </site>
+                </node>
                 
-                <site gml:id="s_2">
+                <node gml:id="s_2">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-118.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.3</groundMotion>
-                </site>
+                </node>
                 
             </GMF>
             

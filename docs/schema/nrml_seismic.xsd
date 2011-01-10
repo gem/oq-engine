@@ -43,13 +43,11 @@
     <xs:simpleType name="TectonicRegion">
         <xs:restriction base="xs:string">
             
-            <!-- NOTE: made enum values lowercase and removed whitespace, in order
-                 to match style of other enums -->
-            <xs:enumeration value="active_shallow_crust"/>
-            <xs:enumeration value="stable_shallow_crust"/>
-            <xs:enumeration value="subduction_interface"/>
-            <xs:enumeration value="subduction_intra_slab"/>
-            <xs:enumeration value="volcanic"/>
+            <xs:enumeration value="Active Shallow Crust"/>
+            <xs:enumeration value="Stable Shallow Crust"/>
+            <xs:enumeration value="Subduction Interface"/>
+            <xs:enumeration value="Subduction IntraSlab"/>
+            <xs:enumeration value="Volcanic"/>
         </xs:restriction>
     </xs:simpleType>
 
