@@ -52,7 +52,6 @@ def parse_config_file(config_file):
 
     parser = ConfigParser()
     parser.read(config_file)
-    print config_file, parser.sections()
 
     params = {}
     sections = []
