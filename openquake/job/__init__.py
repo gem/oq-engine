@@ -134,7 +134,6 @@ class Job(object):
         sections = []
         for each_config_file in Job.default_configs() + [config_file]:
             new_sections, new_params = parse_config_file(each_config_file)
-            print new_sections, new_params
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
@@ -143,7 +142,7 @@ class Job(object):
         # job.config_file = job.super_config_path   #pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, sections=[], base_path=None):
+    def __init__(self, params, job_id=None, sections=list(), base_path=None):
         if job_id is None:
             job_id = kvs.generate_random_id()
         
@@ -200,8 +199,8 @@ class Job(object):
         results = []
         self._partition()
         for (key, mixin) in Mixin.ordered_mixins():
-            if key not in self.sections:
-                next
+            if key.upper() not in self.sections:
+                continue
 
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
