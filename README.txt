@@ -1,6 +1,15 @@
 OpenQuake System
 ==============
 
+Until we get this updated, you should please follow the instructions here for installation: 
+http://openquake.org/documentation/installation/
+
+
+
+
+
+THE BELOW INSTRUCTIONS ARE DEPRECATED:
+
 Dependencies
 ------------
 
@@ -26,7 +35,6 @@ already use MacPorts or Fink) is called homebrew: http://mxcl.github.com/homebre
  * sudo pip install gdal (FAILS, so):
  * Use the package from http://www.kyngchaos.com/software:frameworks
 * osgeo (pip install)
-* eventlet
 * jpype
 * lxml
 * PyYAML

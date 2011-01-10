@@ -1,6 +1,12 @@
 package org.gem.engine;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -8,6 +14,7 @@ import java.util.Map;
 import org.dom4j.Document;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
+import org.gem.engine.hazard.redis.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
 import org.gem.engine.logictree.LogicTreeBranchingLevel;
@@ -15,13 +22,12 @@ import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
 
 /**
- * Class for reading logic tree data in a nrML format file. The constructor of
- * this class takes the path of the file to read from.
+ * Class for reading logic tree data in a nrML format file.
  * 
  */
 public class LogicTreeReader {
 
-    private final String path;
+    private final BufferedReader bufferedReader;
 
     private final Map<String, LogicTree> logicTreeHashMap;
 
@@ -39,7 +45,39 @@ public class LogicTreeReader {
      * Creates a new LogicTreeReader given the path of the file to read from.
      */
     public LogicTreeReader(String path) {
-        this.path = path;
+        File xml = new File(path);
+        FileInputStream fileInputStream;
+        try {
+            fileInputStream = new FileInputStream(xml.getPath());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        BufferedInputStream bufferedInputStream =
+                new BufferedInputStream(fileInputStream);
+        this.bufferedReader =
+                new BufferedReader(new InputStreamReader(bufferedInputStream));
+        logicTreeHashMap = new HashMap<String, LogicTree>();
+    }
+
+    /**
+     * Creates a new LogicTreeReader given cache and key to read from
+     */
+    public LogicTreeReader(Cache cache, String key) {
+        String source = (String) cache.get(key);
+        byte[] bytevals = source.getBytes();
+        InputStream byteis = new ByteArrayInputStream(bytevals);
+        BufferedInputStream bufferedInputStream =
+                new BufferedInputStream(byteis);
+        this.bufferedReader =
+                new BufferedReader(new InputStreamReader(bufferedInputStream));
+        logicTreeHashMap = new HashMap<String, LogicTree>();
+    }
+
+    /**
+     * Creates a new LogicTreeReader given BufferedReader to read from
+     */
+    public LogicTreeReader(BufferedReader bufferedReader) {
+        this.bufferedReader = bufferedReader;
         logicTreeHashMap = new HashMap<String, LogicTree>();
     }
 
@@ -52,11 +90,10 @@ public class LogicTreeReader {
      */
     public Map<String, LogicTree> read() {
 
-        File xml = new File(path);
         SAXReader reader = new SAXReader();
         Document doc = null;
         try {
-            doc = reader.read(xml);
+            doc = reader.read(this.bufferedReader);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
