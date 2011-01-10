@@ -56,7 +56,7 @@ flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
 flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
 
 flags.DEFINE_boolean('partition', False, 'Partition job?')
-flags.DEFINE_boolean('server', False, 'Launch memcached and RabbitMQ subprocs')
+flags.DEFINE_boolean('server', False, 'Launch redis-server and RabbitMQ subprocs')
 flags.DEFINE_boolean('worker', False, 'Launch celery subprocs')
 
 
@@ -81,10 +81,10 @@ def _launch_worker_subprocs():
 
 
 def _launch_server_subprocs():
-    """Start memcached and RabbitMQ as python subprocs.
+    """Start redis-server and RabbitMQ as python subprocs.
 
     There should only be one copy of RabbitMQ running  
-    and (for now) only one copy of memcached.
+    and (for now) only one copy of redis-server.
 
     If a process is already running, don't kill it
     and carry on.
@@ -103,9 +103,9 @@ def _launch_server_subprocs():
 
  
     # launch memcached if it's not already running
-    if not _is_running('[m]emcached'):
-        print "Starting memcached..."
-        Process(target=local, args=('memcached',)).start()
+    if not _is_running('[r]edis-server'):
+        print "Starting redis-server..."
+        Process(target=local, args=('redis-server',)).start()
 
 
 def _is_running(proc_name):
@@ -115,7 +115,7 @@ def _is_running(proc_name):
     Be sure to surroud the first letter
     of the proc_name with [] to avoid getting
     a false positive from the grep
-    (example: '[m]emcached', instead of 'memcached').
+    (example: '[r]edis-server', instead of 'redis-server').
     """
     # set fabric to warn only (so fabric run() calls with no
     # response don't crash and burn)
@@ -153,7 +153,7 @@ if __name__ == '__main__':
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)    
     elif FLAGS.server:
-        # launch memcached and rabbitmq
+        # launch redis and rabbitmq
         _launch_server_subprocs()
     elif FLAGS.worker:
         # launch celery
