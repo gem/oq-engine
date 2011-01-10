@@ -61,6 +61,10 @@ class JobTestCase(unittest.TestCase):
         good_defaults = Job._Job__defaults
         Job.__defaults = good_defaults
 
+    def test_job_has_the_correct_sections(self):
+        self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
+        self.assertEqual(self.job.sections, self.job_with_includes.sections)
+
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 
             self.assertTrue(os.path.isfile(job.super_config_path))
