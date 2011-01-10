@@ -16,10 +16,11 @@
 	<!-- TODO: add useful enum items (T&O group) -->
 	<xs:simpleType name="Vs30Method">
         <xs:annotation>
-            <xs:documentation>Method used to account for vs30</xs:documentation>
+            <xs:documentation>Method used to define the vs30 value.</xs:documentation>
         </xs:annotation>
         <xs:restriction base="xs:string">
-            <xs:enumeration value="none"/>
+            <xs:enumeration value="Wald and Allen Topographic proxy"/>
+            <xs:enumeration value="fixed value"/>
         </xs:restriction>
     </xs:simpleType>
     
@@ -57,17 +58,17 @@
             <xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
         </xs:annotation>
         <xs:attribute name="IMT" type="IMTType"/>
+        
+        <!-- TODO: move timeSpanDuration to better place -->
+        <xs:attribute name="timeSpanDuration" type="NonNegativeDoubleType"/>
         <xs:attribute name="vs30method" type="Vs30Method"/>
         <xs:attribute name="groundMotionComponent" type="GroundMotionComponent"/>
 
-        <!-- NOTE: negative periods don't make sense, right? -->
         <xs:attribute name="period" type="NonNegativeDoubleType"/>
-        
-        <!-- NOTE: can damping have negative values? -->
         <xs:attribute name="damping" type="NonNegativeDoubleType"/>
         
         <xs:attribute name="truncationType" type="TruncationType"/>
-        <xs:attribute name="truncationLevel" type="xs:double"/>
+        <xs:attribute name="truncationLevel" type="NonNegativeDoubleType"/>
         <xs:attribute name="stdDevType" type="StdDevType"/>
     </xs:complexType>
     
@@ -89,10 +90,9 @@
                 <xs:sequence>
                     <!-- NOTE: the description attribute of old 'field' element can go into
                          the optional gml:description element of the groundMotionFieldSet feature -->
-                    <xs:element ref="rupture"/>
                     <xs:element name="GMPEParameters" type="GMPEParametersType"/>
-                    <xs:element ref="GMF"/>
-                    
+                    <xs:element ref="rupture" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="GMF" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -103,14 +103,18 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="site" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="node" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
+                
+                <!-- NOTE: the optional attribute ruptureReference refers to the 
+                     gml:id of one of the ruptures -->
+                <xs:attribute name="ruptureReference" type="xs:IDREF"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:element name="site" type="Site" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="Site">
+    <xs:element name="node" type="Node" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="Node">
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
@@ -141,8 +145,6 @@
                     <xs:element name="IML" type="IMLType"/>
                     <xs:element ref="hazardCurve" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
-                
-                <!-- NOTE: does attribute endBranchLabel have to be required? -->
                 <xs:attribute name="endBranchLabel" type="xs:string"/>
             </xs:extension>
         </xs:complexContent>

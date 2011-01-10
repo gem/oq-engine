@@ -13,7 +13,7 @@
         <simpleFaultSource gml:id="src01">
             <gml:name>Mount Diablo Thrust</gml:name>
             
-            <tectonicRegion>active_shallow_crust</tectonicRegion>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
             <rake>90.0</rake>
             
             <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1" type="ML">
@@ -45,7 +45,7 @@
         <complexFaultSource gml:id="src02">
             <gml:name>Cascadia Megathrust</gml:name>
             
-            <tectonicRegion>subduction_interface</tectonicRegion>
+            <tectonicRegion>Subduction Interface</tectonicRegion>
             <rake>90.0</rake>
             
             <truncatedGutenbergRichter type="ML">
@@ -83,7 +83,7 @@
         <areaSource gml:id="src03">
             <gml:name>Quito</gml:name>
             
-            <tectonicRegion>active_shallow_crust</tectonicRegion>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
             
             <!-- this is the geospatial property, of type gml:SurfacePropertyType -->
             <areaBoundary>
@@ -139,7 +139,7 @@
         <!-- pointSource is a gml:Feature -->
         <pointSource gml:id="src04">
             <gml:name>point</gml:name>
-            <tectonicRegion>active_shallow_crust</tectonicRegion>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
             
             <!-- this is the geospatial property, of type gml:PointPropertyType -->
             <location>

@@ -16,7 +16,7 @@
             <pointRupture gml:id="pr_1">
                 
                 <magnitude type="Mw">6.5</magnitude>
-                <tectonicRegion>active_shallow_crust</tectonicRegion>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
 
                 <focalMechanism publicID="smi:local/1">
                     <qml:nodalPlanes>
@@ -44,7 +44,7 @@
             <pointRupture gml:id="pr_2">
                 
                 <magnitude type="Mw">7.5</magnitude>
-                <tectonicRegion>active_shallow_crust</tectonicRegion>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
 
                 <focalMechanism publicID="smi:local/1">
                     <qml:nodalPlanes>
