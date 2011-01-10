@@ -53,6 +53,14 @@
         </xs:restriction>
     </xs:simpleType>
     
+    <xs:complexType name="MagnitudeList">
+        <xs:simpleContent>
+            <xs:extension base="gml:doubleList">
+                <xs:attribute name="type" type="MagnitudeType"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
     <xs:simpleType name="ProbabilisticDistributionType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="LN"/>

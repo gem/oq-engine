@@ -123,19 +123,35 @@
         </xs:complexContent>
     </xs:complexType>
 
+    <xs:group name="RuptureRateandDepthGroup">
+        <xs:sequence>
+            <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
+            </xs:sequence>
+            
+            <xs:element name="ruptureDepthDistribution" type="RuptureDepthDistribution"/>
+            
+            <!-- NOTE: we could use meters here, as in QuakeML (basic SI unit) -->
+            <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
+        </xs:sequence>
+    </xs:group>
+    
+    <xs:complexType name="RuptureDepthDistribution">
+        <xs:sequence>
+            <xs:element name="magnitude" type="MagnitudeList"/>
+            
+            <!-- NOTE: we could use meters here, as in QuakeML (basic SI unit) -->
+            <xs:element name="depth" type="NonNegativeDoubleList"/>
+        </xs:sequence>
+    </xs:complexType>
+    
     <xs:element name="pointSource" type="PointSource" substitutionGroup="_seismicSource"/>
     <xs:complexType name="PointSource">
         <xs:complexContent>
             <xs:extension base="AbstractSeismicSource">
                 <xs:sequence>
-                    <xs:element name="pointLocation" type="gml:PointType"/>
-                    
-                    <!-- TODO: make the next 3 elements a named group -->
-                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                        <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
-                    </xs:sequence>
-                    <xs:element name="ruptureDepthDistribution" type="ArbitrarilyDiscretizedDistribution"/>
-                    <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="location" type="gml:PointPropertyType"/>
+                    <xs:group ref="RuptureRateandDepthGroup"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -146,16 +162,20 @@
         <xs:complexContent>
             <xs:extension base="AbstractSeismicSource">
                 <xs:sequence>
-                    <xs:element name="areaBoundary" type="gml:PolygonType"/>
-                    
-                    <!-- TODO: use named group from above -->
-                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                        <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
-                    </xs:sequence>
-                    <xs:element name="ruptureDepthDistribution" type="ArbitrarilyDiscretizedDistribution"/>
-                    <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="areaBoundary" type="AreaBoundary"/>
+                    <xs:group ref="RuptureRateandDepthGroup"/>
                 </xs:sequence>
             </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="AreaBoundary">
+        <xs:complexContent>
+            <xs:restriction base="gml:SurfacePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:Polygon"/>
+                </xs:sequence>
+            </xs:restriction>
         </xs:complexContent>
     </xs:complexType>
     
@@ -194,14 +214,10 @@
         </xs:sequence>
     </xs:complexType>
         
-    <!-- NOTE: no explicit type! -->
     <xs:element name="magnitudeFrequencyDistribution" abstract="true"/>
     
     <xs:element name="truncatedGutenbergRichter" type="TruncatedGutenbergRichter"
         substitutionGroup="magnitudeFrequencyDistribution"/>
-    <xs:element name="evenlyDiscretizedIncrementalMFD" type="EvenlyDiscretizedDistribution"
-        substitutionGroup="magnitudeFrequencyDistribution"/>
-
     <xs:complexType name="TruncatedGutenbergRichter">
         <xs:sequence>
             <xs:element name="aValueCumulative" type="xs:double"/>
@@ -209,8 +225,19 @@
             <xs:element name="minMagnitude" type="Magnitude"/>
             <xs:element name="maxMagnitude" type="Magnitude"/>
         </xs:sequence>
+        <xs:attribute name="type" type="MagnitudeType"/>
     </xs:complexType>
 
+    <xs:element name="evenlyDiscretizedIncrementalMFD" type="EvenlyDiscretizedIncrementalMFD"
+        substitutionGroup="magnitudeFrequencyDistribution"/>
+    <xs:complexType name="EvenlyDiscretizedIncrementalMFD">
+        <xs:simpleContent>
+            <xs:extension base="EvenlyDiscretizedDistribution">
+                <xs:attribute name="type" type="MagnitudeType"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
     <!-- ============================================================= -->
     <!-- rupture -->
 
@@ -304,7 +331,6 @@
     </xs:complexType>
 
     <xs:complexType name="LogicTree">
-
         <xs:sequence maxOccurs="unbounded">
             <xs:element name="logicTreeBranchSet" type="LogicTreeBranchSet"/>
         </xs:sequence>
