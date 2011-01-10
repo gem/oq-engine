@@ -9,6 +9,7 @@ from numpy import empty, linspace # pylint: disable=F0401,E0611
 from numpy import array, concatenate # pylint: disable=F0401,E0611
 
 from openquake import shapes
+from openquake.risk.common import loop
 
 STEPS_PER_INTERVAL = 5
 
@@ -92,10 +93,8 @@ def _split_loss_ratios(loss_ratios, steps=STEPS_PER_INTERVAL):
     """
 
     splitted_ratios = set()
-    loss_ratios = array(loss_ratios)
 
-    for idx in xrange(loss_ratios.size - 1):
-        splitted_ratios.update(linspace(loss_ratios[idx],
-                loss_ratios[idx + 1], steps + 1))
+    for interval in loop(array(loss_ratios), linspace, steps + 1):
+        splitted_ratios.update(interval)
 
     return array(sorted(splitted_ratios))

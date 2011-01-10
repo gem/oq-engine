@@ -12,6 +12,7 @@ from numpy import histogram, where, mean # pylint: disable=E1101, E0611
 from openquake import kvs, shapes
 from openquake.parser import vulnerability
 from openquake.logs import LOG
+from openquake.risk.common import collect, loop
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
@@ -115,11 +116,7 @@ def _generate_curve(losses, probs_of_exceedance):
     This function is intended to be used internally.
     """
 
-    mean_losses = []
-
-    for idx in xrange(losses.size - 1):
-        mean_losses.append(mean([losses[idx], losses[idx + 1]]))
-
+    mean_losses = collect(loop(losses, lambda x, y: mean([x, y])))
     return shapes.Curve(zip(mean_losses, probs_of_exceedance))
 
 
