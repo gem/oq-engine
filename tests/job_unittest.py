@@ -14,6 +14,7 @@ from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
+HAZARD_ONLY = "hazard-config.gem"
 
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
@@ -64,6 +65,13 @@ class JobTestCase(unittest.TestCase):
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
         self.assertEqual(self.job.sections, self.job_with_includes.sections)
+
+    def test_job_with_only_hazard_config_only_has_hazard_section(self):
+        good_defaults = Job._Job__defaults
+        Job._Job__defaults = []
+        job_with_only_hazard = Job.from_file(test.test_file(HAZARD_ONLY))
+        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
+        Job._Job__defaults = good_defaults
 
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 

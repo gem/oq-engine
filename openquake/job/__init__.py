@@ -52,6 +52,7 @@ def parse_config_file(config_file):
 
     parser = ConfigParser()
     parser.read(config_file)
+    print config_file, parser.sections()
 
     params = {}
     sections = []
@@ -109,7 +110,8 @@ class Job(object):
          Default job configuration files, writes a warning if they don't exist.
         """
 
-        if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
+        if cls.__defaults and not any([os.path.exists(cfg) for cfg 
+                                                           in cls.__defaults]):
             LOG.warning("No default configuration! If your job config doesn't "
                         "define all of the expected properties things might "
                         "break.")
@@ -133,6 +135,7 @@ class Job(object):
         sections = []
         for each_config_file in Job.default_configs() + [config_file]:
             new_sections, new_params = parse_config_file(each_config_file)
+            print new_sections, new_params
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
