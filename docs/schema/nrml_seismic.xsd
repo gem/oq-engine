@@ -302,17 +302,14 @@
     <!-- ============================================================= -->
     <!-- logic tree -->
     
-    <!-- TODO: rename attribute, name is too general for global attribute (make attribute local) -->
-    <xs:attribute name="uncertaintyType">
-        <xs:simpleType>
-            <xs:restriction base="xs:string">
-                <xs:enumeration value="gmpeModel"/>
-                <xs:enumeration value="sourceModel"/>
-                <xs:enumeration value="maxMagnitudeGutenbergRichterRelative"/>
-                <xs:enumeration value="bValueGutenbergRichterRelative"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
+    <xs:simpleType name="LogicTreeBranchUncertaintyType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="gmpeModel"/>
+            <xs:enumeration value="sourceModel"/>
+            <xs:enumeration value="maxMagnitudeGutenbergRichterRelative"/>
+            <xs:enumeration value="bValueGutenbergRichterRelative"/>
+        </xs:restriction>
+    </xs:simpleType>
     
     <xs:complexType name="LogicTreeBranch">
         <xs:sequence>
@@ -325,11 +322,11 @@
         <xs:sequence minOccurs="1" maxOccurs="unbounded">
             <xs:element name="logicTreeBranch" type="LogicTreeBranch"/>
         </xs:sequence>
-        <xs:attribute ref="uncertaintyType" use="required"/>
+        <xs:attribute name="uncertaintyType" type="LogicTreeBranchUncertaintyType" use="required"/>
     </xs:complexType>
 
     <xs:complexType name="LogicTree">
-        <xs:sequence maxOccurs="unbounded">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
             <xs:element name="logicTreeBranchSet" type="LogicTreeBranchSet"/>
         </xs:sequence>
         <xs:attribute name="tectonicRegion" type="TectonicRegion"/>
@@ -349,15 +346,11 @@
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:element name="logicTreeSet" type="LogicTreeSet" substitutionGroup="gml:_Feature"/>
+    <xs:element name="logicTreeSet" type="LogicTreeSet"/>
     <xs:complexType name="LogicTreeSet">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                    <xs:element name="logicTree" type="LogicTree"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTree" type="LogicTree"/>
+        </xs:sequence>
     </xs:complexType>
 
 </xs:schema>
