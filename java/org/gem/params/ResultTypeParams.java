@@ -2,8 +2,6 @@ package org.gem.params;
 
 public enum ResultTypeParams {
 
-    MEAN_GROUND_MOTION_MAP("Mean ground motion map"),
-
     HAZARD_CURVE("Hazard curve"),
 
     DISAGGREGATION_MAP("Disaggregation map");
