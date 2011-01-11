@@ -322,6 +322,7 @@
         <xs:sequence minOccurs="1" maxOccurs="unbounded">
             <xs:element name="logicTreeBranch" type="LogicTreeBranch"/>
         </xs:sequence>
+        <xs:attribute name="branchingLevel" type="xs:positiveInteger" use="required"/>
         <xs:attribute name="uncertaintyType" type="LogicTreeBranchUncertaintyType" use="required"/>
     </xs:complexType>
 
@@ -329,6 +330,7 @@
         <xs:sequence minOccurs="1" maxOccurs="unbounded">
             <xs:element name="logicTreeBranchSet" type="LogicTreeBranchSet"/>
         </xs:sequence>
+        <xs:attribute name="id" type="xs:string" use="required"/>
         <xs:attribute name="tectonicRegion" type="TectonicRegion"/>
     </xs:complexType>
 
