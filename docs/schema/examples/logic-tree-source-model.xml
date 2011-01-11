@@ -4,9 +4,9 @@
       gml:id="n1">
       
     <logicTreeSet>
-        <logicTree>
+        <logicTree id="lt1">
         
-            <logicTreeBranchSet uncertaintyType="sourceModel">
+            <logicTreeBranchSet branchingLevel="1" uncertaintyType="sourceModel">
                 <logicTreeBranch>
                     <uncertaintyModel>source_model_1.xml</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
@@ -18,7 +18,7 @@
                 </logicTreeBranch>
             </logicTreeBranchSet>
             
-            <logicTreeBranchSet uncertaintyType="maxMagnitudeGutenbergRichterRelative">
+            <logicTreeBranchSet branchingLevel="2" uncertaintyType="maxMagnitudeGutenbergRichterRelative">
                 <logicTreeBranch>
                     <uncertaintyModel>0.2</uncertaintyModel>
                     <uncertaintyWeight>0.2</uncertaintyWeight>
@@ -36,7 +36,7 @@
                 
             </logicTreeBranchSet>
             
-            <logicTreeBranchSet uncertaintyType="bValueGutenbergRichterRelative">
+            <logicTreeBranchSet branchingLevel="3" uncertaintyType="bValueGutenbergRichterRelative">
                 <logicTreeBranch>
                     <uncertaintyModel>0.1</uncertaintyModel>
                     <uncertaintyWeight>0.2</uncertaintyWeight>
