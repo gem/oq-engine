@@ -3,10 +3,12 @@
 import math
 import os
 import unittest
+import sys
 
 from openquake import shapes
 from openquake import test
 from openquake import job
+from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
 from openquake.job.mixins import Mixin
 from openquake.risk.job import RiskJobMixin
@@ -24,6 +26,7 @@ REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
 
+FLAGS = flags.FLAGS
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
@@ -67,11 +70,10 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.sections, self.job_with_includes.sections)
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
-        good_defaults = Job._Job__defaults
-        Job._Job__defaults = []
+        FLAGS.include_defaults = False
         job_with_only_hazard = Job.from_file(test.test_file(HAZARD_ONLY))
         self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        Job._Job__defaults = good_defaults
+        FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 
