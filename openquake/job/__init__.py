@@ -10,6 +10,7 @@ import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
 
+from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
@@ -17,13 +18,14 @@ from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
-
 EXPOSURE = "EXPOSURE"
 INPUT_REGION = "INPUT_REGION"
 HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
+FLAGS = flags.FLAGS
+flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
 
 def run_job(job_file):
     """ Given a job_file, run the job. If we don't get results log it """
@@ -108,9 +110,10 @@ class Job(object):
         """ 
          Default job configuration files, writes a warning if they don't exist.
         """
+        if not FLAGS.include_defaults:
+            return []
 
-        if cls.__defaults and not any([os.path.exists(cfg) for cfg 
-                                                           in cls.__defaults]):
+        if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
             LOG.warning("No default configuration! If your job config doesn't "
                         "define all of the expected properties things might "
                         "break.")
