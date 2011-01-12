@@ -157,6 +157,8 @@
                     <xs:element ref="HCNode" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
                 <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attribute name="statistics" type="StatisticalSummary"/>
+                <xs:attribute name="fractileValue" type="NormalizedDoubleType"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
