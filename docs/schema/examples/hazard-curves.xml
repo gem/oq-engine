@@ -65,7 +65,25 @@
                     <poE>9.3e-01 9.2e-01 9.1e-01</poE>
                 </hazardCurve>
             </HCNode>
-            
         </hazardCurveField>
+        
+        <!-- third hazardCurveField, a statistical summary -->
+        <hazardCurveField gml:id="hcl_1_3" statistics="fractile" fractileValue="0.6">
+            
+            <IML IMT="PGA">0.0001 0.0002 0.0003</IML>
+            
+            <HCNode gml:id="hc4">
+                <location>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-125.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </location>
+                
+                <hazardCurve>
+                    <poE>9.2e-01 9.15e-01 9.05e-01</poE>
+                </hazardCurve>
+            </HCNode>
+        </hazardCurveField>
+        
     </hazardResult>
 </nrml>
