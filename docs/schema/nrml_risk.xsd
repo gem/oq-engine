@@ -64,14 +64,6 @@
         <xs:attribute name="probabilisticDistribution" type="ProbabilisticDistributionType" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="ContinuousVulnerabilitySet">
-        <!-- TODO: not yet implemented -->
-        <xs:sequence minOccurs="0" maxOccurs="unbounded">
-            <xs:any namespace="##targetNamespace" processContents="lax"/>
-        </xs:sequence>
-        <xs:anyAttribute namespace="##any" processContents="lax"/>
-    </xs:complexType>
-    
     <!-- ============================================================= -->
 
     <xs:complexType name="LossRatioCurve">
@@ -203,7 +195,7 @@
             <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element name="discreteVulnerabilitySet" type="DiscreteVulnerabilitySet"/>
-                <xs:element name="continuousVulnerabilitySet" type="ContinuousVulnerabilitySet"/>
+                <xs:element name="continuousVulnerabilitySet" type="xs:anyType"/>
             </xs:choice>
         </xs:sequence>
     </xs:complexType>

@@ -19,7 +19,6 @@
     
 	<!-- ============================================================= -->
 
-    <!-- CDATA doubleList, attribute IMT (mandatory) -->
     <xs:complexType name="IMLType">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
@@ -92,57 +91,15 @@
         <xs:annotation>
             <xs:documentation>This complex type allows to define a whatever discretized function</xs:documentation>
         </xs:annotation>
-        <xs:all>
+        <xs:sequence>
             <xs:element name="abscissa" type="gml:doubleList"/>
             <xs:element name="ordinate" type="gml:doubleList"/>
-        </xs:all>
+        </xs:sequence>
     </xs:complexType>
     
     <!-- ============================================================= -->
     
-	<xs:complexType name="GrdSpecs">
-		<xs:attribute name="minX" type="xs:double"/>
-		<xs:attribute name="minY" type="xs:double"/>
-		<xs:attribute name="maxX" type="xs:double"/>
-		<xs:attribute name="maxY" type="xs:double"/>
-		<xs:attribute name="spacingX" type="xs:double"/>
-		<xs:attribute name="spacingY" type="xs:double"/>
-		<xs:attribute name="isRegular" type="xs:boolean"/>
-	</xs:complexType>
-	
-	<xs:complexType name="GrdFieldSet">
-		<xs:sequence>
-			<xs:element name="grdField" type="GrdField" maxOccurs="unbounded"/>
-		</xs:sequence>
-	</xs:complexType>
-	
-	<xs:complexType name="GrdData" mixed="true">
-		<xs:complexContent>
-			<xs:extension base="xs:anyType"> </xs:extension>
-		</xs:complexContent>
-	</xs:complexType>
-	
-	<!--Grid type -->
-	<xs:complexType name="GrdType">
-		<xs:all>
-			<xs:element name="grdSpecs" type="GrdSpecs"/>
-			<xs:element name="grdFieldSet" type="GrdFieldSet"/>
-			<xs:element name="grdData" type="GrdData"/>
-		</xs:all>
-	</xs:complexType>
-
-	<xs:complexType name="GrdField">
-		<xs:attribute name="index" type="xs:int"/>
-		<xs:attribute name="name" type="paramType"/>
-		<xs:attribute name="refValue" type="xs:double">
-			<xs:annotation>
-				<xs:documentation>This attribute allows to specify a value associated with one layer of the grid file. For example, in the case of a multi-layered grid with several layers each one containing the rate of occurrence [events/year] for a specific magnitude interval, through this attribute is possible to specify the corresponding magnitude value (as a standard: the value in the middle of the interval). </xs:documentation>
-			</xs:annotation>
-		</xs:attribute>
-		<xs:attribute name="lowExt" type="xs:double"/>
-		<xs:attribute name="uppExt" type="xs:double"/>
-	</xs:complexType>
-
+    <!-- NOTE: not used at the moment -->
 	<xs:simpleType name="paramType">
 		<xs:annotation>
 			<xs:documentation>Labels that can be used to describe the parameters to be used in NRML.</xs:documentation>
