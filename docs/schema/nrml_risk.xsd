@@ -122,21 +122,12 @@
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:element name="_abstractAsset" type="AbstractAssetType" substitutionGroup="gml:_Feature" abstract="true"/>
-    <xs:complexType name="AbstractAssetType" abstract="true">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="location" type="gml:PointPropertyType"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
+    <xs:element name="_abstractAsset" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
 
     <xs:element name="asset" type="Asset" substitutionGroup="_abstractAsset"/>
     <xs:complexType name="Asset">
         <xs:complexContent>
-            <xs:extension base="AbstractAssetType">
+            <xs:extension base="FieldNode">
                 <xs:sequence>
                     <xs:choice minOccurs="0" maxOccurs="2">
                         <xs:element name="lossRatioCurves" type="LossRatioCurves"/>
@@ -150,7 +141,7 @@
     <xs:element name="assetDefinition" type="AssetDefinition" substitutionGroup="_abstractAsset"/>
     <xs:complexType name="AssetDefinition">
         <xs:complexContent>
-            <xs:extension base="AbstractAssetType">
+            <xs:extension base="FieldNode">
                 <xs:sequence>
                     <xs:element name="assetDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
                     <xs:element name="vulnerabilityFunctionReference" type="xs:string"/>

@@ -11,58 +11,61 @@
             <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2"/>
         </config>
         
-        <!-- one hazardResult instance file can contain several hazardCurveList elements -->
-        <!-- hazardCurveList is a gml:Feature -->
-        <hazardCurveList gml:id="hcl_1_1" endBranchLabel="1_1">
+        <!-- one hazardResult instance file can contain several hazardCurveField elements -->
+        <!-- hazardCurveField is a gml:Feature -->
+        <hazardCurveField gml:id="hcl_1_1" endBranchLabel="1_1">
             
             <IML IMT="PGA">5.0000e-03 7.0000e-03 1.3700e-02</IML>
             
             <!-- hazardCurve is a gml:Feature -->
-            <hazardCurve gml:id="hc1">
+            <HCNode gml:id="hc1">
                 <location>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-122.5000 37.5000</gml:pos>
                     </gml:Point>
                 </location>
                 
-                <hazardValues>
-                    <!-- according to Damiano, there is no need to allow
-                         to re-define the IMLs inside hazardValues -->
+                <hazardCurve>
                     <poE>9.8728e-01 9.8266e-01 9.4957e-01</poE>
-                </hazardValues>
-            </hazardCurve>
+                </hazardCurve>
+            </HCNode>
             
-            <hazardCurve gml:id="hc2">
+            <HCNode gml:id="hc2">
                 <location>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-123.5000 37.5000</gml:pos>
                     </gml:Point>
                 </location>
                 
-                <hazardValues>
+                <hazardCurve>
                     <poE>9.8728e-02 9.8266e-02 9.4957e-02</poE>
-                </hazardValues>
-            </hazardCurve>
+                </hazardCurve>
+            </HCNode>
             
-        </hazardCurveList>
+        </hazardCurveField>
         
-        <!-- second hazardCurveList, for a different endBranchLabel -->
-        <hazardCurveList gml:id="hcl_1_2" endBranchLabel="1_2">
+        <!-- second hazardCurveField, for a different endBranchLabel -->
+        <hazardCurveField gml:id="hcl_1_2" endBranchLabel="1_2">
             
             <IML IMT="PGA">0.0001 0.0002 0.0003</IML>
             
-            <hazardCurve gml:id="hc3">
+            <HCNode gml:id="hc3">
                 <location>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-125.5000 37.5000</gml:pos>
                     </gml:Point>
                 </location>
                 
-                <hazardValues>
+                <hazardCurve>
+                    <!-- Re-define IML values in hazardCurve element. This must
+                         be possible in order to make the HazardCurve type complete,
+                         although it's probably not required in a hazardResult type
+                         document. -->
+                    <IML IMT="PGA">6.0000e-03 8.0000e-03 1.400e-02</IML>
                     <poE>9.3e-01 9.2e-01 9.1e-01</poE>
-                </hazardValues>
-            </hazardCurve>
+                </hazardCurve>
+            </HCNode>
             
-        </hazardCurveList>
+        </hazardCurveField>
     </hazardResult>
 </nrml>

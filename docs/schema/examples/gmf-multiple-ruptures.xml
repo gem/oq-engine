@@ -72,41 +72,41 @@
             </pointRupture>
             
             <GMF gml:id="gmf_1" ruptureReference="pr_1">
-                <node gml:id="gmf_1_1">
+                <GMFNode gml:id="gmf_1_1">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-116.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.2</groundMotion>
-                </node>
-                <node gml:id="gmf_1_2">
+                </GMFNode>
+                <GMFNode gml:id="gmf_1_2">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-118.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.3</groundMotion>
-                </node>
+                </GMFNode>
             </GMF>
             
             <GMF gml:id="gmf_2" ruptureReference="pr_2">
-                <node gml:id="gmf_2_1">
+                <GMFNode gml:id="gmf_2_1">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-116.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.7</groundMotion>
-                </node>
-                <node gml:id="gmf_2_2">
+                </GMFNode>
+                <GMFNode gml:id="gmf_2_2">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-118.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.6</groundMotion>
-                </node>
+                </GMFNode>
             </GMF>
         </groundMotionFieldSet>
         
