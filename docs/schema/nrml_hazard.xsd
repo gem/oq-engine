@@ -15,7 +15,8 @@
 	
 	<xs:complexType name="HazardProcessing">
 	
-        <!-- NOTE: investigationTimeSpan should be in years, since the base
+        <!-- NOTE: renamed timeSpanDuration (OpenSHA name) to investigationTimeSpan.
+             This parameter should be given in the unit years, since the base
              SI unit (seconds) would yield values that are not instructive.
              We use a simple non-negative float here, not the xs:duration type,
              because xs:duration could be hard to match with a database type -->
