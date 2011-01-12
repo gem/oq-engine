@@ -13,6 +13,20 @@
 	
 	<!-- ============================================================= -->
 	
+	<xs:complexType name="HazardProcessing">
+	
+        <!-- NOTE: investigationTimeSpan should be in years, since the base
+             SI unit (seconds) would yield values that are not instructive.
+             We use a simple non-negative float here, not the xs:duration type,
+             because xs:duration could be hard to match with a database type -->
+        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+        <xs:attribute name="IDmodel" type="xs:string"/>
+        <xs:attribute name="saPeriod" type="NonNegativeDoubleType"/>
+        <xs:attribute name="saDamping" type="NonNegativeDoubleType"/>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    
 	<!-- TODO: add useful enum items (T&O group) -->
 	<xs:simpleType name="Vs30Method">
         <xs:annotation>
@@ -58,9 +72,6 @@
             <xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
         </xs:annotation>
         <xs:attribute name="IMT" type="IMTType"/>
-        
-        <!-- TODO: move timeSpanDuration to better place -->
-        <xs:attribute name="timeSpanDuration" type="NonNegativeDoubleType"/>
         <xs:attribute name="vs30method" type="Vs30Method"/>
         <xs:attribute name="groundMotionComponent" type="GroundMotionComponent"/>
 
@@ -156,7 +167,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="config"/>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
                     <xs:choice>
                         <xs:sequence minOccurs="1" maxOccurs="unbounded">
                             <xs:element ref="hazardCurveList"/>

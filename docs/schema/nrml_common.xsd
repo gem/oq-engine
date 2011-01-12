@@ -11,7 +11,11 @@
 
     <!-- ============================================================= -->
 
-    <xs:element name="config"/>
+    <xs:complexType name="Config">
+        <xs:sequence>
+            <xs:element name="hazardProcessing" type="HazardProcessing" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
     
 	<!-- ============================================================= -->
 
@@ -108,7 +112,7 @@
 	
 	<xs:complexType name="GrdFieldSet">
 		<xs:sequence>
-			<xs:element name="grdField" type="GrdField" maxOccurs="unbounded" />
+			<xs:element name="grdField" type="GrdField" maxOccurs="unbounded"/>
 		</xs:sequence>
 	</xs:complexType>
 	

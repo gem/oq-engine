@@ -341,8 +341,9 @@
     <xs:complexType name="SourceModel">
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                    <xs:element ref="_seismicSource"/>
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:element ref="_seismicSource" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -350,8 +351,9 @@
     
     <xs:element name="logicTreeSet" type="LogicTreeSet"/>
     <xs:complexType name="LogicTreeSet">
-        <xs:sequence minOccurs="1" maxOccurs="unbounded">
-            <xs:element name="logicTree" type="LogicTree"/>
+        <xs:sequence>
+            <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="logicTree" type="LogicTree" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
 
