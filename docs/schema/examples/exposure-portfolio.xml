@@ -12,7 +12,7 @@
         <!-- exposureList is a gml:Feature -->
         <exposureList gml:id="PAV01" assetCategory="buildings" lossCategory="economic_loss">
             
-            <portfolioDescription>Collection of existing building in downtown Pavia</portfolioDescription>
+            <gml:description>Collection of existing building in downtown Pavia</gml:description>
             
             <!-- assetDefinition is a gml:Feature -->
             <assetDefinition gml:id="asset_01">
