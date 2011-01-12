@@ -5,7 +5,7 @@
     
     <!-- riskResult is a gml:Feature -->
     <riskResult gml:id="rr1">
-        <config>Config file details go here</config>
+        <config/>
         
         <!-- lossCurveList is a gml:Feature (due to simple features profile)
                  in full GML, it should be a gml:FeatureCollection -->

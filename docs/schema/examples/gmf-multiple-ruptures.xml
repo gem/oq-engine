@@ -5,7 +5,9 @@
       gml:id="n1">
     
     <hazardResult gml:id="hr1">
-        <config>Config file details go here</config>
+        <config>
+            <hazardProcessing investigationTimeSpan="50.0"/>
+        </config>
         
         <groundMotionFieldSet gml:id="gmfs_1">
         

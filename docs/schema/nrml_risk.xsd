@@ -175,7 +175,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="config"/>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
                     <xs:choice>
                         <xs:element ref="lossCurveList"/>
                         <xs:element ref="lossRatioCurveList"/>
@@ -190,7 +190,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="config"/>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
                     <xs:element ref="exposureList"/>
                 </xs:sequence>
             </xs:extension>
@@ -200,7 +200,7 @@
     <xs:element name="vulnerabilityModel" type="VulnerabilityModel"/>
     <xs:complexType name="VulnerabilityModel">
         <xs:sequence>
-            <xs:element ref="config"/>
+            <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
             <xs:choice minOccurs="1" maxOccurs="unbounded">
                 <xs:element name="discreteVulnerabilitySet" type="DiscreteVulnerabilitySet"/>
                 <xs:element name="continuousVulnerabilitySet" type="ContinuousVulnerabilitySet"/>
