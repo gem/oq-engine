@@ -73,7 +73,7 @@
         <xs:restriction base="xs:string">
             <xs:enumeration value="mean"/>
             <xs:enumeration value="median"/>
-            <xs:enumeration value="fractile"/>
+            <xs:enumeration value="quantile"/>
         </xs:restriction>
     </xs:simpleType>
     
