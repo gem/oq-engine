@@ -898,13 +898,13 @@ public class CommandLineCalculator {
         if (hasPath == true) {
             LogicTreeReader logicTreeReader =
                     new LogicTreeReader(
-                            getRelativePath(ConfigItems.ERF_LOGIC_TREE_FILE
+                            getRelativePath(ConfigItems.SOURCE_MODEL_LOGIC_TREE_FILE
                                     .name()));
             return logicTreeReader.read().get("1");
         } else {
             LogicTreeReader logicTreeReader =
                     new LogicTreeReader(kvs,
-                            config.getString(ConfigItems.ERF_LOGIC_TREE_FILE
+                            config.getString(ConfigItems.SOURCE_MODEL_LOGIC_TREE_FILE
                                     .name()));
             return logicTreeReader.read().get("1");
         }

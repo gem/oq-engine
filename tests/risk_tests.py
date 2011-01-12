@@ -563,7 +563,7 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         
         # parameters needed to compute tses and time span
         self.params["NUMBER_OF_SEISMICITY_HISTORIES"] = 10
-        self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"] = 2
+        self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"] = 2
         self.params["INVESTIGATION_TIME"] = 50.0
         self.params["AGGREGATE_LOSS_CURVE"] = 1
 

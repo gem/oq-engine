@@ -10,6 +10,7 @@ import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
 
+from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
@@ -17,13 +18,14 @@ from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
-
 EXPOSURE = "EXPOSURE"
-INPUT_REGION = "FILTER_REGION"
+INPUT_REGION = "INPUT_REGION"
 HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
+FLAGS = flags.FLAGS
+flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
 
 def run_job(job_file):
     """ Given a job_file, run the job. If we don't get results log it """
@@ -54,16 +56,20 @@ def parse_config_file(config_file):
     parser.read(config_file)
 
     params = {}
+    sections = []
     for section in parser.sections():
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
-                params.update(parse_config_file(config_file))
+                new_sections, new_params = parse_config_file(config_file)
+                sections.extend(new_sections)
+                params.update(new_params)
             else:
+                sections.append(section)
                 params[key] = value
-    return params
+    return sections, params
 
 
 def validate(fn):
@@ -95,15 +101,17 @@ class Job(object):
 
     __cwd = os.path.dirname(__file__)
     __defaults = [os.path.join(__cwd, "../", "default.gem"), #package
-                    "opengem.gem",        # Sane Defaults
-                    "/etc/opengem.gem",   # Site level configs
-                    "~/.opengem.gem"]     # Are we running as a user?
+                    "openquake.gem",        # Sane Defaults
+                    "/etc/openquake.gem",   # Site level configs
+                    "~/.openquake.gem"]     # Are we running as a user?
 
     @classmethod
     def default_configs(cls):
         """ 
          Default job configuration files, writes a warning if they don't exist.
         """
+        if not FLAGS.include_defaults:
+            return []
 
         if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
             LOG.warning("No default configuration! If your job config doesn't "
@@ -126,15 +134,18 @@ class Job(object):
         
         base_path = os.path.abspath(os.path.dirname(config_file))
         params = {}
+        sections = []
         for each_config_file in Job.default_configs() + [config_file]:
-            params.update(parse_config_file(each_config_file))
+            new_sections, new_params = parse_config_file(each_config_file)
+            sections.extend(new_sections)
+            params.update(new_params)
         params['BASE_PATH'] = base_path
-        job = Job(params, base_path=base_path)
+        job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file               #pylint: disable=W0201
         # job.config_file = job.super_config_path   #pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, base_path=None):
+    def __init__(self, params, job_id=None, sections=list(), base_path=None):
         if job_id is None:
             job_id = kvs.generate_random_id()
         
@@ -142,6 +153,7 @@ class Job(object):
         self.blocks_keys = []
         self.partition = True
         self.params = params
+        self.sections = list(set(sections)) # uniquify
         self.base_path = base_path
         if base_path:
             self.to_kvs()
@@ -190,6 +202,9 @@ class Job(object):
         results = []
         self._partition()
         for (key, mixin) in Mixin.ordered_mixins():
+            if key.upper() not in self.sections:
+                continue
+
             with Mixin(self, mixin, key=key):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
