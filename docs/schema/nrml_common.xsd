@@ -69,6 +69,14 @@
         </xs:restriction>
     </xs:simpleType>
     
+    <xs:simpleType name="StatisticalSummary">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="mean"/>
+            <xs:enumeration value="median"/>
+            <xs:enumeration value="fractile"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
     <!-- ============================================================= -->
 
     <xs:complexType name="EvenlyDiscretizedDistribution">
