@@ -89,6 +89,7 @@
             <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="poE" type="NormalizedDoubleList"/>
         </xs:sequence>
+        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
     </xs:complexType>
 
 	<!-- GML substitution groups -->
@@ -158,7 +159,7 @@
                 </xs:sequence>
                 <xs:attribute name="endBranchLabel" type="xs:string"/>
                 <xs:attribute name="statistics" type="StatisticalSummary"/>
-                <xs:attribute name="fractileValue" type="NormalizedDoubleType"/>
+                <xs:attribute name="quantileValue" type="NormalizedDoubleType"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
