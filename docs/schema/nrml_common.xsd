@@ -99,6 +99,19 @@
     
     <!-- ============================================================= -->
     
+    <xs:element name="fieldNode" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:complexType name="FieldNode" abstract="true">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="location" type="gml:PointPropertyType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    
     <!-- NOTE: not used at the moment -->
 	<xs:simpleType name="paramType">
 		<xs:annotation>

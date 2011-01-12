@@ -84,8 +84,9 @@
         <xs:attribute name="stdDevType" type="StdDevType"/>
     </xs:complexType>
     
-	<xs:complexType name="HazardValues">
+	<xs:complexType name="HazardCurve">
         <xs:sequence>
+            <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="poE" type="NormalizedDoubleList"/>
         </xs:sequence>
     </xs:complexType>
@@ -115,7 +116,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="node" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="GMFNode" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
                 
                 <!-- NOTE: the optional attribute ruptureReference refers to the 
@@ -124,38 +125,36 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
-    <xs:element name="node" type="Node" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="Node">
+
+    <xs:element name="GMFNode" type="GMFNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="GMFNodeType">
         <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
+            <xs:extension base="FieldNode">
                 <xs:sequence>
-                    <xs:element name="location" type="gml:PointPropertyType"/>
                     <xs:element name="groundMotion" type="xs:double"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     
-	<xs:element name="hazardCurve" type="HazardCurve" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="HazardCurve">
+    <xs:element name="HCNode" type="HCNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="HCNodeType">
         <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
+            <xs:extension base="FieldNode">
                 <xs:sequence>
-                    <xs:element name="location" type="gml:PointPropertyType"/>
-                    <xs:element name="hazardValues" type="HazardValues"/>
+                    <xs:element name="hazardCurve" type="HazardCurve"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
-	<xs:element name="hazardCurveList" type="HazardCurveList" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="HazardCurveList">
+
+	<xs:element name="hazardCurveField" type="HazardCurveField" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardCurveField">
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element name="IML" type="IMLType"/>
-                    <xs:element ref="hazardCurve" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="HCNode" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
                 <xs:attribute name="endBranchLabel" type="xs:string"/>
             </xs:extension>
@@ -171,7 +170,7 @@
                     <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
                     <xs:choice>
                         <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                            <xs:element ref="hazardCurveList"/>
+                            <xs:element ref="hazardCurveField"/>
                         </xs:sequence>
                         <xs:element ref="groundMotionFieldSet"/>
                     </xs:choice>
