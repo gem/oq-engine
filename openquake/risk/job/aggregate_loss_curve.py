@@ -38,7 +38,7 @@ class AggregateLossCurveMixin:
     def tses(self):
         """Return the tses parameter, using the mixed config file."""
         histories = int(self.params["NUMBER_OF_SEISMICITY_HISTORIES"])
-        realizations = int(self.params["NUMBER_OF_HAZARD_CURVE_CALCULATIONS"])
+        realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
         
         num_ses = histories * realizations
         return num_ses * self.time_span()
