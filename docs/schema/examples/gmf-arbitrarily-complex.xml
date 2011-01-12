@@ -6,8 +6,7 @@
     <!-- hazardResult is a gml:Feature -->
     <hazardResult gml:id="hr1">
         <config>
-            <!-- TODO: rename "timeSpanDuration"! Where do we put it? -->
-            <hazardProcessing timeSpanDuration="50.0"/>
+            <hazardProcessing investigationTimeSpan="50.0"/>
         </config>
         
         <!-- groundMotionFieldSet is a gml:Feature -->

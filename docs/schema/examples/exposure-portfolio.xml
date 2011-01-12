@@ -5,7 +5,7 @@
     
     <!-- exposurePortfolio is a gml:Feature -->
     <exposurePortfolio gml:id="ep1">
-        <config>Config file details go here</config>
+        <config/>
         
         <!-- for attributes assetType and lossType, classification from the
              Taxonomy and Ontology working group is needed -->

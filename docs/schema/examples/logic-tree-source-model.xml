@@ -4,6 +4,7 @@
       gml:id="n1">
       
     <logicTreeSet>
+        <config/>
         <logicTree id="lt1">
         
             <logicTreeBranchSet branchingLevel="1" uncertaintyType="sourceModel">

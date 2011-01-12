@@ -6,9 +6,9 @@
     <!-- hazardResult is a gml:Feature -->
     <hazardResult gml:id="hr1">
     
-        <config>
-            <!-- TODO: not yet in schema! don't like this! -->
-            <hazardProcessing timeSpanDuration="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2"/>
+        <config> 
+            <!-- TODO: is this a good place for these attributes? -->
+            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2"/>
         </config>
         
         <!-- one hazardResult instance file can contain several hazardCurveList elements -->
