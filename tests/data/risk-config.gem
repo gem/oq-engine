@@ -10,12 +10,6 @@ EXPOSURE = exposure.xml
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
 
-# the region to filter on
-FILTER_REGION = 
-
-# the selected for output generation
-OUTPUT_REGION =
-
 # file containing the hazard curves in nrml format
 HAZARD_CURVES = hazard_curves.xml
 

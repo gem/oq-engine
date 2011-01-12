@@ -3,10 +3,12 @@
 import math
 import os
 import unittest
+import sys
 
 from openquake import shapes
 from openquake import test
 from openquake import job
+from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
 from openquake.job.mixins import Mixin
 from openquake.risk.job import RiskJobMixin
@@ -14,6 +16,7 @@ from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
+HAZARD_ONLY = "hazard-config.gem"
 
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
@@ -23,6 +26,7 @@ REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
 
+FLAGS = flags.FLAGS
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
@@ -60,6 +64,16 @@ class JobTestCase(unittest.TestCase):
         self.assertTrue(LOG.warning.called)
         good_defaults = Job._Job__defaults
         Job.__defaults = good_defaults
+
+    def test_job_has_the_correct_sections(self):
+        self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
+        self.assertEqual(self.job.sections, self.job_with_includes.sections)
+
+    def test_job_with_only_hazard_config_only_has_hazard_section(self):
+        FLAGS.include_defaults = False
+        job_with_only_hazard = Job.from_file(test.test_file(HAZARD_ONLY))
+        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
+        FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
         for job in [self.job, self.job_with_includes]: 
@@ -108,9 +122,6 @@ class JobTestCase(unittest.TestCase):
         a_job._partition()
         blocks_keys = a_job.blocks_keys
 
-        print blocks_keys
-        print job.Block.from_kvs(blocks_keys[0]).sites
-            
         expected_block = job.Block((shapes.Site(9.15, 45.16667),
                                     shapes.Site(9.15333, 45.122),
                                     shapes.Site(9.14777, 45.17999),
