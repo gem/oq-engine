@@ -6,6 +6,7 @@
       
     <!-- sourceModel is a gml:Feature -->
     <sourceModel gml:id="sm1">
+        <config/>
     
         <!-- simpleFaultSource is a gml:Feature -->
         <!-- put original element sourceID into attribute gml:id and 

@@ -5,7 +5,7 @@
       
     <!-- riskResult is a gml:Feature -->
     <riskResult gml:id="rr1">
-        <config>Config file details go here</config>
+        <config/>
         
         <lossRatioCurveList gml:id="lossRatioCurveList_1">
         

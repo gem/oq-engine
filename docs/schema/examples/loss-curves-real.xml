@@ -5,7 +5,7 @@
     <!-- example asset data from Vitor Silva, 2010-12-16, geographical
          locations arbitrary -->
     <riskResult gml:id="rr1">
-        <config>Config file details go here</config>
+        <config/>
         
         <lossCurveList gml:id="lossCurveList_1">
             <!-- lossCurveList is a gml:Feature -->
