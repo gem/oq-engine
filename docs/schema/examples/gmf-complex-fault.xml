@@ -54,27 +54,25 @@
                 </complexFaultGeometry>
             </complexFaultRupture>
             
-            <!-- gmf is a gml:Feature -->
             <GMF gml:id="gmf_1" ruptureReference="cfr_1">
                 
-                <!-- node is a gml:Feature -->
-                <node gml:id="s_1">
+                <GMFNode gml:id="s_1">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-116.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.2</groundMotion>
-                </node>
+                </GMFNode>
                 
-                <node gml:id="s_2">
+                <GMFNode gml:id="s_2">
                     <location>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-118.0 41.0</gml:pos>
                         </gml:Point>
                     </location>
                     <groundMotion>0.3</groundMotion>
-                </node>
+                </GMFNode>
                 
             </GMF>
         </groundMotionFieldSet>
