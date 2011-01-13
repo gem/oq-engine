@@ -82,7 +82,8 @@ class MonteCarloMixin: # pylint: disable=W0232
         results = []
         
         source_model_generator = random.Random()
-        source_model_generator.seed(self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
+        source_model_generator.seed(
+                self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
         
         gmpe_generator = random.Random()
         gmpe_generator.seed(self.params.get('GMPE_LT_RANDOM_SEED', None))
