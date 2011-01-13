@@ -109,9 +109,6 @@ class GeoTiffFile(writer.FileWriter):
         srs = osr.SpatialReference()
         srs.SetWellKnownGeogCS(SPATIAL_REFERENCE_SYSTEM)
         self.target.SetProjection(srs.ExportToWkt())
-
-        # This doesn't work with the eventlet tpool stuff.
-        # self.file = tpool.Proxy(open(self.path, 'w'))
     
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later 
@@ -146,7 +143,6 @@ class GeoTiffFile(writer.FileWriter):
             pass
 
         self.target = None  # This is required to flush the file
-        self.finished.send(True)
 
     def _write_html_wrapper(self):
         """write an html wrapper that embeds the geotiff."""
@@ -296,7 +292,6 @@ class GMFGeoTiffFile(GeoTiffFile):
         self._write_html_wrapper()
 
         self.target = None  # This is required to flush the file
-        self.finished.send(True)
     
     @property
     def html_path(self):
