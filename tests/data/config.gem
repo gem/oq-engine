@@ -3,7 +3,7 @@
 [HAZARD]
 
 # file containing erf logic tree structure
-ERF_LOGIC_TREE_FILE = ErfLogicTree.inp
+SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
 # output directory
@@ -91,13 +91,6 @@ SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
-# (true or false) 
-MEAN_GROUND_MOTION_MAP = true
-INDIVIDUAL_GROUND_MOTION_MAP = true
-PROBABILITY_OF_EXCEEDANCE = 0.1
-
-MEAN_HAZARD_CURVES = true
-INDIVIDUAL_HAZARD_CURVES = true
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
@@ -130,12 +123,6 @@ EXPOSURE = exposure.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
-
-# the region to filter on
-FILTER_REGION = 
-
-# the selected for output generation
-OUTPUT_REGION =
 
 # file containing the hazard curves in nrml format
 HAZARD_CURVES = hazard_curves.xml
