@@ -83,17 +83,12 @@
         <xs:attribute name="truncationLevel" type="NonNegativeDoubleType"/>
         <xs:attribute name="stdDevType" type="StdDevType"/>
     </xs:complexType>
-    
-	<xs:complexType name="HazardCurve">
-        <xs:sequence>
-            <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="poE" type="NormalizedDoubleList"/>
-        </xs:sequence>
-        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
-    </xs:complexType>
 
+    <!-- ============================================================= -->
 	<!-- GML substitution groups -->
 
+    <!-- ground motion field (GMF) -->
+    
     <xs:element name="groundMotionFieldSet" type="GroundMotionFieldSet" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="GroundMotionFieldSet">
         <xs:annotation>
@@ -138,6 +133,22 @@
         </xs:complexContent>
     </xs:complexType>
     
+    <!-- hazardCurve -->
+    
+    <xs:element name="hazardCurveField" type="HazardCurveField" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardCurveField">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="IML" type="IMLType"/>
+                    <xs:element ref="HCNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
     <xs:element name="HCNode" type="HCNodeType" substitutionGroup="fieldNode"/>
     <xs:complexType name="HCNodeType">
         <xs:complexContent>
@@ -149,22 +160,66 @@
         </xs:complexContent>
     </xs:complexType>
 
-	<xs:element name="hazardCurveField" type="HazardCurveField" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="HazardCurveField">
+    <xs:complexType name="HazardCurve">
+        <xs:sequence>
+            <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="poE" type="NormalizedDoubleList"/>
+        </xs:sequence>
+        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+    </xs:complexType>
+    
+    <!-- hazardMap -->
+    
+    <xs:element name="hazardMap" type="HazardMap" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardMap">
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element name="IML" type="IMLType"/>
-                    <xs:element ref="HCNode" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="HMNode" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
+                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
                 <xs:attribute name="endBranchLabel" type="xs:string"/>
-                <xs:attribute name="statistics" type="StatisticalSummary"/>
-                <xs:attribute name="quantileValue" type="NormalizedDoubleType"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="HMNode" type="HMNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="HMNodeType">
+        <xs:complexContent>
+            <xs:extension base="HMFieldNode">
+                <xs:sequence>
+                    <xs:element name="IML" type="xs:double"/>
+                </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
 
+    <xs:complexType name="HMFieldNode">
+        <xs:complexContent>
+            <xs:restriction base="FieldNode">
+                <xs:sequence>
+                    <xs:element ref="HMSite"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="HMSite" type="HMSiteType" substitutionGroup="site"/>
+    <xs:complexType name="HMSiteType">
+        <xs:complexContent>
+            <xs:extension base="gml:PointPropertyType">
+                <xs:sequence>
+                    <xs:element name="vs30" type="NonNegativeDoubleType" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- ============================================================= -->
     <!-- child elements of nrml -->
+    
     <xs:element name="hazardResult" type="HazardResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="HazardResult">
         <xs:complexContent>
@@ -176,6 +231,7 @@
                             <xs:element ref="hazardCurveField"/>
                         </xs:sequence>
                         <xs:element ref="groundMotionFieldSet"/>
+                        <xs:element ref="hazardMap"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
