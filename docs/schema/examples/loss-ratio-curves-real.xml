@@ -12,11 +12,11 @@
         
             <!-- asset is a gml:Feature -->
             <asset gml:id="asset_1">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 30.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="W1">
@@ -27,11 +27,11 @@
             </asset>
             
             <asset gml:id="asset_2">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 35.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="W1">
@@ -42,11 +42,11 @@
             </asset>
             
             <asset gml:id="asset_3">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 40.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="W1">
@@ -57,11 +57,11 @@
             </asset>
             
             <asset gml:id="asset_4">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-116.0 30.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="CL1">
@@ -72,11 +72,11 @@
             </asset>
             
             <asset gml:id="asset_5">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-116.0 35.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="CL1">
@@ -87,11 +87,11 @@
             </asset>
             
             <asset gml:id="asset_6">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-116.0 40.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="CL1">

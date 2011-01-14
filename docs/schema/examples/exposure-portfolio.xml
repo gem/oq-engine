@@ -16,11 +16,11 @@
             
             <!-- assetDefinition is a gml:Feature -->
             <assetDefinition gml:id="asset_01">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>9.15000 45.16667</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
@@ -29,11 +29,11 @@
             </assetDefinition>
             
             <assetDefinition gml:id="asset_02">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>9.15333 45.12200</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
@@ -42,11 +42,11 @@
             </assetDefinition>
             
             <assetDefinition gml:id="asset_03">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>9.14777 45.17999</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
