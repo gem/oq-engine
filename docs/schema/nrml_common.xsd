@@ -112,11 +112,25 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element name="location" type="gml:PointPropertyType"/>
+                    <xs:element ref="site"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+    
+    <xs:element name="site" type="gml:PointPropertyType"/>
+    
+    <xs:element name="HMSite" type="HMSiteType" substitutionGroup="site"/>
+    <xs:complexType name="HMSiteType">
+        <xs:complexContent>
+            <xs:extension base="gml:PointPropertyType">
+                <xs:sequence>
+                    <xs:element name="vs30" type="NonNegativeDoubleType" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
     
     <!-- ============================================================= -->
     

@@ -13,11 +13,11 @@
             
             <!-- asset is a gml:Feature -->
             <asset gml:id="asset_1">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 30.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossCurves>
                     <lossCurve endBranchLabel="vf_1">
@@ -33,11 +33,11 @@
             </asset>
 
             <asset gml:id="asset_2">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 35.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossCurves>
                     <lossCurve endBranchLabel="vf_3">
