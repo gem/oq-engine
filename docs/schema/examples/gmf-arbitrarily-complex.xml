@@ -54,20 +54,20 @@
                 
                 <!-- GMFNode is a gml:Feature -->
                 <GMFNode gml:id="s_1">
-                    <location>
+                    <site>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-116.0 41.0</gml:pos>
                         </gml:Point>
-                    </location>
+                    </site>
                     <groundMotion>0.2</groundMotion>
                 </GMFNode>
                 
                 <GMFNode gml:id="s_2">
-                    <location>
+                    <site>
                         <gml:Point srsName="epsg:4326">
                             <gml:pos>-118.0 41.0</gml:pos>
                         </gml:Point>
-                    </location>
+                    </site>
                     <groundMotion>0.3</groundMotion>
                 </GMFNode>
                 

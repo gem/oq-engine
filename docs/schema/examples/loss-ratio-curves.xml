@@ -10,11 +10,11 @@
         <lossRatioCurveList gml:id="lossRatioCurveList_1">
         
             <asset gml:id="asset_1">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 30.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="vf_1">
@@ -29,11 +29,11 @@
             </asset>
 
             <asset gml:id="asset_2">
-                <location>
+                <site>
                     <gml:Point srsName="epsg:4326">
                         <gml:pos>-117.0 35.0</gml:pos>
                     </gml:Point>
-                </location>
+                </site>
                 
                 <lossRatioCurves>
                     <lossRatioCurve endBranchLabel="vf_3">
