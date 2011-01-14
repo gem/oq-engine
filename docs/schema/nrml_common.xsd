@@ -77,6 +77,11 @@
         </xs:restriction>
     </xs:simpleType>
     
+    <xs:attributeGroup name="QuantileGroup">
+        <xs:attribute name="statistics" type="StatisticalSummary"/>
+        <xs:attribute name="quantileValue" type="NormalizedDoubleType"/>
+    </xs:attributeGroup>
+    
     <!-- ============================================================= -->
 
     <xs:complexType name="EvenlyDiscretizedDistribution">
@@ -118,19 +123,8 @@
         </xs:complexContent>
     </xs:complexType>
     
+    <!-- NOTE: site is the head of a substitution group -->
     <xs:element name="site" type="gml:PointPropertyType"/>
-    
-    <xs:element name="HMSite" type="HMSiteType" substitutionGroup="site"/>
-    <xs:complexType name="HMSiteType">
-        <xs:complexContent>
-            <xs:extension base="gml:PointPropertyType">
-                <xs:sequence>
-                    <xs:element name="vs30" type="NonNegativeDoubleType" minOccurs="0" maxOccurs="1"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-    
     
     <!-- ============================================================= -->
     
