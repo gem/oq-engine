@@ -67,12 +67,12 @@ def compute_hazard_curve(job_id, block_id):
         """
         Inner class to dry things up.
         """
-        memcache_client = kvs.get_client(binary=False)
+        redis_client = kvs.get_client(binary=False)
 
         chf_key = kvs.generate_product_key(job_id, 
             kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
 
-        chf = memcache_client.get(chf_key)
+        chf = redis_client.get(chf_key)
 
         if not chf:
             # TODO(jm): implement hazardwrapper and make this work
