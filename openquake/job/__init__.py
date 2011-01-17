@@ -295,7 +295,7 @@ class Job(object):
             config.write(configfile)
 
     def _slurp_files(self):
-        """Read referenced files and write them into memcached, key'd on their
+        """Read referenced files and write them into redis, keyed on their
         sha1s."""
         memcached_client = kvs.get_client(binary=False)
         if self.base_path is None:
@@ -313,7 +313,7 @@ class Job(object):
                     self.params[key] = sha1
 
     def to_kvs(self, write_cfg=True):
-        """Store this job into memcached."""
+        """Store this job into redis."""
         self._slurp_files()
         if write_cfg:
             self._write_super_config()
