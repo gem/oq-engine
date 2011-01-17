@@ -22,13 +22,10 @@ from openquake.output import geotiff
 
 LOG = logs.LOG
 
-class MonteCarloMixin: # pylint: disable=W0232
-    """Implements the JobMixin, which has a primary entry point of execute().
-    Execute is responsible for dispatching celery tasks.
-    Note that this Mixin, during execution, will always be an instance of the Job
-    class, and thus has access to the self.params dict, full of config params
-    loaded from the Job configuration file."""
-    
+class BasePSHAMixin: # TODO(LB): this class might not be necessary
+    """Contains common functionality for PSHA Mixins."""
+
+
     def preload(fn): # pylint: disable=E0213
         """A decorator for preload steps that must run on the Jobber node"""
         def preloader(self, *args, **kwargs):
@@ -42,6 +39,79 @@ class MonteCarloMixin: # pylint: disable=W0232
             return fn(self, *args, **kwargs) # pylint: disable=E1102
         return preloader
 
+
+
+    def site_list_generator(self):
+        """Will subset and yield portions of the region, depending on the 
+        the computation mode."""
+        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+        coords = zip(verts[1::2], verts[::2])
+        region = shapes.Region.from_coordinates(coords)
+        region.cell_size = float(self.params['REGION_GRID_SPACING'])
+        yield [site for site in region]
+
+class ClassicalMixin(BasePSHAMixin):
+    """Classical PSHA method for performing Hazard calculations.
+    
+    Implements the JobMixin, which has a primary entry point of execute().
+    Execute is responsible for dispatching celery tasks.
+
+    Note that this Mixin, during execution, will always be an instance of the
+    Job class, and thus has access to the self.params dict, full of config
+    params loaded from the Job configuration file."""
+    
+    def execute(self):
+        
+        results = []
+        
+        source_model_generator = random.Random()
+        source_model_generator.seed(
+                self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
+
+        gmpe_generator = random.Random()
+        gmpe_generator.seed(self.params.get('GMPE_LT_RANDOM_SEED', None))
+        
+        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+
+        LOG.info('Going to run classical PSHA hazard for %s realizations'
+                % realizations)
+
+        for i in range(0, realizations):
+            pending_tasks = []
+            self.store_source_model(self.config_file,
+                    source_model_generator.getrandbits(32))
+            self.store_gmpe_map(self.config_file,
+                    source_model_generator.getrandbits(32))
+            for site_list in self.site_list_generator():
+                pending_tasks.append(
+                    tasks.compute_hazard_curve.delay(job_id, block_id))
+                        
+    #@preload     
+    def compute_hazard_curve(self, site_list):
+        # TODO(LB): this is pretty much duplicated from
+        # EventBasedMixin
+        jsite_list = self.parameterized_sites(site_list) # TODO: move this function to BasePSHAMixin
+        hazard_curves = java.jclass("HazardCalculator").getHazardCurves(
+            jsite_list,
+            self.generate_erf(), # FIXME:
+            self.generate_gmpe_map(), #FIXME:
+            self.get_iml_list(),
+            float(self.params['MAXIMUM_DISTANCE']))
+
+        return hazard_curves
+        
+
+
+class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
+    """Probabilistic Event Based method for performing Hazard calculations.
+
+    Implements the JobMixin, which has a primary entry point of execute().
+    Execute is responsible for dispatching celery tasks.
+    
+    Note that this Mixin, during execution, will always be an instance of the
+    Job class, and thus has access to the self.params dict, full of config
+    params loaded from the Job configuration file."""
+    
     def store_source_model(self, config_file, seed):
         """Generates an Earthquake Rupture Forecast, using the source zones and
         logic trees specified in the job config file. Note that this has to be
@@ -63,15 +133,6 @@ class MonteCarloMixin: # pylint: disable=W0232
         engine = java.jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         engine.sampleAndSaveGMPETree(self.cache, key, seed)
-
-    def site_list_generator(self):
-        """Will subset and yield portions of the region, depending on the 
-        the computation mode."""
-        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.Region.from_coordinates(coords)
-        region.cell_size = float(self.params['REGION_GRID_SPACING'])
-        yield [site for site in region]
 
     @preload
     def execute(self):
@@ -289,4 +350,4 @@ def gmf_id(history_idx, realization_idx, rupture_idx):
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
 
 
-job.HazJobMixin.register("Monte Carlo", MonteCarloMixin)
+job.HazJobMixin.register("Monte Carlo", EventBasedMixin)
