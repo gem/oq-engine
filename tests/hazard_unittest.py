@@ -41,11 +41,11 @@ def generate_job():
 
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
-    Most data returned from the engine is via memcached."""
+    Most data returned from the engine is via the KVS."""
     
     def setUp(self):
         self.generated_files = []
-        self.memcache_client = kvs.get_client(binary=False)
+        self.kvs_client = kvs.get_client(binary=False)
 
     def tearDown(self):
         for cfg in self.generated_files:
@@ -64,14 +64,14 @@ class HazardEngineTestCase(unittest.TestCase):
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
                                 kvs.tokens.SOURCE_MODEL_TOKEN)
-            source_model = self.memcache_client.get(source_model_key)
+            source_model = self.kvs_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
             
             gmpe_key = kvs.generate_product_key(hazengine.id, 
                                 kvs.tokens.GMPE_TOKEN)
-            gmpe_model = self.memcache_client.get(gmpe_key)
+            gmpe_model = self.kvs_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
@@ -118,7 +118,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         test.wait_for_celery_tasks(results)
 
-        result_values = self.memcache_client.get_multi(result_keys)
+        result_values = self.kvs_client.get_multi(result_keys)
 
         self.assertEqual(result_values, expected_values)
 
@@ -147,7 +147,7 @@ class HazardEngineTestCase(unittest.TestCase):
         for job_id in TASK_JOBID_SIMPLE:
             mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN, 
                 block_id, site)
-            self.memcache_client.set(mgm_key, MEAN_GROUND_INTENSITY)
+            self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
             results.append(tasks.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
@@ -162,13 +162,13 @@ class HazardEngineTestCase(unittest.TestCase):
                  "Teststadt,Landtesten", "villed'essai,paystest"]
         sites_key = kvs.generate_sites_key(job_id, block_id)
 
-        self.memcache_client.set(sites_key, json.JSONEncoder().encode(sites))
+        self.kvs_client.set(sites_key, json.JSONEncoder().encode(sites))
 
         for site in sites:
             site_key = kvs.generate_product_key(job_id,
                 kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
-            self.memcache_client.set(site_key, ONE_CURVE_MODEL)
+            self.kvs_client.set(site_key, ONE_CURVE_MODEL)
 
 
 if __name__ == '__main__':

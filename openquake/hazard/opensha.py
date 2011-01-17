@@ -18,28 +18,62 @@ from openquake import shapes
 
 from openquake.hazard import job
 from openquake.hazard import tasks
+from openquake.job.mixins import Mixin
 from openquake.output import geotiff
 
 LOG = logs.LOG
 
-class BasePSHAMixin: # TODO(LB): this class might not be necessary
+
+def preload(fn): # pylint: disable=E0213
+    """A decorator for preload steps that must run on the Jobber node"""
+    def preloader(self, *args, **kwargs):
+        """Validate job"""
+        # assert(self.base_path)
+        self.cache = java.jclass("KVS")(
+                settings.KVS_HOST, 
+                settings.KVS_PORT)
+        self.calc = java.jclass("CommandLineCalculator")(
+                self.cache, self.key)
+        return fn(self, *args, **kwargs) # pylint: disable=E1102
+    return preloader
+
+class BasePSHAMixin(Mixin): # TODO(LB): this class might not be necessary
     """Contains common functionality for PSHA Mixins."""
 
+    def generate_erf(self):
+        """Generate the Earthquake Rupture Forecast from the currently stored
+        source model logic tree."""
+        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
+        sources = java.jclass("JsonSerializer").getSourceListFromCache(
+                    self.cache, key)
+        erf = java.jclass("GEM1ERF")(sources)
+        self.calc.setGEM1ERFParams(erf)
+        return erf
 
-    def preload(fn): # pylint: disable=E0213
-        """A decorator for preload steps that must run on the Jobber node"""
-        def preloader(self, *args, **kwargs):
-            """Validate job"""
-            # assert(self.base_path)
-            self.cache = java.jclass("KVS")(
-                    settings.KVS_HOST, 
-                    settings.KVS_PORT)
-            self.calc = java.jclass("CommandLineCalculator")(
-                    self.cache, self.key)
-            return fn(self, *args, **kwargs) # pylint: disable=E1102
-        return preloader
-
-
+    def generate_gmpe_map(self):
+        """Generate the GMPE map from the stored GMPE logic tree."""
+        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
+        gmpe_map = java.jclass("JsonSerializer").getGmpeMapFromCache(
+                                                    self.cache,key)
+        self.set_gmpe_params(gmpe_map)
+        return gmpe_map
+        
+    def get_iml_list(self):
+        """Build the appropriate Arbitrary Discretized Func from the IMLs,
+        based on the IMT"""        
+        iml_vals = {'PGA' : numpy.log,  # pylint: disable=E1101
+                    'MMI' : lambda iml: iml,
+                    'PGV' : numpy.log, # pylint: disable=E1101
+                    'PGD' : numpy.log, # pylint: disable=E1101
+                    'SA' : numpy.log,  # pylint: disable=E1101
+                     }
+        
+        iml_list = java.jclass("ArrayList")()
+        for val in self.params['INTENSITY_MEASURE_LEVELS'].split(","):
+            iml_list.add(
+                iml_vals[self.params['INTENSITY_MEASURE_TYPE']](
+                float(val)))
+        return iml_list
 
     def site_list_generator(self):
         """Will subset and yield portions of the region, depending on the 
@@ -50,6 +84,32 @@ class BasePSHAMixin: # TODO(LB): this class might not be necessary
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         yield [site for site in region]
 
+
+    def parameterize_sites(self, site_list):
+        """Convert python Sites to Java Sites, and add default parameters."""
+        # TODO(JMC): There's Java code for this already, sets each site to have
+        # the same default parameters
+        
+        jpype = java.jvm()
+        jsite_list = java.jclass("ArrayList")()
+        for x in site_list:
+            site = x.to_java()
+            
+            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
+            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
+            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
+            depth25.setValue(float(
+                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
+            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
+            site.addParameter(vs30)
+            site.addParameter(depth25)
+            site.addParameter(sadigh)
+            jsite_list.add(site)
+        return jsite_list
+
+
+
 class ClassicalMixin(BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
     
@@ -59,7 +119,8 @@ class ClassicalMixin(BasePSHAMixin):
     Note that this Mixin, during execution, will always be an instance of the
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
-    
+
+    @preload
     def execute(self):
         
         results = []
@@ -82,20 +143,29 @@ class ClassicalMixin(BasePSHAMixin):
                     source_model_generator.getrandbits(32))
             self.store_gmpe_map(self.config_file,
                     source_model_generator.getrandbits(32))
-            for site_list in self.site_list_generator():
+            for site in self.site_list_generator():
                 pending_tasks.append(
-                    tasks.compute_hazard_curve.delay(job_id, block_id))
+                    tasks.compute_hazard_curve.delay(self.id,
+                            site))
+
+            for task in pending_tasks:
+                task.wait()
+                if task.status != 'SUCCESS': 
+                    raise Exception(task.result)
+                    
+        return results
+
                         
-    #@preload     
-    def compute_hazard_curve(self, site_list):
+    @preload     
+    def compute_hazard_curve(self, site):
         # TODO(LB): this is pretty much duplicated from
         # EventBasedMixin
-        jsite_list = self.parameterized_sites(site_list) # TODO: move this function to BasePSHAMixin
+        jsite_list = self.parameterize_sites([site]) # TODO: move this function to BasePSHAMixin
         hazard_curves = java.jclass("HazardCalculator").getHazardCurves(
             jsite_list,
             self.generate_erf(), # FIXME:
             self.generate_gmpe_map(), #FIXME:
-            self.get_iml_list(),
+            self.get_iml_list(), # FIXME:
             float(self.params['MAXIMUM_DISTANCE']))
 
         return hazard_curves
@@ -224,24 +294,6 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
                 files.append(gwriter.html_path)
         return files
         
-    def generate_erf(self):
-        """Generate the Earthquake Rupture Forecast from the currently stored
-        source model logic tree."""
-        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
-        sources = java.jclass("JsonSerializer").getSourceListFromCache(
-                    self.cache, key)
-        erf = java.jclass("GEM1ERF")(sources)
-        self.calc.setGEM1ERFParams(erf)
-        return erf
-
-    def generate_gmpe_map(self):
-        """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
-        gmpe_map = java.jclass("JsonSerializer").getGmpeMapFromCache(
-                                                    self.cache,key)
-        self.set_gmpe_params(gmpe_map)
-        return gmpe_map
-
     def set_gmpe_params(self, gmpe_map):
         """Push parameters from configuration file into the GMPE objects"""
         jpype = java.jvm()
@@ -258,75 +310,7 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
                 jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
                 jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
             gmpe_map.put(tect_region, gmpe)
-    
-    # def load_ruptures(self):
-    #     
-    #     erf = self.generate_erf()
-    #     
-    #     seed = 0 # TODO(JMC): Real seed please
-    #     rn = jclass("Random")(seed)
-    #     event_set_gen = jclass("EventSetGen")
-    #     self.ruptures = event_set_gen.getStochasticEventSetFromPoissonianERF(
-    #                         erf, rn)
-    
-    def get_iml_list(self):
-        """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""        
-        iml_vals = {'PGA' : numpy.log,  # pylint: disable=E1101
-                    'MMI' : lambda iml: iml,
-                    'PGV' : numpy.log, # pylint: disable=E1101
-                    'PGD' : numpy.log, # pylint: disable=E1101
-                    'SA' : numpy.log,  # pylint: disable=E1101
-                     }
-        
-        iml_list = java.jclass("ArrayList")()
-        for val in self.params['INTENSITY_MEASURE_LEVELS'].split(","):
-            iml_list.add(
-                iml_vals[self.params['INTENSITY_MEASURE_TYPE']](
-                float(val)))
-        return iml_list
-
-    def parameterize_sites(self, site_list):
-        """Convert python Sites to Java Sites, and add default parameters."""
-        # TODO(JMC): There's Java code for this already, sets each site to have
-        # the same default parameters
-        
-        jpype = java.jvm()
-        jsite_list = java.jclass("ArrayList")()
-        for x in site_list:
-            site = x.to_java()
-            
-            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
-            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
-            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-            depth25.setValue(float(
-                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
-            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
-            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
-            site.addParameter(vs30)
-            site.addParameter(depth25)
-            site.addParameter(sadigh)
-            jsite_list.add(site)
-        return jsite_list
-
-    @preload
-    def compute_hazard_curve(self, site_list):
-        """Actual hazard curve calculation, runs on the workers.
-        Takes a list of Site objects."""
-        jsite_list = self.parameterize_sites(site_list)
-        hazard_curves = java.jclass("HazardCalculator").getHazardCurves(
-            jsite_list,
-            self.generate_erf(),
-            self.generate_gmpe_map(),
-            self.get_iml_list(),
-            float(self.params['MAXIMUM_DISTANCE']))
-
-        pmf_calculator = java.jclass("ProbabilityMassFunctionCalc")
-        for site in hazard_curves.keySet():
-            pmf = pmf_calculator.getPMF(hazard_curves.get(site))
-            hazard_curves.put(site, pmf)
-        return hazard_curves
-
+ 
     @preload
     def compute_ground_motion_fields(self, site_list, stochastic_set_id, seed):
         """Ground motion field calculation, runs on the workers."""
@@ -350,4 +334,5 @@ def gmf_id(history_idx, realization_idx, rupture_idx):
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
 
 
-job.HazJobMixin.register("Monte Carlo", EventBasedMixin)
+job.HazJobMixin.register("Monte Carlo", EventBasedMixin, order=0) # TODO: change Monte Carlo to 'Event Based'
+job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
