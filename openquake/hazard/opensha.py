@@ -40,6 +40,31 @@ def preload(fn): # pylint: disable=E0213
 class BasePSHAMixin(Mixin): # TODO(LB): this class might not be necessary
     """Contains common functionality for PSHA Mixins."""
 
+
+    #def store_source_model(self, config_file, seed):
+    def store_source_model(self, seed):
+        """Generates an Earthquake Rupture Forecast, using the source zones and
+        logic trees specified in the job config file. Note that this has to be
+        done currently using the file itself, since it has nested references to
+        other files."""
+    
+        #print "Store source model from %s" % (config_file)
+        LOG.info("Storing source model from job config")
+        #engine = java.jclass("CommandLineCalculator")(config_file)
+        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
+        print "source model key is", key
+        self.calc.sampleAndSaveERFTree(self.cache, key, seed)
+    
+    #def store_gmpe_map(self, config_file, seed):
+    def store_gmpe_map(self, seed):    
+        """Generates a hash of tectonic regions and GMPEs, using the logic tree
+        specified in the job config file."""
+        #engine = java.jclass("CommandLineCalculator")(config_file)
+        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
+        print "GMPE map key is", key
+        self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
+
+
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
@@ -122,7 +147,8 @@ class ClassicalMixin(BasePSHAMixin):
 
     @preload
     def execute(self):
-        
+       
+        print "config type is", self.calc.configType() 
         results = []
         
         source_model_generator = random.Random()
@@ -139,10 +165,10 @@ class ClassicalMixin(BasePSHAMixin):
 
         for i in range(0, realizations):
             pending_tasks = []
-            self.store_source_model(self.config_file,
-                    source_model_generator.getrandbits(32))
-            self.store_gmpe_map(self.config_file,
-                    source_model_generator.getrandbits(32))
+            print "dir of self is", dir(self)
+            print "self.params is", self.params
+            self.store_source_model(source_model_generator.getrandbits(32))
+            self.store_gmpe_map(source_model_generator.getrandbits(32))
             for site in self.site_list_generator():
                 pending_tasks.append(
                     tasks.compute_hazard_curve.delay(self.id,
@@ -158,8 +184,6 @@ class ClassicalMixin(BasePSHAMixin):
                         
     @preload     
     def compute_hazard_curve(self, site):
-        # TODO(LB): this is pretty much duplicated from
-        # EventBasedMixin
         jsite_list = self.parameterize_sites([site]) # TODO: move this function to BasePSHAMixin
         hazard_curves = java.jclass("HazardCalculator").getHazardCurves(
             jsite_list,
@@ -182,27 +206,6 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
     
-    def store_source_model(self, config_file, seed):
-        """Generates an Earthquake Rupture Forecast, using the source zones and
-        logic trees specified in the job config file. Note that this has to be
-        done currently using the file itself, since it has nested references to
-        other files.
-    
-        config_file should be an absolute path."""
-        print "Store source model from %s" % (config_file)
-        engine = java.jclass("CommandLineCalculator")(config_file)
-        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
-        engine.sampleAndSaveERFTree(self.cache, key, seed)
-    
-    def store_gmpe_map(self, config_file, seed):
-        """Generates a hash of tectonic regions and GMPEs, using the logic tree
-        specified in the job config file.
-        
-        In the future, this file *could* be passed as a string, since it does 
-        not have any included references."""
-        engine = java.jclass("CommandLineCalculator")(config_file)
-        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
-        engine.sampleAndSaveGMPETree(self.cache, key, seed)
 
     @preload
     def execute(self):
