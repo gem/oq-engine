@@ -77,16 +77,31 @@ class HazardEngineTestCase(unittest.TestCase):
             
     def test_hazard_engine_worker_runs(self):
         """Construction of CommandLineCalculator in Java should not throw
-        errors, and should have params loaded from memcached."""
-        site_id = 1
-        job_id = generate_job()
-        hazengine = job.Job.from_kvs(job_id)
-        self.generated_files.append(
-            os.path.join(test.smoketest_file("simplecase/%s-super.gem" % job_id)))
-        self.generated_files.append(hazengine.super_config_path)
+        errors, and should have params loaded from the kvs."""
+        
+        test_file_path = "smoketests/nshmp-california-fault/config.gem"
+        hazengine = job.Job.from_file(test_file_path)
+        print "hazengine.key is", hazengine.key
+        print "dir(hazengine) is", dir(hazengine)
+        print
+        print "hazengine.params is", hazengine.params
+        print
+        print
+        print "type(hazengine.params) is", type(hazengine.params)
+        
+        #site_id = 1
+        #job_id = generate_job()
+        #hazengine = job.Job.from_kvs(job_id)
+        #self.generated_files.append(
+        #    os.path.join(test.smoketest_file("simplecase/%s-super.gem" % job_id)))
+        #self.generated_files.append(hazengine.super_config_path)
+        
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
-            pass
-            # hazengine.execute()
+            # pass
+            print "dir(hazengine) is", dir(hazengine)
+            #self.assertTrue(False)
+            print "hazengine.execute()"
+            hazengine.execute()
             # hc = hazengine.compute_hazard_curve(site_id)
 
     def test_basic_generate_erf_keeps_order(self):
