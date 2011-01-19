@@ -79,15 +79,15 @@ class HazardEngineTestCase(unittest.TestCase):
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from the kvs."""
         
-        test_file_path = "smoketests/nshmp-california-fault/config.gem"
+        test_file_path = "smoketests/simplecase/config.gem"
         hazengine = job.Job.from_file(test_file_path)
-        print "hazengine.key is", hazengine.key
-        print "dir(hazengine) is", dir(hazengine)
-        print
-        print "hazengine.params is", hazengine.params
-        print
-        print
-        print "type(hazengine.params) is", type(hazengine.params)
+        #print "hazengine.key is", hazengine.key
+        #print "dir(hazengine) is", dir(hazengine)
+        #print
+        #print "hazengine.params is", hazengine.params
+        #print
+        #print
+        #print "type(hazengine.params) is", type(hazengine.params)
         
         #site_id = 1
         #job_id = generate_job()
@@ -98,11 +98,12 @@ class HazardEngineTestCase(unittest.TestCase):
         
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
             # pass
-            print "dir(hazengine) is", dir(hazengine)
-            #self.assertTrue(False)
-            print "hazengine.execute()"
-            hazengine.execute()
+            #print "dir(hazengine) with mixin is", dir(hazengine)
+            #print "hazengine.execute()"
+            results = hazengine.execute()
             # hc = hazengine.compute_hazard_curve(site_id)
+            #print "results are", results
+            self.assertTrue(False)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []

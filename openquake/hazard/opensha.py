@@ -8,7 +8,7 @@ import math
 import os
 import random
 import numpy
-
+import json
 
 from openquake import java
 from openquake import kvs
@@ -75,6 +75,24 @@ class BasePSHAMixin(Mixin): # TODO(LB): this class might not be necessary
         self.calc.setGEM1ERFParams(erf)
         return erf
 
+    def set_gmpe_params(self, gmpe_map):
+        """Push parameters from configuration file into the GMPE objects"""
+        jpype = java.jvm()
+        gmpe_lt_data = self.calc.createGmpeLogicTreeData()
+        for tect_region in gmpe_map.keySet():
+            gmpe = gmpe_map.get(tect_region)
+            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'], 
+                self.params['INTENSITY_MEASURE_TYPE'], 
+                jpype.JDouble(float(self.params['PERIOD'])), 
+                jpype.JDouble(float(self.params['DAMPING'])), 
+                self.params['GMPE_TRUNCATION_TYPE'], 
+                jpype.JDouble(float(self.params['TRUNCATION_LEVEL'])), 
+                self.params['STANDARD_DEVIATION_TYPE'], 
+                jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
+                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+            gmpe_map.put(tect_region, gmpe)
+
+
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
         key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
@@ -114,7 +132,7 @@ class BasePSHAMixin(Mixin): # TODO(LB): this class might not be necessary
         """Convert python Sites to Java Sites, and add default parameters."""
         # TODO(JMC): There's Java code for this already, sets each site to have
         # the same default parameters
-        
+       
         jpype = java.jvm()
         jsite_list = java.jclass("ArrayList")()
         for x in site_list:
@@ -148,7 +166,6 @@ class ClassicalMixin(BasePSHAMixin):
     @preload
     def execute(self):
        
-        print "config type is", self.calc.configType() 
         results = []
         
         source_model_generator = random.Random()
@@ -169,30 +186,54 @@ class ClassicalMixin(BasePSHAMixin):
             print "self.params is", self.params
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
-            for site in self.site_list_generator():
+            for site_list in self.site_list_generator():
+                print "dir(site_list) is", dir(site_list)
+                print "site_list is", site_list
                 pending_tasks.append(
                     tasks.compute_hazard_curve.delay(self.id,
-                            site))
+                            site_list, i))
 
             for task in pending_tasks:
                 task.wait()
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
-                    
+                results.extend(task.result)
+        print "result are", results
         return results
 
                         
     @preload     
-    def compute_hazard_curve(self, site):
-        jsite_list = self.parameterize_sites([site]) # TODO: move this function to BasePSHAMixin
-        hazard_curves = java.jclass("HazardCalculator").getHazardCurves(
+    def compute_hazard_curve(self, site_list, realization):
+        """ Compute hazard curves, write them to KVS as JSON,
+        and return a list of the KVS keys to each curve. """
+        jsite_list = self.parameterize_sites(site_list) 
+        hazard_curves = java.jclass("HazardCalculator").getHazardCurvesAsJson(
             jsite_list,
-            self.generate_erf(), # FIXME:
-            self.generate_gmpe_map(), #FIXME:
-            self.get_iml_list(), # FIXME:
+            self.generate_erf(),
+            self.generate_gmpe_map(),
+            self.get_iml_list(),
             float(self.params['MAXIMUM_DISTANCE']))
-
-        return hazard_curves
+        #print "opensha.py -> compute_hazard_curves:", hazard_curves
+        print "opensha.py -> compute_hazard_curves: "
+        print "type(hazard_curves", type(hazard_curves)
+        print "dir(hazard_curves)", dir(hazard_curves)
+        # TODO (LB): write the curves to KVS here and return keys
+        kvs_client = kvs.get_client()
+        curve_keys = []
+        decoder = json.JSONDecoder()
+        for curve in hazard_curves: 
+            # TODO (LB): This could use some optimization -- 
+            # the json decoding here is mildy sloppy
+            curve_dict = decoder.decode(curve)
+            lon = curve_dict['site_lon']
+            lat = curve_dict['site_lat']
+            curve_key = kvs.tokens.hazard_curve_key(self.id,
+                                                    realization, 
+                                                    lon, 
+                                                    lat)
+            kvs_client.set(curve_key, curve)
+            curve_keys.append(curve_key) 
+        return curve_keys
         
 
 
@@ -297,22 +338,6 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
                 files.append(gwriter.html_path)
         return files
         
-    def set_gmpe_params(self, gmpe_map):
-        """Push parameters from configuration file into the GMPE objects"""
-        jpype = java.jvm()
-        gmpe_lt_data = self.calc.createGmpeLogicTreeData()
-        for tect_region in gmpe_map.keySet():
-            gmpe = gmpe_map.get(tect_region)
-            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'], 
-                self.params['INTENSITY_MEASURE_TYPE'], 
-                jpype.JDouble(float(self.params['PERIOD'])), 
-                jpype.JDouble(float(self.params['DAMPING'])), 
-                self.params['GMPE_TRUNCATION_TYPE'], 
-                jpype.JDouble(float(self.params['TRUNCATION_LEVEL'])), 
-                self.params['STANDARD_DEVIATION_TYPE'], 
-                jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])), 
-                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
-            gmpe_map.put(tect_region, gmpe)
  
     @preload
     def compute_ground_motion_fields(self, site_list, stochastic_set_id, seed):
