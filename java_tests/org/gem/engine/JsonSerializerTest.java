@@ -6,15 +6,23 @@ import static org.junit.Assert.assertTrue;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
+import org.dom4j.Element;
 import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.Before;
 import org.junit.Test;
+import org.opensha.commons.data.DataPoint2D;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFuncAPI;
+import org.opensha.commons.exceptions.DataPoint2DException;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -35,16 +43,52 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
 public class JsonSerializerTest {
 
     private ArrayList<GEMSourceData> sourceList;
+    private static final String TEST_CURVE_JSON =
+            "[{\"y\":\"0.0\",\"x\":\"-5.2983174\"},{\"y\":\"1.0\",\"x\":\"0.756122\"}]";
+    private static final String TEST_HAZARD_CURVE_JSON =
+            String
+                    .format(
+                            "{\"site_lon\":\"-118.3\",\"site_lat\":\"34.12\",\"curve\":%s}",
+                            TEST_CURVE_JSON);
 
     @Before
     public void setUp() {
         sourceList = new ArrayList<GEMSourceData>();
+    }
+
+    @Test
+    public void testHazardCurvesToJson() {
+        List<String> expectedResults = new ArrayList<String>();
+        expectedResults.add(TEST_HAZARD_CURVE_JSON);
+
+        Site site = new Site();
+        Location loc = new Location(34.12, -118.3); // lat, lon
+        site.setLocation(loc);
+        Map<Site, DiscretizedFuncAPI> testMap =
+                new HashMap<Site, DiscretizedFuncAPI>();
+        testMap.put(site, new TestCurve());
+
+        List<String> actualResults = JsonSerializer.hazardCurvesToJson(testMap);
+
+        for (int i = 0; i < expectedResults.size(); i++) {
+            assertEquals(expectedResults.get(i), actualResults.get(i));
+        }
+    }
+
+    @Test
+    public void testCurveToJsonElement() {
+        DiscretizedFuncAPI curve = new TestCurve();
+        Gson gson = new Gson();
+        JsonElement json = JsonSerializer.curveToJsonElement(curve, gson);
+        assertEquals(TEST_CURVE_JSON, json.toString());
     }
 
     /**
@@ -145,20 +189,11 @@ public class JsonSerializerTest {
 
     private void compareCommonParams(
             List<GEMSourceData> sourceListDeserialized, int sourceIndex) {
-        assertTrue(sourceList
-                .get(sourceIndex)
-                .getID()
-                .equalsIgnoreCase(
-                        sourceListDeserialized.get(sourceIndex).getID()));
-        assertTrue(sourceList
-                .get(sourceIndex)
-                .getName()
-                .equalsIgnoreCase(
-                        sourceListDeserialized.get(sourceIndex).getName()));
-        assertTrue(sourceList
-                .get(sourceIndex)
-                .getTectReg()
-                .toString()
+        assertTrue(sourceList.get(sourceIndex).getID().equalsIgnoreCase(
+                sourceListDeserialized.get(sourceIndex).getID()));
+        assertTrue(sourceList.get(sourceIndex).getName().equalsIgnoreCase(
+                sourceListDeserialized.get(sourceIndex).getName()));
+        assertTrue(sourceList.get(sourceIndex).getTectReg().toString()
                 .equalsIgnoreCase(
                         sourceListDeserialized.get(sourceIndex).getTectReg()
                                 .toString()));
@@ -167,10 +202,10 @@ public class JsonSerializerTest {
     private void compareSubductionFaultSourceData(
             GEMSubductionFaultSourceData srcOriginal,
             GEMSubductionFaultSourceData srcDeserialized) {
-        compareFaultTraces(srcOriginal.getTopTrace(),
-                srcDeserialized.getTopTrace());
-        compareFaultTraces(srcOriginal.getBottomTrace(),
-                srcDeserialized.getBottomTrace());
+        compareFaultTraces(srcOriginal.getTopTrace(), srcDeserialized
+                .getTopTrace());
+        compareFaultTraces(srcOriginal.getBottomTrace(), srcDeserialized
+                .getBottomTrace());
         assertTrue(srcOriginal.getRake() == srcDeserialized.getRake());
         assertTrue(srcOriginal.getFloatRuptureFlag() == srcDeserialized
                 .getFloatRuptureFlag());
@@ -203,10 +238,8 @@ public class JsonSerializerTest {
 
     private void comparePointSourceData(GEMPointSourceData srcOriginal,
             GEMPointSourceData srcDeserialized) {
-        assertTrue(srcOriginal
-                .getHypoMagFreqDistAtLoc()
-                .getLocation()
-                .equals(srcDeserialized.getHypoMagFreqDistAtLoc().getLocation()));
+        assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getLocation().equals(
+                srcDeserialized.getHypoMagFreqDistAtLoc().getLocation()));
         assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getNumMagFreqDists() == srcDeserialized
                 .getHypoMagFreqDistAtLoc().getNumMagFreqDists());
         assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getNumFocalMechs() == srcDeserialized
@@ -538,5 +571,262 @@ public class JsonSerializerTest {
                 new GEMSubductionFaultSourceData(id, name, tectReg, topTrc,
                         bottomTrc, rake, magDist, floatRuptureFlag);
         return subduc;
+    }
+
+    /**
+     * Test implementation of Discretized FuncAPI. This is a partial
+     * implementation including only what we need for tests.
+     * 
+     * @author larsbutler
+     * 
+     */
+    static class TestCurve implements DiscretizedFuncAPI {
+
+        static final double[] X_VALS = { -5.2983174, 0.756122 };
+        static final double[] Y_VALS = { 0.0, 1.0 };
+
+        @Override
+        public boolean areAllXValuesInteger(double arg0) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public DiscretizedFuncAPI deepClone() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public boolean equals(DiscretizedFuncAPI arg0) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public DataPoint2D get(int arg0) {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public double getClosestX(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getClosestY(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getFirstInterpolatedX(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getFirstInterpolatedX_inLogXLogYDomain(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public int getIndex(DataPoint2D arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public String getInfo() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public double getInterpolatedY(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getInterpolatedY_inLogXLogYDomain(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getInterpolatedY_inLogYDomain(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getMaxX() {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getMaxY() {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public String getMetadataString() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public double getMinX() {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getMinY() {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public String getName() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public int getNum() {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public Iterator<DataPoint2D> getPointsIterator() {
+            return new Iterator<DataPoint2D>() {
+
+                private int count = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return count < X_VALS.length;
+                }
+
+                @Override
+                public DataPoint2D next() {
+                    DataPoint2D point =
+                            new DataPoint2D(X_VALS[count], Y_VALS[count]);
+                    count++;
+                    return point;
+                }
+
+                @Override
+                public void remove() {
+                    // TODO Auto-generated method stub
+
+                }
+            };
+        }
+
+        @Override
+        public double getTolerance() {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getX(int arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public int getXIndex(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public ListIterator<Double> getXValuesIterator() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public double getY(int arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public double getY(double arg0) {
+            // TODO Auto-generated method stub
+            return 0;
+        }
+
+        @Override
+        public ListIterator<Double> getYValuesIterator() {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
+        @Override
+        public boolean hasPoint(DataPoint2D arg0) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public boolean hasPoint(double arg0, double arg1) {
+            // TODO Auto-generated method stub
+            return false;
+        }
+
+        @Override
+        public void set(DataPoint2D arg0) throws DataPoint2DException {
+            // TODO Auto-generated method stub
+
+        }
+
+        @Override
+        public void set(double arg0, double arg1) throws DataPoint2DException {
+            // TODO Auto-generated method stub
+
+        }
+
+        @Override
+        public void set(int arg0, double arg1) {
+            // TODO Auto-generated method stub
+
+        }
+
+        @Override
+        public void setInfo(String arg0) {
+            // TODO Auto-generated method stub
+
+        }
+
+        @Override
+        public void setName(String arg0) {
+            // TODO Auto-generated method stub
+
+        }
+
+        @Override
+        public void setTolerance(double arg0) {
+            // TODO Auto-generated method stub
+
+        }
+
+        @Override
+        public Element toXMLMetadata(Element arg0) {
+            // TODO Auto-generated method stub
+            return null;
+        }
+
     }
 }

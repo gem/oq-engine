@@ -1,4 +1,3 @@
-// package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
 package org.gem.engine;
 
 import static org.junit.Assert.assertEquals;
