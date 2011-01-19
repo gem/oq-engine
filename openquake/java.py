@@ -15,7 +15,7 @@ flags.DEFINE_boolean('capture_java_debug', True,
     "Pipe Java stderr and stdout to python stderr and stdout")
 
 JAVA_CLASSES = {
-    'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
+    'LogicTreeProcessor' : "org.gem.engine.LogicTreeProcessor",
     'KVS' : "org.gem.engine.hazard.redis.Cache",
     'JsonSerializer' : "org.gem.JsonSerializer",
     "EventSetGen" : "org.gem.calc.StochasticEventSetGenerator",

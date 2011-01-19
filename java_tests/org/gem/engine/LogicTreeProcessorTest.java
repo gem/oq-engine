@@ -1,4 +1,4 @@
-// package org.opensha.gem.GEM1.calc.gemCommandLineCalculator;
+// package org.opensha.gem.GEM1.calc.gemLogicTreeProcessor;
 package org.gem.engine;
 
 import static org.junit.Assert.assertEquals;
@@ -8,7 +8,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Properties;
 
 import org.apache.commons.configuration.ConfigurationException;
-import org.gem.engine.CommandLineCalculator.EqkRuptureDataForNrml;
+import org.gem.engine.LogicTreeProcessor.EqkRuptureDataForNrml;
 import org.gem.engine.hazard.redis.BaseRedisTest;
 import org.gem.engine.hazard.redis.Cache;
 import org.gem.ipe.PredictionEquationTestHelper;
@@ -19,7 +19,7 @@ import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 
 import com.google.gson.Gson;
 
-public class CommandLineCalculatorTest extends BaseRedisTest {
+public class LogicTreeProcessorTest extends BaseRedisTest {
 
     private static String peerTestSet1Case5ConfigFile =
             "peerSet1Case5/CalculatorConfig.properties";
@@ -57,9 +57,9 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         Properties config2 = new Properties();
         config2.setProperty("ANOTHER_KEY", "ANOTHER_VALUE");
 
-        CommandLineCalculator calc1 = new CommandLineCalculator(config1);
-        CommandLineCalculator calc2 = new CommandLineCalculator(config1);
-        CommandLineCalculator calc3 = new CommandLineCalculator(config2);
+        LogicTreeProcessor calc1 = new LogicTreeProcessor(config1);
+        LogicTreeProcessor calc2 = new LogicTreeProcessor(config1);
+        LogicTreeProcessor calc3 = new LogicTreeProcessor(config2);
 
         assertTrue(calc1.equals(calc2));
         assertFalse(calc1.equals(calc3));
@@ -75,8 +75,8 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
      */
     @Test
     public void eqkRuptureKvsData() throws ConfigurationException {
-        CommandLineCalculator clc =
-                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
+        LogicTreeProcessor clc =
+                new LogicTreeProcessor(peerTestSet1Case5ConfigFile);
         /*
          * Not to big test data:
          */
@@ -110,8 +110,8 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         client = new Cache(LOCALHOST, PORT);
         client.flush(); // clear the server side cache
 
-        CommandLineCalculator clc =
-                new CommandLineCalculator(peerTestSet1Case5ConfigFile);
+        LogicTreeProcessor clc =
+                new LogicTreeProcessor(peerTestSet1Case5ConfigFile);
         EqkRupture rupture = PredictionEquationTestHelper.getElsinoreRupture();
         clc.serializeEqkRuptureToKvs(rupture, key, client);
 
@@ -134,4 +134,4 @@ public class CommandLineCalculatorTest extends BaseRedisTest {
         assertEquals(expected, fromKvs);
     }
 
-} // class CommandLineCalculatorTest
+} // class LogicTreeProcessorTest
