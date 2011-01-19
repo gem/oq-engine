@@ -11,6 +11,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.gem.JsonSerializer;
 import org.gem.engine.hazard.redis.Cache;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -88,6 +89,28 @@ public class HazardCalculator {
             e.printStackTrace();
         }
         return results;
+    }
+
+    /**
+     * Get the site/hazard curve pairs as a list of JSON Strings.
+     * 
+     * @param siteList
+     * @param erf
+     * @param gmpeMap
+     * @param imlVals
+     * @param integrationDistance
+     * @return
+     */
+    public static String[] getHazardCurvesAsJson(
+            List<Site> siteList,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+            List<Double> imlVals, double integrationDistance) {
+        Map<Site, DiscretizedFuncAPI> curves =
+                getHazardCurves(siteList, erf, gmpeMap, imlVals,
+                        integrationDistance);
+        List<String> returnCurves = JsonSerializer.hazardCurvesToJson(curves);
+        return returnCurves.toArray(new String[returnCurves.size()]);
     }
 
     /**

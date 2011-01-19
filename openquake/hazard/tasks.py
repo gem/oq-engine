@@ -54,12 +54,11 @@ def write_out_ses(job_file, stochastic_set_key):
         hazengine.write_gmf_files(ses) #pylint: disable=E1101
 
 @task
-def compute_hazard_curve(job_id, site):
-    """ Generate hazard curve for a given site. """
+def compute_hazard_curve(job_id, site_list, realization):
+    """ Generate hazard curve for a given site list. """
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
-        hazengine.compute_hazard_curves(site)
-
+        return hazengine.compute_hazard_curve(site_list, realization)
 
 @task
 def compute_mgm_intensity(job_id, block_id, site_id):
