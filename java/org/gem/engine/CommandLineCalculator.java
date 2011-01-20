@@ -258,7 +258,7 @@ public class CommandLineCalculator {
      */
     public List<GEMSourceData> sampleSourceModelLogicTree(
             LogicTree<ArrayList<GEMSourceData>> lt, long seed) {
-        // TODO(LB): need to differentiate between files only vs. kvs only
+
         List<GEMSourceData> srcList = null;
         Random rn = new Random(seed);
 
@@ -268,9 +268,9 @@ public class CommandLineCalculator {
                 lt.getBranchingLevel(0).getBranch(branchNumber - 1);
         if (branch.getNameInputFile() != null) {
             String sourceName = null;
-            if (hasPath) {
+            if (hasPath) { // job from file
                 sourceName = configFilesPath() + branch.getNameInputFile();
-            } else {
+            } else { // job from kvs
                 sourceName =
                         FilenameUtils.concat(config.getString("BASE_PATH"),
                                 branch.getNameInputFile());
