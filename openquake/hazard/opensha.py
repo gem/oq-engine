@@ -27,7 +27,6 @@ def preload(fn): # pylint: disable=E0213
     """A decorator for preload steps that must run on the Jobber node"""
     def preloader(self, *args, **kwargs):
         """Validate job"""
-        # assert(self.base_path)
         self.cache = java.jclass("KVS")(
                 settings.KVS_HOST, 
                 settings.KVS_PORT)
@@ -36,29 +35,24 @@ def preload(fn): # pylint: disable=E0213
         return fn(self, *args, **kwargs) # pylint: disable=E1102
     return preloader
 
-class BasePSHAMixin(Mixin): # TODO(LB): this class might not be necessary
+class BasePSHAMixin(Mixin): 
     """Contains common functionality for PSHA Mixins."""
 
 
-    #def store_source_model(self, config_file, seed):
     def store_source_model(self, seed):
         """Generates an Earthquake Rupture Forecast, using the source zones and
         logic trees specified in the job config file. Note that this has to be
         done currently using the file itself, since it has nested references to
         other files."""
     
-        #print "Store source model from %s" % (config_file)
         LOG.info("Storing source model from job config")
-        #engine = java.jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
         print "source model key is", key
         self.calc.sampleAndSaveERFTree(self.cache, key, seed)
     
-    #def store_gmpe_map(self, config_file, seed):
     def store_gmpe_map(self, seed):    
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
-        #engine = java.jclass("CommandLineCalculator")(config_file)
         key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         print "GMPE map key is", key
         self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
@@ -347,5 +341,5 @@ def gmf_id(history_idx, realization_idx, rupture_idx):
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
 
 
-job.HazJobMixin.register("Monte Carlo", EventBasedMixin, order=0) # TODO: change Monte Carlo to 'Event Based'
+job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
 job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
