@@ -103,14 +103,19 @@ public class JsonSerializer {
     /**
      * Convert the input Map into a List of JSON Strings.
      * 
+     * <p>
+     * <b>The order in which the results are returned is based on the order of
+     * the site list.</b>
+     * </p>
+     * 
      * @param hazCurves
      * @return List of JSON Strings
      */
     public static List<String> hazardCurvesToJson(
-            Map<Site, DiscretizedFuncAPI> hazCurves) {
+            Map<Site, DiscretizedFuncAPI> hazCurves, List<Site> siteList) {
         List<String> json = new ArrayList<String>();
         Gson gson = new Gson();
-        for (Site site : hazCurves.keySet()) {
+        for (Site site : siteList) {
             Double lon = site.getLocation().getLongitude();
             Double lat = site.getLocation().getLatitude();
             Map<String, String> siteMap = new HashMap<String, String>();
