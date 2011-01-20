@@ -12,6 +12,7 @@ from openquake import shapes
 from openquake import test
 from openquake import job
 from openquake.job import mixins
+from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
@@ -74,36 +75,46 @@ class HazardEngineTestCase(unittest.TestCase):
             gmpe_model = self.kvs_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
+    
+    def test_generate_hazard_curves_using_classical_psha(self): 
+        
+        def verify_order_of_haz_curve_keys(hazengine, result_keys):
+            """ The classical PSHA execute() returns a list of keys 
+            for the curves stored to the KVS. We need to make sure
+            the order is correct. """
+            print "job id (hazengine id) is", hazengine.id 
             
-    def test_hazard_engine_worker_runs(self):
-        """Construction of CommandLineCalculator in Java should not throw
-        errors, and should have params loaded from the kvs."""
-        
-        test_file_path = "smoketests/simplecase/config.gem"
+            expected_keys = []
+            realizations = int(hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+            print "dir of hazengine is", dir(hazengine)
+            for realization in range(0, realizations):    
+                for site_list in hazengine.site_list_generator():
+                    for site in site_list:
+                        key = tokens.hazard_curve_key(hazengine.id,
+                                                      realization,
+                                                      site.longitude,
+                                                      site.latitude) 
+                        expected_keys.append(key) 
+            self.assertEqual(expected_keys, result_keys)
+
+        def verify_haz_curves_stored_to_kvs(result_keys):
+            """ This just tests to make sure there something in the KVS
+            for each key in given list of keys. This does NOT test the
+            actual results. """
+            # TODO (LB): At some point we need to test that the actual 
+            # results to verify they are correct
+            for key in result_keys:
+                value = self.kvs_client.get(key)
+                print "kvs value is", value
+                self.assertTrue(value != None) 
+
+        test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
-        #print "hazengine.key is", hazengine.key
-        #print "dir(hazengine) is", dir(hazengine)
-        #print
-        #print "hazengine.params is", hazengine.params
-        #print
-        #print
-        #print "type(hazengine.params) is", type(hazengine.params)
-        
-        #site_id = 1
-        #job_id = generate_job()
-        #hazengine = job.Job.from_kvs(job_id)
-        #self.generated_files.append(
-        #    os.path.join(test.smoketest_file("simplecase/%s-super.gem" % job_id)))
-        #self.generated_files.append(hazengine.super_config_path)
         
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
-            # pass
-            #print "dir(hazengine) with mixin is", dir(hazengine)
-            #print "hazengine.execute()"
-            results = hazengine.execute()
-            # hc = hazengine.compute_hazard_curve(site_id)
-            #print "results are", results
-            self.assertTrue(False)
+            result_keys = hazengine.execute()
+            verify_order_of_haz_curve_keys(hazengine, result_keys)
+            verify_haz_curves_stored_to_kvs(result_keys)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []

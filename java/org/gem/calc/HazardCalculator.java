@@ -109,7 +109,8 @@ public class HazardCalculator {
         Map<Site, DiscretizedFuncAPI> curves =
                 getHazardCurves(siteList, erf, gmpeMap, imlVals,
                         integrationDistance);
-        List<String> returnCurves = JsonSerializer.hazardCurvesToJson(curves);
+        List<String> returnCurves =
+                JsonSerializer.hazardCurvesToJson(curves, siteList);
         return returnCurves.toArray(new String[returnCurves.size()]);
     }
 
