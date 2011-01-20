@@ -8,7 +8,6 @@ import math
 import os
 import random
 import numpy
-import json
 
 from openquake import java
 from openquake import kvs
@@ -180,32 +179,27 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info('Going to run classical PSHA hazard for %s realizations'
                 % realizations)
 
-        for i in range(0, realizations):
+        for realization in range(0, realizations):
             pending_tasks = []
-            print "dir of self is", dir(self)
-            print "self.params is", self.params
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
             for site_list in self.site_list_generator():
-                print "dir(site_list) is", dir(site_list)
-                print "site_list is", site_list
                 pending_tasks.append(
                     tasks.compute_hazard_curve.delay(self.id,
-                            site_list, i))
+                            site_list, realization))
 
             for task in pending_tasks:
                 task.wait()
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
                 results.extend(task.result)
-        print "result are", results
         return results
 
                         
     @preload     
     def compute_hazard_curve(self, site_list, realization):
         """ Compute hazard curves, write them to KVS as JSON,
-        and return a list of the KVS keys to each curve. """
+        and return a list of the KVS keys for each curve. """
         jsite_list = self.parameterize_sites(site_list) 
         hazard_curves = java.jclass("HazardCalculator").getHazardCurvesAsJson(
             jsite_list,
@@ -213,29 +207,22 @@ class ClassicalMixin(BasePSHAMixin):
             self.generate_gmpe_map(),
             self.get_iml_list(),
             float(self.params['MAXIMUM_DISTANCE']))
-        #print "opensha.py -> compute_hazard_curves:", hazard_curves
-        print "opensha.py -> compute_hazard_curves: "
-        print "type(hazard_curves", type(hazard_curves)
-        print "dir(hazard_curves)", dir(hazard_curves)
-        # TODO (LB): write the curves to KVS here and return keys
+        
+        # write the curves to the KVS and return a list of the keys
         kvs_client = kvs.get_client()
         curve_keys = []
-        decoder = json.JSONDecoder()
-        for curve in hazard_curves: 
-            # TODO (LB): This could use some optimization -- 
-            # the json decoding here is mildy sloppy
-            curve_dict = decoder.decode(curve)
-            lon = curve_dict['site_lon']
-            lat = curve_dict['site_lat']
+        for i in xrange(0, len(hazard_curves)):
+            curve = hazard_curves[i]
+            site = site_list[i]
+            lon = site.longitude
+            lat = site.latitude 
             curve_key = kvs.tokens.hazard_curve_key(self.id,
-                                                    realization, 
-                                                    lon, 
+                                                    realization,
+                                                    lon,
                                                     lat)
             kvs_client.set(curve_key, curve)
-            curve_keys.append(curve_key) 
+            curve_keys.append(curve_key)
         return curve_keys
-        
-
 
 class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
     """Probabilistic Event Based method for performing Hazard calculations.
@@ -274,10 +261,8 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
         for i in range(0, histories):
             pending_tasks = []
             for j in range(0, realizations):
-                self.store_source_model(self.config_file,
-                        source_model_generator.getrandbits(32))
-                self.store_gmpe_map(self.config_file,
-                        gmpe_generator.getrandbits(32))
+                self.store_source_model(source_model_generator.getrandbits(32))
+                self.store_gmpe_map(gmpe_generator.getrandbits(32))
                 for site_list in self.site_list_generator():
                     stochastic_set_id = "%s!%s" % (i, j)
                     # pylint: disable=E1101
