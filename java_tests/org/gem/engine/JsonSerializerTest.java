@@ -1,6 +1,7 @@
 package org.gem.engine;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.lang.reflect.Type;
@@ -53,10 +54,15 @@ public class JsonSerializerTest {
     private ArrayList<GEMSourceData> sourceList;
     private static final String TEST_CURVE_JSON =
             "[{\"y\":\"0.0\",\"x\":\"-5.2983174\"},{\"y\":\"1.0\",\"x\":\"0.756122\"}]";
-    private static final String TEST_HAZARD_CURVE_JSON =
+    private static final String TEST_HAZARD_CURVE_JSON_1 =
             String
                     .format(
                             "{\"site_lon\":\"-118.3\",\"site_lat\":\"34.12\",\"curve\":%s}",
+                            TEST_CURVE_JSON);
+    private static final String TEST_HAZARD_CURVE_JSON_2 =
+            String
+                    .format(
+                            "{\"site_lon\":\"-118.16\",\"site_lat\":\"33.88\",\"curve\":%s}",
                             TEST_CURVE_JSON);
 
     @Before
@@ -67,20 +73,58 @@ public class JsonSerializerTest {
     @Test
     public void testHazardCurvesToJson() {
         List<String> expectedResults = new ArrayList<String>();
-        expectedResults.add(TEST_HAZARD_CURVE_JSON);
+        expectedResults.add(TEST_HAZARD_CURVE_JSON_1);
+        expectedResults.add(TEST_HAZARD_CURVE_JSON_2);
 
-        Site site = new Site();
-        Location loc = new Location(34.12, -118.3); // lat, lon
-        site.setLocation(loc);
+        Site site1, site2;
+        site1 = new Site();
+        site2 = new Site();
+
+        Location loc1, loc2;
+        loc1 = new Location(34.12, -118.3); // lat, lon
+        loc2 = new Location(33.88, -118.16);
+
+        site1.setLocation(loc1);
+        site2.setLocation(loc2);
+
         Map<Site, DiscretizedFuncAPI> testMap =
                 new HashMap<Site, DiscretizedFuncAPI>();
-        testMap.put(site, new TestCurve());
+        testMap.put(site1, new TestCurve());
+        testMap.put(site2, new TestCurve());
 
-        List<String> actualResults = JsonSerializer.hazardCurvesToJson(testMap);
+        // order matters
+        List<Site> siteList = new ArrayList<Site>();
+        siteList.add(site1);
+        siteList.add(site2);
 
-        for (int i = 0; i < expectedResults.size(); i++) {
-            assertEquals(expectedResults.get(i), actualResults.get(i));
+        List<String> actualResults =
+                JsonSerializer.hazardCurvesToJson(testMap, siteList);
+
+        assertTrue(hazCurvesJsonResultsAreEqual(expectedResults, actualResults));
+
+        // test for failure if the order is wrong
+        siteList.clear();
+        siteList.add(site2);
+        siteList.add(site1);
+        actualResults = JsonSerializer.hazardCurvesToJson(testMap, siteList);
+        assertFalse(hazCurvesJsonResultsAreEqual(expectedResults, actualResults));
+    }
+
+    /**
+     * Returns false of the two lists don't match (taking into account order).
+     * Returns false if the test loop is not entered.
+     * 
+     * @param expected
+     * @param actual
+     * @return
+     */
+    private static boolean hazCurvesJsonResultsAreEqual(List<String> expected,
+            List<String> actual) {
+        boolean match = false;
+        for (int i = 0; i < expected.size(); i++) {
+            match = expected.get(i).equals(actual.get(i));
         }
+        return match;
     }
 
     @Test
