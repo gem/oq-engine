@@ -101,7 +101,7 @@ class HazardEngineTestCase(unittest.TestCase):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
-            # TODO (LB): At some point we need to test that the actual 
+            # TODO (LB): At some point we need to test the actual 
             # results to verify they are correct
             for key in result_keys:
                 value = self.kvs_client.get(key)
