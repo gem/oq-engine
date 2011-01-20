@@ -271,6 +271,9 @@ class Site(object):
     def __eq__(self, other):
         return self.hash() == other.hash()
     
+    def __ne__(self, other):
+        return not self == other
+    
     def equals(self, other):
         """Verbose wrapper around =="""
         return self.point.equals(other)
