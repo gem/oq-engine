@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import unittest
+import numpy
 
 from openquake import hazard
 from openquake import kvs
@@ -198,6 +199,183 @@ class HazardEngineTestCase(unittest.TestCase):
             self.kvs_client.set(site_key, ONE_CURVE_MODEL)
 
 
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
+class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.job_id = 1234
+    
+        self.params = {}
+        
+        # single site region at 2.0, 5.0
+        self.params["REGION_GRID_SPACING"] = 0.5
+        self.params["REGION_VERTEX"] = "5.0, 2.0, 5.0, 2.0, 5.0, 2.0, 5.0, 2.0"
+    
+        self.engine = job.Job(self.params,  self.job_id)
+
+        self.expected_mean_curve = numpy.array([9.8542200e-01, 9.8196600e-01,
+                9.5842000e-01, 9.2639600e-01, 8.6713000e-01, 7.7081800e-01,
+                6.3448600e-01, 4.7256800e-01, 3.3523400e-01, 3.1255000e-01,
+                1.7832000e-01, 9.0883400e-02, 4.2189200e-02, 1.7874200e-02,
+                6.7449200e-03, 2.1658200e-03, 5.3878600e-04, 9.4369400e-05,
+                8.9830380e-06])
+    
+        self.empty_curve = {"curve": []}
+
+        # deleting server side cached data
+        kvs.flush()
+    
+    def test_process_the_curves_for_a_single_site(self):
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), self.empty_curve)
+        
+        self._execute_mixin()
+
+        self._has_computed_mean_curve_for_site(shapes.Site(2.0, 5.0))
+    
+    def test_process_the_curves_for_multiple_sites(self):
+        # four sites region
+        self.params["REGION_VERTEX"] = "1.0, 2.0, 1.5, 2.0, 1.5, 1.5, 1.0, 1.5"
+        
+        self._store_hazard_curve_at(shapes.Site(1.5, 1.0), self.empty_curve)
+        self._store_hazard_curve_at(shapes.Site(2.0, 1.0), self.empty_curve)
+        self._store_hazard_curve_at(shapes.Site(1.5, 1.5), self.empty_curve)
+        self._store_hazard_curve_at(shapes.Site(2.0, 1.5), self.empty_curve)
+        
+        self._execute_mixin()
+
+        self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.0))
+        self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.0))
+        self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.5))
+        self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.5))
+    
+    def test_computes_the_mean_curve(self):
+        hazard_curve_1 = numpy.array([9.8161000e-01, 9.7837000e-01,
+                9.5579000e-01, 9.2555000e-01, 8.7052000e-01, 7.8214000e-01,
+                6.5708000e-01, 5.0526000e-01, 3.7044000e-01, 3.4740000e-01,
+                2.0502000e-01, 1.0506000e-01, 4.6531000e-02, 1.7548000e-02,
+                5.4791000e-03, 1.3377000e-03, 2.2489000e-04, 2.2345000e-05,
+                4.2696000e-07])
+
+        hazard_curve_2 = numpy.array([9.7309000e-01, 9.6857000e-01,
+                9.3853000e-01, 9.0089000e-01, 8.3673000e-01, 7.4057000e-01,
+                6.1272000e-01, 4.6467000e-01, 3.3694000e-01, 3.1536000e-01,
+                1.8340000e-01, 9.2412000e-02, 4.0202000e-02, 1.4900000e-02,
+                4.5924000e-03, 1.1126000e-03, 1.8647000e-04, 1.8882000e-05,
+                4.7123000e-07])
+    
+        hazard_curve_3 = numpy.array([9.9178000e-01, 9.8892000e-01,
+                9.6903000e-01, 9.4030000e-01, 8.8405000e-01, 7.8782000e-01,
+                6.4627000e-01, 4.7537000e-01, 3.3168000e-01, 3.0827000e-01,
+                1.7279000e-01, 8.8360000e-02, 4.2766000e-02, 1.9643000e-02,
+                8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
+                1.5582000e-05])
+
+        hazard_curve_4 = numpy.array([9.8885000e-01, 9.8505000e-01,
+                9.5972000e-01, 9.2494000e-01, 8.6030000e-01, 7.5574000e-01,
+                6.1009000e-01, 4.4217000e-01, 3.0543000e-01, 2.8345000e-01,
+                1.5760000e-01, 8.0225000e-02, 3.8681000e-02, 1.7637000e-02,
+                7.2685000e-03, 2.5474000e-03, 6.8347000e-04, 1.2596000e-04,
+                1.2853000e-05])
+
+        hazard_curve_5 = numpy.array([9.9178000e-01, 9.8892000e-01,
+                9.6903000e-01, 9.4030000e-01, 8.8405000e-01, 7.8782000e-01,
+                6.4627000e-01, 4.7537000e-01, 3.3168000e-01, 3.0827000e-01,
+                1.7279000e-01, 8.8360000e-02, 4.2766000e-02, 1.9643000e-02,
+                8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
+                1.5582000e-05])
+    
+        calculator = opensha.MeanHazardCurveCalculator()
+
+        self.assertTrue(numpy.allclose(self.expected_mean_curve,
+                calculator._compute_mean_curve([hazard_curve_1, hazard_curve_2,
+                hazard_curve_3, hazard_curve_4, hazard_curve_5])))
+    
+    def test_reads_and_stores_the_mean_curve_in_kvs(self):
+        hazard_curve_1 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 9.8161000e-01, "x": 0}, {"y": 9.7837000e-01, "x": 0},
+                {"y": 9.5579000e-01, "x": 0}, {"y": 9.2555000e-01, "x": 0},
+                {"y": 8.7052000e-01, "x": 0}, {"y": 7.8214000e-01, "x": 0},
+                {"y": 6.5708000e-01, "x": 0}, {"y": 5.0526000e-01, "x": 0},
+                {"y": 3.7044000e-01, "x": 0}, {"y": 3.4740000e-01, "x": 0},
+                {"y": 2.0502000e-01, "x": 0}, {"y": 1.0506000e-01, "x": 0},
+                {"y": 4.6531000e-02, "x": 0}, {"y": 1.7548000e-02, "x": 0},
+                {"y": 5.4791000e-03, "x": 0}, {"y": 1.3377000e-03, "x": 0},
+                {"y": 2.2489000e-04, "x": 0}, {"y": 2.2345000e-05, "x": 0},
+                {"y": 4.2696000e-07, "x": 0}]}
+
+        hazard_curve_2 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 9.7309000e-01, "x": 0}, {"y": 9.6857000e-01, "x": 0},
+                {"y": 9.3853000e-01, "x": 0}, {"y": 9.0089000e-01, "x": 0},
+                {"y": 8.3673000e-01, "x": 0}, {"y": 7.4057000e-01, "x": 0},
+                {"y": 6.1272000e-01, "x": 0}, {"y": 4.6467000e-01, "x": 0},
+                {"y": 3.3694000e-01, "x": 0}, {"y": 3.1536000e-01, "x": 0},
+                {"y": 1.8340000e-01, "x": 0}, {"y": 9.2412000e-02, "x": 0},
+                {"y": 4.0202000e-02, "x": 0}, {"y": 1.4900000e-02, "x": 0},
+                {"y": 4.5924000e-03, "x": 0}, {"y": 1.1126000e-03, "x": 0},
+                {"y": 1.8647000e-04, "x": 0}, {"y": 1.8882000e-05, "x": 0},
+                {"y": 4.7123000e-07, "x": 0}]}
+    
+        hazard_curve_3 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 9.9178000e-01, "x": 0}, {"y": 9.8892000e-01, "x": 0},
+                {"y": 9.6903000e-01, "x": 0}, {"y": 9.4030000e-01, "x": 0},
+                {"y": 8.8405000e-01, "x": 0}, {"y": 7.8782000e-01, "x": 0},
+                {"y": 6.4627000e-01, "x": 0}, {"y": 4.7537000e-01, "x": 0},
+                {"y": 3.3168000e-01, "x": 0}, {"y": 3.0827000e-01, "x": 0},
+                {"y": 1.7279000e-01, "x": 0}, {"y": 8.8360000e-02, "x": 0},
+                {"y": 4.2766000e-02, "x": 0}, {"y": 1.9643000e-02, "x": 0},
+                {"y": 8.1923000e-03, "x": 0}, {"y": 2.9157000e-03, "x": 0},
+                {"y": 7.9955000e-04, "x": 0}, {"y": 1.5233000e-04, "x": 0},
+                {"y": 1.5582000e-05, "x": 0}]}
+
+        hazard_curve_4 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 9.8885000e-01, "x": 0}, {"y": 9.8505000e-01, "x": 0},
+                {"y": 9.5972000e-01, "x": 0}, {"y": 9.2494000e-01, "x": 0},
+                {"y": 8.6030000e-01, "x": 0}, {"y": 7.5574000e-01, "x": 0},
+                {"y": 6.1009000e-01, "x": 0}, {"y": 4.4217000e-01, "x": 0},
+                {"y": 3.0543000e-01, "x": 0}, {"y": 2.8345000e-01, "x": 0},
+                {"y": 1.5760000e-01, "x": 0}, {"y": 8.0225000e-02, "x": 0},
+                {"y": 3.8681000e-02, "x": 0}, {"y": 1.7637000e-02, "x": 0},
+                {"y": 7.2685000e-03, "x": 0}, {"y": 2.5474000e-03, "x": 0},
+                {"y": 6.8347000e-04, "x": 0}, {"y": 1.2596000e-04, "x": 0},
+                {"y": 1.2853000e-05, "x": 0}]}
+
+        hazard_curve_5 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 9.9178000e-01, "x": 0}, {"y": 9.8892000e-01, "x": 0},
+                {"y": 9.6903000e-01, "x": 0}, {"y": 9.4030000e-01, "x": 0},
+                {"y": 8.8405000e-01, "x": 0}, {"y": 7.8782000e-01, "x": 0},
+                {"y": 6.4627000e-01, "x": 0}, {"y": 4.7537000e-01, "x": 0},
+                {"y": 3.3168000e-01, "x": 0}, {"y": 3.0827000e-01, "x": 0},
+                {"y": 1.7279000e-01, "x": 0}, {"y": 8.8360000e-02, "x": 0},
+                {"y": 4.2766000e-02, "x": 0}, {"y": 1.9643000e-02, "x": 0},
+                {"y": 8.1923000e-03, "x": 0}, {"y": 2.9157000e-03, "x": 0},
+                {"y": 7.9955000e-04, "x": 0}, {"y": 1.5233000e-04, "x": 0},
+                {"y": 1.5582000e-05, "x": 0}]}
+        
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_1, 1)
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_2, 2)
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_3, 3)
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_4, 4)
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_5, 5)
+        
+        self._execute_mixin()
+        
+        result = kvs.get_value_json_decoded(kvs.tokens.mean_hazard_curve_key(
+                self.job_id, shapes.Site(2.0, 5.0)))
+
+        self.assertEqual(2.0, result["site_lon"])
+        self.assertEqual(5.0, result["site_lat"])
+        
+        self.assertTrue(numpy.allclose(self.expected_mean_curve,
+                numpy.array(result["curve"])))
+    
+    def _store_hazard_curve_at(self, site, curve, realization=1):
+        kvs.set_value_json_encoded(
+                kvs.tokens.hazard_curve_key(self.job_id, realization,
+                site.longitude, site.latitude), curve)
+    
+    def _execute_mixin(self):
+        with job.Mixin(self.engine, opensha.MeanHazardCurveCalculator):
+            self.engine.execute()
+    
+    def _has_computed_mean_curve_for_site(self, site):
+        self.assertTrue(kvs.get(kvs.tokens.mean_hazard_curve_key(
+                self.job_id, site)) != None)
