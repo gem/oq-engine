@@ -18,6 +18,7 @@ from openquake import kvs
 from openquake import shapes
 from openquake import test
 
+from openquake.kvs import tokens
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk import engines
 from openquake.output import risk as risk_output
@@ -341,9 +342,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (11.0, 0.0), (12.0, 0.0)])
         
         job_id = 1234
-        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
-        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
-        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
+        kvs.set(tokens.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
+        kvs.set(tokens.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
+        kvs.set(tokens.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
 
         aggregate_curve = prob.AggregateLossCurve.from_kvs(job_id)
 
@@ -570,13 +571,13 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         self.engine = job.Job(self.params,  self.job_id, ".")
         
         # adding the curves to kvs
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 1, 5),
+        kvs.set(tokens.loss_curve_key(self.job_id, 1, 1, 5),
                 shapes.Curve([(1.0, 0.1), (2.0, 0.1)]).to_json())
 
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 2, 5),
+        kvs.set(tokens.loss_curve_key(self.job_id, 1, 2, 5),
                 shapes.Curve([(3.0, 0.1), (4.0, 0.1)]).to_json())
 
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 3, 5),
+        kvs.set(tokens.loss_curve_key(self.job_id, 1, 3, 5),
                 shapes.Curve([(5.0, 0.1), (6.0, 0.1)]).to_json())
         
         # deleting old file

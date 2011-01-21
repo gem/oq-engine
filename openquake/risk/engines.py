@@ -7,6 +7,7 @@ from openquake import logs
 from openquake import kvs
 from openquake import shapes
 
+from openquake.kvs import tokens
 from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based
 
@@ -37,7 +38,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
 
         # check in kvs if hazard and exposure for gridpoint are there
         kvs_key_hazard = kvs.generate_product_key(self.job_id, 
-            kvs.tokens.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
+            tokens.HAZARD_CURVE_KEY_TOKEN, self.block_id, gridpoint)
        
         hazard_curve_json = kvs.get_client(binary=False).get(kvs_key_hazard)
         LOGGER.debug("hazard curve as JSON: %s" % hazard_curve_json)
@@ -53,7 +54,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         kvs_key_exposure = kvs.generate_product_key(self.job_id, 
-            kvs.tokens.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
+            tokens.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
         
         asset = kvs.get_value_json_decoded(kvs_key_exposure)
 
@@ -82,7 +83,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             return None
 
         kvs_key_exposure = kvs.generate_product_key(self.job_id,
-            kvs.tokens.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
+            tokens.EXPOSURE_KEY_TOKEN, self.block_id, gridpoint)
 
         asset = kvs.get_value_json_decoded(kvs_key_exposure)
 

@@ -14,6 +14,7 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.job import mixins, Block
+from openquake.kvs import tokens
 
 from celery.decorators import task
 
@@ -31,7 +32,7 @@ def generate_erf(job_id):
 
     # TODO(JM): implement real ERF computation
 
-    erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
+    erf_key = kvs.generate_product_key(job_id, tokens.ERF_KEY_TOKEN)
     kvs.get_client().set(erf_key, json.JSONEncoder().encode([job_id]))
 
     return job_id
@@ -70,7 +71,7 @@ def compute_hazard_curve(job_id, block_id):
         memcache_client = kvs.get_client(binary=False)
 
         chf_key = kvs.generate_product_key(job_id, 
-            kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
+            tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
 
         chf = memcache_client.get(chf_key)
 
@@ -98,7 +99,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     memcached_client = kvs.get_client(binary=False)
 
-    mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN,
+    mgm_key = kvs.generate_product_key(job_id, tokens.MGM_KEY_TOKEN,
         block_id, site_id)
     mgm = memcached_client.get(mgm_key)
 

@@ -14,6 +14,7 @@ from openquake import test
 from openquake import settings
 
 from openquake.kvs import reader
+from openquake.kvs import tokens
 from openquake.parser import vulnerability
 
 from openquake.output import hazard as hazard_output
@@ -283,14 +284,14 @@ class IdentifierTestCase(unittest.TestCase):
 
     def test_generate_product_key_with_tokens_from_kvs(self):
         products = [
-            kvs.tokens.ERF_KEY_TOKEN,
-            kvs.tokens.MGM_KEY_TOKEN,
-            kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
-            kvs.tokens.EXPOSURE_KEY_TOKEN,
-            kvs.tokens.GMF_KEY_TOKEN,
-            kvs.tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
-            kvs.tokens.LOSS_CURVE_KEY_TOKEN,
-            kvs.tokens.loss_token(0.01),
+            tokens.ERF_KEY_TOKEN,
+            tokens.MGM_KEY_TOKEN,
+            tokens.HAZARD_CURVE_KEY_TOKEN,
+            tokens.EXPOSURE_KEY_TOKEN,
+            tokens.GMF_KEY_TOKEN,
+            tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
+            tokens.LOSS_CURVE_KEY_TOKEN,
+            tokens.loss_token(0.01),
             vulnerability.VULNERABILITY_CURVE_KEY_TOKEN,
         ]
 

@@ -12,6 +12,7 @@ from numpy import where # pylint: disable=E1101, E0611
 
 from openquake import kvs
 from openquake import shapes
+from openquake.kvs import tokens
 from openquake.logs import LOG
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
@@ -122,7 +123,7 @@ class AggregateLossCurve(object):
         loss curves in the kvs system."""
         client = kvs.get_client(binary=False)
         keys = client.keys("%s*%s*" % (job_id,
-                kvs.tokens.LOSS_CURVE_KEY_TOKEN))
+                tokens.LOSS_CURVE_KEY_TOKEN))
 
         LOG.debug("Found %s stored loss curves..." % len(keys))
 

@@ -15,6 +15,7 @@ from openquake.job import mixins
 from openquake.hazard import tasks
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
+from openquake.kvs import tokens
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
@@ -63,14 +64,14 @@ class HazardEngineTestCase(unittest.TestCase):
             hc = hazengine.execute()
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
-                                kvs.tokens.SOURCE_MODEL_TOKEN)
+                                tokens.SOURCE_MODEL_TOKEN)
             source_model = self.memcache_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
             
             gmpe_key = kvs.generate_product_key(hazengine.id, 
-                                kvs.tokens.GMPE_TOKEN)
+                                tokens.GMPE_TOKEN)
             gmpe_model = self.memcache_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
@@ -102,10 +103,10 @@ class HazardEngineTestCase(unittest.TestCase):
         result_keys = []
         expected_values = {}
 
-        print kvs.tokens.ERF_KEY_TOKEN
+        print tokens.ERF_KEY_TOKEN
         
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
+            erf_key = kvs.generate_product_key(job_id, tokens.ERF_KEY_TOKEN)
 
             # Build the expected values
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
@@ -145,7 +146,7 @@ class HazardEngineTestCase(unittest.TestCase):
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN, 
+            mgm_key = kvs.generate_product_key(job_id, tokens.MGM_KEY_TOKEN, 
                 block_id, site)
             self.memcache_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
@@ -166,7 +167,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         for site in sites:
             site_key = kvs.generate_product_key(job_id,
-                kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
+                tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
             self.memcache_client.set(site_key, ONE_CURVE_MODEL)
 

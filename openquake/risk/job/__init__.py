@@ -10,6 +10,7 @@ from openquake.job import mixins
 from openquake import kvs 
 from openquake import logs
 from openquake import shapes
+from openquake.kvs import tokens
 from openquake.output import curve
 from openquake.output import risk as risk_output
 
@@ -57,11 +58,11 @@ class RiskJobMixin(mixins.Mixin):
         loss_ratio_curves = []
         block = job.Block.from_kvs(block_id)
         for point in block.grid(self.region):
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            asset_key = tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
                 site = shapes.Site(asset['lon'], asset['lat'])
-                key = kvs.tokens.loss_ratio_key(
+                key = tokens.loss_ratio_key(
                         job_id, point.row, point.column, asset["AssetID"])
                 loss_ratio_curve = kvs.get(key)
                 if loss_ratio_curve:
@@ -99,10 +100,10 @@ class RiskJobMixin(mixins.Mixin):
         output_generator = geotiff.LossMapGeoTiffFile(path, risk_grid, 
                 init_value=0.0, normalize=True)
         for point in self.region.grid:
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            asset_key = tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
-                key = kvs.tokens.loss_key(self.id, point.row, point.column, 
+                key = tokens.loss_key(self.id, point.row, point.column, 
                         asset["AssetID"], loss_poe)
                 loss = kvs.get(key)
                 LOG.debug("Loss for asset %s at %s %s is %s" % 
