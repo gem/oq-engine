@@ -9,7 +9,7 @@ from openquake import shapes
 
 from openquake.kvs import tokens
 from openquake.parser import vulnerability
-from openquake.risk import classical_psha_based
+from openquake.risk import common
 
 LOGGER = logs.RISK_LOG
 
@@ -73,7 +73,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
             self.vulnerability_curves[asset['VulnerabilityFunction']]
 
         # selected vuln function is Curve
-        return classical_psha_based.compute_loss_ratio_curve(
+        return common.compute_loss_ratio_curve(
             vulnerability_curve, hazard_curve)
     
     def compute_loss_curve(self, gridpoint, loss_ratio_curve):
@@ -90,12 +90,12 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         if asset is None:
             return None
 
-        return classical_psha_based.compute_loss_curve(
+        return common.compute_loss_curve(
             loss_ratio_curve, asset['AssetValue'])
 
 
 def compute_loss(loss_curve, pe_interval):
     """Interpolate loss for a specific probability of exceedance interval"""
-    loss = classical_psha_based.compute_conditional_loss(loss_curve, 
+    loss = common.compute_conditional_loss(loss_curve, 
                                                          pe_interval)
     return loss
