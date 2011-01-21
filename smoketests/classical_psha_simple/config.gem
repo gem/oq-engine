@@ -109,13 +109,13 @@ SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 
-# CALCULATION MODE (Monte Carlo, Full Calculation)
-# if Monte Carlo is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
+# CALCULATION MODE (Event Based, Full Calculation)
+# if Event Based is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
 # if Full Calculation is chosen than uncertainties defined by rules are treated as correlated, and hazard curves are calculated for each end-branch of the logic tree 
-#HAZARD_CALCULATION_MODE = Monte Carlo
+#HAZARD_CALCULATION_MODE = Event Based
 HAZARD_CALCULATION_MODE = Classical
 
-# (used if Monte Carlo approach is chosen)
+# (used if Event Based approach is chosen)
 #NUMBER_OF_LOGIC_TREE_SAMPLES = 40
 NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 # (used if probabilistic event based approach is chosen)
