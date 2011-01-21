@@ -65,7 +65,6 @@ class NrmlFile(producer.FileProducer): # pylint: disable=R0902
                 yield (_to_site(element), 
                        self._to_attributes(element))
 
-    # pylint: disable=R0801
     def _to_attributes(self, element):
         """ Build an attributes dict from XML element """
         
@@ -73,15 +72,18 @@ class NrmlFile(producer.FileProducer): # pylint: disable=R0902
         
         float_strip = lambda x: [float(o) for o in x[0].text.strip().split()]
         # TODO(JMC): This is hardly efficient, but it's simple for the moment...
-        
+       
         for (child_el, child_key, etl) in (
             ('nrml:%s' % self.abscissa_element, self.abscissa_output_key, 
                 float_strip),
             ('../nrml:Common/nrml:%s/nrml:Values' % self.ordinate_element,
                 self.ordinate_output_key, float_strip)):
-            
-            child_node = element.xpath(child_el, 
-                namespaces={"gml":GML_NS,"nrml":NRML_NS})
+            # pylint: disable=R0801
+
+            child_node = element.xpath(
+                child_el, 
+                namespaces={"gml":GML_NS,
+                            "nrml":NRML_NS})
 
             try:
                 attributes[child_key] = etl(child_node)

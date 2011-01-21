@@ -85,26 +85,30 @@ class NrmlFile(producer.FileProducer):
                     "attribute %s" % required_attribute
                 raise ValueError(error_str)
 
-    # pylint: disable=R0801
     def _to_attributes(self, element):
         """ Build an attributes dict from XML element """
-        
         attributes = {}
         
         float_strip = lambda x: [float(o) for o in x[0].text.strip().split()]
         string_strip = lambda x: x[0].text.strip()
         # TODO(JMC): This is hardly efficient, but it's simple for the moment...
-        
+       
         for (child_el, child_key, etl) in (
             ('nrml:Values', 'Values', float_strip),
             ('../nrml:Common/nrml:IMLValues','IMLValues', float_strip),
             ('../nrml:Common/nrml:IMT', 'IMT', string_strip)):
-            child_node = element.xpath(child_el, 
-                namespaces={"gml":GML_NS,"nrml":NRML_NS})
+            # pylint: disable=R0801
+
+            child_node = element.xpath( # pylint: disable=R0801
+                child_el, # pylint: disable=R0801 
+                namespaces={"gml":GML_NS, # pylint: disable=R0801
+                            "nrml":NRML_NS}) # pylint: disable=R0801
 
             try:
+                # pylint: disable=R0801
                 attributes[child_key] = etl(child_node)
-            except Exception:
+            except Exception: 
+                # pylint: disable=R0801
                 error_str = "invalid or missing %s value" % child_key
                 raise ValueError(error_str) 
 
