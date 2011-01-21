@@ -54,41 +54,11 @@ def write_out_ses(job_file, stochastic_set_key):
         hazengine.write_gmf_files(ses) #pylint: disable=E1101
 
 @task
-def compute_hazard_curve(job_id, block_id):
-    """
-    Stubbed Compute Hazard Curve
-
-    This should connect to the Java HazardEngine using hazard wrapper,
-    wait for the hazard curve to be computed, and then write it to 
-    memcached.
-    """
-
-    def _compute_hazard_curve(job_id, block_id, site_id):
-        """
-        Inner class to dry things up.
-        """
-        memcache_client = kvs.get_client(binary=False)
-
-        chf_key = kvs.generate_product_key(job_id, 
-            kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
-
-        chf = memcache_client.get(chf_key)
-
-        if not chf:
-            # TODO(jm): implement hazardwrapper and make this work
-            # TODO(chris): uncomment below when hazardwrapper is done.
-
-            # Synchronous execution.
-            #result = hazardwrapper.apply(args=[job_if, block_id, site_id])
-            #chf = memcache_client.get(chf_key)
-            pass
-        return chf
-
-    # We want all sites for this block.
-    sites = Block.from_kvs(block_id).sites
-
-    if sites is not None:
-        return [_compute_hazard_curve(job_id, block_id, site) for site in sites]
+def compute_hazard_curve(job_id, site_list, realization):
+    """ Generate hazard curve for a given site list. """
+    hazengine = job.Job.from_kvs(job_id)
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+        return hazengine.compute_hazard_curve(site_list, realization)
 
 @task
 def compute_mgm_intensity(job_id, block_id, site_id):
