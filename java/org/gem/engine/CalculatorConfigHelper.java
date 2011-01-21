@@ -75,7 +75,7 @@ public class CalculatorConfigHelper {
      * 
      */
     public static enum CalculationMode {
-        FULL("Full Calculation"), MONTE_CARLO("Monte Carlo");
+        FULL("Full Calculation"), EVENT_BASED("Event Based");
         private static HashMap<String, CalculationMode> calculationModes = null;
         private final String value;
 
