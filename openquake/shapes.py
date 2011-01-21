@@ -14,7 +14,6 @@ from shapely import geometry
 from shapely import wkt
 from scipy.interpolate import interp1d
 
-from openquake import kvs
 from openquake import flags
 from openquake import java
 

@@ -52,7 +52,7 @@ class ProbabilisticEventMixin:
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s" 
                         % (block_id, len(self.blocks_keys)))
-            # pylint: disable-msg=E1101
+            # pylint: disable=E1101
             tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
@@ -66,7 +66,7 @@ class ProbabilisticEventMixin:
                 return []
         return results # TODO(jmc): Move output from being a decorator
 
-    def slice_gmfs(self, block_id):
+    def slice_gmfs(self, block_id): # # pylint: disable=R0914
         """Load and collate GMF values for all sites in this block. """
         # TODO(JMC): Confirm this works regardless of the method of haz calc.
         histories = int(self['NUMBER_OF_SEISMICITY_HISTORIES'])

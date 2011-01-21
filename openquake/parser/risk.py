@@ -21,7 +21,7 @@ def _to_site(element):
     coord = [float(x) for x in pos_el[0].text.strip().split()]
     return shapes.Site(coord[0], coord[1])
 
-class NrmlFile(producer.FileProducer):
+class NrmlFile(producer.FileProducer): # pylint: disable=R0902
     """ This class parses a NRML loss/loss ratio curve file. 
     The class is implemented as a generator. 
     For each curve element in the parsed 
@@ -65,6 +65,7 @@ class NrmlFile(producer.FileProducer):
                 yield (_to_site(element), 
                        self._to_attributes(element))
 
+    # pylint: disable=R0801
     def _to_attributes(self, element):
         """ Build an attributes dict from XML element """
         

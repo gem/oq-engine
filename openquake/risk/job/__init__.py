@@ -50,6 +50,7 @@ class RiskJobMixin(mixins.Mixin):
     """ A mixin proxy for Risk jobs """
     mixins = {}
     
+    # pylint: disable=R0914
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
         decoder = json.JSONDecoder()
@@ -86,7 +87,8 @@ class RiskJobMixin(mixins.Mixin):
         results = [path]
         results.extend(list(plotter.filenames()))
         return results
-    
+   
+    # pylint: disable=R0914 
     def write_loss_map(self, loss_poe):
         """ Iterates through all the assets and maps losses at loss_poe """
         decoder = json.JSONDecoder()

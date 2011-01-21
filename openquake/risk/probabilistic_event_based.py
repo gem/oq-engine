@@ -166,8 +166,9 @@ class AggregateLossCurve(object):
     def compute(self, tses, time_span):
         """Compute the aggregate loss curve."""
         losses = self.losses
-        loss_range = linspace(losses.min(), losses.max(),
-                num=DEFAULT_NUMBER_OF_SAMPLES)
+        loss_range = linspace(losses.min(), # pylint: disable=E1103
+                              losses.max(), # pylint: disable=E1103
+                              num=DEFAULT_NUMBER_OF_SAMPLES)
 
         probs_of_exceedance = compute_probs_of_exceedance(
                 compute_rates_of_exceedance(compute_cumulative_histogram(

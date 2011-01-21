@@ -106,7 +106,8 @@ HTML_TEMPLATE_TABLE_ROW = """
 </tr>
 """
 
-def generate_html(path, width="", height="", colorscale=None, imt='PGA/g',
+def generate_html(path, width="", height="", # pylint: disable=R0913,R0914
+                  colorscale=None, imt='PGA/g',
                   title="", template=None):
     """This function creates an HTML page with a Geotiff image linked, and a 
     colorscale as HTML table. The HTML can be created from an explicitly 

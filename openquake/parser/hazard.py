@@ -85,6 +85,7 @@ class NrmlFile(producer.FileProducer):
                     "attribute %s" % required_attribute
                 raise ValueError(error_str)
 
+    # pylint: disable=R0801
     def _to_attributes(self, element):
         """ Build an attributes dict from XML element """
         

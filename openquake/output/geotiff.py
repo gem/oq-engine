@@ -201,7 +201,7 @@ class LossMapGeoTiffFile(GeoTiffFile):
             f.write(html_string)
 
 
-class GMFGeoTiffFile(GeoTiffFile):
+class GMFGeoTiffFile(GeoTiffFile): # pylint: disable=R0902
     """Writes RGB GeoTIFF image for ground motion fields. Color scale is
     from green (value 0.0) to red (value 2.0). In addition, writes an
     HTML wrapper around the TIFF with a colorscale legend."""
@@ -210,7 +210,8 @@ class GMFGeoTiffFile(GeoTiffFile):
     CUT_UPPER = 2.0
     COLOR_BUCKETS = 16 # yields 0.125 step size
     
-    def __init__(self, path, image_grid, init_value=numpy.nan, 
+    def __init__(self, path, # pylint: disable=R0913
+                 image_grid, init_value=numpy.nan,
                  normalize=True, iml_list=None, discrete=True,
                  colormap=None):
         super(GMFGeoTiffFile, self).__init__(path, image_grid, init_value, 
@@ -336,7 +337,7 @@ class GMFGeoTiffFile(GeoTiffFile):
         r, g, b = _rgb_for(self._condense_iml_range_to_unity(self.iml_list),
                            COLORMAP[self.colormap])
 
-        for idx, iml_value in enumerate(self.iml_list):
+        for idx, iml_value in enumerate(self.iml_list): # pylint: disable=W0612
             colorscale.append(("#%02x%02x%02x" % (int(r[idx]), int(g[idx]), 
                 int(b[idx])), str(self.iml_list[idx])))
 

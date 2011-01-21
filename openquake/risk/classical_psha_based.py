@@ -50,6 +50,7 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     return lrem_po
 
 
+# pylint: disable=C0103
 def _compute_loss_ratio_curve_from_lrem_po(loss_ratios, lrem_po):
     """Compute the loss ratio curve."""
     
