@@ -10,12 +10,46 @@ import uuid
 import openquake.kvs.tokens
 from openquake.kvs.redis import Redis
 
+
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
 MAX_LENGTH_RANDOM_ID = 36
 MEMCACHE_KEY_SEPARATOR = '!'
 SITES_KEY_TOKEN = "sites"
 
+
+def flush():
+    """Flush (delete) all the values stored in the underlying kvs system."""
+    get_client(binary=False).flushall()
+
+
+def mget(regexp):
+    """Get all the values whose keys satisfy the given regexp.
+
+    Return an empty list if there are no keys satisfying the given regxep.
+    """
+
+    values = []
+
+    keys = get_client(binary=False).keys(regexp)
+
+    if keys:
+        values = get_client(binary=False).mget(keys)
+    
+    return values
+
+
+def mget_decoded(regexp):
+    """Get and decode (from json format) all the values whose keys
+    satisfy the given regexp."""
+
+    decoded_values = []
+    decoder = json.JSONDecoder()
+
+    for value in mget(regexp):
+        decoded_values.append(decoder.decode(value))
+
+    return decoded_values
 
 
 def get(key):
