@@ -12,6 +12,7 @@ from openquake import shapes
 from openquake import test
 from openquake import job
 from openquake.job import mixins
+from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
@@ -41,11 +42,11 @@ def generate_job():
 
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
-    Most data returned from the engine is via memcached."""
+    Most data returned from the engine is via the KVS."""
     
     def setUp(self):
         self.generated_files = []
-        self.memcache_client = kvs.get_client(binary=False)
+        self.kvs_client = kvs.get_client(binary=False)
 
     def tearDown(self):
         for cfg in self.generated_files:
@@ -64,30 +65,56 @@ class HazardEngineTestCase(unittest.TestCase):
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
                                 kvs.tokens.SOURCE_MODEL_TOKEN)
-            source_model = self.memcache_client.get(source_model_key)
+            source_model = self.kvs_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
             
             gmpe_key = kvs.generate_product_key(hazengine.id, 
                                 kvs.tokens.GMPE_TOKEN)
-            gmpe_model = self.memcache_client.get(gmpe_key)
+            gmpe_model = self.kvs_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
+    
+    def test_generate_hazard_curves_using_classical_psha(self): 
+        
+        def verify_order_of_haz_curve_keys(hazengine, result_keys):
+            """ The classical PSHA execute() returns a list of keys 
+            for the curves stored to the KVS. We need to make sure
+            the order is correct. """
+            print "job id (hazengine id) is", hazengine.id 
             
-    def test_hazard_engine_worker_runs(self):
-        """Construction of CommandLineCalculator in Java should not throw
-        errors, and should have params loaded from memcached."""
-        site_id = 1
-        job_id = generate_job()
-        hazengine = job.Job.from_kvs(job_id)
-        self.generated_files.append(
-            os.path.join(test.smoketest_file("simplecase/%s-super.gem" % job_id)))
-        self.generated_files.append(hazengine.super_config_path)
+            expected_keys = []
+            realizations = int(hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+            print "dir of hazengine is", dir(hazengine)
+            for realization in range(0, realizations):    
+                for site_list in hazengine.site_list_generator():
+                    for site in site_list:
+                        key = tokens.hazard_curve_key(hazengine.id,
+                                                      realization,
+                                                      site.longitude,
+                                                      site.latitude) 
+                        expected_keys.append(key) 
+            self.assertEqual(expected_keys, result_keys)
+
+        def verify_haz_curves_stored_to_kvs(result_keys):
+            """ This just tests to make sure there something in the KVS
+            for each key in given list of keys. This does NOT test the
+            actual results. """
+            # TODO (LB): At some point we need to test the actual 
+            # results to verify they are correct
+            for key in result_keys:
+                value = self.kvs_client.get(key)
+                print "kvs value is", value
+                self.assertTrue(value != None) 
+
+        test_file_path = "smoketests/classical_psha_simple/config.gem"
+        hazengine = job.Job.from_file(test_file_path)
+        
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
-            pass
-            # hazengine.execute()
-            # hc = hazengine.compute_hazard_curve(site_id)
+            result_keys = hazengine.execute()
+            verify_order_of_haz_curve_keys(hazengine, result_keys)
+            verify_haz_curves_stored_to_kvs(result_keys)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
@@ -118,7 +145,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         test.wait_for_celery_tasks(results)
 
-        result_values = self.memcache_client.get_multi(result_keys)
+        result_values = self.kvs_client.get_multi(result_keys)
 
         self.assertEqual(result_values, expected_values)
 
@@ -147,7 +174,7 @@ class HazardEngineTestCase(unittest.TestCase):
         for job_id in TASK_JOBID_SIMPLE:
             mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN, 
                 block_id, site)
-            self.memcache_client.set(mgm_key, MEAN_GROUND_INTENSITY)
+            self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
             results.append(tasks.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
@@ -162,13 +189,13 @@ class HazardEngineTestCase(unittest.TestCase):
                  "Teststadt,Landtesten", "villed'essai,paystest"]
         sites_key = kvs.generate_sites_key(job_id, block_id)
 
-        self.memcache_client.set(sites_key, json.JSONEncoder().encode(sites))
+        self.kvs_client.set(sites_key, json.JSONEncoder().encode(sites))
 
         for site in sites:
             site_key = kvs.generate_product_key(job_id,
                 kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
 
-            self.memcache_client.set(site_key, ONE_CURVE_MODEL)
+            self.kvs_client.set(site_key, ONE_CURVE_MODEL)
 
 
 if __name__ == '__main__':
