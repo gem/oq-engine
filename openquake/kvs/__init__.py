@@ -54,8 +54,7 @@ def mget_decoded(regexp):
 
 def get(key):
     """Get value from kvs for external decoding"""
-    value = get_client(binary=False).get(key)
-    return value
+    return get_client(binary=False).get(key)
 
 
 def get_client(**kwargs):
