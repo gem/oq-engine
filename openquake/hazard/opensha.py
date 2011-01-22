@@ -7,8 +7,6 @@ import math
 import os
 import random
 
-from numpy import array # pylint: disable=E1101, E0611
-
 from openquake import java
 from openquake import kvs
 from openquake import logs
@@ -208,6 +206,7 @@ class ClassicalMixin(BasePSHAMixin):
             curve_keys.append(curve_key)
         return curve_keys
 
+
 class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
     """Probabilistic Event Based method for performing Hazard calculations.
 
@@ -329,51 +328,6 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
 def gmf_id(history_idx, realization_idx, rupture_idx):
     """ Return a GMF id suitable for use as a KVS key """
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
-
-
-class MeanHazardCurveCalculator:
-    """This class computes a mean hazard for each site in the region
-    using as input all the pre computed curves for different realizations."""
-    
-    def __init__(self):
-        pass
-    
-    def _compute_mean_curve(self, curves):
-        """Compute the mean hazard curve."""
-        return array(curves).mean(axis=0)
-
-    def execute(self):
-        """Execute the logic of this mixin."""
-        for sites in self.site_list_generator():
-            for site in sites:
-                pattern = "%s*%s*%s*%s" % (kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
-                        self.job_id, site.longitude, site.latitude)
-            
-                curves = []
-
-                for raw_curve in kvs.mget_decoded(pattern):
-                    curves.append(self._extract_y_values_from(
-                            raw_curve["curve"]))
-            
-                self._serialize_mean_curve_for(site, curves)
-
-    def _serialize_mean_curve_for(self, site, curves):
-        """Serialize a mean hazard curve in the underlying kvs system."""
-        mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-                "curve": list(self._compute_mean_curve(curves))}
-        
-        kvs.set_value_json_encoded(kvs.tokens.mean_hazard_curve_key(
-                self.job_id, site), mean_curve)
-
-    def _extract_y_values_from(self, curve):
-        """Extract from a serialized hazard curve (in json format)
-        the Y values used to compute the mean hazard curve."""
-        y_values = []
-
-        for point in curve:
-            y_values.append(point["y"])
-        
-        return y_values
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
