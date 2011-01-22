@@ -115,16 +115,15 @@ class QuantileHazardCurveCalculator:
         """Execute the logic of this mixin."""
         quantiles = self._extract_quantiles_from_config()
 
-        for quantile in quantiles:
-            for sites in self.site_list_generator(): # pylint: disable=E1101
-                for site in sites:
-                    curves = []
+        for sites in self.site_list_generator(): # pylint: disable=E1101
+            for site in sites:
+                curves = []
 
-                    # pylint: disable=E1101
-                    for raw_curve in curves_at(self.job_id, site):
-                        curves.append(_extract_y_values_from(
-                                raw_curve["curve"]))
+                # pylint: disable=E1101
+                for raw_curve in curves_at(self.job_id, site):
+                    curves.append(_extract_y_values_from(raw_curve["curve"]))
 
+                for quantile in quantiles:
                     self._serialize_quantile_curve_for(site, curves, quantile)
 
     def _serialize_quantile_curve_for(self, site, curves, quantile):
