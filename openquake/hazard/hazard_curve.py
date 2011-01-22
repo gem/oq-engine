@@ -7,7 +7,9 @@ from numpy import array # pylint: disable=E1101, E0611
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
-from openquake import shapes
+
+
+QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 
 
 def compute_mean_curve(curves):
@@ -20,8 +22,13 @@ def compute_mean_curve(curves):
 
 
 def compute_quantile_curve(curves, quantile):
+    """Compute a quantile hazard curve.
+
+    The input parameter is a list of arrays where each array
+    contains just the Y values of the corresponding hazard curve.
+    """
     result = []
-    
+
     if curves:
         result = mquantiles(curves, quantile, axis=0)[0]
     
@@ -44,6 +51,8 @@ def _extract_y_values_from(curve):
 
 
 def _acceptable(quantile):
+    """Return true if the quantile value taken from the configuration
+    file is valid, false otherwise."""
     try:
         quantile = float(quantile)
         return quantile >= 0.0 and quantile <= 1.0
@@ -53,14 +62,16 @@ def _acceptable(quantile):
 
 
 def curves_at(job_id, site):
+    """Return all the json deserialized hazard curves for
+    a single site (different realizations)."""
     pattern = "%s*%s*%s*%s" % (kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
             job_id, site.longitude, site.latitude)
-    
+
     return kvs.mget_decoded(pattern)
 
 
 class MeanHazardCurveCalculator:
-    """This class computes a mean hazard for each site in the region
+    """This class computes a mean hazard curve for each site in the region
     using as input all the pre computed curves for different realizations."""
     
     def __init__(self):
@@ -72,6 +83,7 @@ class MeanHazardCurveCalculator:
             for site in sites:
                 curves = []
 
+                # pylint: disable=E1101
                 for raw_curve in curves_at(self.job_id, site):
                     curves.append(_extract_y_values_from(raw_curve["curve"]))
 
@@ -89,6 +101,12 @@ class MeanHazardCurveCalculator:
 
 
 class QuantileHazardCurveCalculator:
+    """This class computes a quantile hazard curve for each site in the region
+    using as input all the pre computed curves for different realizations.
+
+    The QUANTILE_LEVELS parameter in the configuration file specifies
+    all the values used in the computation.
+    """
 
     def __init__(self):
         pass
@@ -98,10 +116,11 @@ class QuantileHazardCurveCalculator:
         quantiles = self._extract_quantiles_from_config()
 
         for quantile in quantiles:
-            for sites in self.site_list_generator():
+            for sites in self.site_list_generator(): # pylint: disable=E1101
                 for site in sites:
                     curves = []
 
+                    # pylint: disable=E1101
                     for raw_curve in curves_at(self.job_id, site):
                         curves.append(_extract_y_values_from(
                                 raw_curve["curve"]))
@@ -122,8 +141,10 @@ class QuantileHazardCurveCalculator:
         """Extract the set of valid quantiles from the configuration file."""
         quantiles = []
 
-        if self.has("QUANTILE_LEVELS"):
-            raw_quantiles = self.params["QUANTILE_LEVELS"].split()
+        # pylint: disable=E1101
+        if self.has(QUANTILE_PARAM_NAME):
+            # pylint: disable=E1101
+            raw_quantiles = self.params[QUANTILE_PARAM_NAME].split()
             quantiles = [float(x) for x in raw_quantiles if _acceptable(x)]
 
         return quantiles
