@@ -15,6 +15,7 @@ from openquake import job
 from openquake.job import mixins
 from openquake.kvs import tokens
 from openquake.hazard import tasks
+from openquake.hazard import hazard_curve
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
 from tests.kvs_unittest import ONE_CURVE_MODEL
@@ -283,12 +284,13 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
                 1.5582000e-05])
     
-        calculator = opensha.MeanHazardCurveCalculator()
+        mean_hazard_curve = hazard_curve.compute_mean_curve([
+                hazard_curve_1, hazard_curve_2, hazard_curve_3,
+                hazard_curve_4, hazard_curve_5])
 
-        self.assertTrue(numpy.allclose(self.expected_mean_curve,
-                calculator._compute_mean_curve([hazard_curve_1, hazard_curve_2,
-                hazard_curve_3, hazard_curve_4, hazard_curve_5])))
-    
+        self.assertTrue(numpy.allclose(
+                self.expected_mean_curve, mean_hazard_curve))
+
     def test_reads_and_stores_the_mean_curve_in_kvs(self):
         hazard_curve_1 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
                 {"y": 9.8161000e-01, "x": 0}, {"y": 9.7837000e-01, "x": 0},
@@ -373,7 +375,7 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 site.longitude, site.latitude), curve)
     
     def _execute_mixin(self):
-        with job.Mixin(self.engine, opensha.MeanHazardCurveCalculator):
+        with job.Mixin(self.engine, hazard_curve.MeanHazardCurveCalculator):
             self.engine.execute()
     
     def _has_computed_mean_curve_for_site(self, site):
