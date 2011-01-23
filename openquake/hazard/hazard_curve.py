@@ -30,7 +30,7 @@ def compute_quantile_curve(curves, quantile):
     """
     result = []
 
-    if curves:
+    if len(array(curves).flat):
         result = mquantiles(curves, quantile, axis=0)[0]
     
     return result
