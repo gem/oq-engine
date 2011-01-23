@@ -395,7 +395,7 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
 
     def _run(self, sites):
-        hazard_curve.compute_mean_hazard_curve(
+        hazard_curve.compute_mean_hazard_curves(
                 self.job_id, sites)
 
     def _store_hazard_curve_at(self, site, curve, realization=1):
@@ -661,7 +661,7 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
                 kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
 
     def _run(self, sites):
-        hazard_curve.compute_quantile_hazard_curve(
+        hazard_curve.compute_quantile_hazard_curves(
                 self.engine, sites)
 
     def _store_hazard_curve_at(self, site, curve, realization=1):
