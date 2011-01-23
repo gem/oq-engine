@@ -93,13 +93,8 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 @task(ignore_result=True)
 def compute_mean_quantile_curves(job_id, sites):
-    """Compute mean and quantile hazard curves for a set of sites.
+    """Compute mean and quantile hazard curves for a set of sites."""
 
-# TODO (ac): Instead of saving results manually in KVS, we can
-make shapes.Site jsonable and let celery serialize the results
-using the serializer="json" paramter.
-    """
-    
     # pylint: disable=E1101
     logger = compute_mean_quantile_curves.get_logger()
 
