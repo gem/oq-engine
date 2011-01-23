@@ -62,7 +62,7 @@ def compute_hazard_curve(job_id, site_list, realization, callback=None):
     with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
         keys = hazengine.compute_hazard_curve(site_list, realization)
 
-        if callback is not None:
+        if callback:
             subtask(callback).delay(job_id, site_list)
 
         return keys
@@ -92,19 +92,28 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 
 @task(ignore_result=True)
-def compute_mean_quantile_curves(job_id, sites):
-    """Compute mean and quantile hazard curves for a set of sites."""
+def compute_mean_quantile_curves(job_id, sites, callback=None):
+    """Compute mean and quantile hazard curves for the given sites."""
 
     # pylint: disable=E1101
     logger = compute_mean_quantile_curves.get_logger()
 
-    logger.debug("Computing MEAN curves for %s sites (job_id %s)"
+    logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
     hazard_curve.compute_mean_hazard_curve(job_id, sites)
 
-    logger.debug("Computing QUANTILE curves for %s sites (job_id %s)"
+    logger.info("Computing QUANTILE curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
     engine = job.Job.from_kvs(job_id)
     hazard_curve.compute_quantile_hazard_curve(engine, sites)
+
+    if callback:
+        subtask(callback).delay(job_id, sites)
+
+
+@task(is_eager=True, ignore_result=True)
+def serialize_mean_quantile_curves(job_id, sites):
+    """Serialize mean and quantile curves for the given sites."""
+    print "Job ID is %s" % job_id

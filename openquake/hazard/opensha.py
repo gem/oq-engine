@@ -8,6 +8,8 @@ import os
 import random
 import numpy
 
+from celery.task.sets import subtask
+
 from openquake import java
 from openquake import kvs
 from openquake import logs
@@ -166,11 +168,12 @@ class ClassicalMixin(BasePSHAMixin):
             pending_tasks = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
+            
             for site_list in self.site_list_generator():
-                pending_tasks.append(
-                        tasks.compute_hazard_curve.delay(
-                        self.id, site_list, realization,
-                        callback=tasks.compute_mean_quantile_curves))
+                pending_tasks.append(tasks.compute_hazard_curve.delay(
+                        self.id, site_list, realization, callback=subtask(
+                        tasks.compute_mean_quantile_curves, kwargs={"callback": 
+                        tasks.serialize_mean_quantile_curves})))
 
             for task in pending_tasks:
                 task.wait()
@@ -179,8 +182,8 @@ class ClassicalMixin(BasePSHAMixin):
                 results.extend(task.result)
         return results
 
-                        
-    @preload     
+            
+    @preload
     def compute_hazard_curve(self, site_list, realization):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """
