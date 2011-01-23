@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-Collection of mixins that compute stuff using hazard curves as input.
+Collection of functions that compute stuff using hazard curves as input.
 """
 
 from numpy import array # pylint: disable=E1101, E0611
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
+from openquake.logs import LOG
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -45,7 +46,7 @@ def _extract_y_values_from(curve):
     y_values = []
 
     for point in curve:
-        y_values.append(point["y"])
+        y_values.append(float(point["y"]))
         
     return y_values
 
@@ -67,83 +68,64 @@ def curves_at(job_id, site):
     pattern = "%s*%s*%s*%s" % (kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
             job_id, site.longitude, site.latitude)
 
-    return kvs.mget_decoded(pattern)
+    curves = []
+    raw_curves = kvs.mget_decoded(pattern)
+
+    for raw_curve in raw_curves:
+        curves.append(_extract_y_values_from(raw_curve["curve"]))
+    
+    return curves
 
 
-class MeanHazardCurveCalculator:
-    """This class computes a mean hazard curve for each site in the region
+def _extract_quantiles_from_config(job):
+    """Extract the set of valid quantiles from the configuration file."""
+    quantiles = []
+
+    if job.has(QUANTILE_PARAM_NAME):
+        raw_quantiles = job.params[QUANTILE_PARAM_NAME].split()
+        quantiles = [float(x) for x in raw_quantiles if _acceptable(x)]
+
+    return quantiles
+
+
+def compute_mean_hazard_curve(job_id, sites):
+    """Compute a mean hazard curve for each site in the list
     using as input all the pre computed curves for different realizations."""
-    
-    def __init__(self):
-        pass
-    
-    def execute(self):
-        """Execute the logic of this mixin."""
-        for sites in self.site_list_generator(): # pylint: disable=E1101
-            for site in sites:
-                curves = []
 
-                # pylint: disable=E1101
-                for raw_curve in curves_at(self.job_id, site):
-                    curves.append(_extract_y_values_from(raw_curve["curve"]))
-
-                self._serialize_mean_curve_for(site, curves)
-
-    def _serialize_mean_curve_for(self, site, curves):
-        """Serialize a mean hazard curve in the underlying kvs system."""
-
+    for site in sites:
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-                "curve": list(compute_mean_curve(curves))}
+                "curve": list(compute_mean_curve(curves_at(job_id, site)))}
 
-        kvs.set_value_json_encoded(kvs.tokens.mean_hazard_curve_key(
-                # pylint: disable=E1101
-                self.job_id, site), mean_curve)
+        key = kvs.tokens.mean_hazard_curve_key(job_id, site)
+
+        LOG.debug("MEAN curve at %s is %s" % (key, mean_curve))
+
+        kvs.set_value_json_encoded(key, mean_curve)
 
 
-class QuantileHazardCurveCalculator:
-    """This class computes a quantile hazard curve for each site in the region
+def compute_quantile_hazard_curve(job, sites):
+    """Compute a quantile hazard curve for each site in the list
     using as input all the pre computed curves for different realizations.
-
+    
     The QUANTILE_LEVELS parameter in the configuration file specifies
     all the values used in the computation.
     """
 
-    def __init__(self):
-        pass
-    
-    def execute(self):
-        """Execute the logic of this mixin."""
-        quantiles = self._extract_quantiles_from_config()
+    quantiles = _extract_quantiles_from_config(job)
 
-        for sites in self.site_list_generator(): # pylint: disable=E1101
-            for site in sites:
-                curves = []
+    LOG.debug("List of QUANTILES is %s" % quantiles)
 
-                # pylint: disable=E1101
-                for raw_curve in curves_at(self.job_id, site):
-                    curves.append(_extract_y_values_from(raw_curve["curve"]))
+    for site in sites:
+        for quantile in quantiles:
 
-                for quantile in quantiles:
-                    self._serialize_quantile_curve_for(site, curves, quantile)
+            quantile_curve = {"site_lat": site.latitude,
+                    "site_lon": site.longitude, "curve":
+                    list(compute_quantile_curve(curves_at(
+                    job.id, site), quantile))}
 
-    def _serialize_quantile_curve_for(self, site, curves, quantile):
-        """Serialize a quantile hazard curve in the underlying kvs system."""
+            key = kvs.tokens.quantile_hazard_curve_key(
+                    job.id, site, quantile)
 
-        quantile_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-                "curve": list(compute_quantile_curve(curves, quantile))}
+            LOG.debug("QUANTILE curve at %s is %s" % (key, quantile_curve))
 
-        kvs.set_value_json_encoded(kvs.tokens.quantile_hazard_curve_key(
-                # pylint: disable=E1101
-                self.job_id, site, quantile), quantile_curve)
-
-    def _extract_quantiles_from_config(self):
-        """Extract the set of valid quantiles from the configuration file."""
-        quantiles = []
-
-        # pylint: disable=E1101
-        if self.has(QUANTILE_PARAM_NAME):
-            # pylint: disable=E1101
-            raw_quantiles = self.params[QUANTILE_PARAM_NAME].split()
-            quantiles = [float(x) for x in raw_quantiles if _acceptable(x)]
-
-        return quantiles
+            kvs.set_value_json_encoded(key, quantile_curve)

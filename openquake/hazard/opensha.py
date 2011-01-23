@@ -6,6 +6,7 @@ Wrapper around the OpenSHA-lite java library.
 import math
 import os
 import random
+import numpy
 
 from openquake import java
 from openquake import kvs
@@ -167,8 +168,9 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
             for site_list in self.site_list_generator():
                 pending_tasks.append(
-                    tasks.compute_hazard_curve.delay(self.id,
-                            site_list, realization))
+                        tasks.compute_hazard_curve.delay(
+                        self.id, site_list, realization,
+                        callback=tasks.compute_mean_quantile_curves))
 
             for task in pending_tasks:
                 task.wait()

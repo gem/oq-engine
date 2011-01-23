@@ -201,17 +201,9 @@ class HazardEngineTestCase(unittest.TestCase):
 
 
 class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.job_id = 1234
-    
-        self.params = {}
-        
-        # single site region at 2.0, 5.0
-        self.params["REGION_GRID_SPACING"] = 0.5
-        self.params["REGION_VERTEX"] = "5.0, 2.0, 5.0, 2.0, 5.0, 2.0, 5.0, 2.0"
-    
-        self.engine = job.Job(self.params,  self.job_id)
 
         self.expected_mean_curve = numpy.array([9.8542200e-01, 9.8196600e-01,
                 9.5842000e-01, 9.2639600e-01, 8.6713000e-01, 7.7081800e-01,
@@ -219,29 +211,27 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 1.7832000e-01, 9.0883400e-02, 4.2189200e-02, 1.7874200e-02,
                 6.7449200e-03, 2.1658200e-03, 5.3878600e-04, 9.4369400e-05,
                 8.9830380e-06])
-    
+
         self.empty_curve = {"curve": []}
 
         # deleting server side cached data
         kvs.flush()
-    
+
     def test_process_the_curves_for_a_single_site(self):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), self.empty_curve)
         
-        self._execute_mixin()
+        self._run([shapes.Site(2.0, 5.0)])
 
         self._has_computed_mean_curve_for_site(shapes.Site(2.0, 5.0))
     
     def test_process_the_curves_for_multiple_sites(self):
-        # four sites region
-        self.params["REGION_VERTEX"] = "1.0, 2.0, 1.5, 2.0, 1.5, 1.5, 1.0, 1.5"
-        
         self._store_hazard_curve_at(shapes.Site(1.5, 1.0), self.empty_curve)
         self._store_hazard_curve_at(shapes.Site(2.0, 1.0), self.empty_curve)
         self._store_hazard_curve_at(shapes.Site(1.5, 1.5), self.empty_curve)
         self._store_hazard_curve_at(shapes.Site(2.0, 1.5), self.empty_curve)
         
-        self._execute_mixin()
+        self._run([shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0), 
+                shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)])
 
         self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.0))
         self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.0))
@@ -358,26 +348,29 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_4, 4)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_5, 5)
         
-        self._execute_mixin()
-        
-        result = kvs.get_value_json_decoded(kvs.tokens.mean_hazard_curve_key(
+        self._run([shapes.Site(2.0, 5.0)])
+
+        result = kvs.get_value_json_decoded(
+                kvs.tokens.mean_hazard_curve_key(
                 self.job_id, shapes.Site(2.0, 5.0)))
 
+        # site is correct
         self.assertEqual(2.0, result["site_lon"])
         self.assertEqual(5.0, result["site_lat"])
         
+        # values are correct
         self.assertTrue(numpy.allclose(self.expected_mean_curve,
                 numpy.array(result["curve"])))
-    
+
+    def _run(self, sites):
+        hazard_curve.compute_mean_hazard_curve(
+                self.job_id, sites)
+
     def _store_hazard_curve_at(self, site, curve, realization=1):
         kvs.set_value_json_encoded(
                 kvs.tokens.hazard_curve_key(self.job_id, realization,
                 site.longitude, site.latitude), curve)
-    
-    def _execute_mixin(self):
-        with job.Mixin(self.engine, hazard_curve.MeanHazardCurveCalculator):
-                self.engine.execute()
-    
+
     def _has_computed_mean_curve_for_site(self, site):
         self.assertTrue(kvs.get(kvs.tokens.mean_hazard_curve_key(
                 self.job_id, site)) != None)
@@ -389,11 +382,7 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
         self.job_id = 1234
         
         self.params = {}
-        
-        # single site region at 2.0, 5.0
-        self.params["REGION_GRID_SPACING"] = 0.5
-        self.params["REGION_VERTEX"] = "5.0, 2.0, 5.0, 2.0, 5.0, 2.0, 5.0, 2.0"
-        
+        self.quantiles_levels = hazard_curve.QUANTILE_PARAM_NAME
         self.engine = job.Job(self.params,  self.job_id)
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -407,29 +396,31 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
         kvs.flush()
 
     def test_no_computation_when_no_parameter_specified(self):
-        self._execute_mixin()
+        self._run([])
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
     def test_no_computation_when_the_parameter_is_empty(self):
-        self.params["QUANTILE_LEVELS"] = ""
-        self._execute_mixin()
+        self.params[self.quantiles_levels] = ""
+        self._run([])
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
-    
+
     def test_computes_all_the_levels_specified(self):
-        self.params["QUANTILE_LEVELS"] = "0.25 0.50 0.75"
-        self._execute_mixin()
-        
+        self.params[self.quantiles_levels] = "0.25 0.50 0.75"
+        self._run([shapes.Site(2.0, 5.0)])
+
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.25)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.50)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        self.params["QUANTILE_LEVELS"] = "-0.33 0.00 0.25 0.50 0.75 1.00 1.10"
-        self._execute_mixin()
+        self.params[self.quantiles_levels] = \
+                "-0.33 0.00 0.25 0.50 0.75 1.00 1.10"
+
+        self._run([shapes.Site(2.0, 5.0)])
 
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.00)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.25)
@@ -441,8 +432,10 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
         self._no_computed_quantiles_for(0.33)
 
     def test_just_numeric_values_are_allowed(self):
-        self.params["QUANTILE_LEVELS"] = "-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB"
-        self._execute_mixin()
+        self.params[self.quantiles_levels] = \
+                "-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB"
+
+        self._run([shapes.Site(2.0, 5.0)])
         
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.00)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.50)
@@ -451,21 +444,19 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
         self._no_computed_quantiles_for(0.33)
 
     def test_accepts_also_signs(self):
-        self.params["QUANTILE_LEVELS"] = "-0.33 +0.0 XYZ +0.5 +1.00"
-        self._execute_mixin()
+        self.params[self.quantiles_levels] = "-0.33 +0.0 XYZ +0.5 +1.00"
+        self._run([shapes.Site(2.0, 5.0)])
 
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.00)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.50)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 1.00)
 
-    def test_process_all_the_sites_in_the_region(self):
-        self.params["QUANTILE_LEVELS"] = "0.25 0.50"
-        
-        # four sites region
-        self.params["REGION_VERTEX"] = "1.0, 2.0, 1.5, 2.0, 1.5, 1.5, 1.0, 1.5"
-        
-        self._execute_mixin()
-        
+    def test_process_all_the_sites_given(self):
+        self.params[self.quantiles_levels] = "0.25 0.50"
+
+        self._run([shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)])
+
         self._has_computed_quantile_for_site(shapes.Site(1.5, 1.0), 0.25)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 1.0), 0.25)
         self._has_computed_quantile_for_site(shapes.Site(1.5, 1.5), 0.25)
@@ -521,8 +512,8 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
                 self.expected_curve, quantile_hazard_curve, atol=0.005))
 
     def test_reads_and_stores_the_quantile_curve_in_kvs(self):
-        self.params["QUANTILE_LEVELS"] = "0.75"
-        
+        self.params[self.quantiles_levels] = "0.75"
+
         hazard_curve_1 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
                 {"y": 9.8161000e-01, "x": 0}, {"y": 9.7837000e-01, "x": 0},
                 {"y": 9.5579000e-01, "x": 0}, {"y": 9.2555000e-01, "x": 0},
@@ -589,17 +580,23 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_4, 4)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_5, 5)
 
-        self._execute_mixin()
+        self._run([shapes.Site(2.0, 5.0)])
 
         result = kvs.get_value_json_decoded(
                 kvs.tokens.quantile_hazard_curve_key(
                 self.job_id, shapes.Site(2.0, 5.0), 0.75))
 
+        # site is correct
         self.assertEqual(2.0, result["site_lon"])
         self.assertEqual(5.0, result["site_lat"])
 
+        # values are correct
         self.assertTrue(numpy.allclose(self.expected_curve,
                 numpy.array(result["curve"]), atol=0.005))
+
+    def _run(self, sites):
+        hazard_curve.compute_quantile_hazard_curve(
+                self.engine, sites)
 
     def _store_hazard_curve_at(self, site, curve, realization=1):
         kvs.set_value_json_encoded(
@@ -609,18 +606,13 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.mget(pattern))
 
-# TODO (ac): Add job_id parameter
     def _no_computed_quantiles_for(self, value):
-        self._no_stored_values_for("%s*%s*" %
+        self._no_stored_values_for("%s*%s*%s*" %
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                str(value).replace(".", "")))
+                self.job_id, str(value).replace(".", "")))
 
     def _has_computed_quantile_for_site(self, site, value):
-        self.assertTrue(kvs.mget("%s*%s*%s*%s*" %
+        self.assertTrue(kvs.mget("%s*%s*%s*%s*%s*" %
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                site.longitude, site.latitude,
+                self.job_id, site.longitude, site.latitude,
                 str(value).replace(".", ""))))
-    
-    def _execute_mixin(self):
-        with job.Mixin(self.engine, hazard_curve.QuantileHazardCurveCalculator):
-                self.engine.execute()
