@@ -9,13 +9,15 @@ The following tasks are defined in the hazard engine:
 
 import json
 
+from celery.decorators import task
+from celery.task.sets import subtask
+
 from openquake import job
 from openquake import kvs
 
 from openquake.hazard import job as hazjob
-from openquake.job import mixins, Block
-
-from celery.decorators import task
+from openquake.hazard import hazard_curve
+from openquake.job import mixins
 
 
 @task
@@ -54,11 +56,16 @@ def write_out_ses(job_file, stochastic_set_key):
         hazengine.write_gmf_files(ses) #pylint: disable=E1101
 
 @task
-def compute_hazard_curve(job_id, site_list, realization):
+def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
-        return hazengine.compute_hazard_curve(site_list, realization)
+        keys = hazengine.compute_hazard_curve(site_list, realization)
+
+        if callback is not None:
+            subtask(callback).delay(job_id, site_list)
+
+        return keys
 
 @task
 def compute_mgm_intensity(job_id, block_id, site_id):
@@ -82,3 +89,27 @@ def compute_mgm_intensity(job_id, block_id, site_id):
         pass
 
     return json.JSONDecoder().decode(mgm)
+
+
+@task(ignore_result=True)
+def compute_mean_quantile_curves(job_id, sites):
+    """Compute mean and quantile hazard curves for a set of sites.
+
+# TODO (ac): Instead of saving results manually in KVS, we can
+make shapes.Site jsonable and let celery serialize the results
+using the serializer="json" paramter.
+    """
+    
+    # pylint: disable=E1101
+    logger = compute_mean_quantile_curves.get_logger()
+
+    logger.debug("Computing MEAN curves for %s sites (job_id %s)"
+            % (len(sites), job_id))
+
+    hazard_curve.compute_mean_hazard_curve(job_id, sites)
+
+    logger.debug("Computing QUANTILE curves for %s sites (job_id %s)"
+            % (len(sites), job_id))
+
+    engine = job.Job.from_kvs(job_id)
+    hazard_curve.compute_quantile_hazard_curve(engine, sites)
