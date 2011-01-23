@@ -379,6 +379,21 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(self.expected_mean_curve,
                 numpy.array(result["curve"])))
 
+    def test_end_to_end(self):
+        test_file_path = "smoketests/classical_psha_simple/config.gem"
+        engine = job.Job.from_file(test_file_path)
+
+        with mixins.Mixin(engine,
+                openquake.hazard.job.HazJobMixin, key="hazard"):
+
+            engine.execute()
+
+# TODO (ac): Find out a better way to do this...
+        time.sleep(1)
+        
+        self.assertTrue(len(kvs.mget("%s*%s*" % (
+                kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
+
     def _run(self, sites):
         hazard_curve.compute_mean_hazard_curve(
                 self.job_id, sites)
@@ -629,6 +644,21 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_curve,
                 numpy.array(result["curve"]), atol=0.005))
+
+    def test_end_to_end(self):
+        test_file_path = "smoketests/classical_psha_simple/config.gem"
+        engine = job.Job.from_file(test_file_path)
+
+        with mixins.Mixin(engine,
+                openquake.hazard.job.HazJobMixin, key="hazard"):
+
+            engine.execute()
+
+# TODO (ac): Find out a better way to do this...
+        time.sleep(1)
+
+        self.assertTrue(len(kvs.mget("%s*%s*" % (
+                kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
 
     def _run(self, sites):
         hazard_curve.compute_quantile_hazard_curve(
