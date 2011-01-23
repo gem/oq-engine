@@ -8,8 +8,6 @@ import os
 import random
 import numpy
 
-from celery.task.sets import subtask
-
 from openquake import java
 from openquake import kvs
 from openquake import logs
@@ -171,9 +169,8 @@ class ClassicalMixin(BasePSHAMixin):
             
             for site_list in self.site_list_generator():
                 pending_tasks.append(tasks.compute_hazard_curve.delay(
-                        self.id, site_list, realization, callback=subtask(
-                        tasks.compute_mean_quantile_curves, kwargs={"callback": 
-                        tasks.serialize_mean_quantile_curves})))
+                        self.id, site_list, realization,
+                        callback=tasks.compute_mean_curves))
 
             for task in pending_tasks:
                 task.wait()
