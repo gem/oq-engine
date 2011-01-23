@@ -92,28 +92,35 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 
 @task(ignore_result=True)
-def compute_mean_quantile_curves(job_id, sites, callback=None):
-    """Compute mean and quantile hazard curves for the given sites."""
+def compute_mean_curves(job_id, sites):
+    """Compute the mean hazard curve for each site given."""
 
     # pylint: disable=E1101
-    logger = compute_mean_quantile_curves.get_logger()
+    logger = compute_mean_curves.get_logger()
 
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    hazard_curve.compute_mean_hazard_curve(job_id, sites)
+    hazard_curve.compute_mean_hazard_curves(job_id, sites)
+    subtask(compute_quantile_curves).delay(job_id, sites)
+
+
+@task(ignore_result=True)
+def compute_quantile_curves(job_id, sites):
+    """Compute the quantile hazard curve for each site given."""
+
+    # pylint: disable=E1101
+    logger = compute_quantile_curves.get_logger()
 
     logger.info("Computing QUANTILE curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
     engine = job.Job.from_kvs(job_id)
-    hazard_curve.compute_quantile_hazard_curve(engine, sites)
-
-    if callback:
-        subtask(callback).delay(job_id, sites)
+    hazard_curve.compute_quantile_hazard_curves(engine, sites)
+    subtask(serialize_quantile_curves).delay(job_id, sites)
 
 
 @task(is_eager=True, ignore_result=True)
-def serialize_mean_quantile_curves(job_id, sites):
-    """Serialize mean and quantile curves for the given sites."""
+def serialize_quantile_curves(job_id, sites):
+    """Serialize quantile curves for the given sites."""
     print "Job ID is %s" % job_id

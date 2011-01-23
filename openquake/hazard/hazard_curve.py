@@ -88,7 +88,7 @@ def _extract_quantiles_from_config(job):
     return quantiles
 
 
-def compute_mean_hazard_curve(job_id, sites):
+def compute_mean_hazard_curves(job_id, sites):
     """Compute a mean hazard curve for each site in the list
     using as input all the pre computed curves for different realizations."""
 
@@ -103,7 +103,7 @@ def compute_mean_hazard_curve(job_id, sites):
         kvs.set_value_json_encoded(key, mean_curve)
 
 
-def compute_quantile_hazard_curve(job, sites):
+def compute_quantile_hazard_curves(job, sites):
     """Compute a quantile hazard curve for each site in the list
     using as input all the pre computed curves for different realizations.
     
