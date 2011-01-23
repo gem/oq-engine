@@ -281,6 +281,23 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 self.expected_mean_curve, mean_hazard_curve))
 
+    def test_an_empty_hazard_curve_produces_an_empty_mean_curve(self):
+        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "curve": []}
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve)
+
+        self._run([shapes.Site(2.0, 5.0)])
+
+        result = kvs.get_value_json_decoded(
+                kvs.tokens.mean_hazard_curve_key(
+                self.job_id, shapes.Site(2.0, 5.0)))
+
+        # site is correct
+        self.assertEqual(2.0, result["site_lon"])
+        self.assertEqual(5.0, result["site_lat"])
+        
+        # no values
+        self.assertTrue(numpy.allclose([], numpy.array(result["curve"])))
+
     def test_reads_and_stores_the_mean_curve_in_kvs(self):
         hazard_curve_1 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
                 {"y": 9.8161000e-01, "x": 0}, {"y": 9.7837000e-01, "x": 0},
@@ -510,6 +527,25 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
 # TODO (ac): Check if this tolerance is enough
         self.assertTrue(numpy.allclose(
                 self.expected_curve, quantile_hazard_curve, atol=0.005))
+
+    def test_an_empty_hazard_curve_produces_an_empty_quantile_curve(self):
+        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "curve": []}
+        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve)
+
+        self.params[self.quantiles_levels] = "0.75"
+
+        self._run([shapes.Site(2.0, 5.0)])
+
+        result = kvs.get_value_json_decoded(
+                kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(2.0, 5.0), 0.75))
+
+        # site is correct
+        self.assertEqual(2.0, result["site_lon"])
+        self.assertEqual(5.0, result["site_lat"])
+
+        # no values
+        self.assertTrue(numpy.allclose([], numpy.array(result["curve"])))
 
     def test_reads_and_stores_the_quantile_curve_in_kvs(self):
         self.params[self.quantiles_levels] = "0.75"
