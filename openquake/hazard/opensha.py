@@ -29,7 +29,7 @@ def preload(fn): # pylint: disable=E0213
         self.cache = java.jclass("KVS")(
                 settings.KVS_HOST, 
                 settings.KVS_PORT)
-        self.calc = java.jclass("CommandLineCalculator")(
+        self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
         return fn(self, *args, **kwargs) # pylint: disable=E1102
     return preloader
@@ -37,7 +37,6 @@ def preload(fn): # pylint: disable=E0213
 
 class BasePSHAMixin(Mixin): 
     """Contains common functionality for PSHA Mixins."""
-
 
     def store_source_model(self, seed):
         """Generates an Earthquake Rupture Forecast, using the source zones and
@@ -56,7 +55,6 @@ class BasePSHAMixin(Mixin):
         key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         print "GMPE map key is", key
         self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
-
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
