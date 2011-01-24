@@ -41,7 +41,7 @@ def generate_job():
 
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
-    Most data returned from the engine is via memcached."""
+    Most data returned from the engine is via kvs."""
     
     def setUp(self):
         self.generated_files = []
@@ -55,8 +55,10 @@ class HazardEngineTestCase(unittest.TestCase):
                 pass
 
     def test_hazard_engine_jobber_runs(self):
-        """Construction of LogicTreeProcessor in Java should not throw
-        errors, and should have params loaded from memcached."""
+
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from kvs."""
+
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
@@ -76,8 +78,13 @@ class HazardEngineTestCase(unittest.TestCase):
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
     def test_hazard_engine_worker_runs(self):
+<<<<<<< HEAD
         """Construction of LogicTreeProcessor in Java should not throw
         errors, and should have params loaded from memcached."""
+=======
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from kvs."""
+>>>>>>> e7d781275aeca39f3e89da81af05ef8f05b05143
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_kvs(job_id)
@@ -97,7 +104,7 @@ class HazardEngineTestCase(unittest.TestCase):
         self.assertEqual(TASK_JOBID_SIMPLE,
                          [result.get() for result in results])
 
-    def test_generate_erf_returns_erf_via_memcached(self):
+    def test_generate_erf_returns_erf_via_kvs(self):
         results = []
         result_keys = []
         expected_values = {}
