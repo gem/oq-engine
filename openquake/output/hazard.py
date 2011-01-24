@@ -28,27 +28,33 @@ from openquake.xml import NSMAP, NRML, GML
 
 LOGGER = logs.HAZARD_LOG
 
+NRML_GML_ID = 'n1'
+HAZARDRESULT_GML_ID = 'hr1'
+SRS_EPSG_4326 = 'epsg:4326'
+
 class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the nrml format."""
 
     def __init__(self, path):
         super(HazardCurveXMLWriter, self).__init__(path)
 
-        self.result_tag = None
+        self.nrml_el = None
+        self.result_el = None
         self.curves_per_branch_label = {}
+        self.hcnode_counter = 0
+        self.hcfield_counter = 0
 
     def close(self):
         """Overrides the default implementation writing all the
         collected lxml object model to the stream."""
 
-        if self.result_tag is None:
-            error = "You need to add at least a curve to build a valid output!"
-            raise RuntimeError(error)
+        if self.nrml_el is None:
+            error_msg = "You need to add at least a curve to build " \
+                        "a valid output!"
+            raise RuntimeError(error_msg)
 
-        self.file.write(etree.tostring(self.result_tag, 
-                pretty_print=True,
-                xml_declaration=True,
-                encoding="UTF-8"))
+        self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
+            xml_declaration=True, encoding="UTF-8"))
                 
         super(HazardCurveXMLWriter, self).close()
             
@@ -58,66 +64,106 @@ class HazardCurveXMLWriter(writer.FileWriter):
         point must be of type shapes.Site
         values is a dictionary that matches the one produced by the
         parser nrml.NrmlFile
-        
         """
         
-        if self.result_tag is None:
-            # <nrml:Result />
-            self.result_tag = etree.Element(NRML + "HazardResult", nsmap=NSMAP)
+        # if we are writing the first hazard curve, create wrapping elements
+        if self.nrml_el is None:
             
-            # <nrml:Config />
-            config_tag = etree.SubElement(self.result_tag, NRML + "Config")
-            
-            # <nrml:HazardProcessing />
-            hazard_processing_tag = etree.SubElement(config_tag, NRML + 
-                "HazardProcessing")
-            
-            hazard_processing_tag.attrib["timeSpanDuration"] = str(values
-                ["timeSpanDuration"])
-                
-            hazard_processing_tag.attrib["IDmodel"] = str(values["IDmodel"])
-            
-            hazard_processing_tag.attrib["saPeriod"] = \
-                str(values.get("saPeriod",""))
-            hazard_processing_tag.attrib["saDamping"] = \
-                str(values.get("saDamping",""))
+            # nrml:nrml, needs gml:id
+            self.nrml_el = etree.Element("%snrml" % NRML, nsmap=NSMAP)
 
-        try:
-            hazard_curve_list_tag = \
-                self.curves_per_branch_label[values["endBranchLabel"]]
-        except KeyError:
-            # <nrml:HazardCurveList />
-            hazard_curve_list_tag = etree.SubElement(self.result_tag, 
-                NRML + "HazardCurveList")
-            hazard_curve_list_tag.attrib["endBranchLabel"] = \
-                str(values["endBranchLabel"])
-                
-             # <nrml:IMT />
-            common_tag = etree.Element(NRML + "Common", nsmap=NSMAP)
-            hazard_curve_list_tag.insert(0, common_tag)    
-            # <nrml:IMT />
-            imt_tag = etree.SubElement(common_tag, NRML + "IMT")
-            imt_tag.text = str(values["IMT"])
+            if 'nrml_id' in values:
+                _set_gml_id(self.nrml_el, str(values['nrml_id']))
+            else:
+                _set_gml_id(self.nrml_el, NRML_GML_ID)
             
-            # <nrml:IMLValues />
-            iml_tag = etree.SubElement(common_tag, NRML + "IMLValues")
-            iml_tag.text = " ".join([str(x) for x in values.get("IMLValues")])
+            # nrml:hazardResult, needs gml:id
+            self.result_el = etree.SubElement(self.nrml_el, 
+                "%shazardResult" % NRML)
+            if 'hazres_id' in values:
+                _set_gml_id(self.result_el, str(values['hazres_id']))
+            else:
+                _set_gml_id(self.result_el, HAZARDRESULT_GML_ID)
+
+            # nrml:config
+            config_el = etree.SubElement(self.result_el, "%sconfig" % NRML)
             
-            self.curves_per_branch_label[values["endBranchLabel"]] = \
-                hazard_curve_list_tag
+            # nrml:hazardProcessing
+            hazard_processing_el = etree.SubElement(config_el, 
+                "%shazardProcessing" % NRML)
+            
+            # the following XML attributes are all optional
+            _setOptionalAttributes(hazard_processing_el, values,
+                ('investigationTimeSpan', 'IDmodel', 'saPeriod', 'saDamping'))
+
+        # check if we have hazard curves for an end branch label, or
+        # for mean/median/quantile
+        if 'endBranchLabel' in values and 'statistics' in values:
+            error_msg = "hazardCurveField cannot have both an end branch " \
+                        "and a statistics label"
+            raise ValueError(error_msg)
+        elif 'endBranchLabel' in values:
+            curve_label = values['endBranchLabel']
+        elif 'statistics' in values:
+            curve_label = values['statistics']
+        else:
+            error_msg = "hazardCurveField has to have either an end branch " \
+                        "or a statistics label"
+            raise ValueError(error_msg)
         
-        # <nrml:HazardCurve />
-        curve_tag = etree.SubElement(hazard_curve_list_tag, 
-                NRML + "HazardCurve")
+        try:
+            hazard_curve_field_el = self.curves_per_branch_label[curve_label]
+        except KeyError:
+            
+            # nrml:hazardCurveField, needs gml:id
+            hazard_curve_field_el = etree.SubElement(self.result_el, 
+                "%shazardCurveField" % NRML)
 
-        # <gml:pos />
-        gml_tag = etree.SubElement(curve_tag, GML + "pos")
-        gml_tag.text = " ".join([str(x) for x in (point.longitude, 
-                point.latitude)])
+            if 'hcfield_id' in values:
+                _set_gml_id(hazard_curve_field_el, str(values['hcfield_id']))
+            else:
+                _set_gml_id(hazard_curve_field_el, 
+                    "hcf_%s" % self.hcfield_counter)
+                self.hcfield_counter += 1
 
-        # <nrml:Values />
-        curve_values_tag = etree.SubElement(curve_tag, NRML + "Values")
-        curve_values_tag.text = " ".join([str(x) for x in values["Values"]])
+            if 'endBranchLabel' in values:
+                hazard_curve_field_el.set("endBranchLabel", 
+                    str(values["endBranchLabel"]))
+            elif 'statistics' in values:
+                hazard_curve_field_el.set("statistics", 
+                    str(values["statistics"]))
+                if 'quantileValue' in values:
+                    hazard_curve_field_el.set("quantileValue", 
+                        str(values["quantileValue"]))
+
+            # nrml:IML
+            iml_el = etree.SubElement(hazard_curve_field_el, "%sIML" % NRML)
+            iml_el.text = " ".join([str(x) for x in values["IML"]])
+            iml_el.set("IMT", str(values["IMT"]))
+
+            self.curves_per_branch_label[curve_label] = hazard_curve_field_el
+        
+        # nrml:HCNode, needs gml:id
+        hcnode_el = etree.SubElement(hazard_curve_field_el, "%sHCNode" % NRML)
+
+        if 'hcnode_id' in values:
+            _set_gml_id(hcnode_el, str(values['hcnode_id']))
+        else:
+            _set_gml_id(hcnode_el, "hcn_%s" % self.hcnode_counter)
+            self.hcnode_counter += 1
+
+        # nrml:site
+        site_el = etree.SubElement(hcnode_el, "%ssite" % NRML)
+        point_el = etree.SubElement(site_el, "%sPoint" % GML)
+        point_el.set("srsName", SRS_EPSG_4326)
+
+        pos_el = etree.SubElement(point_el, "%spos" % GML)
+        pos_el.text = "%s %s" % (point.longitude, point.latitude)
+
+        # nrml:hazardCurve
+        hc_el = etree.SubElement(hcnode_el, "%shazardCurve" % NRML)
+        poe_el = etree.SubElement(hc_el, "%spoE" % NRML)
+        poe_el.text = " ".join([str(x) for x in values["poE"]])
 
 
 class GMFXMLWriter(writer.FileWriter):
@@ -195,3 +241,11 @@ class GMFXMLWriter(writer.FileWriter):
                                     nsmap=NSMAP)
         pos_node.text = "%s %s" % (str(point.x), str(point.y))
 
+
+def _setOptionalAttributes(element, value_dict, attr_keys):
+    for curr_key in attr_keys:
+        if curr_key in value_dict:
+            element.set(curr_key, str(value_dict[curr_key]))
+
+def _set_gml_id(element, gml_id):
+    element.set("%sid" % GML, str(gml_id))
