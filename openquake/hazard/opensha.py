@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 Wrapper around the OpenSHA-lite java library.
-
 """
 
 import math
@@ -34,9 +33,9 @@ def preload(fn): # pylint: disable=E0213
         return fn(self, *args, **kwargs) # pylint: disable=E1102
     return preloader
 
+
 class BasePSHAMixin(Mixin): 
     """Contains common functionality for PSHA Mixins."""
-
 
     def store_source_model(self, seed):
         """Generates an Earthquake Rupture Forecast, using the source zones and
@@ -55,7 +54,6 @@ class BasePSHAMixin(Mixin):
         key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         print "GMPE map key is", key
         self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
-
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
@@ -110,16 +108,6 @@ class BasePSHAMixin(Mixin):
                 float(val)))
         return iml_list
 
-    def site_list_generator(self):
-        """Will subset and yield portions of the region, depending on the 
-        the computation mode."""
-        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.Region.from_coordinates(coords)
-        region.cell_size = float(self.params['REGION_GRID_SPACING'])
-        yield [site for site in region]
-
-
     def parameterize_sites(self, site_list):
         """Convert python Sites to Java Sites, and add default parameters."""
         # TODO(JMC): There's Java code for this already, sets each site to have
@@ -142,7 +130,6 @@ class BasePSHAMixin(Mixin):
             site.addParameter(sadigh)
             jsite_list.add(site)
         return jsite_list
-
 
 
 class ClassicalMixin(BasePSHAMixin):
@@ -186,10 +173,11 @@ class ClassicalMixin(BasePSHAMixin):
             pending_tasks = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
+            
             for site_list in self.site_list_generator():
-                pending_tasks.append(
-                    tasks.compute_hazard_curve.delay(self.id,
-                            site_list, realization))
+                pending_tasks.append(tasks.compute_hazard_curve.delay(
+                        self.id, site_list, realization,
+                        callback=tasks.compute_mean_curves))
 
             for task in pending_tasks:
                 task.wait()
@@ -198,8 +186,8 @@ class ClassicalMixin(BasePSHAMixin):
                 results.extend(task.result)
         return results
 
-                        
-    @preload     
+            
+    @preload
     def compute_hazard_curve(self, site_list, realization):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """
@@ -226,6 +214,7 @@ class ClassicalMixin(BasePSHAMixin):
             kvs_client.set(curve_key, curve)
             curve_keys.append(curve_key)
         return curve_keys
+
 
 class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
     """Probabilistic Event Based method for performing Hazard calculations.
