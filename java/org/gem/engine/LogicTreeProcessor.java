@@ -44,7 +44,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
-public class CommandLineCalculator {
+public class LogicTreeProcessor {
 
     /*
      * Apache commons logging, not log4j specifically Note that for application
@@ -56,17 +56,17 @@ public class CommandLineCalculator {
      * member must not be declared static. The use of "static" should therefore
      * be avoided in code within any "library" type project.
      */
-    private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
+    private static Log logger = LogFactory.getLog(LogicTreeProcessor.class);
 
     private final Configuration config;
     private boolean hasPath;
     private Cache kvs;
 
-    public CommandLineCalculator(Properties p) {
+    public LogicTreeProcessor(Properties p) {
         config = ConfigurationConverter.getConfiguration(p);
     }
 
-    public CommandLineCalculator(String calcConfigFile)
+    public LogicTreeProcessor(String calcConfigFile)
             throws ConfigurationException {
         config = new PropertiesConfiguration();
         ((PropertiesConfiguration) config).load(calcConfigFile);
@@ -74,7 +74,7 @@ public class CommandLineCalculator {
         hasPath = true;
     }
 
-    public CommandLineCalculator(Cache cache, String key) {
+    public LogicTreeProcessor(Cache cache, String key) {
         kvs = cache;
         Properties properties =
                 new Gson().fromJson((String) cache.get(key), Properties.class);
@@ -100,11 +100,11 @@ public class CommandLineCalculator {
      */
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof CommandLineCalculator)) {
+        if (!(obj instanceof LogicTreeProcessor)) {
             return false;
         }
 
-        CommandLineCalculator other = (CommandLineCalculator) obj;
+        LogicTreeProcessor other = (LogicTreeProcessor) obj;
 
         Properties thisConfig = ConfigurationConverter.getProperties(config);
 

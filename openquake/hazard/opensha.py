@@ -38,7 +38,7 @@ class MonteCarloMixin: # pylint: disable=W0232
             self.cache = java.jclass("KVS")(
                     settings.KVS_HOST, 
                     settings.KVS_PORT)
-            self.calc = java.jclass("CommandLineCalculator")(
+            self.calc = java.jclass("LogicTreeProcessor")(
                     self.cache, self.key)
             return fn(self, *args, **kwargs) # pylint: disable=E1102
         return preloader
@@ -51,8 +51,8 @@ class MonteCarloMixin: # pylint: disable=W0232
     
         config_file should be an absolute path."""
         print "Store source model from %s" % (config_file)
-        engine = java.jclass("CommandLineCalculator")(config_file)
-        key = kvs.generate_product_key(self.id, tokens.SOURCE_MODEL_TOKEN)
+        engine = java.jclass("LogicTreeProcessor")(config_file)
+        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
         engine.sampleAndSaveERFTree(self.cache, key, seed)
     
     def store_gmpe_map(self, config_file, seed):
@@ -61,8 +61,8 @@ class MonteCarloMixin: # pylint: disable=W0232
         
         In the future, this file *could* be passed as a string, since it does 
         not have any included references."""
-        engine = java.jclass("CommandLineCalculator")(config_file)
-        key = kvs.generate_product_key(self.id, tokens.GMPE_TOKEN)
+        engine = java.jclass("LogicTreeProcessor")(config_file)
+        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         engine.sampleAndSaveGMPETree(self.cache, key, seed)
 
     def site_list_generator(self):

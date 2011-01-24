@@ -16,7 +16,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.gem.engine.CommandLineCalculator;
+import org.gem.engine.LogicTreeProcessor;
 import org.gem.engine.hazard.GemComputeHazardLogicTree;
 
 /**
@@ -28,7 +28,7 @@ import org.gem.engine.hazard.GemComputeHazardLogicTree;
  */
 public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
 
-    private static Log logger = LogFactory.getLog(CommandLineCalculator.class);
+    private static Log logger = LogFactory.getLog(LogicTreeProcessor.class);
 
     private final ArrayList<LogicTreeBranchingLevel> branLevLst;
     protected HashMap<String, Element> ebMap;
