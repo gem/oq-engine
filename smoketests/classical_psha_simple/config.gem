@@ -1,13 +1,26 @@
-# The '#' character and the ';' are used to start a single line comment
+[general]
+
+# NOTE: The order of the vertices is to be kept!!!
+# lat, lon of polygon vertices (in clock or counter-clock wise order)
+#REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
+#
+REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
+# degrees
+#REGION_GRID_SPACING = 0.1
+REGION_GRID_SPACING = 0.02
 
 [HAZARD]
 
+SOURCE_MODEL_LT_RANDOM_SEED = 23
+GMPE_LT_RANDOM_SEED = 5
+GMF_RANDOM_SEED = 3
+
 # file containing erf logic tree structure
-SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
+SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
 # file containing gmpe logic tree structure
-GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
-# output directory
-OUTPUT_DIR = ~/gem_output
+GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
+# output directory - relative to this file
+OUTPUT_DIR = computed_output
 
 
 # moment magnitude (Mw)
@@ -30,7 +43,7 @@ PERIOD = 0.0
 DAMPING = 5.0
 # (in the same units of the intensity measure type)
 # TODO make it a comma separated list and adapt code (CalculatorConfigHelper.makeArbitrarilyDiscretizedFunc())
-INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
+INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
 # (None, 1 Sided, 2 Sided)
 GMPE_TRUNCATION_TYPE = 2 Sided
 # (1,2,3,...)
@@ -43,6 +56,10 @@ REFERENCE_VS30_VALUE = 760.0
 # Cambpell basin depth. Measure is (km)
 REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
 
+# Rock, Deep-Soil
+SADIGH_SITE_TYPE = Rock
+# if true compute ground motion fields using correlated model of Jayaram and Baker 2009
+GROUND_MOTION_CORRELATION = true
 
 # true or false
 INCLUDE_AREA_SOURCES = true
@@ -92,22 +109,45 @@ SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 
-# NOTE: The order of the vertices is to be kept!!!
-# lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
-# degrees
-REGION_GRID_SPACING = 0.1
-
-
 # CALCULATION MODE (Event Based, Full Calculation)
 # if Event Based is chosen than uncertainties defined by rules are treated as uncorrelated, and the user has to set the number of hazard calculations to be done
 # if Full Calculation is chosen than uncertainties defined by rules are treated as correlated, and hazard curves are calculated for each end-branch of the logic tree 
-HAZARD_CALCULATION_MODE = Event Based
+#HAZARD_CALCULATION_MODE = Event Based
+HAZARD_CALCULATION_MODE = Classical
 
 # (used if Event Based approach is chosen)
-NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 40
-# (used if Event Based probabilistic event based approach is chosen)
-NUMBER_OF_SEISMICITY_HISTORIES = 8
+#NUMBER_OF_LOGIC_TREE_SAMPLES = 40
+NUMBER_OF_LOGIC_TREE_SAMPLES = 1
+# (used if probabilistic event based approach is chosen)
+#NUMBER_OF_SEISMICITY_HISTORIES = 8
+NUMBER_OF_SEISMICITY_HISTORIES = 1
 
+# List of quantiles to compute
+QUANTILE_LEVELS = 0.25 0.50
 
-NUMBER_OF_PROCESSORS = 1
+[RISK]
+
+RISK_CALCULATION_MODE = Probabilistic Event
+
+# file containing the exposure in nrml format
+EXPOSURE = small_exposure.xml
+
+# file containing the vulnerability functions
+VULNERABILITY = vulnerability.xml
+
+CONDITIONAL_LOSS_POE = 0.01
+# 0.02 0.05
+
+# file containing the hazard curves in nrml format
+# HAZARD_CURVES = hazard_curves.xml
+LOSS_CURVES_OUTPUT_PREFIX = simplecase
+# name of the loss map file to generate
+LOSS_MAP = loss_map.tiff
+
+# name of the loss ratio map file to generate
+LOSS_RATIO_MAP = loss_ratio_map.tiff
+
+RISK_CELL_SIZE = 0.0005
+
+# uncomment this if you want to compute the aggregate loss curve
+AGGREGATE_LOSS_CURVE = 1
