@@ -15,7 +15,7 @@ from openquake import job
 from openquake.job import mixins
 from openquake.kvs import tokens
 from openquake.hazard import tasks
-from openquake.hazard import hazard_curve
+from openquake.hazard import classical_psha
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
 from tests.kvs_unittest import ONE_CURVE_MODEL
@@ -200,7 +200,7 @@ class HazardEngineTestCase(unittest.TestCase):
             self.kvs_client.set(site_key, ONE_CURVE_MODEL)
 
 
-class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
+class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job_id = 1234
@@ -274,7 +274,7 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
                 1.5582000e-05])
     
-        mean_hazard_curve = hazard_curve.compute_mean_curve([
+        mean_hazard_curve = classical_psha.compute_mean_curve([
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5])
 
@@ -395,7 +395,7 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
 
     def _run(self, sites):
-        hazard_curve.compute_mean_hazard_curves(
+        classical_psha.compute_mean_hazard_curves(
                 self.job_id, sites)
 
     def _store_hazard_curve_at(self, site, curve, realization=1):
@@ -408,13 +408,13 @@ class MeanHazardCurveCalculatorTestCase(unittest.TestCase):
                 self.job_id, site)) != None)
 
 
-class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
+class QuantileHazardCurveComputationTestCase(unittest.TestCase):
     
     def setUp(self):
         self.job_id = 1234
         
         self.params = {}
-        self.quantiles_levels = hazard_curve.QUANTILE_PARAM_NAME
+        self.quantiles_levels = classical_psha.QUANTILE_PARAM_NAME
         self.engine = job.Job(self.params,  self.job_id)
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -535,7 +535,7 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
                 8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
                 1.5582000e-05])
 
-        quantile_hazard_curve = hazard_curve.compute_quantile_curve([
+        quantile_hazard_curve = classical_psha.compute_quantile_curve([
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5], 0.75)
 
@@ -661,7 +661,7 @@ class QuantileHazardCurveCalculatorTestCase(unittest.TestCase):
                 kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
 
     def _run(self, sites):
-        hazard_curve.compute_quantile_hazard_curves(
+        classical_psha.compute_quantile_hazard_curves(
                 self.engine, sites)
 
     def _store_hazard_curve_at(self, site, curve, realization=1):

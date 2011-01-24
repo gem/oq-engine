@@ -16,7 +16,7 @@ from openquake import job
 from openquake import kvs
 
 from openquake.hazard import job as hazjob
-from openquake.hazard import hazard_curve
+from openquake.hazard import classical_psha
 from openquake.job import mixins
 
 
@@ -101,7 +101,7 @@ def compute_mean_curves(job_id, sites):
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    hazard_curve.compute_mean_hazard_curves(job_id, sites)
+    classical_psha.compute_mean_hazard_curves(job_id, sites)
     subtask(compute_quantile_curves).delay(job_id, sites)
 
 
@@ -116,7 +116,7 @@ def compute_quantile_curves(job_id, sites):
             % (len(sites), job_id))
 
     engine = job.Job.from_kvs(job_id)
-    hazard_curve.compute_quantile_hazard_curves(engine, sites)
+    classical_psha.compute_quantile_hazard_curves(engine, sites)
     subtask(serialize_quantile_curves).delay(job_id, sites)
 
 
