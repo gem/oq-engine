@@ -174,6 +174,8 @@ class ClassicalMixin(BasePSHAMixin):
                 % realizations)
 
         for realization in range(0, realizations):
+            LOG.info('Calculatiing hazard curves for realization %s'
+                     % realization)
             pending_tasks = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))

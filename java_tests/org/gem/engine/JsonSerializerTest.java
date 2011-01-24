@@ -8,11 +8,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
-import org.dom4j.Element;
 import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
 import org.gem.engine.hazard.redis.Cache;
@@ -22,7 +20,6 @@ import org.opensha.commons.data.DataPoint2D;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
-import org.opensha.commons.exceptions.DataPoint2DException;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -616,130 +613,10 @@ public class JsonSerializerTest {
      * @author larsbutler
      * 
      */
-    static class TestCurve implements DiscretizedFuncAPI {
+    static class TestCurve extends ArbitrarilyDiscretizedFunc {
 
         static final double[] X_VALS = { -5.2983174, 0.756122 };
         static final double[] Y_VALS = { 0.0, 1.0 };
-
-        @Override
-        public boolean areAllXValuesInteger(double arg0) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public DiscretizedFuncAPI deepClone() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public boolean equals(DiscretizedFuncAPI arg0) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public DataPoint2D get(int arg0) {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public double getClosestX(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getClosestY(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getFirstInterpolatedX(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getFirstInterpolatedX_inLogXLogYDomain(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public int getIndex(DataPoint2D arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public String getInfo() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public double getInterpolatedY(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getInterpolatedY_inLogXLogYDomain(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getInterpolatedY_inLogYDomain(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getMaxX() {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getMaxY() {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public String getMetadataString() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public double getMinX() {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getMinY() {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public String getName() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public int getNum() {
-            // TODO Auto-generated method stub
-            return 0;
-        }
 
         @Override
         public Iterator<DataPoint2D> getPointsIterator() {
@@ -766,102 +643,6 @@ public class JsonSerializerTest {
 
                 }
             };
-        }
-
-        @Override
-        public double getTolerance() {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getX(int arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public int getXIndex(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public ListIterator<Double> getXValuesIterator() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public double getY(int arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public double getY(double arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-
-        @Override
-        public ListIterator<Double> getYValuesIterator() {
-            // TODO Auto-generated method stub
-            return null;
-        }
-
-        @Override
-        public boolean hasPoint(DataPoint2D arg0) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public boolean hasPoint(double arg0, double arg1) {
-            // TODO Auto-generated method stub
-            return false;
-        }
-
-        @Override
-        public void set(DataPoint2D arg0) throws DataPoint2DException {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void set(double arg0, double arg1) throws DataPoint2DException {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void set(int arg0, double arg1) {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void setInfo(String arg0) {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void setName(String arg0) {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public void setTolerance(double arg0) {
-            // TODO Auto-generated method stub
-
-        }
-
-        @Override
-        public Element toXMLMetadata(Element arg0) {
-            // TODO Auto-generated method stub
-            return null;
         }
 
     }
