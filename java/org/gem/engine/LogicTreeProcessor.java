@@ -74,6 +74,15 @@ public class LogicTreeProcessor {
         hasPath = true;
     }
 
+    /**
+     * Create LogicTreeProcessor by loading a job configuration from the
+     * available KVS. The configuration file is serialized as JSON.
+     * 
+     * @param cache
+     *            - KVS connection
+     * @param key
+     *            - key used to retrieve the job config from the KVS
+     */
     public LogicTreeProcessor(Cache cache, String key) {
         kvs = cache;
         Properties properties =
@@ -123,8 +132,7 @@ public class LogicTreeProcessor {
      * @param key
      * @param cache
      */
-    public void
-            serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
+    public void serializeEqkRuptureToKvs(EqkRupture rup, String key, Cache cache) {
         Gson g = new Gson();
         String jsonData = g.toJson(new EqkRuptureDataForNrml(rup));
         cache.set(key, jsonData);
@@ -198,6 +206,16 @@ public class LogicTreeProcessor {
         }
     } // class EqkRuptureDataForKvs
 
+    /**
+     * Creates an ERF tree and writes it to the KVS, serialized as JSON.
+     * 
+     * @param cache
+     *            - KVS
+     * @param key
+     *            - key of the data to be stored in the KVS
+     * @param seed
+     * @throws IOException
+     */
     public void sampleAndSaveERFTree(Cache cache, String key, long seed)
             throws IOException {
         logger.warn("Random seed for ERFLT is " + Long.toString(seed));
@@ -249,12 +267,18 @@ public class LogicTreeProcessor {
         LogicTreeBranch branch =
                 lt.getBranchingLevel(0).getBranch(branchNumber - 1);
         if (branch.getNameInputFile() != null) {
-            String sourceName = configFilesPath() + branch.getNameInputFile();
+            String sourceName = null;
+            if (hasPath) { // job from file
+                sourceName = configFilesPath() + branch.getNameInputFile();
+            } else { // job from kvs
+                sourceName =
+                        FilenameUtils.concat(config.getString("BASE_PATH"),
+                                branch.getNameInputFile());
+            }
 
             SourceModelReader sourceModelReader =
-                    new SourceModelReader(sourceName,
-                            config.getDouble(ConfigItems.WIDTH_OF_MFD_BIN
-                                    .name()));
+                    new SourceModelReader(sourceName, config
+                            .getDouble(ConfigItems.WIDTH_OF_MFD_BIN.name()));
 
             // load sources
             srcList = sourceModelReader.read();
@@ -290,37 +314,28 @@ public class LogicTreeProcessor {
                     if (src instanceof GEMAreaSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(
-                                sourceIndex,
-                                applyRuleToAreaSource((GEMAreaSourceData) src,
-                                        branch.getRule()));
+                        srcList.set(sourceIndex, applyRuleToAreaSource(
+                                (GEMAreaSourceData) src, branch.getRule()));
                     }
                     // if point source
                     if (src instanceof GEMPointSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(
-                                sourceIndex,
-                                applyRuleToPointSource(
-                                        (GEMPointSourceData) src,
-                                        branch.getRule()));
+                        srcList.set(sourceIndex, applyRuleToPointSource(
+                                (GEMPointSourceData) src, branch.getRule()));
                     }
                     // if fault source
                     if (src instanceof GEMFaultSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(
-                                sourceIndex,
-                                applyRuleToFaultSource(
-                                        (GEMFaultSourceData) src,
-                                        branch.getRule()));
+                        srcList.set(sourceIndex, applyRuleToFaultSource(
+                                (GEMFaultSourceData) src, branch.getRule()));
                     }
                     // if subduction source
                     if (src instanceof GEMSubductionFaultSourceData) {
                         // replace the old source with the new source
                         // accordingly to the rule
-                        srcList.set(
-                                sourceIndex,
+                        srcList.set(sourceIndex,
                                 applyRuleToSubductionFaultSource(
                                         (GEMSubductionFaultSourceData) src,
                                         branch.getRule()));
@@ -356,12 +371,10 @@ public class LogicTreeProcessor {
         // define new area source
         GEMAreaSourceData newAreaSrc = areaSrc;
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString()
-                .equalsIgnoreCase(LogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName().toString().equalsIgnoreCase(
+                LogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.bGRRelative.toString())) {
             // loop over mfds
             // mfd index
             int mfdIndex = 0;
@@ -370,26 +383,20 @@ public class LogicTreeProcessor {
                 if (mfd instanceof GutenbergRichterMagFreqDist) {
                     // new mfd
                     GutenbergRichterMagFreqDist newMfdGr = null;
-                    if (rule.getRuleName()
-                            .toString()
-                            .equalsIgnoreCase(
-                                    LogicTreeRuleParam.mMaxGRRelative
-                                            .toString())) {
+                    if (rule.getRuleName().toString().equalsIgnoreCase(
+                            LogicTreeRuleParam.mMaxGRRelative.toString())) {
                         // uncertainties on Mmax
                         newMfdGr =
                                 applyMmaxGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd,
-                                        rule.getVal(), areaSrc.getName());
-                    } else if (rule
-                            .getRuleName()
-                            .toString()
-                            .equalsIgnoreCase(
-                                    LogicTreeRuleParam.bGRRelative.toString())) {
+                                        (GutenbergRichterMagFreqDist) mfd, rule
+                                                .getVal(), areaSrc.getName());
+                    } else if (rule.getRuleName().toString().equalsIgnoreCase(
+                            LogicTreeRuleParam.bGRRelative.toString())) {
                         // uncertainties on b value
                         newMfdGr =
                                 applybGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd,
-                                        rule.getVal(), areaSrc.getName());
+                                        (GutenbergRichterMagFreqDist) mfd, rule
+                                                .getVal(), areaSrc.getName());
                     }
                     // substitute old mfd with new mfd
                     newAreaSrc.getMagfreqDistFocMech().getMagFreqDistList()[mfdIndex] =
@@ -397,7 +404,7 @@ public class LogicTreeProcessor {
                 } // end if mfd is GR
                 mfdIndex = mfdIndex + 1;
             } // for (loop over mfds)
-              // return new area source
+            // return new area source
             return newAreaSrc;
         } else {
             // not(rule == mMaxGRRelative || == bGRRelative)
@@ -426,12 +433,10 @@ public class LogicTreeProcessor {
         // new point source
         GEMPointSourceData newPntSource = pntSrc;
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString()
-                .equalsIgnoreCase(LogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName().toString().equalsIgnoreCase(
+                LogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.bGRRelative.toString())) {
             // loop over mfds
             // mfd index
             int mfdIndex = 0;
@@ -440,24 +445,18 @@ public class LogicTreeProcessor {
                 if (mfd instanceof GutenbergRichterMagFreqDist) {
                     GutenbergRichterMagFreqDist newMfdGr = null;
                     // create new mfd by applying rule
-                    if (rule.getRuleName()
-                            .toString()
-                            .equalsIgnoreCase(
-                                    LogicTreeRuleParam.mMaxGRRelative
-                                            .toString())) {
+                    if (rule.getRuleName().toString().equalsIgnoreCase(
+                            LogicTreeRuleParam.mMaxGRRelative.toString())) {
                         newMfdGr =
                                 applyMmaxGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd,
-                                        rule.getVal(), pntSrc.getName());
-                    } else if (rule
-                            .getRuleName()
-                            .toString()
-                            .equalsIgnoreCase(
-                                    LogicTreeRuleParam.bGRRelative.toString())) {
+                                        (GutenbergRichterMagFreqDist) mfd, rule
+                                                .getVal(), pntSrc.getName());
+                    } else if (rule.getRuleName().toString().equalsIgnoreCase(
+                            LogicTreeRuleParam.bGRRelative.toString())) {
                         newMfdGr =
                                 applybGrRelative(
-                                        (GutenbergRichterMagFreqDist) mfd,
-                                        rule.getVal(), pntSrc.getName());
+                                        (GutenbergRichterMagFreqDist) mfd, rule
+                                                .getVal(), pntSrc.getName());
                     }
                     // substitute old mfd with new mfd
                     newPntSource.getHypoMagFreqDistAtLoc().getMagFreqDistList()[mfdIndex] =
@@ -491,41 +490,34 @@ public class LogicTreeProcessor {
     private static GEMFaultSourceData applyRuleToFaultSource(
             GEMFaultSourceData faultSrc, LogicTreeRule rule) {
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString()
-                .equalsIgnoreCase(LogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName().toString().equalsIgnoreCase(
+                LogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.bGRRelative.toString())) {
             // mfd
             IncrementalMagFreqDist mfd = faultSrc.getMfd();
             if (mfd instanceof GutenbergRichterMagFreqDist) {
                 GutenbergRichterMagFreqDist newMfdGr = null;
                 // create new mfd by applying rule
-                if (rule.getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.mMaxGRRelative.toString())) {
+                if (rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.mMaxGRRelative.toString())) {
                     newMfdGr =
                             applyMmaxGrRelative(
-                                    (GutenbergRichterMagFreqDist) mfd,
-                                    rule.getVal(), faultSrc.getName());
-                } else if (rule
-                        .getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.bGRRelative.toString())) {
+                                    (GutenbergRichterMagFreqDist) mfd, rule
+                                            .getVal(), faultSrc.getName());
+                } else if (rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.bGRRelative.toString())) {
                     newMfdGr =
                             applybGrRelative((GutenbergRichterMagFreqDist) mfd,
                                     rule.getVal(), faultSrc.getName());
                 }
                 // return new fault source with new mfd
-                return new GEMFaultSourceData(faultSrc.getID(),
-                        faultSrc.getName(), faultSrc.getTectReg(), newMfdGr,
-                        faultSrc.getTrace(), faultSrc.getDip(),
-                        faultSrc.getDip(), faultSrc.getSeismDepthLow(),
-                        faultSrc.getSeismDepthUpp(),
-                        faultSrc.getFloatRuptureFlag());
+                return new GEMFaultSourceData(faultSrc.getID(), faultSrc
+                        .getName(), faultSrc.getTectReg(), newMfdGr, faultSrc
+                        .getTrace(), faultSrc.getDip(), faultSrc.getDip(),
+                        faultSrc.getSeismDepthLow(), faultSrc
+                                .getSeismDepthUpp(), faultSrc
+                                .getFloatRuptureFlag());
             } else {
                 // mfd is not GR
                 // if the uncertainty do not apply return the unchanged object
@@ -554,18 +546,14 @@ public class LogicTreeProcessor {
      *          to uncertainty changed according to the rule. In case the rule
      *          is not recognized an error is thrown and execution stops
      */
-    private static
-            GEMSubductionFaultSourceData
-            applyRuleToSubductionFaultSource(
-                    GEMSubductionFaultSourceData subFaultSrc, LogicTreeRule rule) {
+    private static GEMSubductionFaultSourceData applyRuleToSubductionFaultSource(
+            GEMSubductionFaultSourceData subFaultSrc, LogicTreeRule rule) {
 
         // if uncertainties on GR Mmax or GR b value
-        if (rule.getRuleName().toString()
-                .equalsIgnoreCase(LogicTreeRuleParam.mMaxGRRelative.toString())
-                || rule.getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.bGRRelative.toString())) {
+        if (rule.getRuleName().toString().equalsIgnoreCase(
+                LogicTreeRuleParam.mMaxGRRelative.toString())
+                || rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.bGRRelative.toString())) {
 
             // mfd
             IncrementalMagFreqDist mfd = subFaultSrc.getMfd();
@@ -575,19 +563,14 @@ public class LogicTreeProcessor {
                 GutenbergRichterMagFreqDist newMfdGr = null;
 
                 // create new mfd by applying rule
-                if (rule.getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.mMaxGRRelative.toString())) {
+                if (rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.mMaxGRRelative.toString())) {
                     newMfdGr =
                             applyMmaxGrRelative(
-                                    (GutenbergRichterMagFreqDist) mfd,
-                                    rule.getVal(), subFaultSrc.getName());
-                } else if (rule
-                        .getRuleName()
-                        .toString()
-                        .equalsIgnoreCase(
-                                LogicTreeRuleParam.bGRRelative.toString())) {
+                                    (GutenbergRichterMagFreqDist) mfd, rule
+                                            .getVal(), subFaultSrc.getName());
+                } else if (rule.getRuleName().toString().equalsIgnoreCase(
+                        LogicTreeRuleParam.bGRRelative.toString())) {
                     newMfdGr =
                             applybGrRelative((GutenbergRichterMagFreqDist) mfd,
                                     rule.getVal(), subFaultSrc.getName());
@@ -601,7 +584,7 @@ public class LogicTreeProcessor {
                         newMfdGr, subFaultSrc.getFloatRuptureFlag());
 
             } // end if mfd is GR
-              // if uncertainty does not apply return unchanged object
+            // if uncertainty does not apply return unchanged object
             else {
                 return subFaultSrc;
             }
@@ -667,12 +650,13 @@ public class LogicTreeProcessor {
 
         } else {
             // stop execution and return null
-            logger.info("Uncertaintiy value: "
-                    + deltaMmax
-                    + " on maximum magnitude for source: "
-                    + sourceName
-                    + " give maximum magnitude smaller than minimum magnitude!\n"
-                    + "Check your input. Execution stopped.");
+            logger
+                    .info("Uncertaintiy value: "
+                            + deltaMmax
+                            + " on maximum magnitude for source: "
+                            + sourceName
+                            + " give maximum magnitude smaller than minimum magnitude!\n"
+                            + "Check your input. Execution stopped.");
             // System.out.println("Uncertaintiy value: " + deltaMmax +
             // " on maximum magnitude for source: " + sourceName
             // + " give maximum magnitude smaller than minimum magnitude!");
@@ -682,9 +666,8 @@ public class LogicTreeProcessor {
 
     }
 
-    private static GutenbergRichterMagFreqDist
-            applybGrRelative(GutenbergRichterMagFreqDist mfdGR, double deltaB,
-                    String sourceName) {
+    private static GutenbergRichterMagFreqDist applybGrRelative(
+            GutenbergRichterMagFreqDist mfdGR, double deltaB, String sourceName) {
 
         // minimum magnitude
         double mMin = mfdGR.getMagLower();
@@ -746,8 +729,8 @@ public class LogicTreeProcessor {
          * is one method per type defined: setString(), setDouble(), setInt(),
          * ...
          */
-        erf.setParameter(GEM1ERF.MIN_MAG_NAME,
-                config.getDouble(ConfigItems.MINIMUM_MAGNITUDE.name()));
+        erf.setParameter(GEM1ERF.MIN_MAG_NAME, config
+                .getDouble(ConfigItems.MINIMUM_MAGNITUDE.name()));
         // set time span
         TimeSpan timeSpan = new TimeSpan(TimeSpan.NONE, TimeSpan.YEARS);
         timeSpan.setDuration(config.getDouble(ConfigItems.INVESTIGATION_TIME
@@ -756,40 +739,44 @@ public class LogicTreeProcessor {
 
         // params for area source
         // set inclusion of area sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_AREA_SRC_PARAM_NAME,
-                config.getBoolean(ConfigItems.INCLUDE_AREA_SOURCES.name()));
+        erf.setParameter(GEM1ERF.INCLUDE_AREA_SRC_PARAM_NAME, config
+                .getBoolean(ConfigItems.INCLUDE_AREA_SOURCES.name()));
         // set rupture type ("area source rupture model /
         // area_source_rupture_model / AreaSourceRuptureModel)
-        erf.setParameter(GEM1ERF.AREA_SRC_RUP_TYPE_NAME,
-                config.getString(ConfigItems.TREAT_AREA_SOURCE_AS.name()));
+        erf.setParameter(GEM1ERF.AREA_SRC_RUP_TYPE_NAME, config
+                .getString(ConfigItems.TREAT_AREA_SOURCE_AS.name()));
         // set area discretization
-        erf.setParameter(GEM1ERF.AREA_SRC_DISCR_PARAM_NAME,
-                config.getDouble(ConfigItems.AREA_SOURCE_DISCRETIZATION.name()));
+        erf.setParameter(GEM1ERF.AREA_SRC_DISCR_PARAM_NAME, config
+                .getDouble(ConfigItems.AREA_SOURCE_DISCRETIZATION.name()));
         // set mag-scaling relationship
-        erf.setParameter(
-                GEM1ERF.AREA_SRC_MAG_SCALING_REL_PARAM_NAME,
-                config.getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
-                        .name()));
+        erf
+                .setParameter(
+                        GEM1ERF.AREA_SRC_MAG_SCALING_REL_PARAM_NAME,
+                        config
+                                .getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
+                                        .name()));
         // params for grid source
         // inclusion of grid sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_GRIDDED_SEIS_PARAM_NAME,
-                config.getBoolean(ConfigItems.INCLUDE_GRID_SOURCES.name()));
+        erf.setParameter(GEM1ERF.INCLUDE_GRIDDED_SEIS_PARAM_NAME, config
+                .getBoolean(ConfigItems.INCLUDE_GRID_SOURCES.name()));
         // rupture model
-        erf.setParameter(GEM1ERF.GRIDDED_SEIS_RUP_TYPE_NAME,
-                config.getString(ConfigItems.TREAT_GRID_SOURCE_AS.name()));
+        erf.setParameter(GEM1ERF.GRIDDED_SEIS_RUP_TYPE_NAME, config
+                .getString(ConfigItems.TREAT_GRID_SOURCE_AS.name()));
         // mag-scaling relationship
-        erf.setParameter(
-                GEM1ERF.GRIDDED_SEIS_MAG_SCALING_REL_PARAM_NAME,
-                config.getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
-                        .name()));
+        erf
+                .setParameter(
+                        GEM1ERF.GRIDDED_SEIS_MAG_SCALING_REL_PARAM_NAME,
+                        config
+                                .getString(ConfigItems.AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP
+                                        .name()));
 
         // params for fault source
         // inclusion of fault sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME,
-                config.getBoolean(ConfigItems.INCLUDE_FAULT_SOURCE.name()));
+        erf.setParameter(GEM1ERF.INCLUDE_FAULT_SOURCES_PARAM_NAME, config
+                .getBoolean(ConfigItems.INCLUDE_FAULT_SOURCE.name()));
         // rupture offset
-        erf.setParameter(GEM1ERF.FAULT_RUP_OFFSET_PARAM_NAME,
-                config.getDouble(ConfigItems.FAULT_RUPTURE_OFFSET.name()));
+        erf.setParameter(GEM1ERF.FAULT_RUP_OFFSET_PARAM_NAME, config
+                .getDouble(ConfigItems.FAULT_RUPTURE_OFFSET.name()));
         // surface discretization
         erf.setParameter(GEM1ERF.FAULT_DISCR_PARAM_NAME, config
                 .getDouble(ConfigItems.FAULT_SURFACE_DISCRETIZATION.name()));
@@ -802,16 +789,20 @@ public class LogicTreeProcessor {
         erf.setParameter(GEM1ERF.FAULT_SCALING_SIGMA_PARAM_NAME, config
                 .getDouble(ConfigItems.FAULT_MAGNITUDE_SCALING_SIGMA.name()));
         // rupture aspect ratio
-        erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME,
-                config.getDouble(ConfigItems.RUPTURE_ASPECT_RATIO.name()));
+        erf.setParameter(GEM1ERF.FAULT_RUP_ASPECT_RATIO_PARAM_NAME, config
+                .getDouble(ConfigItems.RUPTURE_ASPECT_RATIO.name()));
         // rupture floating type
-        erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME,
-                config.getString(ConfigItems.RUPTURE_FLOATING_TYPE.name()));
+        erf.setParameter(GEM1ERF.FAULT_FLOATER_TYPE_PARAM_NAME, config
+                .getString(ConfigItems.RUPTURE_FLOATING_TYPE.name()));
 
         // params for subduction fault
         // inclusion of fault sources in the calculation
-        erf.setParameter(GEM1ERF.INCLUDE_SUBDUCTION_SOURCES_PARAM_NAME, config
-                .getBoolean(ConfigItems.INCLUDE_SUBDUCTION_FAULT_SOURCE.name()));
+        erf
+                .setParameter(
+                        GEM1ERF.INCLUDE_SUBDUCTION_SOURCES_PARAM_NAME,
+                        config
+                                .getBoolean(ConfigItems.INCLUDE_SUBDUCTION_FAULT_SOURCE
+                                        .name()));
         // rupture offset
         erf.setParameter(GEM1ERF.SUB_RUP_OFFSET_PARAM_NAME, config
                 .getDouble(ConfigItems.SUBDUCTION_FAULT_RUPTURE_OFFSET.name()));
@@ -820,10 +811,12 @@ public class LogicTreeProcessor {
                 .getDouble(ConfigItems.SUBDUCTION_FAULT_SURFACE_DISCRETIZATION
                         .name()));
         // mag-scaling relationship
-        erf.setParameter(
-                GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME,
-                config.getString(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP
-                        .name()));
+        erf
+                .setParameter(
+                        GEM1ERF.SUB_MAG_SCALING_REL_PARAM_NAME,
+                        config
+                                .getString(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP
+                                        .name()));
         // mag-scaling sigma
         erf.setParameter(GEM1ERF.SUB_SCALING_SIGMA_PARAM_NAME, config
                 .getDouble(ConfigItems.SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA
@@ -832,18 +825,18 @@ public class LogicTreeProcessor {
         erf.setParameter(GEM1ERF.SUB_RUP_ASPECT_RATIO_PARAM_NAME, config
                 .getDouble(ConfigItems.SUBDUCTION_RUPTURE_ASPECT_RATIO.name()));
         // rupture floating type
-        erf.setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, config
-                .getString(ConfigItems.SUBDUCTION_RUPTURE_FLOATING_TYPE.name()));
+        erf
+                .setParameter(GEM1ERF.SUB_FLOATER_TYPE_PARAM_NAME, config
+                        .getString(ConfigItems.SUBDUCTION_RUPTURE_FLOATING_TYPE
+                                .name()));
 
         // update
         erf.updateForecast();
     } // setGEM1ERFParams()
 
-    public static
-            HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>
-            sampleGemLogicTreeGMPE(
-                    HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE,
-                    long seed) {
+    public static HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> sampleGemLogicTreeGMPE(
+            HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> listLtGMPE,
+            long seed) {
 
         Random rn = null;
         if (seed != 0) {
@@ -903,8 +896,8 @@ public class LogicTreeProcessor {
             return logicTreeReader.read().get("1");
         } else {
             LogicTreeReader logicTreeReader =
-                    new LogicTreeReader(kvs,
-                            config.getString(ConfigItems.SOURCE_MODEL_LOGIC_TREE_FILE
+                    new LogicTreeReader(kvs, config
+                            .getString(ConfigItems.SOURCE_MODEL_LOGIC_TREE_FILE
                                     .name()));
             return logicTreeReader.read().get("1");
         }
