@@ -14,18 +14,18 @@ def startCli() :
     
     # These lines are the same as the imports in Java
     CalculatorConfigData = jpype.JClass(
-	    'org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CalculatorConfigData')
-    CommandLineCalculator = jpype.JClass(
-	    'org.opensha.gem.GEM1.calc.gemCommandLineCalculator.CommandLineCalculator')
+	    'org.opensha.gem.GEM1.calc.gemLogicTreeProcessor.CalculatorConfigData')
+    LogicTreeProcessor = jpype.JClass(
+	    'org.opensha.gem.GEM1.calc.gemLogicTreeProcessor.LogicTreeProcessor')
     ErfLogicTreeData = jpype.JClass(
-	    'org.opensha.gem.GEM1.calc.gemCommandLineCalculator.ErfLogicTreeData')
+	    'org.opensha.gem.GEM1.calc.gemLogicTreeProcessor.ErfLogicTreeData')
     GmpeLogicTreeData = jpype.JClass(
-	    'org.opensha.gem.GEM1.calc.gemCommandLineCalculator.GmpeLogicTreeData')
+	    'org.opensha.gem.GEM1.calc.gemLogicTreeProcessor.GmpeLogicTreeData')
     InputModelData = jpype.JClass(
-	    'org.opensha.gem.GEM1.calc.gemCommandLineCalculator.InputModelData')
+	    'org.opensha.gem.GEM1.calc.gemLogicTreeProcessor.InputModelData')
 	    
     # We can instantiate python classes as python-normal
-    # calculator = CommandLineCalculator()
+    # calculator = LogicTreeProcessor()
     calcConfigData = CalculatorConfigData("CalculatorConfig.inp")
     # We can also access members of imported classes and call methods on our
     # instances of java classes.
