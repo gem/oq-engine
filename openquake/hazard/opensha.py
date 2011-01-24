@@ -22,7 +22,6 @@ from openquake.output import geotiff
 
 LOG = logs.LOG
 
-
 def preload(fn): # pylint: disable=E0213
     """A decorator for preload steps that must run on the Jobber node"""
     def preloader(self, *args, **kwargs):
@@ -30,7 +29,7 @@ def preload(fn): # pylint: disable=E0213
         self.cache = java.jclass("KVS")(
                 settings.KVS_HOST, 
                 settings.KVS_PORT)
-        self.calc = java.jclass("CommandLineCalculator")(
+        self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
         return fn(self, *args, **kwargs) # pylint: disable=E1102
     return preloader
