@@ -6,7 +6,9 @@ import static org.junit.Assert.assertTrue;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.gem.JsonSerializer;
@@ -14,7 +16,10 @@ import org.gem.ScalarIMRJsonAdapter;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.Before;
 import org.junit.Test;
+import org.opensha.commons.data.DataPoint2D;
+import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -35,16 +40,88 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
 import com.google.gson.reflect.TypeToken;
 
 public class JsonSerializerTest {
 
     private ArrayList<GEMSourceData> sourceList;
+    private static final String TEST_CURVE_JSON =
+            "[{\"y\":\"0.0\",\"x\":\"-5.2983174\"},{\"y\":\"1.0\",\"x\":\"0.756122\"}]";
+    private static final String TEST_HAZARD_CURVE_JSON_1 =
+            String
+                    .format(
+                            "{\"site_lon\":\"-118.3\",\"site_lat\":\"34.12\",\"curve\":%s}",
+                            TEST_CURVE_JSON);
+    private static final String TEST_HAZARD_CURVE_JSON_2 =
+            String
+                    .format(
+                            "{\"site_lon\":\"-118.16\",\"site_lat\":\"33.88\",\"curve\":%s}",
+                            TEST_CURVE_JSON);
 
     @Before
     public void setUp() {
         sourceList = new ArrayList<GEMSourceData>();
+    }
+
+    @Test
+    public void testHazardCurvesToJson() {
+        List<String> expectedResults = new ArrayList<String>();
+        expectedResults.add(TEST_HAZARD_CURVE_JSON_1);
+        expectedResults.add(TEST_HAZARD_CURVE_JSON_2);
+
+        Site site1, site2;
+        site1 = new Site();
+        site2 = new Site();
+
+        Location loc1, loc2;
+        loc1 = new Location(34.12, -118.3); // lat, lon
+        loc2 = new Location(33.88, -118.16);
+
+        site1.setLocation(loc1);
+        site2.setLocation(loc2);
+
+        Map<Site, DiscretizedFuncAPI> testMap =
+                new HashMap<Site, DiscretizedFuncAPI>();
+        testMap.put(site1, new TestCurve());
+        testMap.put(site2, new TestCurve());
+
+        // order matters
+        List<Site> siteList = new ArrayList<Site>();
+        siteList.add(site1);
+        siteList.add(site2);
+
+        List<String> actualResults =
+                JsonSerializer.hazardCurvesToJson(testMap, siteList);
+
+        assertTrue(hazCurvesJsonResultsAreEqual(expectedResults, actualResults));
+    }
+
+    /**
+     * Returns false of the two lists don't match (taking into account order).
+     * Returns false if the test loop is not entered.
+     * 
+     * @param expected
+     * @param actual
+     * @return
+     */
+    private static boolean hazCurvesJsonResultsAreEqual(List<String> expected,
+            List<String> actual) {
+        boolean match = false;
+        for (int i = 0; i < expected.size(); i++) {
+            match = expected.get(i).equals(actual.get(i));
+        }
+        return match;
+    }
+
+    @Test
+    public void testCurveToJsonElement() {
+        DiscretizedFuncAPI curve = new TestCurve();
+        Gson gson = new Gson();
+        JsonElement json = JsonSerializer.curveToJsonElement(curve, gson);
+        assertEquals(TEST_CURVE_JSON, json.toString());
     }
 
     /**
@@ -145,20 +222,11 @@ public class JsonSerializerTest {
 
     private void compareCommonParams(
             List<GEMSourceData> sourceListDeserialized, int sourceIndex) {
-        assertTrue(sourceList
-                .get(sourceIndex)
-                .getID()
-                .equalsIgnoreCase(
-                        sourceListDeserialized.get(sourceIndex).getID()));
-        assertTrue(sourceList
-                .get(sourceIndex)
-                .getName()
-                .equalsIgnoreCase(
-                        sourceListDeserialized.get(sourceIndex).getName()));
-        assertTrue(sourceList
-                .get(sourceIndex)
-                .getTectReg()
-                .toString()
+        assertTrue(sourceList.get(sourceIndex).getID().equalsIgnoreCase(
+                sourceListDeserialized.get(sourceIndex).getID()));
+        assertTrue(sourceList.get(sourceIndex).getName().equalsIgnoreCase(
+                sourceListDeserialized.get(sourceIndex).getName()));
+        assertTrue(sourceList.get(sourceIndex).getTectReg().toString()
                 .equalsIgnoreCase(
                         sourceListDeserialized.get(sourceIndex).getTectReg()
                                 .toString()));
@@ -167,10 +235,10 @@ public class JsonSerializerTest {
     private void compareSubductionFaultSourceData(
             GEMSubductionFaultSourceData srcOriginal,
             GEMSubductionFaultSourceData srcDeserialized) {
-        compareFaultTraces(srcOriginal.getTopTrace(),
-                srcDeserialized.getTopTrace());
-        compareFaultTraces(srcOriginal.getBottomTrace(),
-                srcDeserialized.getBottomTrace());
+        compareFaultTraces(srcOriginal.getTopTrace(), srcDeserialized
+                .getTopTrace());
+        compareFaultTraces(srcOriginal.getBottomTrace(), srcDeserialized
+                .getBottomTrace());
         assertTrue(srcOriginal.getRake() == srcDeserialized.getRake());
         assertTrue(srcOriginal.getFloatRuptureFlag() == srcDeserialized
                 .getFloatRuptureFlag());
@@ -203,10 +271,8 @@ public class JsonSerializerTest {
 
     private void comparePointSourceData(GEMPointSourceData srcOriginal,
             GEMPointSourceData srcDeserialized) {
-        assertTrue(srcOriginal
-                .getHypoMagFreqDistAtLoc()
-                .getLocation()
-                .equals(srcDeserialized.getHypoMagFreqDistAtLoc().getLocation()));
+        assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getLocation().equals(
+                srcDeserialized.getHypoMagFreqDistAtLoc().getLocation()));
         assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getNumMagFreqDists() == srcDeserialized
                 .getHypoMagFreqDistAtLoc().getNumMagFreqDists());
         assertTrue(srcOriginal.getHypoMagFreqDistAtLoc().getNumFocalMechs() == srcDeserialized
@@ -538,5 +604,46 @@ public class JsonSerializerTest {
                 new GEMSubductionFaultSourceData(id, name, tectReg, topTrc,
                         bottomTrc, rake, magDist, floatRuptureFlag);
         return subduc;
+    }
+
+    /**
+     * Test implementation of Discretized FuncAPI. This is a partial
+     * implementation including only what we need for tests.
+     * 
+     * @author larsbutler
+     * 
+     */
+    static class TestCurve extends ArbitrarilyDiscretizedFunc {
+
+        static final double[] X_VALS = { -5.2983174, 0.756122 };
+        static final double[] Y_VALS = { 0.0, 1.0 };
+
+        @Override
+        public Iterator<DataPoint2D> getPointsIterator() {
+            return new Iterator<DataPoint2D>() {
+
+                private int count = 0;
+
+                @Override
+                public boolean hasNext() {
+                    return count < X_VALS.length;
+                }
+
+                @Override
+                public DataPoint2D next() {
+                    DataPoint2D point =
+                            new DataPoint2D(X_VALS[count], Y_VALS[count]);
+                    count++;
+                    return point;
+                }
+
+                @Override
+                public void remove() {
+                    // TODO Auto-generated method stub
+
+                }
+            };
+        }
+
     }
 }

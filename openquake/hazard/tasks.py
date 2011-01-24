@@ -9,13 +9,15 @@ The following tasks are defined in the hazard engine:
 
 import json
 
+from celery.decorators import task
+from celery.task.sets import subtask
+
 from openquake import job
 from openquake import kvs
 
 from openquake.hazard import job as hazjob
-from openquake.job import mixins, Block
-
-from celery.decorators import task
+from openquake.hazard import classical_psha
+from openquake.job import mixins
 
 
 @task
@@ -54,41 +56,16 @@ def write_out_ses(job_file, stochastic_set_key):
         hazengine.write_gmf_files(ses) #pylint: disable=E1101
 
 @task
-def compute_hazard_curve(job_id, block_id):
-    """
-    Stubbed Compute Hazard Curve
+def compute_hazard_curve(job_id, site_list, realization, callback=None):
+    """ Generate hazard curve for a given site list. """
+    hazengine = job.Job.from_kvs(job_id)
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+        keys = hazengine.compute_hazard_curve(site_list, realization)
 
-    This should connect to the Java HazardEngine using hazard wrapper,
-    wait for the hazard curve to be computed, and then write it to 
-    memcached.
-    """
+        if callback:
+            subtask(callback).delay(job_id, site_list)
 
-    def _compute_hazard_curve(job_id, block_id, site_id):
-        """
-        Inner class to dry things up.
-        """
-        memcache_client = kvs.get_client(binary=False)
-
-        chf_key = kvs.generate_product_key(job_id, 
-            kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site_id)
-
-        chf = memcache_client.get(chf_key)
-
-        if not chf:
-            # TODO(jm): implement hazardwrapper and make this work
-            # TODO(chris): uncomment below when hazardwrapper is done.
-
-            # Synchronous execution.
-            #result = hazardwrapper.apply(args=[job_if, block_id, site_id])
-            #chf = memcache_client.get(chf_key)
-            pass
-        return chf
-
-    # We want all sites for this block.
-    sites = Block.from_kvs(block_id).sites
-
-    if sites is not None:
-        return [_compute_hazard_curve(job_id, block_id, site) for site in sites]
+        return keys
 
 @task
 def compute_mgm_intensity(job_id, block_id, site_id):
@@ -112,3 +89,38 @@ def compute_mgm_intensity(job_id, block_id, site_id):
         pass
 
     return json.JSONDecoder().decode(mgm)
+
+
+@task(ignore_result=True)
+def compute_mean_curves(job_id, sites):
+    """Compute the mean hazard curve for each site given."""
+
+    # pylint: disable=E1101
+    logger = compute_mean_curves.get_logger()
+
+    logger.info("Computing MEAN curves for %s sites (job_id %s)"
+            % (len(sites), job_id))
+
+    classical_psha.compute_mean_hazard_curves(job_id, sites)
+    subtask(compute_quantile_curves).delay(job_id, sites)
+
+
+@task(ignore_result=True)
+def compute_quantile_curves(job_id, sites):
+    """Compute the quantile hazard curve for each site given."""
+
+    # pylint: disable=E1101
+    logger = compute_quantile_curves.get_logger()
+
+    logger.info("Computing QUANTILE curves for %s sites (job_id %s)"
+            % (len(sites), job_id))
+
+    engine = job.Job.from_kvs(job_id)
+    classical_psha.compute_quantile_hazard_curves(engine, sites)
+    subtask(serialize_quantile_curves).delay(job_id, sites)
+
+
+@task(is_eager=True, ignore_result=True)
+def serialize_quantile_curves(job_id, sites):
+    """Serialize quantile curves for the given sites."""
+    print "Job ID is %s" % job_id

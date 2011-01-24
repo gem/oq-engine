@@ -295,7 +295,7 @@ class Job(object):
             config.write(configfile)
 
     def _slurp_files(self):
-        """Read referenced files and write them into memcached, key'd on their
+        """Read referenced files and write them into redis, keyed on their
         sha1s."""
         memcached_client = kvs.get_client(binary=False)
         if self.base_path is None:
@@ -313,12 +313,21 @@ class Job(object):
                     self.params[key] = sha1
 
     def to_kvs(self, write_cfg=True):
-        """Store this job into memcached."""
+        """Store this job into redis."""
         self._slurp_files()
         if write_cfg:
             self._write_super_config()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
+
+    def site_list_generator(self):
+        """Will subset and yield portions of the region, depending on the 
+        the computation mode."""
+        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+        coords = zip(verts[1::2], verts[::2])
+        region = shapes.Region.from_coordinates(coords)
+        region.cell_size = float(self.params['REGION_GRID_SPACING'])
+        yield [site for site in region]
 
 
 class AlwaysTrueConstraint():
