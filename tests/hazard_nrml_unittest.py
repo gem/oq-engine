@@ -14,6 +14,8 @@ from openquake.parser import hazard as hazard_parser
 
 LOG = logs.LOG
 
+NRML_SCHEMA_FILE = 'nrml.xsd'
+
 TEST_FILE = "hazard-curves.xml"
 TEST_FILE_SINGLE_RESULT = "hazard-curves-single.xml"
 TEST_FILE_MULTIPLE_ONE_BRANCH = "hazard-curves-multiple-one-branch.xml"
@@ -52,27 +54,22 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     """Unit tests for the HazardCurveXMLWriter class, which serializes
     hazard curves to NRML."""
 
-    def setUp(self):
-        #self._delete_test_file(path)
-        #self.writer = hazard_output.HazardCurveXMLWriter(
-                #test.test_output_file(TEST_FILE))
-        pass
-
-    def tearDown(self):
-        #self._delete_test_file(path)
-        pass
+    def _remove_and_write_file(self, path):
+        if os.path.isfile(path):
+            os.remove(path)
+        self.writer = hazard_output.HazardCurveXMLWriter(path)
 
     def _is_xml_valid(self, path):
         xml_doc = etree.parse(path)
 
         # test that the doc matches the schema
-        schema_path = os.path.join(test.SCHEMA_DIR, "nrml.xsd")
+        schema_path = os.path.join(test.SCHEMA_DIR, NRML_SCHEMA_FILE)
         xmlschema = etree.XMLSchema(etree.parse(schema_path))
         xmlschema.assertValid(xml_doc)
 
     def test_raises_an_error_if_no_curve_is_serialized(self):
         path = test.test_output_file(TEST_FILE)
-        self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self._remove_and_write_file(path)
         self.assertRaises(RuntimeError, self.writer.close)
 
     def test_writes_a_single_result(self):
@@ -95,7 +92,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]}}
 
         path = test.test_output_file(TEST_FILE_SINGLE_RESULT)
-        self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self._remove_and_write_file(path)
 
         self.writer.serialize(data)
         self._is_xml_valid(path)
@@ -144,7 +141,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}}
 
         path = test.test_output_file(TEST_FILE_MULTIPLE_ONE_BRANCH)
-        self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self._remove_and_write_file(path)
 
         self.writer.serialize(data)
         self._is_xml_valid(path)
@@ -196,7 +193,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}}
 
         path = test.test_output_file(TEST_FILE_STATISTICS)
-        self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self._remove_and_write_file(path)
 
         self.writer.serialize(data)
         self._is_xml_valid(path)
@@ -227,7 +224,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                 }
         
         path = test.test_output_file(TEST_FILE_CONFIG_ONCE)
-        self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self._remove_and_write_file(path)
 
         self.writer.serialize(data)
         self._is_xml_valid(path)
@@ -253,7 +250,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     "poE": [0.1, 0.2, 0.3]}}
 
         path = test.test_output_file(TEST_FILE_MULTIPLE_DIFFERENT_BRANCHES)
-        self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self._remove_and_write_file(path)
 
         self.writer.serialize(data)
         self._is_xml_valid(path)
