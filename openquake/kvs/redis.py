@@ -72,5 +72,5 @@ class Redis(object):
         return call
 
     def get_multi(self, keys):
-        """ Return value of multiple keys identically to the memcached way """
+        """ Return value of multiple keys identically to the kvs way """
         return dict(zip(keys, self.mget(keys)))
