@@ -58,7 +58,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 pass
 
     def test_hazard_engine_jobber_runs(self):
-        """Construction of CommandLineCalculator in Java should not throw
+        """Construction of LogicTreeProcessor in Java should not throw
         errors, and should have params loaded from memcached."""
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
