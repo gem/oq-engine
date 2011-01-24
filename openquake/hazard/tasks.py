@@ -100,7 +100,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN,
         block_id, site_id)
-    mgm = mkvs_client.get(mgm_key)
+    mgm = kvs_client.get(mgm_key)
 
     if not mgm:
         # TODO(jm): implement hazardwrapper and make this work.
