@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
-Eventually this will manage shared system state via memcached,
+Eventually this will manage shared system state via kvs,
 for now it's just global variables :)
 """
 
