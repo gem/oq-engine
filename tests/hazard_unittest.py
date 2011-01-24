@@ -78,13 +78,9 @@ class HazardEngineTestCase(unittest.TestCase):
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
             
     def test_hazard_engine_worker_runs(self):
-<<<<<<< HEAD
-        """Construction of LogicTreeProcessor in Java should not throw
-        errors, and should have params loaded from memcached."""
-=======
         """Construction of CommandLineCalculator in Java should not throw
         errors, and should have params loaded from kvs."""
->>>>>>> e7d781275aeca39f3e89da81af05ef8f05b05143
+
         site_id = 1
         job_id = generate_job()
         hazengine = job.Job.from_kvs(job_id)
