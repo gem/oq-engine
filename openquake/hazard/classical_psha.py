@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Collection of functions that compute stuff using hazard curves as input.
+Collection of functions that compute stuff using
+as input data produced with the classical psha method.
 """
 
 from numpy import array # pylint: disable=E1101, E0611
