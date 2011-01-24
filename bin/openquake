@@ -102,7 +102,7 @@ def _launch_server_subprocs():
         Process(target=local, args=('sudo rabbitmq-server',)).start()
 
  
-    # launch memcached if it's not already running
+    # launch kvs if it's not already running
     if not _is_running('[r]edis-server'):
         print "Starting redis-server..."
         Process(target=local, args=('redis-server',)).start()

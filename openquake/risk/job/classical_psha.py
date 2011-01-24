@@ -5,7 +5,7 @@
 class ClassicalPSHABasedMixin:
     """ STUB STUB STUB """
     def store_hazard_curves(self):
-        """ Get the regions from the region file and store them in memcached
+        """ Get the regions from the region file and store them in kvs
         """
 
         # load hazard curve file and write to memcache_client
