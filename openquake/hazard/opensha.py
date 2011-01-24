@@ -160,7 +160,7 @@ class ClassicalMixin(BasePSHAMixin):
     def execute(self):
        
         results = []
-        
+ 
         source_model_generator = random.Random()
         source_model_generator.seed(
                 self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
@@ -170,8 +170,14 @@ class ClassicalMixin(BasePSHAMixin):
         
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
-        LOG.info('Going to run classical PSHA hazard for %s realizations'
-                % realizations)
+        # tally and log the total number of sites
+        total_sites = 0
+        for site_list in self.site_list_generator():
+            total_sites += len(site_list)
+
+        LOG.info('Going to run classical PSHA hazard for \
+%s realizations and %s sites'
+                % (realizations, total_sites))
 
         for realization in range(0, realizations):
             LOG.info('Calculatiing hazard curves for realization %s'
