@@ -170,6 +170,8 @@ class ClassicalMixin(BasePSHAMixin):
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
         # tally and log the total number of sites
+        # TODO (LB): with a large number of sites, this could get expensive
+        # and we might want to change this
         total_sites = 0
         for site_list in self.site_list_generator():
             total_sites += len(site_list)
