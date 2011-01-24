@@ -22,7 +22,7 @@ def _to_site(element):
     """Convert current GML attributes to Site object"""
     # lon/lat are in XML attributes 'Longitude' and 'Latitude'
     # consider them as mandatory
-    pos_el = element.xpath("gml:pos", namespaces={"gml":GML_NS})
+    pos_el = element.xpath("gml:pos", namespaces={"gml": GML_NS})
     coord = [float(x) for x in pos_el[0].text.strip().split()]
     return shapes.Site(coord[0], coord[1])
 
@@ -114,7 +114,7 @@ class NrmlFile(producer.FileProducer):
         # consider all attributes of HazardProcessing element as mandatory 
         for (required_attribute, attrib_type) in [('endBranchLabel', str)]:
             (haz_list_element,) = element.xpath("..", 
-                namespaces={"gml":GML_NS,"nrml":NRML_NS})
+                namespaces={"gml": GML_NS, "nrml": NRML_NS})
             attr_value = haz_list_element.get(required_attribute)
             if attr_value is not None:
                 attributes[required_attribute] = \
