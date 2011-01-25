@@ -23,7 +23,9 @@ from openquake import logs
 
 LOG = logs.LOG
 
-# NOTE(fab): shouldn't numpy.log10 be used?
+# NOTE: this refers to how the values are stored in KVS. In the config
+# file, values are stored untransformed (i.e., the list of IMLs is
+# not stored as logarithms).
 IML_SCALING = {'PGA' : numpy.log,  # pylint: disable=E1101
                'MMI' : lambda iml: iml,
                'PGV' : numpy.log, # pylint: disable=E1101
