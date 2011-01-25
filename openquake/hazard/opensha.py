@@ -23,6 +23,13 @@ from openquake import logs
 
 LOG = logs.LOG
 
+IML_SCALING = {'PGA' : numpy.log,  # pylint: disable=E1101
+               'MMI' : lambda iml: iml,
+               'PGV' : numpy.log, # pylint: disable=E1101
+               'PGD' : numpy.log, # pylint: disable=E1101
+               'SA' : numpy.log,  # pylint: disable=E1101
+              }
+
 def preload(fn): # pylint: disable=E0213
     """A decorator for preload steps that must run on the Jobber node"""
     def preloader(self, *args, **kwargs):
@@ -95,18 +102,12 @@ class BasePSHAMixin(Mixin):
         
     def get_iml_list(self):
         """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""        
-        iml_vals = {'PGA' : numpy.log,  # pylint: disable=E1101
-                    'MMI' : lambda iml: iml,
-                    'PGV' : numpy.log, # pylint: disable=E1101
-                    'PGD' : numpy.log, # pylint: disable=E1101
-                    'SA' : numpy.log,  # pylint: disable=E1101
-                     }
+        based on the IMT""" 
         
         iml_list = java.jclass("ArrayList")()
         for val in self.params['INTENSITY_MEASURE_LEVELS'].split(","):
             iml_list.add(
-                iml_vals[self.params['INTENSITY_MEASURE_TYPE']](
+                IML_SCALING[self.params['INTENSITY_MEASURE_TYPE']](
                 float(val)))
         return iml_list
 
@@ -165,12 +166,11 @@ class ClassicalMixin(BasePSHAMixin):
         for site_list in self.site_list_generator():
             total_sites += len(site_list)
 
-        LOG.info('Going to run classical PSHA hazard for \
-%s realizations and %s sites'
-                % (realizations, total_sites))
+        LOG.info('Going to run classical PSHA hazard for %s realizations '\
+                 'and %s sites' % (realizations, total_sites))
 
-        for realization in range(0, realizations):
-            LOG.info('Calculatiing hazard curves for realization %s'
+        for realization in xrange(0, realizations):
+            LOG.info('Calculating hazard curves for realization %s'
                      % realization)
             pending_tasks = []
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -186,9 +186,68 @@ class ClassicalMixin(BasePSHAMixin):
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
                 results.extend(task.result)
+                self.write_hazardcurve_file(realization, task.result)
+
         return results
 
+    def write_hazardcurve_file(self, realization, curve_keys):
+        """Generate a NRML file with hazard curves for an endBranch 
+        (= realization).
+
+        realization is an integer value, it is used for the NRML file name.
+        curve_keys is a list of KVS keys of the hazard curves to be
+        serialized."""
+
+        LOG.debug("Generating NRML hazard curve file for realization %s, "\
+            "%s hazard curves" % (realization, len(curve_keys)))
+        nrml_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
+                                 "hazardcurve-%s.xml" % realization)
+        
+        xmlwriter = hazard_output.HazardCurveXMLWriter(nrml_path)
+        hc_data = []
+        iml_reference = []
+        
+        for hc_key in curve_keys:
+            hc = kvs.get_value_json_decoded(hc_key)
+            site_obj = shapes.Site(float(hc['site_lon']), 
+                                   float(hc['site_lat']))
+
+            # extract hazard curve abscissa (IML) and ordinate (PoE) from KVS
+            # NOTE(fab): this way of storing the HC data in KVS is not very
+            # efficient, we should store the abscissae and ordinates
+            # separately as lists and not make pairs of them
+            curve_iml = []
+            curve_poe = []
+            for curve_pair in hc['curve']:
+
+                # TODO(fab): should we apply the inverse IML scaling here,
+                # i.e., convert PGA values from logarithmic, as in KVS,
+                # to non-logarithmic? If we write logarithmic values to NRML,
+                # we should indicate this using an XML attribute.
+                curve_iml.append(float(curve_pair['x']))
+                curve_poe.append(float(curve_pair['y']))
             
+            # LOG.debug("IML %s" % (curve_iml))
+
+            # check if current IML from KVS differs from first one in list
+            if len(iml_reference) == 0:
+                iml_reference = curve_iml
+            elif curve_iml != iml_reference:
+                error_msg = "IML lists from KVS differ within one " \
+                    "realization/end branch in hazard curve serialization"
+                raise ValueError(error_msg)
+
+            hc_attrib = {'investigationTimeSpan': 
+                            self.params['INVESTIGATION_TIME'],
+                         'IML': curve_iml,
+                         'IMT': self.params['INTENSITY_MEASURE_TYPE'],
+                         'endBranchLabel': str(realization),
+                         'poE': curve_poe}
+            hc_data.append((site_obj, hc_attrib))
+
+        xmlwriter.serialize(hc_data)
+        return nrml_path
+
     @preload
     def compute_hazard_curve(self, site_list, realization):
         """ Compute hazard curves, write them to KVS as JSON,

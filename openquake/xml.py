@@ -3,6 +3,8 @@
 """Constants and helper functions for XML processing,
 including namespaces, and namespace maps."""
 
+NRML_SCHEMA_FILE = 'nrml.xsd'
+
 NRML_NS = 'http://openquake.org/xmlns/nrml/0.1'
 GML_NS = 'http://www.opengis.net/gml'
 QUAKEML_NS = 'http://quakeml.org/xmlns/quakeml/1.1'
