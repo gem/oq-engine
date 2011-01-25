@@ -17,6 +17,7 @@ from openquake import shapes
 from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
+from openquake.kvs import tokens
 from openquake.output import geotiff
 from openquake.output import hazard as hazard_output
 from openquake import logs
@@ -201,14 +202,39 @@ class ClassicalMixin(BasePSHAMixin):
         curve_keys is a list of KVS keys of the hazard curves to be
         serialized."""
 
+        # do we have a simple realization or a mean/quantile curve?
+        # if the list of keys contains one for a mean or quantile curve,
+        # assume that curve type for all
+
+        LOG.debug("KEYS (%s): %s" % (len(curve_keys), curve_keys))
+
+        if len(kvs.mget("%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, 
+            self.id))) > 0:
+            hc_attrib_update = {'statistics': 'mean'}
+            filename_part = 'mean'
+
+        elif len(kvs.mget("%s*%s*" % (
+            kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, self.id))) > 0:
+
+            # get quantile value from KVS key
+            quantile_value = 0.5
+            hc_attrib_update = {'statistics': 'quantile',
+                                'quantileValue': quantile_value}
+            filename_part = "quantile-%.2f" % quantile_value
+
+        else:
+            # default: use realization
+            hc_attrib_update = {'endBranchLabel': str(realization)}
+            filename_part = str(realization) 
+
         nrml_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
-                                 "hazardcurve-%s.xml" % realization)
+                                 "hazardcurve-%s.xml" % filename_part)
         iml_list = [float(param) 
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
         
         LOG.debug("Generating NRML hazard curve file for realization %s, "\
-            "%s hazard curves" % (realization, len(curve_keys)))
+            "%s hazard curves" % (filename_part, len(curve_keys)))
         LOG.debug("IML: %s" % iml_list)
 
         xmlwriter = hazard_output.HazardCurveXMLWriter(nrml_path)
@@ -235,8 +261,9 @@ class ClassicalMixin(BasePSHAMixin):
                             self.params['INVESTIGATION_TIME'],
                          'IML': iml_list,
                          'IMT': self.params['INTENSITY_MEASURE_TYPE'],
-                         'endBranchLabel': str(realization),
                          'poE': curve_poe}
+
+            hc_attrib.update(hc_attrib_update)
             hc_data.append((site_obj, hc_attrib))
 
         xmlwriter.serialize(hc_data)
@@ -400,6 +427,11 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
 def gmf_id(history_idx, realization_idx, rupture_idx):
     """ Return a GMF id suitable for use as a KVS key """
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
+
+def _extract_product_type_from_kvs_key(kvs_key):
+    (product_type, sep, part_after) = kvs_key.partition(
+        kvs.MEMCACHE_KEY_SEPARATOR)
+    return product_type
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
