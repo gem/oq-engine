@@ -28,7 +28,7 @@ def generate_erf(job_id):
     Takes a job_id, returns a job_id. 
 
     Connects to the Java HazardEngien using hazardwrapper, waits for an ERF to
-    be generated, and then writes it to memcached. 
+    be generated, and then writes it to kvs. 
     """
 
     # TODO(JM): implement real ERF computation
@@ -73,11 +73,11 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     Compute mean ground intensity for a specific site.
     """
 
-    memcached_client = kvs.get_client(binary=False)
+    kvs_client = kvs.get_client(binary=False)
 
     mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN,
         block_id, site_id)
-    mgm = memcached_client.get(mgm_key)
+    mgm = kvs_client.get(mgm_key)
 
     if not mgm:
         # TODO(jm): implement hazardwrapper and make this work.
@@ -85,7 +85,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
         # Synchronous execution.
         #result = hazardwrapper.apply(args=[job_id, block_id, site_id])
-        #mgm = memcached_client.get(mgm_key)
+        #mgm = kvs_client.get(mgm_key)
         pass
 
     return json.JSONDecoder().decode(mgm)
