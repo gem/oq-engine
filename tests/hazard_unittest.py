@@ -7,18 +7,26 @@ import time
 import unittest
 import numpy
 
+from lxml import etree
+
 from openquake import hazard
+from openquake import job
 from openquake import kvs
+from openquake import logs
 from openquake import shapes
 from openquake import test
-from openquake import job
+from openquake import xml
+
 from openquake.job import mixins
 from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
+
 from tests.kvs_unittest import ONE_CURVE_MODEL
+
+LOG = logs.LOG
 
 MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.0500 +35.0000", "intensity": 1.9623e+00, \
@@ -59,7 +67,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_hazard_engine_jobber_runs(self):
         """Construction of LogicTreeProcessor in Java should not throw
-        errors, and should have params loaded from memcached."""
+        errors, and should have params loaded from KVS."""
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
@@ -87,8 +95,8 @@ class HazardEngineTestCase(unittest.TestCase):
             
             expected_keys = []
             realizations = int(hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-            print "dir of hazengine is", dir(hazengine)
-            for realization in range(0, realizations):    
+            # LOG.debug("dir of hazengine is %s" % dir(hazengine))
+            for realization in xrange(0, realizations):    
                 for site_list in hazengine.site_list_generator():
                     for site in site_list:
                         key = tokens.hazard_curve_key(hazengine.id,
@@ -106,8 +114,27 @@ class HazardEngineTestCase(unittest.TestCase):
             # results to verify they are correct
             for key in result_keys:
                 value = self.kvs_client.get(key)
-                print "kvs value is", value
-                self.assertTrue(value != None) 
+                # LOG.debug("kvs value is %s" % value)
+                self.assertTrue(value != None)
+
+        def verify_haz_curves_stored_to_nrml(hazengine):
+            """Tests that a NRML file has been written for each realization,
+            and that this file validates against the NRML schema.
+            Does NOT test if results in NRML file are correct.
+            """
+            realizations = int(hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+            for realization in xrange(0, realizations):
+                nrml_path = os.path.join(
+                    "smoketests/classical_psha_simple/computed_output",
+                    "hazardcurve-%s.xml" % realization)
+
+                LOG.debug("validating NRML file %s" % (nrml_path))
+
+                xml_doc = etree.parse(nrml_path)
+                schema_path = os.path.join(test.SCHEMA_DIR, 
+                    xml.NRML_SCHEMA_FILE)
+                xmlschema = etree.XMLSchema(etree.parse(schema_path))
+                xmlschema.assertValid(xml_doc)
 
         test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
@@ -116,6 +143,7 @@ class HazardEngineTestCase(unittest.TestCase):
             result_keys = hazengine.execute()
             verify_order_of_haz_curve_keys(hazengine, result_keys)
             verify_haz_curves_stored_to_kvs(result_keys)
+            verify_haz_curves_stored_to_nrml(hazengine)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
@@ -125,7 +153,7 @@ class HazardEngineTestCase(unittest.TestCase):
         self.assertEqual(TASK_JOBID_SIMPLE,
                          [result.get() for result in results])
 
-    def test_generate_erf_returns_erf_via_memcached(self):
+    def test_generate_erf_returns_erf_via_kvs(self):
         results = []
         result_keys = []
         expected_values = {}
