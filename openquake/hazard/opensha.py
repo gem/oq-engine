@@ -23,6 +23,7 @@ from openquake import logs
 
 LOG = logs.LOG
 
+# NOTE(fab): shouldn't numpy.log10 be used?
 IML_SCALING = {'PGA' : numpy.log,  # pylint: disable=E1101
                'MMI' : lambda iml: iml,
                'PGV' : numpy.log, # pylint: disable=E1101
