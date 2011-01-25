@@ -4,7 +4,7 @@
 State
 ====================
 
-Eventually this will manage shared system state via memcached, for now it's just global variables :)
+Eventually this will manage shared system state via kvs, for now it's just global variables :)
 
 
 The :mod:`state` Module
