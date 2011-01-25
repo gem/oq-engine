@@ -58,8 +58,10 @@ class HazardEngineTestCase(unittest.TestCase):
                 pass
 
     def test_hazard_engine_jobber_runs(self):
-        """Construction of LogicTreeProcessor in Java should not throw
-        errors, and should have params loaded from memcached."""
+
+        """Construction of CommandLineCalculator in Java should not throw
+        errors, and should have params loaded from kvs."""
+
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
@@ -125,7 +127,7 @@ class HazardEngineTestCase(unittest.TestCase):
         self.assertEqual(TASK_JOBID_SIMPLE,
                          [result.get() for result in results])
 
-    def test_generate_erf_returns_erf_via_memcached(self):
+    def test_generate_erf_returns_erf_via_kvs(self):
         results = []
         result_keys = []
         expected_values = {}
