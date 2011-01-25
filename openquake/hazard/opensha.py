@@ -201,48 +201,39 @@ class ClassicalMixin(BasePSHAMixin):
         curve_keys is a list of KVS keys of the hazard curves to be
         serialized."""
 
-        LOG.debug("Generating NRML hazard curve file for realization %s, "\
-            "%s hazard curves" % (realization, len(curve_keys)))
         nrml_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                                  "hazardcurve-%s.xml" % realization)
+        iml_list = [float(param) 
+                    for param
+                    in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
         
+        LOG.debug("Generating NRML hazard curve file for realization %s, "\
+            "%s hazard curves" % (realization, len(curve_keys)))
+        LOG.debug("IML: %s" % iml_list)
+
         xmlwriter = hazard_output.HazardCurveXMLWriter(nrml_path)
         hc_data = []
-        iml_reference = []
         
         for hc_key in curve_keys:
             hc = kvs.get_value_json_decoded(hc_key)
             site_obj = shapes.Site(float(hc['site_lon']), 
                                    float(hc['site_lat']))
 
-            # extract hazard curve abscissa (IML) and ordinate (PoE) from KVS
-            # NOTE(fab): this way of storing the HC data in KVS is not very
+            # extract hazard curve ordinate (PoE) from KVS
+            # NOTE(fab): At the moment, the IMLs are stored along with the 
+            # PoEs in KVS. However, we are using the IML list from config.
+            # The IMLs from KVS are ignored. Note that IMLs from KVS are
+            # in logarithmic form, but the ones from config are not.
+            # The way of storing the HC data in KVS is not very
             # efficient, we should store the abscissae and ordinates
             # separately as lists and not make pairs of them
-            curve_iml = []
             curve_poe = []
             for curve_pair in hc['curve']:
-
-                # TODO(fab): should we apply the inverse IML scaling here,
-                # i.e., convert PGA values from logarithmic, as in KVS,
-                # to non-logarithmic? If we write logarithmic values to NRML,
-                # we should indicate this using an XML attribute.
-                curve_iml.append(float(curve_pair['x']))
                 curve_poe.append(float(curve_pair['y']))
-            
-            # LOG.debug("IML %s" % (curve_iml))
-
-            # check if current IML from KVS differs from first one in list
-            if len(iml_reference) == 0:
-                iml_reference = curve_iml
-            elif curve_iml != iml_reference:
-                error_msg = "IML lists from KVS differ within one " \
-                    "realization/end branch in hazard curve serialization"
-                raise ValueError(error_msg)
 
             hc_attrib = {'investigationTimeSpan': 
                             self.params['INVESTIGATION_TIME'],
-                         'IML': curve_iml,
+                         'IML': iml_list,
                          'IMT': self.params['INTENSITY_MEASURE_TYPE'],
                          'endBranchLabel': str(realization),
                          'poE': curve_poe}
