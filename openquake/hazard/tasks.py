@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 """
@@ -17,6 +18,7 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
+#from openquake.hazard import opensha
 from openquake.job import mixins
 
 
@@ -27,7 +29,7 @@ def generate_erf(job_id):
 
     Takes a job_id, returns a job_id. 
 
-    Connects to the Java HazardEngien using hazardwrapper, waits for an ERF to
+    Connects to the Java HazardEngine using hazardwrapper, waits for an ERF to
     be generated, and then writes it to memcached. 
     """
 
@@ -123,4 +125,5 @@ def compute_quantile_curves(job_id, sites):
 @task(is_eager=True, ignore_result=True)
 def serialize_quantile_curves(job_id, sites):
     """Serialize quantile curves for the given sites."""
-    print "Job ID is %s" % job_id
+    print "Serialize quantile curves: job ID is %s" % job_id
+    # opensha.write_hazardcurve_file()
