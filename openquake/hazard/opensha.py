@@ -198,7 +198,9 @@ class ClassicalMixin(BasePSHAMixin):
         """Generate a NRML file with hazard curves for an endBranch 
         (= realization).
 
-        realization is an integer value, it is used for the NRML file name.
+        realization is either an integer value or one of the keywords
+        'mean' or 'quantile'
+
         curve_keys is a list of KVS keys of the hazard curves to be
         serialized."""
 
@@ -206,26 +208,31 @@ class ClassicalMixin(BasePSHAMixin):
         # if the list of keys contains one for a mean or quantile curve,
         # assume that curve type for all
 
-        LOG.debug("KEYS (%s): %s" % (len(curve_keys), curve_keys))
+        # LOG.debug("KEYS (%s): %s" % (len(curve_keys), curve_keys))
 
-        if len(kvs.mget("%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, 
-            self.id))) > 0:
+        if (realization == 'mean' and 
+            len(kvs.mget("%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, 
+                self.id))) > 0):
             hc_attrib_update = {'statistics': 'mean'}
             filename_part = 'mean'
 
-        elif len(kvs.mget("%s*%s*" % (
-            kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, self.id))) > 0:
+        elif (realization == 'quantile' and 
+            len(kvs.mget("%s*%s*" % (
+            kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, self.id))) > 0):
 
             # get quantile value from KVS key
             quantile_value = 0.5
             hc_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile_value}
             filename_part = "quantile-%.2f" % quantile_value
+            LOG.debug("=====QUANTILE=====")
 
         else:
             # default: use realization
             hc_attrib_update = {'endBranchLabel': str(realization)}
             filename_part = str(realization) 
+
+        LOG.debug("PATH: %s, %s" % (self.base_path, self['OUTPUT_DIR']))
 
         nrml_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                                  "hazardcurve-%s.xml" % filename_part)
