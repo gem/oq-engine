@@ -125,5 +125,19 @@ def compute_quantile_curves(job_id, sites):
 @task(is_eager=True, ignore_result=True)
 def serialize_quantile_curves(job_id, sites):
     """Serialize quantile curves for the given sites."""
-    print "Serialize quantile curves: job ID is %s" % job_id
-    # opensha.write_hazardcurve_file()
+
+    # pylint: disable=E1101
+    logger = serialize_quantile_curves.get_logger()
+
+    logger.debug("Serializing QUANTILE curves for %s sites (job_id %s)" % (
+        len(sites), job_id))
+
+    ## TODO(fab): where to get base_path from?
+    #hazengine = job.Job.from_kvs(job_id)
+    #with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+        #kvs_keys = classical_psha.quantile_hazard_curve_keys_for_job(
+            #hazengine, sites)
+        #print("KVS_KEYS: %s" % kvs_keys)
+        ## TODO(fab): hazengine.base_path is None!
+        #print("PATHS: %s, %s" % (hazengine.base_path, hazengine['OUTPUT_DIR']))
+        ##hazengine.write_hazardcurve_file('quantile', kvs_keys)
