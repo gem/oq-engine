@@ -77,6 +77,35 @@ def curves_at(job_id, site):
     
     return curves
 
+def hazard_curve_keys_for_job(job_id, sites, 
+                              hc_token=kvs.tokens.HAZARD_CURVE_KEY_TOKEN):
+    """Return the KVS keys of hazard curves for a given job_id
+    and for a given list of sites.
+    """
+
+    kvs_keys = []
+    for site in sites:
+        pattern = "%s*%s*%s*%s" % (hc_token, job_id, site.longitude, 
+                                   site.latitude)
+        curr_keys = kvs.get_keys(pattern)
+        if curr_keys is not None and len(curr_keys) > 0:
+            kvs_keys.extend(curr_keys)
+    
+    return kvs_keys
+
+def mean_hazard_curve_keys_for_job(job_id, sites):
+    """Return the KVS keys of mean hazard curves for a given job_id
+    and for a given list of sites.
+    """
+    return hazard_curve_keys_for_job(job_id, sites, 
+        kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN)
+    
+def quantile_hazard_curve_keys_for_job(job_id, sites):
+    """Return the KVS keys of quantile hazard curves for a given job_id
+    and for a given list of sites.
+    """
+    return hazard_curve_keys_for_job(job_id, sites, 
+        kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
 def _extract_quantiles_from_config(job):
     """Extract the set of valid quantiles from the configuration file."""
