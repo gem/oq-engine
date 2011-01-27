@@ -92,8 +92,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     return json.JSONDecoder().decode(mgm)
 
-
-@task(ignore_result=True)
+@task
 def compute_mean_curves(job_id, sites):
     """Compute the mean hazard curve for each site given."""
 
@@ -103,11 +102,10 @@ def compute_mean_curves(job_id, sites):
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    classical_psha.compute_mean_hazard_curves(job_id, sites)
-    subtask(compute_quantile_curves).delay(job_id, sites)
+    return classical_psha.compute_mean_hazard_curves(job_id, sites)
+    #subtask(compute_quantile_curves).delay(job_id, sites)
 
-
-@task(ignore_result=True)
+@task
 def compute_quantile_curves(job_id, sites):
     """Compute the quantile hazard curve for each site given."""
 
@@ -118,26 +116,6 @@ def compute_quantile_curves(job_id, sites):
             % (len(sites), job_id))
 
     engine = job.Job.from_kvs(job_id)
-    classical_psha.compute_quantile_hazard_curves(engine, sites)
-    subtask(serialize_quantile_curves).delay(job_id, sites)
+    return classical_psha.compute_quantile_hazard_curves(engine, sites)
+    #subtask(serialize_quantile_curves).delay(job_id, sites)
 
-
-@task(is_eager=True, ignore_result=True)
-def serialize_quantile_curves(job_id, sites):
-    """Serialize quantile curves for the given sites."""
-
-    # pylint: disable=E1101
-    logger = serialize_quantile_curves.get_logger()
-
-    logger.debug("Serializing QUANTILE curves for %s sites (job_id %s)" % (
-        len(sites), job_id))
-
-    ## TODO(fab): where to get base_path from?
-    #hazengine = job.Job.from_kvs(job_id)
-    #with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
-        #kvs_keys = classical_psha.quantile_hazard_curve_keys_for_job(
-            #hazengine, sites)
-        #print("KVS_KEYS: %s" % kvs_keys)
-        ## TODO(fab): hazengine.base_path is None!
-        #print("PATHS: %s, %s" % (hazengine.base_path, hazengine['OUTPUT_DIR']))
-        ##hazengine.write_hazardcurve_file('quantile', kvs_keys)
