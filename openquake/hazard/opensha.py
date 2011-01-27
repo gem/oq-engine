@@ -177,78 +177,163 @@ class ClassicalMixin(BasePSHAMixin):
             LOG.info('Calculating hazard curves for realization %s'
                      % realization)
             pending_tasks = []
+            results_per_realization = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
             
             for site_list in self.site_list_generator():
                 pending_tasks.append(tasks.compute_hazard_curve.delay(
-                        self.id, site_list, realization,
-                        callback=tasks.compute_mean_curves))
+                        self.id, site_list, realization))
 
             for task in pending_tasks:
                 task.wait()
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
-                results.extend(task.result)
-                self.write_hazardcurve_file(realization, task.result)
+                results_per_realization.extend(task.result)
+
+            self.write_hazardcurve_file(results_per_realization)
+            results.extend(results_per_realization)
+
+        del results_per_realization
+
+        # compute and serialize mean and quantile hazard curves
+        pending_tasks_mean = []
+        results_mean = []
+        pending_tasks_quantile = []
+        results_quantile = []
+
+        LOG.info('Computing mean and quantile hazard curves')
+        for site_list in self.site_list_generator():
+            pending_tasks_mean.append(tasks.compute_mean_curves.delay(
+                self.id, site_list))
+            pending_tasks_quantile.append(tasks.compute_quantile_curves.delay(
+                self.id, site_list))
+
+        for task in pending_tasks_mean:
+            task.wait()
+            if task.status != 'SUCCESS': 
+                raise Exception(task.result)
+            results_mean.extend(task.result)
+
+        for task in pending_tasks_quantile:
+            task.wait()
+            if task.status != 'SUCCESS': 
+                raise Exception(task.result)
+            results_quantile.extend(task.result)
+
+        LOG.info('Serializing mean hazard curves')
+        self.write_hazardcurve_file(results_mean)
+        del results_mean
+
+        # collect hazard curve keys per quantile value
+        quantile_values = {}
+        while len(results_quantile) > 0:
+            quantile_key = results_quantile.pop()
+            curr_qv = tokens.quantile_value_from_hazard_curve_key(
+                quantile_key)
+            if curr_qv not in quantile_values:
+                quantile_values[curr_qv] = []
+            quantile_values[curr_qv].append(quantile_key)
+                
+        LOG.info('Serializing quantile hazard curves for %s quantile values' \
+            % len(quantile_values))
+        for key_list in quantile_values.values():
+            self.write_hazardcurve_file(key_list)
 
         return results
 
-    def write_hazardcurve_file(self, realization, curve_keys):
-        """Generate a NRML file with hazard curves for an endBranch 
-        (= realization).
-
-        realization is either an integer value or one of the keywords
-        'mean' or 'quantile'
-
+    def write_hazardcurve_file(self, curve_keys):
+        """Generate a NRML file with hazard curves for a collection of 
+        hazard curves from KVS, identified through their KVS keys.
+        
         curve_keys is a list of KVS keys of the hazard curves to be
-        serialized."""
+        serialized.
 
-        # do we have a simple realization or a mean/quantile curve?
-        # if the list of keys contains one for a mean or quantile curve,
-        # assume that curve type for all
+        The hazard curve file can be written
+        (1) for a set of hazard curves belonging to the same realization
+            (= endBranchLabel) and a set of sites.
+        (2) for a mean hazard curve at a set of sites
+        (3) for a quantile hazard curve at a set of sites
+
+        Mixing of these three cases is not allowed, i.e., all hazard curves
+        from the set of curve_keys have to be either for the same realization,
+        mean, or quantile.
+        """
 
         # LOG.debug("KEYS (%s): %s" % (len(curve_keys), curve_keys))
 
-        if (realization == 'mean' and 
-            len(kvs.mget("%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, 
-                self.id))) > 0):
+        if _is_mean_hazard_curve_key(curve_keys[0]):
             hc_attrib_update = {'statistics': 'mean'}
             filename_part = 'mean'
+            curve_mode = 'mean'
 
-        elif (realization == 'quantile' and 
-            len(kvs.mget("%s*%s*" % (
-            kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, self.id))) > 0):
+        elif _is_quantile_hazard_curve_key(curve_keys[0]):
 
             # get quantile value from KVS key
-            quantile_value = 0.5
+            quantile_value = tokens.quantile_value_from_hazard_curve_key(
+                curve_keys[0])
             hc_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile_value}
             filename_part = "quantile-%.2f" % quantile_value
-            LOG.debug("=====QUANTILE=====")
+            curve_mode = 'quantile'
+
+        elif _is_realization_hazard_curve_key(curve_keys[0]):
+            realization_reference_str = \
+                tokens.realization_value_from_hazard_curve_key(curve_keys[0])
+            hc_attrib_update = {'endBranchLabel': realization_reference_str}
+            filename_part = realization_reference_str 
+            curve_mode = 'realization'
 
         else:
-            # default: use realization
-            hc_attrib_update = {'endBranchLabel': str(realization)}
-            filename_part = str(realization) 
+            error_msg = "no valid hazard curve type found in KVS key"
+            raise RuntimeError(error_msg)
 
-        LOG.debug("PATH: %s, %s" % (self.base_path, self['OUTPUT_DIR']))
-
-        nrml_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
-                                 "hazardcurve-%s.xml" % filename_part)
+        nrml_file = "hazardcurve-%s.xml" % filename_part
+        nrml_path = os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], 
+            nrml_file)
         iml_list = [float(param) 
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
         
-        LOG.debug("Generating NRML hazard curve file for realization %s, "\
-            "%s hazard curves" % (filename_part, len(curve_keys)))
+        LOG.debug("Generating NRML hazard curve file for mode %s, "\
+            "%s hazard curves: %s" % (curve_mode, len(curve_keys), nrml_file))
         LOG.debug("IML: %s" % iml_list)
 
         xmlwriter = hazard_output.HazardCurveXMLWriter(nrml_path)
         hc_data = []
         
         for hc_key in curve_keys:
+
+            if curve_mode == 'mean' and not _is_mean_hazard_curve_key(hc_key):
+                error_msg = "non-mean hazard curve key found in mean mode"
+                raise RuntimeError(error_msg)
+            
+            elif curve_mode == 'quantile':
+                if not _is_quantile_hazard_curve_key(hc_key):
+                    error_msg = "non-quantile hazard curve key found in "\
+                                "quantile mode"
+                    raise RuntimeError(error_msg)
+
+                elif tokens.quantile_value_from_hazard_curve_key(hc_key) != \
+                    quantile_value:
+                    error_msg = "quantile value must be the same for all "\
+                                "hazard curves in an instance file"
+                    raise ValueError(error_msg)
+
+            elif curve_mode == 'realization':
+                if not _is_realization_hazard_curve_key(hc_key):
+                    error_msg = "non-realization hazard curve key found in "\
+                                "realization mode"
+                    raise RuntimeError(error_msg)
+                elif tokens.realization_value_from_hazard_curve_key(
+                    hc_key) != realization_reference_str:
+                    error_msg = "realization value must be the same for all "\
+                                "hazard curves in an instance file"
+                    raise ValueError(error_msg)
+
             hc = kvs.get_value_json_decoded(hc_key)
+            #LOG.debug("JSON HC: %s" % hc)
+            
             site_obj = shapes.Site(float(hc['site_lon']), 
                                    float(hc['site_lat']))
 
@@ -435,10 +520,17 @@ def gmf_id(history_idx, realization_idx, rupture_idx):
     """ Return a GMF id suitable for use as a KVS key """
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
 
-def _extract_product_type_from_kvs_key(kvs_key):
-    (product_type, sep, part_after) = kvs_key.partition(
-        kvs.MEMCACHE_KEY_SEPARATOR)
-    return product_type
+def _is_realization_hazard_curve_key(kvs_key):
+    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+                tokens.HAZARD_CURVE_KEY_TOKEN)
+
+def _is_mean_hazard_curve_key(kvs_key):
+    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+                tokens.MEAN_HAZARD_CURVE_KEY_TOKEN)
+
+def _is_quantile_hazard_curve_key(kvs_key):
+    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+                tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)

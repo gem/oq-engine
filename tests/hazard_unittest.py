@@ -670,7 +670,8 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_curve,
-                numpy.array(result["curve"]), atol=0.005))
+                classical_psha._extract_y_values_from(result["curve"]), 
+                atol=0.005))
 
     def test_end_to_end(self):
         test_file_path = "smoketests/classical_psha_simple/config.gem"
@@ -681,7 +682,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
             engine.execute()
 
-# TODO (ac): Find out a better way to do this...
+        # TODO(ac): Find out a better way to do this...
         time.sleep(1)
 
         self.assertTrue(len(kvs.mget("%s*%s*" % (
