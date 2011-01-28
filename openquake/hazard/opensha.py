@@ -204,10 +204,12 @@ class ClassicalMixin(BasePSHAMixin):
 
         LOG.info('Computing mean and quantile hazard curves')
         for site_list in self.site_list_generator():
-            pending_tasks_mean.append(tasks.compute_mean_curves.delay(
-                self.id, site_list))
+
             pending_tasks_quantile.append(tasks.compute_quantile_curves.delay(
                 self.id, site_list))
+            if self.params['COMPUTE_MEAN_HAZARD_CURVE'] is True:
+                pending_tasks_mean.append(tasks.compute_mean_curves.delay(
+                    self.id, site_list))
 
         for task in pending_tasks_mean:
             task.wait()
@@ -221,9 +223,10 @@ class ClassicalMixin(BasePSHAMixin):
                 raise Exception(task.result)
             results_quantile.extend(task.result)
 
-        LOG.info('Serializing mean hazard curves')
-        self.write_hazardcurve_file(results_mean)
-        del results_mean
+        if self.params['COMPUTE_MEAN_HAZARD_CURVE'] is True:
+            LOG.info('Serializing mean hazard curves')
+            self.write_hazardcurve_file(results_mean)
+            del results_mean
 
         # collect hazard curve keys per quantile value
         quantile_values = {}
