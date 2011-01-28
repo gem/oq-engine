@@ -152,4 +152,6 @@ def compute_mean_hazard_map(job):
         for mean_curve in mean_curves:
             site = shapes.Site(mean_curve["site_lon"], mean_curve["site_lat"])
             key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
-            kvs.set_value_json_encoded(key, "STUB")
+            
+            im_level = {"vs30": job.params["REFERENCE_VS30_VALUE"]}
+            kvs.set_value_json_encoded(key, im_level)
