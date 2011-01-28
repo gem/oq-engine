@@ -34,6 +34,8 @@ IML_SCALING = {'PGA' : numpy.log,  # pylint: disable=E1101
                'SA' : numpy.log,  # pylint: disable=E1101
               }
 
+HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
+
 def preload(fn): # pylint: disable=E0213
     """A decorator for preload steps that must run on the Jobber node"""
     def preloader(self, *args, **kwargs):
@@ -292,6 +294,7 @@ class ClassicalMixin(BasePSHAMixin):
             raise RuntimeError(error_msg)
 
         nrml_file = "hazardcurve-%s.xml" % filename_part
+
         nrml_path = os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], 
             nrml_file)
         iml_list = [float(param) 
@@ -535,6 +538,18 @@ def _is_quantile_hazard_curve_key(kvs_key):
     return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
                 tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
+def hazard_curve_filename(filename_part):
+    return "%s-%s.xml" % (HAZARD_CURVE_FILENAME_PREFIX, filename_part)
+
+def realization_hc_filename(realization):
+    return hazard_curve_filename(realization)
+
+def mean_hc_filename():
+    return hazard_curve_filename('mean')
+
+def quantile_hc_filename(quantile_value):
+    filename_part = "quantile-%.2f" % quantile_value
+    return hazard_curve_filename(filename_part)
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
 job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
