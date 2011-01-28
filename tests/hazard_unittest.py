@@ -693,13 +693,15 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.poes_levels = classical_psha.POES_PARAM_NAME
         
         self.params = {}
+        self.params["REFERENCE_VS30_VALUE"] = 500
+
         self.engine = job.Job(self.params,  self.job_id)
         
         # deleting server side cached data
         kvs.flush()
     
     def test_no_computation_when_no_parameter_specified(self):
-        classical_psha.compute_mean_hazard_map(self.engine)
+        self._run()
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
@@ -707,21 +709,38 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
     def test_no_computation_when_the_parameter_is_empty(self):
         self.params[self.poes_levels] = ""
 
-        classical_psha.compute_mean_hazard_map(self.engine)
+        self._run()
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
 
     def test_computes_all_the_levels_specified(self):
         self.params[self.poes_levels] = "0.25 0.50 0.75"
-        
         self._store_empty_mean_curve_at(shapes.Site(2.0, 5.0))
         
-        classical_psha.compute_mean_hazard_map(self.engine)
+        self._run()
 
         self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.25)
         self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.50)
         self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.75)
+
+    def test_stores_also_the_vs30_parameter(self):
+        self.params[self.poes_levels] = "0.25"
+        self._store_empty_mean_curve_at(shapes.Site(2.0, 5.0))
+
+        self._run()
+        
+        im_level = self._get_IML_at(shapes.Site(2.0, 5.0), 0.25)
+        self.assertEqual(500, im_level["vs30"])
+
+    def _get_IML_at(self, site, poe):
+        return kvs.mget_decoded("%s*%s*%s*%s*%s*" %
+                (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
+                self.job_id, site.longitude, site.latitude,
+                str(poe).replace(".", "")))[0]
+
+    def _run(self):
+        classical_psha.compute_mean_hazard_map(self.engine)
 
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.mget(pattern))
