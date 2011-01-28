@@ -683,3 +683,58 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
                 self.job_id, site.longitude, site.latitude,
                 str(value).replace(".", ""))))
+
+
+class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
+    
+    def setUp(self):
+        self.job_id = 1234
+        
+        self.poes_levels = classical_psha.POES_PARAM_NAME
+        
+        self.params = {}
+        self.engine = job.Job(self.params,  self.job_id)
+        
+        # deleting server side cached data
+        kvs.flush()
+    
+    def test_no_computation_when_no_parameter_specified(self):
+        classical_psha.compute_mean_hazard_map(self.engine)
+
+        self._no_stored_values_for("%s" %
+                kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
+    
+    def test_no_computation_when_the_parameter_is_empty(self):
+        self.params[self.poes_levels] = ""
+
+        classical_psha.compute_mean_hazard_map(self.engine)
+
+        self._no_stored_values_for("%s" %
+                kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
+
+    def test_computes_all_the_levels_specified(self):
+        self.params[self.poes_levels] = "0.25 0.50 0.75"
+        
+        self._store_empty_mean_curve_at(shapes.Site(2.0, 5.0))
+        
+        classical_psha.compute_mean_hazard_map(self.engine)
+
+        self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.25)
+        self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.50)
+        self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.75)
+
+    def _no_stored_values_for(self, pattern):
+        self.assertEqual([], kvs.mget(pattern))
+
+    def _store_empty_mean_curve_at(self, site):
+        mean_curve = {"site_lon": site.longitude,
+                "site_lat": site.latitude, "curve": []}
+
+        kvs.set_value_json_encoded(kvs.tokens.mean_hazard_curve_key(
+                self.job_id, site), mean_curve)
+
+    def _has_computed_IML_for_site(self, site, poe):
+        self.assertTrue(kvs.mget("%s*%s*%s*%s*%s*" %
+                (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
+                self.job_id, site.longitude, site.latitude,
+                str(poe).replace(".", ""))))

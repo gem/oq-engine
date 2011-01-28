@@ -8,10 +8,12 @@ from numpy import array # pylint: disable=E1101, E0611
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
+from openquake import shapes
 from openquake.logs import LOG
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
+POES_PARAM_NAME = "POES_HAZARD_MAPS"
 
 
 def compute_mean_curve(curves):
@@ -52,12 +54,12 @@ def _extract_y_values_from(curve):
     return y_values
 
 
-def _acceptable(quantile):
-    """Return true if the quantile value taken from the configuration
+def _acceptable(value):
+    """Return true if the value taken from the configuration
     file is valid, false otherwise."""
     try:
-        quantile = float(quantile)
-        return quantile >= 0.0 and quantile <= 1.0
+        value = float(value)
+        return value >= 0.0 and value <= 1.0
 
     except ValueError:
         return False
@@ -78,15 +80,15 @@ def curves_at(job_id, site):
     return curves
 
 
-def _extract_quantiles_from_config(job):
+def _extract_values_from_config(job, param_name):
     """Extract the set of valid quantiles from the configuration file."""
-    quantiles = []
+    values = []
 
-    if job.has(QUANTILE_PARAM_NAME):
-        raw_quantiles = job.params[QUANTILE_PARAM_NAME].split()
-        quantiles = [float(x) for x in raw_quantiles if _acceptable(x)]
+    if job.has(param_name):
+        raw_values = job.params[param_name].split()
+        values = [float(x) for x in raw_values if _acceptable(x)]
 
-    return quantiles
+    return values
 
 
 def compute_mean_hazard_curves(job_id, sites):
@@ -112,7 +114,7 @@ def compute_quantile_hazard_curves(job, sites):
     all the values used in the computation.
     """
 
-    quantiles = _extract_quantiles_from_config(job)
+    quantiles = _extract_values_from_config(job, QUANTILE_PARAM_NAME)
 
     LOG.debug("List of QUANTILES is %s" % quantiles)
 
@@ -130,3 +132,24 @@ def compute_quantile_hazard_curves(job, sites):
             LOG.debug("QUANTILE curve at %s is %s" % (key, quantile_curve))
 
             kvs.set_value_json_encoded(key, quantile_curve)
+
+
+def compute_mean_hazard_map(job):
+    """Compute a mean hazard map using as input all the
+    pre computed mean hazard curves.
+    
+    The POES_HAZARD_MAPS parameter in the configuration file specifies
+    all the values used in the computation.
+    """
+
+    poes = _extract_values_from_config(job, POES_PARAM_NAME)
+
+    # get all the computed mean curves
+    pattern = "%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, job.id)
+    mean_curves = kvs.mget_decoded(pattern)
+
+    for poe in poes:
+        for mean_curve in mean_curves:
+            site = shapes.Site(mean_curve["site_lon"], mean_curve["site_lat"])
+            key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
+            kvs.set_value_json_encoded(key, "STUB")
