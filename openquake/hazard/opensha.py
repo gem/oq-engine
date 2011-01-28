@@ -209,7 +209,7 @@ class ClassicalMixin(BasePSHAMixin):
 
             pending_tasks_quantile.append(tasks.compute_quantile_curves.delay(
                 self.id, site_list))
-            if self.params['COMPUTE_MEAN_HAZARD_CURVE'] is True:
+            if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
                 pending_tasks_mean.append(tasks.compute_mean_curves.delay(
                     self.id, site_list))
 
@@ -225,7 +225,7 @@ class ClassicalMixin(BasePSHAMixin):
                 raise Exception(task.result)
             results_quantile.extend(task.result)
 
-        if self.params['COMPUTE_MEAN_HAZARD_CURVE'] is True:
+        if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
             LOG.info('Serializing mean hazard curves')
             self.write_hazardcurve_file(results_mean)
             del results_mean
