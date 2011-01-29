@@ -716,7 +716,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 7.3425e-06]}
 
         self._store_mean_curve_at(shapes.Site(2.0, 5.0), mean_curve)
-    
+
     def test_no_computation_when_no_parameter_specified(self):
         self._run()
 
@@ -745,10 +745,10 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
         self._run()
         
-        im_level = self._get_IML_at(shapes.Site(2.0, 5.0), 0.25)
+        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.25)
         self.assertEqual(500, im_level["vs30"])
 
-    def test_computes_the_IML_level(self):
+    def test_computes_the_iml_level(self):
         self.params[self.poes_levels] = "0.10"
         
         mean_curve = {"site_lon": 3.0, "site_lat": 3.0,
@@ -761,21 +761,43 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
         self._run()
         
-        im_level = self._get_IML_at(shapes.Site(2.0, 5.0), 0.10)
+        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.10)
         self.assertEqual(2.0, im_level["site_lon"])
         self.assertEqual(5.0, im_level["site_lat"])
 
         self.assertTrue(numpy.allclose([1.6789e-01],
                 numpy.array(im_level["IML"]), atol=0.005))
 
-        im_level = self._get_IML_at(shapes.Site(3.0, 3.0), 0.10)
+        im_level = self._get_iml_at(shapes.Site(3.0, 3.0), 0.10)
         self.assertEqual(3.0, im_level["site_lon"])
         self.assertEqual(3.0, im_level["site_lat"])
 
         self.assertTrue(numpy.allclose([1.9078e-01],
                 numpy.array(im_level["IML"]), atol=0.005))
 
-    def _get_IML_at(self, site, poe):
+    def test_when_poe_is_too_high_the_min_iml_is_taken(self):
+        # highest value is 9.8728e-01
+        self.params[self.poes_levels] = "0.99"
+        
+        self._run()
+        
+        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.99)
+
+        self.assertTrue(numpy.allclose([5.0000e-03],
+                numpy.array(im_level["IML"])))
+
+    def test_when_poe_is_too_low_the_max_iml_is_taken(self):
+        # lowest value is 7.3425e-06
+        self.params[self.poes_levels] = "0.00"
+
+        self._run()
+
+        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.00)
+
+        self.assertTrue(numpy.allclose([2.1300e+00],
+                numpy.array(im_level["IML"])))
+
+    def _get_iml_at(self, site, poe):
         return kvs.mget_decoded("%s*%s*%s*%s*%s*" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
                 self.job_id, site.longitude, site.latitude,
