@@ -66,9 +66,10 @@ def mean_hazard_curve_key(job_id, site):
 def quantile_hazard_curve_key(job_id, site, quantile):
     """Return the key used to store a quantile hazard curve
     for a single site."""
-    return openquake.kvs.generate_key([QUANTILE_HAZARD_CURVE_KEY_TOKEN,
+    return openquake.kvs.generate_key(
+            [QUANTILE_HAZARD_CURVE_KEY_TOKEN,
             job_id, site.longitude, site.latitude,
-            ("%.2f" % quantile).replace(".", "")])
+            str(quantile)])
 
 
 def mean_hazard_map_key(job_id, site, poe):
@@ -76,7 +77,7 @@ def mean_hazard_map_key(job_id, site, poe):
     for a single site."""
     return openquake.kvs.generate_key([MEAN_HAZARD_MAP_KEY_TOKEN,
             job_id, site.longitude, site.latitude,
-            ("%.2f" % poe).replace(".", "")])
+            str(poe)])
 
 
 def hazard_curve_key(job_id, realization_num, site_lon, site_lat):
