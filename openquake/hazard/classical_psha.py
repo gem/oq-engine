@@ -145,6 +145,7 @@ def _extract_imls_from_config(job):
 def _get_iml_from(mean_curve, job, poe):
     """Return the interpolated IML using as IMLs the values defined in
     the INTENSITY_MEASURE_LEVELS parameter."""
+
     imls = _extract_imls_from_config(job)
     imls.reverse()
     
@@ -169,6 +170,49 @@ using the max IML defined (%s)""" % (site, poe, poes[0], imls[0]))
     return math.exp(interp1d(poes, imls)(poe))
 
 
+def _store_iml_for(curve, key, job, poe):
+    """Store an interpolated IML in kvs along with all
+    the needed metadata."""
+
+    im_level = {}
+
+    im_level["site_lon"] = curve["site_lon"]
+    im_level["site_lat"] = curve["site_lat"]
+    im_level["vs30"] = job.params["REFERENCE_VS30_VALUE"]
+    im_level["IML"] = _get_iml_from(curve, job, poe)
+
+    kvs.set_value_json_encoded(key, im_level)
+
+
+def compute_quantile_hazard_map(job):
+    """Compute a quantile hazard map using as input all the
+    pre computed quantile hazard curves.
+
+    The POES_HAZARD_MAPS parameter in the configuration file specifies
+    all the values used in the computation.
+    """
+    
+    quantiles = _extract_values_from_config(job, QUANTILE_PARAM_NAME)
+    poes = _extract_values_from_config(job, POES_PARAM_NAME)
+
+    for quantile in quantiles:
+        # get all the computed quantile curves
+        pattern = "%s*%s*%s" % (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
+                job.id, quantile)
+
+        quantile_curves = kvs.mget_decoded(pattern)
+
+        for poe in poes:
+            for quantile_curve in quantile_curves:
+                site = shapes.Site(quantile_curve["site_lon"],
+                        quantile_curve["site_lat"])
+
+                key = kvs.tokens.quantile_hazard_map_key(
+                        job.id, site, poe, quantile)
+
+                _store_iml_for(quantile_curve, key, job, poe)
+
+
 def compute_mean_hazard_map(job):
     """Compute a mean hazard map using as input all the
     pre computed mean hazard curves.
@@ -185,14 +229,10 @@ def compute_mean_hazard_map(job):
 
     for poe in poes:
         for mean_curve in mean_curves:
-            site = shapes.Site(mean_curve["site_lon"], mean_curve["site_lat"])
-            key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
-            
-            im_level = {}
+            site = shapes.Site(mean_curve["site_lon"],
+                    mean_curve["site_lat"])
 
-            im_level["site_lon"] = mean_curve["site_lon"]
-            im_level["site_lat"] = mean_curve["site_lat"]
-            im_level["vs30"] = job.params["REFERENCE_VS30_VALUE"]
-            im_level["IML"] = _get_iml_from(mean_curve, job, poe)
-            
-            kvs.set_value_json_encoded(key, im_level)
+            key = kvs.tokens.mean_hazard_map_key(
+                    job.id, site, poe)
+
+            _store_iml_for(mean_curve, key, job, poe)
