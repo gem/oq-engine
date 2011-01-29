@@ -6,12 +6,12 @@ as input data produced with the classical psha method.
 
 import math
 from numpy import array # pylint: disable=E1101, E0611
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d # pylint: disable=E1101, E0611
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
 from openquake import shapes
-from openquake.logs import LOG
+from openquake.logs import HAZARD_LOG
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -103,7 +103,7 @@ def compute_mean_hazard_curves(job_id, sites):
 
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
 
-        LOG.debug("MEAN curve at %s is %s" % (key, mean_curve))
+        HAZARD_LOG.debug("MEAN curve at %s is %s" % (key, mean_curve))
 
         kvs.set_value_json_encoded(key, mean_curve)
 
@@ -118,7 +118,7 @@ def compute_quantile_hazard_curves(job, sites):
 
     quantiles = _extract_values_from_config(job, QUANTILE_PARAM_NAME)
 
-    LOG.debug("List of QUANTILES is %s" % quantiles)
+    HAZARD_LOG.debug("List of QUANTILES is %s" % quantiles)
 
     for site in sites:
         for quantile in quantiles:
@@ -131,17 +131,42 @@ def compute_quantile_hazard_curves(job, sites):
             key = kvs.tokens.quantile_hazard_curve_key(
                     job.id, site, quantile)
 
-            LOG.debug("QUANTILE curve at %s is %s" % (key, quantile_curve))
+            HAZARD_LOG.debug("QUANTILE curve at %s is %s"
+                    % (key, quantile_curve))
 
             kvs.set_value_json_encoded(key, quantile_curve)
 
 
-def _extract_IMLs_from_config(job):
+def _extract_imls_from_config(job):
     """Return the list of IMLs defined in the configuration file."""
-    IMLs = [float(x) for x in job.params["INTENSITY_MEASURE_LEVELS"].split()]
-    IMLs = [math.log(x) for x in IMLs]
+    return [float(x) for x in job.params["INTENSITY_MEASURE_LEVELS"].split()]
 
-    return IMLs
+
+def _get_iml_from(mean_curve, job, poe):
+    """Return the interpolated IML using as IMLs the values defined in
+    the INTENSITY_MEASURE_LEVELS parameter."""
+    imls = _extract_imls_from_config(job)
+    imls.reverse()
+    
+    poes = list(mean_curve["curve"])
+    poes.reverse()
+
+    site = shapes.Site(mean_curve["site_lon"], mean_curve["site_lat"])
+
+    if poe > poes[-1]:
+        HAZARD_LOG.warn("""
+For %s asked interpolation of %s but the max POE value is %s,
+using the min IML defined (%s)""" % (site, poe, poes[-1], imls[-1]))
+        return imls[-1]
+
+    if poe < poes[0]:
+        HAZARD_LOG.warn("""
+For %s asked interpolation of %s but the min POE value is %s,
+using the max IML defined (%s)""" % (site, poe, poes[0], imls[0]))
+        return imls[0]
+
+    imls = [math.log(x) for x in imls]
+    return math.exp(interp1d(poes, imls)(poe))
 
 
 def compute_mean_hazard_map(job):
@@ -168,13 +193,6 @@ def compute_mean_hazard_map(job):
             im_level["site_lon"] = mean_curve["site_lon"]
             im_level["site_lat"] = mean_curve["site_lat"]
             im_level["vs30"] = job.params["REFERENCE_VS30_VALUE"]
-
-            IMLs = _extract_IMLs_from_config(job)
-            IMLs.reverse()
-
-            POEs = list(mean_curve["curve"])
-            POEs.reverse()
-
-            im_level["IML"] = math.exp(interp1d(POEs, IMLs)(poe))
+            im_level["IML"] = _get_iml_from(mean_curve, job, poe)
             
             kvs.set_value_json_encoded(key, im_level)
