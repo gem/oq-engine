@@ -4,7 +4,9 @@ Collection of functions that compute stuff using
 as input data produced with the classical psha method.
 """
 
+import math
 from numpy import array # pylint: disable=E1101, E0611
+from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
@@ -134,6 +136,14 @@ def compute_quantile_hazard_curves(job, sites):
             kvs.set_value_json_encoded(key, quantile_curve)
 
 
+def _extract_IMLs_from_config(job):
+    """Return the list of IMLs defined in the configuration file."""
+    IMLs = [float(x) for x in job.params["INTENSITY_MEASURE_LEVELS"].split()]
+    IMLs = [math.log(x) for x in IMLs]
+
+    return IMLs
+
+
 def compute_mean_hazard_map(job):
     """Compute a mean hazard map using as input all the
     pre computed mean hazard curves.
@@ -153,5 +163,18 @@ def compute_mean_hazard_map(job):
             site = shapes.Site(mean_curve["site_lon"], mean_curve["site_lat"])
             key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
             
-            im_level = {"vs30": job.params["REFERENCE_VS30_VALUE"]}
+            im_level = {}
+
+            im_level["site_lon"] = mean_curve["site_lon"]
+            im_level["site_lat"] = mean_curve["site_lat"]
+            im_level["vs30"] = job.params["REFERENCE_VS30_VALUE"]
+
+            IMLs = _extract_IMLs_from_config(job)
+            IMLs.reverse()
+
+            POEs = list(mean_curve["curve"])
+            POEs.reverse()
+
+            im_level["IML"] = math.exp(interp1d(POEs, IMLs)(poe))
+            
             kvs.set_value_json_encoded(key, im_level)
