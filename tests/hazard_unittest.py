@@ -843,7 +843,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key_5, curve_2)
         kvs.set_value_json_encoded(key_6, curve_2)
 
-        classical_psha.compute_quantile_hazard_map(self.engine)
+        classical_psha.compute_quantile_hazard_maps(self.engine)
 
         # asserting imls have been produced for all poes and quantiles
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
@@ -871,7 +871,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 str(poe)))[0]
 
     def _run(self):
-        classical_psha.compute_mean_hazard_map(self.engine)
+        classical_psha.compute_mean_hazard_maps(self.engine)
 
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.mget(pattern))
