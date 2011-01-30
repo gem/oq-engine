@@ -196,7 +196,7 @@ def compute_quantile_hazard_map(job):
     poes = _extract_values_from_config(job, POES_PARAM_NAME)
 
     for quantile in quantiles:
-        # get all the computed quantile curves
+        # get all the pre computed quantile curves
         pattern = "%s*%s*%s" % (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
                 job.id, quantile)
 
@@ -223,7 +223,7 @@ def compute_mean_hazard_map(job):
 
     poes = _extract_values_from_config(job, POES_PARAM_NAME)
 
-    # get all the computed mean curves
+    # get all the pre computed mean curves
     pattern = "%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, job.id)
     mean_curves = kvs.mget_decoded(pattern)
 
