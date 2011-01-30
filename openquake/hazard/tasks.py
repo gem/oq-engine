@@ -133,5 +133,15 @@ def compute_hazard_maps(job_id):
     """Compute the mean hazard map for the given job."""
 
     engine = job.Job.from_kvs(job_id)
-    classical_psha.compute_mean_hazard_map(engine)
-    classical_psha.compute_quantile_hazard_map(engine)
+    classical_psha.compute_mean_hazard_maps(engine)
+    classical_psha.compute_quantile_hazard_maps(engine)
+    
+    subtask(serialize_mean_hazard_maps).delay(job_id)
+
+
+@task(is_eager=True, ignore_result=True)
+def serialize_mean_hazard_maps(job_id):
+    """Serialize the pre computed hazard maps for the given job."""
+
+    engine = job.Job.from_kvs(job_id)
+    classical_psha.serialize_mean_hazard_maps(engine)
