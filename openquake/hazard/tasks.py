@@ -117,10 +117,21 @@ def compute_quantile_curves(job_id, sites):
 
     engine = job.Job.from_kvs(job_id)
     classical_psha.compute_quantile_hazard_curves(engine, sites)
-    subtask(serialize_quantile_curves).delay(job_id, sites)
+    subtask(serialize_quantile_curves).delay(job_id)
 
 
 @task(is_eager=True, ignore_result=True)
-def serialize_quantile_curves(job_id, sites):
+def serialize_quantile_curves(job_id):
     """Serialize quantile curves for the given sites."""
-    print "Job ID is %s" % job_id
+
+    # testing
+    subtask(compute_hazard_maps).delay(job_id)
+
+
+@task(ignore_result=True)
+def compute_hazard_maps(job_id):
+    """Compute the mean hazard map for the given job."""
+
+    engine = job.Job.from_kvs(job_id)
+    classical_psha.compute_mean_hazard_map(engine)
+    classical_psha.compute_quantile_hazard_map(engine)
