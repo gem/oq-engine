@@ -125,6 +125,9 @@ NUMBER_OF_SEISMICITY_HISTORIES = 1
 # List of quantiles to compute
 QUANTILE_LEVELS = 0.25 0.50
 
+# List of POEs to use for computing hazard maps
+POES_HAZARD_MAPS = 0.10
+
 [RISK]
 
 RISK_CALCULATION_MODE = Probabilistic Event
