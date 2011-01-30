@@ -4,7 +4,9 @@ Collection of functions that compute stuff using
 as input data produced with the classical psha method.
 """
 
+import os
 import math
+
 from numpy import array # pylint: disable=E1101, E0611
 from scipy.interpolate import interp1d # pylint: disable=E1101, E0611
 from scipy.stats.mstats import mquantiles
@@ -12,6 +14,7 @@ from scipy.stats.mstats import mquantiles
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
+from openquake.output import geotiff
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -190,8 +193,8 @@ def _store_iml_for(curve, key, job, poe):
     kvs.set_value_json_encoded(key, im_level)
 
 
-def compute_quantile_hazard_map(job):
-    """Compute a quantile hazard map using as input all the
+def compute_quantile_hazard_maps(job):
+    """Compute quantile hazard maps using as input all the
     pre computed quantile hazard curves.
 
     The POES_HAZARD_MAPS parameter in the configuration file specifies
@@ -226,8 +229,8 @@ def compute_quantile_hazard_map(job):
                 _store_iml_for(quantile_curve, key, job, poe)
 
 
-def compute_mean_hazard_map(job):
-    """Compute a mean hazard map using as input all the
+def compute_mean_hazard_maps(job):
+    """Compute mean hazard maps using as input all the
     pre computed mean hazard curves.
     
     The POES_HAZARD_MAPS parameter in the configuration file specifies
@@ -236,13 +239,13 @@ def compute_mean_hazard_map(job):
 
     poes = _extract_values_from_config(job, POES_PARAM_NAME)
 
-    LOG.debug("[MEAN_HAZARD_MAP] List of POEs is %s" % poes)
+    LOG.debug("[MEAN_HAZARD_MAPS] List of POEs is %s" % poes)
 
     # get all the pre computed mean curves
     pattern = "%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, job.id)
     mean_curves = kvs.mget_decoded(pattern)
 
-    LOG.debug("[MEAN_HAZARD_MAP] Found %s pre computed mean curves"
+    LOG.debug("[MEAN_HAZARD_MAPS] Found %s pre computed mean curves"
             % len(mean_curves))
 
     for poe in poes:
@@ -254,3 +257,39 @@ def compute_mean_hazard_map(job):
                     job.id, site, poe)
 
             _store_iml_for(mean_curve, key, job, poe)
+
+
+def _create_writers(job):
+    """Create a GeoTiff writer for each hazard map to store."""
+
+    writers = {}
+    imls = _extract_imls_from_config(job)
+    poes = _extract_values_from_config(job, POES_PARAM_NAME)
+    
+    for poe in poes:
+        filename = "mean_hazard_map_at-%s.tiff" % poe
+        path = os.path.join(job.params["BASE_PATH"],
+                job.params["OUTPUT_DIR"], filename)
+
+        writers[poe] = geotiff.GMFGeoTiffFile(
+                path, job.region.grid, iml_list=imls)
+
+    return writers
+
+
+def serialize_mean_hazard_maps(job):
+    """Serialize the pre computed mean hazard maps for the given job."""
+
+    writers = _create_writers(job)
+    poes = _extract_values_from_config(job, POES_PARAM_NAME)
+
+    for point in job.region.grid:
+        site = job.region.grid.site_at(point)
+        
+        for poe in poes:
+            key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
+            im_level = kvs.get_value_json_decoded(key)
+            writers[poe].write(point, im_level["IML"])
+
+    for (poe, writer) in writers:
+        writer.close()
