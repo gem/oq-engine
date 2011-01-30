@@ -695,11 +695,11 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
         self.params = {}
         self.params["REFERENCE_VS30_VALUE"] = 500
-        self.params["INTENSITY_MEASURE_LEVELS"] = "5.0000e-03 7.0000e-03 \
-                1.3700e-02 1.9200e-02 2.6900e-02 3.7600e-02 5.2700e-02 \
-                7.3800e-02 9.8000e-02 1.0300e-01 1.4500e-01 2.0300e-01 \
-                2.8400e-01 3.9700e-01 5.5600e-01 7.7800e-01 1.0900e+00 \
-                1.5200e+00 2.1300e+00" 
+        self.params["INTENSITY_MEASURE_LEVELS"] = "5.0000e-03, 7.0000e-03,  \
+                1.3700e-02, 1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02, \
+                7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01, 2.0300e-01, \
+                2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00, \
+                1.5200e+00, 2.1300e+00" 
 
         self.engine = job.Job(self.params,  self.job_id)
         
