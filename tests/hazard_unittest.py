@@ -691,6 +691,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.job_id = 1234
         
         self.poes_levels = classical_psha.POES_PARAM_NAME
+        self.quantiles_levels = classical_psha.QUANTILE_PARAM_NAME
 
         self.params = {}
         self.params["REFERENCE_VS30_VALUE"] = 500
@@ -715,7 +716,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 1.6579e-02, 6.4213e-03, 2.0244e-03, 4.8605e-04, 8.1752e-05,
                 7.3425e-06]}
 
-        self._store_mean_curve_at(shapes.Site(2.0, 5.0), mean_curve)
+        self._store_curve_at(shapes.Site(2.0, 5.0), mean_curve)
 
     def test_no_computation_when_no_parameter_specified(self):
         self._run()
@@ -757,7 +758,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
                 7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
 
-        self._store_mean_curve_at(shapes.Site(3.0, 3.0), mean_curve)
+        self._store_curve_at(shapes.Site(3.0, 3.0), mean_curve)
 
         self._run()
         
@@ -797,6 +798,72 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose([2.1300e+00],
                 numpy.array(im_level["IML"])))
 
+    def test_quantile_hazard_maps_computation(self):
+        self.params[self.poes_levels] = "0.10"
+        self.params[self.quantiles_levels] = "0.25 0.50 0.75"
+
+        curve_1 = {"site_lon": 3.0, "site_lat": 3.0,
+                "curve": [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+                8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
+                2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+
+        curve_2 = {"site_lon": 3.5, "site_lat": 3.5,
+                "curve": [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+                8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
+                2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+
+        # keys for shapes.Site(3.0, 3.0)
+        key_1 = kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(3.0, 3.0), 0.25)
+
+        key_2 = kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(3.0, 3.0), 0.50)
+
+        key_3 = kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(3.0, 3.0), 0.75)
+
+        # keys for shapes.Site(3.5, 3.5)
+        key_4 = kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(3.5, 3.5), 0.25)
+
+        key_5 = kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(3.5, 3.5), 0.50)
+
+        key_6 = kvs.tokens.quantile_hazard_curve_key(
+                self.job_id, shapes.Site(3.5, 3.5), 0.75)
+
+        # setting values in kvs
+        kvs.set_value_json_encoded(key_1, curve_1)
+        kvs.set_value_json_encoded(key_2, curve_1)
+        kvs.set_value_json_encoded(key_3, curve_1)
+
+        kvs.set_value_json_encoded(key_4, curve_2)
+        kvs.set_value_json_encoded(key_5, curve_2)
+        kvs.set_value_json_encoded(key_6, curve_2)
+
+        classical_psha.compute_quantile_hazard_map(self.engine)
+
+        # asserting imls have been produced for all poes and quantiles
+        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+                self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.25)))
+        
+        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+                self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.50)))
+        
+        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+                self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.75)))
+
+        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+                self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.25)))
+
+        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+                self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.50)))
+
+        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+                self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.75)))
+
     def _get_iml_at(self, site, poe):
         return kvs.mget_decoded("%s*%s*%s*%s*%s" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
@@ -809,7 +876,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.mget(pattern))
 
-    def _store_mean_curve_at(self, site, mean_curve):
+    def _store_curve_at(self, site, mean_curve):
         kvs.set_value_json_encoded(
                 kvs.tokens.mean_hazard_curve_key(
                 self.job_id, site), mean_curve)
