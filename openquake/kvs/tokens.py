@@ -12,6 +12,7 @@ MEAN_HAZARD_CURVE_KEY_TOKEN = 'mean_hazard_curve'
 QUANTILE_HAZARD_CURVE_KEY_TOKEN = 'quantile_hazard_curve'
 STOCHASTIC_SET_TOKEN = 'ses'
 MEAN_HAZARD_MAP_KEY_TOKEN = 'mean_hazard_map'
+QUANTILE_HAZARD_MAP_KEY_TOKEN = 'quantile_hazard_map'
 
 # risk tokens
 CONDITIONAL_LOSS_KEY_TOKEN = 'LOSS_AT_'
@@ -73,11 +74,19 @@ def quantile_hazard_curve_key(job_id, site, quantile):
 
 
 def mean_hazard_map_key(job_id, site, poe):
-    """Return the key used to store the IML used in hazard maps
-    for a single site."""
+    """Return the key used to store the IML used in mean hazard
+    maps for a single site."""
     return openquake.kvs.generate_key([MEAN_HAZARD_MAP_KEY_TOKEN,
             job_id, site.longitude, site.latitude,
             str(poe)])
+
+
+def quantile_hazard_map_key(job_id, site, poe, quantile):
+    """Return the key used to store the IML used in quantile
+    hazard maps for a single site."""
+    return openquake.kvs.generate_key([QUANTILE_HAZARD_MAP_KEY_TOKEN,
+            job_id, site.longitude, site.latitude,
+            str(poe), str(quantile)])
 
 
 def hazard_curve_key(job_id, realization_num, site_lon, site_lat):
