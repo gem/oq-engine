@@ -54,7 +54,8 @@ class ExposurePortfolioFile(producer.FileProducer):
 
     """
 
-    REQUIRED_ATTRIBUTES = (('PortfolioID', str), ('PortfolioDescription', str))
+    REQUIRED_ATTRIBUTES = (('PortfolioID', str), 
+                           ('PortfolioDescription', str))
 
     def __init__(self, path):
         super(ExposurePortfolioFile, self).__init__(path)

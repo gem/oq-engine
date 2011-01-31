@@ -453,7 +453,8 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
             for j in range(0, realizations):
                 stochastic_set_id = "%s!%s" % (i, j)
                 stochastic_set_key = kvs.generate_product_key(
-                    self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+                    self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, 
+                    stochastic_set_id)
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -511,7 +512,7 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
 
         jsite_list = self.parameterize_sites(site_list)
         key = kvs.generate_product_key(
-                    self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+            self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
         gmc = self.params['GROUND_MOTION_CORRELATION']
         correlate = (gmc == "true" and True or False)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
