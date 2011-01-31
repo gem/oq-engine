@@ -646,7 +646,7 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
 # class ProbabilisticEventBasedCalculatorTestCase(unittest.TestCase):
 #     
 #     def setUp(self):
-#         self.memcached_client = kvs.get_client(binary=False)
+#         self.kvs_client = kvs.get_client(binary=False)
 #         self.calculator = engines.ProbabilisticEventBasedCalculator(JOB_ID, BLOCK_ID)
 # 
 #         self.key_exposure = kvs.generate_product_key(JOB_ID,
@@ -656,9 +656,9 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
 #             risk.GMF_KEY_TOKEN, BLOCK_ID, SITE)
 # 
 #         # delete old keys
-#         self.memcached_client.delete(self.key_exposure)
-#         self.memcached_client.delete(kvs.generate_job_key(JOB_ID))
-#         self.memcached_client.delete(self.key_gmf)
+#         self.kvs_client.delete(self.key_exposure)
+#         self.kvs_client.delete(kvs.generate_job_key(JOB_ID))
+#         self.kvs_client.delete(self.key_gmf)
 # 
 #     def tearDown(self):
 #         kvs.get_client().flushdb()
@@ -676,7 +676,7 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
 #                 self.calculator.compute_loss_curve(SITE, loss_ratio_curve))
 #         
 #     def test_computes_the_loss_ratio_curve(self):
-#         # saving in memcached the vuln function
+#         # saving in kvs the vuln function
 #         vuln_curve = self.vuln_function = shapes.Curve([
 #                 (0.01, (0.001, 1.00)), (0.04, (0.022, 1.0)), 
 #                 (0.07, (0.051, 1.0)), (0.10, (0.080, 1.0)),
@@ -882,7 +882,7 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
 #             'PortfolioDescription': 'Collection of existing building in downtown Pavia', 
 #             'AssetDescription': 'Moment-resisting ductile concrete frame high rise'}
 #         
-#         # TODO(fab): use memcached-enabled engine, through jobber
+#         # TODO(fab): use kvs-enabled engine, through jobber
 #         risk_engine = engines.ProbabilisticLossRatioCalculator(hazard_curves, 
 #                                 exposure_portfolio)
 #                                   

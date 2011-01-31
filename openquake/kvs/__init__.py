@@ -87,7 +87,7 @@ def generate_sites_key(job_id, block_id):
 
 
 def generate_product_key(job_id, product, block_id="", site=""):
-    """construct memcached key from several part IDs"""
+    """construct kvs key from several part IDs"""
     return generate_key([job_id, product, block_id, site])
 
 
