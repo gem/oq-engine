@@ -57,7 +57,8 @@ class RiskXMLWriter(writer.FileWriter):
         
         # This use of not None is b/c of the trap w/ ElementTree find
         # for nodes that have no child nodes.
-        subnode_pe = self.parent_node.find(NRML + "Common/" + self.abcissa_tag)
+        subnode_pe = self.parent_node.find(
+            NRML + "Common/" + self.abcissa_tag)
         if subnode_pe is not None:
             if subnode_pe.find(NRML + "Values").text != pe_values:
                 LOGGER.error("Abcissa doesn't match between \n %s \n %s"
@@ -74,7 +75,8 @@ class RiskXMLWriter(writer.FileWriter):
                     NRML + "Values", nsmap=NSMAP_OLD).text = pe_values
 
         LOGGER.debug("Writing xml, object is %s", curve_object)
-        subnode_loss = etree.SubElement(node, NRML + "Values", nsmap=NSMAP_OLD)
+        subnode_loss = etree.SubElement(
+            node, NRML + "Values", nsmap=NSMAP_OLD)
         subnode_loss.text = _curve_vals_as_gmldoublelist(curve_object)
 
 

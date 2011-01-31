@@ -37,11 +37,13 @@ TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
-with open(test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+with open(
+    test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
-with open(test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+with open(
+    test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
 NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
@@ -74,7 +76,8 @@ class HazardEngineTestCase(unittest.TestCase):
 
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, 
+            key="hazard"):
             hc = hazengine.execute()
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
@@ -258,7 +261,8 @@ class HazardEngineTestCase(unittest.TestCase):
         print kvs.tokens.ERF_KEY_TOKEN
         
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
+            erf_key = kvs.generate_product_key(job_id, 
+                                               kvs.tokens.ERF_KEY_TOKEN)
 
             # Build the expected values
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
@@ -298,8 +302,8 @@ class HazardEngineTestCase(unittest.TestCase):
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN, 
-                block_id, site)
+            mgm_key = kvs.generate_product_key(job_id, 
+                kvs.tokens.MGM_KEY_TOKEN, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
             results.append(tasks.compute_mgm_intensity.apply_async(
