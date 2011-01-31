@@ -9,26 +9,26 @@ from openquake import test
 from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
-FILES_KNOWN_TO_FAIL = ['Nrml-fail-missing_required_attribute.xml',
+FILES_KNOWN_TO_FAIL_OLD = ['Nrml-fail-missing_required_attribute.xml',
                        'Nrml-fail-attribute_type_mismatch.xml',
                        'Nrml-fail-IML_type_mismatch.xml',
                        'Nrml-fail-missing_IML.xml',
                        'Nrml-fail-illegal_gml_pos.xml',
                        'Nrml-fail-curve_values_type_mismatch.xml']
 
-FILE_FLAVOUR_NOT_IMPLEMENTED = 'Nrml-HazardMap-PASS.xml'
+FILE_FLAVOUR_NOT_IMPLEMENTED_OLD = 'Nrml-HazardMap-PASS.xml'
 
-EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples/failures')
-TEST_FILE = os.path.join(test.SCHEMA_DIR, 'examples/hazard-curves.xml')
+EXAMPLE_DIR_OLD = os.path.join(test.SCHEMA_DIR, 'old/examples/failures')
+TEST_FILE_OLD = os.path.join(test.SCHEMA_DIR, 'old/examples/hazard-curves.xml')
 
 class NrmlFileTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE)
+        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE_OLD)
 
     def test_nrml_files_known_to_fail(self):
-        for testfile in FILES_KNOWN_TO_FAIL:
-            nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR, 
+        for testfile in FILES_KNOWN_TO_FAIL_OLD:
+            nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR_OLD, 
                                                               testfile))
 
             self.assertRaises(ValueError, map, None, nrml_element)
@@ -36,8 +36,8 @@ class NrmlFileTestCase(unittest.TestCase):
     @test.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
-        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR, 
-            FILE_FLAVOUR_NOT_IMPLEMENTED))
+        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR_OLD,
+            FILE_FLAVOUR_NOT_IMPLEMENTED_OLD))
 
         self.assertRaises(NotImplementedError, map, None, nrml_element)
     

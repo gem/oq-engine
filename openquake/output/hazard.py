@@ -24,7 +24,7 @@ from openquake import logs
 from openquake import shapes
 from openquake import writer
 
-from openquake.xml import NSMAP, NRML, GML
+from openquake.xml import NSMAP, NRML, GML, NSMAP_OLD, GML_OLD
 
 LOGGER = logs.HAZARD_LOG
 
@@ -182,7 +182,7 @@ class GMFXMLWriter(writer.FileWriter):
     container_tag = NRML + "GroundMotionFieldSet"
     field_tag = NRML + "field"
     site_tag = NRML + "site"
-    pos_tag = GML + "pos"
+    pos_tag = GML_OLD + "pos"
     ground_motion_attr = "groundMotion"
 
     def write(self, point, val):
@@ -205,20 +205,21 @@ class GMFXMLWriter(writer.FileWriter):
         # TODO(fab): support rupture element (not implemented so far)
         # TODO(fab): support full GMPEParameters (not implemented so far)
 
-        self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
+        self.root_node = etree.Element(self.root_tag, nsmap=NSMAP_OLD)
         config_node = etree.SubElement(self.root_node, self.config_tag, 
-                                       nsmap=NSMAP)
+                                       nsmap=NSMAP_OLD)
         config_node.text = "Config file details go here."
 
         container_node = etree.SubElement(self.root_node, 
-                                          self.container_tag, nsmap=NSMAP)
+                                          self.container_tag, nsmap=NSMAP_OLD)
 
         gmpe_params_node = etree.SubElement(container_node, 
-                                            self.gmpe_params_tag, nsmap=NSMAP)
+                                            self.gmpe_params_tag, 
+                                            nsmap=NSMAP_OLD)
 
         # field element
         self.parent_node = etree.SubElement(container_node, self.field_tag, 
-                                            nsmap=NSMAP)
+                                            nsmap=NSMAP_OLD)
 
     def write_footer(self):
         """Write out the file footer"""
@@ -231,14 +232,14 @@ class GMFXMLWriter(writer.FileWriter):
         attribute 'groundMotion', inner 'site' elements have child element
         <gml:pos> with lon/lat coordinates."""
         outer_site_node = etree.SubElement(parent_node, self.site_tag, 
-                                           nsmap=NSMAP)
+                                           nsmap=NSMAP_OLD)
         outer_site_node.attrib[self.ground_motion_attr] = str(
             val[self.ground_motion_attr])
 
         inner_site_node = etree.SubElement(outer_site_node, self.site_tag,
-                                           nsmap=NSMAP)
+                                           nsmap=NSMAP_OLD)
         pos_node = etree.SubElement(inner_site_node, self.pos_tag, 
-                                    nsmap=NSMAP)
+                                    nsmap=NSMAP_OLD)
         pos_node.text = "%s %s" % (str(point.x), str(point.y))
 
 

@@ -8,7 +8,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML
+from openquake.xml import NRML, GML_OLD
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -19,7 +19,7 @@ def _to_site(element):
     # lon/lat are in XML attribute gml:pos
     # consider them as mandatory
 
-    pos = element.find("%spos" % GML).text
+    pos = element.find("%spos" % GML_OLD).text
     
     try:
         lat, lon = [float(x.strip()) for x in pos.split()]

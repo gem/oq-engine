@@ -14,7 +14,7 @@ from openquake import logs
 from openquake import producer
 from openquake import shapes
 
-from openquake.xml import NRML_NS, GML_NS, NRML
+from openquake.xml import NRML_NS, GML_NS_OLD, NRML
 
 LOG = logs.LOG
 
@@ -22,7 +22,7 @@ def _to_site(element):
     """Convert current GML attributes to Site object"""
     # lon/lat are in XML attributes 'Longitude' and 'Latitude'
     # consider them as mandatory
-    pos_el = element.xpath("gml:pos", namespaces={"gml": GML_NS})
+    pos_el = element.xpath("gml:pos", namespaces={"gml": GML_NS_OLD})
     coord = [float(x) for x in pos_el[0].text.strip().split()]
     return shapes.Site(coord[0], coord[1])
 
@@ -103,7 +103,7 @@ class NrmlFile(producer.FileProducer):
             ('../nrml:Common/nrml:IMLValues','IMLValues', float_strip),
             ('../nrml:Common/nrml:IMT', 'IMT', string_strip)):
             child_node = element.xpath(child_el, 
-                namespaces={"gml": GML_NS, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
 
             try:
                 attributes[child_key] = etl(child_node)
@@ -114,7 +114,7 @@ class NrmlFile(producer.FileProducer):
         # consider all attributes of HazardProcessing element as mandatory 
         for (required_attribute, attrib_type) in [('endBranchLabel', str)]:
             (haz_list_element,) = element.xpath("..", 
-                namespaces={"gml": GML_NS, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
             attr_value = haz_list_element.get(required_attribute)
             if attr_value is not None:
                 attributes[required_attribute] = \
@@ -179,7 +179,7 @@ class GMFReader(producer.FileProducer):
         attributes = {}
         attributes['groundMotion'] = float(element.get('groundMotion'))
         (inner_site_node,) = element.xpath('nrml:site', 
-                namespaces={"gml": GML_NS, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
         return (_to_site(inner_site_node), attributes)
 
 

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:GroundMotionFieldSet xmlns:ns1="http://www.opengis.net/gml/profile/sfgml/1.0"
+ xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
+ xmlns:ns3="http://www.w3.org/1999/xlink"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_hazard.xsd">
+    <ns2:complexFaultRupture>
+            <ns2:magnitude>9.0</ns2:magnitude>
+        <ns2:tectonicRegion>Subduction Interface</ns2:tectonicRegion>
+            <ns2:complexFaultGeometry>
+                <ns2:faultTopEdge>
+                    <ns1:posList>
+                        40.363  -124.704  0.5493260E+01
+                        41.214  -124.977  0.4988560E+01
+                        42.096  -125.140  0.4897340E+01
+                        42.965  -125.219  0.4847610E+01
+                        43.852  -125.257  0.4871280E+01
+                        44.718  -125.313  0.4782420E+01
+                        45.458  -125.416  0.4410880E+01
+                        46.337  -125.623  0.4028170E+01
+                        46.642  -125.746  0.3797400E+01
+                        46.965  -125.874  0.3649880E+01
+                        47.289  -126.015  0.3650670E+01
+                        47.661  -126.240  0.3675160E+01
+                        47.994  -126.422  0.3907950E+01
+                        48.287  -126.660  0.4125160E+01
+                        48.711  -127.037  0.4583670E+01
+                        49.279  -127.605  0.4761580E+01
+                    </ns1:posList>
+                </ns2:faultTopEdge>
+                <ns2:faultBottomEdge>
+                    <ns1:posList>
+                        40.347  -123.829  0.2038490E+02
+                        41.218  -124.137  0.1741390E+02
+                        42.115  -124.252  0.1752740E+02
+                        42.984  -124.313  0.1729190E+02
+                        43.868  -124.263  0.1856200E+02
+                        44.740  -124.213  0.1977810E+02
+                        45.494  -124.099  0.2230320E+02
+                        46.369  -123.853  0.2575860E+02
+                        46.811  -123.644  0.2711490E+02
+                        47.300  -123.423  0.2761730E+02
+                        47.792  -123.440  0.2750930E+02
+                        48.221  -124.075  0.2602160E+02
+                        48.560  -124.773  0.2572870E+02
+                        48.873  -125.409  0.2544710E+02
+                        49.244  -126.117  0.2471340E+02
+                        49.687  -126.911  0.2275770E+02
+                    </ns1:posList>
+                </ns2:faultBottomEdge>
+            </ns2:complexFaultGeometry>
+            <ns2:rake>0</ns2:rake>
+    </ns2:complexFaultRupture>
+    <ns2:GMPEParameters/>
+    <ns2:field>
+        <ns2:site groundMotion="0.5">
+            <ns2:site>
+                <ns1:pos>40.3 -124.7</ns1:pos>
+            </ns2:site>
+        </ns2:site>
+    </ns2:field>
+</ns2:GroundMotionFieldSet>
