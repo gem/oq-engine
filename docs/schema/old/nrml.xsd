@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema 
+	xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+	targetNamespace="http://openquake.org/xmlns/nrml/0.1"> 
+  <!-- Include schemas being part of NRML -->
+	<xs:include schemaLocation="./nrml_seismic.xsd"/>
+	<xs:include schemaLocation="./nrml_hazard.xsd"/>
+	<xs:include schemaLocation="./nrml_risk.xsd"/>
+	<xs:include schemaLocation="./nrml_common.xsd"/>
+</xs:schema>

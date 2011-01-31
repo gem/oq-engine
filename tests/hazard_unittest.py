@@ -45,6 +45,7 @@ with open(test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
 NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
@@ -499,7 +500,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_mean_curve,
-                numpy.array(result["curve"])))
+                classical_psha._extract_y_values_from(result["curve"])))
 
     def _run(self, sites):
         classical_psha.compute_mean_hazard_curves(
