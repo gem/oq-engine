@@ -295,9 +295,9 @@ class Job(object):
             config.write(configfile)
 
     def _slurp_files(self):
-        """Read referenced files and write them into redis, keyed on their
+        """Read referenced files and write them into kvs, keyed on their
         sha1s."""
-        memcached_client = kvs.get_client(binary=False)
+        kvs_client = kvs.get_client(binary=False)
         if self.base_path is None:
             LOG.debug("Can't slurp files without a base path, homie...")
             return
@@ -309,11 +309,11 @@ class Job(object):
                     LOG.debug("Slurping %s" % path)
                     sha1 = hashlib.sha1(data_file.read()).hexdigest()
                     data_file.seek(0)
-                    memcached_client.set(sha1, data_file.read())
+                    kvs_client.set(sha1, data_file.read())
                     self.params[key] = sha1
 
     def to_kvs(self, write_cfg=True):
-        """Store this job into redis."""
+        """Store this job into kvs."""
         self._slurp_files()
         if write_cfg:
             self._write_super_config()

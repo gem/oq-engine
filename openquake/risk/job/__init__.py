@@ -23,7 +23,7 @@ LOG = logs.LOG
 def output(fn):
     """ Decorator for output """
     def output_writer(self, *args, **kwargs):
-        """ Write the output of a block to memcached. """
+        """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
         conditional_loss_poes = [float(x) for x in self.params.get(
                     'CONDITIONAL_LOSS_POE', "0.01").split()]
