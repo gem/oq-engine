@@ -86,7 +86,7 @@ def curves_at(job_id, site):
 
 
 def _extract_values_from_config(job, param_name):
-    """Extract the set of valid quantiles from the configuration file."""
+    """Extract the set of valid values from the configuration file."""
     values = []
 
     if job.has(param_name):
@@ -147,18 +147,18 @@ def _extract_imls_from_config(job):
             "INTENSITY_MEASURE_LEVELS"].split(",")]
 
 
-def _get_iml_from(mean_curve, job, poe):
+def _get_iml_from(curve, job, poe):
     """Return the interpolated IML using as IMLs the values defined in
     the INTENSITY_MEASURE_LEVELS parameter."""
 
-    poes = list(mean_curve["curve"])
+    poes = list(curve["curve"])
     imls = _extract_imls_from_config(job)
 
     imls.sort()
     imls.reverse()
     poes.reverse()
 
-    site = shapes.Site(mean_curve["site_lon"], mean_curve["site_lat"])
+    site = shapes.Site(curve["site_lon"], curve["site_lat"])
 
     if poe > poes[-1]:
         LOG.warn("[HAZARD_MAP] Asked interpolation of %s for site %s " \
@@ -257,39 +257,3 @@ def compute_mean_hazard_maps(job):
                     job.id, site, poe)
 
             _store_iml_for(mean_curve, key, job, poe)
-
-
-def _create_writers(job):
-    """Create a GeoTiff writer for each hazard map to store."""
-
-    writers = {}
-    imls = _extract_imls_from_config(job)
-    poes = _extract_values_from_config(job, POES_PARAM_NAME)
-    
-    for poe in poes:
-        filename = "mean_hazard_map_at-%s.tiff" % poe
-        path = os.path.join(job.params["BASE_PATH"],
-                job.params["OUTPUT_DIR"], filename)
-
-        writers[poe] = geotiff.GMFGeoTiffFile(
-                path, job.region.grid, iml_list=imls)
-
-    return writers
-
-
-def serialize_mean_hazard_maps(job):
-    """Serialize the pre computed mean hazard maps for the given job."""
-
-    writers = _create_writers(job)
-    poes = _extract_values_from_config(job, POES_PARAM_NAME)
-
-    for point in job.region.grid:
-        site = job.region.grid.site_at(point)
-        
-        for poe in poes:
-            key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
-            im_level = kvs.get_value_json_decoded(key)
-            writers[poe].write(point, im_level["IML"])
-
-    for (poe, writer) in writers:
-        writer.close()

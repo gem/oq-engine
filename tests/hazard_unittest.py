@@ -699,10 +699,10 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 1.3700e-02, 1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02, \
                 7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01, 2.0300e-01, \
                 2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00, \
-                1.5200e+00, 2.1300e+00" 
+                1.5200e+00, 2.1300e+00"
 
         self.engine = job.Job(self.params,  self.job_id)
-        
+
         self.empty_mean_curve = {"site_lon": 2.0,
                 "site_lat": 5.0, "curve": []}
 
@@ -749,7 +749,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.25)
         self.assertEqual(500, im_level["vs30"])
 
-    def test_computes_the_iml_level(self):
+    def test_computes_the_iml(self):
         self.params[self.poes_levels] = "0.10"
         
         mean_curve = {"site_lon": 3.0, "site_lat": 3.0,
