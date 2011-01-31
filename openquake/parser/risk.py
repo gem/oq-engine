@@ -61,7 +61,8 @@ class NrmlFile(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'end' and element.tag == NRML + self.abscissa_container:
+            if event == 'end' and \
+                element.tag == NRML + self.abscissa_container:
                 yield (_to_site(element), 
                        self._to_attributes(element))
 
