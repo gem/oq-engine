@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """ Mixin proxy for risk jobs, and associated
 Risk Job Mixin decorators """
 

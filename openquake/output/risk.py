@@ -11,7 +11,7 @@ from lxml import etree
 from openquake import logs
 from openquake import shapes
 from openquake import writer
-from openquake.xml import GML, NRML, NSMAP
+from openquake.xml import GML_OLD, NSMAP_OLD, NRML
 
 LOGGER = logs.RISK_LOG
 
@@ -30,14 +30,14 @@ class RiskXMLWriter(writer.FileWriter):
 
     def write_header(self):
         """Write out the file header"""
-        self.root_node = etree.Element(NRML + "RiskResult", nsmap=NSMAP)
+        self.root_node = etree.Element(NRML + "RiskResult", nsmap=NSMAP_OLD)
         config_node = etree.SubElement(self.root_node, 
-                           NRML + "Config" , nsmap=NSMAP)
+                           NRML + "Config" , nsmap=NSMAP_OLD)
         config_node.text = "Config file details go here."
 
         #pylint: disable=W0201
         self.parent_node = etree.SubElement(self.root_node, 
-                           self.container_tag , nsmap=NSMAP)
+                           self.container_tag , nsmap=NSMAP_OLD)
 
     def write_footer(self):
         """Write out the file footer"""
@@ -48,16 +48,17 @@ class RiskXMLWriter(writer.FileWriter):
         """ This method appends a curve node to the parent node """
 
         (curve_object, asset_object) = val
-        node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP)
+        node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP_OLD)
         node.attrib['AssetID'] = asset_object['AssetID']    
-        pos = etree.SubElement(node, GML + "pos", nsmap=NSMAP)
+        pos = etree.SubElement(node, GML_OLD + "pos", nsmap=NSMAP_OLD)
         pos.text = "%s %s" % (str(point.x), str(point.y))
         
         pe_values = _curve_pe_as_gmldoublelist(curve_object)
         
         # This use of not None is b/c of the trap w/ ElementTree find
         # for nodes that have no child nodes.
-        subnode_pe = self.parent_node.find(NRML + "Common/" + self.abcissa_tag)
+        subnode_pe = self.parent_node.find(
+            NRML + "Common/" + self.abcissa_tag)
         if subnode_pe is not None:
             if subnode_pe.find(NRML + "Values").text != pe_values:
                 LOGGER.error("Abcissa doesn't match between \n %s \n %s"
@@ -66,15 +67,16 @@ class RiskXMLWriter(writer.FileWriter):
         else:
             common_node = self.parent_node.find(NRML + "Common")
             if common_node is None:
-                common_node = etree.Element(NRML + "Common", nsmap=NSMAP)
+                common_node = etree.Element(NRML + "Common", nsmap=NSMAP_OLD)
                 parent_node.insert(0, common_node)  
             subnode_pe = etree.SubElement(common_node, 
-                            self.abcissa_tag, nsmap=NSMAP)
+                            self.abcissa_tag, nsmap=NSMAP_OLD)
             etree.SubElement(subnode_pe, 
-                    NRML + "Values", nsmap=NSMAP).text = pe_values
+                    NRML + "Values", nsmap=NSMAP_OLD).text = pe_values
 
         LOGGER.debug("Writing xml, object is %s", curve_object)
-        subnode_loss = etree.SubElement(node, NRML + "Values", nsmap=NSMAP)
+        subnode_loss = etree.SubElement(
+            node, NRML + "Values", nsmap=NSMAP_OLD)
         subnode_loss.text = _curve_vals_as_gmldoublelist(curve_object)
 
 
