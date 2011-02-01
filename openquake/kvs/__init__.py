@@ -23,6 +23,10 @@ def flush():
     get_client(binary=False).flushall()
 
 
+def get_keys(regexp):
+    """Get all KVS keys that match a given regexp pattern."""
+    return get_client(binary=False).keys(regexp)
+     
 def mget(regexp):
     """Get all the values whose keys satisfy the given regexp.
 

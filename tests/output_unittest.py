@@ -35,7 +35,8 @@ TEST_REGION_SMALL = [(0.0, 0.0), (1.0, 0.0), (1.0, 0.5), (0.0, 0.5)]
 TEST_REGION_SQUARE = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
 
 # 101x51 px (numpy array: 51x101) test region
-TEST_REGION_LARGE_ASYMMETRIC = [(0.0, 0.0), (10.0, 0.0), (10.0, 5.0), (0.0, 5.0)]
+TEST_REGION_LARGE_ASYMMETRIC = [(0.0, 0.0), (10.0, 0.0), (10.0, 5.0), 
+                                (0.0, 5.0)]
 
 GEOTIFF_FILENAME_WITHOUT_NUMBER = "test.smallregion.tiff"
 GEOTIFF_FILENAME_WITH_NUMBER = "test.smallregion.1.tiff"
@@ -145,7 +146,8 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_explicit_colorscale_bins(self):
         """Check RGB geotiff generation with colorscale for GMF. Limits 
         and bins of colorscale are explicitly given."""
-        path = test.test_output_file(GEOTIFF_FILENAME_EXPLICIT_COLORSCALE_BINS)
+        path = test.test_output_file(
+            GEOTIFF_FILENAME_EXPLICIT_COLORSCALE_BINS)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
@@ -153,8 +155,8 @@ class OutputTestCase(unittest.TestCase):
                                                  None)):
         
             curr_path = "%s.%s.tiff" % (path[0:-5], test_number)
-            gwriter = geotiff.GMFGeoTiffFile(curr_path, asymmetric_region.grid,
-                iml_list=test_list, discrete=False)
+            gwriter = geotiff.GMFGeoTiffFile(curr_path, 
+                asymmetric_region.grid, iml_list=test_list, discrete=False)
 
             reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                             asymmetric_region.grid.columns),
@@ -198,13 +200,15 @@ class OutputTestCase(unittest.TestCase):
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC ) 
 
-        gwriter = geotiff.LossMapGeoTiffFile(path, asymmetric_region.grid, normalize=True)
+        gwriter = geotiff.LossMapGeoTiffFile(path, asymmetric_region.grid, 
+            normalize=True)
         reference_raster = numpy.zeros((asymmetric_region.grid.rows, 
                                         asymmetric_region.grid.columns),
                                        dtype=numpy.float)
 
         color_fill = lambda x, y:  (x * y) / 50
-        self._fill_rasters(asymmetric_region, gwriter, reference_raster, color_fill)
+        self._fill_rasters(asymmetric_region, gwriter, reference_raster, 
+            color_fill)
         gwriter.close()
 
         self._assert_geotiff_metadata_is_correct(path, asymmetric_region)
@@ -219,7 +223,8 @@ class OutputTestCase(unittest.TestCase):
         For each site, a separate SVG file is created."""
 
         path = test.test_output_file(LOSS_RATIO_CURVE_PLOT_FILENAME)
-        loss_ratio_curve_path = test.test_file(LOSS_RATIO_CURVE_PLOT_INPUTFILE)
+        loss_ratio_curve_path = test.test_file(
+            LOSS_RATIO_CURVE_PLOT_INPUTFILE)
 
         plotter = curve.RiskCurvePlotter(path, loss_ratio_curve_path, 
             mode='loss_ratio')

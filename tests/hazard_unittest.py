@@ -7,18 +7,26 @@ import time
 import unittest
 import numpy
 
+from lxml import etree
+
 from openquake import hazard
+from openquake import job
 from openquake import kvs
+from openquake import logs
 from openquake import shapes
 from openquake import test
-from openquake import job
+from openquake import xml
+
 from openquake.job import mixins
 from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha # pylint ignore, needed for register
 import openquake.hazard.job
+
 from tests.kvs_unittest import ONE_CURVE_MODEL
+
+LOG = logs.LOG
 
 MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
                         "site":"+35.0500 +35.0000", "intensity": 1.9623e+00, \
@@ -29,12 +37,17 @@ TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
-with open(test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+with open(
+    test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
-with open(test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+with open(
+    test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
+
+NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
@@ -58,13 +71,13 @@ class HazardEngineTestCase(unittest.TestCase):
                 pass
 
     def test_hazard_engine_jobber_runs(self):
-
-        """Construction of CommandLineCalculator in Java should not throw
-        errors, and should have params loaded from kvs."""
+        """Construction of LogicTreeProcessor in Java should not throw
+        errors, and should have params loaded from KVS."""
 
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, 
+            key="hazard"):
             hc = hazengine.execute()
             
             source_model_key = kvs.generate_product_key(hazengine.id, 
@@ -88,9 +101,10 @@ class HazardEngineTestCase(unittest.TestCase):
             the order is correct. """
             
             expected_keys = []
-            realizations = int(hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-            print "dir of hazengine is", dir(hazengine)
-            for realization in range(0, realizations):    
+            realizations = int(
+                hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+            # LOG.debug("dir of hazengine is %s" % dir(hazengine))
+            for realization in xrange(0, realizations):    
                 for site_list in hazengine.site_list_generator():
                     for site in site_list:
                         key = tokens.hazard_curve_key(hazengine.id,
@@ -98,26 +112,138 @@ class HazardEngineTestCase(unittest.TestCase):
                                                       site.longitude,
                                                       site.latitude) 
                         expected_keys.append(key) 
-            self.assertEqual(expected_keys, result_keys)
+            self.assertEqual(expected_keys, result_keys, 
+                "computation didn't yield hazard curve keys in "\
+                "expected order")
 
-        def verify_haz_curves_stored_to_kvs(result_keys):
+        def verify_realization_haz_curves_stored_to_kvs(result_keys):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
             # TODO (LB): At some point we need to test the actual 
             # results to verify they are correct
+
+            LOG.debug("verifying KVS entries for %s hazard curves" % \
+                len(result_keys))
+
             for key in result_keys:
                 value = self.kvs_client.get(key)
-                print "kvs value is", value
-                self.assertTrue(value != None) 
+                # LOG.debug("kvs value is %s" % value)
+                self.assertTrue(value is not None, 
+                    "no non-empty value found at KVS key")
+
+        def verify_mean_haz_curves_stored_to_kvs(hazengine):
+            """ Make sure that the keys and non-empty values for mean 
+            hazard curves have been written to KVS."""
+
+            if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
+
+                LOG.debug("verifying KVS entries for mean hazard curves")
+
+                for site_list in hazengine.site_list_generator():
+                    for site in site_list:
+                        key = tokens.mean_hazard_curve_key(hazengine.id, site)
+                        value = self.kvs_client.get(key)
+                        self.assertTrue(value is not None,
+                            "no non-empty value found at KVS key")
+
+        def verify_quantile_haz_curves_stored_to_kvs(hazengine):
+            """ Make sure that the keys and non-empty values for quantile 
+            hazard curves have been written to KVS."""
+
+            quantiles = classical_psha._extract_quantiles_from_config(
+                hazengine)
+
+            LOG.debug("verifying KVS entries for quantile hazard curves, "\
+                "%s quantile values" % len(quantiles))
+
+            for quantile in quantiles:
+                for site_list in hazengine.site_list_generator():
+                    for site in site_list:
+                        key = tokens.quantile_hazard_curve_key(hazengine.id, 
+                            site, quantile)
+                        value = self.kvs_client.get(key)
+                        self.assertTrue(value is not None,
+                            "no non-empty value found at KVS key")
+
+        def verify_realization_haz_curves_stored_to_nrml(hazengine):
+            """Tests that a NRML file has been written for each realization,
+            and that this file validates against the NRML schema.
+            Does NOT test if results in NRML file are correct.
+            """
+            realizations = int(
+                hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+            for realization in xrange(0, realizations):
+
+                nrml_path = os.path.join(
+                    "smoketests/classical_psha_simple/computed_output",
+                    opensha.realization_hc_filename(realization))
+
+                LOG.debug("validating NRML file %s" % nrml_path)
+
+                self.assertTrue(validatesAgainstXMLSchema(
+                    nrml_path, NRML_SCHEMA_PATH),
+                    "NRML instance file %s does not validate against schema" \
+                    % nrml_path)
+
+        def verify_mean_haz_curves_stored_to_nrml(hazengine):
+            """Tests that a mean NRML file has been written,
+            and that this file validates against the NRML schema.
+            Does NOT test if results in NRML file are correct.
+            """
+
+            if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
+                nrml_path = os.path.join(
+                    "smoketests/classical_psha_simple/computed_output",
+                    opensha.mean_hc_filename())
+
+                LOG.debug("validating NRML file %s" % nrml_path)
+
+                self.assertTrue(validatesAgainstXMLSchema(
+                    nrml_path, NRML_SCHEMA_PATH),
+                    "NRML instance file %s does not validate against schema" \
+                    % nrml_path)
+
+        def verify_quantile_haz_curves_stored_to_nrml(hazengine):
+            """Tests that quantile NRML files have been written,
+            and that these file validate against the NRML schema.
+            Does NOT test if results in NRML files are correct.
+            """
+
+            quantiles = classical_psha._extract_quantiles_from_config(
+                hazengine)
+
+            for quantile in quantiles:
+
+                nrml_path = os.path.join(
+                    "smoketests/classical_psha_simple/computed_output",
+                    opensha.quantile_hc_filename(quantile))
+
+                LOG.debug("validating NRML file for quantile hazard curve: "\
+                    "%s" % nrml_path)
+
+                self.assertTrue(validatesAgainstXMLSchema(
+                    nrml_path, NRML_SCHEMA_PATH),
+                    "NRML instance file %s does not validate against schema" \
+                    % nrml_path)
 
         test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
         
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, 
+            key="hazard"):
             result_keys = hazengine.execute()
+
             verify_order_of_haz_curve_keys(hazengine, result_keys)
-            verify_haz_curves_stored_to_kvs(result_keys)
+            verify_realization_haz_curves_stored_to_kvs(result_keys)
+            verify_realization_haz_curves_stored_to_nrml(hazengine)
+
+            # check results of mean and quantile computation
+            verify_mean_haz_curves_stored_to_kvs(hazengine)
+            verify_quantile_haz_curves_stored_to_kvs(hazengine)
+
+            verify_mean_haz_curves_stored_to_nrml(hazengine)
+            verify_quantile_haz_curves_stored_to_nrml(hazengine)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
@@ -135,7 +261,8 @@ class HazardEngineTestCase(unittest.TestCase):
         print kvs.tokens.ERF_KEY_TOKEN
         
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
+            erf_key = kvs.generate_product_key(job_id, 
+                                               kvs.tokens.ERF_KEY_TOKEN)
 
             # Build the expected values
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
@@ -175,8 +302,8 @@ class HazardEngineTestCase(unittest.TestCase):
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN, 
-                block_id, site)
+            mgm_key = kvs.generate_product_key(job_id, 
+                kvs.tokens.MGM_KEY_TOKEN, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
             results.append(tasks.compute_mgm_intensity.apply_async(
@@ -378,22 +505,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_mean_curve,
-                numpy.array(result["curve"])))
-
-    def test_end_to_end(self):
-        test_file_path = "smoketests/classical_psha_simple/config.gem"
-        engine = job.Job.from_file(test_file_path)
-
-        with mixins.Mixin(engine,
-                openquake.hazard.job.HazJobMixin, key="hazard"):
-
-            engine.execute()
-
-# TODO (ac): Find out a better way to do this...
-        time.sleep(1)
-        
-        self.assertTrue(len(kvs.mget("%s*%s*" % (
-                kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
+                classical_psha._extract_y_values_from(result["curve"])))
 
     def _run(self, sites):
         classical_psha.compute_mean_hazard_curves(
@@ -644,22 +756,8 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_curve,
-                numpy.array(result["curve"]), atol=0.005))
-
-    def test_end_to_end(self):
-        test_file_path = "smoketests/classical_psha_simple/config.gem"
-        engine = job.Job.from_file(test_file_path)
-
-        with mixins.Mixin(engine,
-                openquake.hazard.job.HazJobMixin, key="hazard"):
-
-            engine.execute()
-
-# TODO (ac): Find out a better way to do this...
-        time.sleep(1)
-
-        self.assertTrue(len(kvs.mget("%s*%s*" % (
-                kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN, engine.id))) > 0)
+                classical_psha._extract_y_values_from(result["curve"]), 
+                atol=0.005))
 
     def _run(self, sites):
         classical_psha.compute_quantile_hazard_curves(
@@ -683,3 +781,10 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
                 self.job_id, site.longitude, site.latitude,
                 str(value).replace(".", ""))))
+
+
+def validatesAgainstXMLSchema(xml_instance_path, schema_path):
+    xml_doc = etree.parse(xml_instance_path)
+    xmlschema = etree.XMLSchema(etree.parse(schema_path))
+    # xmlschema.assertValid(xml_doc)
+    return xmlschema.validate(xml_doc)

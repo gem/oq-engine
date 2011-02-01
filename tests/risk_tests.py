@@ -26,6 +26,9 @@ from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import common
 
+EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
+VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
+
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
 
