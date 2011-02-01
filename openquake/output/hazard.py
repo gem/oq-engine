@@ -93,7 +93,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
                 "%shazardProcessing" % NRML)
             
             # the following XML attributes are all optional
-            _setOptionalAttributes(hazard_processing_el, values,
+            _set_optional_attributes(hazard_processing_el, values,
                 ('investigationTimeSpan', 'IDmodel', 'saPeriod', 'saDamping'))
 
         # check if we have hazard curves for an end branch label, or
@@ -243,7 +243,7 @@ class GMFXMLWriter(writer.FileWriter):
         pos_node.text = "%s %s" % (str(point.x), str(point.y))
 
 
-def _setOptionalAttributes(element, value_dict, attr_keys):
+def _set_optional_attributes(element, value_dict, attr_keys):
     for curr_key in attr_keys:
         if curr_key in value_dict:
             element.set(curr_key, str(value_dict[curr_key]))
