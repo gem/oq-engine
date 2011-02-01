@@ -127,7 +127,7 @@ class ProbabilisticEventMixin:
     
     def compute_risk(self, block_id, **kwargs): #pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
-        pre-initialized in memcache:
+        pre-initialized in kvs:
          1) list of sites
          2) gmfs
          3) exposure portfolio (=assets)
@@ -144,7 +144,7 @@ class ProbabilisticEventMixin:
 
         #pylint: disable=W0201 
         self.vuln_curves = \
-                vulnerability.load_vuln_curves_from_kvs(self.job_id)
+                vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         # TODO(jmc): DONT assumes that hazard and risk grid are the same
         block = job.Block.from_kvs(block_id)
