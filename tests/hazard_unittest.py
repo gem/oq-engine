@@ -151,8 +151,8 @@ class HazardEngineTestCase(unittest.TestCase):
             """ Make sure that the keys and non-empty values for quantile 
             hazard curves have been written to KVS."""
 
-            quantiles = classical_psha._extract_quantiles_from_config(
-                hazengine)
+            quantiles = classical_psha._extract_values_from_config(hazengine,
+                classical_psha.QUANTILE_PARAM_NAME)
 
             LOG.debug("verifying KVS entries for quantile hazard curves, "\
                 "%s quantile values" % len(quantiles))
@@ -210,8 +210,8 @@ class HazardEngineTestCase(unittest.TestCase):
             Does NOT test if results in NRML files are correct.
             """
 
-            quantiles = classical_psha._extract_quantiles_from_config(
-                hazengine)
+            quantiles = classical_psha._extract_values_from_config(hazengine,
+                classical_psha.QUANTILE_PARAM_NAME)
 
             for quantile in quantiles:
 
