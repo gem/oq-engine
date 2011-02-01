@@ -9,42 +9,43 @@ from openquake import test
 from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
-FILES_KNOWN_TO_FAIL = ['Nrml-fail-missing_required_attribute.xml',
+FILES_KNOWN_TO_FAIL_OLD = ['Nrml-fail-missing_required_attribute.xml',
                        'Nrml-fail-attribute_type_mismatch.xml',
                        'Nrml-fail-IML_type_mismatch.xml',
                        'Nrml-fail-missing_IML.xml',
                        'Nrml-fail-illegal_gml_pos.xml',
                        'Nrml-fail-curve_values_type_mismatch.xml']
 
-FILE_FLAVOUR_NOT_IMPLEMENTED = 'Nrml-HazardMap-PASS.xml'
+FILE_FLAVOUR_NOT_IMPLEMENTED_OLD = 'Nrml-HazardMap-PASS.xml'
 
-EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples/failures')
-TEST_FILE = os.path.join(test.SCHEMA_DIR, 'examples/hazard-curves.xml')
+EXAMPLE_DIR_OLD = os.path.join(test.SCHEMA_DIR, 'old/examples/failures')
+TEST_FILE_OLD = os.path.join(test.SCHEMA_DIR, 
+                             'old/examples/hazard-curves.xml')
 
 class NrmlFileTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE)
+        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE_OLD)
 
     def test_nrml_files_known_to_fail(self):
-        for testfile in FILES_KNOWN_TO_FAIL:
-            nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR, 
-                                                              testfile))
+        for testfile in FILES_KNOWN_TO_FAIL_OLD:
+            nrml_element = hazard_parser.NrmlFile(os.path.join(
+                EXAMPLE_DIR_OLD, testfile))
 
             self.assertRaises(ValueError, map, None, nrml_element)
             
     @test.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
-        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR, 
-            FILE_FLAVOUR_NOT_IMPLEMENTED))
+        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR_OLD,
+            FILE_FLAVOUR_NOT_IMPLEMENTED_OLD))
 
         self.assertRaises(NotImplementedError, map, None, nrml_element)
     
     def test_filter_region_constraint_known_to_fail(self):
         # set region in which no site is found in input file
-        region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
-                                                                (175.0, -85.0))
+        region_constraint = shapes.RegionConstraint.from_simple(
+            (170.0, -80.0), (175.0, -85.0))
         counter = None
 
         # this loop is not expected to be entered - generator should
@@ -62,8 +63,8 @@ class NrmlFileTestCase(unittest.TestCase):
         # look for sites within specified rectangle
         # constraint is met by one and only one site in the example file 
         # (lon=16.35/lat=48.25)
-        region_constraint = shapes.RegionConstraint.from_simple((-122.45, 38.0),
-                                                                (-122.35, 37.0))
+        region_constraint = shapes.RegionConstraint.from_simple(
+            (-122.45, 38.0), (-122.35, 37.0))
         expected_result = [(shapes.Point(-122.40, 37.50),
                            {'IMT': 'PGA',
                             'IDmodel': 'PGA_1_1',
@@ -110,8 +111,8 @@ class NrmlFileTestCase(unittest.TestCase):
     def test_filter_region_constraint_all_sites(self):
 
         # specified rectangle contains all sites in example file 
-        region_constraint = shapes.RegionConstraint.from_simple((-125.0, 40.0),
-                                                                (-120.0, 20.0))
+        region_constraint = shapes.RegionConstraint.from_simple(
+            (-125.0, 40.0), (-120.0, 20.0))
 
         expected_result_counter = 4
         counter = None
@@ -277,8 +278,8 @@ class NrmlFileTestCase(unittest.TestCase):
                            2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]})]]
 
         # set a region constraint that inlcudes all points 
-        region_constraint = shapes.RegionConstraint.from_simple((-125.0, 40.0),
-                                                                (-120.0, 20.0))
+        region_constraint = shapes.RegionConstraint.from_simple(
+            (-125.0, 40.0), (-120.0, 20.0))
       
         for attr_test_counter, curr_attribute_dict in enumerate(
             test_attribute_dicts):
