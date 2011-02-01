@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Test the output of Loss Curve and Loss Ratio Curve as XML.
 
@@ -19,7 +20,10 @@ log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
-LOSS_SCHEMA_FILE = 'nrml.xsd'
+
+#LOSS_SCHEMA_FILE = 'nrml.xsd'
+NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 TEST_CURVE = shapes.Curve([
      (0.0, 0.24105392741891271), (1280.0, 0.23487103910274165), 
@@ -47,10 +51,10 @@ class LossOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.path = os.path.join(test.DATA_DIR, LOSS_XML_OUTPUT_FILE)
-        self.ratio_path = os.path.join(test.DATA_DIR, 
-            LOSS_RATIO_XML_OUTPUT_FILE)
-        self.schema_path = os.path.join(test.SCHEMA_DIR, LOSS_SCHEMA_FILE)
+        self.path = test.test_output_file(LOSS_XML_OUTPUT_FILE)
+        self.ratio_path = test.test_output_file(LOSS_RATIO_XML_OUTPUT_FILE)
+        # self.schema_path = os.path.join(test.SCHEMA_DIR, LOSS_SCHEMA_FILE)
+        self.schema_path = NRML_SCHEMA_PATH_OLD
 
         # Build up some sample loss curves here
 

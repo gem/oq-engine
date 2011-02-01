@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 """
@@ -27,8 +28,8 @@ def generate_erf(job_id):
 
     Takes a job_id, returns a job_id. 
 
-    Connects to the Java HazardEngien using hazardwrapper, waits for an ERF to
-    be generated, and then writes it to kvs. 
+    Connects to the Java HazardEngine using hazardwrapper, waits for an ERF to
+    be generated, and then writes it to KVS. 
     """
 
     # TODO(JM): implement real ERF computation
@@ -90,8 +91,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     return json.JSONDecoder().decode(mgm)
 
-
-@task(ignore_result=True)
+@task
 def compute_mean_curves(job_id, sites):
     """Compute the mean hazard curve for each site given."""
 
@@ -101,11 +101,10 @@ def compute_mean_curves(job_id, sites):
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    classical_psha.compute_mean_hazard_curves(job_id, sites)
-    subtask(compute_quantile_curves).delay(job_id, sites)
+    return classical_psha.compute_mean_hazard_curves(job_id, sites)
+    #subtask(compute_quantile_curves).delay(job_id, sites)
 
-
-@task(ignore_result=True)
+@task
 def compute_quantile_curves(job_id, sites):
     """Compute the quantile hazard curve for each site given."""
 
@@ -116,11 +115,6 @@ def compute_quantile_curves(job_id, sites):
             % (len(sites), job_id))
 
     engine = job.Job.from_kvs(job_id)
-    classical_psha.compute_quantile_hazard_curves(engine, sites)
-    subtask(serialize_quantile_curves).delay(job_id, sites)
+    return classical_psha.compute_quantile_hazard_curves(engine, sites)
+    #subtask(serialize_quantile_curves).delay(job_id, sites)
 
-
-@task(is_eager=True, ignore_result=True)
-def serialize_quantile_curves(job_id, sites):
-    """Serialize quantile curves for the given sites."""
-    print "Job ID is %s" % job_id
