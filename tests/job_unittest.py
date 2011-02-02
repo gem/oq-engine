@@ -21,7 +21,7 @@ HAZARD_ONLY = "hazard-config.gem"
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
 
 SITE = shapes.Site(1.0, 1.0)
-EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.xml"
+EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
@@ -103,33 +103,32 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
     def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({EXPOSURE: os.path.join(test.DATA_DIR, EXPOSURE_TEST_FILE)})
+        a_job = Job({EXPOSURE: os.path.join(test.SCHEMA_EXAMPLES_DIR,
+                                            EXPOSURE_TEST_FILE)})
         a_job._partition()
         blocks_keys = a_job.blocks_keys
         
         expected_block = job.Block((shapes.Site(9.15000, 45.16667),
-                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999),
-                shapes.Site(9.15765, 45.13005), shapes.Site(9.15934, 45.13300),
-                shapes.Site(9.15876, 45.13805)))
+                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
         
         self.assertEqual(1, len(blocks_keys))
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        a_job = Job({EXPOSURE: test.test_file(EXPOSURE_TEST_FILE), 
+        a_job = Job({EXPOSURE: os.path.join(test.SCHEMA_EXAMPLES_DIR,
+                                            EXPOSURE_TEST_FILE), 
                      INPUT_REGION: test.test_file(REGION_EXPOSURE_TEST_FILE)})
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
         blocks_keys = a_job.blocks_keys
+        print "blocks_keys are %s" % blocks_keys
 
         expected_block = job.Block((shapes.Site(9.15, 45.16667),
                                     shapes.Site(9.15333, 45.122),
-                                    shapes.Site(9.14777, 45.17999),
-                                    shapes.Site(9.15765, 45.13005),
-                                    shapes.Site(9.15934, 45.133),
-                                    shapes.Site(9.15876, 45.13805)))
+                                    shapes.Site(9.14777, 45.17999)))
 
         self.assertEqual(1, len(blocks_keys))
+        
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
     
     @test.skipit
@@ -168,7 +167,7 @@ class JobTestCase(unittest.TestCase):
         
         # test exposure has 6 assets
         a_job = Job({EXPOSURE: os.path.join(
-                test.DATA_DIR, EXPOSURE_TEST_FILE)})
+                test.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
 
         self.generated_files.append(a_job.super_config_path)
         
