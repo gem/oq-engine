@@ -8,7 +8,7 @@ from openquake.parser import exposure
 from openquake import shapes
 from openquake import test
 
-TEST_FILE = 'ExposurePortfolioFile-test.xml'
+TEST_FILE = 'exposure-portfolio.xml'
 
 
 class ExposurePortfolioFileTestCase(unittest.TestCase):
@@ -19,8 +19,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(test.DATA_DIR, TEST_FILE))
-
+            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
         ctr = None
 
         # this loop is not expected to be entered - generator should
@@ -41,18 +40,20 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.15332, 45.12201), (9.15334, 45.12199))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(test.DATA_DIR, TEST_FILE))
+            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result = [
             (shapes.Point(9.15333, 45.12200),
-            {'PortfolioID': 'PAV01',
-             'PortfolioDescription': 'Collection of existing building in ' \
-                                     'downtown Pavia',
-             'AssetID': '02',
-             'AssetDescription': 'Moment-resisting non-ductile concrete ' \
+            {'listID': 'PAV01',
+             'listDescription': 'Collection of existing building in ' \
+                                    'downtown Pavia',
+             'assetID': 'asset_02',
+             'assetDescription': 'Moment-resisting non-ductile concrete ' \
                                  'frame low rise',
-             'AssetValue': 250000.0,
-             'VulnerabilityFunction': 'RC/DMRF-D/LR'
+             'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
+             'structureCategory': 'RC-LR-PC',
+             'assetValue': 250000.0,
+             'assetValueUnit': 'EUR',
             })]
 
         ctr = None
@@ -82,12 +83,13 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
     def test_filter_region_constraint_all_sites(self):
 
         # specified rectangle contains all sites in example file 
-        region_constraint = shapes.RegionConstraint.from_simple((-20.0, 80.0),
-                                                                (40.0, 0.0))
+        region_constraint = \
+                shapes.RegionConstraint.from_simple((9.14776, 45.18000),
+                                                    (9.15334, 45.12199))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(test.DATA_DIR, TEST_FILE))
+            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
-        expected_result_ctr = 6
+        expected_result_ctr = 3
         ctr = None
 
         # just loop through iterator in order to count items
