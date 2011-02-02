@@ -116,7 +116,7 @@ class JobTestCase(unittest.TestCase):
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
         a_job = Job({EXPOSURE: os.path.join(test.SCHEMA_EXAMPLES_DIR,
-                                            EXPOSURE_TEST_FILE), 
+                                            EXPOSURE_TEST_FILE),
                      INPUT_REGION: test.test_file(REGION_EXPOSURE_TEST_FILE)})
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
@@ -128,7 +128,6 @@ class JobTestCase(unittest.TestCase):
                                     shapes.Site(9.14777, 45.17999)))
 
         self.assertEqual(1, len(blocks_keys))
-        
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
     
     @test.skipit
