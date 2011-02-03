@@ -35,7 +35,6 @@ def _to_site(element):
         pos = point_elem.find('%spos' % GML).text
         lon, lat = [float(x.strip()) for x in pos.split()]
 
-        del element
         return shapes.Site(lon, lat)
     except Exception:
         error_str = "element assetDefintion: no valid lon/lat coordinates"
@@ -86,8 +85,10 @@ class ExposurePortfolioFile(producer.FileProducer):
                     self._current_meta['listDescription'] = str(desc.text)
 
             elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
-                yield (_to_site(element), 
-                       self._to_site_attributes(element))
+                site_data = (_to_site(element),
+                             self.to_site_attributes(element))
+                del element
+                yield site_data
 
     def _to_site_attributes(self, element):
         """Build a dict of all node attributes"""
