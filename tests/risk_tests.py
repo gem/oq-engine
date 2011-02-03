@@ -583,6 +583,38 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertAlmostEquals(0.0673, lrem_po[0][2], 4)
         self.assertAlmostEquals(0.05718, lrem_po[1][2], 4)
 
+    def test_pes_from_imls(self):
+        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 0.99, "x": 0.01}, {"y": 0.96, "x": 0.08},
+                {"y": 0.89, "x": 0.17}, {"y": 0.82, "x": 0.26},
+                {"y": 0.7, "x": 0.36}, {"y": 0.4, "x": 0.55},
+                {"y": 0.01, "x": 0.7}]} 
+        expected_pes = [0.9729, 0.9056, 0.7720, 0.4789, 0.0100]
+
+        self.assertTrue(numpy.allclose(expected_pes,
+                        common.compute_pes_from_imls(hazard_curve,
+                        [0.05,0.15,0.3,0.5,0.7]), atol=0.00005))
+    def test_pos_from_pes(self):
+        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
+                {"y": 0.99, "x": 0.01}, {"y": 0.96, "x": 0.08},
+                {"y": 0.89, "x": 0.17}, {"y": 0.82, "x": 0.26},
+                {"y": 0.7, "x": 0.36}, {"y": 0.4, "x": 0.55},
+                {"y": 0.01, "x": 0.7}]}
+        expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
+        self.assertTrue(numpy.allclose(expected_pos,
+                            common.compute_pos_from_pes(hazard_curve, 
+                            [0.05,0.15,0.3,0.5,0.7]), atol=0.00005))
+
+    def test_bin_width_from_imls(self):
+        vuln_function = shapes.VulnerabilityFunction(
+                        [(0.1,0.05), (0.2,0.08),(0.4,0.2),(0.6,0.4)])
+        expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
+        self.assertTrue(numpy.allclose(expected_steps,
+                        common.compute_imls(vuln_function)))
+
+
+
+
     def test_empty_loss_ratio_curve(self):
         self.assertEqual(shapes.EMPTY_CURVE,
                 psha.compute_loss_ratio_curve(
