@@ -54,6 +54,8 @@ class ExposurePortfolioFile(producer.FileProducer):
     
     The attribute dictionary looks like this:
     {'listID': 'PAV01',
+     'listDescription': 'Collection of existing building in ' \
+                        'downtown Pavia',
      'assetID': 'asset_02',
      'assetDescription': 'Moment-resisting non-ductile concrete ' \
                          'frame low rise',
@@ -61,6 +63,9 @@ class ExposurePortfolioFile(producer.FileProducer):
      'structureCategory': 'RC-LR-PC',
      'assetValue': 250000.0,
      'assetValueUnit': 'EUR'}
+
+
+    Note: assetDescription is optional.
     """
 
     def __init__(self, path):
@@ -75,6 +80,10 @@ class ExposurePortfolioFile(producer.FileProducer):
                 # we need to get the exposureList id and description
                 id = element.get('%sid' % GML)
                 self._current_meta['listID'] = str(id)
+
+                desc = element.find('%sdescription' % GML)
+                if desc is not None:
+                    self._current_meta['listDescription'] = str(desc.text)
 
             elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
                 yield (_to_site(element), 
