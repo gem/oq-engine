@@ -45,6 +45,8 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         expected_result = [
             (shapes.Point(9.15333, 45.12200),
             {'listID': 'PAV01',
+             'listDescription': 'Collection of existing building in ' \
+                                'downtown Pavia',
              'assetID': 'asset_02',
              'assetDescription': 'Moment-resisting non-ductile concrete ' \
                                  'frame low rise',
