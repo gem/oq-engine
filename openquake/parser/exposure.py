@@ -34,6 +34,8 @@ def _to_site(element):
         point_elem = site_elem.find('%sPoint' % GML)
         pos = point_elem.find('%spos' % GML).text
         lon, lat = [float(x.strip()) for x in pos.split()]
+
+        del element
         return shapes.Site(lon, lat)
     except Exception:
         error_str = "element assetDefintion: no valid lon/lat coordinates"
@@ -52,8 +54,6 @@ class ExposurePortfolioFile(producer.FileProducer):
     
     The attribute dictionary looks like this:
     {'listID': 'PAV01',
-     'listDescription': 'Collection of existing building in ' \
-                        'downtown Pavia',
      'assetID': 'asset_02',
      'assetDescription': 'Moment-resisting non-ductile concrete ' \
                          'frame low rise',
@@ -76,9 +76,6 @@ class ExposurePortfolioFile(producer.FileProducer):
                 id = element.get('%sid' % GML)
                 self._current_meta['listID'] = str(id)
 
-                desc = element.find('%sdescription' % GML)
-                self._current_meta['listDescription'] = str(desc.text)
- 
             elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
                 yield (_to_site(element), 
                        self._to_site_attributes(element))
