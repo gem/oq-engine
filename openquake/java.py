@@ -49,7 +49,7 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-def jvm(max_mem=4000):
+def jvm(max_mem=2000):
     """Return the jpype module, after guaranteeing the JVM is running and 
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(

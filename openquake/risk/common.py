@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 """
 This module defines functions that can be applied to loss ratio
 or loss curves.
 """
 
-from numpy import mean # pylint: disable=E1101, E0611
+from numpy import mean, array, subtract # pylint: disable=E1101, E0611
 
 from openquake import shapes
 
@@ -66,6 +68,37 @@ def compute_mean_loss(curve):
     mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
     return sum(i*j for i, j in zip(mid_curve.abscissae, mid_curve.ordinates))
 
+def compute_imls(vuln_function):
+    """
+        Computes Intensity Measure Levels considering
+        the highest/lowest values a special case
+    """
+
+    imls = vuln_function.imls
+
+    lowest_curve_value = imls[0] - ((imls[1] - imls[0]) / 2)
+    highest_curve_value = imls[-1] + ((imls[-1] - imls[-2]) / 2)
+    between_curve_values = collect(loop(vuln_function.imls,
+            lambda x, y: mean([x, y])))
+    return [lowest_curve_value] + between_curve_values + [highest_curve_value]
+
+def compute_pes_from_imls(haz_curve, imls):
+    """
+        Computes the probabilities of exceedances from imls
+    """
+
+    curve_tuple = [(el['x'], el['y']) for el in haz_curve['curve']]
+    curve = shapes.Curve(curve_tuple)
+    pes = [curve.ordinate_for(iml) for iml in imls]
+
+    return array(pes)
+
+def compute_pos_from_pes(hazard_curve, imls):
+    """
+        Computes the probability occurences from the probability exceedances
+    """
+    return collect(loop(compute_pes_from_imls(hazard_curve, imls), 
+        lambda x, y: subtract(array(x), array(y))))
 
 def loop(elements, func, *args):
     """Loop over the given elements, yielding func(current, next, *args)."""
