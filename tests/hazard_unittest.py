@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Unit tests for hazard computations with the hazard engine. 
+Includes:
+
+- hazard curves (with mean and quantile)
+- hazard maps (with mean and quantile)
+"""
 
 import json
 import logging
@@ -52,8 +59,6 @@ NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
     return jobobj.id
-
-# TODO(JMC): THIS IS REALLY BITROTTED, DOES NOT REPRESENT CURRENT GOLDEN PATH
 
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
