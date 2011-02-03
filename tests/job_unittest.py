@@ -121,7 +121,6 @@ class JobTestCase(unittest.TestCase):
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
         blocks_keys = a_job.blocks_keys
-        print "blocks_keys are %s" % blocks_keys
 
         expected_block = job.Block((shapes.Site(9.15, 45.16667),
                                     shapes.Site(9.15333, 45.122),
