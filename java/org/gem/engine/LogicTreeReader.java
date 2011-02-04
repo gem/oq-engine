@@ -98,7 +98,7 @@ public class LogicTreeReader {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        Element root = doc.getRootElement(); // <nrml> tag
+        Element root = doc.getRootElement(); // <nrml> element
 
         /**
          * Makes a loop over the possible logic trees defined in the file. In
@@ -177,7 +177,7 @@ public class LogicTreeReader {
 
         Iterator i = logicTreeElem.elementIterator();
         while (i.hasNext()) {
-            Element branchSet = (Element) i.next(); // <logicTreeBranchSet>
+            Element branchSet = (Element) i.next();
 
             parseLogicTreeBranchSet(branchSet, logicTree);
 
@@ -202,7 +202,7 @@ public class LogicTreeReader {
 
         int indexBranch = 1;
         Iterator i = branchSet.elementIterator();
-        while (i.hasNext()) { // <logicTreeBranch> items
+        while (i.hasNext()) {
             Element logicTreeBranch = (Element) i.next();
 
             parseLogicTreeBranch(logicTreeBranch, branchingLevel,
