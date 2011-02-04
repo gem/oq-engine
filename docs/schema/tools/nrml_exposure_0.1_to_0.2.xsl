@@ -16,14 +16,11 @@
                 exclude-result-prefixes="xsl xs nrml1 nrml qml gml_old">
 
 
-    <!--<xsl:include href="nrml_update_common.xsl"/>-->
-
+    <xsl:include href="nrml_update_common.xsl"/>
     <xsl:output method="xml" indent="yes"/>
 
     <!-- start main template -->
-
     <xsl:template match="nrml1:ExposurePortfolio">
-
         <nrml>
             <xsl:attribute name="gml:id">nrml</xsl:attribute>
             <exposurePortfolio>
@@ -31,45 +28,24 @@
                 <xsl:apply-templates select="nrml1:ExposureList"/>
             </exposurePortfolio>
         </nrml>
-
     </xsl:template>
-
     <!-- end main template -->
 
     <xsl:template match="nrml1:ExposureList">
 
         <!-- fix asset and loss category in order to match new-style enum values -->
-        <xsl:variable name="assetCategoryOrig" select="/nrml1:ExposurePortfolio/nrml1:Config/nrml1:ExposureParameters/@AssetType"/>
         <xsl:variable name="assetCategory">
-            <xsl:choose>
-                <xsl:when test="$assetCategoryOrig = 'Population'">
-                    <xsl:text>population</xsl:text>
-                </xsl:when>
-                <xsl:when test="$assetCategoryOrig = 'Buildings'">
-                    <xsl:text>buildings</xsl:text>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:value-of select="$assetCategoryOrig"/>
-                </xsl:otherwise>
-            </xsl:choose>
+            <xsl:call-template name="fix_asset_category">
+                <xsl:with-param name="assetCategory" 
+                    select="/nrml1:ExposurePortfolio/nrml1:Config/nrml1:ExposureParameters/@AssetType"/>
+            </xsl:call-template>
         </xsl:variable>
 
-        <xsl:variable name="lossCategoryOrig" select="/nrml1:ExposurePortfolio/nrml1:Config/nrml1:ExposureParameters/@LossType"/>
         <xsl:variable name="lossCategory">
-            <xsl:choose>
-                <xsl:when test="($lossCategoryOrig = 'People') or ($lossCategoryOrig = 'people')">
-                    <xsl:text>fatalities</xsl:text>
-                </xsl:when>
-                <xsl:when test="($lossCategoryOrig = 'Economical_loss') or ($lossCategoryOrig = 'Economical loss') or 
-                    ($lossCategoryOrig = 'economical_loss') or ($lossCategoryOrig = 'economical loss') or
-                    ($lossCategoryOrig = 'Economic_loss') or ($lossCategoryOrig = 'Economic loss') or
-                    ($lossCategoryOrig = 'economic loss')">
-                    <xsl:text>economic_loss</xsl:text>
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:value-of select="$lossCategoryOrig"/>
-                </xsl:otherwise>
-            </xsl:choose>
+            <xsl:call-template name="fix_loss_category">
+                <xsl:with-param name="lossCategory" 
+                    select="/nrml1:ExposurePortfolio/nrml1:Config/nrml1:ExposureParameters/@LossType"/>
+            </xsl:call-template>
         </xsl:variable>
 
         <!-- fix gml:id of exposureList, if necessary -->
@@ -149,21 +125,6 @@
                 </gml:pos>
             </gml:Point>
         </site>
-    </xsl:template>
-
-    <xsl:template name="fix_gml_id">
-        <xsl:param name="input_id"/>
-        <xsl:param name="prefix"/>
-        <xsl:choose>
-            <xsl:when test="translate(substring($input_id, 1, 1), '0123456789', '') = ''">
-                <!-- first char is numeric, apply prefix -->
-                <xsl:value-of select="concat($prefix, $input_id)"/>
-            </xsl:when>
-            <xsl:otherwise>
-                <!-- first char is non-numeric, take original value -->
-                <xsl:value-of select="$input_id"/>
-            </xsl:otherwise>
-        </xsl:choose>
     </xsl:template>
 
 </xsl:stylesheet>
