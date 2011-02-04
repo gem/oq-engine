@@ -17,6 +17,15 @@ import org.opensha.sha.util.TectonicRegionType;
 public class LogicTreeReaderTest {
 
     /**
+     * Logic Tree Source Model test file.
+     */
+    public static final String LT_SRC_MODEL_TEST_FILE =
+            "docs/schema/examples/logic-tree-source-model.xml";
+
+    public static final String LT_GMPE_TEST_FILE =
+            "docs/schema/examples/logic-tree-gmpe.xml";
+
+    /**
      * Compares source model logic tree as derived by reading nrML file with
      * source model logic tree defined by hand with the same data contained in
      * the nrML file
@@ -28,16 +37,18 @@ public class LogicTreeReaderTest {
                 getSourceModelLogicTree();
 
         LogicTreeReader sourceModelLogicTreeReader =
-                new LogicTreeReader(
-                        "java_tests/data/source_model_logic_tree.xml");
+                new LogicTreeReader(LT_SRC_MODEL_TEST_FILE);
         Map<String, LogicTree> sourceModelLogicTreeHashMapRead =
                 sourceModelLogicTreeReader.read();
 
         assertTrue(sourceModelLogicTreeHashMap.keySet().size() == sourceModelLogicTreeHashMapRead
                 .keySet().size());
-        for (String key : sourceModelLogicTreeHashMap.keySet())
-            assertEquals(sourceModelLogicTreeHashMap.get(key),
-                    sourceModelLogicTreeHashMapRead.get(key));
+        for (String key : sourceModelLogicTreeHashMap.keySet()) {
+            LogicTree expected = sourceModelLogicTreeHashMap.get(key);
+            LogicTree actual = sourceModelLogicTreeHashMapRead.get(key);
+
+            assertEquals(expected, actual);
+        }
 
     }
 
@@ -51,15 +62,18 @@ public class LogicTreeReaderTest {
                 getGmpeLogicTreeHashMap();
 
         LogicTreeReader gmpeLogicTreeReader =
-                new LogicTreeReader("java_tests/data/gmpe_logic_tree.xml");
+                new LogicTreeReader(LT_GMPE_TEST_FILE);
         Map<String, LogicTree> gmpeLogicTreeHashMapRead =
                 gmpeLogicTreeReader.read();
 
         assertTrue(gmpeLogicTreeHashMap.keySet().size() == gmpeLogicTreeHashMapRead
                 .keySet().size());
-        for (String key : gmpeLogicTreeHashMap.keySet())
-            assertEquals(gmpeLogicTreeHashMap.get(key),
-                    gmpeLogicTreeHashMapRead.get(key));
+        for (String key : gmpeLogicTreeHashMap.keySet()) {
+            LogicTree expected = gmpeLogicTreeHashMap.get(key);
+            LogicTree actual = gmpeLogicTreeHashMapRead.get(key);
+
+            assertEquals(expected, actual);
+        }
     }
 
     /**
@@ -90,9 +104,8 @@ public class LogicTreeReaderTest {
         branchingLevel.addBranch(new LogicTreeBranch(1,
                 "McVerryetal_2000_AttenRel", 1.0));
         gmpeLogicTreeSubductionInterface.addBranchingLevel(branchingLevel);
-        gmpeLogicTreeHashMap.put(
-                TectonicRegionType.SUBDUCTION_INTERFACE.toString(),
-                gmpeLogicTreeSubductionInterface);
+        gmpeLogicTreeHashMap.put(TectonicRegionType.SUBDUCTION_INTERFACE
+                .toString(), gmpeLogicTreeSubductionInterface);
 
         return gmpeLogicTreeHashMap;
     }
