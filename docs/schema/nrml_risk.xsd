@@ -15,7 +15,7 @@
     <xs:complexType name="AssetValue">
         <xs:simpleContent>
             <xs:extension base="NonNegativeDoubleType">
-                <xs:attribute name="unit" type="AssetValueUnit" use="required"/>
+                <xs:attribute name="unit" type="AssetValueUnit"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
