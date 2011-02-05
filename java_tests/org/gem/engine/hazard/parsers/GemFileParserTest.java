@@ -44,7 +44,8 @@ public class GemFileParserTest {
         faults.writeSource2NrmlFormat(file);
         SourceModelReader modelReader =
                 new SourceModelReader(file.getAbsolutePath(), 0.1);
-        ArrayList<GEMSourceData> sources = new ArrayList(modelReader.read());
+        ArrayList<GEMSourceData> sources =
+                new ArrayList<GEMSourceData>(modelReader.read());
         assertEquals(faults.getList().size(), sources.size());
         assertSourcesAreEqual(faults.getList(), sources);
     }
