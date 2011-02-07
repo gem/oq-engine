@@ -453,7 +453,6 @@ class ClassicalMixin(BasePSHAMixin):
                         raise ValueError(error_msg)
 
                 hm = kvs.get_value_json_decoded(hm_key)
-                LOG.debug("JSON HM: %s" % hm)
                 
                 site_obj = shapes.Site(float(hm['site_lon']), 
                                        float(hm['site_lat']))

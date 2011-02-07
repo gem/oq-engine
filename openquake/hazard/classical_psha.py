@@ -6,8 +6,8 @@ as input data produced with the classical psha method.
 
 import os
 import math
+import numpy
 
-from numpy import array # pylint: disable=E1101, E0611
 from scipy.interpolate import interp1d # pylint: disable=E1101, E0611
 from scipy.stats.mstats import mquantiles
 
@@ -25,20 +25,20 @@ def compute_mean_curve(curves):
     """Compute a mean hazard curve.
     
     The input parameter is a list of arrays where each array
-    contains just the Y values of the corresponding hazard curve.
+    contains just the y values of the corresponding hazard curve.
     """
-    return array(curves).mean(axis=0)
+    return numpy.array(curves).mean(axis=0)
 
 
 def compute_quantile_curve(curves, quantile):
     """Compute a quantile hazard curve.
 
     The input parameter is a list of arrays where each array
-    contains just the Y values of the corresponding hazard curve.
+    contains just the y values of the corresponding hazard curve.
     """
     result = []
 
-    if len(array(curves).flat):
+    if len(numpy.array(curves).flat):
         result = mquantiles(curves, quantile, axis=0)[0]
     
     return result
@@ -46,7 +46,7 @@ def compute_quantile_curve(curves, quantile):
 
 def _extract_y_values_from(curve):
     """Extract from a serialized hazard curve (in json format)
-    the Y values used to compute the mean hazard curve.
+    the y values (PoEs) used to compute the mean hazard curve.
     
     The serialized hazard curve has this format:
     {"site_lon": 1.0, "site_lat": 1.0, "curve": [{"x": 0.1, "y": 0.2}, ...]}
@@ -191,33 +191,40 @@ def _extract_imls_from_config(job):
 
 
 def _get_iml_from(curve, job, poe):
-    """Return the interpolated IML using as IMLs the values defined in
-    the INTENSITY_MEASURE_LEVELS parameter."""
+    """Return the interpolated IML using the values defined in
+    the INTENSITY_MEASURE_LEVELS parameter as the reference grid to
+    interpolate in.
+    
+    IML from config is in ascending order (abscissa of hazard curve)
+    PoE from curve is in descending order (ordinate of hazard curve)
 
-    poes = list(curve["curve"])
-    imls = _extract_imls_from_config(job)
+    In our interpolation, PoE becomes the x axis, IML the y axis, therefore
+    the arrays have to be reversed (x axis has to be monotonically 
+    increasing).
+    """
 
-    imls.sort()
-    imls.reverse()
-    poes.reverse()
+    # reverse arrays
+    poes = numpy.array(_extract_y_values_from(curve["curve"]))[::-1]
+    imls = numpy.log(numpy.array(_extract_imls_from_config(job))[::-1])
+
+    #LOG.debug("HAZARD MAP PoEs: %s" % poes)
+    #LOG.debug("HAZARD MAP IMLs: %s" % numpy.exp(imls))
 
     site = shapes.Site(curve["site_lon"], curve["site_lat"])
 
     if poe > poes[-1]:
-        LOG.warn("[HAZARD_MAP] Asked interpolation of %s for site %s " \
-                "but the max POE value is %s, using the min IML defined (%s)"
-                % (poe, site, poes[-1], imls[-1]))
-        return imls[-1]
+        LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
+            "using maximum PoE value pair, PoE: %s, IML: %s, at site %s" % (
+            poe, poes[-1], math.exp(imls[-1]), site))
+        return math.exp(imls[-1])
 
     if poe < poes[0]:
-        LOG.warn("[HAZARD_MAP] Asked interpolation of %s for site %s " \
-                "but the min POE value is %s, using the max IML defined (%s)"
-                % (poe, site, poes[0], imls[0]))
-        return imls[0]
+        LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
+            "using minimum PoE value pair, PoE: %s, IML: %s, at site %s" % (
+            poe, poes[0], math.exp(imls[0]), site))
+        return math.exp(imls[0])
 
-    imls = [math.log(x) for x in imls]
-    return math.exp(interp1d(poes, imls)(poe))
-
+    return math.exp(interp1d(poes, imls, kind='linear')(poe))
 
 def _store_iml_for(curve, key, job, poe):
     """Store an interpolated IML in kvs along with all
@@ -265,7 +272,7 @@ def compute_quantile_hazard_maps(job):
         for poe in poes:
             for quantile_curve in quantile_curves:
                 site = shapes.Site(quantile_curve["site_lon"],
-                        quantile_curve["site_lat"])
+                                   quantile_curve["site_lat"])
 
                 key = kvs.tokens.quantile_hazard_map_key(
                         job.id, site, poe, quantile)
@@ -299,7 +306,7 @@ def compute_mean_hazard_maps(job):
     for poe in poes:
         for mean_curve in mean_curves:
             site = shapes.Site(mean_curve["site_lon"],
-                    mean_curve["site_lat"])
+                               mean_curve["site_lat"])
 
             key = kvs.tokens.mean_hazard_map_key(
                     job.id, site, poe)
