@@ -792,7 +792,6 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 def validatesAgainstXMLSchema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
-    # xmlschema.assertValid(xml_doc)
     return xmlschema.validate(xml_doc)
 
 
@@ -821,11 +820,12 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         kvs.flush()
 
         mean_curve = {"site_lon": 2.0, "site_lat": 5.0,
-                "curve": [9.8728e-01, 9.8266e-01, 9.4957e-01,
+                "curve": classical_psha._reconstruct_curve_list_from(
+                [9.8728e-01, 9.8266e-01, 9.4957e-01,
                 9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01, 3.6143e-01,
                 2.4231e-01, 2.2452e-01, 1.2831e-01, 7.0352e-02, 3.6060e-02,
                 1.6579e-02, 6.4213e-03, 2.0244e-03, 4.8605e-04, 8.1752e-05,
-                7.3425e-06]}
+                7.3425e-06])}
 
         self._store_curve_at(shapes.Site(2.0, 5.0), mean_curve)
 
@@ -864,10 +864,11 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.params[self.poes_levels] = "0.10"
         
         mean_curve = {"site_lon": 3.0, "site_lat": 3.0,
-                "curve": [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+                "curve": classical_psha._reconstruct_curve_list_from(
+                [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
-                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06])}
 
         self._store_curve_at(shapes.Site(3.0, 3.0), mean_curve)
 
@@ -914,16 +915,18 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.params[self.quantiles_levels] = "0.25 0.50 0.75"
 
         curve_1 = {"site_lon": 3.0, "site_lat": 3.0,
-                "curve": [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+                "curve": classical_psha._reconstruct_curve_list_from(
+                [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
-                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06])}
 
         curve_2 = {"site_lon": 3.5, "site_lat": 3.5,
-                "curve": [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+                "curve": classical_psha._reconstruct_curve_list_from(
+                [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
-                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06])}
 
         # keys for shapes.Site(3.0, 3.0)
         key_1 = kvs.tokens.quantile_hazard_curve_key(
