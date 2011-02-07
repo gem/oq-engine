@@ -8,7 +8,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML_OLD
+from openquake.xml import NRML_OLD, GML_OLD
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -65,10 +65,10 @@ class ExposurePortfolioFile(producer.FileProducer):
                 self.file, events=('start', 'end')):
 
             if event == 'start' and element.tag == \
-                    '%sExposureParameters' % NRML:
+                    '%sExposureParameters' % NRML_OLD:
 
                 self._set_meta(element)
-            elif event == 'end' and element.tag == '%sAssetInstance' % NRML:
+            elif event == 'end' and element.tag == '%sAssetInstance' % NRML_OLD:
                 yield (_to_site(element), 
                        self._to_site_attributes(element))
 
@@ -76,9 +76,9 @@ class ExposurePortfolioFile(producer.FileProducer):
         """Build a dict of all node attributes"""
         site_attributes = {}
 
-        site_attributes["AssetID"] = element.find("%sAssetID" % NRML).text
+        site_attributes["AssetID"] = element.find("%sAssetID" % NRML_OLD).text
         site_attributes["AssetValue"] = float(element.find(
-                "%sAssetValue" % NRML).text)
+                "%sAssetValue" % NRML_OLD).text)
 
         # consider all attributes of AssetInstance element as mandatory
         for required_attribute in (('AssetDescription', str),
