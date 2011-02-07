@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns="http://openquake.org/xmlns/nrml/0.1"
-           xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+           xmlns="http://openquake.org/xmlns/nrml/0.2"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
            xmlns:gmlsf="http://www.opengis.net/gmlsf"
            xmlns:gml="http://www.opengis.net/gml"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.1"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
            elementFormDefault="qualified"
            xml:lang="en"> 
 
