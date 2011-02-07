@@ -91,12 +91,12 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.NRML + "LossCurvePE//"
-                + xml.NRML + "Values").text.strip().split())
+                + xml.NRML_OLD + "LossCurvePE//"
+                + xml.NRML_OLD + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
-                xml.NRML + "LossCurveList//" 
-                + xml.NRML + "LossCurve//"
-                + xml.NRML + "Values").text.strip().split()
+                xml.NRML_OLD + "LossCurveList//" 
+                + xml.NRML_OLD + "LossCurve//"
+                + xml.NRML_OLD + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.abscissae):
             self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
@@ -111,12 +111,12 @@ class LossOutputTestCase(unittest.TestCase):
         loaded_xml = xml_doc.getroot()
 
         xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.NRML + "LossRatioCurvePE//"
-                + xml.NRML + "Values").text.strip().split())
+                + xml.NRML_OLD + "LossRatioCurvePE//"
+                + xml.NRML_OLD + "Values").text.strip().split())
         xml_first_curve_value = loaded_xml.find(
-                xml.NRML + "LossRatioCurveList//" 
-                + xml.NRML + "LossRatioCurve//"
-                + xml.NRML + "Values").text.strip().split()
+                xml.NRML_OLD + "LossRatioCurveList//" 
+                + xml.NRML_OLD + "LossRatioCurve//"
+                + xml.NRML_OLD + "Values").text.strip().split()
 
         for idx, val in enumerate(TEST_CURVE.abscissae):
             self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
