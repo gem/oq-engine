@@ -1,8 +1,7 @@
+# -*- coding: utf-8 -*-
 """
 Test the output of Loss Curve, Loss Ratio Curve and Hazard Curves as XML.
-
 """
-
 
 import os
 import unittest
@@ -15,7 +14,7 @@ log = logs.LOG
 
 XML_TEST_DIRECTORY= "examples"
 SCHEMA_FILE = 'nrml.xsd'
-
+SCHEMA_FILE_OLD = 'old/nrml.xsd'
 
 class SchemaValidationTestCase(unittest.TestCase):
     """Confirm that all XML examples match schema."""
