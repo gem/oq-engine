@@ -33,8 +33,8 @@ from openquake.xml import NSMAP, NRML, GML, NSMAP_OLD, GML_OLD
 
 LOGGER = logs.HAZARD_LOG
 
-NRML_GML_ID = 'n1'
-HAZARDRESULT_GML_ID = 'hr1'
+NRML_GML_ID = 'nrml'
+HAZARDRESULT_GML_ID = 'hr'
 SRS_EPSG_4326 = 'epsg:4326'
 
 class HazardCurveXMLWriter(writer.FileWriter):
@@ -206,6 +206,10 @@ class HazardMapXMLWriter(writer.FileWriter):
     HAZARD_MAP_DEFAULT_ID = 'hm'
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
+    def __init__(self, path):
+        super(HazardMapXMLWriter, self).__init__(path)
+        self.hmnode_counter = 0
+
     def write(self, point, val):
         """Writes hazard map for one site.
 
@@ -230,14 +234,12 @@ class HazardMapXMLWriter(writer.FileWriter):
     def write_header(self):
         """Header (i.e., common) information for all nodes."""
 
-        self.hmnode_counter = 0
-
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
-        self.root_node.attrib['id' % GML] = self.NRML_DEFAULT_ID
+        self.root_node.attrib['%sid' % GML] = self.NRML_DEFAULT_ID
 
         hazard_result_node = etree.SubElement(self.root_node, 
             self.hazard_result_tag, nsmap=NSMAP)
-        hazard_result_node.attrib['id' % GML] = self.HAZARD_RESULT_DEFAULT_ID
+        hazard_result_node.attrib['%sid' % GML] = self.HAZARD_RESULT_DEFAULT_ID
 
         config_node = etree.SubElement(hazard_result_node, 
             self.config_tag, nsmap=NSMAP)
@@ -248,7 +250,7 @@ class HazardMapXMLWriter(writer.FileWriter):
         # parent node for hazard map nodes: hazardMap
         self.parent_node = etree.SubElement(hazard_result_node, 
             self.hazard_map_tag, nsmap=NSMAP)
-        self.parent_node.attrib['id' % GML] = self.HAZARD_MAP_DEFAULT_ID
+        self.parent_node.attrib['%sid' % GML] = self.HAZARD_MAP_DEFAULT_ID
 
     def write_footer(self):
         """Serialize tree to file."""
@@ -265,10 +267,10 @@ class HazardMapXMLWriter(writer.FileWriter):
     def _append_node(self, point, val, parent_node):
         """Write HMNode element."""
         
-        hmnode_counter += 1
+        self.hmnode_counter += 1
         node_node = etree.SubElement(parent_node, self.node_tag, nsmap=NSMAP)
-        node_node.attrib["id" % GML] = "%s%s" % (HAZARD_MAP_NODE_ID_PREFIX, 
-            hmnode_counter)
+        node_node.attrib["%sid" % GML] = "%s%s" % (
+            self.HAZARD_MAP_NODE_ID_PREFIX, self.hmnode_counter)
 
         site_node = etree.SubElement(node_node, self.site_tag, nsmap=NSMAP)
         point_node = etree.SubElement(site_node, self.point_tag, nsmap=NSMAP)
@@ -308,11 +310,11 @@ class HazardMapXMLWriter(writer.FileWriter):
                     raise ValueError(error_msg)
 
     def _ensure_all_attributes_set(self):
-        if self._ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
-                                       self.hazard_processing_node) and 
-            self._ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK, 
-                                       self.parent_node) and
-            self._ensure_attributes_rules():
+        if (self._ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
+                                        self.hazard_processing_node) and 
+             self._ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK, 
+                                         self.parent_node) and
+             self._ensure_attribute_rules()):
             return True
         else:
             return False
@@ -324,8 +326,8 @@ class HazardMapXMLWriter(writer.FileWriter):
 
             # ensure that neither statistics nor quantileValue is set
             # together with endBranchLabel
-            if 'statistics' in self.parent_node.attrib or
-                'quantileValue' in self.parent_node.attrib:
+            if ('statistics' in self.parent_node.attrib or
+                'quantileValue' in self.parent_node.attrib):
 
                 error_msg = "attribute endBranchLabel cannot be used " \
                             "together with statistics/quantileValue"
