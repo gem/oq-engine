@@ -24,7 +24,7 @@ from openquake import logs
 from openquake import shapes
 from openquake import writer
 
-from openquake.xml import NSMAP, NRML, GML, NSMAP_OLD, GML_OLD
+from openquake.xml import NSMAP, NRML_OLD, NRML, GML, NSMAP_OLD, GML_OLD
 
 LOGGER = logs.HAZARD_LOG
 
@@ -176,12 +176,12 @@ class GMFXMLWriter(writer.FileWriter):
     Rupture information and full GMPEParameters are currently 
     not supported."""
 
-    root_tag = NRML + "HazardResult"
-    config_tag = NRML + "Config"
-    gmpe_params_tag = NRML + "GMPEParameters"
-    container_tag = NRML + "GroundMotionFieldSet"
-    field_tag = NRML + "field"
-    site_tag = NRML + "site"
+    root_tag = NRML_OLD + "HazardResult"
+    config_tag = NRML_OLD + "Config"
+    gmpe_params_tag = NRML_OLD + "GMPEParameters"
+    container_tag = NRML_OLD + "GroundMotionFieldSet"
+    field_tag = NRML_OLD + "field"
+    site_tag = NRML_OLD + "site"
     pos_tag = GML_OLD + "pos"
     ground_motion_attr = "groundMotion"
 
