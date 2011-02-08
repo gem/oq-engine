@@ -199,7 +199,7 @@ class HazardMapXMLWriter(writer.FileWriter):
         {'name': 'IMT', 'required': True}, 
         {'name': 'endBranchLabel', 'required': False}, 
         {'name': 'statistics', 'required': False}, 
-        {'name': 'quantile_value', 'required': False})
+        {'name': 'quantileValue', 'required': False})
 
     NRML_DEFAULT_ID = 'nrml'
     HAZARD_RESULT_DEFAULT_ID = 'hr'

@@ -237,8 +237,8 @@ def _store_iml_for(curve, key, job, poe):
     im_level["vs30"] = float(job.params["REFERENCE_VS30_VALUE"])
     im_level["IML"] = _get_iml_from(curve, job, poe)
 
-    LOG.debug("[HAZARD_MAP] Storing IML at %s with value %s"
-            % (key, im_level))
+    #LOG.debug("[HAZARD_MAP] Storing IML at %s with value %s"
+            #% (key, im_level))
 
     kvs.set_value_json_encoded(key, im_level)
 

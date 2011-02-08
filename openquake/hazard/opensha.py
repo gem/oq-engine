@@ -233,25 +233,35 @@ class ClassicalMixin(BasePSHAMixin):
             del results_mean
 
             if self.params[classical_psha.POES_PARAM_NAME] != '':
+                LOG.info('Computing/serializing mean hazard maps')
                 results_mean_maps = classical_psha.compute_mean_hazard_maps(
                     self)
                 self.write_hazardmap_file(results_mean_maps)
                 del results_mean_maps
 
         # collect hazard curve keys per quantile value
-        quantile_values = {}
-        while len(results_quantile) > 0:
-            quantile_key = results_quantile.pop()
-            curr_qv = tokens.quantile_value_from_hazard_curve_key(
-                quantile_key)
-            if curr_qv not in quantile_values:
-                quantile_values[curr_qv] = []
-            quantile_values[curr_qv].append(quantile_key)
-                
+        quantile_values = _collect_curve_keys_per_quantile(results_quantile)
+
         LOG.info('Serializing quantile hazard curves for %s quantile values' \
             % len(quantile_values))
         for key_list in quantile_values.values():
             self.write_hazardcurve_file(key_list)
+
+        # compute quantile hazard maps
+        if (self.params[classical_psha.POES_PARAM_NAME] != '' and
+            len(quantile_values) > 0):
+
+            LOG.info('Computing quantile hazard maps')
+            results_quantile_maps = \
+                classical_psha.compute_quantile_hazard_maps(self)
+
+            quantile_values = _collect_map_keys_per_quantile(
+                results_quantile_maps)
+
+            LOG.info('Serializing quantile hazard maps for %s quantile values' \
+                % len(quantile_values))
+            for key_list in quantile_values.values():
+                self.write_hazardmap_file(key_list)
 
         return results
 
@@ -686,6 +696,29 @@ def mean_hm_filename(poe):
 def quantile_hm_filename(quantile_value, poe):
     filename_part = "%s-quantile-%.2f" % (poe, quantile_value)
     return hazard_map_filename(filename_part)
+
+def _collect_curve_keys_per_quantile(keys):
+    quantile_values = {}
+    while len(keys) > 0:
+        quantile_key = keys.pop()
+        curr_qv = tokens.quantile_value_from_hazard_curve_key(
+            quantile_key)
+        if curr_qv not in quantile_values:
+            quantile_values[curr_qv] = []
+        quantile_values[curr_qv].append(quantile_key)
+    return quantile_values
+
+def _collect_map_keys_per_quantile(keys):
+    quantile_values = {}
+    while len(keys) > 0:
+        quantile_key = keys.pop()
+        curr_qv = tokens.quantile_value_from_hazard_map_key(
+            quantile_key)
+        if curr_qv not in quantile_values:
+            quantile_values[curr_qv] = []
+        quantile_values[curr_qv].append(quantile_key)
+    return quantile_values
+
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
 job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
