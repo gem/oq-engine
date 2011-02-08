@@ -1,11 +1,18 @@
 package org.gem.engine.hazard.parsers;
 
 import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
+import org.dom4j.Document;
+import org.dom4j.DocumentFactory;
+import org.dom4j.Element;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.XMLWriter;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -131,19 +138,18 @@ public class GemFileParser {
                 // Write separator +
                 // Scalar seismic moment rate per units of time and area above
                 // 'magThreshold'
-                out.write(String.format("> -Z %6.2e idx %d \n", Math
-                        .log10(momRate), idx));
+                out.write(String.format("> -Z %6.2e idx %d \n",
+                        Math.log10(momRate), idx));
 
                 // Write trace coordinates
                 for (Location loc : src.getRegion().getBorder()) {
-                    out
-                            .write(String.format("%+7.3f %+6.3f %+6.2f \n", loc
-                                    .getLongitude(), loc.getLatitude(), loc
-                                    .getDepth()));
+                    out.write(String.format("%+7.3f %+6.3f %+6.2f \n",
+                            loc.getLongitude(), loc.getLatitude(),
+                            loc.getDepth()));
                     if (INFO) {
-                        System.out.printf("%+7.3f %+6.3f %+6.2f \n", loc
-                                .getLongitude(), loc.getLatitude(), loc
-                                .getDepth());
+                        System.out.printf("%+7.3f %+6.3f %+6.2f \n",
+                                loc.getLongitude(), loc.getLatitude(),
+                                loc.getDepth());
                     }
                 }
             }
@@ -171,8 +177,8 @@ public class GemFileParser {
                 // create fault surface using Stirling method
                 StirlingGriddedSurface faultSurface =
                         new StirlingGriddedSurface(src.getTrace(),
-                                src.getDip(), src.getSeismDepthUpp(), src
-                                        .getSeismDepthLow(), 1.0);
+                                src.getDip(), src.getSeismDepthUpp(),
+                                src.getSeismDepthLow(), 1.0);
 
                 for (int ic =
                         faultSurface.getSurfacePerimeterLocsList().size() - 1; ic >= 0; ic--) {
@@ -192,8 +198,8 @@ public class GemFileParser {
                         (GEMSubductionFaultSourceData) dat;
 
                 ApproxEvenlyGriddedSurface faultSurface =
-                        new ApproxEvenlyGriddedSurface(src.getTopTrace(), src
-                                .getBottomTrace(), 10.0);
+                        new ApproxEvenlyGriddedSurface(src.getTopTrace(),
+                                src.getBottomTrace(), 10.0);
 
                 for (int ic =
                         faultSurface.getSurfacePerimeterLocsList().size() - 1; ic >= 0; ic--) {
@@ -282,16 +288,16 @@ public class GemFileParser {
                                             .getTotalIncrRate()
                                     + ", "
                                     + "Strike: "
-                                    + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getStrike()
+                                    + src.getMagfreqDistFocMech()
+                                            .getFocalMech(ifm).getStrike()
                                     + ", "
                                     + "Dip: "
-                                    + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getDip()
+                                    + src.getMagfreqDistFocMech()
+                                            .getFocalMech(ifm).getDip()
                                     + ", "
                                     + "Rake: "
-                                    + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getRake() + ", "
+                                    + src.getMagfreqDistFocMech()
+                                            .getFocalMech(ifm).getRake() + ", "
                                     + "Average Hypo Depth (km): "
                                     + src.getAveHypoDepth();
 
@@ -454,8 +460,8 @@ public class GemFileParser {
                 // create fault surface using Stirling method
                 StirlingGriddedSurface faultSurface =
                         new StirlingGriddedSurface(src.getTrace(),
-                                src.getDip(), src.getSeismDepthUpp(), src
-                                        .getSeismDepthLow(), 1.0);
+                                src.getDip(), src.getSeismDepthUpp(),
+                                src.getSeismDepthLow(), 1.0);
 
                 // create Placemarck object
                 out.write("<Placemark>\n");
@@ -520,8 +526,8 @@ public class GemFileParser {
                         (GEMSubductionFaultSourceData) dat;
 
                 ApproxEvenlyGriddedSurface faultSurface =
-                        new ApproxEvenlyGriddedSurface(src.getTopTrace(), src
-                                .getBottomTrace(), 10.0);
+                        new ApproxEvenlyGriddedSurface(src.getTopTrace(),
+                                src.getBottomTrace(), 10.0);
 
                 // create Placemarck object
                 out.write("<Placemark>\n");
@@ -702,15 +708,14 @@ public class GemFileParser {
             out.write(String.format("%2.2e", Math.pow(10,
                     (Math.log10(maxTmr) - (i + 1) * deltaColorBar))));
             out.write(" to ");
-            out.write(String.format("%2.2e", Math.pow(10,
-                    (Math.log10(maxTmr) - i * deltaColorBar))));
+            out.write(String.format("%2.2e",
+                    Math.pow(10, (Math.log10(maxTmr) - i * deltaColorBar))));
             out.write("</TR>\n");
         }
         out.write("</TABLE>]]>\n");
         out.write("</description>\n");
 
-        out
-                .write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
+        out.write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
         out.write("<Point id=\"colorbar\">\n");
         out.write("<altitudeMode>\n");
         out.write("clampToGround\n");
@@ -744,11 +749,9 @@ public class GemFileParser {
 
                     if (i != (colorName.size() - 1)
                             && Math.log10(sourceTMR.get(sourceIndex)) > Math
-                                    .log10(maxTmr)
-                                    - (i + 1) * deltaColorBar
+                                    .log10(maxTmr) - (i + 1) * deltaColorBar
                             && Math.log10(sourceTMR.get(sourceIndex)) <= Math
-                                    .log10(maxTmr)
-                                    - i * deltaColorBar) {
+                                    .log10(maxTmr) - i * deltaColorBar) {
                         color = colorName.get(i);
                         break;
                     } else if (i == colorName.size() - 1) {
@@ -800,16 +803,16 @@ public class GemFileParser {
                                             .getTotalIncrRate()
                                     + ", "
                                     + "Strike: "
-                                    + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getStrike()
+                                    + src.getMagfreqDistFocMech()
+                                            .getFocalMech(ifm).getStrike()
                                     + ", "
                                     + "Dip: "
-                                    + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getDip()
+                                    + src.getMagfreqDistFocMech()
+                                            .getFocalMech(ifm).getDip()
                                     + ", "
                                     + "Rake: "
-                                    + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getRake() + ", "
+                                    + src.getMagfreqDistFocMech()
+                                            .getFocalMech(ifm).getRake() + ", "
                                     + "Average Hypo Depth (km): "
                                     + src.getAveHypoDepth();
 
@@ -978,9 +981,9 @@ public class GemFileParser {
 
                 // create corresponding GEMAreaSourceData
                 GEMAreaSourceData srcArea =
-                        new GEMAreaSourceData(src.getID(), src.getName(), src
-                                .getTectReg(), srcReg, magfreqDistFocMech, src
-                                .getAveRupTopVsMag(), src.getAveHypoDepth());
+                        new GEMAreaSourceData(src.getID(), src.getName(),
+                                src.getTectReg(), srcReg, magfreqDistFocMech,
+                                src.getAveRupTopVsMag(), src.getAveHypoDepth());
 
                 // total moment rate
                 double tmr =
@@ -1047,15 +1050,14 @@ public class GemFileParser {
             out.write(String.format("%2.2e", Math.pow(10,
                     (Math.log10(maxTmr) - (i + 1) * deltaColorBar))));
             out.write(" to ");
-            out.write(String.format("%2.2e", Math.pow(10,
-                    (Math.log10(maxTmr) - i * deltaColorBar))));
+            out.write(String.format("%2.2e",
+                    Math.pow(10, (Math.log10(maxTmr) - i * deltaColorBar))));
             out.write("</TR>\n");
         }
         out.write("</TABLE>]]>\n");
         out.write("</description>\n");
 
-        out
-                .write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
+        out.write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
         out.write("<Point id=\"colorbar\">\n");
         out.write("<altitudeMode>\n");
         out.write("clampToGround\n");
@@ -1111,9 +1113,9 @@ public class GemFileParser {
 
                 // create corresponding GEMAreaSourceData
                 GEMAreaSourceData srcArea =
-                        new GEMAreaSourceData(src.getID(), src.getName(), src
-                                .getTectReg(), srcReg, magfreqDistFocMech, src
-                                .getAveRupTopVsMag(), src.getAveHypoDepth());
+                        new GEMAreaSourceData(src.getID(), src.getName(),
+                                src.getTectReg(), srcReg, magfreqDistFocMech,
+                                src.getAveRupTopVsMag(), src.getAveHypoDepth());
 
                 String color = null;
 
@@ -1122,11 +1124,9 @@ public class GemFileParser {
 
                     if (i != (colorName.size() - 1)
                             && Math.log10(sourceTMR.get(sourceIndex)) > Math
-                                    .log10(maxTmr)
-                                    - (i + 1) * deltaColorBar
+                                    .log10(maxTmr) - (i + 1) * deltaColorBar
                             && Math.log10(sourceTMR.get(sourceIndex)) <= Math
-                                    .log10(maxTmr)
-                                    - i * deltaColorBar) {
+                                    .log10(maxTmr) - i * deltaColorBar) {
                         color = colorName.get(i);
                         break;
                     } else if (i == colorName.size() - 1) {
@@ -1284,8 +1284,8 @@ public class GemFileParser {
                 // create fault surface using Stirling method
                 StirlingGriddedSurface faultSurface =
                         new StirlingGriddedSurface(src.getTrace(),
-                                src.getDip(), src.getSeismDepthUpp(), src
-                                        .getSeismDepthLow(), 10.0);
+                                src.getDip(), src.getSeismDepthUpp(),
+                                src.getSeismDepthLow(), 10.0);
 
                 // total moment rate
                 double tmr = src.getMfd().getTotalMomentRate();
@@ -1357,15 +1357,14 @@ public class GemFileParser {
             out.write(String.format("%2.2e", Math.pow(10,
                     (Math.log10(maxTmr) - (i + 1) * deltaColorBar))));
             out.write(" to ");
-            out.write(String.format("%2.2e", Math.pow(10,
-                    (Math.log10(maxTmr) - i * deltaColorBar))));
+            out.write(String.format("%2.2e",
+                    Math.pow(10, (Math.log10(maxTmr) - i * deltaColorBar))));
             out.write("</TR>\n");
         }
         out.write("</TABLE>]]>\n");
         out.write("</description>\n");
 
-        out
-                .write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
+        out.write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
         out.write("<Point id=\"colorbar\">\n");
         out.write("<altitudeMode>\n");
         out.write("clampToGround\n");
@@ -1395,8 +1394,8 @@ public class GemFileParser {
                 // create fault surface using Stirling method
                 StirlingGriddedSurface faultSurface =
                         new StirlingGriddedSurface(src.getTrace(),
-                                src.getDip(), src.getSeismDepthUpp(), src
-                                        .getSeismDepthLow(), 10.0);
+                                src.getDip(), src.getSeismDepthUpp(),
+                                src.getSeismDepthLow(), 10.0);
 
                 String color = null;
 
@@ -1405,11 +1404,9 @@ public class GemFileParser {
 
                     if (i != (colorName.size() - 1)
                             && Math.log10(sourceTMR.get(sourceIndex)) > Math
-                                    .log10(maxTmr)
-                                    - (i + 1) * deltaColorBar
+                                    .log10(maxTmr) - (i + 1) * deltaColorBar
                             && Math.log10(sourceTMR.get(sourceIndex)) <= Math
-                                    .log10(maxTmr)
-                                    - i * deltaColorBar) {
+                                    .log10(maxTmr) - i * deltaColorBar) {
                         color = colorName.get(i);
                         break;
                     } else if (i == colorName.size() - 1) {
@@ -1620,8 +1617,8 @@ public class GemFileParser {
                         (GEMSubductionFaultSourceData) dat;
 
                 ApproxEvenlyGriddedSurface faultSurface =
-                        new ApproxEvenlyGriddedSurface(src.getTopTrace(), src
-                                .getBottomTrace(), 10.0);
+                        new ApproxEvenlyGriddedSurface(src.getTopTrace(),
+                                src.getBottomTrace(), 10.0);
 
                 // total moment rate
                 double tmr = src.getMfd().getTotalMomentRate();
@@ -1693,15 +1690,14 @@ public class GemFileParser {
             out.write(String.format("%2.2e", Math.pow(10,
                     (Math.log10(maxTmr) - (i + 1) * deltaColorBar))));
             out.write(" to ");
-            out.write(String.format("%2.2e", Math.pow(10,
-                    (Math.log10(maxTmr) - i * deltaColorBar))));
+            out.write(String.format("%2.2e",
+                    Math.pow(10, (Math.log10(maxTmr) - i * deltaColorBar))));
             out.write("</TR>\n");
         }
         out.write("</TABLE>]]>\n");
         out.write("</description>\n");
 
-        out
-                .write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
+        out.write("<Style><IconStyle><scale>1</scale><Icon><href>http://maps.google.com/mapfiles/kml/shapes/donut.png</href></Icon></IconStyle><ListStyle></ListStyle></Style>\n");
         out.write("<Point id=\"colorbar\">\n");
         out.write("<altitudeMode>\n");
         out.write("clampToGround\n");
@@ -1730,8 +1726,8 @@ public class GemFileParser {
                         (GEMSubductionFaultSourceData) dat;
 
                 ApproxEvenlyGriddedSurface faultSurface =
-                        new ApproxEvenlyGriddedSurface(src.getTopTrace(), src
-                                .getBottomTrace(), 10.0);
+                        new ApproxEvenlyGriddedSurface(src.getTopTrace(),
+                                src.getBottomTrace(), 10.0);
 
                 String color = null;
 
@@ -1740,11 +1736,9 @@ public class GemFileParser {
 
                     if (i != (colorName.size() - 1)
                             && Math.log10(sourceTMR.get(sourceIndex)) > Math
-                                    .log10(maxTmr)
-                                    - (i + 1) * deltaColorBar
+                                    .log10(maxTmr) - (i + 1) * deltaColorBar
                             && Math.log10(sourceTMR.get(sourceIndex)) <= Math
-                                    .log10(maxTmr)
-                                    - i * deltaColorBar) {
+                                    .log10(maxTmr) - i * deltaColorBar) {
                         color = colorName.get(i);
                         break;
                     } else if (i == colorName.size() - 1) {
@@ -1908,10 +1902,9 @@ public class GemFileParser {
                 out.write(String.format("> -Z %6.2e \n", Math.log10(momRate)));
                 // Write trace coordinates
                 for (Location loc : src.getTrace()) {
-                    out
-                            .write(String.format("%+7.3f %+6.3f %+6.2f\n", loc
-                                    .getLongitude(), loc.getLatitude(), loc
-                                    .getDepth()));
+                    out.write(String.format("%+7.3f %+6.3f %+6.2f\n",
+                            loc.getLongitude(), loc.getLatitude(),
+                            loc.getDepth()));
                 }
 
             }
@@ -1967,18 +1960,16 @@ public class GemFileParser {
                 out.write(String.format("> -Z %6.2e \n", Math.log10(momRate)));
                 // Write top trace coordinates
                 for (Location loc : src.getTopTrace()) {
-                    out
-                            .write(String.format("%+7.3f %+6.3f %+6.2f\n", loc
-                                    .getLongitude(), loc.getLatitude(), loc
-                                    .getDepth()));
+                    out.write(String.format("%+7.3f %+6.3f %+6.2f\n",
+                            loc.getLongitude(), loc.getLatitude(),
+                            loc.getDepth()));
                 }
                 out.write(String.format("> \n", Math.log10(momRate)));
                 // Write bottom trace coordinates
                 for (Location loc : src.getBottomTrace()) {
-                    out
-                            .write(String.format("%+7.3f %+6.3f %+6.2f\n", loc
-                                    .getLongitude(), loc.getLatitude(), loc
-                                    .getDepth()));
+                    out.write(String.format("%+7.3f %+6.3f %+6.2f\n",
+                            loc.getLongitude(), loc.getLatitude(),
+                            loc.getDepth()));
                 }
 
             }
@@ -2015,8 +2006,8 @@ public class GemFileParser {
                 // polygon coordinates
                 out.write(areaSrc.getRegion().getBorder().size() + "\n");
                 for (Location loc : areaSrc.getRegion().getBorder()) {
-                    out.write(String.format("%+7.3f %+6.3f\n", loc
-                            .getLatitude(), loc.getLongitude()));
+                    out.write(String.format("%+7.3f %+6.3f\n",
+                            loc.getLatitude(), loc.getLongitude()));
                 }
 
                 // focal mechanims and mfd
@@ -2117,5 +2108,85 @@ public class GemFileParser {
 
         out.close();
 
+    }
+
+    /**
+     * Method for serializing source data to nrml format file. At the moment it
+     * serializes only fault source data.
+     */
+    public void writeSource2NrmlFormat(File file) {
+        Document doc = DocumentFactory.getInstance().createDocument();
+        Element root = doc.addElement("sourceModel");
+
+        for (GEMSourceData src : srcDataList) {
+            if (src instanceof GEMFaultSourceData) {
+                GEMFaultSourceData faultSrc = (GEMFaultSourceData) src;
+                Element simpleFault = root.addElement("simpleFault");
+                Element sourceName = simpleFault.addElement("sourceName");
+                sourceName.addText(faultSrc.getName());
+                Element sourceID = simpleFault.addElement("sourceID");
+                sourceID.addText(faultSrc.getID());
+                Element tectonicRegion =
+                        simpleFault.addElement("tectonicRegion");
+                tectonicRegion.addText(faultSrc.getTectReg().toString());
+                Element simpleFaultGeometry =
+                        simpleFault.addElement("simpleFaultGeometry");
+                Element faultTrace =
+                        simpleFaultGeometry.addElement("faultTrace");
+                Element posList = faultTrace.addElement("posList");
+                String positionList = "";
+                for (Location loc : faultSrc.getTrace()) {
+                    positionList =
+                            positionList + loc.getLongitude() + " "
+                                    + loc.getLatitude() + " " + loc.getDepth()
+                                    + " ";
+                }
+                positionList = positionList.trim();
+                posList.addText(positionList);
+                Element dip = simpleFaultGeometry.addElement("dip");
+                dip.addText(Double.toString(faultSrc.getDip()));
+                Element upperSeismogenicDepth =
+                        simpleFaultGeometry.addElement("upperSeismogenicDepth");
+                upperSeismogenicDepth.addText(Double.toString(faultSrc
+                        .getSeismDepthUpp()));
+                Element lowerSeismogenicDepth =
+                        simpleFaultGeometry.addElement("lowerSeismogenicDepth");
+                lowerSeismogenicDepth.addText(Double.toString(faultSrc
+                        .getSeismDepthLow()));
+                Element rake = simpleFault.addElement("rake");
+                rake.addText(Double.toString(faultSrc.getRake()));
+                Element evenlyDiscretizedIncrementalMagFreqDist =
+                        simpleFault
+                                .addElement("evenlyDiscretizedIncrementalMagFreqDist");
+                evenlyDiscretizedIncrementalMagFreqDist.addAttribute("binSize",
+                        Double.toString(faultSrc.getMfd().getDelta()));
+                evenlyDiscretizedIncrementalMagFreqDist.addAttribute("minVal",
+                        Double.toString(faultSrc.getMfd().getMinX()));
+                evenlyDiscretizedIncrementalMagFreqDist.addAttribute(
+                        "binCount",
+                        Integer.toString(faultSrc.getMfd().getNum()));
+                Element distributionValues =
+                        evenlyDiscretizedIncrementalMagFreqDist
+                                .addElement("DistributionValues");
+                String values = "";
+                for (int i = 0; i < faultSrc.getMfd().getNum(); i++) {
+                    values = values + faultSrc.getMfd().getY(i) + " ";
+                }
+                values = values.trim();
+                distributionValues.addText(values);
+            }
+        }
+
+        FileOutputStream fos;
+        XMLWriter writer;
+        OutputFormat format = OutputFormat.createPrettyPrint();
+        try {
+            fos = new FileOutputStream(file.getAbsolutePath());
+            writer = new XMLWriter(fos, format);
+            writer.write(doc);
+            writer.flush();
+        } catch (Exception e) {
+            throw new RuntimeException();
+        }
     }
 }
