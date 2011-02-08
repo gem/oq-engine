@@ -8,7 +8,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML
+from openquake.xml import NRML, GML, NRML_OLD, GML_OLD
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -86,7 +86,7 @@ class ExposurePortfolioFile(producer.FileProducer):
 
             elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
                 site_data = (_to_site(element),
-                             self.to_site_attributes(element))
+                             self._to_site_attributes(element))
                 del element
                 yield site_data
 

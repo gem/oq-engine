@@ -11,7 +11,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML_NS, GML_NS_OLD, NRML
+from openquake.xml import NRML_NS_OLD, GML_NS_OLD, NRML_OLD
 
 def _to_site(element):
     """Convert current GML attributes to Site object."""
@@ -62,7 +62,7 @@ class NrmlFile(producer.FileProducer):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
             if event == 'end' and \
-                element.tag == NRML + self.abscissa_container:
+                element.tag == NRML_OLD + self.abscissa_container:
                 yield (_to_site(element), 
                        self._to_attributes(element))
 
@@ -81,7 +81,7 @@ class NrmlFile(producer.FileProducer):
                 self.ordinate_output_key, float_strip)):
             
             child_node = element.xpath(child_el, 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
 
             try:
                 attributes[child_key] = etl(child_node)
