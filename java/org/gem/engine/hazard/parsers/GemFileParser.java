@@ -8,12 +8,14 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentFactory;
 import org.dom4j.Element;
 import org.dom4j.QName;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -2129,7 +2131,7 @@ public class GemFileParser {
     }
 
     /**
-     * Method for serializing source data to NRML format file.
+     * Serializes source data to NRML format file.
      */
     public void writeSource2NrmlFormat(File file) {
         Document doc = DocumentFactory.getInstance().createDocument();
@@ -2151,7 +2153,6 @@ public class GemFileParser {
                 Element sourceElement =
                         sourceModel.addElement(simpleFaultQName);
 
-                // common parameters for simple and complex sources
                 appendIdTo(source, sourceElement);
                 appendNameTo(source, sourceElement);
                 appendTectonicRegionTo(source, sourceElement);
@@ -2193,7 +2194,6 @@ public class GemFileParser {
                 Element sourceElement =
                         sourceModel.addElement(complexSourceQName);
 
-                // common parameters for simple and complex sources
                 appendIdTo(source, sourceElement);
                 appendNameTo(source, sourceElement);
                 appendTectonicRegionTo(source, sourceElement);
@@ -2229,80 +2229,22 @@ public class GemFileParser {
                 appendNameTo(source, sourceElement);
                 appendTectonicRegionTo(source, sourceElement);
 
+                // <areaBoundary>
                 addLocationsTo(source.getRegion().getBorder(), sourceElement
                         .addElement(NRMLConstants.NRML_AREA_BOUNDARY)
                         .addElement(NRMLConstants.GML_POLYGON).addElement(
                                 NRMLConstants.GML_EXTERIOR));
 
-                MagFreqDistsForFocalMechs mechs =
-                        source.getMagfreqDistFocMech();
-                for (int i = 0; i < mechs.getNumFocalMechs(); i++) {
-                    Element rateModel =
-                            sourceElement
-                                    .addElement(NRMLConstants.NRML_RUPTURE_RATE_MODEL);
+                // <ruptureRateModel>
+                addRuptureModelTo(source.getMagfreqDistFocMech(), sourceElement);
 
-                    appendEvenlyDiscretizedMFDTo(mechs.getMagFreqDist(i),
-                            rateModel);
+                // <ruptureDepthDistribution>
+                addDepthDistributionTo(source.getAveRupTopVsMag(),
+                        sourceElement);
 
-                    FocalMechanism mech = mechs.getFocalMech(i);
+                // <hypocentralDepth>
+                addHypocentralDepthTo(source.getAveHypoDepth(), sourceElement);
 
-                    Element focalMech =
-                            rateModel
-                                    .addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
-
-                    Element plane1 =
-                            focalMech
-                                    .addElement(NRMLConstants.QML_NODAL_PLANES)
-                                    .addElement(NRMLConstants.QML_NODAL_PLANE1);
-
-                    Element strike =
-                            plane1.addElement(NRMLConstants.QML_STRIKE);
-
-                    Element value = strike.addElement(NRMLConstants.QML_VALUE);
-                    value.addText(Double.toString(mech.getStrike()));
-
-                    Element dip = plane1.addElement(NRMLConstants.QML_DIP);
-
-                    value = dip.addElement(NRMLConstants.QML_VALUE);
-                    value.addText(Double.toString(mech.getDip()));
-
-                    Element rake = plane1.addElement(NRMLConstants.QML_RAKE);
-
-                    value = rake.addElement(NRMLConstants.QML_VALUE);
-                    value.addText(Double.toString(mech.getRake()));
-                }
-
-                Element ruptureDepth =
-                        sourceElement
-                                .addElement(NRMLConstants.NRML_RUPTURE_DEPTH_DISTRIBUTION);
-
-                Element magnitude =
-                        ruptureDepth.addElement(NRMLConstants.MAGNITUDE);
-
-                StringBuilder values = new StringBuilder();
-
-                for (Double value : source.getAveRupTopVsMag().getXVals()) {
-                    values.append(value).append(" ");
-                }
-
-                magnitude.addText(values.toString().trim());
-
-                Element depth = ruptureDepth.addElement(NRMLConstants.DEPTH);
-
-                values = new StringBuilder();
-
-                for (Double value : source.getAveRupTopVsMag().getYVals()) {
-                    values.append(value).append(" ");
-                }
-
-                depth.addText(values.toString().trim());
-
-                Element hypocentralDepth =
-                        sourceElement
-                                .addElement(NRMLConstants.NRML_HYPOCENTRAL_DEPTH);
-
-                hypocentralDepth.addText(Double.toString(source
-                        .getAveHypoDepth()));
             } else if (src instanceof GEMPointSourceData) {
                 GEMPointSourceData source = (GEMPointSourceData) src;
 
@@ -2313,6 +2255,7 @@ public class GemFileParser {
                 appendNameTo(source, sourceElement);
                 appendTectonicRegionTo(source, sourceElement);
 
+                // <location>
                 Element pos =
                         sourceElement.addElement(NRMLConstants.NRML_LOCATION)
                                 .addElement(NRMLConstants.GML_POINT)
@@ -2320,78 +2263,20 @@ public class GemFileParser {
 
                 Location location =
                         source.getHypoMagFreqDistAtLoc().getLocation();
+
                 pos.addText(location.getLongitude() + " "
                         + location.getLatitude());
 
-                MagFreqDistsForFocalMechs mechs =
-                        source.getHypoMagFreqDistAtLoc();
-                for (int i = 0; i < mechs.getNumFocalMechs(); i++) {
-                    Element rateModel =
-                            sourceElement
-                                    .addElement(NRMLConstants.NRML_RUPTURE_RATE_MODEL);
+                // <ruptureRateModel>
+                addRuptureModelTo(source.getHypoMagFreqDistAtLoc(),
+                        sourceElement);
 
-                    appendEvenlyDiscretizedMFDTo(mechs.getMagFreqDist(i),
-                            rateModel);
+                // <ruptureDepthDistribution>
+                addDepthDistributionTo(source.getAveRupTopVsMag(),
+                        sourceElement);
 
-                    FocalMechanism mech = mechs.getFocalMech(i);
-
-                    Element focalMech =
-                            rateModel
-                                    .addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
-
-                    Element plane1 =
-                            focalMech
-                                    .addElement(NRMLConstants.QML_NODAL_PLANES)
-                                    .addElement(NRMLConstants.QML_NODAL_PLANE1);
-
-                    Element strike =
-                            plane1.addElement(NRMLConstants.QML_STRIKE);
-
-                    Element value = strike.addElement(NRMLConstants.QML_VALUE);
-                    value.addText(Double.toString(mech.getStrike()));
-
-                    Element dip = plane1.addElement(NRMLConstants.QML_DIP);
-
-                    value = dip.addElement(NRMLConstants.QML_VALUE);
-                    value.addText(Double.toString(mech.getDip()));
-
-                    Element rake = plane1.addElement(NRMLConstants.QML_RAKE);
-
-                    value = rake.addElement(NRMLConstants.QML_VALUE);
-                    value.addText(Double.toString(mech.getRake()));
-                }
-
-                Element ruptureDepth =
-                        sourceElement
-                                .addElement(NRMLConstants.NRML_RUPTURE_DEPTH_DISTRIBUTION);
-
-                Element magnitude =
-                        ruptureDepth.addElement(NRMLConstants.MAGNITUDE);
-
-                StringBuilder values = new StringBuilder();
-
-                for (Double value : source.getAveRupTopVsMag().getXVals()) {
-                    values.append(value).append(" ");
-                }
-
-                magnitude.addText(values.toString().trim());
-
-                Element depth = ruptureDepth.addElement(NRMLConstants.DEPTH);
-
-                values = new StringBuilder();
-
-                for (Double value : source.getAveRupTopVsMag().getYVals()) {
-                    values.append(value).append(" ");
-                }
-
-                depth.addText(values.toString().trim());
-
-                Element hypocentralDepth =
-                        sourceElement
-                                .addElement(NRMLConstants.NRML_HYPOCENTRAL_DEPTH);
-
-                hypocentralDepth.addText(Double.toString(source
-                        .getAveHypoDepth()));
+                // <hypocentralDepth>
+                addHypocentralDepthTo(source.getAveHypoDepth(), sourceElement);
             }
         }
 
@@ -2409,8 +2294,74 @@ public class GemFileParser {
         }
     }
 
+    private void addHypocentralDepthTo(Double depth, Element element) {
+        Element hypocentralDepth =
+                element.addElement(NRMLConstants.NRML_HYPOCENTRAL_DEPTH);
+
+        hypocentralDepth.addText(Double.toString(depth));
+    }
+
+    private void addDepthDistributionTo(ArbitrarilyDiscretizedFunc dist,
+            Element element) {
+
+        Element ruptureDistribution =
+                element
+                        .addElement(NRMLConstants.NRML_RUPTURE_DEPTH_DISTRIBUTION);
+
+        Element magnitude =
+                ruptureDistribution.addElement(NRMLConstants.MAGNITUDE);
+
+        magnitude.addText(valuesAsString(dist.getXVals()));
+
+        Element depth = ruptureDistribution.addElement(NRMLConstants.DEPTH);
+        depth.addText(valuesAsString(ArrayUtils.toPrimitive(dist.getYVals())));
+    }
+
+    private String valuesAsString(double[] values) {
+        StringBuilder result = new StringBuilder();
+
+        for (Double value : values) {
+            result.append(value).append(" ");
+        }
+
+        return result.toString().trim();
+    }
+
+    private void addRuptureModelTo(MagFreqDistsForFocalMechs mechs,
+            Element element) {
+
+        for (int i = 0; i < mechs.getNumFocalMechs(); i++) {
+            Element rateModel =
+                    element.addElement(NRMLConstants.NRML_RUPTURE_RATE_MODEL);
+
+            appendEvenlyDiscretizedMFDTo(mechs.getMagFreqDist(i), rateModel);
+
+            FocalMechanism mech = mechs.getFocalMech(i);
+
+            Element focalMech =
+                    rateModel.addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
+
+            Element plane1 =
+                    focalMech.addElement(NRMLConstants.QML_NODAL_PLANES)
+                            .addElement(NRMLConstants.QML_NODAL_PLANE1);
+
+            Element strike = plane1.addElement(NRMLConstants.QML_STRIKE);
+
+            Element value = strike.addElement(NRMLConstants.QML_VALUE);
+            value.addText(Double.toString(mech.getStrike()));
+
+            Element dip = plane1.addElement(NRMLConstants.QML_DIP);
+            value = dip.addElement(NRMLConstants.QML_VALUE);
+            value.addText(Double.toString(mech.getDip()));
+
+            Element rake = plane1.addElement(NRMLConstants.QML_RAKE);
+            value = rake.addElement(NRMLConstants.QML_VALUE);
+            value.addText(Double.toString(mech.getRake()));
+        }
+    }
+
     private void addLocationsTo(LocationList locations, Element element) {
-        Element lineString = element.addElement(NRMLConstants.GML_LINE_STRING);
+        Element lineString = element.addElement(NRMLConstants.GML_LINEAR_RING);
         Element posList = lineString.addElement(NRMLConstants.GML_POS_LIST);
 
         StringBuilder values = new StringBuilder();
@@ -2418,7 +2369,6 @@ public class GemFileParser {
         for (Location location : locations) {
             values.append(location.getLongitude()).append(" ");
             values.append(location.getLatitude()).append(" ");
-            values.append(location.getDepth()).append(" ");
         }
 
         posList.addText(values.toString().trim());
