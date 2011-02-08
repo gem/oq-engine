@@ -10,6 +10,7 @@ import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
 
+from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
@@ -17,13 +18,14 @@ from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
-
 EXPOSURE = "EXPOSURE"
-INPUT_REGION = "FILTER_REGION"
+INPUT_REGION = "INPUT_REGION"
 HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
+FLAGS = flags.FLAGS
+flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
 
 def run_job(job_file):
     """ Given a job_file, run the job. If we don't get results log it """
@@ -107,9 +109,10 @@ class Job(object):
         """ 
          Default job configuration files, writes a warning if they don't exist.
         """
+        if not FLAGS.include_defaults:
+            return []
 
-        if cls.__defaults and not any([os.path.exists(cfg) for cfg 
-                                                           in cls.__defaults]):
+        if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
             LOG.warning("No default configuration! If your job config doesn't "
                         "define all of the expected properties things might "
                         "break.")
@@ -291,9 +294,9 @@ class Job(object):
             config.write(configfile)
 
     def _slurp_files(self):
-        """Read referenced files and write them into memcached, key'd on their
+        """Read referenced files and write them into kvs, keyed on their
         sha1s."""
-        memcached_client = kvs.get_client(binary=False)
+        kvs_client = kvs.get_client(binary=False)
         if self.base_path is None:
             LOG.debug("Can't slurp files without a base path, homie...")
             return
@@ -305,16 +308,25 @@ class Job(object):
                     LOG.debug("Slurping %s" % path)
                     sha1 = hashlib.sha1(data_file.read()).hexdigest()
                     data_file.seek(0)
-                    memcached_client.set(sha1, data_file.read())
+                    kvs_client.set(sha1, data_file.read())
                     self.params[key] = sha1
 
     def to_kvs(self, write_cfg=True):
-        """Store this job into memcached."""
+        """Store this job into kvs."""
         self._slurp_files()
         if write_cfg:
             self._write_super_config()
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
+
+    def site_list_generator(self):
+        """Will subset and yield portions of the region, depending on the 
+        the computation mode."""
+        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
+        coords = zip(verts[1::2], verts[::2])
+        region = shapes.Region.from_coordinates(coords)
+        region.cell_size = float(self.params['REGION_GRID_SPACING'])
+        yield [site for site in region]
 
 
 class AlwaysTrueConstraint():

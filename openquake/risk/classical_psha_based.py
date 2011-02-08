@@ -98,7 +98,6 @@ def _split_loss_ratios(loss_ratios, steps=None):
     if steps is None:
         steps = STEPS_PER_INTERVAL
 
-    print 'steps: ' + str(steps)
     splitted_ratios = set()
 
     for interval in loop(array(loss_ratios), linspace, steps + 1):
