@@ -1,0 +1,539 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--  From: http://portal.opengeospatial.org/files/?artifact_id=11266
+      See: http://xml.coverpages.org/OGC-GML-SimpleFeaturesProfile.html
+      News story:  http://xml.coverpages.org/ni2005-07-07-a.html        -->
+<!--  GML Simple Features Profile
+      Reference schema for GML simple features profile, from Normative Annex D
+
+      The following schema document, called gmlSimpleFeaturesProfile.xsd,
+      contains only those element declarations from GML that are required
+      to validate a GML application schema that complies with this profile.
+      GML application schemas can ensure compliance with this profile by
+      importing this schema document rather schema documents from the 
+      standard GML 3.1.1 distribution. -->
+<schema xmlns="http://www.w3.org/2001/XMLSchema" xmlns:sch="http://www.ascc.net/xml/schematron" xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns:xlink="http://www.w3.org/1999/xlink" targetNamespace="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified" version="3.1.1">
+    <annotation>
+        <appinfo source="urn:opengis:specification:gml:schema-xsd:feature:v3.1.1"/>
+        <documentation>
+GML profile for simple features.
+Copyright (c) 2005 OGC, All Rights Reserved.
+</documentation>
+    </annotation>
+    <import namespace="http://www.w3.org/1999/xlink" schemaLocation="http://schemas.opengis.net/xlink/1.0.0/xlinks.xsd"/>
+    <attribute name="id" type="ID"/>
+    <attribute name="remoteSchema" type="anyURI"/>
+    <attributeGroup name="AssociationAttributeGroup">
+        <attributeGroup ref="xlink:simpleLink"/>
+        <attribute ref="gml:remoteSchema" use="optional"/>
+    </attributeGroup>
+    <complexType name="MeasureType">
+        <simpleContent>
+            <extension base="double">
+                <attribute name="uom" type="anyURI" use="required"/>
+            </extension>
+        </simpleContent>
+    </complexType>
+    <element name="_Object" abstract="true"/>
+    <element name="_GML" type="gml:AbstractGMLType" abstract="true" substitutionGroup="gml:_Object"/>
+    <complexType name="AbstractGMLType" abstract="true">
+        <sequence>
+            <group ref="gml:StandardObjectProperties"/>
+        </sequence>
+        <attribute ref="gml:id" use="optional"/>
+    </complexType>
+    <group name="StandardObjectProperties">
+        <sequence>
+            <element ref="gml:metaDataProperty" minOccurs="0" maxOccurs="unbounded"/>
+            <element ref="gml:description" minOccurs="0"/>
+            <element ref="gml:name" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </group>
+    <element name="metaDataProperty" type="gml:MetaDataPropertyType"/>
+    <complexType name="MetaDataPropertyType">
+        <!-- <sequence minOccurs="0"> -->
+        <!-- <element ref="gml:_MetaData"/> -->
+        <!-- <any processContents="lax"/> -->
+        <!-- </sequence> -->
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+        <attribute name="about" type="anyURI" use="optional"/>
+    </complexType>
+    <element name="description" type="gml:StringOrRefType"/>
+    <complexType name="StringOrRefType">
+        <simpleContent>
+            <extension base="string">
+                <attributeGroup ref="gml:AssociationAttributeGroup"/>
+            </extension>
+        </simpleContent>
+    </complexType>
+    <element name="name" type="gml:CodeType"/>
+    <complexType name="CodeType">
+        <simpleContent>
+            <extension base="string">
+                <attribute name="codeSpace" type="anyURI" use="optional"/>
+            </extension>
+        </simpleContent>
+    </complexType>
+    <complexType name="ReferenceType">
+        <sequence/>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <element name="Envelope" type="gml:EnvelopeType"/>
+    <complexType name="EnvelopeType">
+        <sequence>
+            <element name="lowerCorner" type="gml:DirectPositionType"/>
+            <element name="upperCorner" type="gml:DirectPositionType"/>
+        </sequence>
+        <attributeGroup ref="gml:SRSReferenceGroup"/>
+    </complexType>
+    <element name="Null" type="gml:NullType"/>
+    <simpleType name="NullType">
+        <union memberTypes="gml:NullEnumeration anyURI"/>
+    </simpleType>
+    <simpleType name="NullEnumeration">
+        <annotation>
+            <documentation>
+Some common reasons for a null value:
+innapplicable - the object does not have a value
+missing - The correct value is not readily
+available to the sender of this data.
+Furthermore, a correct value may not exist.
+template - the value will be available later
+unknown - The correct value is not known to, and
+not computable by, the sender of this data.
+However, a correct value probably exists.
+withheld - the value is not divulged
+other:reason - as indicated by "reason" string
+Specific communities may agree to assign more strict semantics
+when these terms are used in a particular context.
+</documentation>
+        </annotation>
+        <union>
+            <simpleType>
+                <restriction base="string">
+                    <enumeration value="inapplicable"/>
+                    <enumeration value="missing"/>
+                    <enumeration value="template"/>
+                    <enumeration value="unknown"/>
+                    <enumeration value="withheld"/>
+                </restriction>
+            </simpleType>
+            <simpleType>
+                <restriction base="string">
+                    <pattern value="other:\w{2,}"/>
+                </restriction>
+            </simpleType>
+        </union>
+    </simpleType>
+    <element name="boundedBy" type="gml:BoundingShapeType"/>
+    <complexType name="BoundingShapeType">
+        <sequence>
+            <choice>
+                <element ref="gml:Envelope"/>
+                <element ref="gml:Null"/>
+            </choice>
+        </sequence>
+    </complexType>
+    <!-- ============================================================== -->
+    <!-- == == -->
+    <!-- ============================================================== -->
+    <element name="_Feature" type="gml:AbstractFeatureType" abstract="true" substitutionGroup="gml:_GML"/>
+    <complexType name="AbstractFeatureType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractGMLType">
+                <sequence>
+                    <element ref="gml:boundedBy" minOccurs="0"/>
+                    <!-- additional properties must be specified
+in an application schema -->
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="FeatureCollection" type="gml:FeatureCollectionType" substitutionGroup="gml:_Feature"/>
+    <complexType name="FeatureCollectionType">
+        <complexContent>
+            <extension base="gml:AbstractFeatureCollectionType"/>
+        </complexContent>
+    </complexType>
+    <complexType name="AbstractFeatureCollectionType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractFeatureType">
+                <sequence>
+                    <element ref="gml:featureMember" minOccurs="0" maxOccurs="unbounded"/>
+                    <element ref="gml:featureMembers" minOccurs="0"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="featureMember" type="gml:FeaturePropertyType"/>
+    <complexType name="FeaturePropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:_Feature"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <element name="featureMembers" type="gml:FeatureArrayPropertyType"/>
+    <complexType name="FeatureArrayPropertyType">
+        <sequence>
+            <element ref="gml:_Feature" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <!-- =================================================================== -->
+    <!-- == == -->
+    <!-- =================================================================== -->
+    <simpleType name="doubleList">
+        <list itemType="double"/>
+    </simpleType>
+    <simpleType name="NCNameList">
+        <list itemType="NCName"/>
+    </simpleType>
+    <element name="pos" type="gml:DirectPositionType"/>
+    <complexType name="DirectPositionType">
+        <simpleContent>
+            <extension base="gml:doubleList">
+                <attributeGroup ref="gml:SRSReferenceGroup"/>
+            </extension>
+        </simpleContent>
+    </complexType>
+    <element name="posList" type="gml:DirectPositionListType"/>
+    <complexType name="DirectPositionListType">
+        <simpleContent>
+            <extension base="gml:doubleList">
+                <attributeGroup ref="gml:SRSReferenceGroup"/>
+                <attribute name="count" type="positiveInteger" use="optional"/>
+            </extension>
+        </simpleContent>
+    </complexType>
+    <attributeGroup name="SRSReferenceGroup">
+        <attribute name="srsName" type="anyURI" use="optional"/>
+        <attribute name="srsDimension" type="positiveInteger" use="optional"/>
+        <attributeGroup ref="gml:SRSInformationGroup"/>
+    </attributeGroup>
+    <attributeGroup name="SRSInformationGroup">
+        <attribute name="axisLabels" type="gml:NCNameList" use="optional"/>
+        <attribute name="uomLabels" type="gml:NCNameList" use="optional"/>
+    </attributeGroup>
+    <!-- =================================================================== -->
+    <!-- == == -->
+    <!-- =================================================================== -->
+    <simpleType name="CurveInterpolationType">
+        <restriction base="string">
+            <enumeration value="linear"/>
+        </restriction>
+    </simpleType>
+    <simpleType name="SurfaceInterpolationType">
+        <restriction base="string">
+            <enumeration value="planar"/>
+        </restriction>
+    </simpleType>
+    <element name="_Geometry" type="gml:AbstractGeometryType" substitutionGroup="gml:_GML" abstract="true"/>
+    <complexType name="AbstractGeometryType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractGMLType">
+                <attributeGroup ref="gml:SRSReferenceGroup"/>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="_GeometricPrimitive" type="gml:AbstractGeometricPrimitiveType" substitutionGroup="gml:_Geometry" abstract="true"/>
+    <complexType name="AbstractGeometricPrimitiveType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractGeometryType"/>
+        </complexContent>
+    </complexType>
+    <element name="_GeometricAggregate" type="gml:AbstractGeometricAggregateType" substitutionGroup="gml:_Geometry" abstract="true"/>
+    <complexType name="AbstractGeometricAggregateType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractGeometryType"/>
+        </complexContent>
+    </complexType>
+    <element name="_Ring" type="gml:AbstractRingType" substitutionGroup="gml:_Geometry" abstract="true"/>
+    <complexType name="AbstractRingType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractGeometryType"/>
+        </complexContent>
+    </complexType>
+    <element name="_Surface" type="gml:AbstractSurfaceType" substitutionGroup="gml:_GeometricPrimitive" abstract="true"/>
+    <complexType name="AbstractSurfaceType">
+        <complexContent>
+            <extension base="gml:AbstractGeometricPrimitiveType"/>
+        </complexContent>
+    </complexType>
+    <element name="_SurfacePatch" type="gml:AbstractSurfacePatchType" abstract="true"/>
+    <complexType name="AbstractSurfacePatchType" abstract="true"/>
+    <element name="_Curve" type="gml:AbstractCurveType" substitutionGroup="gml:_GeometricPrimitive" abstract="true"/>
+    <complexType name="AbstractCurveType" abstract="true">
+        <complexContent>
+            <extension base="gml:AbstractGeometricPrimitiveType"/>
+        </complexContent>
+    </complexType>
+    <element name="_CurveSegment" type="gml:AbstractCurveSegmentType" abstract="true"/>
+    <complexType name="AbstractCurveSegmentType" abstract="true">
+        <sequence/>
+        <attribute name="numDerivativesAtStart" type="integer" use="optional" fixed="0"/>
+        <attribute name="numDerivativesAtEnd" type="integer" use="optional" fixed="0"/>
+        <attribute name="numDerivativeInterior" type="integer" use="optional" fixed="0"/>
+    </complexType>
+    <!-- =================================================================== -->
+    <!-- == == -->
+    <!-- =================================================================== -->
+    <complexType name="PointPropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:Point"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <complexType name="PointArrayPropertyType">
+        <sequence>
+            <element ref="gml:Point" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <element name="Point" type="gml:PointType" substitutionGroup="gml:_GeometricPrimitive"/>
+    <complexType name="PointType">
+        <complexContent>
+            <extension base="gml:AbstractGeometricPrimitiveType">
+                <sequence>
+                    <element ref="gml:pos"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <complexType name="CurvePropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:_Curve"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <complexType name="CurveArrayPropertyType">
+        <sequence>
+            <element ref="gml:_Curve" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <element name="LineString" type="gml:LineStringType" substitutionGroup="gml:_Curve"/>
+    <complexType name="LineStringType">
+        <complexContent>
+            <extension base="gml:AbstractCurveType">
+                <sequence>
+                    <element ref="gml:posList"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="LineStringSegment" type="gml:LineStringSegmentType" substitutionGroup="gml:_CurveSegment"/>
+    <complexType name="LineStringSegmentType">
+        <complexContent>
+            <extension base="gml:AbstractCurveSegmentType">
+                <sequence>
+                    <element ref="gml:posList"/>
+                </sequence>
+                <attribute name="interpolation" type="gml:CurveInterpolationType" fixed="linear"/>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="segments" type="gml:CurveSegmentArrayPropertyType"/>
+    <complexType name="CurveSegmentArrayPropertyType">
+        <sequence>
+            <element ref="gml:_CurveSegment" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <element name="Curve" type="gml:CurveType" substitutionGroup="gml:_Curve"/>
+    <complexType name="CurveType">
+        <complexContent>
+            <extension base="gml:AbstractCurveType">
+                <sequence>
+                    <element ref="gml:segments"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <complexType name="SurfacePropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:_Surface"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <complexType name="SurfaceArrayPropertyType">
+        <sequence>
+            <element ref="gml:_Surface" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <element name="Surface" type="gml:SurfaceType" substitutionGroup="gml:_Surface"/>
+    <complexType name="SurfaceType">
+        <complexContent>
+            <extension base="gml:AbstractSurfaceType">
+                <sequence>
+                    <element ref="gml:patches"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="patches" type="gml:SurfacePatchArrayPropertyType"/>
+    <complexType name="SurfacePatchArrayPropertyType">
+        <sequence>
+            <element ref="gml:_SurfacePatch" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <element name="PolygonPatch" type="gml:PolygonPatchType" substitutionGroup="gml:_SurfacePatch"/>
+    <complexType name="PolygonPatchType">
+        <complexContent>
+            <extension base="gml:AbstractSurfacePatchType">
+                <sequence>
+                    <element ref="gml:exterior" minOccurs="0"/>
+                    <element ref="gml:interior" minOccurs="0" maxOccurs="unbounded"/>
+                </sequence>
+                <attribute name="interpolation" type="gml:SurfaceInterpolationType" fixed="planar"/>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="Polygon" type="gml:PolygonType" substitutionGroup="gml:_Surface"/>
+    <complexType name="PolygonType">
+        <complexContent>
+            <extension base="gml:AbstractSurfaceType">
+                <sequence>
+                    <element ref="gml:exterior" minOccurs="0"/>
+                    <element ref="gml:interior" minOccurs="0" maxOccurs="unbounded"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="exterior" type="gml:AbstractRingPropertyType"/>
+    <element name="interior" type="gml:AbstractRingPropertyType"/>
+    <complexType name="AbstractRingPropertyType">
+        <sequence>
+            <element ref="gml:LinearRing"/>
+        </sequence>
+    </complexType>
+    <element name="LinearRing" type="gml:LinearRingType" substitutionGroup="gml:_Ring"/>
+    <complexType name="LinearRingType">
+        <complexContent>
+            <extension base="gml:AbstractRingType">
+                <sequence>
+                    <element ref="gml:posList"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <complexType name="GeometryPropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:_Geometry"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <complexType name="GeometryArrayPropertyType">
+        <sequence>
+            <element ref="gml:_Geometry" minOccurs="0" maxOccurs="unbounded"/>
+        </sequence>
+    </complexType>
+    <!-- ================================================================ -->
+    <!-- == == -->
+    <!-- ================================================================ -->
+    <complexType name="MultiPointPropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:MultiPoint"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <element name="MultiPoint" type="gml:MultiPointType" substitutionGroup="gml:_GeometricAggregate"/>
+    <complexType name="MultiPointType">
+        <complexContent>
+            <extension base="gml:AbstractGeometricAggregateType">
+                <sequence>
+                    <element ref="gml:pointMember" minOccurs="0" maxOccurs="unbounded"/>
+                    <element ref="gml:pointMembers" minOccurs="0"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="pointMember" type="gml:PointPropertyType"/>
+    <element name="pointMembers" type="gml:PointArrayPropertyType"/>
+    <complexType name="MultiCurvePropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:MultiCurve"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <element name="MultiCurve" type="gml:MultiCurveType" substitutionGroup="gml:_GeometricAggregate"/>
+    <complexType name="MultiCurveType">
+        <complexContent>
+            <extension base="gml:AbstractGeometricAggregateType">
+                <sequence>
+                    <element ref="gml:curveMember" minOccurs="0" maxOccurs="unbounded"/>
+                    <element ref="gml:curveMembers" minOccurs="0"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="curveMember" type="gml:CurvePropertyType"/>
+    <element name="curveMembers" type="gml:CurveArrayPropertyType"/>
+    <complexType name="MultiSurfacePropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:MultiSurface"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <element name="MultiSurface" type="gml:MultiSurfaceType" substitutionGroup="gml:_GeometricAggregate"/>
+    <complexType name="MultiSurfaceType">
+        <complexContent>
+            <extension base="gml:AbstractGeometricAggregateType">
+                <sequence>
+                    <element ref="gml:surfaceMember" minOccurs="0" maxOccurs="unbounded"/>
+                    <element ref="gml:surfaceMembers" minOccurs="0"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="surfaceMember" type="gml:SurfacePropertyType"/>
+    <element name="surfaceMembers" type="gml:SurfaceArrayPropertyType"/>
+    <complexType name="MultiGeometryPropertyType">
+        <sequence minOccurs="0">
+            <element ref="gml:_GeometricAggregate"/>
+        </sequence>
+        <attributeGroup ref="gml:AssociationAttributeGroup"/>
+    </complexType>
+    <element name="MultiGeometry" type="gml:MultiGeometryType" substitutionGroup="gml:_GeometricAggregate"/>
+    <complexType name="MultiGeometryType">
+        <complexContent>
+            <extension base="gml:AbstractGeometricAggregateType">
+                <sequence>
+                    <element ref="gml:geometryMember" minOccurs="0" maxOccurs="unbounded"/>
+                    <element ref="gml:geometryMembers" minOccurs="0"/>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="geometryMember" type="gml:GeometryPropertyType"/>
+    <element name="geometryMembers" type="gml:GeometryArrayPropertyType"/>
+    <!-- ================================================================== -->
+    <!-- -->
+    <!-- ================================================================== -->
+    <element name="Definition" type="gml:DefinitionType" substitutionGroup="gml:_GML"/>
+    <complexType name="DefinitionType">
+        <complexContent>
+            <restriction base="gml:AbstractGMLType">
+                <sequence>
+                    <element ref="gml:metaDataProperty" minOccurs="0" maxOccurs="unbounded"/>
+                    <element ref="gml:description" minOccurs="0"/>
+                    <element ref="gml:name" maxOccurs="unbounded"/>
+                </sequence>
+                <attribute ref="gml:id" use="required"/>
+            </restriction>
+        </complexContent>
+    </complexType>
+    <element name="Dictionary" type="gml:DictionaryType" substitutionGroup="gml:Definition"/>
+    <complexType name="DictionaryType">
+        <complexContent>
+            <extension base="gml:DefinitionType">
+                <sequence minOccurs="0" maxOccurs="unbounded">
+                    <choice>
+                        <element ref="gml:dictionaryEntry"/>
+                    </choice>
+                </sequence>
+            </extension>
+        </complexContent>
+    </complexType>
+    <element name="dictionaryEntry" type="gml:DictionaryEntryType"/>
+    <complexType name="DictionaryEntryType">
+        <sequence minOccurs="0">
+            <element ref="gml:Definition"/>
+        </sequence>
+        <!-- <attributeGroup ref="gml:AssociationAttributeGroup"/> -->
+    </complexType>
+</schema>

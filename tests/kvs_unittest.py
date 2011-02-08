@@ -5,8 +5,6 @@ import os
 import time
 import unittest
 
-from openquake import hazard
-from openquake import risk
 from openquake import java
 from openquake import logs
 from openquake import kvs
@@ -205,8 +203,8 @@ class KVSTestCase(unittest.TestCase):
         self.assertEquals(data, nrmls)
 
     @test.skipit
-    def test_end_to_end_from_memcached_to_nrml(self):
-        # storing in memcached from java side
+    def test_end_to_end_from_kvs_to_nrml(self):
+        # storing in kvs from java side
         self.java_client.set("KEY", ONE_CURVE_MODEL)
         
         time.sleep(0.3)
@@ -285,14 +283,14 @@ class IdentifierTestCase(unittest.TestCase):
 
     def test_generate_product_key_with_tokens_from_kvs(self):
         products = [
-            hazard.ERF_KEY_TOKEN,
-            hazard.MGM_KEY_TOKEN,
-            hazard.HAZARD_CURVE_KEY_TOKEN,
-            risk.EXPOSURE_KEY_TOKEN,
-            risk.GMF_KEY_TOKEN,
-            risk.LOSS_RATIO_CURVE_KEY_TOKEN,
-            risk.LOSS_CURVE_KEY_TOKEN,
-            risk.loss_token(0.01),
+            kvs.tokens.ERF_KEY_TOKEN,
+            kvs.tokens.MGM_KEY_TOKEN,
+            kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
+            kvs.tokens.EXPOSURE_KEY_TOKEN,
+            kvs.tokens.GMF_KEY_TOKEN,
+            kvs.tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
+            kvs.tokens.LOSS_CURVE_KEY_TOKEN,
+            kvs.tokens.loss_token(0.01),
             vulnerability.VULNERABILITY_CURVE_KEY_TOKEN,
         ]
 
@@ -304,7 +302,7 @@ class IdentifierTestCase(unittest.TestCase):
                     self.block_id, self.site)
             self.assertEqual(key, ev)
     
-    def test_memcached_doesnt_support_spaces_in_keys(self):
+    def test_kvs_doesnt_support_spaces_in_keys(self):
         self.product = "A TestProduct"
         self.site = "Testville, TestLand"
         key = kvs.generate_product_key(self.job_id, self.product, 
