@@ -355,10 +355,10 @@ class HazardEngineTestCase(unittest.TestCase):
 
             # hazard maps: check results of mean and quantile computation
             verify_mean_haz_maps_stored_to_kvs(hazengine)
-            #verify_quantile_haz_maps_stored_to_kvs(hazengine)
+            verify_quantile_haz_maps_stored_to_kvs(hazengine)
 
             verify_mean_haz_maps_stored_to_nrml(hazengine)
-            #verify_quantile_haz_maps_stored_to_nrml(hazengine)
+            verify_quantile_haz_maps_stored_to_nrml(hazengine)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
