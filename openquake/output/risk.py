@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
-Output risk data (loss ratio curves, loss curves, and loss values)
-as nrml-style XML.
-
+NRML serialization of risk-related data sets.
+- loss ratio curves
+- loss curves
 """
 
 from lxml import etree
@@ -11,16 +11,24 @@ from lxml import etree
 from openquake import logs
 from openquake import shapes
 from openquake import writer
-from openquake.xml import GML_OLD, NSMAP_OLD, NRML_OLD
+#from openquake.xml import GML_OLD, NSMAP_OLD, NRML_OLD
+from openquake.xml import GML, NRML, NSMAP
 
 LOGGER = logs.RISK_LOG
 
 class RiskXMLWriter(writer.FileWriter):
-    """This class writes a risk curve into the nrml format."""
-    curve_tag = NRML_OLD + "Curve"
-    abcissa_tag = NRML_OLD + "PE"
-    container_tag = NRML_OLD + "RiskElementList"
+    """This class serializes a set of loss or loss ratio curves to NRML.
+    """
+
+    container_tag = None
+    curves_tag = None
+    curve_tag = None
+    abcissa_tag = None
     
+    root_tag = "%snrml" % NRML
+    result_tag = "%sriskResult" % NRML
+    config_tag = "%sconfig" % NRML
+
     def write(self, point, val):
         if isinstance(point, shapes.GridPoint):
             point = point.site.point
@@ -29,21 +37,24 @@ class RiskXMLWriter(writer.FileWriter):
         self._append_curve_node(point, val, self.parent_node)
 
     def write_header(self):
-        """Write out the file header"""
-        self.root_node = etree.Element(NRML_OLD + "RiskResult", nsmap=NSMAP_OLD)
-        config_node = etree.SubElement(self.root_node, 
-                           NRML_OLD + "Config" , nsmap=NSMAP_OLD)
-        config_node.text = "Config file details go here."
+        """Header (i.e., common) information for all curves."""
+        self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
+        result_node = etree.SubElement(self.root_node, self.result_tag,
+            nsmap=NSMAP)
+
+        config_node = etree.SubElement(result_node, self.config_tag, 
+            nsmap=NSMAP)
 
         #pylint: disable=W0201
-        self.parent_node = etree.SubElement(self.root_node, 
-                           self.container_tag , nsmap=NSMAP_OLD)
+        self.parent_node = etree.SubElement(result_node, self.container_tag, 
+            nsmap=NSMAP)
 
     def write_footer(self):
-        """Write out the file footer"""
+        """Serialize tree to file."""
         et = etree.ElementTree(self.root_node)
-        et.write(self.file, pretty_print=True)
-    
+        et.write(self.file, pretty_print=True, xml_declaration=True,
+            encoding="UTF-8")
+
     def _append_curve_node(self, point, val, parent_node):
         """ This method appends a curve node to the parent node """
 
@@ -81,23 +92,30 @@ class RiskXMLWriter(writer.FileWriter):
 
 
 class LossCurveXMLWriter(RiskXMLWriter):
-    """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = NRML_OLD + "LossCurve"
-    abcissa_tag = NRML_OLD + "LossCurvePE"
-    container_tag = NRML_OLD + "LossCurveList"
+    """NRML serialization of loss curves"""
+    container_tag = "%slossCurveList" % NRML
+    curves_tag = "%slossCurves" % NRML
+    curve_tag = "%slossCurve" % NRML
+    abcissa_tag = "%sloss" % NRML
     
 
 class LossRatioCurveXMLWriter(RiskXMLWriter):
-    """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = NRML_OLD + "LossRatioCurve"
-    abcissa_tag = NRML_OLD + "LossRatioCurvePE"
-    container_tag = NRML_OLD + "LossRatioCurveList"
-
-
-def _curve_pe_as_gmldoublelist(curve_object):
-    """ Return the list of abscissae converted to string joined by a space """
-    return " ".join([str(abscissa) for abscissa in curve_object.abscissae])
+    """NRML serialization of loss ratio curves"""
+    container_tag = "%slossRatioCurveList" % NRML
+    curves_tag = "%slossRatioCurves" % NRML
+    curve_tag = "%slossRatioCurve" % NRML
+    abcissa_tag = "%slossRatio" % NRML
 
 def _curve_vals_as_gmldoublelist(curve_object):
-    """ Return the list of ordinates converted to string joined by a space """
+    """Return the list of loss/loss ratio values from a curve object.
+    This is the abscissa of the curve.
+    The list of values is converted to string joined by a space.
+    """
+    return " ".join([str(abscissa) for abscissa in curve_object.abscissae])
+
+def _curve_poe_as_gmldoublelist(curve_object):
+    """Return the list of PoE values from a curve object.
+    This is the ordinate of the curve.
+    The list of values is converted to string joined by a space.
+    """
     return " ".join([str(ordinate) for ordinate in curve_object.ordinates])
