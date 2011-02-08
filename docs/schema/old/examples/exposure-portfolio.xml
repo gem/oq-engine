@@ -1,0 +1,26 @@
+<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
+	<Config>
+    	<ExposureParameters PortfolioID="PAV01" PortfolioDescription="Collection of existing building in downtown Pavia" AssetType="buildings" LossType="economical loss">
+		</ExposureParameters>
+	</Config>
+	<ExposureList>
+		<AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
+			<AssetID>01</AssetID>
+		  	<StructureType>RC-LR-PC</StructureType>
+	      	<gml:pos>  45.16667 9.15000</gml:pos>
+	      	<AssetValue>150000</AssetValue>
+		</AssetInstance>
+	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
+		  <AssetID>02</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos>45.12200   9.15333 </gml:pos>
+	      <AssetValue>250000</AssetValue>
+	    </AssetInstance>
+	    <AssetInstance AssetDescription="Moment-resisting non-ductile concrete frame low rise" VulnerabilityFunction="RC/DMRF-D/LR">
+		  <AssetID>03</AssetID>
+		  <StructureType>RC-LR-PC</StructureType>
+	      <gml:pos> 45.17999		9.14777</gml:pos>
+	      <AssetValue>500000</AssetValue>
+	    </AssetInstance>
+	</ExposureList>
+</ExposurePortfolio>

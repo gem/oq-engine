@@ -188,8 +188,8 @@ class KVSTestCase(unittest.TestCase):
         self.assertEquals(data, nrmls)
 
     @test.skipit
-    def test_end_to_end_from_memcached_to_nrml(self):
-        # storing in memcached from java side
+    def test_end_to_end_from_kvs_to_nrml(self):
+        # storing in kvs from java side
         self.java_client.set("KEY", ONE_CURVE_MODEL)
         
         time.sleep(0.3)
@@ -287,7 +287,7 @@ class IdentifierTestCase(unittest.TestCase):
                     self.block_id, self.site)
             self.assertEqual(key, ev)
     
-    def test_memcached_doesnt_support_spaces_in_keys(self):
+    def test_kvs_doesnt_support_spaces_in_keys(self):
         self.product = "A TestProduct"
         self.site = "Testville, TestLand"
         key = kvs.generate_product_key(self.job_id, self.product, 

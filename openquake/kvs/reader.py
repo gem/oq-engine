@@ -8,7 +8,7 @@ import math
 from openquake import shapes
 
 class Reader(object):
-    """Read objects from memcached and translate them into
+    """Read objects from kvs and translate them into
     our object model.
     """
     
@@ -16,7 +16,7 @@ class Reader(object):
         self.client = client
     
     def _check_key_in_cache(self, key):
-        """Raise an error if the given key is not in memcached."""
+        """Raise an error if the given key is not in kvs."""
         
         if not self.client.get(key):
             raise ValueError("There's no value for key %s!" % key)
