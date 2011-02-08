@@ -15,7 +15,7 @@ flags.DEFINE_boolean('capture_java_debug', True,
     "Pipe Java stderr and stdout to python stderr and stdout")
 
 JAVA_CLASSES = {
-    'CommandLineCalculator' : "org.gem.engine.CommandLineCalculator",
+    'LogicTreeProcessor' : "org.gem.engine.LogicTreeProcessor",
     'KVS' : "org.gem.engine.hazard.redis.Cache",
     'JsonSerializer' : "org.gem.JsonSerializer",
     "EventSetGen" : "org.gem.calc.StochasticEventSetGenerator",
@@ -62,7 +62,7 @@ def jvm(max_mem=2000):
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(), 
             "-Djava.ext.dirs=%s:%s" % jarpaths, 
-            "-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
+        #"-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
             # "-Dlog4j.debug",
             "-Dlog4j.configuration=log4j.properties",
             "-Dlog4j.rootLogger=%s, A1" % (FLAGS.debug.upper()),

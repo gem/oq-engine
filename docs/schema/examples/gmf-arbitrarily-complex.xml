@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+      
+    <!-- hazardResult is a gml:Feature -->
+    <hazardResult gml:id="hr1">
+        <config>
+            <hazardProcessing investigationTimeSpan="50.0"/>
+        </config>
+        
+        <!-- groundMotionFieldSet is a gml:Feature -->
+        <groundMotionFieldSet gml:id="gmfs_1">
+            
+            <gml:description>Optional description element</gml:description>
+            <GMPEParameters IMT="PGA"/>
+            
+            <!-- arbitrarilyComplexRupture is a gml:Feature -->
+            <arbitrarilyComplexRupture gml:id="acr_1">
+                
+                <!-- non-geospatial properties -->
+                <magnitude type="Mw">8.0</magnitude>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+                <rake>0.0</rake>
+
+                <!-- geospatial property -->
+                <ruptureSurface>
+                    <gml:Surface>
+                        <gml:patches>
+                            <gml:PolygonPatch>
+                                <gml:exterior>
+                                    <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4979">
+                                        <!-- TODO: find appropriate reference system. The third (vertical)
+                                             coordinate is the local depth, measured from ground
+                                             (positive: downward direction) -->
+                                        <gml:posList>-119.0 40.0 5.0 -120.0 39.0 5.0 -118.0 39.0 5.0 -119.0 40.0 5.0</gml:posList>
+                                    </gml:LinearRing>
+                                </gml:exterior>
+                            </gml:PolygonPatch>
+                            <gml:PolygonPatch>
+                                <gml:exterior>
+                                    <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4979">
+                                        <gml:posList>-120.0 40.0 5.0 -121.0 39.0 5.0 -119.0 39.0 5.0 -120.0 40.0 5.0</gml:posList>
+                                    </gml:LinearRing>
+                                </gml:exterior>
+                            </gml:PolygonPatch>
+                        </gml:patches>
+                    </gml:Surface>
+                </ruptureSurface>
+            </arbitrarilyComplexRupture>
+            
+            <!-- gmf is a gml:Feature -->
+            <GMF gml:id="gmf_1" ruptureReference="acr_1">
+                
+                <!-- GMFNode is a gml:Feature -->
+                <GMFNode gml:id="s_1">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-116.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.2</groundMotion>
+                </GMFNode>
+                
+                <GMFNode gml:id="s_2">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-118.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.3</groundMotion>
+                </GMFNode>
+                
+            </GMF>
+            
+        </groundMotionFieldSet>
+        
+    </hazardResult>
+</nrml>

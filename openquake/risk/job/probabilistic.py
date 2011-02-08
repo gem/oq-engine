@@ -70,7 +70,7 @@ class ProbabilisticEventMixin:
         """Load and collate GMF values for all sites in this block. """
         # TODO(JMC): Confirm this works regardless of the method of haz calc.
         histories = int(self['NUMBER_OF_SEISMICITY_HISTORIES'])
-        realizations = int(self['NUMBER_OF_HAZARD_CURVE_CALCULATIONS'])
+        realizations = int(self['NUMBER_OF_LOGIC_TREE_SAMPLES'])
         num_ses = histories * realizations
         
         block = job.Block.from_kvs(block_id)
