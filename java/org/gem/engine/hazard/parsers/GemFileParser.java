@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import org.dom4j.Document;
 import org.dom4j.DocumentFactory;
 import org.dom4j.Element;
+import org.dom4j.QName;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 import org.opensha.commons.data.function.EvenlyDiscretizedFunc;
@@ -25,6 +26,7 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSource
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
+import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
@@ -2127,8 +2129,7 @@ public class GemFileParser {
     }
 
     /**
-     * Method for serializing source data to nrml format file. At the moment it
-     * serializes only fault source data.
+     * Method for serializing source data to NRML format file.
      */
     public void writeSource2NrmlFormat(File file) {
         Document doc = DocumentFactory.getInstance().createDocument();
@@ -2144,79 +2145,260 @@ public class GemFileParser {
 
         for (GEMSourceData src : srcDataList) {
             if (src instanceof GEMFaultSourceData) {
-                GEMFaultSourceData fault = (GEMFaultSourceData) src;
+                GEMFaultSourceData source = (GEMFaultSourceData) src;
+                QName simpleFaultQName = NRMLConstants.NRML_SIMPLE_FAULT_SOURCE;
 
-                Element faultSource =
-                        sourceModel
-                                .addElement(NRMLConstants.NRML_SIMPLE_FAULT_SOURCE);
+                Element sourceElement =
+                        sourceModel.addElement(simpleFaultQName);
 
-                faultSource.addAttribute(NRMLConstants.GML_ID, fault.getID());
+                // common parameters for simple and complex sources
+                appendIdTo(source, sourceElement);
+                appendNameTo(source, sourceElement);
+                appendTectonicRegionTo(source, sourceElement);
+                appendRakeTo(source.getRake(), sourceElement);
+                appendEvenlyDiscretizedMFDTo(source.getMfd(), sourceElement);
 
-                Element name = faultSource.addElement(NRMLConstants.GML_NAME);
-                name.addText(fault.getName());
+                // <simpleFaultGeometry>
+                QName simpleGeomQName =
+                        NRMLConstants.NRML_SIMPLE_FAULT_GEOMETRY;
 
-                Element tectonicRegion =
-                        faultSource
-                                .addElement(NRMLConstants.NRML_TECTONIC_REGION);
-
-                tectonicRegion.addText(fault.getTectReg().toString());
-
-                Element rake = faultSource.addElement(NRMLConstants.NRML_RAKE);
-                rake.addText(Double.toString(fault.getRake()));
-
-                Element evenlyDiscretizedIncrementalMFD =
-                        faultSource.addElement(NRMLConstants.NRML_EDI_MFD);
-
-                String binSize = Double.toString(fault.getMfd().getDelta());
-
-                evenlyDiscretizedIncrementalMFD.addAttribute(
-                        NRMLConstants.NRML_BIN_SIZE, binSize);
-
-                String minVal = Double.toString(fault.getMfd().getMinX());
-
-                evenlyDiscretizedIncrementalMFD.addAttribute(
-                        NRMLConstants.NRML_MIN_VAL, minVal);
-
-                evenlyDiscretizedIncrementalMFD.addText(MFDValuesAsText(fault));
-
-                Element simpleFaultGeometry =
-                        faultSource
-                                .addElement(NRMLConstants.NRML_SIMPLE_FAULT_GEOMETRY);
+                Element simpleGeometry =
+                        sourceElement.addElement(simpleGeomQName);
 
                 Element faultTrace =
-                        simpleFaultGeometry
+                        simpleGeometry
                                 .addElement(NRMLConstants.NRML_FAULT_TRACE);
 
-                Element lineString =
-                        faultTrace.addElement(NRMLConstants.GML_LINE_STRING);
+                addLocationsTo(source.getTrace(), faultTrace);
 
-                Element posList =
-                        lineString.addElement(NRMLConstants.GML_POS_LIST);
-                posList.addText(positionsAsText(fault));
+                // <dip>
+                Element dip = simpleGeometry.addElement(NRMLConstants.NRML_DIP);
+                dip.addText(Double.toString(source.getDip()));
 
-                Element dip =
-                        simpleFaultGeometry.addElement(NRMLConstants.NRML_DIP);
-                dip.addText(Double.toString(fault.getDip()));
+                // <upperSeismogenicDepth>
+                simpleGeometry.addElement(NRMLConstants.NRML_UPPER_SEISM_DEP)
+                        .addText(Double.toString(source.getSeismDepthUpp()));
 
-                Element upperSeismogenicDepth =
-                        simpleFaultGeometry
-                                .addElement(NRMLConstants.NRML_UPPER_SEISM_DEP);
+                // <lowerSeismogenicDepth>
+                simpleGeometry.addElement(NRMLConstants.NRML_LOWER_SEISM_DEP)
+                        .addText(Double.toString(source.getSeismDepthLow()));
 
-                upperSeismogenicDepth.addText(Double.toString(fault
-                        .getSeismDepthUpp()));
+            } else if (src instanceof GEMSubductionFaultSourceData) {
+                GEMSubductionFaultSourceData source =
+                        (GEMSubductionFaultSourceData) src;
 
-                Element lowerSeismogenicDepth =
-                        simpleFaultGeometry
-                                .addElement(NRMLConstants.NRML_LOWER_SEISM_DEP);
+                QName complexSourceQName =
+                        NRMLConstants.NRML_COMPLEX_FAULT_SOURCE;
 
-                lowerSeismogenicDepth.addText(Double.toString(fault
-                        .getSeismDepthLow()));
+                Element sourceElement =
+                        sourceModel.addElement(complexSourceQName);
+
+                // common parameters for simple and complex sources
+                appendIdTo(source, sourceElement);
+                appendNameTo(source, sourceElement);
+                appendTectonicRegionTo(source, sourceElement);
+                appendRakeTo(source.getRake(), sourceElement);
+                appendEvenlyDiscretizedMFDTo(source.getMfd(), sourceElement);
+
+                // <complexFaultGeometry>
+                QName complexGeomQName =
+                        NRMLConstants.NRML_COMPLEX_FAULT_GEOMETRY;
+
+                Element complexFaultGeometry =
+                        sourceElement.addElement(complexGeomQName);
+
+                Element faultEdges =
+                        complexFaultGeometry
+                                .addElement(NRMLConstants.NRML_FAULT_EDGES);
+
+                // <faultTopEdge>
+                addLocationsTo(source.getTopTrace(), faultEdges
+                        .addElement(NRMLConstants.NRML_FAULT_TOP_EDGE));
+
+                // <faultBottomEdge>
+                addLocationsTo(source.getBottomTrace(), faultEdges
+                        .addElement(NRMLConstants.NRML_FAULT_BOTTOM_EDGE));
+
+            } else if (src instanceof GEMAreaSourceData) {
+                GEMAreaSourceData source = (GEMAreaSourceData) src;
+
+                QName areaSourceQName = NRMLConstants.NRML_AREA_SOURCE;
+                Element sourceElement = sourceModel.addElement(areaSourceQName);
+
+                appendIdTo(source, sourceElement);
+                appendNameTo(source, sourceElement);
+                appendTectonicRegionTo(source, sourceElement);
+
+                addLocationsTo(source.getRegion().getBorder(), sourceElement
+                        .addElement(NRMLConstants.NRML_AREA_BOUNDARY)
+                        .addElement(NRMLConstants.GML_POLYGON).addElement(
+                                NRMLConstants.GML_EXTERIOR));
+
+                MagFreqDistsForFocalMechs mechs =
+                        source.getMagfreqDistFocMech();
+                for (int i = 0; i < mechs.getNumFocalMechs(); i++) {
+                    Element rateModel =
+                            sourceElement
+                                    .addElement(NRMLConstants.NRML_RUPTURE_RATE_MODEL);
+
+                    appendEvenlyDiscretizedMFDTo(mechs.getMagFreqDist(i),
+                            rateModel);
+
+                    FocalMechanism mech = mechs.getFocalMech(i);
+
+                    Element focalMech =
+                            rateModel
+                                    .addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
+
+                    Element plane1 =
+                            focalMech
+                                    .addElement(NRMLConstants.QML_NODAL_PLANES)
+                                    .addElement(NRMLConstants.QML_NODAL_PLANE1);
+
+                    Element strike =
+                            plane1.addElement(NRMLConstants.QML_STRIKE);
+
+                    Element value = strike.addElement(NRMLConstants.QML_VALUE);
+                    value.addText(Double.toString(mech.getStrike()));
+
+                    Element dip = plane1.addElement(NRMLConstants.QML_DIP);
+
+                    value = dip.addElement(NRMLConstants.QML_VALUE);
+                    value.addText(Double.toString(mech.getDip()));
+
+                    Element rake = plane1.addElement(NRMLConstants.QML_RAKE);
+
+                    value = rake.addElement(NRMLConstants.QML_VALUE);
+                    value.addText(Double.toString(mech.getRake()));
+                }
+
+                Element ruptureDepth =
+                        sourceElement
+                                .addElement(NRMLConstants.NRML_RUPTURE_DEPTH_DISTRIBUTION);
+
+                Element magnitude =
+                        ruptureDepth.addElement(NRMLConstants.MAGNITUDE);
+
+                StringBuilder values = new StringBuilder();
+
+                for (Double value : source.getAveRupTopVsMag().getXVals()) {
+                    values.append(value).append(" ");
+                }
+
+                magnitude.addText(values.toString().trim());
+
+                Element depth = ruptureDepth.addElement(NRMLConstants.DEPTH);
+
+                values = new StringBuilder();
+
+                for (Double value : source.getAveRupTopVsMag().getYVals()) {
+                    values.append(value).append(" ");
+                }
+
+                depth.addText(values.toString().trim());
+
+                Element hypocentralDepth =
+                        sourceElement
+                                .addElement(NRMLConstants.NRML_HYPOCENTRAL_DEPTH);
+
+                hypocentralDepth.addText(Double.toString(source
+                        .getAveHypoDepth()));
+            } else if (src instanceof GEMPointSourceData) {
+                GEMPointSourceData source = (GEMPointSourceData) src;
+
+                QName areaSourceQName = NRMLConstants.NRML_POINT_SOURCE;
+                Element sourceElement = sourceModel.addElement(areaSourceQName);
+
+                appendIdTo(source, sourceElement);
+                appendNameTo(source, sourceElement);
+                appendTectonicRegionTo(source, sourceElement);
+
+                Element pos =
+                        sourceElement.addElement(NRMLConstants.NRML_LOCATION)
+                                .addElement(NRMLConstants.GML_POINT)
+                                .addElement(NRMLConstants.GML_POS);
+
+                Location location =
+                        source.getHypoMagFreqDistAtLoc().getLocation();
+                pos.addText(location.getLongitude() + " "
+                        + location.getLatitude());
+
+                MagFreqDistsForFocalMechs mechs =
+                        source.getHypoMagFreqDistAtLoc();
+                for (int i = 0; i < mechs.getNumFocalMechs(); i++) {
+                    Element rateModel =
+                            sourceElement
+                                    .addElement(NRMLConstants.NRML_RUPTURE_RATE_MODEL);
+
+                    appendEvenlyDiscretizedMFDTo(mechs.getMagFreqDist(i),
+                            rateModel);
+
+                    FocalMechanism mech = mechs.getFocalMech(i);
+
+                    Element focalMech =
+                            rateModel
+                                    .addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
+
+                    Element plane1 =
+                            focalMech
+                                    .addElement(NRMLConstants.QML_NODAL_PLANES)
+                                    .addElement(NRMLConstants.QML_NODAL_PLANE1);
+
+                    Element strike =
+                            plane1.addElement(NRMLConstants.QML_STRIKE);
+
+                    Element value = strike.addElement(NRMLConstants.QML_VALUE);
+                    value.addText(Double.toString(mech.getStrike()));
+
+                    Element dip = plane1.addElement(NRMLConstants.QML_DIP);
+
+                    value = dip.addElement(NRMLConstants.QML_VALUE);
+                    value.addText(Double.toString(mech.getDip()));
+
+                    Element rake = plane1.addElement(NRMLConstants.QML_RAKE);
+
+                    value = rake.addElement(NRMLConstants.QML_VALUE);
+                    value.addText(Double.toString(mech.getRake()));
+                }
+
+                Element ruptureDepth =
+                        sourceElement
+                                .addElement(NRMLConstants.NRML_RUPTURE_DEPTH_DISTRIBUTION);
+
+                Element magnitude =
+                        ruptureDepth.addElement(NRMLConstants.MAGNITUDE);
+
+                StringBuilder values = new StringBuilder();
+
+                for (Double value : source.getAveRupTopVsMag().getXVals()) {
+                    values.append(value).append(" ");
+                }
+
+                magnitude.addText(values.toString().trim());
+
+                Element depth = ruptureDepth.addElement(NRMLConstants.DEPTH);
+
+                values = new StringBuilder();
+
+                for (Double value : source.getAveRupTopVsMag().getYVals()) {
+                    values.append(value).append(" ");
+                }
+
+                depth.addText(values.toString().trim());
+
+                Element hypocentralDepth =
+                        sourceElement
+                                .addElement(NRMLConstants.NRML_HYPOCENTRAL_DEPTH);
+
+                hypocentralDepth.addText(Double.toString(source
+                        .getAveHypoDepth()));
             }
         }
 
         FileOutputStream fos;
         XMLWriter writer;
         OutputFormat format = OutputFormat.createPrettyPrint();
+
         try {
             fos = new FileOutputStream(file.getAbsolutePath());
             writer = new XMLWriter(fos, format);
@@ -2227,23 +2409,81 @@ public class GemFileParser {
         }
     }
 
-    private String positionsAsText(GEMFaultSourceData source) {
+    private void addLocationsTo(LocationList locations, Element element) {
+        Element lineString = element.addElement(NRMLConstants.GML_LINE_STRING);
+        Element posList = lineString.addElement(NRMLConstants.GML_POS_LIST);
+
         StringBuilder values = new StringBuilder();
 
-        for (Location loc : source.getTrace()) {
-            values.append(loc.getLongitude()).append(" ");
-            values.append(loc.getLatitude()).append(" ");
-            values.append(loc.getDepth()).append(" ");
+        for (Location location : locations) {
+            values.append(location.getLongitude()).append(" ");
+            values.append(location.getLatitude()).append(" ");
+            values.append(location.getDepth()).append(" ");
         }
 
-        return values.toString().trim();
+        posList.addText(values.toString().trim());
     }
 
-    private String MFDValuesAsText(GEMFaultSourceData source) {
+    private void addLocationsTo(FaultTrace trace, Element element) {
+        Element lineString = element.addElement(NRMLConstants.GML_LINE_STRING);
+        Element posList = lineString.addElement(NRMLConstants.GML_POS_LIST);
+
         StringBuilder values = new StringBuilder();
 
-        for (int i = 0; i < source.getMfd().getNum(); i++) {
-            values.append(source.getMfd().getY(i)).append(" ");
+        for (Location location : trace) {
+            values.append(location.getLongitude()).append(" ");
+            values.append(location.getLatitude()).append(" ");
+            values.append(location.getDepth()).append(" ");
+        }
+
+        posList.addText(values.toString().trim());
+    }
+
+    private void appendEvenlyDiscretizedMFDTo(IncrementalMagFreqDist mfd,
+            Element faultSource) {
+
+        Element evenlyDiscretizedIncrementalMFD =
+                faultSource.addElement(NRMLConstants.NRML_EDI_MFD);
+
+        String binSize = Double.toString(mfd.getDelta());
+
+        evenlyDiscretizedIncrementalMFD.addAttribute(
+                NRMLConstants.NRML_BIN_SIZE, binSize);
+
+        String minVal = Double.toString(mfd.getMinX());
+
+        evenlyDiscretizedIncrementalMFD.addAttribute(
+                NRMLConstants.NRML_MIN_VAL, minVal);
+
+        evenlyDiscretizedIncrementalMFD.addText(MFDValuesAsText(mfd));
+    }
+
+    private void appendRakeTo(Double rake, Element element) {
+        element.addElement(NRMLConstants.NRML_RAKE).addText(
+                Double.toString(rake));
+    }
+
+    private void appendIdTo(GEMSourceData source, Element element) {
+        element.addAttribute(NRMLConstants.GML_ID, source.getID());
+    }
+
+    private void appendTectonicRegionTo(GEMSourceData source, Element element) {
+        Element tectonicRegion =
+                element.addElement(NRMLConstants.NRML_TECTONIC_REGION);
+
+        tectonicRegion.addText(source.getTectReg().toString());
+    }
+
+    private void appendNameTo(GEMSourceData source, Element element) {
+        Element name = element.addElement(NRMLConstants.GML_NAME);
+        name.addText(source.getName());
+    }
+
+    private String MFDValuesAsText(IncrementalMagFreqDist mfd) {
+        StringBuilder values = new StringBuilder();
+
+        for (int i = 0; i < mfd.getNum(); i++) {
+            values.append(mfd.getY(i)).append(" ");
         }
 
         return values.toString().trim();
