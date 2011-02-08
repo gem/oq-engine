@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://openquake.org/xmlns/nrml/0.1"
+	xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
+	<!-- import -->
+	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+		<!-- schemaLocation="./gml.xsd"/> -->
+	<xs:include schemaLocation="nrml_common.xsd"/>
+
+	<xs:element name="AssetInstance" type="nrml:AssetType" substitutionGroup="nrml:Asset"/>
+	<xs:element name="DiscreteVulnerability" type="nrml:ModelType" substitutionGroup="nrml:Model"/>
+	<xs:element name="IntensityMeasureLevels" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="LossCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="LossCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="LossRatioCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+		<xs:element name="LossRatioCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="ExposureList" type="nrml:AssetPortfolioType"/>	
+	<xs:element name="ContinuousVulnerabilitySet" type="nrml:ModelListType"/>
+	<xs:element name="DiscreteVulnerabilitySet" type="nrml:ModelListType"/>
+	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
+	<xs:element name="LossRatioCurveList" type="nrml:CurveListType"/>
+	<xs:element name="ExposurePortfolio">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="nrml:Config"/>
+				<xs:element ref="nrml:ExposureList"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="RiskResult">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="nrml:Config"/>
+				<xs:choice>
+					<xs:element ref="nrml:LossCurveList"/>
+					<xs:element ref="nrml:LossRatioCurveList"/>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:element name="VulnerabilityModel">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="nrml:Config"/>
+				<xs:choice>
+					<xs:element ref="nrml:DiscreteVulnerabilitySet"/>
+					<xs:element ref="nrml:ContinuousVulnerabilitySet"/>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+</xs:schema>

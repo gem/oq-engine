@@ -1,601 +1,360 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-    targetNamespace="http://openquake.org/xmlns/nrml/0.1"
-    xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
-    xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0">
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
+           xmlns="http://openquake.org/xmlns/nrml/0.2"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+           elementFormDefault="qualified"
+           xml:lang="en">
 
-    <!-- include common types-->
     <xs:annotation>
-        <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
+        <xs:documentation>Schema describing the XML structure of files containing information pertinent with the creation of ERF.
         </xs:documentation>
     </xs:annotation>
-    <!-- -->
 
-    <!-- import -->
-    <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-        schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+    <xs:import namespace="http://quakeml.org/xmlns/quakeml/1.1" schemaLocation="./QuakeML-BED-1.1.xsd"/>
     <xs:include schemaLocation="nrml_common.xsd"/>
-    <!-- -->
 
-    <xs:complexType name="LogicTreeERFType">
-        <xs:annotation>
-            <xs:documentation>Object containing all the information necessary to implement a set of ERF using a logic tree structure</xs:documentation>
-        </xs:annotation>
-        <xs:all maxOccurs="1">
-            <xs:element name="BranchingLevelList" type="nrml:LogicTreeBranchingLevelListType"
-                maxOccurs="1"/>
-            <xs:element name="EndBranchMappingList" type="nrml:LogicTreeEndBranchMappingListType"/>
-        </xs:all>
-        <xs:attribute name="description" type="xs:string">
-            <xs:annotation>
-                <xs:documentation>In GEM1 we use this attribute to store the hashmap that associates a set of branch labels to a set of ASCII input files. The structure is the following: (branch label) (absolute position of the ASCII input file)</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="modelID" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="LogicTreeBranchingLevelType">
-        <xs:annotation>
-            <xs:documentation>This is used to describe a branching level of a LT</xs:documentation>
-        </xs:annotation>
-        <xs:sequence maxOccurs="unbounded">
-            <xs:element name="Branch" type="nrml:LogicTreeBranchType"/>
-        </xs:sequence>
-        <xs:attribute name="level" use="required">
-            <xs:annotation>
-                <xs:documentation>Level number</xs:documentation>
-            </xs:annotation>
-            <xs:simpleType>
-                <xs:restriction base="xs:int">
-                    <xs:minInclusive value="1"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="branchingLabel" use="required">
-            <xs:annotation>
-                <xs:documentation>This parameter describes the current level of branching</xs:documentation>
-            </xs:annotation>
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="DipAbs"/>
-                    <xs:enumeration value="DipRel"/>
-                    <xs:enumeration value="mMaxAbs"/>
-                    <xs:enumeration value="mMaxRel"/>
-                    <xs:enumeration value="MFDistAlt"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="appliesTo" use="required">
-            <xs:annotation>
-                <xs:documentation>This attribute specifies the ID of the node to apply this branching level. "-1" means that we're in the first branching level (thus there's no previous branching levels to apply to). "0" means that this branching is applied at all the nodes of the lower lever. i.e. if we are describing branching level 3, by putting appliesTo=0 this branching level will be applied to all the branches defined at level 2.</xs:documentation>
-            </xs:annotation>
-            <xs:simpleType>
-                <xs:restriction base="xs:int">
-                    <xs:minInclusive value="-1"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-    </xs:complexType>
-    <xs:complexType name="LogicTreeBranchType">
-        <xs:annotation>
-            <xs:documentation>ID of the current branch within this branching level</xs:documentation>
-        </xs:annotation>
-        <xs:attribute name="weight" use="required">
-            <xs:annotation>
-                <xs:documentation>Epistemic uncertainty: weight for the current node</xs:documentation>
-            </xs:annotation>
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minExclusive value="0.0"/>
-                    <xs:maxInclusive value="1.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="id" use="required">
-            <xs:simpleType>
-                <xs:restriction base="xs:int">
-                    <xs:minInclusive value="1"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="value" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="InputToERFType">
-        <xs:annotation>
-            <xs:documentation>Contains all the information necessary to create an ERF</xs:documentation>
-        </xs:annotation>
-        <xs:sequence>
-            <xs:element maxOccurs="1" name="SeismicSourceList" type="nrml:SeismicSourceListType"/>
-        </xs:sequence>
-        <xs:attribute name="publicID" type="xs:string"/>
-        <xs:attribute name="Name" type="xs:string"/>
-        <xs:attribute name="TreeLabel" type="xs:string"/>
-        <xs:attribute name="TreeFile" type="xs:anyURI"/>
-        <xs:attribute name="author" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="SeismicSourceType" mixed="false">
-        <xs:annotation>
-            <xs:documentation>Generic container for all the objects describing a seismic source</xs:documentation>
-        </xs:annotation>
-        <xs:choice maxOccurs="1">
-            <xs:element name="Fault" type="nrml:SeismicSourceFaultType"/>
-            <xs:element name="Area" type="nrml:SeismicSourceZoneType"/>
-            <xs:element name="Grid" type="nrml:SeismicSourceGriddedType"/>
-            <xs:element name="SubductionFault" type="nrml:SeismicSourceSubductionFaultType"/>
-        </xs:choice>
-        <xs:attribute name="ID" type="xs:string"/>
-        <xs:attribute name="name" type="xs:string"/>
-        <xs:attribute name="description" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="SeismicSourceDescriptionType">
-        <xs:annotation>
-            <xs:documentation>This is a generic container for the typologies of Probabilistic Earthquake Sources </xs:documentation>
-        </xs:annotation>
-    </xs:complexType>
-    <xs:complexType name="SeismicSourceZoneType">
-        <xs:annotation>
-            <xs:documentation>Seismic Zone object (i.e a 2D polygon)</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="Polygon" type="gml:PolygonType">
-                <xs:annotation>
-                    <xs:documentation>This is a container for the geographic regions that define a seismic source zone.</xs:documentation>
-                </xs:annotation>
-            </xs:element>
-            <xs:element maxOccurs="1" name="HypoRateModelList" type="nrml:HypoRateModelListType"/>
-        </xs:all>
-        <xs:attribute form="unqualified" name="tectonicSetting" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="SeismicSourceFaultType">
-        <xs:annotation>
-            <xs:documentation>Fault source object</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="FaultModel" type="nrml:FaultModelType"/>
-            <xs:element name="MFdist" type="nrml:MFDType"/>
-        </xs:all>
-        <xs:attribute name="ruptureFloating" use="optional">
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="No"/>
-                    <xs:enumeration value="Yes"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="faultAspectRatio" type="xs:double">
-            <xs:annotation>
-                <xs:documentation>Ratio between fault length and width</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="offsetX" type="xs:double" use="optional"/>
-        <xs:attribute name="offsetY" type="xs:double" use="optional"/>
-        <xs:attribute name="magScalingRelationship">
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="WC1994"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute form="unqualified" name="tectonicSetting" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="FaultModelType">
-        <xs:choice>
-            <xs:element name="SimpleFaultType" type="nrml:SimpleFaultDataType"/>
-        </xs:choice>
-    </xs:complexType>
-    <xs:complexType name="SimpleFaultDataType">
-        <xs:annotation>
-            <xs:documentation>This object partly recalls the <a href="http://www.opensha.org/documentation/glossary/SimpleFaultData.html">SimpleFaultData</a> object defined in OpenSHA. </xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="FaultTrace" type="gml:LineStringType" form="qualified"/>
-            <xs:element name="DipList" type="gml:doubleList" minOccurs="0"/>
-        </xs:all>
-        <xs:attribute name="AverageDip">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="0"/>
-                    <xs:maxInclusive fixed="true" value="90"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="AverageRake">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="-180.0"/>
-                    <xs:maxInclusive fixed="true" value="+360.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="TectonicRegionType">
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="Active Shallow Crust"/>
-                    <xs:enumeration value="Stable Shallow Crust"/>
-                    <xs:enumeration value="Subduction Interface"/>
-                    <xs:enumeration value="Subduction IntraSlab"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="SeimogenicLayerTopDepth">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="0.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="SeimogenicLayerBottomDepth">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="0.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-    </xs:complexType>
-    <xs:complexType name="ComplexFaultDataType">
-        <xs:annotation>
-            <xs:documentation>Describes irregular (non-rectangular) fault</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="TopFaultTrace" type="gml:LineStringType" form="qualified"/>
-            <xs:element name="BottomFaultTrace" type="gml:LineStringType" form="qualified"/>
-        </xs:all>
-        <xs:attribute name="AverageRake">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="-180.0"/>
-                    <xs:maxInclusive fixed="true" value="+360.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="TectonicRegionType">
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="Active Shallow Crust"/>
-                    <xs:enumeration value="Stable Shallow Crust"/>
-                    <xs:enumeration value="Subduction Interface"/>
-                    <xs:enumeration value="Subduction IntraSlab"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-    </xs:complexType>
-    <xs:complexType name="SeismicSourceSubductionFaultType">
-        <xs:annotation>
-            <xs:documentation>This object partly recalls the <a href="http://www.opensha.org/documentation/glossary/SimpleFaultData.html">SimpleFaultData</a> object defined in OpenSHA. </xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="TopFaultTrace" type="gml:LineStringType" form="qualified"/>
-            <xs:element name="BottomFaultTrace" type="gml:LineStringType" form="qualified"/>
-            <xs:element name="MFdist" type="nrml:MFDType"/>
-        </xs:all>
-        <xs:attribute name="AverageRake">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="-180.0"/>
-                    <xs:maxInclusive fixed="true" value="+360.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute form="unqualified" name="tectonicSetting" type="xs:string"/>
-    </xs:complexType>
-    <xs:complexType name="SeismicSourceGriddedType">
-        <xs:annotation>
-            <xs:documentation>Gridded seismicity object </xs:documentation>
-        </xs:annotation>
-        <xs:sequence maxOccurs="unbounded">
-            <xs:element name="Node" type="nrml:GridNodeType"/>
-        </xs:sequence>
-        <xs:attribute name="nodeCount" type="xs:int"/>
-    </xs:complexType>
-    <xs:complexType name="HypoRateParametersType">
-        <xs:annotation>
-            <xs:documentation>This is simply a container for a set of HypoRateModels</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="MagFreqDist" type="nrml:MFDType"/>
-            <xs:element name="FocalMech" type="nrml:FocalMechanismType"/>
-            <xs:element name="RupTopDist" type="nrml:EvenlyDiscretizedTopRuptureDepthDistType"/>
-        </xs:all>
-    </xs:complexType>
-    <xs:complexType name="HypoRateModelType">
-        <xs:annotation>
-            <xs:documentation>This object specifies the properties of the seismicity generated by a source using a MFD and Prevalent focal mechanism</xs:documentation>
-        </xs:annotation>
-        <xs:sequence>
-            <xs:element maxOccurs="1" name="Parameters" type="nrml:HypoRateParametersType"/>
-        </xs:sequence>
-        <xs:attribute form="unqualified" name="mMax" use="required" type="xs:float">
-            <xs:annotation>
-                <xs:documentation>Maximum value of magnitude</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-    </xs:complexType>
-    <xs:complexType name="HypoRateModelListType">
-        <xs:annotation>
-            <xs:documentation>This is simply a container for a set of SeismicSourcePoints</xs:documentation>
-        </xs:annotation>
-        <xs:sequence maxOccurs="1" minOccurs="1">
-            <xs:element name="Model" type="nrml:HypoRateModelType" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
-    <xs:complexType name="FocalMechanismType">
-        <xs:annotation>
-            <xs:documentation>Definition compliant with the one contained in the OpenSHA glossary href="http://www.opensha.org/documentation/glossary/index.html </xs:documentation>
-        </xs:annotation>
-        <xs:attribute name="strike" type="xs:double"/>
-        <xs:attribute name="dip" type="xs:double"/>
-        <xs:attribute name="rake" type="xs:double"/>
-        <xs:attribute name="averageHypoDepth" type="xs:double" use="optional"/>
-    </xs:complexType>
-    <xs:complexType name="MFDType">
-        <xs:annotation>
-            <xs:documentation>The complex-type describes the properties of the source seismicity magnitude-frequency distribution. The distributions allowed are the classical Gutenberg-Richter distribution (double truncated on the incremental) described in terms of  the classical aGR and bGR parameters (aGR is the intercept of the cumulative distribution).</xs:documentation>
-        </xs:annotation>
-        <xs:choice>
-            <xs:element name="EvenlyDiscretized" type="nrml:EvenlyDiscretizedMFDistType"/>
-            <xs:element name="GutenbergRichter" type="nrml:GutenbergRichterMFDistType"/>
-            <xs:element name="CharateristicGaussian" type="nrml:CharacteristicGaussianMFDistType"/>
-        </xs:choice>
-    </xs:complexType>
-    <xs:complexType name="EvenlyDiscretizedMFDistType">
-        <xs:annotation>
-            <xs:documentation>Describes the magnitude-frequency distribution of earthquakes in terms of the number of events per year in a set of equally spaced bins. The values to be included in the list must be space-separated.
-            </xs:documentation>
-        </xs:annotation>
+    <!-- ============================================================= -->
+
+    <xs:simpleType name="Strike">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="360.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="Dip">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="90.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="Rake">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="-180.0"/>
+            <xs:maxInclusive value="+180.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="TectonicRegion">
+        <xs:restriction base="xs:string">
+            
+            <xs:enumeration value="Active Shallow Crust"/>
+            <xs:enumeration value="Stable Shallow Crust"/>
+            <xs:enumeration value="Subduction Interface"/>
+            <xs:enumeration value="Subduction IntraSlab"/>
+            <xs:enumeration value="Volcanic"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+
+    <!-- ============================================================= -->
+    <!-- seismic source geometry -->
+    
+    <!-- complex fault -->
+    
+    <xs:complexType name="ComplexFaultGeometry">
         <xs:complexContent>
-            <xs:extension base="nrml:EvenlyDiscretizedDistType"> </xs:extension>
+            <xs:restriction base="gml:MultiGeometryPropertyType">
+                <xs:sequence>
+                    <xs:element ref="faultEdges"/>
+                </xs:sequence>
+            </xs:restriction>
         </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="EvenlyDiscretizedTopRuptureDepthDistType">
-        <xs:annotation>
-            <xs:documentation>This complex types allows the description of the top of rupture depth as a function of magnitude.</xs:documentation>
-        </xs:annotation>
+    
+    <xs:element name="faultEdges" type="FaultEdges" substitutionGroup="gml:MultiCurve"/>
+    <xs:complexType name="FaultEdges">
         <xs:complexContent>
-            <xs:extension base="nrml:EvenlyDiscretizedDistType"/>
+            <xs:restriction base="gml:MultiCurveType">
+                <xs:sequence>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="faultBottomEdge"/>
+                </xs:sequence>
+            </xs:restriction>
         </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="GutenbergRichterMFDistType">
-        <xs:annotation>
-            <xs:documentation>Describes the magnitude-frequency distribution of earthquakes using a
-                double-truncated GR distribution.</xs:documentation>
-        </xs:annotation>
-        <xs:attribute name="a" type="xs:float">
-            <xs:annotation>
-                <xs:documentation>Intercept of the complementary cumulative GR distribution</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="b">
-            <xs:annotation>
-                <xs:documentation>Negatively defined so that: Log(N(m)) =
-                    aGR+bGRm</xs:documentation>
-            </xs:annotation>
-            <xs:simpleType>
-                <xs:restriction base="xs:float">
-                    <xs:minInclusive value="0.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="maxM" type="xs:float">
-            <xs:annotation>
-                <xs:documentation>Maximum magnitude: upper extreme of the last bin. It's a multiple
-                    of mWdt</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="minM" type="xs:float">
-            <xs:annotation>
-                <xs:documentation>Minimum magnitude: lower extreme of the first bin. It's a multiple
-                    of mWdt</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="dM" type="xs:float">
-            <xs:annotation>
-                <xs:documentation>Width of the magnitude bin. This value specifies the magnitude interval to be used to discretize the Magnitude-Frequency distribution. Ex. if mmin=5.0 and mmax=6.5 in order to have six intervals we specify dM=0.25.</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="type">
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="incremental"/>
-                    <xs:enumeration value="cumulative"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
+    
+    <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:complexType name="FaultEdge">
+        <xs:complexContent>
+            <xs:restriction base="gml:CurvePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:LineString"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="CharacteristicGaussianMFDistType">
-        <xs:annotation>
-            <xs:documentation>Describes the magnitude-frequency distribution of earthquakes using the characteristic model.
-            </xs:documentation>
-        </xs:annotation>
-        <xs:attribute name="M" type="xs:double">
-            <xs:annotation>
-                <xs:documentation>Characteristic magnitude value</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="rate">
-            <xs:annotation>
-                <xs:documentation>Annual rate of occurrence for the characteristic magnitude.</xs:documentation>
-            </xs:annotation>
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minExclusive value="0.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="sigma" type="xs:double">
-            <xs:annotation>
-                <xs:documentation>Standard deviatio of the normal distribution used to account for aleatoric uncertainty about the characteristic magnitude. </xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
-        <xs:attribute name="truncation" type="xs:double">
-            <xs:annotation>
-                <xs:documentation>The truncation needs to be expressed in units of sigma.</xs:documentation>
-            </xs:annotation>
-        </xs:attribute>
+
+    <!-- simple fault -->
+    
+    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="SimpleFaultGeometry">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="faultTrace" type="FaultEdge"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="SeismicSourceListType" mixed="false">
-        <xs:annotation>
-            <xs:documentation>Generic container for all the objects describing a seismic source</xs:documentation>
-        </xs:annotation>
-        <xs:sequence maxOccurs="unbounded">
-            <xs:element name="Source" type="nrml:SeismicSourceType"/>
-        </xs:sequence>
+    
+    <!-- ============================================================= -->
+    <!-- seismic source -->
+    
+    <xs:element name="_seismicSource" type="AbstractSeismicSource" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:complexType name="AbstractSeismicSource" abstract="true">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="tectonicRegion" type="TectonicRegion"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="LogicTreeEndBranchMappingListType">
-        <xs:sequence maxOccurs="unbounded">
-            <xs:element name="EndBranchMapping" type="nrml:LogicTreeEndBranchMappingType"/>
-        </xs:sequence>
-    </xs:complexType>
-    <xs:complexType name="LogicTreeEndBranchMappingType">
+
+    <xs:group name="RuptureRateandDepthGroup">
         <xs:sequence>
-            <xs:element name="SourcedataList" type="nrml:SeismicSourceListType">
-                <xs:annotation>
-                    <xs:documentation>The names adopted to define this element correspond to the short name used in OpenSHA to identify a GMPE</xs:documentation>
-                </xs:annotation>
-            </xs:element>
+            <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
+            </xs:sequence>
+            
+            <xs:element name="ruptureDepthDistribution" type="RuptureDepthDistribution"/>
+            
+            <!-- NOTE: we could use meters here, as in QuakeML (basic SI unit) -->
+            <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
         </xs:sequence>
-        <xs:attribute name="label" type="xs:string" use="required"/>
-    </xs:complexType>
-    <xs:complexType name="LogicTreeBranchingLevelListType">
-        <xs:sequence maxOccurs="unbounded">
-            <xs:element name="BranchingLevel" type="nrml:LogicTreeBranchingLevelType"/>
+    </xs:group>
+    
+    <xs:complexType name="RuptureDepthDistribution">
+        <xs:sequence>
+            <xs:element name="magnitude" type="MagnitudeList"/>
+            
+            <!-- NOTE: we could use meters here, as in QuakeML (basic SI unit) -->
+            <xs:element name="depth" type="NonNegativeDoubleList"/>
         </xs:sequence>
     </xs:complexType>
-    <xs:complexType name="GridNodeType">
-        <xs:all>
-            <xs:element name="Point" type="gml:PointType"/>
-            <xs:element name="HypoRateModelList" type="nrml:HypoRateModelListType"/>
-        </xs:all>
-        <xs:attribute form="unqualified" name="tectonicSetting" type="xs:string"/>
+    
+    <xs:element name="pointSource" type="PointSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="PointSource">
+        <xs:complexContent>
+            <xs:extension base="AbstractSeismicSource">
+                <xs:sequence>
+                    <xs:element name="location" type="gml:PointPropertyType"/>
+                    <xs:group ref="RuptureRateandDepthGroup"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:element name="InputToERF" type="nrml:InputToERFType">
-        <xs:annotation>
-            <xs:documentation>This object contains the set of information necessary to instantiate an ERF</xs:documentation>
-        </xs:annotation>
-    </xs:element>
-    <xs:element name="SeismicSource" type="nrml:SeismicSourceType">
-        <xs:annotation>
-            <xs:documentation>A generic container for one of the defined source typologies: fault,
-seismic zone or gridded seismicity.          
-In case of a fault Source, the geometry can be defined in two ways:
-- in the FaultingStyle object 
-- in the SeismicSourceObject.
-The information eventually included into the SeismicSourceObject superseeds the one provided in the FaultingStyle object.
-</xs:documentation>
-        </xs:annotation>
-    </xs:element>
-    <xs:element name="LogicTree" type="nrml:LogicTreeERFType"/>
-    <xs:attribute name="AverageStrike">
-        <xs:simpleType>
-            <xs:restriction base="xs:double">
-                <xs:minInclusive fixed="true" value="0.0"/>
-                <xs:maxInclusive fixed="true" value="+360.0"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
-    <xs:attribute name="AverageDip">
-        <xs:simpleType>
-            <xs:restriction base="xs:double">
-                <xs:minInclusive fixed="true" value="0.0"/>
-                <xs:maxInclusive fixed="true" value="+90.0"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
-    <xs:attribute name="AverageRake">
-        <xs:simpleType>
-            <xs:restriction base="xs:double">
-                <xs:minInclusive fixed="true" value="-180.0"/>
-                <xs:maxInclusive fixed="true" value="+180.0"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
-    <xs:attribute name="TectonicRegion">
-        <xs:simpleType>
-            <xs:restriction base="xs:string">
-                <xs:enumeration value="Active Shallow Crust"/>
-                <xs:enumeration value="Stable Shallow Crust"/>
-                <xs:enumeration value="Subduction Interface"/>
-                <xs:enumeration value="Subduction IntraSlab"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
-    <xs:attribute name="SeimogenicLayerTopDepth">
-        <xs:simpleType>
-            <xs:restriction base="xs:double">
-                <xs:minInclusive fixed="true" value="0.0"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
-    <xs:attribute name="SeimogenicLayerBottomDepth">
-        <xs:simpleType>
-            <xs:restriction base="xs:double">
-                <xs:minInclusive fixed="true" value="0.0"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:attribute>
-    <xs:complexType name="MagnitudeType">
-        <xs:attribute name="value" type="xs:double"/>
+    
+    <xs:element name="areaSource" type="AreaSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="AreaSource">
+        <xs:complexContent>
+            <xs:extension base="AbstractSeismicSource">
+                <xs:sequence>
+                    <xs:element name="areaBoundary" type="AreaBoundary"/>
+                    <xs:group ref="RuptureRateandDepthGroup"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:element name="magnitude" type="nrml:MagnitudeType"/>
-    <xs:complexType name="PointRuptureType">
-        <xs:annotation>
-            <xs:documentation>Describes a point rupture
-</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element name="hypocenterLocation" type="gml:PointType"/>
-            <xs:element ref="nrml:magnitude"/>
-        </xs:all>
-        <xs:attribute ref="nrml:AverageStrike"/>
-        <xs:attribute ref="nrml:AverageDip"/>
-        <xs:attribute ref="nrml:AverageRake"/>
-        <xs:attribute ref="nrml:TectonicRegion"/>
+    
+    <xs:complexType name="AreaBoundary">
+        <xs:complexContent>
+            <xs:restriction base="gml:SurfacePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:Polygon"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="SimpleFaultRuptureType">
-        <xs:annotation>
-            <xs:documentation>Describes a rupture as derived from a simple 
-fault data</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element ref="nrml:magnitude"/>
-            <xs:element name="simpleFaultData" type="nrml:SimpleFaultDataType"/>
-        </xs:all>
+    
+    <xs:element name="simpleFaultSource" type="SimpleFaultSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="SimpleFaultSource">
+        <xs:complexContent>
+            <xs:extension base="AbstractSeismicSource">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element ref="magnitudeFrequencyDistribution"/>
+                    <xs:element ref="simpleFaultGeometry"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="ComplexFaultRuptureType">
-        <xs:annotation>
-            <xs:documentation>Describes a rupture as derived from 
-a complex fault data
-</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element ref="nrml:magnitude"/>
-            <xs:element name="complexFaultData" type="nrml:ComplexFaultDataType"/>
-        </xs:all>
+    
+    <xs:element name="complexFaultSource" type="ComplexFaultSource" substitutionGroup="_seismicSource"/>
+    <xs:complexType name="ComplexFaultSource">
+        <xs:complexContent>
+            <xs:extension base="AbstractSeismicSource">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element ref="magnitudeFrequencyDistribution"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-    <xs:complexType name="ArbitrarilyComplexRuptureType">
-        <xs:annotation>
-            <xs:documentation>Describes an arbitrarily complex rupture
-</xs:documentation>
-        </xs:annotation>
-        <xs:all>
-            <xs:element ref="gml:Surface"/>
-            <xs:element ref="nrml:magnitude"/>
-        </xs:all>
-        <xs:attribute name="AverageRake">
-            <xs:simpleType>
-                <xs:restriction base="xs:double">
-                    <xs:minInclusive fixed="true" value="-180.0"/>
-                    <xs:maxInclusive fixed="true" value="+360.0"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
-        <xs:attribute name="TectonicRegion">
-            <xs:simpleType>
-                <xs:restriction base="xs:string">
-                    <xs:enumeration value="Active Shallow Crust"/>
-                    <xs:enumeration value="Stable Shallow Crust"/>
-                    <xs:enumeration value="Subduction Interface"/>
-                    <xs:enumeration value="Subduction IntraSlab"/>
-                </xs:restriction>
-            </xs:simpleType>
-        </xs:attribute>
+
+    <!-- ============================================================= -->
+    
+    <xs:complexType name="RuptureRateModel">
+        <xs:sequence>
+            <xs:element ref="magnitudeFrequencyDistribution"/>
+            <xs:element name="focalMechanism" type="qml:FocalMechanism"/>
+        </xs:sequence>
     </xs:complexType>
+        
+    <xs:element name="magnitudeFrequencyDistribution" abstract="true"/>
+    
+    <xs:element name="truncatedGutenbergRichter" type="TruncatedGutenbergRichter"
+        substitutionGroup="magnitudeFrequencyDistribution"/>
+    <xs:complexType name="TruncatedGutenbergRichter">
+        <xs:sequence>
+            <xs:element name="aValueCumulative" type="xs:double"/>
+            <xs:element name="bValue" type="NonNegativeDoubleType"/>
+            <xs:element name="minMagnitude" type="Magnitude"/>
+            <xs:element name="maxMagnitude" type="Magnitude"/>
+        </xs:sequence>
+        <xs:attribute name="type" type="MagnitudeType"/>
+    </xs:complexType>
+
+    <xs:element name="evenlyDiscretizedIncrementalMFD" type="EvenlyDiscretizedIncrementalMFD"
+        substitutionGroup="magnitudeFrequencyDistribution"/>
+    <xs:complexType name="EvenlyDiscretizedIncrementalMFD">
+        <xs:simpleContent>
+            <xs:extension base="EvenlyDiscretizedDistribution">
+                <xs:attribute name="type" type="MagnitudeType"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    <!-- rupture -->
+
+    <xs:element name="rupture" type="Rupture" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:complexType name="Rupture">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="magnitude" type="Magnitude"/>
+                    <xs:element name="tectonicRegion" type="TectonicRegion"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="pointRupture" type="PointRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="PointRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="focalMechanism" type="qml:FocalMechanism"/>
+                    <xs:element name="hypocenterLocation" type="gml:PointPropertyType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="simpleFaultRupture" type="SimpleFaultRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="SimpleFaultRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element ref="simpleFaultGeometry"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="complexFaultRupture" type="ComplexFaultRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="ComplexFaultRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="arbitrarilyComplexRupture" type="ArbitrarilyComplexRupture" substitutionGroup="rupture"/>
+    <xs:complexType name="ArbitrarilyComplexRupture">
+        <xs:complexContent>
+            <xs:extension base="Rupture">
+                <xs:sequence>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="ruptureSurface" type="gml:SurfacePropertyType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- ============================================================= -->
+    <!-- logic tree -->
+    
+    <xs:simpleType name="LogicTreeBranchUncertaintyType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="gmpeModel"/>
+            <xs:enumeration value="sourceModel"/>
+            <xs:enumeration value="maxMagnitudeGutenbergRichterRelative"/>
+            <xs:enumeration value="bValueGutenbergRichterRelative"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:complexType name="LogicTreeBranch">
+        <xs:sequence>
+            <xs:element name="uncertaintyModel" type="xs:string"/>
+            <xs:element name="uncertaintyWeight" type="NonNegativeDoubleType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="LogicTreeBranchSet">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranch" type="LogicTreeBranch"/>
+        </xs:sequence>
+        <xs:attribute name="branchingLevel" type="xs:positiveInteger" use="required"/>
+        <xs:attribute name="uncertaintyType" type="LogicTreeBranchUncertaintyType" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="LogicTree">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranchSet" type="LogicTreeBranchSet"/>
+        </xs:sequence>
+        <xs:attribute name="id" type="xs:string" use="required"/>
+        <xs:attribute name="tectonicRegion" type="TectonicRegion"/>
+    </xs:complexType>
+
+    <!-- ============================================================= -->
+    <!-- child elements of nrml -->
+    
+    <xs:element name="sourceModel" type="SourceModel" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="SourceModel">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:element ref="_seismicSource" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="logicTreeSet" type="LogicTreeSet"/>
+    <xs:complexType name="LogicTreeSet">
+        <xs:sequence>
+            <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="logicTree" type="LogicTree" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
 </xs:schema>
