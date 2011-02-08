@@ -42,6 +42,9 @@ public class NRMLConstants {
 
     public static final QName GML_POLYGON = new QName("Polygon", GML_NAMESPACE);
 
+    public static final QName GML_LINEAR_RING =
+            new QName("LinearRing", GML_NAMESPACE);
+
     // NRML Properties
     public static final QName NRML_SOURCE_MODEL =
             new QName("sourceModel", NRML_NAMESPACE);
