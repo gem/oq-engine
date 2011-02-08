@@ -232,7 +232,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.write_hazardcurve_file(results_mean)
             del results_mean
 
-            if self.params['POES_HAZARD_MAPS'] != '':
+            if self.params[classical_psha.POES_PARAM_NAME] != '':
                 results_mean_maps = classical_psha.compute_mean_hazard_maps(
                     self)
                 self.write_hazardmap_file(results_mean_maps)
@@ -392,7 +392,8 @@ class ClassicalMixin(BasePSHAMixin):
 
         # LOG.debug("KEYS (%s): %s" % (len(map_keys), map_keys))
 
-        poe_list = [float(x) for x in self.params['POES_HAZARD_MAPS'].split()]
+        poe_list = [float(x) for x in \
+            self.params[classical_psha.POES_PARAM_NAME].split()]
         if len(poe_list) == 0:
             return None
 
@@ -678,11 +679,12 @@ def quantile_hc_filename(quantile_value):
     filename_part = "quantile-%.2f" % quantile_value
     return hazard_curve_filename(filename_part)
 
-def mean_hm_filename():
-    return hazard_map_filename('mean')
+def mean_hm_filename(poe):
+    filename_part = "%s-mean" % poe
+    return hazard_map_filename(filename_part)
 
-def quantile_hm_filename(quantile_value):
-    filename_part = "quantile-%.2f" % quantile_value
+def quantile_hm_filename(quantile_value, poe):
+    filename_part = "%s-quantile-%.2f" % (poe, quantile_value)
     return hazard_map_filename(filename_part)
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)

@@ -4,7 +4,7 @@ Unit tests for hazard computations with the hazard engine.
 Includes:
 
 - hazard curves (with mean and quantile)
-- hazard maps (with mean and quantile)
+- hazard maps (only mean and quantile)
 """
 
 import json
@@ -152,6 +152,27 @@ class HazardEngineTestCase(unittest.TestCase):
                         self.assertTrue(value is not None,
                             "no non-empty value found at KVS key")
 
+        def verify_mean_haz_maps_stored_to_kvs(hazengine):
+            """ Make sure that the keys and non-empty values for mean 
+            hazard maps have been written to KVS."""
+
+            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
+                hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
+                'true'):
+
+                LOG.debug("verifying KVS entries for mean hazard maps")
+
+                poes = classical_psha._extract_values_from_config(hazengine, 
+                    classical_psha.POES_PARAM_NAME)
+
+                for poe in poes:
+                    for site_list in hazengine.site_list_generator():
+                        for site in site_list:
+                            key = tokens.mean_hazard_map_key(hazengine.id, site, poe)
+                            value = self.kvs_client.get(key)
+                            self.assertTrue(value is not None,
+                                "no non-empty value found at KVS key")
+
         def verify_quantile_haz_curves_stored_to_kvs(hazengine):
             """ Make sure that the keys and non-empty values for quantile 
             hazard curves have been written to KVS."""
@@ -170,6 +191,34 @@ class HazardEngineTestCase(unittest.TestCase):
                         value = self.kvs_client.get(key)
                         self.assertTrue(value is not None,
                             "no non-empty value found at KVS key")
+
+        def verify_quantile_haz_maps_stored_to_kvs(hazengine):
+            """ Make sure that the keys and non-empty values for quantile 
+            hazard maps have been written to KVS."""
+
+            quantiles = classical_psha._extract_values_from_config(hazengine,
+                classical_psha.QUANTILE_PARAM_NAME)
+
+            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and 
+                len(quantiles) > 0):
+
+                poes = classical_psha._extract_values_from_config(hazengine, 
+                    classical_psha.POES_PARAM_NAME)
+
+                LOG.debug("verifying KVS entries for quantile hazard maps, "\
+                    "%s quantile values, %s PoEs" % (
+                    len(quantiles), len(poes)))
+
+                for quantile in quantiles:
+                    for poe in poes:
+                        for site_list in hazengine.site_list_generator():
+                            for site in site_list:
+                                key = tokens.quantile_hazard_map_key(hazengine.id, 
+                                    site, poe, quantile)
+                                value = self.kvs_client.get(key)
+                                self.assertTrue(value is not None,
+                                    "no non-empty value found at KVS key %s" \
+                                    % key)
 
         def verify_realization_haz_curves_stored_to_nrml(hazengine):
             """Tests that a NRML file has been written for each realization,
@@ -192,7 +241,7 @@ class HazardEngineTestCase(unittest.TestCase):
                     % nrml_path)
 
         def verify_mean_haz_curves_stored_to_nrml(hazengine):
-            """Tests that a mean NRML file has been written,
+            """Tests that a mean hazard curve NRML file has been written,
             and that this file validates against the NRML schema.
             Does NOT test if results in NRML file are correct.
             """
@@ -209,8 +258,33 @@ class HazardEngineTestCase(unittest.TestCase):
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
 
+        def verify_mean_haz_maps_stored_to_nrml(hazengine):
+            """Tests that a mean hazard map NRML file has been written,
+            and that this file validates against the NRML schema.
+            Does NOT test if results in NRML file are correct.
+            """
+            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
+                hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
+                'true'):
+
+                poes = classical_psha._extract_values_from_config(hazengine, 
+                    classical_psha.POES_PARAM_NAME)
+
+                for poe in poes:
+                    nrml_path = os.path.join(
+                        "smoketests/classical_psha_simple/computed_output",
+                        opensha.mean_hm_filename(poe))
+
+                    LOG.debug("validating NRML file for mean hazard map %s" \
+                        % nrml_path)
+
+                    self.assertTrue(validatesAgainstXMLSchema(
+                        nrml_path, NRML_SCHEMA_PATH),
+                        "NRML instance file %s does not validate against "\
+                        "schema" % nrml_path)
+
         def verify_quantile_haz_curves_stored_to_nrml(hazengine):
-            """Tests that quantile NRML files have been written,
+            """Tests that quantile hazard curve NRML files have been written,
             and that these file validate against the NRML schema.
             Does NOT test if results in NRML files are correct.
             """
@@ -232,6 +306,35 @@ class HazardEngineTestCase(unittest.TestCase):
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
 
+        def verify_quantile_haz_maps_stored_to_nrml(hazengine):
+            """Tests that quantile hazard map NRML files have been written,
+            and that these file validate against the NRML schema.
+            Does NOT test if results in NRML files are correct.
+            """
+
+            quantiles = classical_psha._extract_values_from_config(hazengine,
+                classical_psha.QUANTILE_PARAM_NAME)
+
+            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and 
+                len(quantiles) > 0):
+
+                poes = classical_psha._extract_values_from_config(hazengine, 
+                    classical_psha.POES_PARAM_NAME)
+
+                for quantile in quantiles:
+                    for poe in poes:
+                        nrml_path = os.path.join(
+                            "smoketests/classical_psha_simple/computed_output",
+                            opensha.quantile_hm_filename(quantile, poe))
+
+                        LOG.debug("validating NRML file for quantile hazard "\
+                            "map: %s" % nrml_path)
+
+                        self.assertTrue(validatesAgainstXMLSchema(
+                            nrml_path, NRML_SCHEMA_PATH),
+                            "NRML instance file %s does not validate against "\
+                            "schema" % nrml_path)
+
         test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
         
@@ -243,12 +346,19 @@ class HazardEngineTestCase(unittest.TestCase):
             verify_realization_haz_curves_stored_to_kvs(result_keys)
             verify_realization_haz_curves_stored_to_nrml(hazengine)
 
-            # check results of mean and quantile computation
+            # hazard curves: check results of mean and quantile computation
             verify_mean_haz_curves_stored_to_kvs(hazengine)
             verify_quantile_haz_curves_stored_to_kvs(hazengine)
 
             verify_mean_haz_curves_stored_to_nrml(hazengine)
             verify_quantile_haz_curves_stored_to_nrml(hazengine)
+
+            # hazard maps: check results of mean and quantile computation
+            verify_mean_haz_maps_stored_to_kvs(hazengine)
+            #verify_quantile_haz_maps_stored_to_kvs(hazengine)
+
+            verify_mean_haz_maps_stored_to_nrml(hazengine)
+            #verify_quantile_haz_maps_stored_to_nrml(hazengine)
 
     def test_basic_generate_erf_keeps_order(self):
         results = []
