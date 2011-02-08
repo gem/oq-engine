@@ -98,14 +98,14 @@ public class HazardCalculatorTest {
                 HazardCalculator.getHazardCurves(siteList, erf, gmpeMap,
                         imlVals, integrationDistance);
         HazardCurveCalculator hazCurveCal = null;
+        DiscretizedFuncAPI hazCurve = new ArbitrarilyDiscretizedFunc();
+        for (Double val : imlVals) {
+            hazCurve.set(val, 1.0);
+        }
         try {
             hazCurveCal = new HazardCurveCalculator();
             hazCurveCal.setMaxSourceDistance(integrationDistance);
             for (Site site : siteList) {
-                DiscretizedFuncAPI hazCurve = new ArbitrarilyDiscretizedFunc();
-                for (Double val : imlVals) {
-                    hazCurve.set(val, 1.0);
-                }
                 hazCurveCal.getHazardCurve(hazCurve, site, gmpeMap, erf);
                 assertTrue(hazCurve.equals(results.get(site)));
             }
