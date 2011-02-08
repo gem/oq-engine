@@ -1,47 +1,56 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ns2:logicTreeSet xmlns:ns1="http://www.opengis.net/gml/profile/sfgml/1.0"
- xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
- xmlns:ns3="http://www.w3.org/1999/xlink"
- xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
- xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_seismic.xsd">
-    <ns2:logicTree>
-        <ns2:logicTreeBranchSet ns2:uncertaintyType="sourceModel">
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>source_model1.xml</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.5</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>source_model2.xml</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.5</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-        </ns2:logicTreeBranchSet>
-        <ns2:logicTreeBranchSet ns2:uncertaintyType="maxMagnitudeGutenbergRichterRelative">
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>0.2</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.2</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>0.0</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.6</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>-0.2</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.2</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-        </ns2:logicTreeBranchSet>
-        <ns2:logicTreeBranchSet ns2:uncertaintyType="bValueGutenbergRichterRelative">
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>0.1</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.2</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>0.0</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.6</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-            <ns2:logicTreeBranch>
-                <ns2:uncertaintyModel>-0.1</ns2:uncertaintyModel>
-                <ns2:uncertaintyWeight>0.2</ns2:uncertaintyWeight>
-            </ns2:logicTreeBranch>
-        </ns2:logicTreeBranchSet>
-    </ns2:logicTree>
-</ns2:logicTreeSet>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.2">
+    <logicTreeSet>
+
+        <logicTree id="lt1">
+                <logicTreeBranchSet branchingLevel="1" uncertaintyType="sourceModel">
+                    <logicTreeBranch>
+                        <uncertaintyModel>source_model1.xml</uncertaintyModel>
+                        <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+
+                    <logicTreeBranch>
+                        <uncertaintyModel>source_model2.xml</uncertaintyModel>
+                        <uncertaintyWeight>0.5</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+
+
+                <logicTreeBranchSet branchingLevel="2" uncertaintyType="maxMagnitudeGutenbergRichterRelative">
+                        <logicTreeBranch>
+                            <uncertaintyModel>0.2</uncertaintyModel>
+                            <uncertaintyWeight>0.2</uncertaintyWeight>
+                        </logicTreeBranch>
+
+                        <logicTreeBranch>
+                            <uncertaintyModel>0.0</uncertaintyModel>
+                            <uncertaintyWeight>0.6</uncertaintyWeight>
+                        </logicTreeBranch>
+
+                        <logicTreeBranch>
+                            <uncertaintyModel>-0.2</uncertaintyModel>
+                            <uncertaintyWeight>0.2</uncertaintyWeight>
+                        </logicTreeBranch>
+                </logicTreeBranchSet>
+
+                <logicTreeBranchSet branchingLevel="3" uncertaintyType="bValueGutenbergRichterRelative">
+                        <logicTreeBranch>
+                            <uncertaintyModel>0.1</uncertaintyModel>
+                            <uncertaintyWeight>0.2</uncertaintyWeight>
+                        </logicTreeBranch>
+
+                        <logicTreeBranch>
+                            <uncertaintyModel>0.0</uncertaintyModel>
+                            <uncertaintyWeight>0.6</uncertaintyWeight>
+                        </logicTreeBranch>
+
+                        <logicTreeBranch>
+                            <uncertaintyModel>-0.1</uncertaintyModel>
+                            <uncertaintyWeight>0.2</uncertaintyWeight>
+                        </logicTreeBranch>
+                </logicTreeBranchSet>
+        </logicTree>
+    </logicTreeSet>
+
+</nrml>
