@@ -361,7 +361,7 @@ class ClassicalMixin(BasePSHAMixin):
             site_obj = shapes.Site(float(hc['site_lon']), 
                                    float(hc['site_lat']))
 
-            # extract hazard curve ordinate (PoE) from KVS
+            # use hazard curve ordinate values (PoE) from KVS
             # NOTE(fab): At the moment, the IMLs are stored along with the 
             # PoEs in KVS. However, we are using the IML list from config.
             # The IMLs from KVS are ignored. Note that IMLs from KVS are
@@ -468,16 +468,7 @@ class ClassicalMixin(BasePSHAMixin):
                 site_obj = shapes.Site(float(hm['site_lon']), 
                                        float(hm['site_lat']))
 
-                # extract hazard map ground motion from KVS
-
-                # NOTE(fab): At the moment, the IMLs are stored along with the 
-                # PoEs in KVS. However, we are using the IML list from config.
-                # The IMLs from KVS are ignored. Note that IMLs from KVS are
-                # in logarithmic form, but the ones from config are not.
-                # The way of storing the HC data in KVS is not very
-                # efficient, we should store the abscissae and ordinates
-                # separately as lists and not make pairs of them
-
+                # use hazard map IML and vs30 values from KVS
                 hm_attrib = {'investigationTimeSpan': 
                                 self.params['INVESTIGATION_TIME'],
                             'IMT': self.params['INTENSITY_MEASURE_TYPE'],
