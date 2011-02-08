@@ -143,8 +143,8 @@ def compute_mean_hazard_curves(job_id, sites):
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
         keys.append(key)
 
-        LOG.debug("[MEAN_HAZARD_CURVES] Curve at %s is %s"
-                % (key, mean_curve))
+        #LOG.debug("[MEAN_HAZARD_CURVES] Curve at %s is %s"
+                #% (key, mean_curve))
 
         kvs.set_value_json_encoded(key, mean_curve)
 
@@ -176,8 +176,8 @@ def compute_quantile_hazard_curves(job, sites):
                     job.id, site, quantile)
             keys.append(key)
 
-            LOG.debug("[QUANTILE_HAZARD_CURVES] Curve at %s is %s"
-                    % (key, quantile_curve))
+            #LOG.debug("[QUANTILE_HAZARD_CURVES] Curve at %s is %s"
+                    #% (key, quantile_curve))
 
             kvs.set_value_json_encoded(key, quantile_curve)
 
