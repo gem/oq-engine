@@ -24,7 +24,7 @@ class ClassicalPSHABasedLossRatioCalculator(object):
         self.block_id = block_id
 
         self.vuln_curves = \
-                vulnerability.load_vuln_curves_from_kvs(self.job_id)
+                vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         # self.vuln_curves is a dict of {string: Curve}
         LOGGER.debug("ProbabilisticLossRatioCalculator init: vuln curves are")
