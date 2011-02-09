@@ -2,9 +2,9 @@ package org.gem.calc;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -14,6 +14,9 @@ import java.util.Random;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.gem.engine.GmpeLogicTreeData;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.After;
 import org.junit.Before;
@@ -62,6 +65,8 @@ public class HazardCalculatorTest {
     private static final String LOCALHOST = "localhost";
     private Cache cache;
 
+    private static Log logger = LogFactory.getLog(GmpeLogicTreeData.class);
+
     @Before
     public void setUp() throws IOException {
         setUpSites();
@@ -109,8 +114,9 @@ public class HazardCalculatorTest {
                 hazCurveCal.getHazardCurve(hazCurve, site, gmpeMap, erf);
                 assertTrue(hazCurve.equals(results.get(site)));
             }
-        } catch (RemoteException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            String msg = "Unxpected exception: " + e.getMessage();
+            fail(msg);
         }
     }
 
