@@ -14,7 +14,7 @@ from openquake import logs
 from openquake import producer
 from openquake import shapes
 
-from openquake.xml import NRML_NS, GML_NS_OLD, NRML
+from openquake.xml import NRML_NS, NRML_NS_OLD, GML_NS_OLD, NRML, NRML_OLD
 
 LOG = logs.LOG
 
@@ -66,13 +66,13 @@ class NrmlFile(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'start' and element.tag == NRML + 'HazardProcessing':
+            if event == 'start' and element.tag == NRML_OLD + 'HazardProcessing':
                 self._hazard_curve_meta(element)
             # The HazardMap is not yet implemented
             #elif event == 'start' and element.tag == NRML + 'HazardMap':
              #error_str = "parsing of HazardMap elements is not yet implemented"
              #raise NotImplementedError(error_str)    
-            elif event == 'end' and element.tag == NRML + 'HazardCurve':
+            elif event == 'end' and element.tag == NRML_OLD + 'HazardCurve':
                 yield (_to_site(element), 
                        self._to_attributes(element))
     
@@ -103,7 +103,7 @@ class NrmlFile(producer.FileProducer):
             ('../nrml:Common/nrml:IMLValues','IMLValues', float_strip),
             ('../nrml:Common/nrml:IMT', 'IMT', string_strip)):
             child_node = element.xpath(child_el, 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
 
             try:
                 attributes[child_key] = etl(child_node)
@@ -114,7 +114,7 @@ class NrmlFile(producer.FileProducer):
         # consider all attributes of HazardProcessing element as mandatory 
         for (required_attribute, attrib_type) in [('endBranchLabel', str)]:
             (haz_list_element,) = element.xpath("..", 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
             attr_value = haz_list_element.get(required_attribute)
             if attr_value is not None:
                 attributes[required_attribute] = \
@@ -158,11 +158,11 @@ class GMFReader(producer.FileProducer):
         site_nesting_level = 0
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'start' and element.tag == NRML + 'HazardResult':
+            if event == 'start' and element.tag == NRML_OLD + 'HazardResult':
                 self._gmf_attributes()
-            elif event == 'start' and element.tag == NRML + 'site':
+            elif event == 'start' and element.tag == NRML_OLD + 'site':
                 site_nesting_level += 1
-            elif event == 'end' and element.tag == NRML + 'site':
+            elif event == 'end' and element.tag == NRML_OLD + 'site':
                 site_nesting_level -= 1
 
                 # yield only for outer site elements
@@ -179,7 +179,7 @@ class GMFReader(producer.FileProducer):
         attributes = {}
         attributes['groundMotion'] = float(element.get('groundMotion'))
         (inner_site_node,) = element.xpath('nrml:site', 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS})
+                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
         return (_to_site(inner_site_node), attributes)
 
 
