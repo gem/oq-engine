@@ -177,7 +177,7 @@ class ProbabilisticEventMixin:
         exceedance """
 
         loss_conditional = common.compute_conditional_loss(loss_curve, loss_poe)
-        key = kvs.tokens.loss_key(self.id, row, col, asset["AssetID"], loss_poe)
+        key = kvs.tokens.loss_key(self.id, row, col, asset["assetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
             loss_conditional, key))
@@ -188,10 +188,10 @@ class ProbabilisticEventMixin:
         # If the asset has a vuln function code we don't have loaded, return
         # fail
         vuln_function = self.vuln_curves.get(
-                asset["VulnerabilityFunction"], None)
+                asset["vulnerabilityFunctionReference"], None)
         if not vuln_function:
             LOGGER.error("Unknown vulnerability function %s for asset %s"
-                % (asset["VulnerabilityFunction"], asset["AssetID"]))
+                % (asset["vulnerabilityFunctionReference"], asset["assetID"]))
             return None
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
@@ -199,7 +199,7 @@ class ProbabilisticEventMixin:
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None
-        key = kvs.tokens.loss_ratio_key(self.id, row, col, asset["AssetID"])
+        key = kvs.tokens.loss_ratio_key(self.id, row, col, asset["assetID"])
         
         LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))
@@ -212,8 +212,8 @@ class ProbabilisticEventMixin:
         if asset is None:
             return None
         
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset["AssetValue"])
-        key = kvs.tokens.loss_curve_key(self.id, row, column, asset["AssetID"])
+        loss_curve = loss_ratio_curve.rescale_abscissae(asset["assetValue"])
+        key = kvs.tokens.loss_curve_key(self.id, row, column, asset["assetID"])
 
         LOGGER.warn("RESULT: loss curve is %s, write to key %s" % (
                 loss_curve, key))
