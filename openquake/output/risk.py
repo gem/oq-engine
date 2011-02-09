@@ -13,7 +13,6 @@ from openquake import shapes
 from openquake import writer
 
 from openquake.output import nrml
-#from openquake.xml import GML_OLD, NSMAP_OLD, NRML_OLD
 from openquake.xml import GML, NRML, NSMAP
 
 LOG = logs.RISK_LOG
@@ -115,7 +114,7 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
 
         elif not nrml.element_equal_to_site(site_el, point):
             error_msg = "asset %s cannot have two differing sites: %s, %s " \
-                % (asset_id, site_el, point)
+                % (asset_id, nrml.lon_lat_from_site(site_el), point)
             raise ValueError(error_msg)
 
         # loss/loss ratio curves - sub-element already created?
