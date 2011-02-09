@@ -1,926 +1,2021 @@
-<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
-  <Config>
-    <ExposureParameters PortfolioID="LA01" PortfolioDescription="Collection of exposure values for existing building in Los Angeles County, California, US" AssetType="buildings" LossType="economical loss">
-    </ExposureParameters>
-  </Config>
-  <ExposureList>
-    <AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>5624</AssetID>
-      <AssetValue>18.02</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>5625</AssetID>
-      <AssetValue>5.07</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>5626</AssetID>
-      <AssetValue>16.33</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>5627</AssetID>
-      <AssetValue>12.52</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>5628</AssetID>
-      <AssetValue>18.78</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>5629</AssetID>
-      <AssetValue>5.63</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>5630</AssetID>
-      <AssetValue>11.26</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>5631</AssetID>
-      <AssetValue>312.49</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>5632</AssetID>
-      <AssetValue>2787.71</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>5633</AssetID>
-      <AssetValue>5.50</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>5634</AssetID>
-      <AssetValue>175.78</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>5635</AssetID>
-      <AssetValue>182148.97</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>5636</AssetID>
-      <AssetValue>5.50</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>5637</AssetID>
-      <AssetValue>93834.31</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_HC">
-      <AssetID>5638</AssetID>
-      <AssetValue>87.72</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_LC">
-      <AssetID>5639</AssetID>
-      <AssetValue>33.54</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_MC">
-      <AssetID>5640</AssetID>
-      <AssetValue>113.52</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_PC">
-      <AssetID>5641</AssetID>
-      <AssetValue>23.22</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>5642</AssetID>
-      <AssetValue>17.02</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>5643</AssetID>
-      <AssetValue>5.50</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>5644</AssetID>
-      <AssetValue>16.52</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.852034 -118.077721</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>5645</AssetID>
-      <AssetValue>29.45</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>5646</AssetID>
-      <AssetValue>171.84</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C1L_HC">
-      <AssetID>5647</AssetID>
-      <AssetValue>40.68</AssetValue>
-      <StructureType>C1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C1L_MC">
-      <AssetID>5648</AssetID>
-      <AssetValue>20.34</AssetValue>
-      <StructureType>C1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>5649</AssetID>
-      <AssetValue>130.76</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>5650</AssetID>
-      <AssetValue>90.07</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_PC">
-      <AssetID>5651</AssetID>
-      <AssetValue>8.71</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>5652</AssetID>
-      <AssetValue>110.22</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>5653</AssetID>
-      <AssetValue>313.99</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>5654</AssetID>
-      <AssetValue>59.51</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>5655</AssetID>
-      <AssetValue>19.83</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S1L_MC">
-      <AssetID>5656</AssetID>
-      <AssetValue>29.45</AssetValue>
-      <StructureType>S1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>5657</AssetID>
-      <AssetValue>176.62</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_HC">
-      <AssetID>5658</AssetID>
-      <AssetValue>40.68</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_PC">
-      <AssetID>5659</AssetID>
-      <AssetValue>11.22</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>5660</AssetID>
-      <AssetValue>11.02</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>5661</AssetID>
-      <AssetValue>178.85</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S2L_MC">
-      <AssetID>5662</AssetID>
-      <AssetValue>29.45</AssetValue>
-      <StructureType>S2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_HC">
-      <AssetID>5663</AssetID>
-      <AssetValue>91.46</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>5664</AssetID>
-      <AssetValue>11.32</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM2L_MC">
-      <AssetID>5665</AssetID>
-      <AssetValue>19.83</AssetValue>
-      <StructureType>RM2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>5666</AssetID>
-      <AssetValue>3073.01</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>5667</AssetID>
-      <AssetValue>200790.47</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_LC">
-      <AssetID>5668</AssetID>
-      <AssetValue>34.97</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_MC">
-      <AssetID>5669</AssetID>
-      <AssetValue>118.36</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_PC">
-      <AssetID>5670</AssetID>
-      <AssetValue>24.21</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>5671</AssetID>
-      <AssetValue>17.10</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>5672</AssetID>
-      <AssetValue>5.53</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>5673</AssetID>
-      <AssetValue>5.66</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>5674</AssetID>
-      <AssetValue>5.53</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>5675</AssetID>
-      <AssetValue>5.53</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>5676</AssetID>
-      <AssetValue>18.11</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>5677</AssetID>
-      <AssetValue>5.09</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>5678</AssetID>
-      <AssetValue>16.41</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>5679</AssetID>
-      <AssetValue>12.58</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>5680</AssetID>
-      <AssetValue>18.87</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>5681</AssetID>
-      <AssetValue>16.60</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>5682</AssetID>
-      <AssetValue>103437.51</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.855398 -118.067592</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>5683</AssetID>
-      <AssetValue>109.13</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.862429 -118.055065</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>5684</AssetID>
-      <AssetValue>269.46</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.862429 -118.055065</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>5685</AssetID>
-      <AssetValue>404.19</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.862429 -118.055065</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>5686</AssetID>
-      <AssetValue>121.25</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.862429 -118.055065</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>5687</AssetID>
-      <AssetValue>242.51</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.862429 -118.055065</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>5688</AssetID>
-      <AssetValue>3783.21</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.862429 -118.055065</gml:pos>
-    </AssetInstance>
-    <AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161697</AssetID>
-      <AssetValue>992.44</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>161698</AssetID>
-      <AssetValue>321.08</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161699</AssetID>
-      <AssetValue>963.25</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>161700</AssetID>
-      <AssetValue>321.08</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>161701</AssetID>
-      <AssetValue>321.08</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161702</AssetID>
-      <AssetValue>656.76</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161703</AssetID>
-      <AssetValue>1050.82</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161704</AssetID>
-      <AssetValue>952.31</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>161705</AssetID>
-      <AssetValue>328.38</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161706</AssetID>
-      <AssetValue>15692.35</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161707</AssetID>
-      <AssetValue>1094.61</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161708</AssetID>
-      <AssetValue>905.32</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161709</AssetID>
-      <AssetValue>295.54</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161710</AssetID>
-      <AssetValue>8826.94</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161711</AssetID>
-      <AssetValue>565.83</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>161712</AssetID>
-      <AssetValue>282.91</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161713</AssetID>
-      <AssetValue>943.05</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>161714</AssetID>
-      <AssetValue>628.70</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161715</AssetID>
-      <AssetValue>855.03</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161716</AssetID>
-      <AssetValue>254.62</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>161717</AssetID>
-      <AssetValue>276.62</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>161718</AssetID>
-      <AssetValue>276.62</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161719</AssetID>
-      <AssetValue>829.88</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>161720</AssetID>
-      <AssetValue>276.62</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161721</AssetID>
-      <AssetValue>39870.10</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161722</AssetID>
-      <AssetValue>10245.54</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161723</AssetID>
-      <AssetValue>22426.93</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161724</AssetID>
-      <AssetValue>820.45</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_PC">
-      <AssetID>161725</AssetID>
-      <AssetValue>304.14</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161726</AssetID>
-      <AssetValue>771.61</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161727</AssetID>
-      <AssetValue>1437.62</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161728</AssetID>
-      <AssetValue>1664.62</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161729</AssetID>
-      <AssetValue>42.71</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161730</AssetID>
-      <AssetValue>281.91</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161731</AssetID>
-      <AssetValue>205.02</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HS">
-      <AssetID>161732</AssetID>
-      <AssetValue>324.62</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC1_MC">
-      <AssetID>161733</AssetID>
-      <AssetValue>121.63</AssetValue>
-      <StructureType>PC1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC1_HS">
-      <AssetID>161734</AssetID>
-      <AssetValue>121.63</AssetValue>
-      <StructureType>PC1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_PC">
-      <AssetID>161735</AssetID>
-      <AssetValue>42.30</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC"> 
-      <AssetID>161736</AssetID>
-      <AssetValue>79.32</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC"><!-- JOSH changed from HAZUS_C2L_HS -->
-      <AssetID>161737</AssetID>
-      <AssetValue>163.94</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161738</AssetID>
-      <AssetValue>4657.25</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC"><!-- JMC changed from HAZUS_W1_HS -->
-      <AssetID>161739</AssetID>
-      <AssetValue>1020.25</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161740</AssetID>
-      <AssetValue>1613.06</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C1L_HC">
-      <AssetID>161741</AssetID>
-      <AssetValue>1102.53</AssetValue>
-      <StructureType>C1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C1L_MC">
-      <AssetID>161742</AssetID>
-      <AssetValue>551.26</AssetValue>
-      <StructureType>C1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161743</AssetID>
-      <AssetValue>3543.85</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161744</AssetID>
-      <AssetValue>2441.32</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_PC">
-      <AssetID>161745</AssetID>
-      <AssetValue>236.25</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161746</AssetID>
-      <AssetValue>4847.34</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161747</AssetID>
-      <AssetValue>537.68</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161748</AssetID>
-      <AssetValue>298.71</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM2L_MC">
-      <AssetID>161749</AssetID>
-      <AssetValue>537.68</AssetValue>
-      <StructureType>RM2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S1L_MC">
-      <AssetID>161750</AssetID>
-      <AssetValue>798.38</AssetValue>
-      <StructureType>S1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S2L_MC">
-      <AssetID>161751</AssetID>
-      <AssetValue>798.38</AssetValue>
-      <StructureType>S2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_HC">
-      <AssetID>161752</AssetID>
-      <AssetValue>1102.53</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161753</AssetID>
-      <AssetValue>798.38</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161754</AssetID>
-      <AssetValue>18214.31</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161755</AssetID>
-      <AssetValue>2987.16</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161756</AssetID>
-      <AssetValue>762.85</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161757</AssetID>
-      <AssetValue>690.31</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161758</AssetID>
-      <AssetValue>214.23</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161759</AssetID>
-      <AssetValue>761.73</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>161760</AssetID>
-      <AssetValue>232.75</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>161761</AssetID>
-      <AssetValue>232.75</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161762</AssetID>
-      <AssetValue>698.25</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>161763</AssetID>
-      <AssetValue>232.75</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161764</AssetID>
-      <AssetValue>719.41</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161765</AssetID>
-      <AssetValue>14590.61</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161766</AssetID>
-      <AssetValue>8207.22</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161767</AssetID>
-      <AssetValue>526.10</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>161768</AssetID>
-      <AssetValue>263.05</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>161769</AssetID>
-      <AssetValue>528.98</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>161770</AssetID>
-      <AssetValue>584.56</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161771</AssetID>
-      <AssetValue>795.00</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161772</AssetID>
-      <AssetValue>236.74</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161773</AssetID>
-      <AssetValue>841.76</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>161774</AssetID>
-      <AssetValue>257.20</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>161775</AssetID>
-      <AssetValue>257.20</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>161776</AssetID>
-      <AssetValue>718.81</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_PC">
-      <AssetID>161777</AssetID>
-      <AssetValue>24.84</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>161778</AssetID>
-      <AssetValue>257.20</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_LC">
-      <AssetID>161779</AssetID>
-      <AssetValue>35.88</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_HC">
-      <AssetID>161780</AssetID>
-      <AssetValue>93.84</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161781</AssetID>
-      <AssetValue>31900.29</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161782</AssetID>
-      <AssetValue>16433.48</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161783</AssetID>
-      <AssetValue>488.22</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161784</AssetID>
-      <AssetValue>876.84</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>161785</AssetID>
-      <AssetValue>702.83</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_MH_MC">
-      <AssetID>161786</AssetID>
-      <AssetValue>121.44</AssetValue>
-      <StructureType>MH</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161787</AssetID>
-      <AssetValue>793.47</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161788</AssetID>
-      <AssetValue>2396.04</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>161789</AssetID>
-      <AssetValue>1597.36</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161790</AssetID>
-      <AssetValue>2084.55</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161791</AssetID>
-      <AssetValue>2300.19</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>161792</AssetID>
-      <AssetValue>702.83</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161793</AssetID>
-      <AssetValue>2108.51</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>161794</AssetID>
-      <AssetValue>702.83</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161795</AssetID>
-      <AssetValue>2172.40</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161796</AssetID>
-      <AssetValue>33137.39</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161797</AssetID>
-      <AssetValue>18639.78</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161798</AssetID>
-      <AssetValue>1194.85</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>161799</AssetID>
-      <AssetValue>597.42</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_HC">
-      <AssetID>161800</AssetID>
-      <AssetValue>1805.56</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LC">
-      <AssetID>161801</AssetID>
-      <AssetValue>238.04</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_URML_LS">
-      <AssetID>161802</AssetID>
-      <AssetValue>476.08</AssetValue>
-      <StructureType>URML</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161803</AssetID>
-      <AssetValue>646.93</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S4L_MC">
-      <AssetID>161804</AssetID>
-      <AssetValue>1991.43</AssetValue>
-      <StructureType>S4L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_HC">
-      <AssetID>161805</AssetID>
-      <AssetValue>7426.87</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_W1_MC">
-      <AssetID>161806</AssetID>
-      <AssetValue>13203.34</AssetValue>
-      <StructureType>W1</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_LC">
-      <AssetID>161807</AssetID>
-      <AssetValue>584.15</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C2L_MC">
-      <AssetID>161808</AssetID>
-      <AssetValue>1752.45</AssetValue>
-      <StructureType>C2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_S3_MC">
-      <AssetID>161809</AssetID>
-      <AssetValue>1327.62</AssetValue>
-      <StructureType>S3</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_PC2L_MC">
-      <AssetID>161810</AssetID>
-      <AssetValue>584.15</AssetValue>
-      <StructureType>PC2L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_MC">
-      <AssetID>161811</AssetID>
-      <AssetValue>1732.54</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_HC">
-      <AssetID>161812</AssetID>
-      <AssetValue>1911.77</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_C3L_MC">
-      <AssetID>161813</AssetID>
-      <AssetValue>584.15</AssetValue>
-      <StructureType>C3L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance><AssetInstance AssetDescription="LA building" VulnerabilityFunction="HAZUS_RM1L_LC">
-      <AssetID>161814</AssetID>
-      <AssetValue>537.68</AssetValue>
-      <StructureType>RM1L</StructureType>
-      <gml:pos>33.779013 -118.186739</gml:pos>
-    </AssetInstance>
-  </ExposureList>
-<!-- Git bug -->
-</ExposurePortfolio>
+<?xml version="1.0"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
+  <exposurePortfolio gml:id="ep">
+    <exposureList gml:id="LA01" assetCategory="buildings" lossCategory="economic_loss">
+      <gml:description>Collection of exposure values for existing building in Los Angeles County, California, US</gml:description>
+      <assetDefinition gml:id="a5624">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>18.02</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5625">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>5.07</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5626">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>16.33</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5627">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>12.52</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5628">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>18.78</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5629">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>5.63</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5630">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>11.26</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5631">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>312.49</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5632">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>2787.71</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5633">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>5.50</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5634">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>175.78</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5635">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>182148.97</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5636">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>5.50</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5637">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>93834.31</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5638">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_HC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>87.72</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5639">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_LC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>33.54</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5640">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_MC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>113.52</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5641">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_PC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>23.22</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5642">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>17.02</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5643">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>5.50</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5644">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>16.52</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5645">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>29.45</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5646">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>171.84</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5647">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C1L</structureCategory>
+        <assetValue>40.68</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5648">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C1L</structureCategory>
+        <assetValue>20.34</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5649">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>130.76</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5650">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>90.07</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5651">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_PC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>8.71</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5652">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>110.22</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5653">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>313.99</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5654">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>59.51</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5655">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>19.83</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5656">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S1L</structureCategory>
+        <assetValue>29.45</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5657">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>176.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5658">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_HC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>40.68</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5659">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_PC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>11.22</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5660">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>11.02</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5661">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>178.85</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5662">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S2L</structureCategory>
+        <assetValue>29.45</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5663">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_HC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>91.46</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5664">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>11.32</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5665">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM2L</structureCategory>
+        <assetValue>19.83</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5666">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>3073.01</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5667">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>200790.47</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5668">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_LC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>34.97</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5669">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_MC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>118.36</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5670">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_PC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>24.21</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5671">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>17.10</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5672">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>5.53</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5673">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>5.66</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5674">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>5.53</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5675">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>5.53</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5676">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>18.11</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5677">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>5.09</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5678">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>16.41</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5679">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>12.58</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5680">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>18.87</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5681">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>16.60</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5682">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.067592 33.855398</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>103437.51</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5683">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.055065 33.862429</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>109.13</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5684">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.055065 33.862429</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>269.46</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5685">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.055065 33.862429</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>404.19</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5686">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.055065 33.862429</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>121.25</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5687">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.055065 33.862429</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>242.51</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5688">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.055065 33.862429</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>3783.21</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161697">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>992.44</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161698">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>321.08</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161699">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>963.25</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161700">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>321.08</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161701">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>321.08</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161702">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>656.76</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161703">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>1050.82</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161704">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>952.31</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161705">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>328.38</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161706">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>15692.35</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161707">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>1094.61</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161708">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>905.32</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161709">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>295.54</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161710">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>8826.94</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161711">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>565.83</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161712">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>282.91</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161713">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>943.05</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161714">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>628.70</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161715">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>855.03</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161716">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>254.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161717">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>276.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161718">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>276.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161719">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>829.88</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161720">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>276.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161721">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>39870.10</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161722">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>10245.54</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161723">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>22426.93</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161724">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>820.45</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161725">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_PC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>304.14</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161726">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>771.61</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161727">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>1437.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161728">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>1664.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161729">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>42.71</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161730">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>281.91</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161731">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>205.02</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161732">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HS</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>324.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161733">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC1_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC1</structureCategory>
+        <assetValue>121.63</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161734">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC1_HS</vulnerabilityFunctionReference>
+        <structureCategory>PC1</structureCategory>
+        <assetValue>121.63</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161735">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_PC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>42.30</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161736">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>79.32</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161737">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>163.94</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161738">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>4657.25</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161739">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>1020.25</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161740">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>1613.06</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161741">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C1L</structureCategory>
+        <assetValue>1102.53</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161742">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C1L</structureCategory>
+        <assetValue>551.26</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161743">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>3543.85</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161744">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>2441.32</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161745">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_PC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>236.25</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161746">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>4847.34</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161747">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>537.68</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161748">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>298.71</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161749">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM2L</structureCategory>
+        <assetValue>537.68</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161750">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S1L</structureCategory>
+        <assetValue>798.38</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161751">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S2L</structureCategory>
+        <assetValue>798.38</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161752">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_HC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>1102.53</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161753">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>798.38</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161754">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>18214.31</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161755">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>2987.16</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161756">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>762.85</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161757">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>690.31</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161758">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>214.23</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161759">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>761.73</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161760">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>232.75</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161761">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>232.75</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161762">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>698.25</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161763">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>232.75</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161764">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>719.41</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161765">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>14590.61</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161766">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>8207.22</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161767">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>526.10</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161768">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>263.05</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161769">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>528.98</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161770">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>584.56</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161771">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>795.00</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161772">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>236.74</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161773">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>841.76</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161774">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>257.20</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161775">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>257.20</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161776">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>718.81</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161777">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_PC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>24.84</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161778">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>257.20</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161779">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_LC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>35.88</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161780">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_HC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>93.84</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161781">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>31900.29</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161782">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>16433.48</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161783">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>488.22</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161784">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>876.84</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161785">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>702.83</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161786">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_MH_MC</vulnerabilityFunctionReference>
+        <structureCategory>MH</structureCategory>
+        <assetValue>121.44</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161787">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>793.47</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161788">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>2396.04</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161789">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>1597.36</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161790">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>2084.55</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161791">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>2300.19</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161792">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>702.83</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161793">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>2108.51</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161794">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>702.83</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161795">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>2172.40</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161796">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>33137.39</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161797">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>18639.78</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161798">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>1194.85</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161799">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>597.42</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161800">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>1805.56</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161801">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>238.04</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161802">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <structureCategory>URML</structureCategory>
+        <assetValue>476.08</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161803">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>646.93</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161804">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <structureCategory>S4L</structureCategory>
+        <assetValue>1991.43</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161805">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>7426.87</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161806">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <structureCategory>W1</structureCategory>
+        <assetValue>13203.34</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161807">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>584.15</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161808">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C2L</structureCategory>
+        <assetValue>1752.45</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161809">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <structureCategory>S3</structureCategory>
+        <assetValue>1327.62</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161810">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <structureCategory>PC2L</structureCategory>
+        <assetValue>584.15</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161811">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>1732.54</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161812">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>1911.77</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161813">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <structureCategory>C3L</structureCategory>
+        <assetValue>584.15</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a161814">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.186739 33.779013</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>537.68</assetValue>
+      </assetDefinition>
+    </exposureList>
+  </exposurePortfolio>
+</nrml>
