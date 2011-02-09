@@ -17,7 +17,7 @@ public class NRMLConstants {
             new Namespace("qml", "http://quakeml.org/xmlns/quakeml/1.1");
 
     public static final Namespace NRML_NAMESPACE =
-            new Namespace("", "http://openquake.org/xmlns/nrml/0.1");
+            new Namespace("", "http://openquake.org/xmlns/nrml/0.2");
 
     // Properties are in the form NAMESPACE_PROPERTYNAME
 
