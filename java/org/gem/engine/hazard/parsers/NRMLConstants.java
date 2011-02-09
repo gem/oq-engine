@@ -130,6 +130,21 @@ public class NRMLConstants {
     public static final QName NRML_LOCATION =
             new QName("location", NRML_NAMESPACE);
 
+    public static final QName NRML_GUTENBERG_MFD =
+            new QName("truncatedGutenbergRichter", NRML_NAMESPACE);
+
+    public static final QName NRML_A_VALUE =
+            new QName("aValueCumulative", NRML_NAMESPACE);
+
+    public static final QName NRML_B_VALUE =
+            new QName("bValue", NRML_NAMESPACE);
+
+    public static final QName NRML_MIN_MAGNITUDE =
+            new QName("minMagnitude", NRML_NAMESPACE);
+
+    public static final QName NRML_MAX_MAGNITUDE =
+            new QName("maxMagnitude", NRML_NAMESPACE);
+
     // QML Properties
     public static final QName QML_NODAL_PLANES =
             new QName("nodalPlanes", QML_NAMESPACE);
