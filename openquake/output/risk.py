@@ -11,15 +11,15 @@ from lxml import etree
 from openquake import logs
 from openquake import shapes
 from openquake import writer
-from openquake.xml import GML_OLD, NSMAP_OLD, NRML
+from openquake.xml import GML_OLD, NSMAP_OLD, NRML_OLD
 
 LOGGER = logs.RISK_LOG
 
 class RiskXMLWriter(writer.FileWriter):
     """This class writes a risk curve into the nrml format."""
-    curve_tag = NRML + "Curve"
-    abcissa_tag = NRML + "PE"
-    container_tag = NRML + "RiskElementList"
+    curve_tag = NRML_OLD + "Curve"
+    abcissa_tag = NRML_OLD + "PE"
+    container_tag = NRML_OLD + "RiskElementList"
     
     def write(self, point, val):
         if isinstance(point, shapes.GridPoint):
@@ -30,9 +30,9 @@ class RiskXMLWriter(writer.FileWriter):
 
     def write_header(self):
         """Write out the file header"""
-        self.root_node = etree.Element(NRML + "RiskResult", nsmap=NSMAP_OLD)
+        self.root_node = etree.Element(NRML_OLD + "RiskResult", nsmap=NSMAP_OLD)
         config_node = etree.SubElement(self.root_node, 
-                           NRML + "Config" , nsmap=NSMAP_OLD)
+                           NRML_OLD + "Config" , nsmap=NSMAP_OLD)
         config_node.text = "Config file details go here."
 
         #pylint: disable=W0201
@@ -49,7 +49,7 @@ class RiskXMLWriter(writer.FileWriter):
 
         (curve_object, asset_object) = val
         node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP_OLD)
-        node.attrib['AssetID'] = asset_object['AssetID']    
+        node.attrib['assetID'] = asset_object['assetID']    
         pos = etree.SubElement(node, GML_OLD + "pos", nsmap=NSMAP_OLD)
         pos.text = "%s %s" % (str(point.x), str(point.y))
         
@@ -58,40 +58,40 @@ class RiskXMLWriter(writer.FileWriter):
         # This use of not None is b/c of the trap w/ ElementTree find
         # for nodes that have no child nodes.
         subnode_pe = self.parent_node.find(
-            NRML + "Common/" + self.abcissa_tag)
+            NRML_OLD + "Common/" + self.abcissa_tag)
         if subnode_pe is not None:
-            if subnode_pe.find(NRML + "Values").text != pe_values:
+            if subnode_pe.find(NRML_OLD + "Values").text != pe_values:
                 LOGGER.error("Abcissa doesn't match between \n %s \n %s"
-                    % (subnode_pe.find(NRML + "Values").text, pe_values))
+                    % (subnode_pe.find(NRML_OLD + "Values").text, pe_values))
                 raise Exception("Curves must share the same Abcissa!")
         else:
-            common_node = self.parent_node.find(NRML + "Common")
+            common_node = self.parent_node.find(NRML_OLD + "Common")
             if common_node is None:
-                common_node = etree.Element(NRML + "Common", nsmap=NSMAP_OLD)
+                common_node = etree.Element(NRML_OLD + "Common", nsmap=NSMAP_OLD)
                 parent_node.insert(0, common_node)  
             subnode_pe = etree.SubElement(common_node, 
                             self.abcissa_tag, nsmap=NSMAP_OLD)
             etree.SubElement(subnode_pe, 
-                    NRML + "Values", nsmap=NSMAP_OLD).text = pe_values
+                    NRML_OLD + "Values", nsmap=NSMAP_OLD).text = pe_values
 
         LOGGER.debug("Writing xml, object is %s", curve_object)
         subnode_loss = etree.SubElement(
-            node, NRML + "Values", nsmap=NSMAP_OLD)
+            node, NRML_OLD + "Values", nsmap=NSMAP_OLD)
         subnode_loss.text = _curve_vals_as_gmldoublelist(curve_object)
 
 
 class LossCurveXMLWriter(RiskXMLWriter):
     """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = NRML + "LossCurve"
-    abcissa_tag = NRML + "LossCurvePE"
-    container_tag = NRML + "LossCurveList"
+    curve_tag = NRML_OLD + "LossCurve"
+    abcissa_tag = NRML_OLD + "LossCurvePE"
+    container_tag = NRML_OLD + "LossCurveList"
     
 
 class LossRatioCurveXMLWriter(RiskXMLWriter):
     """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = NRML + "LossRatioCurve"
-    abcissa_tag = NRML + "LossRatioCurvePE"
-    container_tag = NRML + "LossRatioCurveList"
+    curve_tag = NRML_OLD + "LossRatioCurve"
+    abcissa_tag = NRML_OLD + "LossRatioCurvePE"
+    container_tag = NRML_OLD + "LossRatioCurveList"
 
 
 def _curve_pe_as_gmldoublelist(curve_object):
