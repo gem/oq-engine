@@ -3,22 +3,25 @@
 Tests for the serialization of loss/loss ratio curves to NRML format.
 """
 
-from lxml import etree
-
 import os
 import unittest
 
+from lxml import etree
+
 from openquake import logs
-from openquake.risk import engines
-from openquake.output import risk as risk_output
-from openquake import test
 from openquake import shapes
+from openquake import test
 from openquake import xml
+
+from openquake.output import risk as risk_output
+from openquake.risk import engines
 
 log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
+
+LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
 NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
 NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
@@ -49,7 +52,6 @@ class LossOutputTestCase(unittest.TestCase):
         second_asset_a = {"assetID" : "a1712", "endBranchLabel": "A"}
         second_asset_b = {"assetID" : "a1712", "endBranchLabel": "B"}
 
-        # Then serialize them to XML
         self.loss_curves = [
             (first_site, (TEST_LOSS_CURVE, first_asset_a)),
             (first_site, (TEST_LOSS_CURVE, first_asset_b)),
@@ -62,7 +64,12 @@ class LossOutputTestCase(unittest.TestCase):
             (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_a)),
             (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))] 
 
-    def test_is_serialized_to_file_and_validates(self):
+        # loss curve that fails with inconsistent sites for an asset
+        self.loss_curves_fail = [
+            (first_site, (TEST_LOSS_CURVE, first_asset_a)),
+            (second_site, (TEST_LOSS_CURVE, first_asset_a))] 
+
+    def test_loss_is_serialized_to_file_and_validates(self):
 
         xml_writer = risk_output.LossCurveXMLWriter(self.loss_curve_path)
         xml_writer.serialize(self.loss_curves)
@@ -71,7 +78,9 @@ class LossOutputTestCase(unittest.TestCase):
             NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
             self.loss_curve_path)
-        
+
+    def test_loss_ratio_is_serialized_to_file_and_validates(self):
+
         xml_writer = risk_output.LossRatioCurveXMLWriter(
             self.loss_ratio_curve_path)
         xml_writer.serialize(self.loss_ratio_curves)
@@ -80,6 +89,13 @@ class LossOutputTestCase(unittest.TestCase):
             self.loss_ratio_curve_path, NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
             self.loss_ratio_curve_path)
+
+    def test_loss_serialization_with_inconsistent_site_fails(self):
+
+        xml_writer = risk_output.LossCurveXMLWriter(
+            test.test_output_file(LOSS_XML_FAIL_OUTPUT_FILE))
+        self.assertRaises(ValueError, xml_writer.serialize, 
+            self.loss_curves_fail)
 
     # http://www.devcomments.com/error-restricting-complexType-list-parsing-official-GML-schema-at108628.htm
     # skip unless we have the parser for new risk NRML
