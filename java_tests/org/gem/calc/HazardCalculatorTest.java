@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -114,8 +115,8 @@ public class HazardCalculatorTest {
                 hazCurveCal.getHazardCurve(hazCurve, site, gmpeMap, erf);
                 assertTrue(hazCurve.equals(results.get(site)));
             }
-        } catch (Exception e) {
-            String msg = "Unxpected exception: " + e.getMessage();
+        } catch (RemoteException e) {
+            String msg = "Unexpected exception: " + e.getMessage();
             fail(msg);
         }
     }
