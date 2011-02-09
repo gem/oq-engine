@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.gem.engine.SourceModelReader;
 import org.gem.engine.hazard.models.nshmp.us.NshmpCaliforniaFaultData;
@@ -29,68 +30,55 @@ public class GemFileParserTest extends SourceModelTestData {
         // new File(OUTPUT_FILE).delete();
     }
 
-    // TODO (ac): Add equals on object after the implementation of
-    // truncatedGutenbergRichter
     @Test
     public void serializesSimpleSourceData() {
-        GemFileParser writer = new GemFileParser();
-
         ArrayList<GEMSourceData> sources = new ArrayList<GEMSourceData>();
         sources.add(simpleFaultSourceData());
 
-        writer.setList(sources);
-        writer.writeSource2NrmlFormat(new File(OUTPUT_FILE));
-
-        SourceModelReader reader = new SourceModelReader(OUTPUT_FILE, 0.1);
-        assertEquals(sources.size(), reader.read().size());
+        writeSources(sources);
+        assertReadedSourcesAreEqualTo(sources);
     }
 
-    // TODO (ac): Add equals on object after the implementation of
-    // truncatedGutenbergRichter
     @Test
     public void serializesComplexSourceData() {
-        GemFileParser writer = new GemFileParser();
-
         ArrayList<GEMSourceData> sources = new ArrayList<GEMSourceData>();
         sources.add(complexSourceData());
 
-        writer.setList(sources);
-        writer.writeSource2NrmlFormat(new File(OUTPUT_FILE));
-
-        SourceModelReader reader = new SourceModelReader(OUTPUT_FILE, 0.1);
-        assertEquals(sources.size(), reader.read().size());
+        writeSources(sources);
+        assertReadedSourcesAreEqualTo(sources);
     }
 
-    // TODO (ac): Add equals on object after the implementation of
-    // truncatedGutenbergRichter
     @Test
     public void serializesAreaSourceData() {
-        GemFileParser writer = new GemFileParser();
-
         ArrayList<GEMSourceData> sources = new ArrayList<GEMSourceData>();
         sources.add(areaSourceData());
 
-        writer.setList(sources);
-        writer.writeSource2NrmlFormat(new File(OUTPUT_FILE));
-
-        SourceModelReader reader = new SourceModelReader(OUTPUT_FILE, 0.1);
-        assertEquals(sources.size(), reader.read().size());
+        writeSources(sources);
+        assertReadedSourcesAreEqualTo(sources);
     }
 
-    // TODO (ac): Add equals on object after the implementation of
-    // truncatedGutenbergRichter
     @Test
     public void serializesPointSourceData() {
-        GemFileParser writer = new GemFileParser();
-
         ArrayList<GEMSourceData> sources = new ArrayList<GEMSourceData>();
         sources.add(pointSourceData());
 
+        writeSources(sources);
+        assertReadedSourcesAreEqualTo(sources);
+    }
+
+    private void writeSources(ArrayList<GEMSourceData> sources) {
+        GemFileParser writer = new GemFileParser();
+
         writer.setList(sources);
         writer.writeSource2NrmlFormat(new File(OUTPUT_FILE));
+    }
 
+    private void assertReadedSourcesAreEqualTo(ArrayList<GEMSourceData> sources) {
         SourceModelReader reader = new SourceModelReader(OUTPUT_FILE, 0.1);
-        assertEquals(sources.size(), reader.read().size());
+        List<GEMSourceData> readedSources = reader.read();
+
+        assertEquals(sources.size(), readedSources.size());
+        assertSourcesAreEqual(sources, readedSources);
     }
 
     /**
