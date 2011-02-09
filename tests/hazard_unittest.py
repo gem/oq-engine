@@ -181,7 +181,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
-                self.assertTrue(validatesAgainstXMLSchema(
+                self.assertTrue(xml.validatesAgainstXMLSchema(
                     nrml_path, NRML_SCHEMA_PATH),
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
@@ -199,7 +199,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
-                self.assertTrue(validatesAgainstXMLSchema(
+                self.assertTrue(xml.validatesAgainstXMLSchema(
                     nrml_path, NRML_SCHEMA_PATH),
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
@@ -222,7 +222,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 LOG.debug("validating NRML file for quantile hazard curve: "\
                     "%s" % nrml_path)
 
-                self.assertTrue(validatesAgainstXMLSchema(
+                self.assertTrue(xml.validatesAgainstXMLSchema(
                     nrml_path, NRML_SCHEMA_PATH),
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
