@@ -8,24 +8,36 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML_OLD
+from openquake.xml import NRML, GML, NRML_OLD, GML_OLD
 
 # do not use namespace for now
 RISKML_NS = ''
 
 
 def _to_site(element):
-    """Convert current GML attributes to Site object"""
+    """Convert current GML attributes to Site object
+
+    We want to extract the value of <gml:pos>. We expect the input element to be
+    an 'assetDefinition' and have a child element structured like this:
+    
+    <site>
+        <gml:Point srsName="epsg:4326">
+            <gml:pos>9.15000 45.16667</gml:pos>
+        </gml:Point>
+    </site>
+    """
     # lon/lat are in XML attribute gml:pos
     # consider them as mandatory
 
-    pos = element.find("%spos" % GML_OLD).text
-    
-    try:
-        lat, lon = [float(x.strip()) for x in pos.split()]
+    try: 
+        site_elem = element.find('%ssite' % NRML)
+        point_elem = site_elem.find('%sPoint' % GML)
+        pos = point_elem.find('%spos' % GML).text
+        lon, lat = [float(x.strip()) for x in pos.split()]
+
         return shapes.Site(lon, lat)
     except Exception:
-        error_str = "element AssetInstance: no valid lon/lat coordinates"
+        error_str = "element assetDefintion: no valid lon/lat coordinates"
         raise ValueError(error_str)
 
 
@@ -39,23 +51,21 @@ class ExposurePortfolioFile(producer.FileProducer):
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with exposure-related attribute values for this site.
     
-    The attribute dictionary looks like
-    {'PortfolioID': 'PAV01',
-     'PortfolioDescription': 'Collection of existing buildings in downtown Pavia',
-     'AssetID': '01',
-     'AssetDescription': 'Moment-resisting non-ductile concrete frame low rise',
-     'AssetValue': 150000,
-     'VulnerabilityFunction': 'RC/DMRF-D/LR'
-    }
+    The attribute dictionary looks like this:
+    {'listID': 'PAV01',
+     'listDescription': 'Collection of existing building in ' \
+                        'downtown Pavia',
+     'assetID': 'asset_02',
+     'assetDescription': 'Moment-resisting non-ductile concrete ' \
+                         'frame low rise',
+     'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
+     'structureCategory': 'RC-LR-PC',
+     'assetValue': 250000.0,
+     'assetValueUnit': 'EUR'}
 
-    Note: at the time of writing this class the author has no access to the
-    XML Schema, so all XML attributes from the example instance documents are
-    assumed to be mandatory.
 
+    Note: assetDescription is optional.
     """
-
-    REQUIRED_ATTRIBUTES = (('PortfolioID', str), 
-                           ('PortfolioDescription', str))
 
     def __init__(self, path):
         super(ExposurePortfolioFile, self).__init__(path)
@@ -65,37 +75,49 @@ class ExposurePortfolioFile(producer.FileProducer):
                 self.file, events=('start', 'end')):
 
             if event == 'start' and element.tag == \
-                    '%sExposureParameters' % NRML:
+                    '%sexposureList' % NRML:
+                # we need to get the exposureList id and description
+                id = element.get('%sid' % GML)
+                self._current_meta['listID'] = str(id)
 
-                self._set_meta(element)
-            elif event == 'end' and element.tag == '%sAssetInstance' % NRML:
-                yield (_to_site(element), 
-                       self._to_site_attributes(element))
+                desc = element.find('%sdescription' % GML)
+                if desc is not None:
+                    self._current_meta['listDescription'] = str(desc.text)
+
+            elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
+                site_data = (_to_site(element),
+                             self._to_site_attributes(element))
+                del element
+                yield site_data
 
     def _to_site_attributes(self, element):
         """Build a dict of all node attributes"""
         site_attributes = {}
 
-        site_attributes["AssetID"] = element.find("%sAssetID" % NRML).text
-        site_attributes["AssetValue"] = float(element.find(
-                "%sAssetValue" % NRML).text)
+        # consider all attributes of assetDefinition element as mandatory
 
-        # consider all attributes of AssetInstance element as mandatory
-        for required_attribute in (('AssetDescription', str),
-                                   ('VulnerabilityFunction', str)):
-            attr_value = element.get(required_attribute[0])
+        site_attributes['assetID'] = element.get('%sid' % GML)
+        asset_value = element.find('%sassetValue' % NRML)
+        try:
+            site_attributes['assetValue'] = float(asset_value.text)
+        except Exception:
+            error_str = 'element assetDefinition: no valid assetValue'
+            raise ValueError(error_str)
+        site_attributes['assetValueUnit'] = asset_value.get('unit')
+
+        # all of these attributes are in the NRML namespace
+        for (required_attr, attr_type) in (('assetDescription', str),
+                                   ('vulnerabilityFunctionReference', str),
+                                   ('structureCategory', str)):
+            attr_value = element.find('%s%s' % (NRML, required_attr)).text
             if attr_value is not None:
-                site_attributes[required_attribute[0]] = \
-                    required_attribute[1](attr_value)
+                site_attributes[required_attr] = \
+                    attr_type(attr_value)
             else:
-                error_str = "element AssetInstance: missing required " \
-                    "attribute %s" % required_attribute[0]
+                error_str = "element assetDefinition: missing required " \
+                    "attribute %s" % required_attr
                 raise ValueError(error_str) 
 
-        try:
-            site_attributes.update(self._current_meta)
-        except Exception:
-            error_str = "root element (ExposurePortfolio) is missing"
-            raise ValueError(error_str)
+        site_attributes.update(self._current_meta)
 
         return site_attributes

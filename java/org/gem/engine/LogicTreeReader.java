@@ -31,6 +31,7 @@ public class LogicTreeReader {
 
     private final Map<String, LogicTree> logicTreeHashMap;
 
+    private static final String BRANCHING_LEVEL = "branchingLevel";
     private static final String TECTONIC_REGION = "tectonicRegion";
     private static final String UNCERTAINTY_TYPE = "uncertaintyType";
     private static final String UNCERTAINTY_MODEL = "uncertaintyModel";
@@ -97,7 +98,7 @@ public class LogicTreeReader {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        Element root = doc.getRootElement();
+        Element root = doc.getRootElement(); // <nrml> element
 
         /**
          * Makes a loop over the possible logic trees defined in the file. In
@@ -113,56 +114,135 @@ public class LogicTreeReader {
         int indexLogicTree = 1;
         Iterator i = root.elements().iterator();
         while (i.hasNext()) {
-            Element logicTreeElem = (Element) i.next();
-            String key = Integer.toString(indexLogicTree);
-            LogicTree logicTree = new LogicTree();
-            if (logicTreeElem.attributeValue(TECTONIC_REGION) != null)
-                key = logicTreeElem.attributeValue(TECTONIC_REGION);
+            Element logicTreeSetElem = (Element) i.next();
 
-            int indexBranchingLevel = 1;
-            Iterator j = logicTreeElem.elementIterator();
-            while (j.hasNext()) {
-                Element branchSetElem = (Element) j.next();
-                String uncertaintyType =
-                        branchSetElem.attributeValue(UNCERTAINTY_TYPE);
-                LogicTreeBranchingLevel branchingLevel =
-                        new LogicTreeBranchingLevel(indexBranchingLevel, "", 0);
+            Map<String, LogicTree> logicTrees =
+                    parseLogicTreeSet(logicTreeSetElem, indexLogicTree);
 
-                int indexBranch = 1;
-                Iterator k = branchSetElem.elementIterator();
-                while (k.hasNext()) {
-                    Element branchElem = (Element) k.next();
-                    String uncertaintyModel =
-                            (String) branchElem.element(UNCERTAINTY_MODEL)
-                                    .getData();
-                    Double uncertaintyWeight =
-                            Double.valueOf((String) branchElem.element(
-                                    UNCERTAINTY_WEIGHT).getData());
-                    LogicTreeBranch branch =
-                            new LogicTreeBranch(indexBranch, uncertaintyModel,
-                                    uncertaintyWeight);
-                    if (uncertaintyType.equalsIgnoreCase(SOURCE_MODEL))
-                        branch.setNameInputFile(uncertaintyModel);
-                    else if (uncertaintyType
-                            .equalsIgnoreCase(MAX_MAGNITUDE_GUTENBERG_RICHTER_RELATIVE))
-                        branch.setRule(new LogicTreeRule(
-                                LogicTreeRuleParam.mMaxGRRelative, Double
-                                        .valueOf(uncertaintyModel)));
-                    else if (uncertaintyType
-                            .equalsIgnoreCase(B_VALUE_GUTENBERG_RICHTER_RELATIVE))
-                        branch.setRule(new LogicTreeRule(
-                                LogicTreeRuleParam.bGRRelative, Double
-                                        .valueOf(uncertaintyModel)));
-                    branchingLevel.addBranch(branch);
-                    indexBranch = indexBranch + 1;
-                }
-                logicTree.addBranchingLevel(branchingLevel);
-                indexBranchingLevel = indexBranchingLevel + 1;
+            for (String key : logicTrees.keySet()) {
+                logicTreeHashMap.put(key, logicTrees.get(key));
             }
-            logicTreeHashMap.put(key, logicTree);
-            indexLogicTree = indexLogicTree + 1;
+
+            indexLogicTree++;
         }
         return logicTreeHashMap;
     }
 
+    /**
+     * Parse child elements of a &lt;logicTreeSet&gt; element.
+     * 
+     * @param logicTreeSet
+     * @param indexLogicTree
+     * @return Map of LogicTrees, keyed by tectonicRegion. If no tectonicRegion
+     *         is defined for a logicTree, keys will be "1" through "N", where N
+     *         is the total number of logicTree elements in the logicTreeSet.
+     */
+    private Map<String, LogicTree> parseLogicTreeSet(Element logicTreeSet,
+            int indexLogicTree) {
+
+        String key = Integer.toString(indexLogicTree);
+        Map<String, LogicTree> logicTrees = new HashMap<String, LogicTree>();
+        Iterator i = logicTreeSet.elementIterator();
+        while (i.hasNext()) {
+            Element elem = (Element) i.next();
+            LogicTree logicTree = new LogicTree();
+
+            // skip config for now
+            // TODO(LB): we might care about the <config> elem later
+            // at the time this was written, the example files did not
+            // include any config items
+            if (elem.getName().equals("config")) {
+                continue;
+            }
+
+            String tectonicRegion = parseLogicTree(elem, logicTree);
+            if (tectonicRegion != null) {
+                key = tectonicRegion;
+            }
+            logicTrees.put(key, logicTree);
+        }
+        return logicTrees;
+    }
+
+    /**
+     * Parse attributes and children of a &lt;logicTree&gt; element.
+     * 
+     * @param logicTreeElem
+     * @param logicTree
+     * @return tectonicRegion of the logic tree (or null if none is defined)
+     */
+    private String parseLogicTree(Element logicTreeElem, LogicTree logicTree) {
+
+        String tectonicRegion = logicTreeElem.attributeValue(TECTONIC_REGION);
+
+        Iterator i = logicTreeElem.elementIterator();
+        while (i.hasNext()) {
+            Element branchSet = (Element) i.next();
+
+            parseLogicTreeBranchSet(branchSet, logicTree);
+
+        }
+        return tectonicRegion;
+    }
+
+    /**
+     * Parse attributes and children of a &lt;logicTreeBranchSet&gt; element.
+     * 
+     * @param branchSet
+     * @param logicTree
+     */
+    private void parseLogicTreeBranchSet(Element branchSet, LogicTree logicTree) {
+
+        int indexBranchingLevel =
+                Integer.parseInt(branchSet.attributeValue(BRANCHING_LEVEL));
+
+        String uncertaintyType = branchSet.attributeValue(UNCERTAINTY_TYPE);
+        LogicTreeBranchingLevel branchingLevel =
+                new LogicTreeBranchingLevel(indexBranchingLevel, "", 0);
+
+        int indexBranch = 1;
+        Iterator i = branchSet.elementIterator();
+        while (i.hasNext()) {
+            Element logicTreeBranch = (Element) i.next();
+
+            parseLogicTreeBranch(logicTreeBranch, branchingLevel,
+                    uncertaintyType, indexBranch);
+
+            indexBranch++;
+        }
+        logicTree.addBranchingLevel(branchingLevel);
+    }
+
+    /**
+     * Parse child elements of &lt;logicTreeBranch&gt; element.
+     * 
+     * @param logicTreeBranch
+     * @param branchingLevel
+     * @param uncertaintyType
+     * @param indexBranch
+     */
+    private void parseLogicTreeBranch(Element logicTreeBranch,
+            LogicTreeBranchingLevel branchingLevel, String uncertaintyType,
+            int indexBranch) {
+
+        String uncertaintyModel =
+                (String) logicTreeBranch.element(UNCERTAINTY_MODEL).getData();
+        Double uncertaintyWeight =
+                Double.valueOf((String) logicTreeBranch.element(
+                        UNCERTAINTY_WEIGHT).getData());
+        LogicTreeBranch branch =
+                new LogicTreeBranch(indexBranch, uncertaintyModel,
+                        uncertaintyWeight);
+        if (uncertaintyType.equalsIgnoreCase(SOURCE_MODEL))
+            branch.setNameInputFile(uncertaintyModel);
+        else if (uncertaintyType
+                .equalsIgnoreCase(MAX_MAGNITUDE_GUTENBERG_RICHTER_RELATIVE))
+            branch.setRule(new LogicTreeRule(LogicTreeRuleParam.mMaxGRRelative,
+                    Double.valueOf(uncertaintyModel)));
+        else if (uncertaintyType
+                .equalsIgnoreCase(B_VALUE_GUTENBERG_RICHTER_RELATIVE))
+            branch.setRule(new LogicTreeRule(LogicTreeRuleParam.bGRRelative,
+                    Double.valueOf(uncertaintyModel)));
+        branchingLevel.addBranch(branch);
+    }
 }
