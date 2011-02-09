@@ -46,7 +46,7 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
 
     def write(self, point, values):
         """Writes an asset element with loss/loss ratio information.
-        
+
         point must be of type shapes.Site or shapes.GridPoint
         values is a pair of (curve_object, asset_object), with curve_object
         of type shapes.Curve. 
