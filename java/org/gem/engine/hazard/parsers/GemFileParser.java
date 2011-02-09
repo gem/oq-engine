@@ -2145,6 +2145,8 @@ public class GemFileParser {
         sourceModel.addAttribute(NRMLConstants.GML_ID, "sm1");
         sourceModel.addElement(NRMLConstants.NRML_CONFIG);
 
+        int sourceCounter = 0;
+
         for (GEMSourceData src : srcDataList) {
             if (src instanceof GEMFaultSourceData) {
                 GEMFaultSourceData source = (GEMFaultSourceData) src;
@@ -2165,6 +2167,9 @@ public class GemFileParser {
 
                 Element simpleGeometry =
                         sourceElement.addElement(simpleGeomQName);
+
+                simpleGeometry.addAttribute(NRMLConstants.GML_ID, "sfg_"
+                        + sourceCounter);
 
                 Element faultTrace =
                         simpleGeometry
@@ -2278,6 +2283,8 @@ public class GemFileParser {
                 // <hypocentralDepth>
                 addHypocentralDepthTo(source.getAveHypoDepth(), sourceElement);
             }
+
+            sourceCounter++;
         }
 
         FileOutputStream fos;
@@ -2340,6 +2347,8 @@ public class GemFileParser {
 
             Element focalMech =
                     rateModel.addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
+
+            focalMech.addAttribute(NRMLConstants.NRML_PUBLIC_ID, "fc_" + i);
 
             Element plane1 =
                     focalMech.addElement(NRMLConstants.QML_NODAL_PLANES)
