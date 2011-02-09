@@ -4,7 +4,7 @@
       xmlns="http://openquake.org/xmlns/nrml/0.2"
       gml:id="n1">
     <logicTreeSet>
-        <logicTree tectonicRegion="Active Shallow Crust">
+        <logicTree id="lt1" tectonicRegion="Active Shallow Crust">
             <logicTreeBranchSet branchingLevel="1" uncertaintyType="gmpeModel">
                 <logicTreeBranch>
                     <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
