@@ -3,6 +3,7 @@
 """Constants and helper functions for XML processing,
 including namespaces, and namespace maps."""
 
+from lxml import etree
 
 NRML_SCHEMA_FILE = 'nrml.xsd'
 
@@ -27,3 +28,8 @@ NRML_OLD = "{%s}" % NRML_NS_OLD
 GML_OLD = "{%s}" % GML_NS_OLD
 
 NSMAP_OLD = {None: NRML_NS_OLD, "gml": GML_NS_OLD}
+
+def validatesAgainstXMLSchema(xml_instance_path, schema_path):
+    xml_doc = etree.parse(xml_instance_path)
+    xmlschema = etree.XMLSchema(etree.parse(schema_path))
+    return xmlschema.validate(xml_doc)
