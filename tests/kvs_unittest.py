@@ -291,7 +291,7 @@ class IdentifierTestCase(unittest.TestCase):
             kvs.tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
             kvs.tokens.LOSS_CURVE_KEY_TOKEN,
             kvs.tokens.loss_token(0.01),
-            vulnerability.VULNERABILITY_CURVE_KEY_TOKEN,
+            kvs.tokens.VULNERABILITY_CURVE_KEY_TOKEN,
         ]
 
         for product in products:
