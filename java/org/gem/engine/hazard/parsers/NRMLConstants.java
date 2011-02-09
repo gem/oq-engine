@@ -145,6 +145,9 @@ public class NRMLConstants {
     public static final QName NRML_MAX_MAGNITUDE =
             new QName("maxMagnitude", NRML_NAMESPACE);
 
+    public static final QName NRML_PUBLIC_ID =
+            new QName("publicID", NRML_NAMESPACE);
+
     // QML Properties
     public static final QName QML_NODAL_PLANES =
             new QName("nodalPlanes", QML_NAMESPACE);
