@@ -2157,7 +2157,7 @@ public class GemFileParser {
                 appendNameTo(source, sourceElement);
                 appendTectonicRegionTo(source, sourceElement);
                 appendRakeTo(source.getRake(), sourceElement);
-                appendEvenlyDiscretizedMFDTo(source.getMfd(), sourceElement);
+                appendMFDTo(source.getMfd(), sourceElement);
 
                 // <simpleFaultGeometry>
                 QName simpleGeomQName =
@@ -2198,7 +2198,7 @@ public class GemFileParser {
                 appendNameTo(source, sourceElement);
                 appendTectonicRegionTo(source, sourceElement);
                 appendRakeTo(source.getRake(), sourceElement);
-                appendEvenlyDiscretizedMFDTo(source.getMfd(), sourceElement);
+                appendMFDTo(source.getMfd(), sourceElement);
 
                 // <complexFaultGeometry>
                 QName complexGeomQName =
@@ -2334,7 +2334,7 @@ public class GemFileParser {
             Element rateModel =
                     element.addElement(NRMLConstants.NRML_RUPTURE_RATE_MODEL);
 
-            appendEvenlyDiscretizedMFDTo(mechs.getMagFreqDist(i), rateModel);
+            appendMFDTo(mechs.getMagFreqDist(i), rateModel);
 
             FocalMechanism mech = mechs.getFocalMech(i);
 
@@ -2387,6 +2387,41 @@ public class GemFileParser {
         }
 
         posList.addText(values.toString().trim());
+    }
+
+    private void appendMFDTo(IncrementalMagFreqDist mfd, Element element) {
+        if (mfd instanceof GutenbergRichterMagFreqDist) {
+            GutenbergRichterMagFreqDist dist =
+                    (GutenbergRichterMagFreqDist) mfd;
+
+            double bVal = dist.get_bValue();
+            double minMagnitude = dist.getMinX() - (dist.getDelta() / 2);
+            double maxMagnitude = dist.getMaxX() + (dist.getDelta() / 2);
+            double totalCumRate = dist.getTotCumRate();
+
+            double den =
+                    Math.pow(10, -(bVal * minMagnitude))
+                            - Math.pow(10, -(bVal * maxMagnitude));
+
+            double aVal = Math.log10(totalCumRate / den);
+
+            Element gutRich =
+                    element.addElement(NRMLConstants.NRML_GUTENBERG_MFD);
+
+            gutRich.addElement(NRMLConstants.NRML_A_VALUE).addText(
+                    Double.toString(aVal));
+
+            gutRich.addElement(NRMLConstants.NRML_B_VALUE).addText(
+                    Double.toString(bVal));
+
+            gutRich.addElement(NRMLConstants.NRML_MIN_MAGNITUDE).addText(
+                    Double.toString(minMagnitude));
+
+            gutRich.addElement(NRMLConstants.NRML_MAX_MAGNITUDE).addText(
+                    Double.toString(maxMagnitude));
+        } else {
+            appendEvenlyDiscretizedMFDTo(mfd, element);
+        }
     }
 
     private void appendEvenlyDiscretizedMFDTo(IncrementalMagFreqDist mfd,
