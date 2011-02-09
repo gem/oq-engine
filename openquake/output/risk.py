@@ -49,7 +49,7 @@ class RiskXMLWriter(writer.FileWriter):
 
         (curve_object, asset_object) = val
         node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP_OLD)
-        node.attrib['AssetID'] = asset_object['AssetID']    
+        node.attrib['assetID'] = asset_object['assetID']    
         pos = etree.SubElement(node, GML_OLD + "pos", nsmap=NSMAP_OLD)
         pos.text = "%s %s" % (str(point.x), str(point.y))
         
