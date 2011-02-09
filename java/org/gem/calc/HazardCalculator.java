@@ -1,5 +1,6 @@
 package org.gem.calc;
 
+import java.rmi.RemoteException;
 import java.text.DecimalFormat;
 import java.util.HashMap;
 import java.util.List;
@@ -87,7 +88,7 @@ public class HazardCalculator {
                 curveCalculator.getHazardCurve(hazardCurve, site, gmpeMap, erf);
                 results.put(site, hazardCurve);
             }
-        } catch (Exception e) {
+        } catch (RemoteException e) {
             logger.error(e);
             throw new RuntimeException(e);
         }
