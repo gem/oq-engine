@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 This module defines functions to compute loss ratio curves
 using the classical psha based approach.
@@ -112,14 +113,13 @@ def _compute_imls(vuln_function):
         the highest/lowest values a special case
     """
 
-
     imls = vuln_function.imls
 
+    # "special" cases for lowest part and highest part of the curve
     lowest_curve_value = imls[0] - ((imls[1] - imls[0]) / 2)
     highest_curve_value = imls[-1] + ((imls[-1] - imls[-2]) / 2)
-    between_curve_values = collect(loop(vuln_function.imls,
-            lambda x, y: mean([x, y])))
 
+    between_curve_values = collect(loop(imls, lambda x, y: mean([x, y])))
     
     return [lowest_curve_value] + between_curve_values + [highest_curve_value]
 
