@@ -95,9 +95,12 @@ class RiskCurvePlotter(CurvePlotter):
     def _parse_nrml_file(self):
         """Parse loss/loss ratio curve data from NRML file into a dictionary."""
 
-        nrml_element = risk_parser.NrmlFile(self.nrml_input_path,
-            mode=self.mode)
-
+        if self.mode == 'loss_ratio':
+            nrml_element = risk_parser.LossRatioCurveXMLReader(
+                self.nrml_input_path)
+        else:
+            nrml_element = risk_parser.LossCurveXMLReader(self.nrml_input_path)
+        
         # loss/loss ratio curves have a common *ordinate* for all curves
         # in an NRML file
         for (nrml_point, nrml_attr) in nrml_element.filter(

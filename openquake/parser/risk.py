@@ -1,27 +1,32 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""This module contains a class that parses NRML instance document files
+"""
+This module contains a class that parses NRML instance document files
 for the output of risk computations. At the moment, loss and loss curve data
-is supported. The root element of such NRML instance documents 
-is <RiskResult>.
+is supported.
 """
 
 from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML_NS_OLD, GML_NS_OLD, NRML_OLD
+from openquake import xml
 
+from openquake.parser import nrml
+
+#from openquake.xml import NRML_NS_OLD, GML_NS_OLD, NRML_OLD
+
+# TODO(fab): use same function from xml module
 def _to_site(element):
     """Convert current GML attributes to Site object."""
     # lon/lat are in XML attributes 'Longitude' and 'Latitude'
     # consider them as mandatory
-    pos_el = element.xpath("gml:pos", namespaces={"gml": GML_NS_OLD})
+    pos_el = element.xpath("gml:pos", namespaces={"gml": xml.GML_NS_OLD})
     coord = [float(x) for x in pos_el[0].text.strip().split()]
     return shapes.Site(coord[0], coord[1])
 
-class NrmlFile(producer.FileProducer):
+class RiskXMLReader(producer.FileProducer):
     """ This class parses a NRML loss/loss ratio curve file. 
     The class is implemented as a generator. 
     For each curve element in the parsed 
@@ -37,8 +42,7 @@ class NrmlFile(producer.FileProducer):
     }
     """
 
-    def __init__(self, path, mode='loss'):
-        self.mode = mode
+    def __init__(self, path):
 
         self.ordinate_property = 'Probability of Exceedance'
         self.abscissa_element = 'Values'
@@ -47,23 +51,19 @@ class NrmlFile(producer.FileProducer):
         self.ordinate_output_key = 'POE'
         self.property_output_key = 'Property'
 
-        if self.mode == 'loss_ratio':
-            self.abscissa_property = 'Loss Ratio'
-            self.ordinate_element = 'LossRatioCurvePE'
-            self.abscissa_container = 'LossRatioCurve'
-        else:
-            self.abscissa_property = 'Loss'
-            self.ordinate_element = 'LossCurvePE'
-            self.abscissa_container = 'LossCurve'
+        
+        self.abscissa_property = None
+        self.ordinate_element = None
+        self.abscissa_container = None
 
-        super(NrmlFile, self).__init__(path)
+        super(RiskXMLReader, self).__init__(path)
 
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
             if event == 'end' and \
-                element.tag == NRML_OLD + self.abscissa_container:
-                yield (_to_site(element), 
+                element.tag == xml.NRML_OLD + self.abscissa_container:
+                yield (shapes.Site(xml.lon_lat_from_site(element)), 
                        self._to_attributes(element))
 
     def _to_attributes(self, element):
@@ -81,7 +81,7 @@ class NrmlFile(producer.FileProducer):
                 self.ordinate_output_key, float_strip)):
             
             child_node = element.xpath(child_el, 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
+                namespaces={"gml": xml.GML_NS_OLD, "nrml": xml.NRML_NS_OLD})
 
             try:
                 attributes[child_key] = etl(child_node)
@@ -91,4 +91,30 @@ class NrmlFile(producer.FileProducer):
         
         attributes["AssetID"] = element.attrib.get("AssetID", None)
         return attributes
+
+
+class LossCurveXMLReader(RiskXMLReader):
+    """NRML parser class for loss curves"""
+    
+    abscissa_property = 'Loss'
+    ordinate_element = 'LossCurvePE'
+    abscissa_container = 'LossCurve'
+
+    #container_tag = "%slossCurveList" % xml.NRML
+    #curves_tag = "%slossCurves" % xml.NRML
+    #curve_tag = "%slossCurve" % xml.NRML
+    #abscissa_tag = "%sloss" % xml.NRML
+    
+
+class LossRatioCurveXMLReader(RiskXMLReader):
+    """NRML parser class for loss ratio curves"""
+
+    abscissa_property = 'Loss Ratio'
+    ordinate_element = 'LossRatioCurvePE'
+    abscissa_container = 'LossRatioCurve'
+
+    #container_tag = "%slossRatioCurveList" % xml.NRML
+    #curves_tag = "%slossRatioCurves" % xml.NRML
+    #curve_tag = "%slossRatioCurve" % xml.NRML
+    #abscissa_tag = "%slossRatio" % xml.NRML
 
