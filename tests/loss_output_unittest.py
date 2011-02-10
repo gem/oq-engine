@@ -14,12 +14,14 @@ from openquake import test
 from openquake import xml
 
 from openquake.output import risk as risk_output
-from openquake.risk import engines
 
 log = logs.RISK_LOG
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
+
+SINGLE_LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
+SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 
 LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
@@ -41,6 +43,12 @@ class LossOutputTestCase(unittest.TestCase):
         self.loss_curve_path = test.test_output_file(LOSS_XML_OUTPUT_FILE)
         self.loss_ratio_curve_path = test.test_output_file(
             LOSS_RATIO_XML_OUTPUT_FILE)
+
+        self.single_loss_curve_path = test.test_output_file(
+            SINGLE_LOSS_XML_OUTPUT_FILE)
+        self.single_loss_ratio_curve_path = test.test_output_file(
+            SINGLE_LOSS_RATIO_XML_OUTPUT_FILE)
+
         self.schema_path = NRML_SCHEMA_PATH
 
         # Build up some sample loss/loss ratio curves here
@@ -63,6 +71,12 @@ class LossOutputTestCase(unittest.TestCase):
             (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_b)),
             (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_a)),
             (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))] 
+
+        self.single_loss_curve = [
+            (first_site, (TEST_LOSS_CURVE, first_asset_a))] 
+
+        self.single_loss_ratio_curve = [
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))] 
 
         # loss curve that fails with inconsistent sites for an asset
         self.loss_curves_fail = [
@@ -96,57 +110,55 @@ class LossOutputTestCase(unittest.TestCase):
             test.test_output_file(LOSS_XML_FAIL_OUTPUT_FILE))
         self.assertRaises(ValueError, xml_writer.serialize, 
             self.loss_curves_fail)
-
-    # http://www.devcomments.com/error-restricting-complexType-list-parsing-official-GML-schema-at108628.htm
-    # skip unless we have the parser for new risk NRML
-    @test.skipit
-    def test_xml_is_valid(self):
-        # save the xml, and run schema validation on it
-        xml_doc = etree.parse(self.loss_curve_path)
-        loaded_xml = xml_doc.getroot()
-
-        # Test that the doc matches the schema
-        xmlschema = etree.XMLSchema(etree.parse(self.schema_path))
-        xmlschema.assertValid(xml_doc)
     
-    # skip unless we have the parser for new risk NRML
-    @test.skipit
     def test_loss_xml_is_correct(self):
-        xml_doc = etree.parse(self.loss_curve_path)
+
+        # serialize curves
+        xml_writer = risk_output.LossCurveXMLWriter(self.single_loss_curve_path)
+        xml_writer.serialize(self.single_loss_curve)
+
+        # parse curves DOM-style
+        xml_doc = etree.parse(self.single_loss_curve_path)
         loaded_xml = xml_doc.getroot()
 
-        xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.NRML_OLD + "LossCurvePE//"
-                + xml.NRML_OLD + "Values").text.strip().split())
-        xml_first_curve_value = loaded_xml.find(
-                xml.NRML_OLD + "LossCurveList//" 
-                + xml.NRML_OLD + "LossCurve//"
-                + xml.NRML_OLD + "Values").text.strip().split()
+        poe_el_txt = loaded_xml.findtext(".//%s" % xml.RISK_POE_TAG)
+        poe_values = [float(x) for x in poe_el_txt.strip().split()]
 
-        for idx, val in enumerate(TEST_CURVE.abscissae):
-            self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
-        for idx, val in enumerate(TEST_CURVE.ordinates):
-            self.assertAlmostEqual(val, float(xml_first_curve_value[idx]), 6)
+        loss_el_txt = loaded_xml.findtext(
+            ".//%s" % xml.RISK_LOSS_ABSCISSA_TAG)
+        loss_values = [float(x) \
+            for x in loss_el_txt.strip().split()]
+
+        for idx, val in enumerate(TEST_LOSS_CURVE.abscissae):
+            self.assertAlmostEqual(val, float(loss_values[idx]), 6)
+        for idx, val in enumerate(TEST_LOSS_CURVE.ordinates):
+            self.assertAlmostEqual(val, float(poe_values[idx]), 6)
+
 
     # TODO(jmc): Test that the lat and lon are correct for each curve
     # Optionally, compare it to another XML file.
 
-    # skip unless we have the parser for new risk NRML
-    @test.skipit
-    def test_ratio_xml_is_correct(self):
-        xml_doc = etree.parse(self.loss_ratio_curve_path)
+    def test_loss_ratio_xml_is_correct(self):
+
+        # serialize curves
+        xml_writer = risk_output.LossRatioCurveXMLWriter(
+            self.single_loss_ratio_curve_path)
+        xml_writer.serialize(self.single_loss_ratio_curve)
+
+        # parse curves DOM-style
+        xml_doc = etree.parse(self.single_loss_ratio_curve_path)
         loaded_xml = xml_doc.getroot()
 
-        xml_curve_pe = map(float, loaded_xml.find(".//"
-                + xml.NRML_OLD + "LossRatioCurvePE//"
-                + xml.NRML_OLD + "Values").text.strip().split())
-        xml_first_curve_value = loaded_xml.find(
-                xml.NRML_OLD + "LossRatioCurveList//" 
-                + xml.NRML_OLD + "LossRatioCurve//"
-                + xml.NRML_OLD + "Values").text.strip().split()
+        poe_el_txt = loaded_xml.findtext(".//%s" % xml.RISK_POE_TAG)
+        poe_values = [float(x) for x in poe_el_txt.strip().split()]
 
-        for idx, val in enumerate(TEST_CURVE.abscissae):
-            self.assertAlmostEqual(val, float(xml_curve_pe[idx]), 6)
-        for idx, val in enumerate(TEST_CURVE.ordinates):
-            self.assertAlmostEqual(val, float(xml_first_curve_value[idx]), 6)
+        loss_ratio_el_txt = loaded_xml.findtext(
+            ".//%s" % xml.RISK_LOSS_RATIO_ABSCISSA_TAG)
+        loss_ratio_values = [float(x) \
+            for x in loss_ratio_el_txt.strip().split()]
+
+        for idx, val in enumerate(TEST_LOSS_RATIO_CURVE.abscissae):
+            self.assertAlmostEqual(val, float(loss_ratio_values[idx]), 6)
+        for idx, val in enumerate(TEST_LOSS_RATIO_CURVE.ordinates):
+            self.assertAlmostEqual(val, float(poe_values[idx]), 6)
 
