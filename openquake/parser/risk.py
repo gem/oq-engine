@@ -42,21 +42,21 @@ class RiskXMLReader(producer.FileProducer):
     }
     """
 
-    def __init__(self, path):
+    # these tag names and properties have to be redefined in the 
+    # derived classes
+    abscissa_property = None
+    ordinate_element = None
+    abscissa_container = None
 
-        self.ordinate_property = 'Probability of Exceedance'
-        self.abscissa_element = 'Values'
+    ordinate_property = 'Probability of Exceedance'
+    abscissa_element = 'Values'
 
-        self.abscissa_output_key = 'Values'
-        self.ordinate_output_key = 'POE'
-        self.property_output_key = 'Property'
+    abscissa_output_key = 'Values'
+    ordinate_output_key = 'POE'
+    property_output_key = 'Property'
 
-        
-        self.abscissa_property = None
-        self.ordinate_element = None
-        self.abscissa_container = None
-
-        super(RiskXMLReader, self).__init__(path)
+    #def __init__(self, path):
+        #super(RiskXMLReader, self).__init__(path)
 
     def _parse(self):
         for event, element in etree.iterparse(
