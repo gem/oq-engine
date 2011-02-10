@@ -29,12 +29,6 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
     curves_tag = None
     curve_tag = None
     abscissa_tag = None
-    
-    result_tag = "%sriskResult" % xml.NRML
-    asset_tag = "%sasset" % xml.NRML
-    site_tag = "%ssite" % xml.NRML
-    poe_tag = "%spoE" % xml.NRML
-    end_branch_attr_name = 'endBranchLabel'
 
     CONTAINER_DEFAULT_ID = 'c1'
 
@@ -76,7 +70,7 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
                 nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
             
             # nrml:riskResult, needs gml:id
-            result_el = etree.SubElement(self.root_node, self.result_tag)
+            result_el = etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
             if 'riskres_id' in asset_object:
                 nrml.set_gml_id(result_el, str(asset_object['riskres_id']))
             else:
@@ -97,14 +91,15 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
         except KeyError:
             
             # nrml:asset, needs gml:id
-            asset_el = etree.SubElement(self.curve_list_el, self.asset_tag)
+            asset_el = etree.SubElement(self.curve_list_el, 
+                xml.RISK_ASSET_TAG)
             nrml.set_gml_id(asset_el, asset_id)
             self.assets_per_id[asset_id] = asset_el
 
         # check if nrml:site is already existing
-        site_el = asset_el.find(self.site_tag)
+        site_el = asset_el.find(xml.RISK_SITE_TAG)
         if site_el is None:
-            site_el = etree.SubElement(asset_el, self.site_tag)
+            site_el = etree.SubElement(asset_el, xml.RISK_SITE_TAG)
 
             point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
             point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
@@ -126,30 +121,29 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
 
         # attribute for endBranchLabel (optional)
         if 'endBranchLabel' in asset_object:
-            curve_el.set(self.end_branch_attr_name, 
-                str(asset_object[self.end_branch_attr_name]))
+            curve_el.set(xml.RISK_END_BRANCH_ATTR_NAME, 
+                str(asset_object[xml.RISK_END_BRANCH_ATTR_NAME]))
 
         abscissa_el = etree.SubElement(curve_el, self.abscissa_tag)
         abscissa_el.text = _curve_vals_as_gmldoublelist(curve_object)
 
-        poe_el = etree.SubElement(curve_el, self.poe_tag)
+        poe_el = etree.SubElement(curve_el, xml.RISK_POE_TAG)
         poe_el.text = _curve_poe_as_gmldoublelist(curve_object)
 
 
 class LossCurveXMLWriter(RiskXMLWriter):
     """NRML serialization of loss curves"""
-    container_tag = "%slossCurveList" % xml.NRML
-    curves_tag = "%slossCurves" % xml.NRML
-    curve_tag = "%slossCurve" % xml.NRML
-    abscissa_tag = "%sloss" % xml.NRML
-    
+    container_tag = xml.RISK_LOSS_CONTAINER_TAG
+    curves_tag = xml.RISK_LOSS_CURVES_TAG
+    curve_tag = xml.RISK_LOSS_CURVE_TAG
+    abscissa_tag = xml.RISK_LOSS_ABSCISSA_TAG
 
 class LossRatioCurveXMLWriter(RiskXMLWriter):
     """NRML serialization of loss ratio curves"""
-    container_tag = "%slossRatioCurveList" % xml.NRML
-    curves_tag = "%slossRatioCurves" % xml.NRML
-    curve_tag = "%slossRatioCurve" % xml.NRML
-    abscissa_tag = "%slossRatio" % xml.NRML
+    container_tag = xml.RISK_LOSS_RATIO_CONTAINER_TAG
+    curves_tag = xml.RISK_LOSS_RATIO_CURVES_TAG
+    curve_tag = xml.RISK_LOSS_RATIO_CURVE_TAG
+    abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 def _curve_vals_as_gmldoublelist(curve_object):
     """Return the list of loss/loss ratio values from a curve object.

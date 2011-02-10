@@ -44,6 +44,23 @@ GML_POS_TAG = "%spos" % GML
 GML_SRS_ATTR_NAME = 'srsName'
 GML_SRS_EPSG_4326 = 'epsg:4326'
 
+# common risk tag names
+RISK_RESULT_TAG = "%sriskResult" % NRML
+RISK_ASSET_TAG = "%sasset" % NRML
+RISK_SITE_TAG = "%ssite" % NRML
+RISK_POE_TAG = "%spoE" % NRML
+RISK_END_BRANCH_ATTR_NAME = 'endBranchLabel'
+
+RISK_LOSS_CONTAINER_TAG = "%slossCurveList" % NRML
+RISK_LOSS_CURVES_TAG = "%slossCurves" % NRML
+RISK_LOSS_CURVE_TAG = "%slossCurve" % NRML
+RISK_LOSS_ABSCISSA_TAG = "%sloss" % NRML
+
+RISK_LOSS_RATIO_CONTAINER_TAG = "%slossRatioCurveList" % NRML
+RISK_LOSS_RATIO_CURVES_TAG = "%slossRatioCurves" % NRML
+RISK_LOSS_RATIO_CURVE_TAG = "%slossRatioCurve" % NRML
+RISK_LOSS_RATIO_ABSCISSA_TAG = "%slossRatio" % NRML
+
 def validatesAgainstXMLSchema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
