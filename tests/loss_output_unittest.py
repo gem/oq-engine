@@ -129,6 +129,9 @@ class LossOutputTestCase(unittest.TestCase):
         loss_values = [float(x) \
             for x in loss_el_txt.strip().split()]
 
+        self.assertEqual(len(loss_values), len(TEST_LOSS_CURVE.abscissae), 
+            "curve length mismatch")
+
         for idx, val in enumerate(TEST_LOSS_CURVE.abscissae):
             self.assertAlmostEqual(val, float(loss_values[idx]), 6)
         for idx, val in enumerate(TEST_LOSS_CURVE.ordinates):
@@ -156,6 +159,10 @@ class LossOutputTestCase(unittest.TestCase):
             ".//%s" % xml.RISK_LOSS_RATIO_ABSCISSA_TAG)
         loss_ratio_values = [float(x) \
             for x in loss_ratio_el_txt.strip().split()]
+
+        self.assertEqual(len(loss_ratio_values), 
+            len(TEST_LOSS_RATIO_CURVE.abscissae), 
+            "curve length mismatch")
 
         for idx, val in enumerate(TEST_LOSS_RATIO_CURVE.abscissae):
             self.assertAlmostEqual(val, float(loss_ratio_values[idx]), 6)
