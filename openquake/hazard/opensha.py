@@ -283,8 +283,6 @@ class ClassicalMixin(BasePSHAMixin):
         mean, or quantile.
         """
 
-        # LOG.debug("KEYS (%s): %s" % (len(curve_keys), curve_keys))
-
         if _is_mean_hazard_curve_key(curve_keys[0]):
             hc_attrib_update = {'statistics': 'mean'}
             filename_part = 'mean'
@@ -356,7 +354,6 @@ class ClassicalMixin(BasePSHAMixin):
                     raise ValueError(error_msg)
 
             hc = kvs.get_value_json_decoded(hc_key)
-            #LOG.debug("JSON HC: %s" % hc)
             
             site_obj = shapes.Site(float(hc['site_lon']), 
                                    float(hc['site_lat']))
@@ -399,8 +396,6 @@ class ClassicalMixin(BasePSHAMixin):
         Mixing of these three cases is not allowed, i.e., all hazard maps
         from the set of curve_keys have to be either for mean, or quantile.
         """
-
-        # LOG.debug("KEYS (%s): %s" % (len(map_keys), map_keys))
 
         poe_list = [float(x) for x in \
             self.params[classical_psha.POES_PARAM_NAME].split()]
