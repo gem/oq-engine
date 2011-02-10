@@ -20,8 +20,8 @@ log = logs.RISK_LOG
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 
-SINGLE_LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
-SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
+SINGLE_LOSS_XML_OUTPUT_FILE = 'loss-curves-single.xml'
+SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves-single.xml'
 
 LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
