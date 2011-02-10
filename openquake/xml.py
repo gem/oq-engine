@@ -40,6 +40,7 @@ NRML_CONFIG_TAG = "%sconfig" % NRML
 
 GML_POINT_TAG = "%sPoint" % GML
 GML_POS_TAG = "%spos" % GML
+GML_ID_ATTR_NAME = "%sid" % GML
 
 GML_SRS_ATTR_NAME = 'srsName'
 GML_SRS_EPSG_4326 = 'epsg:4326'
@@ -51,15 +52,19 @@ RISK_SITE_TAG = "%ssite" % NRML
 RISK_POE_TAG = "%spoE" % NRML
 RISK_END_BRANCH_ATTR_NAME = 'endBranchLabel'
 
+RISK_CURVE_ORDINATE_PROPERTY = 'Probability of Exceedance'
+
 RISK_LOSS_CONTAINER_TAG = "%slossCurveList" % NRML
 RISK_LOSS_CURVES_TAG = "%slossCurves" % NRML
 RISK_LOSS_CURVE_TAG = "%slossCurve" % NRML
 RISK_LOSS_ABSCISSA_TAG = "%sloss" % NRML
+RISK_LOSS_ABSCISSA_PROPERTY = 'Loss'
 
 RISK_LOSS_RATIO_CONTAINER_TAG = "%slossRatioCurveList" % NRML
 RISK_LOSS_RATIO_CURVES_TAG = "%slossRatioCurves" % NRML
 RISK_LOSS_RATIO_CURVE_TAG = "%slossRatioCurve" % NRML
 RISK_LOSS_RATIO_ABSCISSA_TAG = "%slossRatio" % NRML
+RISK_LOSS_RATIO_ABSCISSA_PROPERTY = 'Loss Ratio'
 
 def validatesAgainstXMLSchema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
@@ -79,14 +84,17 @@ def element_equal_to_site(element, site):
 
 def lon_lat_from_site(element):
     """Extract (lon, lat) pair from gml:pos sub-element of element."""
-    pos_el = element.find(".//%s" % GML_POS_TAG)
+    pos_el = element.findall(".//%s" % GML_POS_TAG)
     if len(pos_el) > 1:
         error_msg = "site element %s has more than one gml:pos elements" % (
             element)
         raise ValueError(error_msg)
-    return lon_lat_from_gml_pos(pos_el)
+    return lon_lat_from_gml_pos(pos_el[0])
 
 def lon_lat_from_gml_pos(pos_el):
     """Return (lon, lat) coordinate pair from gml:pos element."""
     coord = pos_el.text.strip().split()
     return (float(coord[0]), float(coord[1]))
+
+def strip_namespace_from_tag(full_tag, namespace):
+    return full_tag[len(namespace):]

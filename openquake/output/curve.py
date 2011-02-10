@@ -107,7 +107,7 @@ class RiskCurvePlotter(CurvePlotter):
             region_constraint=None):
 
             site_hash = nrml_point.hash()
-            curve_id = nrml_attr['AssetID']
+            curve_id = nrml_attr['assetID']
 
             if site_hash not in self.data:
                 self.data[site_hash] = {
