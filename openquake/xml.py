@@ -67,10 +67,9 @@ def lon_lat_from_site(element):
         error_msg = "site element %s has more than one gml:pos elements" % (
             element)
         raise ValueError(error_msg)
-    return lon_lat_from_gml_pos(pos_el.text)
+    return lon_lat_from_gml_pos(pos_el)
 
-def lon_lat_from_gml_pos(pos_text):
-    """Return (lon, lat) coordinate pair from text node 
-    of gml:pos element."""
-    coord = pos_text.strip().split()
+def lon_lat_from_gml_pos(pos_el):
+    """Return (lon, lat) coordinate pair from gml:pos element."""
+    coord = pos_el.text.strip().split()
     return (float(coord[0]), float(coord[1]))
