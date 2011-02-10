@@ -26,7 +26,10 @@ class RiskXMLReader(producer.FileProducer):
     is a dictionary with risk-related attribute values for this site.
     
     The attribute dictionary looks like
-    {'assetID': 'a100',
+    {'nrml_id': 'nrml',
+     'result_id': 'rr',
+     'list_id': 'list_1',
+     'assetID': 'a100',
      'poE': [0.2, 0.02, ...], 
      'loss': [0.0, 1280.0, ...], # for loss
      'lossRatio': [0.0, 0.1, ...], # for loss ratio
@@ -59,7 +62,10 @@ class RiskXMLReader(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'start' and element.tag == xml.RISK_ASSET_TAG:
+            if event == 'start' and element.tag == xml.NRML_ROOT_TAG:
+                self._to_id_attributes(element)
+
+            elif event == 'start' and element.tag == xml.RISK_ASSET_TAG:
                 self._to_asset_attributes(element)
 
             elif event == 'end' and element.tag == self.curve_tag:
@@ -67,8 +73,27 @@ class RiskXMLReader(producer.FileProducer):
                 curr_attributes = self._to_curve_attributes(element)
 
                 # free memory of just parsed element
-                del element
+                element.clear()
                 yield (self._current_site, curr_attributes)
+
+    def _to_id_attributes(self, element):
+        """Collect id attributes from root element."""
+
+        self._current_id_meta = {}
+
+        # get nrml id
+        self._current_id_meta['nrml_id'] = \
+            element.attrib[xml.GML_ID_ATTR_NAME]
+
+        # get riskResult id
+        curr_el = element.find('.//%s' % xml.RISK_RESULT_TAG)
+        self._current_id_meta['result_id'] = \
+            curr_el.attrib[xml.GML_ID_ATTR_NAME]
+
+        # get lossCurveList id
+        curr_el = element.find('.//%s' % self.container_tag)
+        self._current_id_meta['list_id'] = \
+            curr_el.attrib[xml.GML_ID_ATTR_NAME]
 
     def _to_asset_attributes(self, element):
         """Collect metadata attributes for new asset element."""
@@ -102,6 +127,7 @@ class RiskXMLReader(producer.FileProducer):
             attributes[xml.RISK_END_BRANCH_ATTR_NAME] = \
                 element.attrib[xml.RISK_END_BRANCH_ATTR_NAME]
  
+        attributes.update(self._current_id_meta)
         attributes.update(self._current_asset_meta)
         return attributes
 
