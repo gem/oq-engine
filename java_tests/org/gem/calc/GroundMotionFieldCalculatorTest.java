@@ -22,6 +22,7 @@ import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.DoubleParameter;
+import org.opensha.commons.param.StringParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.sha.calc.HazardCurveCalculator;
@@ -31,6 +32,7 @@ import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.attenRelImpl.AS_1997_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
+import org.opensha.sha.imr.attenRelImpl.SadighEtAl_1997_AttenRel;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
@@ -66,7 +68,7 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         Random rn = new Random();
         GroundMotionFieldCalculator.getStochasticGroundMotionField(imr,
@@ -80,7 +82,7 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         Random rn = new Random();
         GroundMotionFieldCalculator.getStochasticGroundMotionField(imr,
@@ -97,7 +99,7 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         Random rn = new Random();
         GroundMotionFieldCalculator.getStochasticGroundMotionField(attenRel,
@@ -115,7 +117,7 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         Random rn = new Random();
         GroundMotionFieldCalculator.getStochasticGroundMotionField(imr, rup,
@@ -132,10 +134,25 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         GroundMotionFieldCalculator.getStochasticGroundMotionField(imr,
                 rupture, sites, rn);
+    }
+
+    @Test
+    public void attenRelWithOnlyTotalStandardDev() {
+        /**
+         * This test compares hazard curves calculated with the classical
+         * approach and by generating multiple ground motion fields. No
+         * truncation is assumed for the GMPE. The chosen GMPE support only
+         * total standard deviation. This test check if the stochastic ground
+         * motion field calculator can handle this situation.
+         */
+        String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
+        double truncationLevel = 2.0;
+        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel,
+                new SadighEtAl_1997_AttenRel(this));
     }
 
     @Test
@@ -148,7 +165,8 @@ public class GroundMotionFieldCalculatorTest implements
          */
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 2.0;
-        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
+        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel,
+                new BA_2008_AttenRel(this));
     }
 
     @Test
@@ -161,7 +179,8 @@ public class GroundMotionFieldCalculatorTest implements
          */
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED;
         double truncationLevel = 2.0;
-        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
+        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel,
+                new BA_2008_AttenRel(this));
     }
 
     @Test
@@ -174,7 +193,8 @@ public class GroundMotionFieldCalculatorTest implements
          */
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_1SIDED;
         double truncationLevel = 2.0;
-        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel);
+        compareHazardCurveForSingleEarthquake(truncationType, truncationLevel,
+                new BA_2008_AttenRel(this));
     }
 
     @Test
@@ -192,7 +212,7 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         Boolean inter_event = false;
         Boolean vs30Cluster = false;
@@ -263,7 +283,7 @@ public class GroundMotionFieldCalculatorTest implements
 
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
 
         Boolean inter_event = true;
         Boolean vs30Cluster = false;
@@ -321,7 +341,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = new Random(seed);
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         ScalarIntensityMeasureRelationshipAPI imr = null;
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -337,7 +357,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = new Random(seed);
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         EqkRupture rupture = null;
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -353,7 +373,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = new Random(seed);
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         List<Site> siteList = null;
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -369,7 +389,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = new Random(seed);
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         List<Site> siteList = new ArrayList<Site>();
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -385,7 +405,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = null;
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         List<Site> siteList = new ArrayList<Site>();
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -402,7 +422,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = new Random(seed);
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         List<Site> siteList = new ArrayList<Site>();
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -418,7 +438,7 @@ public class GroundMotionFieldCalculatorTest implements
         Random rn = new Random(seed);
         String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
         double truncationLevel = 1.0;
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, new BA_2008_AttenRel(this));
         List<Site> siteList = new ArrayList<Site>();
         Map<Site, Double> map =
                 GroundMotionFieldCalculator
@@ -489,9 +509,9 @@ public class GroundMotionFieldCalculatorTest implements
     }
 
     private void compareHazardCurveForSingleEarthquake(String truncationType,
-            double truncationLevel) {
+            double truncationLevel, ScalarIntensityMeasureRelationshipAPI ar) {
 
-        setImr(truncationType, truncationLevel);
+        setImr(truncationType, truncationLevel, ar);
 
         // calculate hazard curve following classical approach
         try {
@@ -540,6 +560,10 @@ public class GroundMotionFieldCalculatorTest implements
     private void setSite() {
         Site site = new Site(new Location(33.8, -117.4));
         site.addParameter(new DoubleParameter(Vs30_Param.NAME, 760.0));
+        StringParameter sadighSiteType =
+                new StringParameter("Sadigh Site Type");
+        sadighSiteType.setValue("Rock");
+        site.addParameter(sadighSiteType);
         this.site = site;
     }
 
@@ -564,8 +588,9 @@ public class GroundMotionFieldCalculatorTest implements
         }
     }
 
-    private void setImr(String truncationType, double truncationLevel) {
-        this.imr = new BA_2008_AttenRel(this);
+    private void setImr(String truncationType, double truncationLevel,
+            ScalarIntensityMeasureRelationshipAPI ar) {
+        this.imr = ar;
         this.imr.setParamDefaults();
         this.imr.getParameter(SigmaTruncTypeParam.NAME)
                 .setValue(truncationType);
