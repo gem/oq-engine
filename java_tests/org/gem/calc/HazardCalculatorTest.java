@@ -2,10 +2,8 @@ package org.gem.calc;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -97,9 +95,11 @@ public class HazardCalculatorTest {
     /**
      * Check that hazard curves stored in map are exactly those calculated from
      * the method getHazardCurve in {@link HazardCurveCalculator}
+     * 
+     * @throws Exception
      */
     @Test
-    public void checkHazardCurves() {
+    public void checkHazardCurves() throws Exception {
         Map<Site, DiscretizedFuncAPI> results =
                 HazardCalculator.getHazardCurves(siteList, erf, gmpeMap,
                         imlVals, integrationDistance);
@@ -108,16 +108,12 @@ public class HazardCalculatorTest {
         for (Double val : imlVals) {
             hazCurve.set(val, 1.0);
         }
-        try {
-            hazCurveCal = new HazardCurveCalculator();
-            hazCurveCal.setMaxSourceDistance(integrationDistance);
-            for (Site site : siteList) {
-                hazCurveCal.getHazardCurve(hazCurve, site, gmpeMap, erf);
-                assertTrue(hazCurve.equals(results.get(site)));
-            }
-        } catch (RemoteException e) {
-            String msg = "Unexpected exception: " + e.getMessage();
-            fail(msg);
+
+        hazCurveCal = new HazardCurveCalculator();
+        hazCurveCal.setMaxSourceDistance(integrationDistance);
+        for (Site site : siteList) {
+            hazCurveCal.getHazardCurve(hazCurve, site, gmpeMap, erf);
+            assertTrue(hazCurve.equals(results.get(site)));
         }
     }
 
