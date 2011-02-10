@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
-"""Constants and helper functions for XML processing,
-including namespaces, and namespace maps."""
+"""
+Constants and helper functions for XML processing,
+including namespaces, and namespace maps.
+"""
 
 from lxml import etree
+
+from openquake import shapes
+
 
 NRML_SCHEMA_FILE = 'nrml.xsd'
 
@@ -28,8 +33,44 @@ NRML_OLD = "{%s}" % NRML_NS_OLD
 GML_OLD = "{%s}" % GML_NS_OLD
 
 NSMAP_OLD = {None: NRML_NS_OLD, "gml": GML_NS_OLD}
+# end TODO
+
+NRML_ROOT_TAG = "%snrml" % NRML
+NRML_CONFIG_TAG = "%sconfig" % NRML
+
+GML_POINT_TAG = "%sPoint" % GML
+GML_POS_TAG = "%spos" % GML
+
+GML_SRS_ATTR_NAME = 'srsName'
+GML_SRS_EPSG_4326 = 'epsg:4326'
 
 def validatesAgainstXMLSchema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
     return xmlschema.validate(xml_doc)
+
+def element_equal_to_site(element, site):
+    """Check whether a given XML element (containing a gml:pos) has the same
+    coordinates as a shapes.Site.
+    Note: doesn't check whether the spatial reference system is the same.
+    """
+    (element_lon, element_lat) = lon_lat_from_site(element)
+    if site == shapes.Site(element_lon, element_lat):
+        return True
+    else:
+        return False
+
+def lon_lat_from_site(element):
+    """Extract (lon, lat) pair from gml:pos sub-element of element."""
+    pos_el = element.find(".//%s" % GML_POS_TAG)
+    if len(pos_el) > 1:
+        error_msg = "site element %s has more than one gml:pos elements" % (
+            element)
+        raise ValueError(error_msg)
+    return lon_lat_from_gml_pos(pos_el.text)
+
+def lon_lat_from_gml_pos(pos_text):
+    """Return (lon, lat) coordinate pair from text node 
+    of gml:pos element."""
+    coord = pos_text.strip().split()
+    return (float(coord[0]), float(coord[1]))
