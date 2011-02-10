@@ -11,9 +11,9 @@ from lxml import etree
 from openquake import logs
 from openquake import shapes
 from openquake import writer
+from openquake import xml
 
 from openquake.output import nrml
-from openquake.xml import GML, NRML, NSMAP
 
 LOG = logs.RISK_LOG
 
@@ -30,10 +30,10 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
     curve_tag = None
     abscissa_tag = None
     
-    result_tag = "%sriskResult" % NRML
-    asset_tag = "%sasset" % NRML
-    site_tag = "%ssite" % NRML
-    poe_tag = "%spoE" % NRML
+    result_tag = "%sriskResult" % xml.NRML
+    asset_tag = "%sasset" % xml.NRML
+    site_tag = "%ssite" % xml.NRML
+    poe_tag = "%spoE" % xml.NRML
     end_branch_attr_name = 'endBranchLabel'
 
     CONTAINER_DEFAULT_ID = 'c1'
@@ -106,15 +106,15 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
         if site_el is None:
             site_el = etree.SubElement(asset_el, self.site_tag)
 
-            point_el = etree.SubElement(site_el, nrml.GML_POINT_TAG)
-            point_el.set(nrml.GML_SRS_ATTR_NAME, nrml.GML_SRS_EPSG_4326)
+            point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
+            point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
 
-            pos_el = etree.SubElement(point_el, nrml.GML_POS_TAG)
+            pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
             pos_el.text = "%s %s" % (point.longitude, point.latitude)
 
-        elif not nrml.element_equal_to_site(site_el, point):
+        elif not xml.element_equal_to_site(site_el, point):
             error_msg = "asset %s cannot have two differing sites: %s, %s " \
-                % (asset_id, nrml.lon_lat_from_site(site_el), point)
+                % (asset_id, xml.lon_lat_from_site(site_el), point)
             raise ValueError(error_msg)
 
         # loss/loss ratio curves - sub-element already created?
@@ -138,18 +138,18 @@ class RiskXMLWriter(nrml.TreeNRMLWriter):
 
 class LossCurveXMLWriter(RiskXMLWriter):
     """NRML serialization of loss curves"""
-    container_tag = "%slossCurveList" % NRML
-    curves_tag = "%slossCurves" % NRML
-    curve_tag = "%slossCurve" % NRML
-    abscissa_tag = "%sloss" % NRML
+    container_tag = "%slossCurveList" % xml.NRML
+    curves_tag = "%slossCurves" % xml.NRML
+    curve_tag = "%slossCurve" % xml.NRML
+    abscissa_tag = "%sloss" % xml.NRML
     
 
 class LossRatioCurveXMLWriter(RiskXMLWriter):
     """NRML serialization of loss ratio curves"""
-    container_tag = "%slossRatioCurveList" % NRML
-    curves_tag = "%slossRatioCurves" % NRML
-    curve_tag = "%slossRatioCurve" % NRML
-    abscissa_tag = "%slossRatio" % NRML
+    container_tag = "%slossRatioCurveList" % xml.NRML
+    curves_tag = "%slossRatioCurves" % xml.NRML
+    curve_tag = "%slossRatioCurve" % xml.NRML
+    abscissa_tag = "%slossRatio" % xml.NRML
 
 def _curve_vals_as_gmldoublelist(curve_object):
     """Return the list of loss/loss ratio values from a curve object.
