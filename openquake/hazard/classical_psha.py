@@ -143,9 +143,6 @@ def compute_mean_hazard_curves(job_id, sites):
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
         keys.append(key)
 
-        #LOG.debug("[MEAN_HAZARD_CURVES] Curve at %s is %s"
-                #% (key, mean_curve))
-
         kvs.set_value_json_encoded(key, mean_curve)
 
     return keys
@@ -176,9 +173,6 @@ def compute_quantile_hazard_curves(job, sites):
                     job.id, site, quantile)
             keys.append(key)
 
-            #LOG.debug("[QUANTILE_HAZARD_CURVES] Curve at %s is %s"
-                    #% (key, quantile_curve))
-
             kvs.set_value_json_encoded(key, quantile_curve)
 
     return keys
@@ -207,9 +201,6 @@ def _get_iml_from(curve, job, poe):
     poes = numpy.array(_extract_y_values_from(curve["curve"]))[::-1]
     imls = numpy.log(numpy.array(_extract_imls_from_config(job))[::-1])
 
-    #LOG.debug("HAZARD MAP PoEs: %s" % poes)
-    #LOG.debug("HAZARD MAP IMLs: %s" % numpy.exp(imls))
-
     site = shapes.Site(curve["site_lon"], curve["site_lat"])
 
     if poe > poes[-1]:
@@ -236,9 +227,6 @@ def _store_iml_for(curve, key, job, poe):
     im_level["site_lat"] = curve["site_lat"]
     im_level["vs30"] = float(job.params["REFERENCE_VS30_VALUE"])
     im_level["IML"] = _get_iml_from(curve, job, poe)
-
-    #LOG.debug("[HAZARD_MAP] Storing IML at %s with value %s"
-            #% (key, im_level))
 
     kvs.set_value_json_encoded(key, im_level)
 
