@@ -240,9 +240,9 @@ public class GroundMotionFieldCalculator {
         try {
             cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
         } catch (Exception e) {
-            // String msg = "Unexpected exception: " + e.getMessage();
-            // logger.error(msg);
-            // throw new RuntimeException(e);
+            String msg = "Unexpected exception: " + e.getMessage();
+            logger.error(msg);
+            throw new RuntimeException(e);
         }
 
         double[] intraEventResiduals =
@@ -342,14 +342,13 @@ public class GroundMotionFieldCalculator {
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
 
+        // period is changed only if defined in attenRel
         double period = 0.0;
         try {
             period =
                     (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
         } catch (Exception e) {
-            // String msg = "Unexpected exception: " + e.getMessage();
-            // logger.error(msg);
-            // throw new RuntimeException(e);
+
         }
 
         double correlationRange = Double.NaN;
