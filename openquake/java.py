@@ -86,6 +86,11 @@ def jvm(max_mem=None):
     return jpype
 
 
+# The default JVM max. memory size to be used in the absence of any other
+# setting or configuration.
+DEFAULT_JVM_MAX_MEM=4000
+
+
 def get_jvm_max_mem(max_mem):
     """
     Determine what the JVM maximum memory size should be.
