@@ -24,16 +24,19 @@ from openquake import logs
 from openquake import shapes
 from openquake import writer
 
-from openquake.xml import NSMAP, NRML_OLD, NRML, GML, NSMAP_OLD, GML_OLD
+from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
 
 LOGGER = logs.HAZARD_LOG
 
 NRML_GML_ID = 'n1'
 HAZARDRESULT_GML_ID = 'hr1'
+GMFS_GML_ID = 'gmfs_1'
+GMF_GML_ID = 'gmf_1'
 SRS_EPSG_4326 = 'epsg:4326'
 
+
 class HazardCurveXMLWriter(writer.FileWriter):
-    """This class writes an hazard curve into the nrml format."""
+    """This class writes an hazard curve into the NRML format."""
 
     def __init__(self, path):
         super(HazardCurveXMLWriter, self).__init__(path)
@@ -45,7 +48,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         self.hcfield_counter = 0
 
     def close(self):
-        """Overrides the default implementation writing all the
+        """Override the default implementation writing all the
         collected lxml object model to the stream."""
 
         if self.nrml_el is None:
@@ -55,17 +58,17 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
         self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
             xml_declaration=True, encoding="UTF-8"))
-                
+
         super(HazardCurveXMLWriter, self).close()
             
     def write(self, point, values):
-        """Writes an hazard curve.
+        """Write an hazard curve.
         
         point must be of type shapes.Site
         values is a dictionary that matches the one produced by the
         parser nrml.NrmlFile
         """
-        
+
         # if we are writing the first hazard curve, create wrapping elements
         if self.nrml_el is None:
             
@@ -170,25 +173,40 @@ class GMFXMLWriter(writer.FileWriter):
     """This class serializes ground motion field (GMF) informatiuon
     to NRML format.
 
-    As of now, only the field information is supported. GMPEParameters is
+    As of now, only the GMFNode information is supported. GMPEParameters is
     serialized as a stub with the only attribute that is formally required
     (but doesn't have a useful definition in the schema).
     Rupture information and full GMPEParameters are currently 
     not supported."""
 
-    root_tag = NRML_OLD + "HazardResult"
-    config_tag = NRML_OLD + "Config"
-    gmpe_params_tag = NRML_OLD + "GMPEParameters"
-    container_tag = NRML_OLD + "GroundMotionFieldSet"
-    field_tag = NRML_OLD + "field"
-    site_tag = NRML_OLD + "site"
-    pos_tag = GML_OLD + "pos"
+    root_tag = NRML + "nrml"
+    hazard_result_tag = NRML + "hazardResult"
+    config_tag = NRML + "config"
+    hazard_processing_tag = NRML + "hazardProcessing"
+    gmpe_params_tag = NRML + "GMPEParameters"
+    groun_motion_field_set_tag = NRML + "groundMotionFieldSet"
+    field_tag = NRML + "GMF"
+    node_tag = NRML + "GMFNode"
+    site_tag = NRML + "site"
+    point_tag = GML + "Point"
+    pos_tag = GML + "pos"
     ground_motion_attr = "groundMotion"
+
+    def __init__(self, path):
+        super(GMFXMLWriter, self).__init__(path)
+        
+        self.node_counter = 0
+        
+        # <GMF/> where all the fields are appended
+        self.parent_node = None
+
+        # <nrml/> the root of the document
+        self.root_node = None
 
     def write(self, point, val):
         """Writes GMF for one site.
 
-        point must be of type shapes.Site
+        point must be of type shapes.Site or shapes.GridPoint
         val is a dictionary:
 
         {'groundMotion': 0.8}
@@ -200,53 +218,94 @@ class GMFXMLWriter(writer.FileWriter):
         self._append_site_node(point, val, self.parent_node)
 
     def write_header(self):
-        """Write out the file header"""
+        """Write out the file header."""
 
         # TODO(fab): support rupture element (not implemented so far)
         # TODO(fab): support full GMPEParameters (not implemented so far)
 
-        self.root_node = etree.Element(self.root_tag, nsmap=NSMAP_OLD)
-        config_node = etree.SubElement(self.root_node, self.config_tag, 
-                                       nsmap=NSMAP_OLD)
-        config_node.text = "Config file details go here."
+        self.root_node = etree.Element(
+                GMFXMLWriter.root_tag, nsmap=NSMAP_WITH_QUAKEML)
 
-        container_node = etree.SubElement(self.root_node, 
-                                          self.container_tag, nsmap=NSMAP_OLD)
+        _set_gml_id(self.root_node, NRML_GML_ID)
+        
+        hazard_result_node = etree.SubElement(self.root_node,
+                GMFXMLWriter.hazard_result_tag, nsmap=NSMAP)
 
-        gmpe_params_node = etree.SubElement(container_node, 
-                                            self.gmpe_params_tag, 
-                                            nsmap=NSMAP_OLD)
+        _set_gml_id(hazard_result_node, HAZARDRESULT_GML_ID)
+        
+        config_node = etree.SubElement(hazard_result_node,
+                GMFXMLWriter.config_tag, nsmap=NSMAP)
 
-        # field element
-        self.parent_node = etree.SubElement(container_node, self.field_tag, 
-                                            nsmap=NSMAP_OLD)
+        hazard_processing_node = etree.SubElement(config_node,
+                GMFXMLWriter.hazard_processing_tag, nsmap=NSMAP)
+
+        # stubbed value, not yet implemented...
+        hazard_processing_node.set(
+                "%sinvestigationTimeSpan" % NRML, str(50.0))
+
+        ground_motion_field_set_node = etree.SubElement(
+                hazard_result_node,
+                GMFXMLWriter.groun_motion_field_set_tag, nsmap=NSMAP)
+
+        _set_gml_id(ground_motion_field_set_node, GMFS_GML_ID)
+
+
+        gmpe_params_node = etree.SubElement(
+                ground_motion_field_set_node,
+                GMFXMLWriter.gmpe_params_tag, nsmap=NSMAP)
+
+        # stubbed value, not yet implemented...
+        gmpe_params_node.set("%sIMT" % NRML, "PGA")
+
+        # right now, all the sites are appended to one GMF
+        self.parent_node = etree.SubElement(
+                ground_motion_field_set_node,
+                GMFXMLWriter.field_tag, nsmap=NSMAP)
+
+        _set_gml_id(self.parent_node, GMF_GML_ID)
 
     def write_footer(self):
-        """Write out the file footer"""
+        """Write out the file footer."""
         et = etree.ElementTree(self.root_node)
         et.write(self.file, pretty_print=True, xml_declaration=True,
                  encoding="UTF-8")
-    
-    def _append_site_node(self, point, val, parent_node):
-        """Write outer and inner 'site' elements. Outer 'site' elements have
-        attribute 'groundMotion', inner 'site' elements have child element
-        <gml:pos> with lon/lat coordinates."""
-        outer_site_node = etree.SubElement(parent_node, self.site_tag, 
-                                           nsmap=NSMAP_OLD)
-        outer_site_node.attrib[self.ground_motion_attr] = str(
-            val[self.ground_motion_attr])
 
-        inner_site_node = etree.SubElement(outer_site_node, self.site_tag,
-                                           nsmap=NSMAP_OLD)
-        pos_node = etree.SubElement(inner_site_node, self.pos_tag, 
-                                    nsmap=NSMAP_OLD)
+    def _append_site_node(self, point, val, parent_node):
+        """Write a single GMFNode element."""
+
+        gmf_node = etree.SubElement(
+                parent_node, GMFXMLWriter.node_tag, nsmap=NSMAP)
+        
+        _set_gml_id(gmf_node, "node%s" % self.node_counter)
+        
+        site_node = etree.SubElement(
+                gmf_node, GMFXMLWriter.site_tag, nsmap=NSMAP)
+
+        point_node = etree.SubElement(site_node,
+                GMFXMLWriter.point_tag, nsmap=NSMAP)
+
+        pos_node = etree.SubElement(
+                point_node, GMFXMLWriter.pos_tag, nsmap=NSMAP)
+
         pos_node.text = "%s %s" % (str(point.x), str(point.y))
+
+        ground_motion_node = etree.SubElement(
+                gmf_node, GMFXMLWriter.ground_motion_attr, nsmap=NSMAP)
+
+        ground_motion_node.text = str(val[self.ground_motion_attr])
+
+        self.node_counter += 1
 
 
 def _set_optional_attributes(element, value_dict, attr_keys):
+    """Set the attributes for the given element specified
+    in attr_keys if they are present in the value_dict dictionary."""
+
     for curr_key in attr_keys:
         if curr_key in value_dict:
             element.set(curr_key, str(value_dict[curr_key]))
 
+
 def _set_gml_id(element, gml_id):
+    """Set the attribute gml:id for the given element."""
     element.set("%sid" % GML, str(gml_id))
