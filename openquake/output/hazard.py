@@ -20,13 +20,10 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 
 from lxml import etree
 
-from openquake import logs
 from openquake import shapes
 from openquake import writer
 
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
-
-LOGGER = logs.HAZARD_LOG
 
 NRML_GML_ID = 'n1'
 HAZARDRESULT_GML_ID = 'hr1'
@@ -75,18 +72,15 @@ class HazardCurveXMLWriter(writer.FileWriter):
             # nrml:nrml, needs gml:id
             self.nrml_el = etree.Element("%snrml" % NRML, nsmap=NSMAP)
 
-            if 'nrml_id' in values:
-                _set_gml_id(self.nrml_el, str(values['nrml_id']))
-            else:
-                _set_gml_id(self.nrml_el, NRML_GML_ID)
+            _set_gml_id_if_present("nrml_id", values,
+                    NRML_GML_ID, self.nrml_el)
             
             # nrml:hazardResult, needs gml:id
             self.result_el = etree.SubElement(self.nrml_el, 
                 "%shazardResult" % NRML)
-            if 'hazres_id' in values:
-                _set_gml_id(self.result_el, str(values['hazres_id']))
-            else:
-                _set_gml_id(self.result_el, HAZARDRESULT_GML_ID)
+
+            _set_gml_id_if_present("hazres_id", values,
+                    HAZARDRESULT_GML_ID, self.result_el)
 
             # nrml:config
             config_el = etree.SubElement(self.result_el, "%sconfig" % NRML)
@@ -117,16 +111,15 @@ class HazardCurveXMLWriter(writer.FileWriter):
         try:
             hazard_curve_field_el = self.curves_per_branch_label[curve_label]
         except KeyError:
-            
+
             # nrml:hazardCurveField, needs gml:id
             hazard_curve_field_el = etree.SubElement(self.result_el, 
                 "%shazardCurveField" % NRML)
 
-            if 'hcfield_id' in values:
-                _set_gml_id(hazard_curve_field_el, str(values['hcfield_id']))
-            else:
-                _set_gml_id(hazard_curve_field_el, 
-                    "hcf_%s" % self.hcfield_counter)
+            _set_gml_id_if_present("hcfield_id", values,
+                    "hcf_%s" % self.hcfield_counter, hazard_curve_field_el)
+
+            if "hcfield_id" not in values:
                 self.hcfield_counter += 1
 
             if 'endBranchLabel' in values:
@@ -149,23 +142,25 @@ class HazardCurveXMLWriter(writer.FileWriter):
         # nrml:HCNode, needs gml:id
         hcnode_el = etree.SubElement(hazard_curve_field_el, "%sHCNode" % NRML)
 
-        if 'hcnode_id' in values:
-            _set_gml_id(hcnode_el, str(values['hcnode_id']))
-        else:
-            _set_gml_id(hcnode_el, "hcn_%s" % self.hcnode_counter)
+        _set_gml_id_if_present("hcnode_id", values,
+                "hcn_%s" % self.hcnode_counter, hcnode_el)
+
+        if "hcnode_id" not in values:
             self.hcnode_counter += 1
 
-        # nrml:site
-        site_el = etree.SubElement(hcnode_el, "%ssite" % NRML)
-        point_el = etree.SubElement(site_el, "%sPoint" % GML)
+        # nrml:site, nrml:Point
+        point_el = etree.SubElement(etree.SubElement(
+                hcnode_el, "%ssite" % NRML), "%sPoint" % GML)
+
         point_el.set("srsName", SRS_EPSG_4326)
 
         pos_el = etree.SubElement(point_el, "%spos" % GML)
         pos_el.text = "%s %s" % (point.longitude, point.latitude)
 
-        # nrml:hazardCurve
-        hc_el = etree.SubElement(hcnode_el, "%shazardCurve" % NRML)
-        poe_el = etree.SubElement(hc_el, "%spoE" % NRML)
+        # nrml:hazardCurve, nrml:poE
+        poe_el = etree.SubElement(etree.SubElement(
+                hcnode_el, "%shazardCurve" % NRML), "%spoE" % NRML)
+
         poe_el.text = " ".join([str(x) for x in values["poE"]])
 
 
@@ -309,3 +304,13 @@ def _set_optional_attributes(element, value_dict, attr_keys):
 def _set_gml_id(element, gml_id):
     """Set the attribute gml:id for the given element."""
     element.set("%sid" % GML, str(gml_id))
+
+
+def _set_gml_id_if_present(id_key, values, default_id, element):
+    """Set the attribute gml:id using the input dictionary if present,
+    use a default one otherwise."""
+
+    if id_key in values:
+        _set_gml_id(element, str(values[id_key]))
+    else:
+        _set_gml_id(element, default_id)
