@@ -62,8 +62,8 @@ class LossOutputTestCase(unittest.TestCase):
         second_site = shapes.Site(10.0, 20.0)
         first_curve = TEST_CURVE
         second_curve = first_curve
-        first_asset = {"AssetID" : "1711"}
-        second_asset = {"AssetID" : "1712"}
+        first_asset = {"assetID" : "1711"}
+        second_asset = {"assetID" : "1712"}
 
         # Then serialize them to XML
         loss_curves = [(first_site, (first_curve, first_asset)), 
