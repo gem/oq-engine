@@ -21,7 +21,6 @@ log = logs.RISK_LOG
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
 LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves.xml'
 
-#LOSS_SCHEMA_FILE = 'nrml.xsd'
 NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
 NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
@@ -53,7 +52,6 @@ class LossOutputTestCase(unittest.TestCase):
     def setUp(self):
         self.path = test.test_output_file(LOSS_XML_OUTPUT_FILE)
         self.ratio_path = test.test_output_file(LOSS_RATIO_XML_OUTPUT_FILE)
-        # self.schema_path = os.path.join(test.SCHEMA_DIR, LOSS_SCHEMA_FILE)
         self.schema_path = NRML_SCHEMA_PATH_OLD
 
         # Build up some sample loss curves here
