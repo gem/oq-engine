@@ -13,7 +13,7 @@ from openquake import java
 class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
 
-    def setup(self):
+    def setUp(self):
         try:
             del os.environ["OQ_JVM_MAXMEM"]
         except KeyError:
@@ -26,7 +26,7 @@ class JvmMaxMemTestCase(unittest.TestCase):
         parameter is not passed the default value should be used to determine
         the maximum.
         """
-        self.assertIs(None, os.environ.get("OQ_JVM_MAXMEM"))
+        self.assertTrue(os.environ.get("OQ_JVM_MAXMEM") is None)
         self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem(None))
 
     def test_jvm_maxmem_without_maxmem_environ_var_but_with_param(self):
@@ -34,7 +34,7 @@ class JvmMaxMemTestCase(unittest.TestCase):
         If the OQ_JVM_MAXMEM environment variable is not set and the `max_mem`
         parameter is passed its value should be used to determine the maximum.
         """
-        self.assertIs(None, os.environ.get("OQ_JVM_MAXMEM"))
+        self.assertTrue(os.environ.get("OQ_JVM_MAXMEM") is None)
         self.assertEqual(1111, java.get_jvm_max_mem(1111))
 
     def test_jvm_maxmem_environ_var_honoured_without_param(self):
