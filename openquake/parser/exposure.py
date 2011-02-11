@@ -8,7 +8,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML, NRML_OLD, GML_OLD
+from openquake.xml import NRML, GML
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -77,8 +77,8 @@ class ExposurePortfolioFile(producer.FileProducer):
             if event == 'start' and element.tag == \
                     '%sexposureList' % NRML:
                 # we need to get the exposureList id and description
-                id = element.get('%sid' % GML)
-                self._current_meta['listID'] = str(id)
+                exp_id = element.get('%sid' % GML)
+                self._current_meta['listID'] = str(exp_id)
 
                 desc = element.find('%sdescription' % GML)
                 if desc is not None:
