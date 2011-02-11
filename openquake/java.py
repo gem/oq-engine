@@ -106,4 +106,8 @@ def get_jvm_max_mem(max_mem):
         * the value of the `OQ_JVM_MAX_MEM` environment variable
         * a fixed default (`4000`).
     """
-    #return max_mem if max_mem else 4000
+    if max_mem:
+        return max_mem
+    if os.environ.get("OQ_JVM_MAXMEM"):
+        return int(os.environ.get("OQ_JVM_MAXMEM"))
+    return DEFAULT_JVM_MAX_MEM
