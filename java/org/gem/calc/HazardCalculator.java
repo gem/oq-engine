@@ -54,11 +54,13 @@ public class HazardCalculator {
      *            : maximum distance used for integration
      * @return
      */
-    public static Map<Site, DiscretizedFuncAPI> getHazardCurves(
-            List<Site> siteList,
-            EqkRupForecastAPI erf,
-            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-            List<Double> imlVals, double integrationDistance) {
+    public static
+            Map<Site, DiscretizedFuncAPI>
+            getHazardCurves(
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+                    List<Double> imlVals, double integrationDistance) {
         validateInput(siteList, erf, gmpeMap);
         if (imlVals == null) {
             String msg = "Array of intensity measure levels cannot be null";
@@ -74,19 +76,21 @@ public class HazardCalculator {
         }
         Map<Site, DiscretizedFuncAPI> results =
                 new HashMap<Site, DiscretizedFuncAPI>();
-        DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
-        for (double val : imlVals)
-            hazardCurve.set(val, 1.0);
         HazardCurveCalculator curveCalculator = null;
         try {
             curveCalculator = new HazardCurveCalculator();
             curveCalculator.setMaxSourceDistance(integrationDistance);
             for (Site site : siteList) {
+                DiscretizedFuncAPI hazardCurve =
+                        new ArbitrarilyDiscretizedFunc();
+                for (double val : imlVals)
+                    hazardCurve.set(val, 1.0);
                 curveCalculator.getHazardCurve(hazardCurve, site, gmpeMap, erf);
                 results.put(site, hazardCurve);
             }
         } catch (RemoteException e) {
-            e.printStackTrace();
+            logger.error(e);
+            throw new RuntimeException(e);
         }
         return results;
     }
@@ -101,11 +105,13 @@ public class HazardCalculator {
      * @param integrationDistance
      * @return
      */
-    public static String[] getHazardCurvesAsJson(
-            List<Site> siteList,
-            EqkRupForecastAPI erf,
-            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-            List<Double> imlVals, double integrationDistance) {
+    public static
+            String[]
+            getHazardCurvesAsJson(
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+                    List<Double> imlVals, double integrationDistance) {
         Map<Site, DiscretizedFuncAPI> curves =
                 getHazardCurves(siteList, erf, gmpeMap, imlVals,
                         integrationDistance);
@@ -136,11 +142,13 @@ public class HazardCalculator {
      *        ground motion fields
      * @return
      */
-    public static Map<EqkRupture, Map<Site, Double>> getGroundMotionFields(
-            List<Site> siteList,
-            EqkRupForecastAPI erf,
-            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-            Random rn, boolean correlation) {
+    public static
+            Map<EqkRupture, Map<Site, Double>>
+            getGroundMotionFields(
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+                    Random rn, boolean correlation) {
         validateInput(siteList, erf, gmpeMap);
         if (rn == null) {
             String msg = "Random number generator cannot be null";
@@ -158,29 +166,32 @@ public class HazardCalculator {
             for (EqkRupture rup : eqkRupList) {
                 logger.debug("rupture mag is " + rup.getMag());
                 groundMotionFields.put(rup, GroundMotionFieldCalculator
-                        .getStochasticGroundMotionField_JB2009(gmpeMap.get(rup
-                                .getTectRegType()), rup, siteList, rn,
-                                inter_event, Vs30Cluster));
+                        .getStochasticGroundMotionField_JB2009(
+                                gmpeMap.get(rup.getTectRegType()), rup,
+                                siteList, rn, inter_event, Vs30Cluster));
             }
         } else {
             for (EqkRupture rup : eqkRupList) {
                 logger.debug("rupture mag is " + rup.getMag());
                 groundMotionFields.put(rup, GroundMotionFieldCalculator
-                        .getStochasticGroundMotionField(gmpeMap.get(rup
-                                .getTectRegType()), rup, siteList, rn));
+                        .getStochasticGroundMotionField(
+                                gmpeMap.get(rup.getTectRegType()), rup,
+                                siteList, rn));
             }
         }
         return groundMotionFields;
     }
 
-    public static void generateAndSaveGMFs(
-            Cache cache,
-            String key,
-            String gmf_id,
-            List<Site> siteList,
-            EqkRupForecastAPI erf,
-            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-            Random rn, boolean correlation) {
+    public static
+            void
+            generateAndSaveGMFs(
+                    Cache cache,
+                    String key,
+                    String gmf_id,
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
+                    Random rn, boolean correlation) {
         Map<EqkRupture, Map<Site, Double>> gmfs =
                 getGroundMotionFields(siteList, erf, gmpeMap, rn, correlation);
 
@@ -198,10 +209,12 @@ public class HazardCalculator {
         gmfToMemcache(cache, key, gmf_id, rupture_ids, site_ids, gmfs);
     }
 
-    public static Boolean validateInput(
-            List<Site> siteList,
-            EqkRupForecastAPI erf,
-            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
+    public static
+            Boolean
+            validateInput(
+                    List<Site> siteList,
+                    EqkRupForecastAPI erf,
+                    Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap) {
         if (siteList == null) {
             String msg = "List of sites cannot be null";
             logger.error(msg);
