@@ -4,7 +4,7 @@ import os
 import unittest
 import tempfile
 
-from openquake import test
+from utils import test
 from openquake import shapes
 
 from openquake import flags
