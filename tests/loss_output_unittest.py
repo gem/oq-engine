@@ -88,7 +88,7 @@ class LossOutputTestCase(unittest.TestCase):
         xml_writer = risk_output.LossCurveXMLWriter(self.loss_curve_path)
         xml_writer.serialize(self.loss_curves)
 
-        self.assertTrue(xml.validatesAgainstXMLSchema(self.loss_curve_path,
+        self.assertTrue(xml.validates_against_xml_schema(self.loss_curve_path,
             NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
             self.loss_curve_path)
@@ -99,7 +99,7 @@ class LossOutputTestCase(unittest.TestCase):
             self.loss_ratio_curve_path)
         xml_writer.serialize(self.loss_ratio_curves)
 
-        self.assertTrue(xml.validatesAgainstXMLSchema(
+        self.assertTrue(xml.validates_against_xml_schema(
             self.loss_ratio_curve_path, NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
             self.loss_ratio_curve_path)
