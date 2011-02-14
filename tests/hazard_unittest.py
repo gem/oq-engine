@@ -235,7 +235,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
-                self.assertTrue(validatesAgainstXMLSchema(
+                self.assertTrue(xml.validates_against_xml_schema(
                     nrml_path, NRML_SCHEMA_PATH),
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
@@ -253,7 +253,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
-                self.assertTrue(validatesAgainstXMLSchema(
+                self.assertTrue(xml.validates_against_xml_schema(
                     nrml_path, NRML_SCHEMA_PATH),
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
@@ -278,7 +278,7 @@ class HazardEngineTestCase(unittest.TestCase):
                     LOG.debug("validating NRML file for mean hazard map %s" \
                         % nrml_path)
 
-                    self.assertTrue(validatesAgainstXMLSchema(
+                    self.assertTrue(xml.validates_against_xml_schema(
                         nrml_path, NRML_SCHEMA_PATH),
                         "NRML instance file %s does not validate against "\
                         "schema" % nrml_path)
@@ -301,7 +301,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 LOG.debug("validating NRML file for quantile hazard curve: "\
                     "%s" % nrml_path)
 
-                self.assertTrue(validatesAgainstXMLSchema(
+                self.assertTrue(xml.validates_against_xml_schema(
                     nrml_path, NRML_SCHEMA_PATH),
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
@@ -330,7 +330,7 @@ class HazardEngineTestCase(unittest.TestCase):
                         LOG.debug("validating NRML file for quantile hazard "\
                             "map: %s" % nrml_path)
 
-                        self.assertTrue(validatesAgainstXMLSchema(
+                        self.assertTrue(xml.validates_against_xml_schema(
                             nrml_path, NRML_SCHEMA_PATH),
                             "NRML instance file %s does not validate against "\
                             "schema" % nrml_path)
@@ -896,13 +896,6 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
                 self.job_id, site.longitude, site.latitude,
                 str(value))))
-                # str(value).replace(".", ""))))
-
-
-def validatesAgainstXMLSchema(xml_instance_path, schema_path):
-    xml_doc = etree.parse(xml_instance_path)
-    xmlschema = etree.XMLSchema(etree.parse(schema_path))
-    return xmlschema.validate(xml_doc)
 
 
 class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
