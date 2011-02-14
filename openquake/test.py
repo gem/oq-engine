@@ -29,6 +29,8 @@ OUTPUT_DIR = os.path.abspath(os.path.join(
 SCHEMA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../docs/schema'))
 
+SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
+    SCHEMA_DIR, 'examples'))
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
