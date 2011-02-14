@@ -8,7 +8,7 @@
     
         <config> 
             <!-- TODO: is this a good place for these attributes? -->
-            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2"/>
+            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2" />
         </config>
         
         <!-- one hazardResult instance file can contain several hazardCurveField elements -->
