@@ -13,12 +13,17 @@ import java.util.Random;
 
 import junit.framework.Assert;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.gem.engine.GmpeLogicTreeData;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagLengthRelationship;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
+import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.commons.geo.GriddedRegion;
 import org.opensha.commons.geo.Location;
@@ -26,6 +31,7 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.param.DoubleParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
+import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -58,6 +64,8 @@ public class HazardCalculatorTest {
     private static final String LOCALHOST = "localhost";
     private Cache cache;
 
+    private static Log logger = LogFactory.getLog(GmpeLogicTreeData.class);
+
     @Before
     public void setUp() throws IOException {
         setUpSites();
@@ -81,6 +89,31 @@ public class HazardCalculatorTest {
         if (cache != null) {
             cache.flush();
             cache = null;
+        }
+    }
+
+    /**
+     * Check that hazard curves stored in map are exactly those calculated from
+     * the method getHazardCurve in {@link HazardCurveCalculator}
+     * 
+     * @throws Exception
+     */
+    @Test
+    public void checkHazardCurves() throws Exception {
+        Map<Site, DiscretizedFuncAPI> results =
+                HazardCalculator.getHazardCurves(siteList, erf, gmpeMap,
+                        imlVals, integrationDistance);
+        HazardCurveCalculator hazCurveCal = null;
+        DiscretizedFuncAPI hazCurve = new ArbitrarilyDiscretizedFunc();
+        for (Double val : imlVals) {
+            hazCurve.set(val, 1.0);
+        }
+
+        hazCurveCal = new HazardCurveCalculator();
+        hazCurveCal.setMaxSourceDistance(integrationDistance);
+        for (Site site : siteList) {
+            hazCurveCal.getHazardCurve(hazCurve, site, gmpeMap, erf);
+            assertTrue(hazCurve.equals(results.get(site)));
         }
     }
 
@@ -238,11 +271,8 @@ public class HazardCalculatorTest {
         }
         if (groundMotionFields == null
                 || groundMotionFields.values().size() == 0) {
-            Assert
-                    .fail("HazardCalculator did not return ground motion fields after "
-                            + maxTries
-                            + " runs."
-                            + groundMotionFields.toString());
+            Assert.fail("HazardCalculator did not return ground motion fields after "
+                    + maxTries + " runs." + groundMotionFields.toString());
 
         }
         String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
@@ -279,11 +309,8 @@ public class HazardCalculatorTest {
         }
         if (groundMotionFields == null
                 || groundMotionFields.values().size() == 0) {
-            Assert
-                    .fail("HazardCalculator did not return ground motion fields after "
-                            + maxTries
-                            + " runs."
-                            + groundMotionFields.toString());
+            Assert.fail("HazardCalculator did not return ground motion fields after "
+                    + maxTries + " runs." + groundMotionFields.toString());
 
         }
         Map<Site, Double> firstGmf =
@@ -322,7 +349,7 @@ public class HazardCalculatorTest {
         border.add(new Location(38.0, 38.0));
         border.add(new Location(38.0, 35.0));
         Region reg = new Region(border, BorderType.MERCATOR_LINEAR);
-        double spacing = 0.1;
+        double spacing = 1.0;
         GriddedRegion griddedReg = new GriddedRegion(reg, spacing, null);
         for (Location loc : griddedReg.getNodeList()) {
             Site site = new Site(loc);
