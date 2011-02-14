@@ -1,15 +1,19 @@
-package org.gem.engine;
+package org.gem.engine.hazard.parsers;
 
+import static org.gem.engine.hazard.parsers.SourceModelTestData.areaSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.assertSourcesAreEqual;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.complexSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.pointSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.simpleFaultSourceData;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.gem.engine.hazard.parsers.SourceModelTestData;
 import org.junit.Test;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
-public class SourceModelReaderTest extends SourceModelTestData {
+public class SourceModelReaderTest {
 
     /**
      * Compares source model as derived by reading nrML file with source model

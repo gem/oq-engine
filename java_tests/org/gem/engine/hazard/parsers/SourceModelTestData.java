@@ -24,7 +24,7 @@ import org.opensha.sha.util.TectonicRegionType;
 
 public class SourceModelTestData {
 
-    protected GEMSubductionFaultSourceData complexSourceData() {
+    static GEMSubductionFaultSourceData complexSourceData() {
         String id = "src02";
         String name = "Cascadia Megathrust";
 
@@ -82,7 +82,7 @@ public class SourceModelTestData {
                 topTrace, bottomTrace, rake, magFreqDist, true);
     }
 
-    protected GEMAreaSourceData areaSourceData() {
+    static GEMAreaSourceData areaSourceData() {
         String id = "src03";
         String name = "Quito";
 
@@ -132,7 +132,7 @@ public class SourceModelTestData {
 
     }
 
-    protected GEMPointSourceData pointSourceData() {
+    static GEMPointSourceData pointSourceData() {
         String id = "src04";
         String name = "point";
 
@@ -170,7 +170,7 @@ public class SourceModelTestData {
                 aveRupTopVsMag, aveHypoDepth);
     }
 
-    protected GEMFaultSourceData simpleFaultSourceData() {
+    static GEMFaultSourceData simpleFaultSourceData() {
         String id = "src01";
         String name = "Mount Diablo Thrust";
 
@@ -199,7 +199,7 @@ public class SourceModelTestData {
                 true);
     }
 
-    protected static void assertSourcesAreEqual(List<GEMSourceData> list1,
+    static void assertSourcesAreEqual(List<GEMSourceData> list1,
             List<GEMSourceData> list2) {
 
         for (int i = 0; i < list1.size(); i++) {
@@ -207,7 +207,7 @@ public class SourceModelTestData {
         }
     }
 
-    protected GutenbergRichterMagFreqDist getGutenbergRichterMagFreqDist(
+    static GutenbergRichterMagFreqDist getGutenbergRichterMagFreqDist(
             double bValue, double aValueCumulative, double min, double max,
             double delta) {
 
