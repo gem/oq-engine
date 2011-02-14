@@ -43,13 +43,14 @@ JAVA_CLASSES = {
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
 
+
 def jclass(class_key):
     """Wrapper around jpype.JClass for short class names"""
     jvm()
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-def jvm(max_mem=2000):
+def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and 
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(
@@ -59,6 +60,7 @@ def jvm(max_mem=2000):
     # TODO(JMC): Make sure these directories exist
     # LOG.debug("Jarpath is %s", jarpaths)
     if not jpype.isJVMStarted():
+        max_mem = get_jvm_max_mem(max_mem)
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(), 
             "-Djava.ext.dirs=%s:%s" % jarpaths, 
@@ -84,8 +86,28 @@ def jvm(max_mem=2000):
     return jpype
 
 
-# TODO(JMC): Use this later for logging:
-# self.PropertyConfigurator = jpype.JClass(
-#    'org.apache.log4j.PropertyConfigurator')
-# object.__getattribute__(self, 
-#    'PropertyConfigurator').configure(settings.LOG4J_PROPERTIES)
+# The default JVM max. memory size to be used in the absence of any other
+# setting or configuration.
+DEFAULT_JVM_MAX_MEM=4000
+
+
+def get_jvm_max_mem(max_mem):
+    """
+    Determine what the JVM maximum memory size should be.
+
+    :param max_mem: the `max_mem` parameter value actually passed to the
+        caller.
+    :type max_mem: integer or None
+
+    :returns: the maximum JVM memory size considering the possible sources in
+        the following order
+        * the actual value passed
+        * TODO: the value in the config file
+        * the value of the `OQ_JVM_MAX_MEM` environment variable
+        * a fixed default (`4000`).
+    """
+    if max_mem:
+        return max_mem
+    if os.environ.get("OQ_JVM_MAXMEM"):
+        return int(os.environ.get("OQ_JVM_MAXMEM"))
+    return DEFAULT_JVM_MAX_MEM

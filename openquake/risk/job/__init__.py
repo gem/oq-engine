@@ -62,7 +62,7 @@ class RiskJobMixin(mixins.Mixin):
             for asset in [decoder.decode(x) for x in asset_list]:
                 site = shapes.Site(asset['lon'], asset['lat'])
                 key = kvs.tokens.loss_ratio_key(
-                        job_id, point.row, point.column, asset["AssetID"])
+                        job_id, point.row, point.column, asset["assetID"])
                 loss_ratio_curve = kvs.get(key)
                 if loss_ratio_curve:
                     loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
@@ -102,12 +102,12 @@ class RiskJobMixin(mixins.Mixin):
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [decoder.decode(x) for x in asset_list]:
                 key = kvs.tokens.loss_key(self.id, point.row, point.column, 
-                        asset["AssetID"], loss_poe)
+                        asset["assetID"], loss_poe)
                 loss = kvs.get(key)
                 LOG.debug("Loss for asset %s at %s %s is %s" % 
-                    (asset["AssetID"], asset['lon'], asset['lat'], loss))
+                    (asset["assetID"], asset['lon'], asset['lat'], loss))
                 if loss:
-                    loss_ratio = float(loss) / float(asset["AssetValue"])
+                    loss_ratio = float(loss) / float(asset["assetValue"])
                     risk_site = shapes.Site(asset['lon'], asset['lat'])
                     risk_point = risk_grid.point_at(risk_site)
                     output_generator.write(
