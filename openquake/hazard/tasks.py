@@ -115,6 +115,6 @@ def compute_quantile_curves(job_id, sites):
             % (len(sites), job_id))
 
     engine = job.Job.from_kvs(job_id)
+
     return classical_psha.compute_quantile_hazard_curves(engine, sites)
     #subtask(serialize_quantile_curves).delay(job_id, sites)
-
