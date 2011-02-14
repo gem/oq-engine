@@ -36,8 +36,7 @@ if __name__ == '__main__':
 
         args = sys.argv
         args.remove('run_tests.py')
-        args = ['nosetests'] + args
-
+        args = ['nosetests', '-e', 'do_test.+'] + args
 
         if (FLAGS.debug == "debug"):
             pass
