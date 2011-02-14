@@ -66,7 +66,7 @@ RISK_LOSS_RATIO_CURVE_TAG = "%slossRatioCurve" % NRML
 RISK_LOSS_RATIO_ABSCISSA_TAG = "%slossRatio" % NRML
 RISK_LOSS_RATIO_ABSCISSA_PROPERTY = 'Loss Ratio'
 
-def validatesAgainstXMLSchema(xml_instance_path, schema_path):
+def validates_against_xml_schema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
     return xmlschema.validate(xml_doc)
