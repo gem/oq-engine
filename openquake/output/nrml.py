@@ -18,6 +18,19 @@ RISKRESULT_DEFAULT_ID = 'rr'
 HAZARDRESULT_DEFAULT_ID = 'hr'
 
 class TreeNRMLWriter(writer.FileWriter):
+    """
+    Abstract base class for a writer that doesn't write (site, attribute)
+    pairs to file sequentially, but first collects the whole lxml object
+    model and then serializes using the close() method.
+    This is required when the (site, attribute) pairs have to be collected
+    per category in different tree branches (e.g., for loss curves, several
+    curves have to be assigned to the same asset). 
+    """
+    def write(self, point, value):
+        """Write out an individual point (has to be implemented in 
+        derived class).
+        """
+        raise NotImplementedError
 
     def close(self):
         """Overrides the default implementation writing all the
@@ -33,6 +46,7 @@ class TreeNRMLWriter(writer.FileWriter):
         super(TreeNRMLWriter, self).close()
 
     def _create_root_element(self):
+        """Adds NRML root element to lxml tree representation.""" 
         self.root_node = etree.Element(xml.NRML_ROOT_TAG, nsmap=xml.NSMAP)
 
 
