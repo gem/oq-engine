@@ -14,6 +14,7 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
+import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
@@ -256,29 +257,34 @@ public class GroundMotionFieldCalculator {
         }
     }
 
-    private static void validateInputForJB2009(
-            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
-            List<Site> sites, Random rn, Boolean inter_event,
-            Boolean Vs30Cluster) {
+    private static void
+            validateInputForJB2009(
+                    ScalarIntensityMeasureRelationshipAPI attenRel,
+                    EqkRupture rup, List<Site> sites, Random rn,
+                    Boolean interEvent, Boolean Vs30Cluster) {
         validateInput(attenRel, rup, sites);
         checkRandomNumberIsNotNull(rn);
-        if (inter_event == null)
+        if (interEvent == null) {
             throw new IllegalArgumentException(
                     "Usage of inter event residuals must be specified");
-        if (Vs30Cluster == null)
+        }
+        if (Vs30Cluster == null) {
             throw new IllegalArgumentException(
                     "Vs30 cluster option must be specified");
-        if (inter_event == true
+        }
+        if (interEvent == true
                 && attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
-                        .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER) == false)
+                        .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER) == false) {
             throw new IllegalArgumentException(
                     "The specified attenuation relationship does not provide"
                             + " inter-event standard deviation");
+        }
         if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
-                .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTRA) == false)
+                .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTRA) == false) {
             throw new IllegalArgumentException(
                     "The specified attenuation relationship does not provide"
                             + " intra-event standard deviation");
+        }
     }
 
     private static void checkRandomNumberIsNotNull(Random rn) {
@@ -342,13 +348,14 @@ public class GroundMotionFieldCalculator {
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
 
-        // period is changed only if defined in attenRel
+        // default value for period is zero. Only if spectral acceleration
+        // calculation is requested, the value of the period variable is
+        // obtained from the attenRel object
         double period = 0.0;
-        try {
+        if (attenRel.getIntensityMeasure().getName()
+                .equalsIgnoreCase(SA_Param.NAME)) {
             period =
                     (Double) attenRel.getParameter(PeriodParam.NAME).getValue();
-        } catch (Exception e) {
-
         }
 
         double correlationRange = Double.NaN;
