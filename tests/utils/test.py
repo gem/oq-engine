@@ -21,13 +21,13 @@ flags.DEFINE_boolean('download_test_data', True,
         'Fetch test data files if needed')
         
 DATA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../tests/data'))
+    os.path.dirname(__file__), '../data'))
 
 OUTPUT_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../tests/data/output'))
+    os.path.dirname(__file__), '../data/output'))
 
 SCHEMA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../docs/schema'))
+    os.path.dirname(__file__), '../../docs/schema'))
 
 SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
     SCHEMA_DIR, 'examples'))
@@ -45,7 +45,8 @@ def test_output_file(file_name):
 def smoketest_file(file_name):
     """ Take a file name and return the full path to the file in the smoketests
     directory """
-    return os.path.join(os.path.dirname(__file__), "../smoketests", file_name)
+    return os.path.join(
+        os.path.dirname(__file__), "../../smoketests", file_name)
 
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three 
