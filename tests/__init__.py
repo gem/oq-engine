@@ -1,5 +1,3 @@
-import os, sys
-from utils import test
 from converter_unittest import *
 from geo_unittest import *
 from handlers_unittest import *
