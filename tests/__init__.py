@@ -1,5 +1,4 @@
 import os, sys
-sys.path.append(os.path.abspath(os.path.curdir))
 from utils import test
 from converter_unittest import *
 from geo_unittest import *
