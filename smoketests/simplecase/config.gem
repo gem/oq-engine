@@ -121,6 +121,14 @@ NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 #NUMBER_OF_SEISMICITY_HISTORIES = 8
 NUMBER_OF_SEISMICITY_HISTORIES = 1
 
+# List of quantiles to compute
+QUANTILE_LEVELS = 0.25 0.50
+
+# Compute mean hazard curve
+COMPUTE_MEAN_HAZARD_CURVE = true
+
+# List of POEs to use for computing hazard maps
+POES_HAZARD_MAPS = 0.01 0.10
 
 [RISK]
 

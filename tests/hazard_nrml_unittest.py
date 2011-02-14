@@ -3,6 +3,7 @@
 
 import os
 import unittest
+
 from lxml import etree
 
 from openquake import logs

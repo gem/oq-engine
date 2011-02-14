@@ -140,7 +140,7 @@ class AggregateLossCurve(object):
         """Return an aggregate curve using the GMFs and assets
         stored in the underlying kvs system."""
         
-        vuln_model = vulnerability.load_vuln_curves_from_kvs(job_id)
+        vuln_model = vulnerability.load_vuln_model_from_kvs(job_id)
         aggregate_curve = AggregateLossCurve(vuln_model)
         
         client = kvs.get_client(binary=False)
