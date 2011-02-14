@@ -7,7 +7,7 @@ import unittest
 from lxml import etree
 
 from openquake import logs
-from openquake import test
+from utils import test
 from openquake import shapes
 from openquake import xml
 
