@@ -26,7 +26,10 @@ def _to_site(element):
     # consider them as mandatory
     pos_el = element.xpath("./nrml:site/gml:Point/gml:pos",
                            namespaces=NAMESPACES)
-    coord = [float(x) for x in pos_el[0].text.strip().split()]
+    try:
+        coord = [float(x) for x in pos_el[0].text.strip().split()]
+    except Exception:
+        raise ValueError('Missing or invalid lon/lat')
     return shapes.Site(coord[0], coord[1])
 
 
@@ -114,18 +117,6 @@ class NrmlFile(producer.FileProducer):
                 attributes[child_key] = etl(child_node)
             except Exception:
                 raise ValueError(invalid_value_error % child_key)
-
-        # IML values can be overridden inside of a hazardCurve element
-        # check if such an override is defined in the file
-        iml_override = element.xpath('./nrml:hazardCurve/nrml:IML',
-                                     namespaces=NAMESPACES)
-        if iml_override:
-            try:
-                attributes['IMLValues'] = float_strip(iml_override)
-                # TODO (LB): Do we override the IMT as well?
-                # Is it legal to redefine the IML values _and_ IMT type?
-            except Exception:
-                raise ValueError(invalid_value_error % 'IMLValues') 
 
         try:
             attributes.update(self._current_hazard_meta)
