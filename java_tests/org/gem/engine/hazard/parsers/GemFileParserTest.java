@@ -1,19 +1,23 @@
 package org.gem.engine.hazard.parsers;
 
+import static org.gem.engine.hazard.parsers.SourceModelTestData.areaSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.assertSourcesAreEqual;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.complexSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.pointSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestData.simpleFaultSourceData;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.gem.engine.SourceModelReader;
 import org.gem.engine.hazard.models.nshmp.us.NshmpCaliforniaFaultData;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
-public class GemFileParserTest extends SourceModelTestData {
+public class GemFileParserTest {
 
     private static final String OUTPUT_FILE = "output.txt";
     private static final String FILENAME = "california-fault.dat";
