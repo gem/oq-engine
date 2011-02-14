@@ -50,8 +50,8 @@ class LossOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.path = test.test_output_file(LOSS_XML_OUTPUT_FILE)
-        self.ratio_path = test.test_output_file(LOSS_RATIO_XML_OUTPUT_FILE)
+        self.path = test.do_test_output_file(LOSS_XML_OUTPUT_FILE)
+        self.ratio_path = test.do_test_output_file(LOSS_RATIO_XML_OUTPUT_FILE)
         self.schema_path = NRML_SCHEMA_PATH_OLD
 
         # Build up some sample loss curves here
