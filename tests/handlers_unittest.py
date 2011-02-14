@@ -2,7 +2,7 @@ import os
 import unittest
 import urlparse
 
-from openquake import test
+from utils import test
 from openquake.job import handlers
 
 class StubbedGetter(object):

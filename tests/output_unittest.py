@@ -16,7 +16,7 @@ import unittest
 from osgeo import gdal, gdalconst
 
 from openquake import shapes
-from openquake import test
+from utils import test
 from openquake.output import geotiff
 from openquake.output import curve
 

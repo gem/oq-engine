@@ -6,7 +6,7 @@ import unittest
 import sys
 
 from openquake import shapes
-from openquake import test
+from utils import test
 from openquake import job
 from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG

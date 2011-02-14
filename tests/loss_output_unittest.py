@@ -12,7 +12,7 @@ import unittest
 from openquake import logs
 from openquake.risk import engines
 from openquake.output import risk as risk_output
-from openquake import test
+from utils import test
 from openquake import shapes
 from openquake import xml
 
