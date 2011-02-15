@@ -6,15 +6,13 @@ Tests for the NRML parser of loss/loss ratio curves.
 import os
 import unittest
 
-from lxml import etree
-
 from openquake import logs
 from openquake import shapes
-from openquake import test
 from openquake import xml
 
-from openquake.output import risk as risk_output
 from openquake.parser import risk as risk_parser
+
+from utils import test
 
 log = logs.RISK_LOG
 
