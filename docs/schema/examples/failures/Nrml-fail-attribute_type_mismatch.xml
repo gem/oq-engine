@@ -4,7 +4,7 @@
 
     <hazardResult gml:id="hr1">
         <config> 
-            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2" />
+            <hazardProcessing investigationTimeSpan="foo" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2" />
         </config>
         <hazardCurveField gml:id="hcl_1_1" endBranchLabel="1_1">
             <IML IMT="PGA">5.0000e-03 7.0000e-03 1.3700e-02</IML>

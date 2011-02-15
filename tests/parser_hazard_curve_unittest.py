@@ -15,8 +15,7 @@ FILES_KNOWN_TO_FAIL = [
     'Nrml-fail-IML_type_mismatch.xml',
     'Nrml-fail-missing_IML.xml',
     'Nrml-fail-illegal_gml_pos.xml',
-    'Nrml-fail-curve_values_type_mismatch.xml'
-]
+    'Nrml-fail-curve_values_type_mismatch.xml']
 
 FILE_FLAVOUR_NOT_IMPLEMENTED = 'hazard-map.xml'
 
@@ -209,11 +208,13 @@ class NrmlFileTestCase(unittest.TestCase):
                             self.nrml_element.filter(region_constraint, 
                                     attribute_constraint)):
                 if expected_results[filter_counter]:
-                    # only perform the following tests if the expected result item
-                    # is not empty
+                    # only perform the following tests if the expected
+                    # result item is not empty
 
-                    expected_nrml_point = expected_results[filter_counter][counter][0]
-                    expected_nrml_attr = expected_results[filter_counter][counter][1]
+                    expected_nrml_point = \
+                        expected_results[filter_counter][counter][0]
+                    expected_nrml_attr = \
+                        expected_results[filter_counter][counter][1]
                     # check topological equality for points
                     self.assertTrue(nrml_point.equals(expected_nrml_point),
                         "filter yielded unexpected point at position" \
@@ -222,8 +223,8 @@ class NrmlFileTestCase(unittest.TestCase):
                         expected_nrml_point))
 
                     self.assertEqual(nrml_attr, expected_nrml_attr,
-                        "filter yielded unexpected attribute values at position" \
-                        " %s: \n Got: %s, \n Expected: %s " \
+                        "filter yielded unexpected attribute values at " \
+                        "position %s: \n Got: %s, \n Expected: %s " \
                         % (counter, nrml_attr, expected_nrml_attr))
 
             if expected_results[filter_counter]:
@@ -234,15 +235,40 @@ class NrmlFileTestCase(unittest.TestCase):
                     (len(expected_results[filter_counter]),
                         attribute_constraint.attribute))
 
-                # ensure that the generator returns _exactly_ the number of items
-                # in the expected result list
+                # ensure that the generator returns _exactly_ the number of
+                # items in the expected result list
                 self.assertEqual(len(expected_results[filter_counter]),
                                  counter + 1,
                                  "filter yielded incorrect number of items \
                                  \n Got: %s \n Expected: %s" \
-                                 % (counter, len(expected_results[filter_counter])))
+                                 % (counter,
+                                    len(expected_results[filter_counter])))
             else:
                 # verify that 0 elements were received
                 self.assertTrue(counter is None)
 
             self.nrml_element.reset()
+
+
+class GMFReaderTestCase(unittest.TestCase):
+
+    def test_gmf_reader_yields_correct_parsed_values(self):
+        test_file = os.path.join(EXAMPLE_DIR, 'gmf-simple-fault.xml')
+        expected_output = [(shapes.Site(-116.0, 41.0),
+                            {'groundMotion': 0.2}),
+                           (shapes.Site(-118.0, 41.0),
+                            {'groundMotion': 0.3})]
+
+        reader = hazard_parser.GMFReader(test_file)
+
+        for (counter, (site, ground_motion)) in enumerate(reader):
+            # verify that each result matches what is expected
+            # order matters here
+            expected_site = expected_output[counter][0]
+            expected_gm = expected_output[counter][1]
+            self.assertEqual(expected_site, site)
+            self.assertEqual(expected_gm, ground_motion)
+
+        # verify that we have the correct number of results
+        self.assertEqual(len(expected_output), counter+1)
+
