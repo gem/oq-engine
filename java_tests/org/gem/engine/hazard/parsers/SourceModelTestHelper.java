@@ -22,7 +22,7 @@ import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
-public class SourceModelTestData {
+public class SourceModelTestHelper {
 
     static GEMSubductionFaultSourceData complexSourceData() {
         String id = "src02";
