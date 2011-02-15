@@ -4,7 +4,6 @@ Collection of functions that compute stuff using
 as input data produced with the classical psha method.
 """
 
-import os
 import math
 import numpy
 
@@ -14,7 +13,6 @@ from scipy.stats.mstats import mquantiles
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
-from openquake.output import geotiff
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
