@@ -16,7 +16,7 @@
                 </site>
                 
                 <hazardCurve>
-                    <poE>9.8728e-01 9.8266e-01 9.4957e-01</poE>
+                    <poE>9.8728e-01 9.8266e-01 foo</poE>
                 </hazardCurve>
             </HCNode>
         </hazardCurveField>
