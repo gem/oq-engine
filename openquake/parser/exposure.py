@@ -8,7 +8,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML, NRML_OLD, GML_OLD
+from openquake.xml import NRML, GML
 
 # do not use namespace for now
 RISKML_NS = ''
