@@ -10,12 +10,12 @@ from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
 FILES_KNOWN_TO_FAIL = [
-    #'Nrml-fail-missing_required_attribute.xml',
-    #'Nrml-fail-attribute_type_mismatch.xml',
-    'Nrml-fail-IML_type_mismatch.xml.new',
-    #'Nrml-fail-missing_IML.xml',
-    #'Nrml-fail-illegal_gml_pos.xml',
-    #'Nrml-fail-curve_values_type_mismatch.xml'
+    'Nrml-fail-missing_required_attribute.xml',
+    'Nrml-fail-attribute_type_mismatch.xml',
+    'Nrml-fail-IML_type_mismatch.xml',
+    'Nrml-fail-missing_IML.xml',
+    'Nrml-fail-illegal_gml_pos.xml',
+    'Nrml-fail-curve_values_type_mismatch.xml'
 ]
 
 FILE_FLAVOUR_NOT_IMPLEMENTED = 'hazard-map.xml'
