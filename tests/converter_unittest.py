@@ -9,7 +9,7 @@ import sys
 import unittest
 
 from openquake import converter
-from openquake import test
+from utils import test
 from openquake import flags
 FLAGS = flags.FLAGS
 
