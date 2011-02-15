@@ -14,14 +14,15 @@ from openquake import logs
 from openquake import producer
 from openquake import shapes
 
-from openquake.xml import NRML_NS, NRML_NS_OLD, GML_NS, GML_NS_OLD, NRML, NRML_OLD
+from openquake.xml import NRML_NS, GML_NS, NRML
 
 LOG = logs.LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 def _to_site(element):
-    """Convert current GML attributes to Site object"""
+    """Extract site information from an HCNode or GMFNode
+    and return a Site object"""
     # lon/lat are in XML attributes 'Longitude' and 'Latitude'
     # consider them as mandatory
     pos_el = element.xpath("./nrml:site/gml:Point/gml:pos",
@@ -31,6 +32,24 @@ def _to_site(element):
     except Exception:
         raise ValueError('Missing or invalid lon/lat')
     return shapes.Site(coord[0], coord[1])
+
+
+def _to_gmf_site_data(element):
+    """ Extract site and ground motion values from a given GMFNode element
+
+    returns a tuple of (shapes.Site, dict)"""
+
+    attributes = {}
+
+    ground_motion_elems = element.xpath('./nrml:groundMotion',
+                                        namespaces=NAMESPACES)
+    try:
+        attributes['groundMotion'] = \
+            float(ground_motion_elems[0].text.strip())
+    except Exception:
+        raise ValueError('invalid or missing groundMotion value')
+    return (_to_site(element), attributes)
+
 
 
 class NrmlFile(producer.FileProducer):
@@ -143,34 +162,12 @@ class GMFReader(producer.FileProducer):
         super(GMFReader, self).__init__(path)
 
     def _parse(self):
-        site_nesting_level = 0
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'start' and element.tag == NRML_OLD + 'HazardResult':
-                self._gmf_attributes()
-            elif event == 'start' and element.tag == NRML_OLD + 'site':
-                site_nesting_level += 1
-            elif event == 'end' and element.tag == NRML_OLD + 'site':
-                site_nesting_level -= 1
+            if event == 'end' and element.tag == NRML + 'GMFNode':
+                yield (_to_gmf_site_data(element))
 
-                # yield only for outer site elements
-                if site_nesting_level == 0:
-                    yield (self._to_site_data(element))
-
-    def _gmf_attributes(self):
-        """TODO(fab): Collect instance-wide attributes here."""
-        pass
-
-    def _to_site_data(self, element):
-        """this is called on the outer 'site' elements"""
-        
-        attributes = {}
-        attributes['groundMotion'] = float(element.get('groundMotion'))
-        (inner_site_node,) = element.xpath('nrml:site', 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
-        return (_to_site(inner_site_node), attributes)
-
-
+    
 class HazardConstraint(object):
     """ This class represents a constraint that can be used to filter
     VulnerabilityFunction elements from an VulnerabilityModel XML instance 
