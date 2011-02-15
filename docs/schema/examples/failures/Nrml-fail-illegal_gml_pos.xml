@@ -11,7 +11,7 @@
             <HCNode gml:id="hc1">
                 <site>
                     <gml:Point srsName="epsg:4326">
-                        <gml:pos>-122.5000 37.5000</gml:pos>
+                        <gml:pos>-122.5000 foo</gml:pos>
                     </gml:Point>
                 </site>
                 
