@@ -1,10 +1,10 @@
 package org.gem.engine.hazard.parsers;
 
-import static org.gem.engine.hazard.parsers.SourceModelTestData.areaSourceData;
-import static org.gem.engine.hazard.parsers.SourceModelTestData.assertSourcesAreEqual;
-import static org.gem.engine.hazard.parsers.SourceModelTestData.complexSourceData;
-import static org.gem.engine.hazard.parsers.SourceModelTestData.pointSourceData;
-import static org.gem.engine.hazard.parsers.SourceModelTestData.simpleFaultSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestHelper.areaSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestHelper.assertSourcesAreEqual;
+import static org.gem.engine.hazard.parsers.SourceModelTestHelper.complexSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestHelper.pointSourceData;
+import static org.gem.engine.hazard.parsers.SourceModelTestHelper.simpleFaultSourceData;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
