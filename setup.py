@@ -12,16 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import glob
 import os
-import sys
 
 from distutils.core import setup
-from setuptools import find_packages
 
 scripts = ["bin/%s" % x for x in os.listdir('bin')]
-scripts.extend(
-    ["openquake/utils/%s" % x for x in os.listdir('openquake/utils')])
 scripts.append('celeryconfig.py')
 
 libs = []
