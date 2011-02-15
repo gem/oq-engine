@@ -7,7 +7,7 @@ import unittest
 from lxml import etree
 
 from openquake import logs
-from openquake import test
+from utils import test
 from openquake import shapes
 from openquake import xml
 
@@ -43,7 +43,7 @@ class GMFXMLWriterTestCase(unittest.TestCase):
     # and will break if we update one of those pieces independently
     @test.skipit
     def test_serializes_gmf(self):
-        path = test.test_output_file(GMF_NORUPTURE_TEST_FILE)
+        path = test.do_test_output_file(GMF_NORUPTURE_TEST_FILE)
         writer = hazard_output.GMFXMLWriter(path)
         writer.serialize(GMF_NORUPTURE_TEST_DATA)
 
@@ -74,7 +74,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         xmlschema.assertValid(xml_doc)
 
     def test_raises_an_error_if_no_curve_is_serialized(self):
-        path = test.test_output_file(TEST_FILE)
+        path = test.do_test_output_file(TEST_FILE)
         self._remove_and_write_file(path)
         self.assertRaises(RuntimeError, self.writer.close)
 
@@ -97,7 +97,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     7.0352e-02, 3.6060e-02, 1.6579e-02, 6.4213e-03, 
                     2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]})]
 
-        path = test.test_output_file(TEST_FILE_SINGLE_RESULT)
+        path = test.do_test_output_file(TEST_FILE_SINGLE_RESULT)
         self._remove_and_write_file(path)
 
         self.writer.serialize(data)
@@ -146,7 +146,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     8.8035e-02, 4.3499e-02, 1.9065e-02, 7.0442e-03, 
                     2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]})]
 
-        path = test.test_output_file(TEST_FILE_MULTIPLE_ONE_BRANCH)
+        path = test.do_test_output_file(TEST_FILE_MULTIPLE_ONE_BRANCH)
         self._remove_and_write_file(path)
 
         self.writer.serialize(data)
@@ -199,7 +199,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     8.8035e-02, 4.3499e-02, 1.9065e-02, 7.0442e-03, 
                     2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]})]
 
-        path = test.test_output_file(TEST_FILE_STATISTICS)
+        path = test.do_test_output_file(TEST_FILE_STATISTICS)
         self._remove_and_write_file(path)
 
         self.writer.serialize(data)
@@ -230,7 +230,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                         "poE": [0.4, 0.5, 0.6]})
                 ]
         
-        path = test.test_output_file(TEST_FILE_CONFIG_ONCE)
+        path = test.do_test_output_file(TEST_FILE_CONFIG_ONCE)
         self._remove_and_write_file(path)
 
         self.writer.serialize(data)
@@ -265,7 +265,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                     "IMT": "PGA",
                     "poE": [0.1, 0.2, 0.3]})]
 
-        path = test.test_output_file(TEST_FILE_MULTIPLE_DIFFERENT_BRANCHES)
+        path = test.do_test_output_file(TEST_FILE_MULTIPLE_DIFFERENT_BRANCHES)
         self._remove_and_write_file(path)
 
         self.writer.serialize(data)
@@ -298,7 +298,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         constraint = shapes.RegionConstraint.from_simple(
                 upper_left_cor, lower_right_cor)
 
-        reader = hazard_parser.NrmlFile(test.test_output_file(TEST_FILE))
+        reader = hazard_parser.NrmlFile(test.do_test_output_file(TEST_FILE))
         return reader.filter(constraint)
 
     def _result_as_string(self, path):
