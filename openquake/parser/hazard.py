@@ -14,7 +14,7 @@ from openquake import logs
 from openquake import producer
 from openquake import shapes
 
-from openquake.xml import NRML_NS, NRML_NS_OLD, GML_NS_OLD, NRML, NRML_OLD
+from openquake.xml import NRML_NS_OLD, GML_NS_OLD, NRML_OLD
 
 LOG = logs.LOG
 

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from converter_unittest import *
 from geo_unittest import *
 from handlers_unittest import *
 from hazard_nrml_unittest import *
