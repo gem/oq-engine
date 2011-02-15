@@ -7,7 +7,6 @@ Base functionality for NRML serialization.
 from lxml import etree
 
 from openquake import logs
-from openquake import shapes
 from openquake import writer
 from openquake import xml
 

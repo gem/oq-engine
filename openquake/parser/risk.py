@@ -13,8 +13,6 @@ from openquake import producer
 from openquake import shapes
 from openquake import xml
 
-from openquake.parser import nrml
-
 
 class RiskXMLReader(producer.FileProducer):
     """ This class parses a NRML loss/loss ratio curve file. 
