@@ -5,7 +5,7 @@ import os
 import unittest
 
 from openquake import shapes
-from openquake import test
+from utils import test
 from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
