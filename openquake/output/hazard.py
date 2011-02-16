@@ -396,9 +396,7 @@ class GMFXMLWriter(writer.FileWriter):
         container_node = etree.SubElement(self.root_node, 
                                           self.container_tag, nsmap=NSMAP_OLD)
 
-        gmpe_params_node = etree.SubElement(container_node, 
-                                            self.gmpe_params_tag, 
-                                            nsmap=NSMAP_OLD)
+        etree.SubElement(container_node, self.gmpe_params_tag, nsmap=NSMAP_OLD)
 
         # field element
         self.parent_node = etree.SubElement(container_node, self.field_tag, 
