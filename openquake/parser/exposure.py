@@ -77,8 +77,8 @@ class ExposurePortfolioFile(producer.FileProducer):
             if event == 'start' and element.tag == \
                     '%sexposureList' % NRML:
                 # we need to get the exposureList id and description
-                id = element.get('%sid' % GML)
-                self._current_meta['listID'] = str(id)
+                identifier = element.get('%sid' % GML)
+                self._current_meta['listID'] = str(identifier)
 
                 desc = element.find('%sdescription' % GML)
                 if desc is not None:
