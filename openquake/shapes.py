@@ -14,7 +14,6 @@ from shapely import geometry
 from shapely import wkt
 from scipy.interpolate import interp1d
 
-from openquake import kvs
 from openquake import flags
 from openquake import java
 
@@ -236,7 +235,7 @@ class Grid(object):
                     point = GridPoint(self, col, row)
                     self.check_gridpoint(point)
                     yield point
-                except BoundsException, _e:
+                except BoundsException:
                     print "GACK! at col %s row %s" % (col, row)
                     print "Point at %s %s isnt on grid" % \
                         (point.site.longitude, point.site.latitude)
