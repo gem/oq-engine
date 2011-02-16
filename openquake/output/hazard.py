@@ -209,6 +209,8 @@ class HazardMapXMLWriter(writer.FileWriter):
     def __init__(self, path):
         super(HazardMapXMLWriter, self).__init__(path)
         self.hmnode_counter = 0
+        self.parent_node = None
+        self.hazard_processing_node = None
 
     def write(self, point, val):
         """Writes hazard map for one site.
@@ -367,6 +369,10 @@ class GMFXMLWriter(writer.FileWriter):
     site_tag = NRML_OLD + "site"
     pos_tag = GML_OLD + "pos"
     ground_motion_attr = "groundMotion"
+
+    def __init__(self, path):
+        super(GMFXMLWriter, self).__init__(path)
+        self.parent_node = None
 
     def write(self, point, val):
         """Writes GMF for one site.
