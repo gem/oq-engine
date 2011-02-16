@@ -97,9 +97,8 @@ def quantile_value_from_hazard_curve_key(kvs_key):
     """Extract quantile value from a KVS key for a quantile hazard curve."""
     if extract_product_type_from_kvs_key(kvs_key) == \
         QUANTILE_HAZARD_CURVE_KEY_TOKEN:
-        (part_before, sep, quantile_str) = kvs_key.rpartition(
+        (_part_before, _sep, quantile_str) = kvs_key.rpartition(
             openquake.kvs.MEMCACHE_KEY_SEPARATOR)
-        # return float("%s.%s" % (quantile_str[0:-2], quantile_str[-2:]))
         return float(quantile_str)
     else:
         return None
