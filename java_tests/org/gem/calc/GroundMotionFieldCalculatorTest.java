@@ -53,6 +53,14 @@ public class GroundMotionFieldCalculatorTest {
     long seed = 123456789;
     int numRealizations = 3000;
 
+    private final ParameterChangeWarningListener testParamChangeListener =
+            new ParameterChangeWarningListener() {
+                @Override
+                public void parameterChangeWarning(
+                        ParameterChangeWarningEvent event) {
+                }
+            };
+
     @Before
     public void setUp() {
         setIml();
@@ -716,13 +724,5 @@ public class GroundMotionFieldCalculatorTest {
         EqkRupture rup = new EqkRupture(mag, aveRake, rupSurf, hypo);
         return rup;
     }
-
-    private final ParameterChangeWarningListener testParamChangeListener =
-            new ParameterChangeWarningListener() {
-                @Override
-                public void parameterChangeWarning(
-                        ParameterChangeWarningEvent event) {
-                }
-            };
 
 }
