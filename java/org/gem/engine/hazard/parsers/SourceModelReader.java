@@ -1,4 +1,4 @@
-package org.gem.engine;
+package org.gem.engine.hazard.parsers;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -42,59 +42,68 @@ public class SourceModelReader {
     // border type for area source definition
     private static BorderType borderType = BorderType.GREAT_CIRCLE;
 
-    private static String SIMPLE_FAULT = "simpleFault";
-    private static String COMPLEX_FAULT = "complexFault";
-    private static String AREA = "area";
-    private static String POINT = "point";
+    private static final String SIMPLE_FAULT = "simpleFaultSource";
+    private static final String COMPLEX_FAULT = "complexFaultSource";
+    private static final String AREA = "areaSource";
+    private static final String POINT = "pointSource";
 
-    private static String SOURCE_NAME = "sourceName";
-    private static String SOURCE_ID = "sourceID";
-    private static String TECTONIC_REGION = "tectonicRegion";
+    private static final String SOURCE_NAME = "name";
+    private static final String SOURCE_ID = "id";
+    private static final String TECTONIC_REGION = "tectonicRegion";
 
-    private static String SIMPLE_FAULT_GEOMETRY = "simpleFaultGeometry";
-    private static String FAULT_TRACE = "faultTrace";
-    private static String UPPER_SEIMSMOGENIC_DEPTH = "upperSeismogenicDepth";
-    private static String LOWER_SEISMOGENIC_DEPTH = "lowerSeismogenicDepth";
+    private static final String SIMPLE_FAULT_GEOMETRY = "simpleFaultGeometry";
+    private static final String FAULT_TRACE = "faultTrace";
+    private static final String UPPER_SEIMSMOGENIC_DEPTH =
+            "upperSeismogenicDepth";
+    private static final String LOWER_SEISMOGENIC_DEPTH =
+            "lowerSeismogenicDepth";
 
-    private static String COMPLEX_FAULT_GEOMETRY = "complexFaultGeometry";
-    private static String FAULT_TOP_EDGE = "faultTopEdge";
-    private static String FAULT_BOTTOM_EDGE = "faultBottomEdge";
+    private static final String COMPLEX_FAULT_GEOMETRY = "complexFaultGeometry";
+    private static final String FAULT_TOP_EDGE = "faultTopEdge";
+    private static final String FAULT_BOTTOM_EDGE = "faultBottomEdge";
 
-    private static String AREA_BOUNDARY = "areaBoundary";
-    private static String EXTERIOR = "exterior";
-    private static String LINEAR_RING = "LinearRing";
-    private static String POS_LIST = "posList";
+    private static final String AREA_BOUNDARY = "areaBoundary";
+    private static final String EXTERIOR = "exterior";
+    private static final String LINEAR_RING = "LinearRing";
+    private static final String POS_LIST = "posList";
 
-    private static String POINT_LOCATION = "pointLocation";
-    private static String POS = "pos";
+    private static final String POINT_LOCATION = "Point";
+    private static final String POS = "pos";
 
-    private static String RUPTURE_RATE_MODEL = "ruptureRateModel";
+    private static final String RUPTURE_RATE_MODEL = "ruptureRateModel";
 
-    private static String HYPOCENTRAL_DEPTH = "hypocentralDepth";
+    private static final String HYPOCENTRAL_DEPTH = "hypocentralDepth";
 
-    private static String FOCAL_MECHANISM = "focalMechanism";
-    private static String STRIKE = "strike";
-    private static String DIP = "dip";
-    private static String RAKE = "rake";
+    private static final String FOCAL_MECHANISM = "focalMechanism";
+    private static final String STRIKE = "strike";
+    private static final String DIP = "dip";
+    private static final String RAKE = "rake";
 
-    private static String RUPTURE_DEPTH_DISTRIBUTION =
+    private static final String RUPTURE_DEPTH_DISTRIBUTION =
             "ruptureDepthDistribution";
-    private static String XVALUES = "XValues";
-    private static String YVALUES = "YValues";
 
-    private static String EVENLY_DISCRETIZED_MAG_FREQ_DIST =
-            "evenlyDiscretizedIncrementalMagFreqDist";
-    private static String BIN_SIZE = "binSize";
-    private static String MIN_VAL = "minVal";
-    private static String BIN_COUNT = "binCount";
-    private static String DISTRIBUTION_VALUES = "DistributionValues";
+    private static final String EVENLY_DISCRETIZED_MAG_FREQ_DIST =
+            "evenlyDiscretizedIncrementalMFD";
+    private static final String BIN_SIZE = "binSize";
+    private static final String MIN_VAL = "minVal";
 
-    private static String TRUNCATED_GUTENBERG_RICHTER =
+    private static final String TRUNCATED_GUTENBERG_RICHTER =
             "truncatedGutenbergRichter";
-    private static String a_VALUE_CUMULATIVE = "aValueCumulative";
-    private static String b_VALUE = "bValue";
-    private static String MIN_MAGNITUDE = "minMagnitude";
-    private static String MAX_MAGNITUDE = "maxMagnitude";
+    private static final String a_VALUE_CUMULATIVE = "aValueCumulative";
+    private static final String b_VALUE = "bValue";
+    private static final String MIN_MAGNITUDE = "minMagnitude";
+    private static final String MAX_MAGNITUDE = "maxMagnitude";
+
+    private static final String NODAL_PLANE1 = "nodalPlane1";
+    private static final String NODAL_PLANES = "nodalPlanes";
+    private static final String VALUE = "value";
+    private static final String DEPTH = "depth";
+    private static final String MAGNITUDE = "magnitude";
+    private static final String LINE_STRING = "LineString";
+    private static final String FAULT_EDGES = "faultEdges";
+    private static final String POLYGON = "Polygon";
+    private static final String LOCATION = "location";
+    private static final String SOURCE_MODEL = "sourceModel";
 
     /**
      * Creates a new SourceModelReader given the path of the file to read from
@@ -110,6 +119,7 @@ public class SourceModelReader {
      * Reads file and returns source model data. For each source definition, a
      * {@link GEMSourceData} is created and stored in a list.
      */
+    @SuppressWarnings("unchecked")
     public List<GEMSourceData> read() {
 
         File xml = new File(path);
@@ -120,8 +130,10 @@ public class SourceModelReader {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        Element root = doc.getRootElement();
-        Iterator i = root.elements().iterator();
+
+        Element sourceModel = doc.getRootElement().element(SOURCE_MODEL);
+        Iterator i = sourceModel.elements().iterator();
+
         while (i.hasNext()) {
             Element elem = (Element) i.next();
             String elemName = elem.getName();
@@ -141,42 +153,56 @@ public class SourceModelReader {
     /**
      * Reads and return point source data
      */
-    private GEMPointSourceData
-            getPointSourceData(double deltaMFD, Element elem) {
-        String srcName = (String) elem.element(SOURCE_NAME).getData();
-        String srcID = (String) elem.element(SOURCE_ID).getData();
-        TectonicRegionType tectRegType =
-                TectonicRegionType.getTypeForName((String) elem.element(
-                        TECTONIC_REGION).getData());
-        Location pointLoc = getPointLocation(elem.element(POINT_LOCATION));
+    private GEMPointSourceData getPointSourceData(double deltaMFD, Element elem) {
+        Location pointLoc =
+                getPointLocation(elem.element(LOCATION).element(POINT_LOCATION));
         MagFreqDistsForFocalMechs magfreqDistFocMech =
                 getMagFreqDistsForFocalMechs(deltaMFD, elem);
         HypoMagFreqDistAtLoc hypoMagFreqDistAtLoc =
-                new HypoMagFreqDistAtLoc(
-                        magfreqDistFocMech.getMagFreqDistList(), pointLoc,
-                        magfreqDistFocMech.getFocalMechanismList());
+                new HypoMagFreqDistAtLoc(magfreqDistFocMech
+                        .getMagFreqDistList(), pointLoc, magfreqDistFocMech
+                        .getFocalMechanismList());
         ArbitrarilyDiscretizedFunc rupDepthDist =
                 getRuptureDepthDistribution(elem
                         .element(RUPTURE_DEPTH_DISTRIBUTION));
         double hypocentralDepth =
                 Double.valueOf((String) elem.element(HYPOCENTRAL_DEPTH)
                         .getData());
-        return new GEMPointSourceData(srcID, srcName, tectRegType,
+
+        return new GEMPointSourceData(extractIDFrom(elem),
+                extractNameFrom(elem), extractTectonicRegionFrom(elem),
                 hypoMagFreqDistAtLoc, rupDepthDist, hypocentralDepth);
+    }
+
+    /**
+     * Returns the type of the tectonic region of the given element.
+     */
+    private TectonicRegionType extractTectonicRegionFrom(Element elem) {
+        return TectonicRegionType.getTypeForName((String) elem.element(
+                TECTONIC_REGION).getData());
+    }
+
+    /**
+     * Returns the ID of the given element.
+     */
+    private String extractIDFrom(Element elem) {
+        return elem.attributeValue(SOURCE_ID);
+    }
+
+    /**
+     * Returns the name of the given element.
+     */
+    private String extractNameFrom(Element elem) {
+        return (String) elem.element(SOURCE_NAME).getData();
     }
 
     /**
      * Reads and returns area source data
      */
     private GEMAreaSourceData getAreaSourceData(double deltaMFD, Element elem) {
-        String srcName = (String) elem.element(SOURCE_NAME).getData();
-        String srcID = (String) elem.element(SOURCE_ID).getData();
-        TectonicRegionType tectRegType =
-                TectonicRegionType.getTypeForName((String) elem.element(
-                        TECTONIC_REGION).getData());
         Region reg =
-                new Region(get2DLocList(elem.element(AREA_BOUNDARY)
-                        .element(EXTERIOR).element(LINEAR_RING)
+                new Region(get2DLocList(elem.element(AREA_BOUNDARY).element(
+                        POLYGON).element(EXTERIOR).element(LINEAR_RING)
                         .element(POS_LIST)), borderType);
         MagFreqDistsForFocalMechs magfreqDistFocMech =
                 getMagFreqDistsForFocalMechs(deltaMFD, elem);
@@ -186,7 +212,9 @@ public class SourceModelReader {
         double hypocentralDepth =
                 Double.valueOf((String) elem.element(HYPOCENTRAL_DEPTH)
                         .getData());
-        return new GEMAreaSourceData(srcID, srcName, tectRegType, reg,
+
+        return new GEMAreaSourceData(extractIDFrom(elem),
+                extractNameFrom(elem), extractTectonicRegionFrom(elem), reg,
                 magfreqDistFocMech, rupDepthDist, hypocentralDepth);
     }
 
@@ -195,21 +223,21 @@ public class SourceModelReader {
      */
     private GEMSubductionFaultSourceData getComplexFaultSourceData(
             double deltaMFD, Element elem) {
-        String srcName = (String) elem.element(SOURCE_NAME).getData();
-        String srcID = (String) elem.element(SOURCE_ID).getData();
-        TectonicRegionType tectRegType =
-                TectonicRegionType.getTypeForName((String) elem.element(
-                        TECTONIC_REGION).getData());
         Element complexFaultGeometry = elem.element(COMPLEX_FAULT_GEOMETRY);
+
         FaultTrace faultTopEdge =
-                getFaultTrace(complexFaultGeometry.element(FAULT_TOP_EDGE)
-                        .element(POS_LIST));
+                getFaultTrace(complexFaultGeometry.element(FAULT_EDGES)
+                        .element(FAULT_TOP_EDGE).element(LINE_STRING).element(
+                                POS_LIST));
         FaultTrace faultBottomEdge =
-                getFaultTrace(complexFaultGeometry.element(FAULT_BOTTOM_EDGE)
+                getFaultTrace(complexFaultGeometry.element(FAULT_EDGES)
+                        .element(FAULT_BOTTOM_EDGE).element(LINE_STRING)
                         .element(POS_LIST));
         double rake = Double.valueOf((String) elem.element(RAKE).getData());
         IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
-        return new GEMSubductionFaultSourceData(srcID, srcName, tectRegType,
+
+        return new GEMSubductionFaultSourceData(extractIDFrom(elem),
+                extractNameFrom(elem), extractTectonicRegionFrom(elem),
                 faultTopEdge, faultBottomEdge, rake, magFreqDist, true);
     }
 
@@ -218,15 +246,10 @@ public class SourceModelReader {
      */
     private GEMFaultSourceData getSimpleFaultSourceData(double deltaMFD,
             Element elem) {
-        String srcName = (String) elem.element(SOURCE_NAME).getData();
-        String srcID = (String) elem.element(SOURCE_ID).getData();
-        TectonicRegionType tectRegType =
-                TectonicRegionType.getTypeForName((String) elem.element(
-                        TECTONIC_REGION).getData());
         Element simpleFaultGeometry = elem.element(SIMPLE_FAULT_GEOMETRY);
         FaultTrace faultTrace =
                 getFaultTrace(simpleFaultGeometry.element(FAULT_TRACE).element(
-                        POS_LIST));
+                        LINE_STRING).element(POS_LIST));
         double dip =
                 Double.valueOf((String) simpleFaultGeometry.element(DIP)
                         .getData());
@@ -237,9 +260,12 @@ public class SourceModelReader {
                 Double.valueOf((String) simpleFaultGeometry.element(
                         LOWER_SEISMOGENIC_DEPTH).getData());
         double rake = Double.valueOf((String) elem.element(RAKE).getData());
+
         IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
-        return new GEMFaultSourceData(srcID, srcName, tectRegType, magFreqDist,
-                faultTrace, dip, rake, lowerSeismogenicDepth,
+
+        return new GEMFaultSourceData(extractIDFrom(elem),
+                extractNameFrom(elem), extractTectonicRegionFrom(elem),
+                magFreqDist, faultTrace, dip, rake, lowerSeismogenicDepth,
                 upperSeismogenicDepth, true);
     }
 
@@ -258,6 +284,7 @@ public class SourceModelReader {
      * Reads magnitude frequency distribution/focal mechanism pairs and returns
      * {@link MagFreqDistsForFocalMechs}
      */
+    @SuppressWarnings("unchecked")
     private MagFreqDistsForFocalMechs getMagFreqDistsForFocalMechs(
             double deltaMFD, Element elem) {
         List<IncrementalMagFreqDist> mfdList =
@@ -286,13 +313,12 @@ public class SourceModelReader {
      * or incremental evenly discretized) and returns
      * {@link IncrementalMagFreqDist}
      */
-    private IncrementalMagFreqDist
-            getMagFreqDist(double deltaMFD, Element elem) {
+    private IncrementalMagFreqDist getMagFreqDist(double deltaMFD, Element elem) {
         IncrementalMagFreqDist magFreqDist = null;
         if (elem.element(TRUNCATED_GUTENBERG_RICHTER) != null) {
             magFreqDist =
-                    getGutenbergRichterMagFreqDist(deltaMFD,
-                            elem.element(TRUNCATED_GUTENBERG_RICHTER));
+                    getGutenbergRichterMagFreqDist(deltaMFD, elem
+                            .element(TRUNCATED_GUTENBERG_RICHTER));
         } else if (elem.element(EVENLY_DISCRETIZED_MAG_FREQ_DIST) != null) {
             magFreqDist =
                     getEvenlyDiscretizedMagFreqDist(elem
@@ -314,19 +340,21 @@ public class SourceModelReader {
         double minVal =
                 Double.valueOf(evenlyDiscretizedMagFreqDist
                         .attributeValue(MIN_VAL));
-        int binCount =
-                Integer.valueOf(evenlyDiscretizedMagFreqDist
-                        .attributeValue(BIN_COUNT));
-        Element distributionValues =
-                evenlyDiscretizedMagFreqDist.element(DISTRIBUTION_VALUES);
-        magFreqDist = new IncrementalMagFreqDist(minVal, binCount, binSize);
-        String occurrenceRates = (String) distributionValues.getData();
-        StringTokenizer st = new StringTokenizer(occurrenceRates);
+
+        StringTokenizer st =
+                new StringTokenizer((String) evenlyDiscretizedMagFreqDist
+                        .getData());
+
+        magFreqDist =
+                new IncrementalMagFreqDist(minVal, st.countTokens(), binSize);
+
         int index = 0;
+
         while (st.hasMoreTokens()) {
             magFreqDist.add(index, Double.valueOf(st.nextToken()));
-            index = index + 1;
+            index++;
         }
+
         return magFreqDist;
     }
 
@@ -358,11 +386,18 @@ public class SourceModelReader {
      * {@link FocalMechanism}
      */
     private FocalMechanism getFocalMechanism(Element focalMech) {
+        Element nodalPlane =
+                focalMech.element(NODAL_PLANES).element(NODAL_PLANE1);
+
         double strike =
-                Double.valueOf((String) focalMech.element(STRIKE).getData());
-        double dip = Double.valueOf((String) focalMech.element(DIP).getData());
+                Double.valueOf((String) nodalPlane.element(STRIKE).element(
+                        VALUE).getData());
+        double dip =
+                Double.valueOf((String) nodalPlane.element(DIP).element(VALUE)
+                        .getData());
         double rake =
-                Double.valueOf((String) focalMech.element(RAKE).getData());
+                Double.valueOf((String) nodalPlane.element(RAKE).element(VALUE)
+                        .getData());
         return new FocalMechanism(strike, dip, rake);
     }
 
@@ -374,13 +409,13 @@ public class SourceModelReader {
             Element ruptureDepthDist) {
         ArbitrarilyDiscretizedFunc rupDepthDist =
                 new ArbitrarilyDiscretizedFunc();
-        String xVals = (String) ruptureDepthDist.element(XVALUES).getData();
-        String yVals = (String) ruptureDepthDist.element(YVALUES).getData();
+        String xVals = (String) ruptureDepthDist.element(MAGNITUDE).getData();
+        String yVals = (String) ruptureDepthDist.element(DEPTH).getData();
         StringTokenizer xVal = new StringTokenizer(xVals);
         StringTokenizer yVal = new StringTokenizer(yVals);
         while (xVal.hasMoreTokens())
-            rupDepthDist.set(Double.valueOf(xVal.nextToken()),
-                    Double.valueOf(yVal.nextToken()));
+            rupDepthDist.set(Double.valueOf(xVal.nextToken()), Double
+                    .valueOf(yVal.nextToken()));
         return rupDepthDist;
     }
 
@@ -390,7 +425,7 @@ public class SourceModelReader {
      */
     private LocationList get3DLocList(Element posList) {
         LocationList locList = new LocationList();
-        String positionList = (String) posList.getData();
+        String positionList = ((String) posList.getData());
         StringTokenizer st = new StringTokenizer(positionList);
         while (st.hasMoreTokens()) {
             double lon = Double.valueOf(st.nextToken());
