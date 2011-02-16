@@ -69,7 +69,6 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
         # test that the doc matches the schema
         schema_path = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-        print "schema_path is %s" % schema_path
         xmlschema = etree.XMLSchema(etree.parse(schema_path))
         xmlschema.assertValid(xml_doc)
 
