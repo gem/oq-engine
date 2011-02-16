@@ -288,9 +288,10 @@ public class GroundMotionFieldCalculator {
     }
 
     private static void checkRandomNumberIsNotNull(Random rn) {
-        if (rn == null)
+        if (rn == null) {
             throw new IllegalArgumentException(
                     "Random number generator cannot be null");
+        }
     }
 
     /**
