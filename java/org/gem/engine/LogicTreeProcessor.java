@@ -21,6 +21,7 @@ import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
 import org.gem.engine.hazard.GEM1ERF;
+import org.gem.engine.hazard.parsers.SourceModelReader;
 import org.gem.engine.hazard.redis.Cache;
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
