@@ -27,7 +27,7 @@ def _to_site(element):
     # consider them as mandatory
     pos_el = element.xpath("./nrml:site/gml:Point/gml:pos",
                            namespaces=NAMESPACES)
-    assert len(pos_el) is 1
+    assert len(pos_el) == 1
 
     try:
         coord = [float(x) for x in pos_el[0].text.strip().split()]
@@ -45,7 +45,7 @@ def _to_gmf_site_data(element):
 
     ground_motion_elems = element.xpath('./nrml:groundMotion',
                                         namespaces=NAMESPACES)
-    assert len(ground_motion_elems) is 1
+    assert len(ground_motion_elems) == 1
 
     try:
         attributes['groundMotion'] = \
