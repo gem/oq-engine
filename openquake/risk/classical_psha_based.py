@@ -70,7 +70,8 @@ def _compute_lrem(vuln_function, distribution=None):
     lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
 
     for idx, value in enumerate(vuln_function):
-        iml, mean_val, cov = value
+        mean_val, cov = value[1:]
+
 
         stddev = cov * mean_val
         variance = stddev ** 2.0
