@@ -8,7 +8,7 @@ import os
 import unittest
 
 from lxml import etree
-from openquake import test
+from utils import test
 from openquake import logs
 
 log = logs.LOG
