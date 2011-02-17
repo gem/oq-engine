@@ -10,8 +10,8 @@ from lxml import etree
 
 from openquake import logs
 from openquake import shapes
-from openquake import test
 from openquake import xml
+from utils import test
 
 from openquake.output import risk as risk_output
 
@@ -40,13 +40,13 @@ class LossOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.loss_curve_path = test.test_output_file(LOSS_XML_OUTPUT_FILE)
-        self.loss_ratio_curve_path = test.test_output_file(
+        self.loss_curve_path = test.do_test_output_file(LOSS_XML_OUTPUT_FILE)
+        self.loss_ratio_curve_path = test.do_test_output_file(
             LOSS_RATIO_XML_OUTPUT_FILE)
 
-        self.single_loss_curve_path = test.test_output_file(
+        self.single_loss_curve_path = test.do_test_output_file(
             SINGLE_LOSS_XML_OUTPUT_FILE)
-        self.single_loss_ratio_curve_path = test.test_output_file(
+        self.single_loss_ratio_curve_path = test.do_test_output_file(
             SINGLE_LOSS_RATIO_XML_OUTPUT_FILE)
 
         self.schema_path = NRML_SCHEMA_PATH
@@ -108,7 +108,7 @@ class LossOutputTestCase(unittest.TestCase):
         """Assert that serialization of illegal loss curve data 
         raises error."""
         xml_writer = risk_output.LossCurveXMLWriter(
-            test.test_output_file(LOSS_XML_FAIL_OUTPUT_FILE))
+            test.do_test_output_file(LOSS_XML_FAIL_OUTPUT_FILE))
         self.assertRaises(ValueError, xml_writer.serialize, 
             self.loss_curves_fail)
     
