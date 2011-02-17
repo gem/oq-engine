@@ -17,7 +17,7 @@ from openquake import logs
 from openquake import risk
 from openquake import kvs 
 from openquake import shapes
-from openquake import test
+from utils import test
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk import engines

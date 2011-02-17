@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DATA_DIR=./tests/data
+DATA_DIR=../tests/data
 
 echo "Running demo..."
 python bin/openquake \
