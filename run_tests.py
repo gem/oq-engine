@@ -17,6 +17,7 @@ Usage Examples:
 
 """
 
+import os
 import sys
 import unittest
 
@@ -28,15 +29,14 @@ flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")
 
 if __name__ == '__main__':
     sys.argv = FLAGS(sys.argv)  
-    sys.path.append("tests")
+    sys.path.append("%s/tests" % os.path.abspath(os.path.curdir))
     logs.init_logs()
     try:
         import nose
 
         args = sys.argv
         args.remove('run_tests.py')
-        args = ['nosetests'] + args
-
+        args = ['nosetests', '-e', 'do_test.+'] + args
 
         if (FLAGS.debug == "debug"):
             pass

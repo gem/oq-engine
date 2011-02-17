@@ -21,7 +21,7 @@ from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake import test
+from utils import test
 from openquake import xml
 
 from openquake.job import mixins
