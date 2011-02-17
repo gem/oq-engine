@@ -26,6 +26,4 @@ BROKER_VHOST = "celeryvhost"
 CELERY_RESULT_BACKEND = "amqp"
 
 
-CELERY_IMPORTS = ("openquake.risk.job",
-                  "openquake.hazard.tasks",
-                  "tests.tasks")
+CELERY_IMPORTS = ("openquake.risk.job", "openquake.hazard.tasks")

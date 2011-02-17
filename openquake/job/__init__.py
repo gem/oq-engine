@@ -3,7 +3,6 @@
 """ A single hazard/risk job """
 
 import hashlib
-import math
 import os
 import re
 import urlparse

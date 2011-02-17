@@ -2,7 +2,7 @@ import os
 import unittest
 import urlparse
 
-from openquake import test
+from utils import test
 from openquake.job import handlers
 
 class StubbedGetter(object):
@@ -13,7 +13,7 @@ class StubbedGetter(object):
 class FileHandlerTestCase(unittest.TestCase):
     def test_file_handler_writes_a_file(self):
         expected_path = "/tmp/fake_file"
-        remote_path = test.test_file("config.gem")
+        remote_path = test.do_test_file("config.gem")
         url = urlparse.urlparse(remote_path)
 
         file_handler = handlers.FileHandler(url, expected_path)
@@ -41,7 +41,7 @@ class SFTPHandlerTestCase(unittest.TestCase):
                         writer.write(reader.read())
 
         expected_path = "/tmp/fake_file"
-        remote_path = "sftp://localhost/%s" % test.test_file("config.gem")
+        remote_path = "sftp://localhost/%s" % test.do_test_file("config.gem")
         url = urlparse.urlparse(remote_path)
 
         sftp_handler = handlers.SFTPHandler(url, expected_path)
@@ -75,7 +75,7 @@ class HTTPHandlerTestCase(unittest.TestCase):
                     return reader.read()
 
         expected_path = "/tmp/fake_file"
-        remote_path = "http://localhost/%s" % test.test_file("config.gem")
+        remote_path = "http://localhost/%s" % test.do_test_file("config.gem")
         url = urlparse.urlparse(remote_path)
 
         http_handler = handlers.HTTPHandler(url, expected_path)

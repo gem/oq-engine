@@ -14,17 +14,42 @@ from openquake import logs
 from openquake import producer
 from openquake import shapes
 
-from openquake.xml import NRML_NS, NRML_NS_OLD, GML_NS_OLD, NRML, NRML_OLD
+from openquake.xml import NRML_NS, GML_NS, NRML
 
 LOG = logs.LOG
 
+NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
+
 def _to_site(element):
-    """Convert current GML attributes to Site object"""
+    """Extract site information from an HCNode or GMFNode
+    and return a Site object"""
     # lon/lat are in XML attributes 'Longitude' and 'Latitude'
     # consider them as mandatory
-    pos_el = element.xpath("gml:pos", namespaces={"gml": GML_NS_OLD})
-    coord = [float(x) for x in pos_el[0].text.strip().split()]
+    pos_el = element.xpath("./nrml:site/gml:Point/gml:pos",
+                           namespaces=NAMESPACES)
+    try:
+        coord = [float(x) for x in pos_el[0].text.strip().split()]
+    except Exception:
+        raise ValueError('Missing or invalid lon/lat')
     return shapes.Site(coord[0], coord[1])
+
+
+def _to_gmf_site_data(element):
+    """ Extract site and ground motion values from a given GMFNode element
+
+    returns a tuple of (shapes.Site, dict)"""
+
+    attributes = {}
+
+    ground_motion_elems = element.xpath('./nrml:groundMotion',
+                                        namespaces=NAMESPACES)
+    try:
+        attributes['groundMotion'] = \
+            float(ground_motion_elems[0].text.strip())
+    except Exception:
+        raise ValueError('invalid or missing groundMotion value')
+    return (_to_site(element), attributes)
+
 
 
 class NrmlFile(producer.FileProducer):
@@ -39,10 +64,12 @@ class NrmlFile(producer.FileProducer):
     The attribute dictionary looks like
     {'IMT': 'PGA',
      'IDmodel': 'Model_Id',
-     'timeSpanDuration': 50.0,
+     'investigationTimeSpan': 50.0,
      'endBranchLabel': 'Foo', 
-     'IML': [5.0000e-03, 7.0000e-03, ...], 
-     'Values': [9.8728e-01, 9.8266e-01, ...],
+     'saDamping': 0.2,
+     'saPeriod': 0.1,
+     'IMLValues': [5.0000e-03, 7.0000e-03, ...],
+     'PoEValues': [9.8728e-01, 9.8266e-01, ...],
     }
 
     Notes:
@@ -57,7 +84,7 @@ class NrmlFile(producer.FileProducer):
 
     """
 
-    PROCESSING_ATTRIBUTES = (('IDmodel', str), ('timeSpanDuration', float),
+    PROCESSING_ATTRIBUTES = (('IDmodel', str), ('investigationTimeSpan', float),
                              ('saPeriod', float), ('saDamping', float))
 
     def __init__(self, path):
@@ -66,16 +93,13 @@ class NrmlFile(producer.FileProducer):
     def _parse(self):
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'start' and element.tag == NRML_OLD + 'HazardProcessing':
+            if event == 'start' and element.tag == NRML + 'hazardProcessing':
                 self._hazard_curve_meta(element)
-            # The HazardMap is not yet implemented
-            #elif event == 'start' and element.tag == NRML + 'HazardMap':
-             #error_str = "parsing of HazardMap elements is not yet implemented"
-             #raise NotImplementedError(error_str)    
-            elif event == 'end' and element.tag == NRML_OLD + 'HazardCurve':
-                yield (_to_site(element), 
-                       self._to_attributes(element))
-    
+            elif event == 'end' and element.tag == NRML + 'HCNode':
+                site_data = (_to_site(element), self._to_attributes(element))
+                del element
+                yield site_data
+
     def _hazard_curve_meta(self, element):
         """ Hazard curve metadata from the element """
         self._current_hazard_meta = {} #pylint: disable=W0201
@@ -90,53 +114,36 @@ class NrmlFile(producer.FileProducer):
                 raise ValueError(error_str)
 
     def _to_attributes(self, element):
-        """ Build an attributes dict from XML element """
-        
+        """ Build an attributes dict from an HCNode element """
+
         attributes = {}
-        
+
+        invalid_value_error = 'invalid or missing %s value'
+
         float_strip = lambda x: [float(o) for o in x[0].text.strip().split()]
-        string_strip = lambda x: x[0].text.strip()
-        # TODO(JMC): This is hardly efficient, but it's simple for the moment...
-        
+        get_imt = lambda x: x[0].get('IMT').strip()
+        get_ebl = lambda x: x[0].get('endBranchLabel').strip()
+
         for (child_el, child_key, etl) in (
-            ('nrml:Values', 'Values', float_strip),
-            ('../nrml:Common/nrml:IMLValues','IMLValues', float_strip),
-            ('../nrml:Common/nrml:IMT', 'IMT', string_strip)):
+            ('./nrml:hazardCurve/nrml:poE', 'PoEValues', float_strip),
+            ('../nrml:IML','IMLValues', float_strip),
+            ('../nrml:IML', 'IMT', get_imt),
+            ('../../nrml:hazardCurveField', 'endBranchLabel', get_ebl)):
             child_node = element.xpath(child_el, 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
+                namespaces=NAMESPACES)
 
             try:
                 attributes[child_key] = etl(child_node)
             except Exception:
-                error_str = "invalid or missing %s value" % child_key
-                raise ValueError(error_str) 
-
-        # consider all attributes of HazardProcessing element as mandatory 
-        for (required_attribute, attrib_type) in [('endBranchLabel', str)]:
-            (haz_list_element,) = element.xpath("..", 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
-            attr_value = haz_list_element.get(required_attribute)
-            if attr_value is not None:
-                attributes[required_attribute] = \
-                    attrib_type(attr_value)
-            else:
-                error_str = "element endBranchLabel: missing required "\
-                   "attribute %s" % required_attribute
-                raise ValueError(error_str) 
+                raise ValueError(invalid_value_error % child_key)
 
         try:
             attributes.update(self._current_hazard_meta)
         except Exception:
-            error_str = "root element (HazardProcessing) is missing"
+            error_str = "config element 'hazardProcessing' is missing"
             raise ValueError(error_str) 
         
         return attributes
-    # 
-    # def filter(self, attribute_constraint=None):
-    #    for next in iter(self):
-    #        if (attribute_constraint is not None and \
-    #                attribute_constraint.match(next)):
-    #            yield next
 
 
 class GMFReader(producer.FileProducer):
@@ -155,34 +162,12 @@ class GMFReader(producer.FileProducer):
         super(GMFReader, self).__init__(path)
 
     def _parse(self):
-        site_nesting_level = 0
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end')):
-            if event == 'start' and element.tag == NRML_OLD + 'HazardResult':
-                self._gmf_attributes()
-            elif event == 'start' and element.tag == NRML_OLD + 'site':
-                site_nesting_level += 1
-            elif event == 'end' and element.tag == NRML_OLD + 'site':
-                site_nesting_level -= 1
+            if event == 'end' and element.tag == NRML + 'GMFNode':
+                yield (_to_gmf_site_data(element))
 
-                # yield only for outer site elements
-                if site_nesting_level == 0:
-                    yield (self._to_site_data(element))
-
-    def _gmf_attributes(self):
-        """TODO(fab): Collect instance-wide attributes here."""
-        pass
-
-    def _to_site_data(self, element):
-        """this is called on the outer 'site' elements"""
-        
-        attributes = {}
-        attributes['groundMotion'] = float(element.get('groundMotion'))
-        (inner_site_node,) = element.xpath('nrml:site', 
-                namespaces={"gml": GML_NS_OLD, "nrml": NRML_NS_OLD})
-        return (_to_site(inner_site_node), attributes)
-
-
+    
 class HazardConstraint(object):
     """ This class represents a constraint that can be used to filter
     VulnerabilityFunction elements from an VulnerabilityModel XML instance 

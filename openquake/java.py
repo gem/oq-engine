@@ -88,7 +88,7 @@ def jvm(max_mem=None):
 
 # The default JVM max. memory size to be used in the absence of any other
 # setting or configuration.
-DEFAULT_JVM_MAX_MEM=4000
+DEFAULT_JVM_MAX_MEM = 4000
 
 
 def get_jvm_max_mem(max_mem):

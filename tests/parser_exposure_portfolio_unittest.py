@@ -6,7 +6,7 @@ import unittest
 
 from openquake.parser import exposure
 from openquake import shapes
-from openquake import test
+from utils import test
 
 TEST_FILE = 'exposure-portfolio.xml'
 
