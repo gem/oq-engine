@@ -27,9 +27,11 @@ def _to_site(element):
     # consider them as mandatory
     pos_el = element.xpath("./nrml:site/gml:Point/gml:pos",
                            namespaces=NAMESPACES)
+    assert len(pos_el) == 1
+
     try:
         coord = [float(x) for x in pos_el[0].text.strip().split()]
-    except Exception:
+    except (AttributeError, ValueError, IndexError, TypeError):
         raise ValueError('Missing or invalid lon/lat')
     return shapes.Site(coord[0], coord[1])
 
@@ -43,10 +45,12 @@ def _to_gmf_site_data(element):
 
     ground_motion_elems = element.xpath('./nrml:groundMotion',
                                         namespaces=NAMESPACES)
+    assert len(ground_motion_elems) == 1
+
     try:
         attributes['groundMotion'] = \
             float(ground_motion_elems[0].text.strip())
-    except Exception:
+    except (AttributeError, ValueError, IndexError, TypeError):
         raise ValueError('invalid or missing groundMotion value')
     return (_to_site(element), attributes)
 
@@ -89,6 +93,7 @@ class NrmlFile(producer.FileProducer):
 
     def __init__(self, path):
         super(NrmlFile, self).__init__(path)
+        self._current_hazard_meta = None
 
     def _parse(self):
         for event, element in etree.iterparse(
@@ -102,7 +107,7 @@ class NrmlFile(producer.FileProducer):
 
     def _hazard_curve_meta(self, element):
         """ Hazard curve metadata from the element """
-        self._current_hazard_meta = {} #pylint: disable=W0201
+        self._current_hazard_meta = {}
         for (required_attribute, attrib_type) in self.PROCESSING_ATTRIBUTES:
             id_model_value = element.get(required_attribute)
             if id_model_value is not None:
@@ -137,12 +142,10 @@ class NrmlFile(producer.FileProducer):
             except Exception:
                 raise ValueError(invalid_value_error % child_key)
 
-        try:
-            attributes.update(self._current_hazard_meta)
-        except Exception:
-            error_str = "config element 'hazardProcessing' is missing"
-            raise ValueError(error_str) 
-        
+        if self._current_hazard_meta is None:
+            raise ValueError("config element 'hazardProcessing' is missing")
+
+        attributes.update(self._current_hazard_meta)
         return attributes
 
 
