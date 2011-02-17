@@ -5,11 +5,11 @@ import os
 import unittest
 
 from openquake import shapes
-from openquake import test
+from utils import test
 from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
-FILES_KNOWN_TO_FAIL_OLD = [
+FILES_KNOWN_TO_FAIL = [
     'Nrml-fail-missing_required_attribute.xml',
     'Nrml-fail-attribute_type_mismatch.xml',
     'Nrml-fail-IML_type_mismatch.xml',
@@ -17,29 +17,30 @@ FILES_KNOWN_TO_FAIL_OLD = [
     'Nrml-fail-illegal_gml_pos.xml',
     'Nrml-fail-curve_values_type_mismatch.xml']
 
-FILE_FLAVOUR_NOT_IMPLEMENTED_OLD = 'Nrml-HazardMap-PASS.xml'
+FILE_FLAVOUR_NOT_IMPLEMENTED = 'hazard-map.xml'
 
-EXAMPLE_DIR_OLD = os.path.join(test.SCHEMA_DIR, 'old/examples/failures')
-TEST_FILE_OLD = os.path.join(test.SCHEMA_DIR, 
-                             'old/examples/hazard-curves.xml')
+EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples')
+FAIL_EXAMPLE_DIR = os.path.join(EXAMPLE_DIR, 'failures')
+TEST_FILE = os.path.join(EXAMPLE_DIR,
+                         'hazard-curves.xml')
 
 class NrmlFileTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE_OLD)
+        self.nrml_element = hazard_parser.NrmlFile(TEST_FILE)
 
     def test_nrml_files_known_to_fail(self):
-        for testfile in FILES_KNOWN_TO_FAIL_OLD:
+        for testfile in FILES_KNOWN_TO_FAIL:
             nrml_element = hazard_parser.NrmlFile(os.path.join(
-                EXAMPLE_DIR_OLD, testfile))
+                FAIL_EXAMPLE_DIR, testfile))
 
             self.assertRaises(ValueError, map, None, nrml_element)
-            
+
     @test.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
-        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR_OLD,
-            FILE_FLAVOUR_NOT_IMPLEMENTED_OLD))
+        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR,
+            FILE_FLAVOUR_NOT_IMPLEMENTED))
 
         self.assertRaises(NotImplementedError, map, None, nrml_element)
     
@@ -65,24 +66,16 @@ class NrmlFileTestCase(unittest.TestCase):
         # constraint is met by one and only one site in the example file 
         # (lon=16.35/lat=48.25)
         region_constraint = shapes.RegionConstraint.from_simple(
-            (-122.45, 38.0), (-122.35, 37.0))
-        expected_result = [(shapes.Point(-122.40, 37.50),
+            (-123.0, 38.0), (-122.0, 37.0))
+        expected_result = [(shapes.Point(-122.5, 37.5),
                            {'IMT': 'PGA',
                             'IDmodel': 'PGA_1_1',
-                            'timeSpanDuration': 50.0,
-                            'endBranchLabel': 'Foo',
+                            'investigationTimeSpan': 50.0,
+                            'endBranchLabel': '1_1',
                             'saDamping': 0.2,
                             'saPeriod': 0.1,
-                            'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                            1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                            7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                            2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                            7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                            'Values': [9.8784e-01, 9.8405e-01, 9.5719e-01,
-                            9.1955e-01, 8.5019e-01, 7.4038e-01, 5.9153e-01,
-                            4.2626e-01, 2.9755e-01, 2.7731e-01, 1.6218e-01,
-                            8.8035e-02, 4.3499e-02, 1.9065e-02, 7.0442e-03,
-                            2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]})]
+                            'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
+                            'PoEValues': [9.8728e-01, 9.8266e-01, 9.4957e-01]})]
 
         counter = None
         for counter, (nrml_point, nrml_attr) in enumerate(
@@ -113,7 +106,7 @@ class NrmlFileTestCase(unittest.TestCase):
 
         # specified rectangle contains all sites in example file 
         region_constraint = shapes.RegionConstraint.from_simple(
-            (-125.0, 40.0), (-120.0, 20.0))
+            (-126.0, 40.0), (-120.0, 20.0))
 
         expected_result_counter = 4
         counter = None
@@ -146,177 +139,136 @@ class NrmlFileTestCase(unittest.TestCase):
         item in a set of expected results.
         """
 
-        test_attribute_dicts = [
+        test_filters = [
             {'IMT': 'PGA'},
-            {'endBranchLabel': 'Foo'},
-            {'IMT': 'PGA', 'Values': [9.8728e-01, 9.8266e-01, 9.4957e-01,
-            9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01,
-            3.6143e-01, 2.4231e-01, 2.2452e-01, 1.2831e-01,
-            7.0352e-02, 3.6060e-02, 1.6579e-02, 6.4213e-03,
-            2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]}
-        ]
+            {'IMT': 'FAKE'},
+            {'IMLValues': [0.0001, 0.0002, 0.0003]},
+            {'PoEValues': [9.2e-01, 9.15e-01, 9.05e-01]}]
 
-        expected_results = [ 
-                            [(shapes.Point(-122.5000, 37.5000),
-                            {'IMT': 'PGA',
-                            'IDmodel': 'PGA_1_1',
-                            'timeSpanDuration': 50.0,
-                            'endBranchLabel': 'Foo',
-                            'saDamping': 0.2,
-                            'saPeriod': 0.1,
-                            'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                            1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                            7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                            2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                            7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                            'Values': [9.8728e-01, 9.8266e-01, 9.4957e-01,
-                            9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01,
-                            3.6143e-01, 2.4231e-01, 2.2452e-01, 1.2831e-01,
-                            7.0352e-02, 3.6060e-02, 1.6579e-02, 6.4213e-03,
-                            2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]}),
-                            (shapes.Point(-122.4000, 37.5000),
-                            {'IMT': 'PGA',
-                            'IDmodel': 'PGA_1_1',
-                            'timeSpanDuration': 50.0,
-                            'endBranchLabel': 'Foo',
-                            'saDamping': 0.2,
-                            'saPeriod': 0.1,
-                            'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                            1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                            7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                            2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                            7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                            'Values': [9.8784e-01, 9.8405e-01, 9.5719e-01,
-                            9.1955e-01, 8.5019e-01, 7.4038e-01, 5.9153e-01,
-                            4.2626e-01, 2.9755e-01, 2.7731e-01, 1.6218e-01,
-                            8.8035e-02, 4.3499e-02, 1.9065e-02, 7.0442e-03,
-                            2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}),
-                            (shapes.Point(-122.3000, 37.5000),
-                            {'IMT': 'PGA',
-                            'IDmodel': 'PGA_1_1',
-                            'timeSpanDuration': 50.0,
-                            'endBranchLabel': 'Foo',
-                            'saDamping': 0.2,
-                            'saPeriod': 0.1,
-                            'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                            1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                            7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                            2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                            7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                            'Values': [9.8822e-01, 9.8499e-01, 9.6243e-01,
-                            9.3086e-01, 8.7155e-01, 7.7398e-01, 6.3413e-01,
-                            4.6796e-01, 3.3025e-01, 3.0795e-01, 1.7852e-01,
-                            9.4528e-02, 4.5402e-02, 1.9435e-02, 7.0961e-03,
-                            2.1325e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]})
-                           ],
-                           [(shapes.Point(-122.5000, 37.5000),
-                           {'IMT': 'PGA',
-                           'IDmodel': 'PGA_1_1',
-                           'timeSpanDuration': 50.0,
-                           'endBranchLabel': 'Foo',
-                           'saDamping': 0.2,
-                           'saPeriod': 0.1,
-                           'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                           1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                           7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                           2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                           7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                           'Values': [9.8728e-01, 9.8266e-01, 9.4957e-01,
-                           9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01,
-                           3.6143e-01, 2.4231e-01, 2.2452e-01, 1.2831e-01,
-                           7.0352e-02, 3.6060e-02, 1.6579e-02, 6.4213e-03,
-                           2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]}),
-                           (shapes.Point(-122.4000, 37.5000),
-                           {'IMT': 'PGA',
-                           'IDmodel': 'PGA_1_1',
-                           'timeSpanDuration': 50.0,
-                           'endBranchLabel': 'Foo',
-                           'saDamping': 0.2,
-                           'saPeriod': 0.1,
-                           'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                           1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                           7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                           2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                           7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                           'Values': [9.8784e-01, 9.8405e-01, 9.5719e-01,
-                           9.1955e-01, 8.5019e-01, 7.4038e-01, 5.9153e-01,
-                           4.2626e-01, 2.9755e-01, 2.7731e-01, 1.6218e-01,
-                           8.8035e-02, 4.3499e-02, 1.9065e-02, 7.0442e-03,
-                           2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}),
-                           (shapes.Point(-122.3000, 37.5000),
-                           {'IMT': 'PGA',
-                           'IDmodel': 'PGA_1_1',
-                           'timeSpanDuration': 50.0,
-                           'endBranchLabel': 'Foo',
-                           'saDamping': 0.2,
-                           'saPeriod': 0.1,
-                           'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                           1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                           7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                           2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                           7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                           'Values': [9.8822e-01, 9.8499e-01, 9.6243e-01,
-                           9.3086e-01, 8.7155e-01, 7.7398e-01, 6.3413e-01,
-                           4.6796e-01, 3.3025e-01, 3.0795e-01, 1.7852e-01,
-                           9.4528e-02, 4.5402e-02, 1.9435e-02, 7.0961e-03,
-                           2.1325e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]})
-                          ],[ (shapes.Point(-122.5000, 37.5000),
-                           {'IMT': 'PGA',
-                           'IDmodel': 'PGA_1_1',
-                           'timeSpanDuration': 50.0,
-                           'endBranchLabel': 'Foo',
-                           'saDamping': 0.2,
-                           'saPeriod': 0.1,
-                           'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02,
-                           1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
-                           7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01,
-                           2.0300e-01, 2.8400e-01, 3.9700e-01, 5.5600e-01,
-                           7.7800e-01, 1.0900e+00, 1.5200e+00, 2.1300e+00],
-                           'Values': [9.8728e-01, 9.8266e-01, 9.4957e-01,
-                           9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01,
-                           3.6143e-01, 2.4231e-01, 2.2452e-01, 1.2831e-01,
-                           7.0352e-02, 3.6060e-02, 1.6579e-02, 6.4213e-03,
-                           2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]})]]
+        # this is the structure of the test NRML file
+        # we'll use this to construct an 'expected results' list
+        nrml_data = [
+                     # first hazardCurveField
+                     (shapes.Point(-122.5000, 37.5000),
+                      {'IMT': 'PGA',
+                       'IDmodel': 'PGA_1_1',
+                       'investigationTimeSpan': 50.0,
+                       'endBranchLabel': '1_1',
+                       'saDamping': 0.2,
+                       'saPeriod': 0.1,
+                       'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
+                       'PoEValues': [9.8728e-01, 9.8266e-01, 9.4957e-01]}),
+                     (shapes.Point(-123.5000, 37.5000),
+                      {'IMT': 'PGA',
+                       'IDmodel': 'PGA_1_1',
+                       'investigationTimeSpan': 50.0,
+                       'endBranchLabel': '1_1',
+                       'saDamping': 0.2,
+                       'saPeriod': 0.1,
+                       'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
+                       'PoEValues': [9.8728e-02, 9.8266e-02, 9.4957e-02]}),
+                     # second hazardCurveField
+                     (shapes.Point(-125.5000, 37.5000),
+                      {'IMT': 'PGA',
+                       'IDmodel': 'PGA_1_1',
+                       'investigationTimeSpan': 50.0,
+                       'endBranchLabel': '1_1',
+                       'saDamping': 0.2,
+                       'saPeriod': 0.1,
+                       'IMLValues': [0.0001, 0.0002, 0.0003],
+                       'PoEValues': [9.3e-01, 9.2e-01, 9.1e-01]}),
+                     # third hazardCurveField
+                     (shapes.Point(-125.5000, 37.5000),
+                      {'IMT': 'PGA',
+                       'IDmodel': 'PGA_1_1',
+                       'investigationTimeSpan': 50.0,
+                       'endBranchLabel': '1_1',
+                       'saDamping': 0.2,
+                       'saPeriod': 0.1,
+                       'IMLValues': [0.0001, 0.0002, 0.0003],
+                       'PoEValues': [9.2e-01, 9.15e-01, 9.05e-01]})]
+
+        expected_results = [ # one list of results for each test_filter
+                            nrml_data,
+                            [],
+                            [nrml_data[2], nrml_data[3]],
+                            [nrml_data[3]]]
 
         # set a region constraint that inlcudes all points 
         region_constraint = shapes.RegionConstraint.from_simple(
-            (-125.0, 40.0), (-120.0, 20.0))
+            (-126.0, 40.0), (-120.0, 30.0))
       
-        for attr_test_counter, curr_attribute_dict in enumerate(
-            test_attribute_dicts):
+        for filter_counter, filter_dict in enumerate(
+            test_filters):
             attribute_constraint = producer.AttributeConstraint(
-                    curr_attribute_dict)
+                    filter_dict)
 
             counter = None
             for counter, (nrml_point, nrml_attr) in enumerate(
                             self.nrml_element.filter(region_constraint, 
                                     attribute_constraint)):
+                if expected_results[filter_counter]:
+                    # only perform the following tests if the expected
+                    # result item is not empty
 
-                # check topological equality for points
-                self.assertTrue(nrml_point.equals(
-                    expected_results[attr_test_counter][counter][0]),
-                    "filter yielded unexpected point at position %s: %s, %s" \
-                    % (counter, nrml_point, 
-                       expected_results[attr_test_counter][counter][0]))
+                    expected_nrml_point = \
+                        expected_results[filter_counter][counter][0]
+                    expected_nrml_attr = \
+                        expected_results[filter_counter][counter][1]
+                    # check topological equality for points
+                    self.assertTrue(nrml_point.equals(expected_nrml_point),
+                        "filter yielded unexpected point at position" \
+                        " %s: \n Got: %s, \n Expected: %s " \
+                        % (counter, nrml_point, 
+                        expected_nrml_point))
 
-                self.assertEqual(nrml_attr, expected_results[
-                    attr_test_counter][counter][1],
-                    "filter yielded unexpected attribute values at position" \
-                    " %s: %s, %s" % (counter, nrml_attr, 
-                        expected_results[attr_test_counter][counter][1]))
-            
-            # ensure that generator yielded at least one item
-            self.assertTrue(counter is not None, 
-                "filter yielded nothing although %s item(s) were expected \
-                 for attribute check of %s" % \
-                (len(expected_results[attr_test_counter]),
-                    attribute_constraint.attribute))
+                    self.assertEqual(nrml_attr, expected_nrml_attr,
+                        "filter yielded unexpected attribute values at " \
+                        "position %s: \n Got: %s, \n Expected: %s " \
+                        % (counter, nrml_attr, expected_nrml_attr))
 
-            # ensure that generator returns exactly the number of items of the
-            # expected result list
-            self.assertEqual(counter, 
-                len(expected_results[attr_test_counter])-1,
-                "filter yielded wrong number of items (%s), expected were %s" \
-                % (counter+1, len(expected_results[attr_test_counter])))
-            
+            if expected_results[filter_counter]:
+                # ensure that generator yielded at least one item
+                self.assertTrue(counter is not None,
+                    "filter yielded nothing although %s item(s) were expected \
+                    for attribute check of %s" % \
+                    (len(expected_results[filter_counter]),
+                        attribute_constraint.attribute))
+
+                # ensure that the generator returns _exactly_ the number of
+                # items in the expected result list
+                self.assertEqual(len(expected_results[filter_counter]),
+                                 counter + 1,
+                                 "filter yielded incorrect number of items \
+                                 \n Got: %s \n Expected: %s" \
+                                 % (counter,
+                                    len(expected_results[filter_counter])))
+            else:
+                # verify that 0 elements were received
+                self.assertTrue(counter is None)
+
             self.nrml_element.reset()
+
+
+class GMFReaderTestCase(unittest.TestCase):
+
+    def test_gmf_reader_yields_correct_parsed_values(self):
+        test_file = os.path.join(EXAMPLE_DIR, 'gmf-simple-fault.xml')
+        expected_output = [(shapes.Site(-116.0, 41.0),
+                            {'groundMotion': 0.2}),
+                           (shapes.Site(-118.0, 41.0),
+                            {'groundMotion': 0.3})]
+
+        reader = hazard_parser.GMFReader(test_file)
+
+        for (counter, (site, ground_motion)) in enumerate(reader):
+            # verify that each result matches what is expected
+            # order matters here
+            expected_site = expected_output[counter][0]
+            expected_gm = expected_output[counter][1]
+            self.assertEqual(expected_site, site)
+            self.assertEqual(expected_gm, ground_motion)
+
+        # verify that we have the correct number of results
+        self.assertEqual(len(expected_output), counter+1)
+

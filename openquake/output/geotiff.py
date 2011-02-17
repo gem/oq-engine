@@ -336,7 +336,7 @@ class GMFGeoTiffFile(GeoTiffFile):
         r, g, b = _rgb_for(self._condense_iml_range_to_unity(self.iml_list),
                            COLORMAP[self.colormap])
 
-        for idx, iml_value in enumerate(self.iml_list):
+        for idx, _iml_value in enumerate(self.iml_list):
             colorscale.append(("#%02x%02x%02x" % (int(r[idx]), int(g[idx]), 
                 int(b[idx])), str(self.iml_list[idx])))
 

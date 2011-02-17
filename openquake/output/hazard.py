@@ -4,7 +4,7 @@
 This module provides classes that serialize hazard-related objects
 to NRML format.
 
-Hazard curves:
+* Hazard curves:
 
 For the serialization of hazard curves, it currently takes 
 all the lxml object model in memory
@@ -13,7 +13,12 @@ IML. Couldn't find a way to do so writing an object at a
 time without making a restriction to the order on which
 objects are received.
 
-Ground Motion Fields (GMFs):
+* Hazard maps:
+
+Hazard maps are serialized per object (=Site) as implemented 
+in the base class.
+
+* Ground Motion Fields (GMFs):
 
 GMFs are serialized per object (=Site) as implemented in the base class.
 """
@@ -134,7 +139,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
             # nrml:IML
             iml_el = etree.SubElement(hazard_curve_field_el, "%sIML" % NRML)
-            iml_el.text = " ".join([str(x) for x in values["IML"]])
+            iml_el.text = " ".join([str(x) for x in values["IMLValues"]])
             iml_el.set("IMT", str(values["IMT"]))
 
             self.curves_per_branch_label[curve_label] = hazard_curve_field_el
@@ -161,7 +166,187 @@ class HazardCurveXMLWriter(writer.FileWriter):
         poe_el = etree.SubElement(etree.SubElement(
                 hcnode_el, "%shazardCurve" % NRML), "%spoE" % NRML)
 
-        poe_el.text = " ".join([str(x) for x in values["poE"]])
+        poe_el.text = " ".join([str(x) for x in values["PoEValues"]])
+
+
+class HazardMapXMLWriter(writer.FileWriter):
+    """This class serializes hazard map information
+    to NRML format.
+    """
+
+    root_tag = "%snrml" % NRML
+    hazard_result_tag = "%shazardResult" % NRML
+    config_tag = "%sconfig" % NRML
+    hazard_processing_tag = "%shazardProcessing" % NRML
+    
+    hazard_map_tag = "%shazardMap" % NRML
+
+    node_tag = "%sHMNode" % NRML
+    site_tag = "%sHMSite" % NRML
+    vs30_tag = "%svs30" % NRML
+
+    point_tag = "%sPoint" % GML
+    pos_tag = "%spos" % GML
+    iml_tag = "%sIML" % NRML
+
+    PROCESSING_ATTRIBUTES_TO_CHECK = (
+        {'name': 'investigationTimeSpan', 'required': False},)
+
+    MAP_ATTRIBUTES_TO_CHECK = (
+        {'name': 'poE', 'required': True}, 
+        {'name': 'IMT', 'required': True}, 
+        {'name': 'endBranchLabel', 'required': False}, 
+        {'name': 'statistics', 'required': False}, 
+        {'name': 'quantileValue', 'required': False})
+
+    NRML_DEFAULT_ID = 'nrml'
+    HAZARD_RESULT_DEFAULT_ID = 'hr'
+    HAZARD_MAP_DEFAULT_ID = 'hm'
+    HAZARD_MAP_NODE_ID_PREFIX = 'n_'
+
+    def __init__(self, path):
+        super(HazardMapXMLWriter, self).__init__(path)
+        self.hmnode_counter = 0
+        self.parent_node = None
+        self.hazard_processing_node = None
+
+    def write(self, point, val):
+        """Writes hazard map for one site.
+
+        point must be of type shapes.Site
+        val is a dictionary like this:
+
+        {'IML': 0.8,
+         'IMT': 'PGA',
+         'poE': 0.1,
+         'endBranchLabel': '1',
+         'vs30': 760.0,
+         'investigationTimeSpan': 50.0
+        }
+        """
+
+        if isinstance(point, shapes.GridPoint):
+            point = point.site.point
+        if isinstance(point, shapes.Site):
+            point = point.point
+        self._append_node(point, val, self.parent_node)
+
+    def write_header(self):
+        """Header (i.e., common) information for all nodes."""
+
+        self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
+        self.root_node.attrib['%sid' % GML] = self.NRML_DEFAULT_ID
+
+        hazard_result_node = etree.SubElement(self.root_node, 
+            self.hazard_result_tag, nsmap=NSMAP)
+        hazard_result_node.attrib['%sid' % GML] = self.HAZARD_RESULT_DEFAULT_ID
+
+        config_node = etree.SubElement(hazard_result_node, 
+            self.config_tag, nsmap=NSMAP)
+
+        self.hazard_processing_node = etree.SubElement(config_node, 
+            self.hazard_processing_tag, nsmap=NSMAP)
+
+        # parent node for hazard map nodes: hazardMap
+        self.parent_node = etree.SubElement(hazard_result_node, 
+            self.hazard_map_tag, nsmap=NSMAP)
+        self.parent_node.attrib['%sid' % GML] = self.HAZARD_MAP_DEFAULT_ID
+
+    def write_footer(self):
+        """Serialize tree to file."""
+
+        if self._ensure_all_attributes_set():
+            et = etree.ElementTree(self.root_node)
+            et.write(self.file, pretty_print=True, xml_declaration=True,
+                    encoding="UTF-8")
+        else:
+            error_msg = "not all required attributes set in hazard curve " \
+                        "dataset"
+            raise ValueError(error_msg)
+    
+    def _append_node(self, point, val, parent_node):
+        """Write HMNode element."""
+        
+        self.hmnode_counter += 1
+        node_node = etree.SubElement(parent_node, self.node_tag, nsmap=NSMAP)
+        node_node.attrib["%sid" % GML] = "%s%s" % (
+            self.HAZARD_MAP_NODE_ID_PREFIX, self.hmnode_counter)
+
+        site_node = etree.SubElement(node_node, self.site_tag, nsmap=NSMAP)
+        point_node = etree.SubElement(site_node, self.point_tag, nsmap=NSMAP)
+        point_node.attrib['srsName'] = 'epsg:4326'
+
+        pos_node = etree.SubElement(point_node, self.pos_tag, nsmap=NSMAP)
+        pos_node.text = "%s %s" % (str(point.x), str(point.y))
+
+        if 'vs30' in val:
+            vs30_node = etree.SubElement(site_node, self.vs30_tag, 
+                nsmap=NSMAP)
+            vs30_node.text = str(val['vs30'])
+
+        iml_node = etree.SubElement(node_node, self.iml_tag, nsmap=NSMAP)
+        iml_node.text = str(val['IML'])
+
+        # check/set common attributes
+        # TODO(fab): this could be moved to common base class 
+        # of all serializers
+        self._set_common_attributes(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
+            self.hazard_processing_node, val)
+        self._set_common_attributes(self.MAP_ATTRIBUTES_TO_CHECK, 
+            parent_node, val)
+
+    def _set_common_attributes(self, attr_list, node, val):
+        """Set common XML attributes, if necessary. Check if consistent
+        values are given for all hazard map nodes. If hazard map node
+        attributes dictionary does not have the item set, do nothing.
+        """
+        for attr in attr_list:
+            if attr['name'] in val:
+                if attr['name'] not in node.attrib:
+                    node.attrib[attr['name']] = str(val[attr['name']])
+                elif node.attrib[attr['name']] != str(val[attr['name']]):
+                    error_msg = "not all nodes of the hazard map have the " \
+                        "same value for common attribute %s" % attr['name'] 
+                    raise ValueError(error_msg)
+
+    def _ensure_all_attributes_set(self):
+        if (self._ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
+                                        self.hazard_processing_node) and 
+             self._ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK, 
+                                         self.parent_node) and
+             self._ensure_attribute_rules()):
+            return True
+        else:
+            return False
+
+    def _ensure_attribute_rules(self):
+        
+        # special checks: end branch label and statistics
+        if 'endBranchLabel' in self.parent_node.attrib:
+
+            # ensure that neither statistics nor quantileValue is set
+            # together with endBranchLabel
+            if ('statistics' in self.parent_node.attrib or
+                'quantileValue' in self.parent_node.attrib):
+
+                error_msg = "attribute endBranchLabel cannot be used " \
+                            "together with statistics/quantileValue"
+                raise ValueError(error_msg)
+
+        elif 'statistics' not in self.parent_node.attrib:
+
+            error_msg = "either attribute endBranchLabel or attribute " \
+                        "statistics has to be set"
+            raise ValueError(error_msg)
+
+        return True
+
+
+    def _ensure_attributes_set(self, attr_list, node):
+        for attr in attr_list:
+            if attr['name'] not in node.attrib and attr['required'] is True:
+                return False
+        return True
 
 
 class GMFXMLWriter(writer.FileWriter):
@@ -189,7 +374,6 @@ class GMFXMLWriter(writer.FileWriter):
 
     def __init__(self, path):
         super(GMFXMLWriter, self).__init__(path)
-        
         self.node_counter = 0
         
         # <GMF/> where all the fields are appended
