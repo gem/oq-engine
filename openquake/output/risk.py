@@ -1,103 +1,160 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
-Output risk data (loss ratio curves, loss curves, and loss values)
-as nrml-style XML.
-
+NRML serialization of risk-related data sets.
+- loss ratio curves
+- loss curves
 """
 
 from lxml import etree
 
 from openquake import logs
 from openquake import shapes
-from openquake import writer
-from openquake.xml import GML_OLD, NSMAP_OLD, NRML_OLD
+from openquake import xml
 
-LOGGER = logs.RISK_LOG
+from openquake.output import nrml
 
-class RiskXMLWriter(writer.FileWriter):
-    """This class writes a risk curve into the nrml format."""
-    curve_tag = NRML_OLD + "Curve"
-    abcissa_tag = NRML_OLD + "PE"
-    container_tag = NRML_OLD + "RiskElementList"
-    
-    def write(self, point, val):
+LOG = logs.RISK_LOG
+
+class RiskXMLWriter(nrml.TreeNRMLWriter):
+    """This class serializes a set of loss or loss ratio curves to NRML.
+    Since the curves have to be collected under several different asset
+    objects, we have to build the whole tree before serializing
+    (use base class nrml.TreeNRMLWriter).
+    """
+
+    # these tag names have to be redefined in the derived classes
+    container_tag = None
+    curves_tag = None
+    curve_tag = None
+    abscissa_tag = None
+
+    CONTAINER_DEFAULT_ID = 'c1'
+
+    def __init__(self, path):
+        super(RiskXMLWriter, self).__init__(path)
+
+        self.curve_list_el = None
+        self.assets_per_id = {}
+
+    def write(self, point, values):
+        """Writes an asset element with loss/loss ratio information.
+
+        point must be of type shapes.Site or shapes.GridPoint
+        values is a pair of (curve_object, asset_object), with curve_object
+        of type shapes.Curve. 
+        asset_object is a dictionary that looks like:
+
+        {'assetID': foo, # this is the only required item
+         'nrml_id': 'nrml',
+         'riskres_id': 'rr',
+         'list_id': 'list',
+         'endBranchLabel' : '1_1'
+        }
+        """
+        
         if isinstance(point, shapes.GridPoint):
-            point = point.site.point
-        if isinstance(point, shapes.Site):
-            point = point.point
-        self._append_curve_node(point, val, self.parent_node)
+            point = point.site
 
-    def write_header(self):
-        """Write out the file header"""
-        self.root_node = etree.Element(NRML_OLD + "RiskResult", nsmap=NSMAP_OLD)
-        config_node = etree.SubElement(self.root_node, 
-                           NRML_OLD + "Config" , nsmap=NSMAP_OLD)
-        config_node.text = "Config file details go here."
+        (curve_object, asset_object) = values
 
-        #pylint: disable=W0201
-        self.parent_node = etree.SubElement(self.root_node, 
-                           self.container_tag , nsmap=NSMAP_OLD)
+        # if we are writing the first hazard curve, create wrapping elements
+        if self.root_node is None:
+            
+            # nrml:nrml, needs gml:id
+            self._create_root_element()
+            if 'nrml_id' in asset_object:
+                nrml.set_gml_id(self.root_node, str(asset_object['nrml_id']))
+            else:
+                nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
+            
+            # nrml:riskResult, needs gml:id
+            result_el = etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
+            if 'riskres_id' in asset_object:
+                nrml.set_gml_id(result_el, str(asset_object['riskres_id']))
+            else:
+                nrml.set_gml_id(result_el, nrml.RISKRESULT_DEFAULT_ID)
 
-    def write_footer(self):
-        """Write out the file footer"""
-        et = etree.ElementTree(self.root_node)
-        et.write(self.file, pretty_print=True)
-    
-    def _append_curve_node(self, point, val, parent_node):
-        """ This method appends a curve node to the parent node """
+            # container element, needs gml:id
+            self.curve_list_el = etree.SubElement(result_el, 
+                self.container_tag)
+            if 'list_id' in asset_object:
+                nrml.set_gml_id(self.curve_list_el, str(
+                    asset_object['list_id']))
+            else:
+                nrml.set_gml_id(self.curve_list_el, self.CONTAINER_DEFAULT_ID)
 
-        (curve_object, asset_object) = val
-        node = etree.SubElement(parent_node, self.curve_tag, nsmap=NSMAP_OLD)
-        node.attrib['assetID'] = asset_object['assetID']    
-        pos = etree.SubElement(node, GML_OLD + "pos", nsmap=NSMAP_OLD)
-        pos.text = "%s %s" % (str(point.x), str(point.y))
-        
-        pe_values = _curve_pe_as_gmldoublelist(curve_object)
-        
-        # This use of not None is b/c of the trap w/ ElementTree find
-        # for nodes that have no child nodes.
-        subnode_pe = self.parent_node.find(
-            NRML_OLD + "Common/" + self.abcissa_tag)
-        if subnode_pe is not None:
-            if subnode_pe.find(NRML_OLD + "Values").text != pe_values:
-                LOGGER.error("Abcissa doesn't match between \n %s \n %s"
-                    % (subnode_pe.find(NRML_OLD + "Values").text, pe_values))
-                raise Exception("Curves must share the same Abcissa!")
-        else:
-            common_node = self.parent_node.find(NRML_OLD + "Common")
-            if common_node is None:
-                common_node = etree.Element(NRML_OLD + "Common", nsmap=NSMAP_OLD)
-                parent_node.insert(0, common_node)  
-            subnode_pe = etree.SubElement(common_node, 
-                            self.abcissa_tag, nsmap=NSMAP_OLD)
-            etree.SubElement(subnode_pe, 
-                    NRML_OLD + "Values", nsmap=NSMAP_OLD).text = pe_values
+        asset_id = str(asset_object['assetID'])
+        try:
+            asset_el = self.assets_per_id[asset_id]
+        except KeyError:
+            
+            # nrml:asset, needs gml:id
+            asset_el = etree.SubElement(self.curve_list_el, 
+                xml.RISK_ASSET_TAG)
+            nrml.set_gml_id(asset_el, asset_id)
+            self.assets_per_id[asset_id] = asset_el
 
-        LOGGER.debug("Writing xml, object is %s", curve_object)
-        subnode_loss = etree.SubElement(
-            node, NRML_OLD + "Values", nsmap=NSMAP_OLD)
-        subnode_loss.text = _curve_vals_as_gmldoublelist(curve_object)
+        # check if nrml:site is already existing
+        site_el = asset_el.find(xml.RISK_SITE_TAG)
+        if site_el is None:
+            site_el = etree.SubElement(asset_el, xml.RISK_SITE_TAG)
+
+            point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
+            point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
+
+            pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
+            pos_el.text = "%s %s" % (point.longitude, point.latitude)
+
+        elif not xml.element_equal_to_site(site_el, point):
+            error_msg = "asset %s cannot have two differing sites: %s, %s " \
+                % (asset_id, xml.lon_lat_from_site(site_el), point)
+            raise ValueError(error_msg)
+
+        # loss/loss ratio curves - sub-element already created?
+        curves_el = asset_el.find(self.curves_tag)
+        if curves_el is None:
+            curves_el = etree.SubElement(asset_el, self.curves_tag)
+
+        curve_el = etree.SubElement(curves_el, self.curve_tag)
+
+        # attribute for endBranchLabel (optional)
+        if 'endBranchLabel' in asset_object:
+            curve_el.set(xml.RISK_END_BRANCH_ATTR_NAME, 
+                str(asset_object[xml.RISK_END_BRANCH_ATTR_NAME]))
+
+        abscissa_el = etree.SubElement(curve_el, self.abscissa_tag)
+        abscissa_el.text = _curve_vals_as_gmldoublelist(curve_object)
+
+        poe_el = etree.SubElement(curve_el, xml.RISK_POE_TAG)
+        poe_el.text = _curve_poe_as_gmldoublelist(curve_object)
 
 
 class LossCurveXMLWriter(RiskXMLWriter):
-    """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = NRML_OLD + "LossCurve"
-    abcissa_tag = NRML_OLD + "LossCurvePE"
-    container_tag = NRML_OLD + "LossCurveList"
-    
+    """NRML serialization of loss curves"""
+    container_tag = xml.RISK_LOSS_CONTAINER_TAG
+    curves_tag = xml.RISK_LOSS_CURVES_TAG
+    curve_tag = xml.RISK_LOSS_CURVE_TAG
+    abscissa_tag = xml.RISK_LOSS_ABSCISSA_TAG
 
 class LossRatioCurveXMLWriter(RiskXMLWriter):
-    """Simple serialization of loss curves and loss ratio curves"""
-    curve_tag = NRML_OLD + "LossRatioCurve"
-    abcissa_tag = NRML_OLD + "LossRatioCurvePE"
-    container_tag = NRML_OLD + "LossRatioCurveList"
-
-
-def _curve_pe_as_gmldoublelist(curve_object):
-    """ Return the list of abscissae converted to string joined by a space """
-    return " ".join([str(abscissa) for abscissa in curve_object.abscissae])
+    """NRML serialization of loss ratio curves"""
+    container_tag = xml.RISK_LOSS_RATIO_CONTAINER_TAG
+    curves_tag = xml.RISK_LOSS_RATIO_CURVES_TAG
+    curve_tag = xml.RISK_LOSS_RATIO_CURVE_TAG
+    abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 def _curve_vals_as_gmldoublelist(curve_object):
-    """ Return the list of ordinates converted to string joined by a space """
+    """Return the list of loss/loss ratio values from a curve object.
+    This is the abscissa of the curve.
+    The list of values is converted to string joined by a space.
+    """
+    return " ".join([str(abscissa) for abscissa in curve_object.abscissae])
+
+def _curve_poe_as_gmldoublelist(curve_object):
+    """Return the list of PoE values from a curve object.
+    This is the ordinate of the curve.
+    The list of values is converted to string joined by a space.
+    """
     return " ".join([str(ordinate) for ordinate in curve_object.ordinates])
+
