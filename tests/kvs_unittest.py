@@ -10,7 +10,7 @@ from openquake import logs
 from openquake import kvs
 from openquake import settings
 from openquake import shapes
-from openquake import test
+from utils import test
 from openquake import settings
 
 from openquake.kvs import reader
