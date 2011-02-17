@@ -10,7 +10,6 @@ from lxml import etree
 
 from openquake import logs
 from openquake import shapes
-from openquake import writer
 from openquake import xml
 
 from openquake.output import nrml

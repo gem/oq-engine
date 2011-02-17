@@ -21,7 +21,6 @@ from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
 from openquake.output import geotiff
 from openquake.output import hazard as hazard_output
-from openquake import logs
 
 LOG = logs.LOG
 

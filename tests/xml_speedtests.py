@@ -15,7 +15,7 @@ from xml.sax import saxutils
 import guppy
 from lxml import etree
 
-from openquake import test
+from utils import test
 from openquake import flags
 FLAGS = flags.FLAGS
 

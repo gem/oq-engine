@@ -13,8 +13,6 @@ from openquake import producer
 from openquake import shapes
 from openquake import xml
 
-from openquake.parser import nrml
-
 
 class RiskXMLReader(producer.FileProducer):
     """ This class parses a NRML loss/loss ratio curve file. 
@@ -53,6 +51,10 @@ class RiskXMLReader(producer.FileProducer):
     property_output_key = 'property'
 
     def __init__(self, path):
+        self._current_site = None
+        self._current_id_meta = None
+        self._current_asset_meta = None
+
         self.abscissa_output_key = xml.strip_namespace_from_tag(
             self.abscissa_tag, xml.NRML)
         self.ordinate_output_key = xml.strip_namespace_from_tag(
