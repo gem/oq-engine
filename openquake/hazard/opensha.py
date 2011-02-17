@@ -14,13 +14,13 @@ from openquake import logs
 from openquake import settings
 from openquake import shapes
 
+from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
 from openquake.output import geotiff
 from openquake.output import hazard as hazard_output
-from openquake import logs
 
 LOG = logs.LOG
 
@@ -35,6 +35,7 @@ IML_SCALING = {'PGA' : numpy.log,  # pylint: disable=E1101
               }
 
 HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
+HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
 
 def preload(fn): # pylint: disable=E0213
     """A decorator for preload steps that must run on the Jobber node"""
@@ -230,20 +231,36 @@ class ClassicalMixin(BasePSHAMixin):
             self.write_hazardcurve_file(results_mean)
             del results_mean
 
+            if self.params[classical_psha.POES_PARAM_NAME] != '':
+                LOG.info('Computing/serializing mean hazard maps')
+                results_mean_maps = classical_psha.compute_mean_hazard_maps(
+                    self)
+                self.write_hazardmap_file(results_mean_maps)
+                del results_mean_maps
+
         # collect hazard curve keys per quantile value
-        quantile_values = {}
-        while len(results_quantile) > 0:
-            quantile_key = results_quantile.pop()
-            curr_qv = tokens.quantile_value_from_hazard_curve_key(
-                quantile_key)
-            if curr_qv not in quantile_values:
-                quantile_values[curr_qv] = []
-            quantile_values[curr_qv].append(quantile_key)
-                
+        quantile_values = _collect_curve_keys_per_quantile(results_quantile)
+
         LOG.info('Serializing quantile hazard curves for %s quantile values' \
             % len(quantile_values))
         for key_list in quantile_values.values():
             self.write_hazardcurve_file(key_list)
+
+        # compute quantile hazard maps
+        if (self.params[classical_psha.POES_PARAM_NAME] != '' and
+            len(quantile_values) > 0):
+
+            LOG.info('Computing quantile hazard maps')
+            results_quantile_maps = \
+                classical_psha.compute_quantile_hazard_maps(self)
+
+            quantile_values = _collect_map_keys_per_quantile(
+                results_quantile_maps)
+
+            LOG.info('Serializing quantile hazard maps for %s quantile values' \
+                % len(quantile_values))
+            for key_list in quantile_values.values():
+                self.write_hazardmap_file(key_list)
 
         return results
 
@@ -264,8 +281,6 @@ class ClassicalMixin(BasePSHAMixin):
         from the set of curve_keys have to be either for the same realization,
         mean, or quantile.
         """
-
-        # LOG.debug("KEYS (%s): %s" % (len(curve_keys), curve_keys))
 
         if _is_mean_hazard_curve_key(curve_keys[0]):
             hc_attrib_update = {'statistics': 'mean'}
@@ -293,7 +308,7 @@ class ClassicalMixin(BasePSHAMixin):
             error_msg = "no valid hazard curve type found in KVS key"
             raise RuntimeError(error_msg)
 
-        nrml_file = "hazardcurve-%s.xml" % filename_part
+        nrml_file = "%s-%s.xml" % (HAZARD_CURVE_FILENAME_PREFIX, filename_part)
 
         nrml_path = os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], 
             nrml_file)
@@ -338,12 +353,11 @@ class ClassicalMixin(BasePSHAMixin):
                     raise ValueError(error_msg)
 
             hc = kvs.get_value_json_decoded(hc_key)
-            #LOG.debug("JSON HC: %s" % hc)
             
             site_obj = shapes.Site(float(hc['site_lon']), 
                                    float(hc['site_lat']))
 
-            # extract hazard curve ordinate (PoE) from KVS
+            # use hazard curve ordinate values (PoE) from KVS
             # NOTE(fab): At the moment, the IMLs are stored along with the 
             # PoEs in KVS. However, we are using the IML list from config.
             # The IMLs from KVS are ignored. Note that IMLs from KVS are
@@ -357,15 +371,112 @@ class ClassicalMixin(BasePSHAMixin):
 
             hc_attrib = {'investigationTimeSpan': 
                             self.params['INVESTIGATION_TIME'],
-                         'IML': iml_list,
+                         'IMLValues': iml_list,
                          'IMT': self.params['INTENSITY_MEASURE_TYPE'],
-                         'poE': curve_poe}
+                         'PoEValues': curve_poe}
 
             hc_attrib.update(hc_attrib_update)
             hc_data.append((site_obj, hc_attrib))
 
         xmlwriter.serialize(hc_data)
         return nrml_path
+
+    def write_hazardmap_file(self, map_keys):
+        """Generate a NRML file with a hazard map for a collection of 
+        hazard map nodes from KVS, identified through their KVS keys.
+        
+        map_keys is a list of KVS keys of the hazard map nodes to be
+        serialized.
+
+        The hazard map file can be written
+        (1) for a mean hazard map at a set of sites
+        (2) for a quantile hazard map at a set of sites
+
+        Mixing of these three cases is not allowed, i.e., all hazard maps
+        from the set of curve_keys have to be either for mean, or quantile.
+        """
+
+        poe_list = [float(x) for x in \
+            self.params[classical_psha.POES_PARAM_NAME].split()]
+        if len(poe_list) == 0:
+            return None
+
+        if _is_mean_hazard_map_key(map_keys[0]):
+            hm_attrib_update = {'statistics': 'mean'}
+            filename_part = 'mean'
+            map_mode = 'mean'
+
+        elif _is_quantile_hazard_map_key(map_keys[0]):
+
+            # get quantile value from KVS key
+            quantile_value = tokens.quantile_value_from_hazard_map_key(
+                map_keys[0])
+            hm_attrib_update = {'statistics': 'quantile',
+                                'quantileValue': quantile_value}
+            filename_part = "quantile-%.2f" % quantile_value
+            map_mode = 'quantile'
+
+        else:
+            error_msg = "no valid hazard map type found in KVS key"
+            raise RuntimeError(error_msg)
+
+        files = []
+        for poe in poe_list:
+
+            nrml_file = "%s-%s-%s.xml" % (
+                HAZARD_MAP_FILENAME_PREFIX, str(poe), filename_part)
+
+            nrml_path = os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], 
+                nrml_file)
+
+            LOG.debug("Generating NRML hazard map file for PoE %s, mode %s, "\
+                "%s nodes in hazard map: %s" % (
+                poe, map_mode, len(map_keys), nrml_file))
+
+            xmlwriter = hazard_output.HazardMapXMLWriter(nrml_path)
+            hm_data = []
+            
+            for hm_key in map_keys:
+
+                if tokens.poe_value_from_hazard_map_key(hm_key) != poe:
+                    continue
+
+                elif map_mode == 'mean' and not _is_mean_hazard_map_key(hm_key):
+                    error_msg = "non-mean hazard map key found in mean mode"
+                    raise RuntimeError(error_msg)
+                
+                elif map_mode == 'quantile':
+                    if not _is_quantile_hazard_map_key(hm_key):
+                        error_msg = "non-quantile hazard map key found in "\
+                                    "quantile mode"
+                        raise RuntimeError(error_msg)
+
+                    elif tokens.quantile_value_from_hazard_map_key(hm_key) != \
+                        quantile_value:
+                        error_msg = "quantile value must be the same for all "\
+                                    "hazard map nodes in an instance file"
+                        raise ValueError(error_msg)
+
+                hm = kvs.get_value_json_decoded(hm_key)
+                
+                site_obj = shapes.Site(float(hm['site_lon']), 
+                                       float(hm['site_lat']))
+
+                # use hazard map IML and vs30 values from KVS
+                hm_attrib = {'investigationTimeSpan': 
+                                self.params['INVESTIGATION_TIME'],
+                            'IMT': self.params['INTENSITY_MEASURE_TYPE'],
+                            'IML': hm['IML'],
+                            'vs30': hm['vs30'],
+                            'poE': poe}
+
+                hm_attrib.update(hm_attrib_update)
+                hm_data.append((site_obj, hm_attrib))
+
+            xmlwriter.serialize(hm_data)
+            files.append(nrml_path)
+
+        return files
 
     @preload
     def compute_hazard_curve(self, site_list, realization):
@@ -539,8 +650,19 @@ def _is_quantile_hazard_curve_key(kvs_key):
     return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
                 tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
+def _is_mean_hazard_map_key(kvs_key):
+    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+                tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
+
+def _is_quantile_hazard_map_key(kvs_key):
+    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+                tokens.QUANTILE_HAZARD_MAP_KEY_TOKEN)
+
 def hazard_curve_filename(filename_part):
     return "%s-%s.xml" % (HAZARD_CURVE_FILENAME_PREFIX, filename_part)
+
+def hazard_map_filename(filename_part):
+    return "%s-%s.xml" % (HAZARD_MAP_FILENAME_PREFIX, filename_part)
 
 def realization_hc_filename(realization):
     return hazard_curve_filename(realization)
@@ -551,6 +673,37 @@ def mean_hc_filename():
 def quantile_hc_filename(quantile_value):
     filename_part = "quantile-%.2f" % quantile_value
     return hazard_curve_filename(filename_part)
+
+def mean_hm_filename(poe):
+    filename_part = "%s-mean" % poe
+    return hazard_map_filename(filename_part)
+
+def quantile_hm_filename(quantile_value, poe):
+    filename_part = "%s-quantile-%.2f" % (poe, quantile_value)
+    return hazard_map_filename(filename_part)
+
+def _collect_curve_keys_per_quantile(keys):
+    quantile_values = {}
+    while len(keys) > 0:
+        quantile_key = keys.pop()
+        curr_qv = tokens.quantile_value_from_hazard_curve_key(
+            quantile_key)
+        if curr_qv not in quantile_values:
+            quantile_values[curr_qv] = []
+        quantile_values[curr_qv].append(quantile_key)
+    return quantile_values
+
+def _collect_map_keys_per_quantile(keys):
+    quantile_values = {}
+    while len(keys) > 0:
+        quantile_key = keys.pop()
+        curr_qv = tokens.quantile_value_from_hazard_map_key(
+            quantile_key)
+        if curr_qv not in quantile_values:
+            quantile_values[curr_qv] = []
+        quantile_values[curr_qv].append(quantile_key)
+    return quantile_values
+
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
 job.HazJobMixin.register("Classical", ClassicalMixin, order=1)

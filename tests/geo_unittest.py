@@ -4,7 +4,7 @@ import os
 import unittest
 import tempfile
 
-from openquake import test
+from utils import test
 from openquake import shapes
 
 from openquake import flags
@@ -160,7 +160,7 @@ class ShapesTestCase(unittest.TestCase):
 class FieldTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.gmf_string = open(test.test_file("gmfs.json")).readline()
+        self.gmf_string = open(test.do_test_file("gmfs.json")).readline()
         region = shapes.Region.from_coordinates(
                  [(-118.30, 34.12), (-118.18, 34.12), 
                  (-118.18,  34.00), (-118.30,  34.00)] )
