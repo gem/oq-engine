@@ -32,7 +32,6 @@ MULTIPLE_CURVES_MULTIPLE_BRANCHES = '{"modelName":"","hcRepList":[{"gridNode":[{
 class KVSTestCase(unittest.TestCase):
     
     def setUp(self):
-        
         # starting the jvm...
         print "About to start the jvm..."
         jpype = java.jvm()
@@ -57,27 +56,15 @@ class KVSTestCase(unittest.TestCase):
     
     def test_can_wrap_the_java_client(self):
         self.java_client.set("KEY", "VALUE")
-        
-        # TODO (ac): I know, it's weird. Looking for something better...
-        time.sleep(0.3)
-
         result = self.java_client.get("KEY")
-        print result
-        
         self.assertEqual("VALUE", self.java_client.get("KEY"))
 
     def test_can_write_in_java_and_read_in_python(self):
         self.java_client.set("KEY", "VALUE")
-        
-        time.sleep(0.3)
-        
         self.assertEqual("VALUE", self.python_client.get("KEY"))
     
     def test_can_write_in_python_and_read_in_java(self):
         self.python_client.set("KEY", "VALUE")
-        
-        time.sleep(0.3)
-        
         self.assertEqual("VALUE", self.java_client.get("KEY"))
     
     def test_an_empty_model_produces_an_empty_curve_set(self):
@@ -128,8 +115,6 @@ class KVSTestCase(unittest.TestCase):
         self.assertEqual(1, len(curves))
         self.assertEqual(shapes.Curve(
                 ((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
-    
-    # input compatible to the nrml writer
     
     def test_an_empty_model_produces_an_empty_curve_set_nrml(self):
         self.python_client.set("KEY", EMPTY_MODEL)
