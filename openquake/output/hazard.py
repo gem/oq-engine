@@ -41,7 +41,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the NRML format."""
 
     def __init__(self, path):
-        super(HazardCurveXMLWriter, self).__init__(path)
+        writer.FileWriter.__init__(self, path)
 
         self.nrml_el = None
         self.result_el = None
@@ -61,7 +61,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
             xml_declaration=True, encoding="UTF-8"))
 
-        super(HazardCurveXMLWriter, self).close()
+        writer.FileWriter.close(self)
             
     def write(self, point, values):
         """Write an hazard curve.
@@ -77,15 +77,15 @@ class HazardCurveXMLWriter(writer.FileWriter):
             # nrml:nrml, needs gml:id
             self.nrml_el = etree.Element("%snrml" % NRML, nsmap=NSMAP)
 
-            _set_gml_id_if_present("nrml_id", values,
-                    NRML_GML_ID, self.nrml_el)
-            
+            _set_gml_id(self.nrml_el, _gml_id("nrml_id", values,
+                    NRML_GML_ID))
+
             # nrml:hazardResult, needs gml:id
             self.result_el = etree.SubElement(self.nrml_el, 
                 "%shazardResult" % NRML)
 
-            _set_gml_id_if_present("hazres_id", values,
-                    HAZARDRESULT_GML_ID, self.result_el)
+            _set_gml_id(self.result_el, _gml_id("hazres_id", values,
+                    HAZARDRESULT_GML_ID))
 
             # nrml:config
             config_el = etree.SubElement(self.result_el, "%sconfig" % NRML)
@@ -121,8 +121,9 @@ class HazardCurveXMLWriter(writer.FileWriter):
             hazard_curve_field_el = etree.SubElement(self.result_el, 
                 "%shazardCurveField" % NRML)
 
-            _set_gml_id_if_present("hcfield_id", values,
-                    "hcf_%s" % self.hcfield_counter, hazard_curve_field_el)
+            _set_gml_id(hazard_curve_field_el, _gml_id(
+                    "hcfield_id", values,
+                    "hcf_%s" % self.hcfield_counter))
 
             if "hcfield_id" not in values:
                 self.hcfield_counter += 1
@@ -147,8 +148,9 @@ class HazardCurveXMLWriter(writer.FileWriter):
         # nrml:HCNode, needs gml:id
         hcnode_el = etree.SubElement(hazard_curve_field_el, "%sHCNode" % NRML)
 
-        _set_gml_id_if_present("hcnode_id", values,
-                "hcn_%s" % self.hcnode_counter, hcnode_el)
+        _set_gml_id(hcnode_el, _gml_id(
+                "hcnode_id", values,
+                "hcn_%s" % self.hcnode_counter))
 
         if "hcnode_id" not in values:
             self.hcnode_counter += 1
@@ -205,8 +207,10 @@ class HazardMapXMLWriter(writer.FileWriter):
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
     def __init__(self, path):
-        super(HazardMapXMLWriter, self).__init__(path)
+        writer.FileWriter.__init__(self, path)
+
         self.hmnode_counter = 0
+        self.root_node = None
         self.parent_node = None
         self.hazard_processing_node = None
 
@@ -290,29 +294,16 @@ class HazardMapXMLWriter(writer.FileWriter):
         # check/set common attributes
         # TODO(fab): this could be moved to common base class 
         # of all serializers
-        self._set_common_attributes(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
-            self.hazard_processing_node, val)
-        self._set_common_attributes(self.MAP_ATTRIBUTES_TO_CHECK, 
-            parent_node, val)
-
-    def _set_common_attributes(self, attr_list, node, val):
-        """Set common XML attributes, if necessary. Check if consistent
-        values are given for all hazard map nodes. If hazard map node
-        attributes dictionary does not have the item set, do nothing.
-        """
-        for attr in attr_list:
-            if attr['name'] in val:
-                if attr['name'] not in node.attrib:
-                    node.attrib[attr['name']] = str(val[attr['name']])
-                elif node.attrib[attr['name']] != str(val[attr['name']]):
-                    error_msg = "not all nodes of the hazard map have the " \
-                        "same value for common attribute %s" % attr['name'] 
-                    raise ValueError(error_msg)
+        _set_common_attributes(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
+                self.hazard_processing_node, val)
+        _set_common_attributes(self.MAP_ATTRIBUTES_TO_CHECK, 
+                parent_node, val)
 
     def _ensure_all_attributes_set(self):
-        if (self._ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
+        """Ensure that all the attributes are set if required."""
+        if (_ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
                                         self.hazard_processing_node) and 
-             self._ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK, 
+             _ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK, 
                                          self.parent_node) and
              self._ensure_attribute_rules()):
             return True
@@ -320,7 +311,9 @@ class HazardMapXMLWriter(writer.FileWriter):
             return False
 
     def _ensure_attribute_rules(self):
-        
+        """Ensure business constraints on attributes 
+        of an HazardCurveField node."""
+
         # special checks: end branch label and statistics
         if 'endBranchLabel' in self.parent_node.attrib:
 
@@ -342,13 +335,8 @@ class HazardMapXMLWriter(writer.FileWriter):
         return True
 
 
-    def _ensure_attributes_set(self, attr_list, node):
-        for attr in attr_list:
-            if attr['name'] not in node.attrib and attr['required'] is True:
-                return False
-        return True
-
-
+# TODO Add support rupture element (not implemented so far)
+# TODO Add support full GMPEParameters (not implemented so far)
 class GMFXMLWriter(writer.FileWriter):
     """This class serializes ground motion field (GMF) informatiuon
     to NRML format.
@@ -373,7 +361,7 @@ class GMFXMLWriter(writer.FileWriter):
     ground_motion_attr = "groundMotion"
 
     def __init__(self, path):
-        super(GMFXMLWriter, self).__init__(path)
+        writer.FileWriter.__init__(self, path)
         self.node_counter = 0
         
         # <GMF/> where all the fields are appended
@@ -398,9 +386,6 @@ class GMFXMLWriter(writer.FileWriter):
 
     def write_header(self):
         """Write out the file header."""
-
-        # TODO(fab): support rupture element (not implemented so far)
-        # TODO(fab): support full GMPEParameters (not implemented so far)
 
         self.root_node = etree.Element(
                 GMFXMLWriter.root_tag, nsmap=NSMAP_WITH_QUAKEML)
@@ -490,11 +475,35 @@ def _set_gml_id(element, gml_id):
     element.set("%sid" % GML, str(gml_id))
 
 
-def _set_gml_id_if_present(id_key, values, default_id, element):
-    """Set the attribute gml:id using the input dictionary if present,
-    use a default one otherwise."""
+def _gml_id(id_key, values, default_id):
+    """Return the attribute gml:id using the input dictionary. Return
+    a default id if it is not present."""
 
     if id_key in values:
-        _set_gml_id(element, str(values[id_key]))
+        return str(values[id_key])
     else:
-        _set_gml_id(element, default_id)
+        return default_id
+
+
+def _set_common_attributes(attr_list, node, val):
+    """Set common XML attributes, if necessary. Check if consistent
+    values are given for all hazard map nodes. If hazard map node
+    attributes dictionary does not have the item set, do nothing.
+    """
+    for attr in attr_list:
+        if attr['name'] in val:
+            if attr['name'] not in node.attrib:
+                node.attrib[attr['name']] = str(val[attr['name']])
+            elif node.attrib[attr['name']] != str(val[attr['name']]):
+                error_msg = "not all nodes of the hazard map have the " \
+                        "same value for common attribute %s" % attr['name']
+                raise ValueError(error_msg)
+
+                
+def _ensure_attributes_set(attr_list, node):
+    """Ensure that all the given attributes are set if required."""
+    for attr in attr_list:
+        if attr['name'] not in node.attrib and attr['required'] is True:
+            return False
+    return True
+
