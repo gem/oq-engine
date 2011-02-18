@@ -112,11 +112,10 @@ class HazardCurveXMLWriter(writer.FileWriter):
             error_msg = "hazardCurveField has to have either an end branch " \
                         "or a statistics label"
             raise ValueError(error_msg)
-        
-        try:
-            hazard_curve_field_el = self.curves_per_branch_label[curve_label]
-        except KeyError:
 
+        if self.curves_per_branch_label.has_key(curve_label):
+            hazard_curve_field_el = self.curves_per_branch_label[curve_label]
+        else:
             # nrml:hazardCurveField, needs gml:id
             hazard_curve_field_el = etree.SubElement(self.result_el, 
                 "%shazardCurveField" % NRML)
