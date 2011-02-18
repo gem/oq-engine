@@ -19,7 +19,13 @@ def compute_conditional_loss(curve, probability):
     """
 
     if curve.ordinate_out_of_bounds(probability):
-        return 0.0
+        # when the probability is smaller than the lowest PoE defined
+        # we just use the max loss (ratio)
+        if probability < curve.y_values[-1]:
+            return curve.x_values[-1]
+        else:
+        # otherwise we have no losses
+            return 0.0
 
     return curve.abscissa_for(probability)
 
