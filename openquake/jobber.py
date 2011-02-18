@@ -19,7 +19,6 @@ from openquake import logs
 
 LOGGER = logs.LOG
 
-# TODO (ac): This class is not covered by unit tests...
 class Jobber(object):
     """The Jobber class is responsible to evaluate the configuration settings
     and to execute the computations in parallel tasks (using the celery

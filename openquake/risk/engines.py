@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Top-level managers for computation classes.
+The risk stuff using the classical psha based approach is not
+currently implemented. The logic of this class needs to be
+moved into one (or more) mixins.
 """
 
 from openquake import logs
