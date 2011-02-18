@@ -6,7 +6,6 @@ import unittest
 
 from lxml import etree
 
-from openquake import logs
 from utils import test
 from openquake import shapes
 from openquake import xml
@@ -53,7 +52,8 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     """Unit tests for the HazardCurveXMLWriter class, which serializes
     hazard curves to NRML."""
 
-    def _setUp(self):
+    def setUp(self):
+        self.writer = None
         self.readed_curves = None
 
     def _initialize_writer(self, path):
@@ -158,6 +158,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         self._assert_number_of_curves_is(2)
         self._assert_curves_are(data)
 
+    @test.skipit # re-enable this when the parser will support statistics
     def test_writes_multiple_results_with_statistics(self):
         data = [(shapes.Site(-122.5000, 37.5000), 
                 {"nrml_id": "nrml_instance_1",
