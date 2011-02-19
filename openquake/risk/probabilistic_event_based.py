@@ -25,7 +25,7 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
 
     imls = vuln_function.imls
     loss_ratios = []
-    
+
     # seems like with numpy you can only specify a single fill value
     # if the x_new is outside the range. Here we need two different values,
     # depending if the x_new is below or upon the defined values
@@ -37,7 +37,7 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
         else:
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_field))
-    
+
     return array(loss_ratios)
 
 
@@ -49,12 +49,12 @@ def _compute_loss_ratios_range(loss_ratios,
 
 def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
     "Compute the cumulative histogram."
-    
+
     # ruptures (earthquake) occured but probably due to distance,
     # magnitude and soil conditions, no ground motion was felt at that location
     if (loss_ratios <= 0.0).all():
         return zeros(loss_ratios_range.size - 1)
-    
+
     invalid_ratios = lambda ratios: where(array(ratios) <= 0.0)[0].size
 
     hist = histogram(loss_ratios, bins=loss_ratios_range)
@@ -71,7 +71,7 @@ def _compute_rates_of_exceedance(cum_histogram, tses):
 
     if tses <= 0:
         raise ValueError("TSES is not supposed to be less than zero!")
-    
+
     return (array(cum_histogram).astype(float) / tses)
 
 
@@ -79,14 +79,14 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
     """Compute the probabilities of exceedance using the given rates of
     exceedance and the given time span."""
 
-    poe = lambda rate: 1 - math.exp((rate * -1) *  time_span)
+    poe = lambda rate: 1 - math.exp((rate * -1) * time_span)
     return array([poe(rate) for rate in rates_of_exceedance])
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
         number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute a loss ratio curve using the probabilistic event based approach.
-    
+
     A loss ratio curve is a function that has loss ratios as X values
     and PoEs (Probabilities of Exceendance) as Y values.
     """
@@ -112,7 +112,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
 def _generate_curve(losses, probs_of_exceedance):
     """Generate a loss ratio (or loss) curve, given a set of losses
     and corresponding PoEs (Probabilities of Exceedance).
-    
+
     This function is intended to be used internally.
     """
 
@@ -128,7 +128,7 @@ def _asset_for_gmfs(job_id, gmfs_key):
 
     key = kvs.tokens.asset_key(
             job_id, row(gmfs_key), column(gmfs_key))
-    
+
     return kvs.get_value_json_decoded(key)
 
 
@@ -139,10 +139,10 @@ class AggregateLossCurve(object):
     def from_kvs(job_id):
         """Return an aggregate curve using the GMFs and assets
         stored in the underlying kvs system."""
-        
+
         vuln_model = vulnerability.load_vuln_model_from_kvs(job_id)
         aggregate_curve = AggregateLossCurve(vuln_model)
-        
+
         client = kvs.get_client(binary=False)
         gmfs_keys = client.keys("%s*%s*" % (job_id, kvs.tokens.GMF_KEY_TOKEN))
         LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
@@ -151,7 +151,7 @@ class AggregateLossCurve(object):
             asset = _asset_for_gmfs(job_id, gmfs_key)
             gmfs = kvs.get_value_json_decoded(gmfs_key)
             aggregate_curve.append(gmfs, asset)
-        
+
         return aggregate_curve
 
     def __init__(self, vuln_model):
@@ -198,7 +198,7 @@ class AggregateLossCurve(object):
 
     def compute(self, number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
         """Compute the aggregate loss curve."""
-        
+
         if self.empty:
             return shapes.EMPTY_CURVE
 
