@@ -155,53 +155,56 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
                 0.1756), "TSES": 200, "TimeSpan": 50}
 
-        self.asset_1 = {"VulnerabilityFunction": "ID", "AssetValue": 22.61}
+        self.asset_1 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 22.61}
 
         self.gmfs_2 = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172,
                 0.6604, 0.1182, 0.1545, 0.7613, 0.5246, 0.2428, 0.2882,
                 0.2179, 1.2939, 0.6042, 0.1418, 0.3637, 0.222, 0.3613,
                 0.113), "TSES": 200, "TimeSpan": 50}
         
-        self.asset_2 = {"VulnerabilityFunction": "ID", "AssetValue": 124.27}
+        self.asset_2 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 124.27}
 
         self.gmfs_3 = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862,
                 0.1438, 0.2114, 0.5101, 1.0097, 0.226, 0.3443, 0.1693,
                 1.0754, 0.3533, 0.1461, 0.347, 0.2665, 0.2977, 0.2925),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_3 = {"VulnerabilityFunction": "ID", "AssetValue": 42.93}
+        self.asset_3 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 42.93}
         
         self.gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313,
                 0.9297, 0.2337, 0.2862, 0.5278, 0.6603, 0.3537, 0.2997,
                 0.1097, 1.1875, 0.4752, 0.1575, 0.4009, 0.2519, 0.2653,
                 0.1394), "TSES": 200, "TimeSpan": 50}
 
-        self.asset_4 = {"VulnerabilityFunction": "ID", "AssetValue": 29.37}
+        self.asset_4 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 29.37}
 
         self.gmfs_5 = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763,
                 0.2189, 0.3324, 0.3215, 0.6406, 0.5014, 0.3877, 0.1318, 1.0545,
                 0.3035, 0.1118, 0.2981, 0.3492, 0.2406, 0.1043),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_5 = {"VulnerabilityFunction": "ID", "AssetValue": 40.68}
+        self.asset_5 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 40.68}
         
         self.gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633,
                 0.2095, 0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
                 0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_6 = {"VulnerabilityFunction": "ID", "AssetValue": 178.47}
+        self.asset_6 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 178.47}
 
         # deleting keys in kvs
         kvs.get_client(binary=False).flushall()
-        
-        # store the vulnerability function
-#        vulnerability.write_vuln_curves_to_kvs(self.job_id,
-#                {"ID": self.vuln_function_2.to_json()})
 
-        kvs.set_value_json_encoded(kvs.tokens.vuln_key(self.job_id), 
-                                        {"ID": self.vuln_function_2.to_json()})
-        
+        kvs.set_value_json_encoded(
+                kvs.tokens.vuln_key(self.job_id), 
+                {"ID": self.vuln_function_2.to_json()})
+
         # store the gmfs
         self._store_gmfs(self.gmfs_1, 1, 1)
         self._store_gmfs(self.gmfs_2, 1, 2)
@@ -217,15 +220,32 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self._store_asset(self.asset_4, 1, 4)
         self._store_asset(self.asset_5, 1, 5)
         self._store_asset(self.asset_6, 1, 6)
+        
+        self.params = {}
+        self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
+        self.params["AGGREGATE_LOSS_CURVE"] = 1
+
+        self.job = job.Job(self.params,  self.job_id, ".")
+    
+        # deleting old file
+        self._delete_test_file()
+
+    def tearDown(self):
+        self._delete_test_file()
+
+    def _delete_test_file(self):
+        try:
+            os.remove(os.path.join(test.OUTPUT_DIR, 
+                    aggregate._filename(self.job_id)))
+        except OSError:
+            pass
 
     def _store_asset(self, asset, row, column):
         key = kvs.tokens.asset_key(self.job_id, row, column)
-        kvs.set_value_json_encoded(key, asset)
+        kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
 
     def _store_gmfs(self, gmfs, row, column):
-        key = kvs.generate_product_key(self.job_id,
-                kvs.tokens.GMF_KEY_TOKEN, row, column)
-        
+        key = kvs.tokens.gmfs_key(self.job_id, column, row)
         kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
@@ -482,7 +502,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         aggregate_curve = prob.AggregateLossCurve(
                 {"ID": shapes.EMPTY_VULN_FUNCTION})
 
-        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+        asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
 
         aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
 
@@ -494,7 +514,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         aggregate_curve = prob.AggregateLossCurve(
                 {"ID": shapes.EMPTY_VULN_FUNCTION})
 
-        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+        asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
 
         aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
 
@@ -506,7 +526,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         aggregate_curve = prob.AggregateLossCurve(
                 {"ID": shapes.EMPTY_VULN_FUNCTION})
 
-        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+        asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
         
         aggregate_curve.append({
                 "IMLs": (), "TSES": 1, "TimeSpan": 1}, asset)
@@ -515,19 +535,19 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 aggregate_curve.append, {
                 "IMLs": (1.0,), "TSES": 1, "TimeSpan": 1}, asset)
 
-    def test_from_kvs_gets_the_vuln_functions_from_kvs(self):
+    def test_creating_the_aggregate_curve_from_kvs_loads_the_vuln_model(self):
         # we have just self.vuln_function_2 stored in kvs
-        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id);
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id)
 
         self.assertEqual(self.vuln_function_2,
                 aggregate_curve.vuln_model["ID"])
 
-    def test_from_kvs_gets_all_the_gmfs_from_kvs(self):
+    def test_creating_the_aggregate_curve_from_kvs_gets_all_the_gmfs(self):
         # we have 6 gmfs stored in kvs
         aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id)
         self.assertEqual(6, len(aggregate_curve.distribution))
 
-    def test_from_kvs_gets_all_the_related_sites(self):
+    def test_creating_the_aggregate_curve_from_kvs_gets_all_the_related_sites(self):
         expected_curve = shapes.Curve([(39.52702042, 0.99326205),
                 (106.20489077, 0.917915), (172.88276113, 0.77686984),
                 (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
@@ -535,6 +555,40 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # result is correct, so we are getting the correct assets
         aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id)
         self.assertEqual(expected_curve, aggregate_curve.compute(6))
+
+    def test_curve_to_plot_interface_translation(self):
+        curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
+
+        expected_data = {}
+        expected_data["AggregateLossCurve"] = {}
+        expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
+        expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
+        expected_data["AggregateLossCurve"]["abscissa_property"] = "Loss"
+        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE"
+        expected_data["AggregateLossCurve"] \
+                ["curve_title"] = "Aggregate Loss Curve"
+
+        self.assertEqual(expected_data, aggregate._for_plotting(curve))
+
+    def test_plots_the_aggregate_curve(self):
+        aggregate.compute_aggregate_curve(self.job)
+        self._assert_plot_is_produced()
+
+    def test_plots_the_aggregate_curve_only_if_specified(self):
+        del(self.params["AGGREGATE_LOSS_CURVE"])
+
+        aggregate.compute_aggregate_curve(self.job)
+        self._assert_plot_is_not_produced()
+
+    def _assert_plot_is_not_produced(self):
+        self.assertFalse(os.path.exists(
+                os.path.join(test.OUTPUT_DIR,
+                aggregate._filename(self.job_id))))
+
+    def _assert_plot_is_produced(self):
+        self.assertTrue(os.path.exists(
+                os.path.join(test.OUTPUT_DIR,
+                aggregate._filename(self.job_id))))
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase):
@@ -798,69 +852,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                 common.compute_mean_loss(loss_ratio_curve), 3)
-
-
-class AggregateLossCurveMixinTestCase(unittest.TestCase):
-    
-    def setUp(self):
-        self.job_id = 1234
-        
-        self.params = {}
-        self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
-        self.params["AGGREGATE_LOSS_CURVE"] = 1
-
-        self.engine = job.Job(self.params,  self.job_id, ".")
-
-        # deleting old file
-        self._delete_test_file()
-    
-    def tearDown(self):
-        self._delete_test_file()
-
-    def _delete_test_file(self):
-        try:
-            os.remove(os.path.join(test.OUTPUT_DIR, 
-                    aggregate.filename(self.job_id)))
-        except OSError:
-            pass
-    
-    def _execute_mixin(self):
-        with job.Mixin(self.engine, aggregate.AggregateLossCurveMixin):
-            self.engine.execute()
-    
-    def test_curve_to_plot_interface_translation(self):
-        curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
-        
-        expected_data = {}
-        expected_data["AggregateLossCurve"] = {}
-        expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
-        expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
-        expected_data["AggregateLossCurve"]["abscissa_property"] = "Loss"
-        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE"
-        expected_data["AggregateLossCurve"] \
-                ["curve_title"] = "Aggregate Loss Curve"
-
-        self.assertEqual(expected_data, aggregate.for_plotting(curve))
-
-    def test_plots_the_aggregate_curve(self):
-        self._execute_mixin()
-        self._assert_plot_is_produced()
-
-    def test_plots_the_aggregate_curve_only_if_specified(self):
-        del(self.params["AGGREGATE_LOSS_CURVE"])
-
-        self._execute_mixin()
-        self._assert_plot_is_not_produced()
-
-    def _assert_plot_is_not_produced(self):
-        self.assertFalse(os.path.exists(
-                os.path.join(test.OUTPUT_DIR,
-                aggregate.filename(self.job_id))))
-
-    def _assert_plot_is_produced(self):
-        self.assertTrue(os.path.exists(
-                os.path.join(test.OUTPUT_DIR,
-                aggregate.filename(self.job_id))))
 
 
 # LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'

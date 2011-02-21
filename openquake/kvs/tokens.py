@@ -151,3 +151,9 @@ def extract_product_type_from_kvs_key(kvs_key):
         openquake.kvs.MEMCACHE_KEY_SEPARATOR)
     return product_type
 
+
+def gmfs_key(job_id, column, row):
+    """Return the key used to store a ground motion field set
+    for a single site."""
+    return openquake.kvs.generate_product_key(job_id,
+            GMF_KEY_TOKEN, column, row)
