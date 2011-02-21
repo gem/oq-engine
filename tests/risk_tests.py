@@ -4,31 +4,19 @@
 This is a basic set of tests for risk engine.
 """
 
-import json
 import os
 import numpy
 import unittest
 
-from scipy.interpolate import interp1d
-from shapely import geometry
-
 from openquake import job
-from openquake import logs
-from openquake import risk
 from openquake import kvs 
 from openquake import shapes
 from utils import test
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.risk import engines
-from openquake.output import risk as risk_output
-from openquake.parser import vulnerability
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import common
-
-EXPOSURE_INPUT_FILE = 'FakeExposurePortfolio.xml'
-VULNERABILITY_INPUT_FILE = 'VulnerabilityModelFile-jobber-test.xml'
 
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
@@ -195,13 +183,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         # deleting keys in kvs
         kvs.get_client(binary=False).flushall()
         
-        # store the vulnerability function
-#        vulnerability.write_vuln_curves_to_kvs(self.job_id,
-#                {"ID": self.vuln_function_2.to_json()})
-
         kvs.set_value_json_encoded(kvs.tokens.vuln_key(self.job_id), 
-                                        {"ID": self.vuln_function_2.to_json()})
-        
+                {"ID": self.vuln_function_2.to_json()})
+
         # store the gmfs
         self._store_gmfs(self.gmfs_1, 1, 1)
         self._store_gmfs(self.gmfs_2, 1, 2)
@@ -558,6 +542,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(kvs.tokens.vuln_key(
                 self.job_id), self.vulnerability_curves)
 
+    def tearDown(self):
+        psha.STEPS_PER_INTERVAL = 5
+
     def test_empty_loss_curve(self):
         self.assertEqual(common.compute_loss_curve(shapes.EMPTY_CURVE, None),
                 shapes.EMPTY_CURVE)
@@ -576,11 +563,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.2 * ASSET_VALUE, 2.0), (0.3 * ASSET_VALUE, 3.0)]),
                 loss_curve)
 
-    @test.skipit
-    def test_empty_lrem_po(self):
-        self.assertEqual(0, psha._compute_lrem_po(
-                shapes.EMPTY_VULN_FUNCTION, [], None).size)
-
     def test_lrem_po_computation(self):
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
@@ -588,24 +570,24 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
               (0.36, 0.70), (0.55, 0.40),
               (0.70, 0.01)])
 
-        psha.STEPS_PER_INTERVAL=2
+        # pre computed values just use one intermediate
+        # values between the imls
+        psha.STEPS_PER_INTERVAL = 2
+
         vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
               (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
         lrem = psha._compute_lrem(vuln_function)
 
-        lrem_po = psha._compute_lrem_po(
-                vuln_function, 
+        lrem_po = psha._compute_lrem_po(vuln_function, 
                 lrem, hazard_curve)
 
-
-        psha.STEPS_PER_INTERVAL=5
         self.assertTrue(numpy.allclose(0.07, lrem_po[0][0], atol=0.005))
         self.assertTrue(numpy.allclose(0.06, lrem_po[1][0], atol=0.005))
         self.assertTrue(numpy.allclose(0.13, lrem_po[0][1], atol=0.005))
         self.assertTrue(numpy.allclose(0.47, lrem_po[5][3], atol=0.005))
         self.assertTrue(numpy.allclose(0.23, lrem_po[8][3], atol=0.005))
-        self.assertTrue(numpy.allclose(0.0, lrem_po[10][0], atol=0.005))
+        self.assertTrue(numpy.allclose(0.00, lrem_po[10][0], atol=0.005))
 
     def test_pes_from_imls(self):
         hazard_curve = shapes.Curve([
@@ -619,9 +601,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         imls = [0.05, 0.15, 0.3, 0.5, 0.7]
 
         self.assertTrue(numpy.allclose(numpy.array(expected_pes),
-              psha._compute_pes_from_imls(hazard_curve, imls),
-              atol=0.00005))
-
+                psha._compute_pes_from_imls(hazard_curve, imls),
+                atol=0.00005))
 
     def test_pes_to_pos(self):
         hazard_curve = shapes.Curve([
@@ -632,28 +613,19 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
         pes = [0.05,0.15,0.3,0.5,0.7]
         self.assertTrue(numpy.allclose(expected_pos,
-                            psha._convert_pes_to_pos(hazard_curve, pes),
-                            atol=0.00005))
+                psha._convert_pes_to_pos(hazard_curve, pes),
+                atol=0.00005))
 
     def test_bin_width_from_imls(self):
         vuln_function = shapes.VulnerabilityFunction(
                         [(0.1,0.05), (0.2,0.08),(0.4,0.2),(0.6,0.4)])
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
         self.assertTrue(numpy.allclose(expected_steps,
-                        psha._compute_imls(vuln_function)))
-
-
-
-
-    @test.skipit
-    def test_empty_loss_ratio_curve(self):
-        self.assertEqual(shapes.EMPTY_CURVE,
-                psha.compute_loss_ratio_curve(
-                shapes.EMPTY_VULN_FUNCTION, None))
+                psha._compute_imls(vuln_function)))
 
     def test_end_to_end(self):
         # manually computed values by Vitor Silva
-        psha.STEPS_PER_INTERVAL=2
+        psha.STEPS_PER_INTERVAL = 2
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
               (0.17, 0.89), (0.26, 0.82),
@@ -662,9 +634,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
               (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
-
-        loss_ratio_curve = psha.compute_loss_ratio_curve(vuln_function, hazard_curve)
-
+        loss_ratio_curve = psha.compute_loss_ratio_curve(
+                vuln_function, hazard_curve)
 
         lr_curve_expected = shapes.Curve([(0.0, 0.96),
                 (0.025, 0.96), (0.05, 0.91), (0.065,  0.87),
@@ -672,16 +643,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.3, 0.47), (0.4, 0.23), (0.7,  0.00),
                 (1.0, 0.00)])
 
-        psha.STEPS_PER_INTERVAL=5
         for x_value in lr_curve_expected.abscissae:
-            self.assertTrue(numpy.allclose(lr_curve_expected.ordinate_for(x_value),
+            self.assertTrue(numpy.allclose(
+                    lr_curve_expected.ordinate_for(x_value),
                     loss_ratio_curve.ordinate_for(x_value), atol=0.005))
-
-    @test.skipit
-    def test_empty_lrem(self):
-        self.assertEqual([], psha._compute_lrem(
-            shapes.VulnerabilityFunction.from_json(self.vulnerability_curves[
-            self.empty_vuln_code]), shapes.EMPTY_CURVE))
 
     def test_splits_single_interval_with_no_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),
@@ -748,16 +713,19 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # testing just the length of the result
         self.assertEqual(56, len(psha._split_loss_ratios(loss_ratios)))
 
-    # TODO (bw): Should we check also if the curve has no values?
-    def test_ratio_is_zero_if_probability_is_out_of_bounds(self):
+    def test_ratio_is_zero_if_probability_is_too_high(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.0,
-                common.compute_conditional_loss(loss_curve, 0.050))
-
-        self.assertEqual(0.0,
                 common.compute_conditional_loss(loss_curve, 0.200))        
+
+    def test_ratio_is_max_if_probability_is_too_low(self):
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
+                (0.27, 0.089), (0.30, 0.066)])
+
+        self.assertEqual(0.30,
+                common.compute_conditional_loss(loss_curve, 0.050))        
 
     def test_conditional_loss_computation(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
