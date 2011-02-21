@@ -6,7 +6,7 @@ This module defines functions that can be applied to loss ratio
 or loss curves.
 """
 
-from numpy import mean  # pylint: disable=E1101, E0611
+from numpy import mean
 
 from openquake import shapes
 
