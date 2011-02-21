@@ -175,7 +175,7 @@ class AggregateLossCurve(object):
 
         if self.empty:
             self._initialize_parameters(gmfs)
-        
+
         assert gmfs["TimeSpan"] == self._time_span
         assert gmfs["TSES"] == self._tses
         assert len(gmfs["IMLs"]) == self._gmfs_length
