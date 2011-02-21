@@ -26,20 +26,20 @@ def _for_plotting(loss_curve):
     data["AggregateLossCurve"]["abscissa_property"] = "Loss"
     data["AggregateLossCurve"]["ordinate_property"] = "PoE"
     data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
-    
+
     return data
 
 
 def compute_aggregate_curve(job):
     """Compute and plot an aggreate loss curve.
-    
+
     This function expects to find in kvs a set of pre computed
-    GMFs and assets. 
+    GMFs and assets.
 
     This function is trigger only if the AGGREGATE_LOSS_CURVE
     parameter has been specified in the configuration file.
     """
-    
+
     if not job.has("AGGREGATE_LOSS_CURVE"):
         LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
                 "skipping aggregate loss curve computation...")
@@ -47,7 +47,7 @@ def compute_aggregate_curve(job):
         return
 
     aggregate_loss_curve = prob.AggregateLossCurve.from_kvs(job.id)
-    
+
     path = os.path.join(job.base_path,
             job.params["OUTPUT_DIR"], _filename(job.id))
 
