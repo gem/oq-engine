@@ -33,15 +33,14 @@ class EpsilonTestCase(unittest.TestCase):
             samples.append(sample)
 
     def test_correlated(self):
-        """In case of uncorrelated jobs we should obtain an independent
-        `epsilon` value for each asset."""
-        import pdb
-        samples = []
+        """In case of correlated jobs we should obtain the same
+        `epsilon` value for assets of the same building typology."""
+        samples = dict()
         self.mixin.__dict__['ASSET_CORRELATION'] = True
         for _, asset in self.exposure_parser:
-            pdb.set_trace()
             sample = self.mixin.epsilon(asset)
             self.assertTrue(
-                sample not in samples,
-                "%s is already in %s" % (sample, samples))
-            samples.append(sample)
+                asset['structureCategory'] not in samples or
+                sample == samples['structureCategory'])
+            if asset['structureCategory'] not in samples:
+                samples['structureCategory'] = sample
