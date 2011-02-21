@@ -371,9 +371,9 @@ class ClassicalMixin(BasePSHAMixin):
 
             hc_attrib = {'investigationTimeSpan': 
                             self.params['INVESTIGATION_TIME'],
-                         'IML': iml_list,
+                         'IMLValues': iml_list,
                          'IMT': self.params['INTENSITY_MEASURE_TYPE'],
-                         'poE': curve_poe}
+                         'PoEValues': curve_poe}
 
             hc_attrib.update(hc_attrib_update)
             hc_data.append((site_obj, hc_attrib))
