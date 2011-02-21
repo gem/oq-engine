@@ -563,11 +563,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.2 * ASSET_VALUE, 2.0), (0.3 * ASSET_VALUE, 3.0)]),
                 loss_curve)
 
-    @test.skipit
-    def test_empty_lrem_po(self):
-        self.assertEqual(0, psha._compute_lrem_po(
-                shapes.EMPTY_VULN_FUNCTION, [], None).size)
-
     def test_lrem_po_computation(self):
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
@@ -576,7 +571,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
               (0.70, 0.01)])
 
         # pre computed values just use one intermediate
-        # values between the iml
+        # values between the imls
         psha.STEPS_PER_INTERVAL = 2
 
         vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
@@ -628,12 +623,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(expected_steps,
                 psha._compute_imls(vuln_function)))
 
-    @test.skipit
-    def test_empty_loss_ratio_curve(self):
-        self.assertEqual(shapes.EMPTY_CURVE,
-                psha.compute_loss_ratio_curve(
-                shapes.EMPTY_VULN_FUNCTION, None))
-
     def test_end_to_end(self):
         # manually computed values by Vitor Silva
         psha.STEPS_PER_INTERVAL = 2
@@ -658,12 +647,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
             self.assertTrue(numpy.allclose(
                     lr_curve_expected.ordinate_for(x_value),
                     loss_ratio_curve.ordinate_for(x_value), atol=0.005))
-
-    @test.skipit
-    def test_empty_lrem(self):
-        self.assertEqual([], psha._compute_lrem(
-            shapes.VulnerabilityFunction.from_json(self.vulnerability_curves[
-            self.empty_vuln_code]), shapes.EMPTY_CURVE))
 
     def test_splits_single_interval_with_no_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),
