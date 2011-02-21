@@ -14,29 +14,9 @@ from openquake import shapes
 from openquake.output import curve
 from openquake.output import risk as risk_output
 
-from openquake.risk.job.aggregate_loss_curve import AggregateLossCurveMixin
-
 from celery.decorators import task
 
 LOG = logs.LOG
-
-def output(fn):
-    """ Decorator for output """
-    def output_writer(self, *args, **kwargs):
-        """ Write the output of a block to kvs. """
-        fn(self, *args, **kwargs)
-        conditional_loss_poes = [float(x) for x in self.params.get(
-                    'CONDITIONAL_LOSS_POE', "0.01").split()]
-        #if result:
-        results = []
-        for block_id in self.blocks_keys:
-            #pylint: disable=W0212
-            results.extend(self._write_output_for_block(self.job_id, block_id))
-        for loss_poe in conditional_loss_poes:
-            results.extend(self.write_loss_map(loss_poe))
-        return results
-
-    return output_writer
 
 
 @task
@@ -45,7 +25,7 @@ def compute_risk(job_id, block_id, **kwargs):
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin, key="risk") as mixed:
         mixed.compute_risk(block_id, **kwargs)
-        
+
 
 class RiskJobMixin(mixins.Mixin):
     """ A mixin proxy for Risk jobs """
@@ -117,4 +97,3 @@ class RiskJobMixin(mixins.Mixin):
 
 
 mixins.Mixin.register("Risk", RiskJobMixin, order=2)
-mixins.Mixin.register("AggregateLossCurve", AggregateLossCurveMixin, order=3)

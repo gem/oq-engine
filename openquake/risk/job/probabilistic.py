@@ -21,7 +21,7 @@ from openquake.risk import job as risk_job
 from openquake.parser import exposure
 from openquake.parser import vulnerability
 from openquake.risk.job import output, RiskJobMixin
-
+from openquake.risk.job import aggregate_loss_curve
 
 LOGGER = logs.LOG
 
@@ -43,12 +43,12 @@ class ProbabilisticEventMixin:
     """ Mixin for Probalistic Event Risk Job """
 
     @preload
-    @output
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
 
-        results = []
         tasks = []
+        results = []
+        
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s" 
                         % (block_id, len(self.blocks_keys)))
@@ -56,7 +56,7 @@ class ProbabilisticEventMixin:
             tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
-        # memcache).
+        # kvs)
         for task in tasks:
             try:
                 # TODO(chris): Figure out where to put that timeout.
@@ -64,7 +64,34 @@ class ProbabilisticEventMixin:
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return []
-        return results # TODO(jmc): Move output from being a decorator
+
+        results = self.write_outputs()
+        aggregate_loss_curve.compute_aggregate_curve(self)
+
+        return results
+
+    def write_outputs(self):
+        """Write outputs for the risk computations.
+
+        Supported outputs:
+            * Loss ratio curves in xml (NRML) and svg formats
+            * Loss maps for all the values specified in the
+            CONDITIONAL_LOSS_POE parameter
+        """
+        
+        conditional_loss_poes = [float(x) for x in self.params.get(
+                    'CONDITIONAL_LOSS_POE', "0.01").split()]
+
+        results = []
+        for block_id in self.blocks_keys:
+            #pylint: disable=W0212
+            results.extend(self._write_output_for_block(
+                    self.job_id, block_id))
+
+        for loss_poe in conditional_loss_poes:
+            results.extend(self.write_loss_map(loss_poe))
+
+        return results
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
@@ -93,13 +120,12 @@ class ProbabilisticEventMixin:
                     for key in gmfs.keys():
                         (row, col) = key.split("!")
                         gmfs[key].append(field.get(int(row), int(col)))
-                                        
+
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
-            key_gmf = kvs.generate_product_key(self.id,
-                kvs.tokens.GMF_KEY_TOKEN, col, row)
+            key_gmf = kvs.tokens.gmfs_key(self.id, col, row)
             LOGGER.debug( "GMF_SLICE for %s X %s : \n\t%s" % (
-                    col, row, gmf_slice ))
+                    col, row, gmf_slice))
             timespan = float(self['INVESTIGATION_TIME'])
             gmf = {"IMLs": gmf_slice, "TSES": num_ses * timespan, 
                     "TimeSpan": timespan}
