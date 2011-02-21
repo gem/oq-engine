@@ -20,7 +20,7 @@ from openquake.risk import probabilistic_event_based
 from openquake.risk import job as risk_job
 from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.risk.job import output, RiskJobMixin
+from openquake.risk.job import RiskJobMixin
 from openquake.risk.job import aggregate_loss_curve
 
 LOGGER = logs.LOG
