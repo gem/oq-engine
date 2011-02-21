@@ -7,6 +7,7 @@ validate all capabilities of the formats (e.g., coordinate and projection),
 and (eventually) test performance of various serializers.
 """
 
+import hashlib
 import os
 import numpy
 import struct
@@ -261,6 +262,30 @@ class OutputTestCase(unittest.TestCase):
         # assert that for each site in the NRML file an SVG has been created
         for svg_file in plotter.filenames():
             self.assertTrue(os.path.getsize(svg_file) > 0)
+
+    def test_loss_curve_plot_generation_multiple_sites_render_multi(self):
+        """Create SVG plots for loss curves read from an NRML file. The
+        file contains data for several sites. 
+        For each site, a separate SVG file is created."""
+
+        path = test.do_test_output_file(LOSS_CURVE_PLOT_FILENAME)
+        loss_curve_path = test.do_test_file(LOSS_CURVE_PLOT_INPUTFILE)
+
+        plotter = curve.RiskCurvePlotter(path, loss_curve_path, mode='loss',
+            curve_title="This is a test loss curve", render_multi=True)
+
+        # delete expected output files, if existing
+        for svg_file in plotter.filenames():
+            if os.path.isfile(svg_file):
+                os.remove(svg_file)
+
+        plotter.plot(autoscale_y=True)
+        
+        sha1 = hashlib.sha1()
+        with open(plotter.svg_filenames[0]) as svg_file:
+            sha1.update(svg_file.read())
+            self.assertEqual('704b472ae27175f20f1c5cb05e0d3f0987ff8f40',
+                             sha1.hexdigest())
 
     def test_simple_curve_plot_generation(self):
         """Create an SVG plot of a single (hazard) curve for a single site
