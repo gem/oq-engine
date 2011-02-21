@@ -222,7 +222,7 @@ class ProbabilisticEventMixin:
         return loss_curve
 
     def epsilon(self, asset):
-        """A value from the standard normal distribution for the given asset.
+        """Sample from the standard normal distribution for the given asset.
 
         For uncorrelated risk calculation jobs we sample the standard normal
         distribution for each asset.
@@ -231,7 +231,9 @@ class ProbabilisticEventMixin:
         the same standard normal distribution sample.
         
         Two assets are considered to be of the same building typology if their
-        structure category is the same.
+        structure category is the same. The asset's `structureCategory` is
+        only needed for correlated jobs and unlikely to be available for
+        uncorrelated ones.
         """
 
 
