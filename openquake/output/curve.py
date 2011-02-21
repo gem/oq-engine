@@ -52,7 +52,6 @@ class CurvePlotter(object):
         be implemented by the derived class."""
         pass
 
-
     def plot(self, autoscale_y=True):
         """Create a plot for each site in the dataset.
         The argument autoscale_y auto-scales the ordinate axis (default).
