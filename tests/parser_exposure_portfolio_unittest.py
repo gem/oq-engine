@@ -8,6 +8,7 @@ from openquake.parser import exposure
 from openquake import shapes
 from utils import test
 
+
 TEST_FILE = 'exposure-portfolio.xml'
 
 
