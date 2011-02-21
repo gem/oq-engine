@@ -14,12 +14,19 @@ from openquake import shapes
 def compute_conditional_loss(curve, probability):
     """Return the loss (or loss ratio) corresponding to the given
     PoE (Probability of Exceendance).
+
+    Return the max loss (or loss ratio) if the given PoE is smaller
+    than the lowest PoE defined.
     
-    Return zero if the probability if out of bounds.
+    Return zero if the given PoE is greater than the
+    highest PoE defined.
     """
 
     if curve.ordinate_out_of_bounds(probability):
-        return 0.0
+        if probability < curve.y_values[-1]:
+            return curve.x_values[-1]
+        else:
+            return 0.0
 
     return curve.abscissa_for(probability)
 
