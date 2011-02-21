@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 """
 This is a basic set of tests for risk engine.
 """
@@ -79,36 +80,173 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
     
     def setUp(self):
-        self.vuln_function = shapes.Curve([(0.01, (0.001, 1.00)),
-                (0.04, (0.022, 1.0)), (0.07, (0.051, 1.0)),
-                (0.10, (0.080, 1.0)), (0.12, (0.100, 1.0)),
-                (0.22, (0.200, 1.0)), (0.37, (0.405, 1.0)),
+        self.vuln_function_1 = shapes.VulnerabilityFunction([
+                (0.01, (0.001, 1.00)),
+                (0.04, (0.022, 1.0)),
+                (0.07, (0.051, 1.0)),
+                (0.10, (0.080, 1.0)),
+                (0.12, (0.100, 1.0)),
+                (0.22, (0.200, 1.0)),
+                (0.37, (0.405, 1.0)),
                 (0.52, (0.700, 1.0))])
 
         self.gmfs = GMFs
 
-        self.cum_histogram = numpy.array([112, 31, 17, 12, 7, 7, 5, 4, 4, 4, 1,
-                1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        self.cum_histogram = numpy.array([112, 46, 26, 18, 14,
+                12, 8, 7, 7, 6, 5, 4, 4, 4, 4, 4, 2, 1,
+                1, 1, 1, 1, 1, 1])
+        
+        self.vuln_function_2 = shapes.VulnerabilityFunction([
+                (0.00, (0.00, 0.30)), (0.04, (0.00, 0.30)),
+                (0.08, (0.00, 0.30)), (0.12, (0.01, 0.30)),
+                (0.16, (0.04, 0.30)), (0.20, (0.07, 0.30)),
+                (0.24, (0.11, 0.30)), (0.28, (0.15, 0.30)),
+                (0.32, (0.20, 0.30)), (0.36, (0.25, 0.30)),
+                (0.40, (0.30, 0.30)), (0.44, (0.35, 0.30)),
+                (0.48, (0.39, 0.30)), (0.53, (0.43, 0.30)),
+                (0.57, (0.47, 0.30)), (0.61, (0.51, 0.30)),
+                (0.65, (0.55, 0.30)), (0.69, (0.58, 0.30)),
+                (0.73, (0.61, 0.30)), (0.77, (0.64, 0.30)),
+                (0.81, (0.67, 0.30)), (0.85, (0.69, 0.30)),
+                (0.89, (0.71, 0.30)), (0.93, (0.73, 0.30)),
+                (0.97, (0.75, 0.30)), (1.01, (0.77, 0.30)),
+                (1.05, (0.79, 0.30)), (1.09, (0.80, 0.30)),
+                (1.13, (0.81, 0.30)), (1.17, (0.83, 0.30)),
+                (1.21, (0.84, 0.30)), (1.25, (0.85, 0.30)),
+                (1.29, (0.86, 0.30)), (1.33, (0.87, 0.30)),
+                (1.37, (0.88, 0.30)), (1.41, (0.89, 0.30)),
+                (1.45, (0.89, 0.30)), (1.49, (0.90, 0.30)),
+                (1.54, (0.91, 0.30)), (1.58, (0.91, 0.30)),
+                (1.62, (0.92, 0.30)), (1.66, (0.92, 0.30)),
+                (1.70, (0.93, 0.30)), (1.74, (0.93, 0.30)),
+                (1.78, (0.94, 0.30)), (1.82, (0.94, 0.30)),
+                (1.86, (0.94, 0.30)), (1.90, (0.95, 0.30)),
+                (1.94, (0.95, 0.30)), (1.98, (0.95, 0.30)),
+                (2.02, (0.95, 0.30)), (2.06, (0.96, 0.30)),
+                (2.10, (0.96, 0.30)), (2.14, (0.96, 0.30)),
+                (2.18, (0.96, 0.30)), (2.22, (0.97, 0.30)),
+                (2.26, (0.97, 0.30)), (2.30, (0.97, 0.30)),
+                (2.34, (0.97, 0.30)), (2.38, (0.97, 0.30)),
+                (2.42, (0.97, 0.30)), (2.46, (0.98, 0.30)),
+                (2.51, (0.98, 0.30)), (2.55, (0.98, 0.30)),
+                (2.59, (0.98, 0.30)), (2.63, (0.98, 0.30)),
+                (2.67, (0.98, 0.30)), (2.71, (0.98, 0.30)),
+                (2.75, (0.98, 0.30)), (2.79, (0.98, 0.30)),
+                (2.83, (0.98, 0.30)), (2.87, (0.99, 0.30)),
+                (2.91, (0.99, 0.30)), (2.95, (0.99, 0.30)),
+                (2.99, (0.99, 0.30)), (3.03, (0.99, 0.30)),
+                (3.07, (0.99, 0.30)), (3.11, (0.99, 0.30)),
+                (3.15, (0.99, 0.30)), (3.19, (0.99, 0.30)),
+                (3.23, (0.99, 0.30)), (3.27, (0.99, 0.30)),
+                (3.31, (0.99, 0.30)), (3.35, (0.99, 0.30)),
+                (3.39, (0.99, 0.30)), (3.43, (0.99, 0.30)),
+                (3.47, (0.99, 0.30)), (3.52, (0.99, 0.30)),
+                (3.56, (0.99, 0.30)), (3.60, (0.99, 0.30)),
+                (3.64, (0.99, 0.30)), (3.68, (0.99, 0.30)),
+                (3.72, (0.99, 0.30)), (3.76, (0.99, 0.30)),
+                (3.80, (0.99, 0.30)), (3.84, (1.00, 0.30)),
+                (3.88, (1.00, 0.30)), (3.92, (1.00, 0.30)),
+                (3.96, (1.00, 0.30)), (4.00, (1.00, 0.30))])
+
+        self.job_id = 1234
+
+        self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
+                0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
+                0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
+                0.1756), "TSES": 200, "TimeSpan": 50}
+
+        self.asset_1 = {"VulnerabilityFunction": "ID", "AssetValue": 22.61}
+
+        self.gmfs_2 = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172,
+                0.6604, 0.1182, 0.1545, 0.7613, 0.5246, 0.2428, 0.2882,
+                0.2179, 1.2939, 0.6042, 0.1418, 0.3637, 0.222, 0.3613,
+                0.113), "TSES": 200, "TimeSpan": 50}
+        
+        self.asset_2 = {"VulnerabilityFunction": "ID", "AssetValue": 124.27}
+
+        self.gmfs_3 = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862,
+                0.1438, 0.2114, 0.5101, 1.0097, 0.226, 0.3443, 0.1693,
+                1.0754, 0.3533, 0.1461, 0.347, 0.2665, 0.2977, 0.2925),
+                "TSES": 200, "TimeSpan": 50}
+
+        self.asset_3 = {"VulnerabilityFunction": "ID", "AssetValue": 42.93}
+        
+        self.gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313,
+                0.9297, 0.2337, 0.2862, 0.5278, 0.6603, 0.3537, 0.2997,
+                0.1097, 1.1875, 0.4752, 0.1575, 0.4009, 0.2519, 0.2653,
+                0.1394), "TSES": 200, "TimeSpan": 50}
+
+        self.asset_4 = {"VulnerabilityFunction": "ID", "AssetValue": 29.37}
+
+        self.gmfs_5 = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763,
+                0.2189, 0.3324, 0.3215, 0.6406, 0.5014, 0.3877, 0.1318, 1.0545,
+                0.3035, 0.1118, 0.2981, 0.3492, 0.2406, 0.1043),
+                "TSES": 200, "TimeSpan": 50}
+
+        self.asset_5 = {"VulnerabilityFunction": "ID", "AssetValue": 40.68}
+        
+        self.gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633,
+                0.2095, 0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
+                0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
+                "TSES": 200, "TimeSpan": 50}
+
+        self.asset_6 = {"VulnerabilityFunction": "ID", "AssetValue": 178.47}
+
+        # deleting keys in kvs
+        kvs.get_client(binary=False).flushall()
+        
+        # store the vulnerability function
+#        vulnerability.write_vuln_curves_to_kvs(self.job_id,
+#                {"ID": self.vuln_function_2.to_json()})
+
+        kvs.set_value_json_encoded(kvs.tokens.vuln_key(self.job_id), 
+                                        {"ID": self.vuln_function_2.to_json()})
+        
+        # store the gmfs
+        self._store_gmfs(self.gmfs_1, 1, 1)
+        self._store_gmfs(self.gmfs_2, 1, 2)
+        self._store_gmfs(self.gmfs_3, 1, 3)
+        self._store_gmfs(self.gmfs_4, 1, 4)
+        self._store_gmfs(self.gmfs_5, 1, 5)
+        self._store_gmfs(self.gmfs_6, 1, 6)
+
+        # store the assets
+        self._store_asset(self.asset_1, 1, 1)
+        self._store_asset(self.asset_2, 1, 2)
+        self._store_asset(self.asset_3, 1, 3)
+        self._store_asset(self.asset_4, 1, 4)
+        self._store_asset(self.asset_5, 1, 5)
+        self._store_asset(self.asset_6, 1, 6)
+
+    def _store_asset(self, asset, row, column):
+        key = kvs.tokens.asset_key(self.job_id, row, column)
+        kvs.set_value_json_encoded(key, asset)
+
+    def _store_gmfs(self, gmfs, row, column):
+        key = kvs.generate_product_key(self.job_id,
+                kvs.tokens.GMF_KEY_TOKEN, row, column)
+        
+        kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
-        self.assertEqual([], prob.compute_loss_ratios(
-                shapes.EMPTY_CURVE, self.gmfs))
+        self.assertEqual(0, prob._compute_loss_ratios(
+                shapes.EMPTY_CURVE, self.gmfs).size)
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
-        self.assertEqual([], prob.compute_loss_ratios(
-                self.vuln_function, {"IMLs": ()}))
+        self.assertEqual(0, prob._compute_loss_ratios(
+                self.vuln_function_1, {"IMLs": ()}).size)
 
     def test_loss_ratios_boundaries(self):
         # loss ratio is zero if the gmf iml is below the minimum iml
         # defined by the function min iml in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-                prob.compute_loss_ratios(self.vuln_function,
+                prob._compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.0001, 0.0002, 0.0003)})))
 
         # loss ratio is equal to the maximum iml defined by the
         # function is greater than that max iml in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.52, 0.52]),
-                prob.compute_loss_ratios(self.vuln_function,
+                prob._compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.525, 0.53)})))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -188,170 +326,215 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-                prob.compute_loss_ratios(self.vuln_function, self.gmfs)))
+                prob._compute_loss_ratios(self.vuln_function_1, self.gmfs)))
 
     def test_loss_ratios_range_generation(self):
-        expected_range = numpy.array([0.0000, 0.0292, 0.0583, 0.0875, 0.1167,
-                0.1458, 0.1750, 0.2042, 0.2333, 0.2625, 0.2917, 0.3208,
-                0.3500, 0.3792, 0.4083, 0.4375, 0.4667, 0.4958, 0.5250,
-                0.5542, 0.5833, 0.6125, 0.6417, 0.6708, 0.700])
+        loss_ratios = numpy.array([0.0, 2.0])
+        expected_range = numpy.array([0.0, 0.5, 1.0, 1.5, 2.0])
 
         self.assertTrue(numpy.allclose(expected_range,
-                prob.compute_loss_ratios_range(self.vuln_function),
+                prob._compute_loss_ratios_range(loss_ratios, 5),
                 atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
+        loss_ratios = prob._compute_loss_ratios(self.vuln_function_1, self.gmfs)
+        loss_ratios_range = prob._compute_loss_ratios_range(loss_ratios)
+        
         self.assertTrue(numpy.allclose(self.cum_histogram,
-                prob.compute_cumulative_histogram(
-                prob.compute_loss_ratios(self.vuln_function, self.gmfs),
-                prob.compute_loss_ratios_range(self.vuln_function))))
+                prob._compute_cumulative_histogram(
+                loss_ratios, loss_ratios_range)))
 
     def test_computes_the_rates_of_exceedance(self):
-        expected_rates = numpy.array([0.124, 0.0344, 0.0189, 0.0133,
-                0.0078, 0.0078, 0.0056, 0.0044, 0.0044, 0.0044,
-                0.0011, 0.0011, 0.0011, 0.0011, 0.011, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        expected_rates = numpy.array([0.12444444, 0.05111111, 0.02888889,
+                0.02, 0.01555556, 0.01333333, 0.00888889, 0.00777778,
+                0.00777778, 0.00666667, 0.00555556, 0.00444444,
+                0.00444444, 0.00444444, 0.00444444, 0.00444444, 0.00222222,
+                0.00111111, 0.00111111, 0.00111111, 0.00111111,
+                0.00111111, 0.00111111, 0.00111111])
 
         self.assertTrue(numpy.allclose(expected_rates,
-                prob.compute_rates_of_exceedance(
+                prob._compute_rates_of_exceedance(
                 self.cum_histogram, self.gmfs["TSES"]), atol=0.01))
 
     def test_TSES_is_not_supposed_to_be_zero_or_less(self):
-        self.assertRaises(ValueError, prob.compute_rates_of_exceedance,
+        self.assertRaises(ValueError, prob._compute_rates_of_exceedance,
                 self.cum_histogram, 0.0)
         
-        self.assertRaises(ValueError, prob.compute_rates_of_exceedance,
+        self.assertRaises(ValueError, prob._compute_rates_of_exceedance,
                 self.cum_histogram, -10.0)
 
     def test_computes_probs_of_exceedance(self):
-        expected_probs = [0.9980, 0.8213, 0.6111, 0.4866, 0.3222, 0.3222,
-                0.2425, 0.1993, 0.1993, 0.1993, 0.0540,
-                0.0540, 0.0540, 0.0540, 0.0540, 0.0, 0.0, 0.0, 0.0,
-                0.0, 0.0, 0.0, 0.0, 0.0]
+        expected_probs = [0.99801517, 0.92235092, 0.76412292, 0.63212056,
+                0.54057418, 0.48658288, 0.35881961, 0.32219042, 0.32219042,
+                0.28346869, 0.24253487, 0.1992626, 0.1992626, 0.1992626,
+                0.1992626, 0.1992626, 0.10516068, 0.05404053, 0.05404053,
+                0.05404053, 0.05404053, 0.05404053, 0.05404053, 0.05404053]
 
         self.assertTrue(numpy.allclose(expected_probs, 
-                prob.compute_probs_of_exceedance(
-                prob.compute_rates_of_exceedance(
+                prob._compute_probs_of_exceedance(
+                prob._compute_rates_of_exceedance(
                 self.cum_histogram, self.gmfs["TSES"]),
                 self.gmfs["TimeSpan"]), atol=0.0001))
 
     def test_computes_the_loss_ratio_curve(self):
-        expected_curve = shapes.Curve([
-                (0.014583333333333332, 0.99801517),
-                (0.043749999999999997, 0.82133133505033484),
-                (0.072916666666666657, 0.61110443601077713),
-                (0.10208333333333333, 0.48658288096740798),
-                (0.13124999999999998, 0.32219042199454972),
-                (0.16041666666666665, 0.32219042199454972),
-                (0.18958333333333333, 0.24253487160303355),
-                (0.21874999999999997, 0.19926259708319194),
-                (0.24791666666666662, 0.19926259708319194),
-                (0.27708333333333329, 0.19926259708319194),
-                (0.30624999999999997, 0.054040531093234589),
-                (0.33541666666666664, 0.054040531093234589),
-                (0.36458333333333331, 0.054040531093234589),
-                (0.39374999999999993, 0.054040531093234589),
-                (0.42291666666666661, 0.054040531093234589),
-                (0.45208333333333328, 0.0), (0.48124999999999996, 0.0),
-                (0.5395833333333333, 0.0), (0.59791666666666665, 0.0),
-                (0.51041666666666663, 0.0), (0.56874999999999987, 0.0),
-                (0.62708333333333321, 0.0), (0.65625, 0.0),
-                (0.68541666666666656, 0.0)])
+        # manually computed results from V. Silva
+        expected_curve = shapes.Curve([(0.085255, 0.988891),
+                (0.255765, 0.82622606), (0.426275, 0.77686984),
+                (0.596785, 0.52763345), (0.767295, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function, self.gmfs))
+                self.vuln_function_2, self.gmfs_1, 6))
 
-    def test_an_empty_gmfs_produces_an_empty_loss_ratio_curve(self):
+        expected_curve = shapes.Curve([(0.0935225, 0.99326205),
+                (0.2640675, 0.917915), (0.4346125, 0.77686984),
+                (0.6051575, 0.52763345), (0.7757025, 0.22119922)])
+
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function_2, self.gmfs_2, 6))
+
+        expected_curve = shapes.Curve([(0.1047, 0.99326205),
+                (0.2584, 0.89460078), (0.4121, 0.63212056),
+                (0.5658, 0.39346934), (0.7195, 0.39346934)])
+
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function_2, self.gmfs_3, 6))
+
+        expected_curve = shapes.Curve([(0.09012, 0.99326205),
+                (0.25551, 0.93607214), (0.4209, 0.77686984),
+                (0.58629, 0.52763345), (0.75168, 0.39346934)])
+
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function_2, self.gmfs_4, 6))
+
+        expected_curve = shapes.Curve([(0.08089, 0.99326205),
+                (0.23872, 0.95021293), (0.39655, 0.7134952),
+                (0.55438, 0.52763345), (0.71221, 0.39346934)])
+
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function_2, self.gmfs_5, 6))
+
+        expected_curve = shapes.Curve([(0.0717025, 0.99326205),
+                (0.2128575, 0.917915), (0.3540125, 0.82622606),
+                (0.4951675, 0.77686984), (0.6363225, 0.39346934)])
+
+        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+                self.vuln_function_2, self.gmfs_6, 6))
+
+    def test_with_not_earthquakes_we_have_an_empty_curve(self):
         gmfs = dict(self.gmfs)
         gmfs["IMLs"] = ()
 
-        curve = prob.compute_loss_ratio_curve(self.vuln_function, gmfs)
+        curve = prob.compute_loss_ratio_curve(self.vuln_function_1, gmfs)
         self.assertEqual(shapes.EMPTY_CURVE, curve)
 
-    def test_loss_ratio_curve_with_null_gmf(self):
+    def test_with_no_ground_motion_the_curve_degenerates_to_a_single_point(self):
         gmfs = {"IMLs": (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
                 "TSES": 900, "TimeSpan": 50}
-        
+
+        # sounds like a curve, but it's a point :-)
         expected_curve = shapes.Curve([
-                (0.014583333333333332, 0.0),
-                (0.043749999999999997, 0.0),
-                (0.072916666666666657, 0.0),
-                (0.10208333333333333, 0.0),
-                (0.13124999999999998, 0.0),
-                (0.16041666666666665, 0.0),
-                (0.18958333333333333, 0.0),
-                (0.21874999999999997, 0.0),
-                (0.24791666666666662, 0.0),
-                (0.27708333333333329, 0.0),
-                (0.30624999999999997, 0.0),
-                (0.33541666666666664, 0.0),
-                (0.36458333333333331, 0.0),
-                (0.39374999999999993, 0.0),
-                (0.42291666666666661, 0.0),
-                (0.45208333333333328, 0.0),
-                (0.48124999999999996, 0.0),
-                (0.5395833333333333, 0.0),
-                (0.59791666666666665, 0.0),
-                (0.51041666666666663, 0.0),
-                (0.56874999999999987, 0.0),
-                (0.62708333333333321, 0.0),
-                (0.65625, 0.0),
-                (0.68541666666666656, 0.0)])
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
+                (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function, gmfs))
+                self.vuln_function_1, gmfs))
 
-    def test_losses_aggregation(self):
-        # we don't care about PoEs in this case
-        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
-                (3.0, 0.0), (4.0, 0.0)])
+    def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
+        self.assertEqual(shapes.EMPTY_CURVE,
+                prob.AggregateLossCurve({}).compute())
 
-        loss_curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
-                (7.0, 0.0), (8.0, 0.0)])
+    def test_computes_the_aggregate_loss_curve(self):
+        vuln_functions = {"ID": self.vuln_function_2}
 
-        loss_curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
-                (11.0, 0.0), (12.0, 0.0)])
+        aggregate_curve = prob.AggregateLossCurve(vuln_functions)
+        aggregate_curve.append(self.gmfs_1, self.asset_1)
+        aggregate_curve.append(self.gmfs_2, self.asset_2)
+        aggregate_curve.append(self.gmfs_3, self.asset_3)
+        aggregate_curve.append(self.gmfs_4, self.asset_4)
+        aggregate_curve.append(self.gmfs_5, self.asset_5)
+        aggregate_curve.append(self.gmfs_6, self.asset_6)
 
-        aggregate_curve = prob.AggregateLossCurve()
-        aggregate_curve.append(loss_curve_1)
-        aggregate_curve.append(loss_curve_2)
-        aggregate_curve.append(loss_curve_3)
+        expected_losses = numpy.array((7.2636, 57.9264, 187.4893, 66.9082,
+                47.0280, 248.7796, 23.2329, 121.3514, 177.4167, 259.2902,
+                77.7080, 127.7417, 18.9470, 339.5774, 151.1763, 6.1881,
+                71.9168, 97.9514, 56.4720, 11.6513))
 
-        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
-        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
-
-    def test_losses_aggregation_with_empty_input_set(self):
-        aggregate_curve = prob.AggregateLossCurve()
-        self.assertEqual([], aggregate_curve.losses)
-
-    def test_input_loss_curves_must_be_of_same_size(self):
-        loss_curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0)])
-        loss_curve_2 = shapes.Curve([(5.0, 0.0)])
-
-        aggregate_curve = prob.AggregateLossCurve()
-        aggregate_curve.append(loss_curve_1)
-
-        self.assertRaises(ValueError, aggregate_curve.append, loss_curve_2)
-
-    def test_can_build_an_aggregate_curve_from_kvs(self):
-        curve_1 = shapes.Curve([(1.0, 0.0), (2.0, 0.0), 
-                (3.0, 0.0), (4.0, 0.0)])
-
-        curve_2 = shapes.Curve([(5.0, 0.0), (6.0, 0.0), 
-                (7.0, 0.0), (8.0, 0.0)])
-
-        curve_3 = shapes.Curve([(9.0, 0.0), (10.0, 0.0), 
-                (11.0, 0.0), (12.0, 0.0)])
+        self.assertTrue(numpy.allclose(
+                expected_losses, aggregate_curve.losses))
         
-        job_id = 1234
-        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 1, 5), curve_1.to_json())
-        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 2, 5), curve_2.to_json())
-        kvs.set(kvs.tokens.loss_curve_key(job_id, 1, 3, 5), curve_3.to_json())
+        expected_curve = shapes.Curve([(39.52702042, 0.99326205),
+                (106.20489077, 0.917915), (172.88276113, 0.77686984),
+                (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
 
-        aggregate_curve = prob.AggregateLossCurve.from_kvs(job_id)
+        self.assertEqual(expected_curve, aggregate_curve.compute(6))
 
-        expected_losses = numpy.array((15.0, 18.0, 21.0, 24.0))
-        self.assertTrue(numpy.allclose(expected_losses, aggregate_curve.losses))
+    def test_no_distribution_without_gmfs(self):
+        aggregate_curve = prob.AggregateLossCurve({})
+        self.assertEqual(0, aggregate_curve.losses.size)
+
+    def test_tses_parameter_must_be_congruent(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
+
+        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+
+        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
+
+        self.assertRaises(AssertionError,
+                aggregate_curve.append, {
+                "TSES": 2, "TimeSpan": 1, "IMLs": ()}, asset)
+
+    def test_time_span_parameter_must_be_congruent(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
+
+        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+
+        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
+
+        self.assertRaises(AssertionError,
+                aggregate_curve.append, {
+                "TSES": 1, "TimeSpan": 2, "IMLs": ()}, asset)
+
+    def test_gmfs_length_must_be_congruent(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
+
+        asset = {"VulnerabilityFunction": "ID", "AssetValue": 1.0}
+        
+        aggregate_curve.append({
+                "IMLs": (), "TSES": 1, "TimeSpan": 1}, asset)
+
+        self.assertRaises(AssertionError,
+                aggregate_curve.append, {
+                "IMLs": (1.0,), "TSES": 1, "TimeSpan": 1}, asset)
+
+    def test_from_kvs_gets_the_vuln_functions_from_kvs(self):
+        # we have just self.vuln_function_2 stored in kvs
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id);
+
+        self.assertEqual(self.vuln_function_2,
+                aggregate_curve.vuln_model["ID"])
+
+    def test_from_kvs_gets_all_the_gmfs_from_kvs(self):
+        # we have 6 gmfs stored in kvs
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id)
+        self.assertEqual(6, len(aggregate_curve.distribution))
+
+    def test_from_kvs_gets_all_the_related_sites(self):
+        expected_curve = shapes.Curve([(39.52702042, 0.99326205),
+                (106.20489077, 0.917915), (172.88276113, 0.77686984),
+                (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
+
+        # result is correct, so we are getting the correct assets
+        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id)
+        self.assertEqual(expected_curve, aggregate_curve.compute(6))
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase):
@@ -393,53 +576,111 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.2 * ASSET_VALUE, 2.0), (0.3 * ASSET_VALUE, 3.0)]),
                 loss_curve)
 
+    @test.skipit
     def test_empty_lrem_po(self):
-        self.assertEqual([], psha._compute_lrem_po(
-                shapes.EMPTY_CURVE, [], None))
+        self.assertEqual(0, psha._compute_lrem_po(
+                shapes.EMPTY_VULN_FUNCTION, [], None).size)
 
     def test_lrem_po_computation(self):
-        lrem_po = psha._compute_lrem_po(shapes.Curve.from_json(
-                self.vulnerability_curves[self.vuln_curve_code_test]), 
-                LOSS_RATIO_EXCEEDANCE_MATRIX, HAZARD_CURVE)
+        hazard_curve = shapes.Curve([
+              (0.01, 0.99), (0.08, 0.96),
+              (0.17, 0.89), (0.26, 0.82),
+              (0.36, 0.70), (0.55, 0.40),
+              (0.70, 0.01)])
 
-        self.assertAlmostEquals(0.0959, lrem_po[0][0], 4)
-        self.assertAlmostEquals(0.0367, lrem_po[1][0], 4)
-        self.assertAlmostEquals(0.0849, lrem_po[0][1], 4)
-        self.assertAlmostEquals(0.05049, lrem_po[1][1], 4)
-        self.assertAlmostEquals(0.0673, lrem_po[0][2], 4)
-        self.assertAlmostEquals(0.05718, lrem_po[1][2], 4)
+        psha.STEPS_PER_INTERVAL=2
+        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
+              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
+        lrem = psha._compute_lrem(vuln_function)
+
+        lrem_po = psha._compute_lrem_po(
+                vuln_function, 
+                lrem, hazard_curve)
+
+
+        psha.STEPS_PER_INTERVAL=5
+        self.assertTrue(numpy.allclose(0.07, lrem_po[0][0], atol=0.005))
+        self.assertTrue(numpy.allclose(0.06, lrem_po[1][0], atol=0.005))
+        self.assertTrue(numpy.allclose(0.13, lrem_po[0][1], atol=0.005))
+        self.assertTrue(numpy.allclose(0.47, lrem_po[5][3], atol=0.005))
+        self.assertTrue(numpy.allclose(0.23, lrem_po[8][3], atol=0.005))
+        self.assertTrue(numpy.allclose(0.0, lrem_po[10][0], atol=0.005))
+
+    def test_pes_from_imls(self):
+        hazard_curve = shapes.Curve([
+              (0.01, 0.99), (0.08, 0.96),
+              (0.17, 0.89), (0.26, 0.82),
+              (0.36, 0.70), (0.55, 0.40),
+              (0.70, 0.01)])
+
+        expected_pes = [0.9729, 0.9056, 0.7720, 0.4789, 0.0100]
+
+        imls = [0.05, 0.15, 0.3, 0.5, 0.7]
+
+        self.assertTrue(numpy.allclose(numpy.array(expected_pes),
+              psha._compute_pes_from_imls(hazard_curve, imls),
+              atol=0.00005))
+
+
+    def test_pes_to_pos(self):
+        hazard_curve = shapes.Curve([
+              (0.01, 0.99), (0.08, 0.96),
+              (0.17, 0.89), (0.26, 0.82),
+              (0.36, 0.70), (0.55, 0.40),
+              (0.70, 0.01)])
+        expected_pos = [0.0673, 0.1336, 0.2931, 0.4689]
+        pes = [0.05,0.15,0.3,0.5,0.7]
+        self.assertTrue(numpy.allclose(expected_pos,
+                            psha._convert_pes_to_pos(hazard_curve, pes),
+                            atol=0.00005))
+
+    def test_bin_width_from_imls(self):
+        vuln_function = shapes.VulnerabilityFunction(
+                        [(0.1,0.05), (0.2,0.08),(0.4,0.2),(0.6,0.4)])
+        expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
+        self.assertTrue(numpy.allclose(expected_steps,
+                        psha._compute_imls(vuln_function)))
+
+
+
+
+    @test.skipit
     def test_empty_loss_ratio_curve(self):
         self.assertEqual(shapes.EMPTY_CURVE,
-                psha.compute_loss_ratio_curve(None, []))
+                psha.compute_loss_ratio_curve(
+                shapes.EMPTY_VULN_FUNCTION, None))
 
     def test_end_to_end(self):
         # manually computed values by Vitor Silva
-        hazard_curve = shapes.Curve(
-                [(5.0, 0.4), (6.0, 0.2), (7.0, 0.05)])
+        psha.STEPS_PER_INTERVAL=2
+        hazard_curve = shapes.Curve([
+              (0.01, 0.99), (0.08, 0.96),
+              (0.17, 0.89), (0.26, 0.82),
+              (0.36, 0.70), (0.55, 0.40),
+              (0.70, 0.01)])
+        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
+              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
-        lrem = psha._compute_lrem(shapes.Curve.from_json(
-                self.vulnerability_curves[self.vuln_curve_code_test]))
 
-        loss_ratio_curve = psha.compute_loss_ratio_curve(
-                shapes.Curve.from_json(
-                self.vulnerability_curves[self.vuln_curve_code_test]),
-                hazard_curve)
+        loss_ratio_curve = psha.compute_loss_ratio_curve(vuln_function, hazard_curve)
 
-        lr_curve_expected = shapes.Curve([(0.0, 0.650), 
-                (0.05, 0.650), (0.10, 0.632), (0.15, 0.569),
-                (0.20, 0.477), (0.25, 0.382), (0.28, 0.330),
-                (0.31, 0.283), (0.34, 0.241), (0.37, 0.205),
-                (0.40, 0.173), (0.44, 0.137), (0.48, 0.108),
-                (0.52, 0.085), (0.56, 0.066), (0.60, 0.051)])
 
+        lr_curve_expected = shapes.Curve([(0.0, 0.96),
+                (0.025, 0.96), (0.05, 0.91), (0.065,  0.87),
+                (0.08, 0.83), (0.14, 0.75), (0.2,  0.60),
+                (0.3, 0.47), (0.4, 0.23), (0.7,  0.00),
+                (1.0, 0.00)])
+
+        psha.STEPS_PER_INTERVAL=5
         for x_value in lr_curve_expected.abscissae:
-            self.assertAlmostEqual(lr_curve_expected.ordinate_for(x_value),
-                    loss_ratio_curve.ordinate_for(x_value), 3)
+            self.assertTrue(numpy.allclose(lr_curve_expected.ordinate_for(x_value),
+                    loss_ratio_curve.ordinate_for(x_value), atol=0.005))
 
+    @test.skipit
     def test_empty_lrem(self):
-        self.assertEqual([None], psha._compute_lrem(
-            shapes.Curve.from_json(self.vulnerability_curves[
+        self.assertEqual([], psha._compute_lrem(
+            shapes.VulnerabilityFunction.from_json(self.vulnerability_curves[
             self.empty_vuln_code]), shapes.EMPTY_CURVE))
 
     def test_splits_single_interval_with_no_steps_between(self):
@@ -458,7 +699,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
     def test_splits_multiple_intervals_with_a_step_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
                 [1.0, 1.5, 2.0, 2.5, 3.0]),
-                psha._split_loss_ratios([1.0, 2.0, 3.0], 2)))
+                psha._split_loss_ratios([1.0, 2.0, 3.0], steps=2)))
 
     def test_splits_multiple_intervals_with_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
@@ -566,25 +807,10 @@ class AggregateLossCurveMixinTestCase(unittest.TestCase):
         
         self.params = {}
         self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
-        
-        # parameters needed to compute tses and time span
-        self.params["NUMBER_OF_SEISMICITY_HISTORIES"] = 10
-        self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"] = 2
-        self.params["INVESTIGATION_TIME"] = 50.0
         self.params["AGGREGATE_LOSS_CURVE"] = 1
 
         self.engine = job.Job(self.params,  self.job_id, ".")
-        
-        # adding the curves to kvs
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 1, 5),
-                shapes.Curve([(1.0, 0.1), (2.0, 0.1)]).to_json())
 
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 2, 5),
-                shapes.Curve([(3.0, 0.1), (4.0, 0.1)]).to_json())
-
-        kvs.set(kvs.tokens.loss_curve_key(self.job_id, 1, 3, 5),
-                shapes.Curve([(5.0, 0.1), (6.0, 0.1)]).to_json())
-        
         # deleting old file
         self._delete_test_file()
     

@@ -8,11 +8,14 @@ import math
 
 import geohash
 import json
-import numpy
 
-from shapely import geometry
+from numpy import zeros # pylint: disable=F0401,E0611
+from numpy import empty # pylint: disable=F0401,E0611
+from numpy import allclose # pylint: disable=F0401,E0611
+
 from shapely import wkt
-from scipy.interpolate import interp1d
+from shapely import geometry
+from scipy.interpolate import interp1d # pylint: disable=F0401,E0611
 
 from openquake import flags
 from openquake import java
@@ -323,7 +326,7 @@ class Field(object):
         if field is not None:
             self.field = field
         else:
-            self.field = numpy.zeros((rows, cols))
+            self.field = zeros((rows, cols))
     
     def get(self, row, col):
         """ Return the value at self.field[row][col] 
@@ -350,7 +353,7 @@ class Field(object):
         """
         assert grid
         assert grid.cell_size
-        field = numpy.zeros((grid.rows, grid.columns))
+        field = zeros((grid.rows, grid.columns))
         
         for key, field_site in values.items(): #pylint: disable=W0612
             point = grid.point_at(
@@ -384,68 +387,60 @@ class Curve(object):
     """This class defines a curve (discrete function)
     used in the risk domain."""
 
-    @staticmethod
-    def from_json(json_str):
+    @classmethod
+    def from_json(cls, json_str):
         """Construct a curve from a serialized version in
         json format."""
         as_dict = json.JSONDecoder().decode(json_str)
-        return Curve.from_dict(as_dict)
+        return cls.from_dict(as_dict)
 
-    @staticmethod
-    def from_dict(values):
+    @classmethod
+    def from_dict(cls, values):
         """Construct a curve from a dictionary.
         
-        The dictionary keys can be unordered and can be
+        The dictionary keys can be unordered and of
         whatever type can be converted to float with float().
-
         """
-        
+
         data = []
         
         for key, val in values.items():
             data.append((float(key), val))
 
-        return Curve(data)
+        return cls(data)
 
     def __init__(self, values):
         """Construct a curve from a sequence of tuples.
         
         The value on the first position of the tuple is the x value,
-        the value(s) on the second position is the y value(s).
-        
-        This class supports multiple y values for the same
-        x value, for example:
+        the value(s) on the second position is the y value(s). This class
+        supports multiple y values for the same x value, for example:
         
         Curve([(0.1, 1.0), (0.2, 2.0)]) # single y value
         Curve([(0.1, (1.0, 0.5)), (0.2, (2.0, 0.5))]) # multiple y values
         
-        or, with lists:
-        
+        You can also pass lists instead of tuples, like:
+
         Curve([(0.1, [1.0, 0.5]), (0.2, [2.0, 0.5])])
-        
-        The values can be in any order, for axample:
-        
-        Curve([(0.4, 1.0), (0.2, 2.0), (0.3, 2.0)])
-        
         """
 
         # sort the values on x axis
         values = sorted(values, key=lambda data: data[0])
         
         elements = len(values)
-        self.x_values = numpy.empty(elements)
-        self.y_values = numpy.empty(elements)
+        self.x_values = empty(elements)
+        self.y_values = empty(elements)
 
         if elements and type(values[0][1]) in (tuple, list):
-            self.y_values = numpy.empty((elements, len(values[0][1])))
+            self.y_values = empty((elements, len(values[0][1])))
 
         for index, (key, val) in enumerate(values):
             self.x_values[index] = key
             self.y_values[index] = val
 
     def __eq__(self, other):
-        return numpy.allclose(self.x_values, other.x_values) \
-                and numpy.allclose(self.y_values, other.y_values)
+        return allclose(self.x_values, other.x_values) \
+                and allclose(self.y_values, other.y_values)
 
     def __str__(self):
         return "X Values: %s\nY Values: %s" % (
@@ -465,6 +460,11 @@ class Curve(object):
     def abscissae(self):
         """Return the abscissa values of this curve in ascending order."""
         return self.x_values
+
+    @property
+    def is_empty(self):
+        """Return true if this curve is empty, false otherwise."""
+        return self.abscissae.size == 0
 
     @property
     def ordinates(self):
@@ -499,7 +499,7 @@ class Curve(object):
         return Curve(data).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
-        """Check if the given value is outside the codomain boundaries."""
+        """Check if the given value is outside the Y values boundaries."""
         ordinates = list(self.ordinates)
         ordinates.sort()
         
@@ -518,4 +518,40 @@ class Curve(object):
         return json.JSONEncoder().encode(as_dict)
 
 
+class VulnerabilityFunction(Curve):
+    """This class represents a vulnerability fuction.
+
+    A vulnerability function has IMLs (Intensity Measure Levels) as
+    X values and MLRs, CVs (Mean Loss Ratio and Coefficent of Variation)
+    as Y values.
+    """
+
+    @property
+    def means(self):
+        """Return the mean loss ratios of this function."""
+        if self.is_empty:
+            return self.ordinates
+        else:
+            return self.ordinates[:, 0]
+
+    def __iter__(self):
+        """Iterate on the values of this function, returning triples
+        in the form of (iml, mean loss ratio, cov)."""
+        for idx in range(len(self.abscissae)):
+            yield((self.abscissae[idx], 
+                    self.ordinates[idx][0],
+                    self.ordinates[idx][1]))
+
+    @property
+    def imls(self):
+        """Return the imls of this function."""
+        return self.abscissae
+
+    @property
+    def covs(self):
+        """Return the covs of this function."""
+        return self.ordinates[:, 1]
+
+
 EMPTY_CURVE = Curve(())
+EMPTY_VULN_FUNCTION = VulnerabilityFunction(())

@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 """
-This module defines the functions that can be applied to loss ratio
+This module defines functions that can be applied to loss ratio
 or loss curves.
 """
 
-from numpy import mean # pylint: disable=E1101, E0611
+from numpy import mean  # pylint: disable=E1101, E0611
 
 from openquake import shapes
 
+
 def compute_conditional_loss(curve, probability):
     """Return the loss (or loss ratio) corresponding to the given
-    probability of exceedance. Return zero if the probability
-    of exceedance if out of bounds.
+    PoE (Probability of Exceendance).
+    
+    Return zero if the probability if out of bounds.
     """
 
     if curve.ordinate_out_of_bounds(probability):
@@ -21,7 +25,11 @@ def compute_conditional_loss(curve, probability):
 
 
 def compute_loss_curve(loss_ratio_curve, asset):
-    """Compute the loss curve for a specific asset value."""
+    """Compute the loss curve for the given asset value.
+    
+    A loss curve is obtained from a loss ratio curve by
+    multiplying each X value (loss ratio) for the given asset.
+    """
 
     if not asset: 
         return shapes.EMPTY_CURVE
@@ -32,37 +40,46 @@ def compute_loss_curve(loss_ratio_curve, asset):
 def _compute_mid_mean_pe(loss_ratio_curve):
     """Compute a new loss ratio curve taking the mean values."""
 
-    data = []
     loss_ratios = loss_ratio_curve.abscissae
     pes = loss_ratio_curve.ordinates
 
-    for idx in xrange(len(loss_ratios) - 1):
-        data.append((mean([loss_ratios[idx],
-                loss_ratios[idx + 1]]),
-                mean([pes[idx], pes[idx + 1]])))
+    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
+    mid_pes = collect(loop(pes, lambda x, y: mean([x, y])))
 
-    return shapes.Curve(data)
+    return shapes.Curve(zip(ratios, mid_pes))
 
 
 def _compute_mid_po(loss_ratio_pe_mid_curve):
-    """Compute a loss ratio curve that has probabilities of occurrence
-    as ordinate values."""
+    """Compute a loss ratio curve that has PoOs
+    (Probabilities of Occurrence) as Y values."""
 
-    data = []
     loss_ratios = loss_ratio_pe_mid_curve.abscissae
     pes = loss_ratio_pe_mid_curve.ordinates
 
-    for idx in xrange(len(loss_ratios) - 1):
-        data.append((mean([loss_ratios[idx],
-                loss_ratios[idx + 1]]), pes[idx] - pes[idx + 1]))
+    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
+    pos = collect(loop(pes, lambda x, y: x - y))
 
-    return  shapes.Curve(data)
+    return shapes.Curve(zip(ratios, pos))
 
 
 def compute_mean_loss(curve):
-    """Compute the mean loss (or loss ratio)."""
+    """Compute the mean loss (or loss ratio) for the given curve."""
 
-    mid_pos_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
+    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
+    return sum(i*j for i, j in zip(mid_curve.abscissae, mid_curve.ordinates))
 
-    return sum(i*j for i, j in zip(
-            mid_pos_curve.abscissae, mid_pos_curve.ordinates))
+
+def loop(elements, func, *args):
+    """Loop over the given elements, yielding func(current, next, *args)."""
+    for idx in xrange(elements.size - 1):
+        yield func(elements[idx], elements[idx + 1], *args)
+
+
+def collect(iterator):
+    """Simply collect the data taken from the given iterator."""
+    data = []
+
+    for element in iterator:
+        data.append(element)
+    
+    return data
