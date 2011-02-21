@@ -48,7 +48,8 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
 
 
 def _generate_loss_ratios(vuln_function):
-    """Loss ratios are a function of the vulnerability curve."""
+    """Generate the set of loss ratios used to compute the LREM
+    (Loss Ratio Exceedance Matrix)."""
 
     # we manually add 0.0 as first loss ratio and the last (1.0) loss ratio
     loss_ratios = concatenate((array([0.0]),
@@ -109,8 +110,8 @@ def _split_loss_ratios(loss_ratios, steps=None):
 
 def _compute_imls(vuln_function):
     """
-        Compute Intensity Measure Levels considering
-        the highest/lowest values a special case
+        Compute the mean IMLs (Intensity Measure Level)
+        for the given vulnerability function.
     """
 
     imls = vuln_function.imls
@@ -126,7 +127,8 @@ def _compute_imls(vuln_function):
 
 def _compute_pes_from_imls(haz_curve, imls):
     """
-        Compute the probabilities of exceedances from imls
+        Return the PoEs (Probability of Exceendance) defined in the
+        hazard curve for each IML (Intensity Measure Level) given.
     """
     pes = [haz_curve.ordinate_for(iml) for iml in imls]
 
@@ -135,7 +137,9 @@ def _compute_pes_from_imls(haz_curve, imls):
 
 def _convert_pes_to_pos(hazard_curve, imls):
     """
-        Compute the probability occurences from the probability exceedances
+        For each IML (Intensity Measure Level) given compute the
+        PoOs (Probability of Occurence) from the PoEs
+        (Probability of Exceendance) defined in the given hazard curve.
     """
     return collect(loop(_compute_pes_from_imls(hazard_curve, imls),
         lambda x, y: subtract(array(x), array(y))))
