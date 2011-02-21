@@ -28,7 +28,8 @@ class CurvePlotter(object):
     For a specific curve plot (hazard/loss/loss ratio), 
     a class has to be derived from this one."""
 
-    def __init__(self, output_base_path, nrml_input_path, curve_title=None):
+    def __init__(self, output_base_path, nrml_input_path, curve_title=None,
+                 render_multi=False):
 
         # remove trailing .svg extension from output file name (if existing)
         self.output_base_path = output_base_path
@@ -38,9 +39,13 @@ class CurvePlotter(object):
         self.nrml_input_path = nrml_input_path
         self.curve_title = curve_title
         self.data = {}
-        self.svg_filenames = []
 
         self._parse_nrml_file()
+        self.render_multi = render_multi
+        if render_multi:
+            self.svg_filenames = [self.nrml_input_path.replace('xml', 'svg')]
+        else:
+            self.svg_filenames = [sd['path'] for sd in self.data.values()]
 
     def _parse_nrml_file(self):
         """Parse curve data from NRML file into a dictionary, has to
@@ -53,15 +58,29 @@ class CurvePlotter(object):
         If set to false, the displayed ordinate range is 0...1.
         TODO(fab): let user specify abscissa and ordinate range for plot."""
 
+        if self.render_multi:
+            self.__plot_multi(autoscale_y)
+        else:
+            self.__plot_single(autoscale_y)
+
+    def __plot_single(self, autoscale_y):
+        """ Plot only a single curve on the svg """
         for site_data in self.data.values():
             plot = CurvePlot(site_data['path'])
             plot.write(site_data['curves'], autoscale_y)
             plot.close()
 
+    def __plot_multi(self, autoscale_y):
+        """ Plot multiple curves on the same svg """
+        plot_path = self.svg_filenames[0]
+        plot = CurvePlot(plot_path, use_title=True)
+        for site_data in self.data.values():
+            plot.write(site_data['curves'], autoscale_y)
+        plot.close()
+
     def filenames(self):
         """ Generator yields the path value for each dict in self.data """
-        for site_data in self.data.values():
-            yield site_data['path']
+        return (path for path in self.svg_filenames)
 
     def _generate_filename(self, site_hash):
         """ Return a file name string """
@@ -79,7 +98,7 @@ class RiskCurvePlotter(CurvePlotter):
     per asset, multiple assets per site (according to Vitor)."""
 
     def __init__(self, output_base_path, nrml_input_path, mode='loss', 
-                 curve_title=None):
+                 curve_title=None, render_multi=False):
         """mode can be 'loss' or 'loss_ratio', 'loss' is the default."""
         self.mode = mode
 
@@ -90,7 +109,7 @@ class RiskCurvePlotter(CurvePlotter):
                 curve_title = 'Loss Curve'
 
         super(RiskCurvePlotter, self).__init__(output_base_path, 
-            nrml_input_path, curve_title)
+            nrml_input_path, curve_title, render_multi)
 
     def _parse_nrml_file(self):
         """Parse loss/loss ratio curve data from NRML file into a dictionary."""
@@ -133,13 +152,14 @@ class HazardCurvePlotter(CurvePlotter):
     can contain multiple hazard curves, one for each logic tree end branch 
     given in the NRML file."""
 
-    def __init__(self, output_base_path, nrml_input_path, curve_title=None):
+    def __init__(self, output_base_path, nrml_input_path, curve_title=None,
+                 render_multi=False):
 
         if curve_title is None:
             curve_title = 'Hazard Curves'
 
         super(HazardCurvePlotter, self).__init__(output_base_path, 
-            nrml_input_path, curve_title)
+            nrml_input_path, curve_title, render_multi=False)
 
     def _parse_nrml_file(self):
         """Parse hazard curve data from NRML file into a dictionary."""
@@ -215,7 +235,8 @@ class CurvePlot(writer.FileWriter):
                        'style' : 'normal',
                        'family': ('serif', 'sans-serif', 'monospace')}
 
-    def __init__(self, path):
+    def __init__(self, path, use_title=False):
+        self.use_title = use_title
         self.color_code_generator = _color_code_generator()
         super(CurvePlot, self).__init__(path)
 
@@ -269,6 +290,10 @@ class CurvePlot(writer.FileWriter):
         """Set the title of this plot using the given site. Use just
         the title in case there's not site related."""
         try:
+            if self.use_title:
+                # Multiple curves shouldn't use a site specific long/lat
+                raise KeyError
+
             pylab.title("%s for (%7.3f, %6.3f)" % (
                     data[curve]['curve_title'],
                     data[curve]['Site'].longitude, 

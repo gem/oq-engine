@@ -158,8 +158,8 @@ class GeoTiffFile(writer.FileWriter):
         self.close()
 
 
-class LossMapGeoTiffFile(GeoTiffFile):
-    """ Write RGBA geotiff images for loss maps. Color scale is from
+class MapGeoTiffFile(GeoTiffFile):
+    """ Write RGBA geotiff images for loss/hazard maps. Color scale is from
     0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend."""
 
@@ -199,6 +199,20 @@ class LossMapGeoTiffFile(GeoTiffFile):
 
         with open(html_path, 'w') as f:
             f.write(html_string)
+
+
+class LossMapGeoTiffFile(MapGeoTiffFile):
+    """ Write RGBA geotiff images for loss maps. Color scale is from
+    0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
+    the TIFF with a color-scale legend."""
+    pass
+
+
+class HazardMapGeoTiffFile(MapGeoTiffFile):
+    """ Write RGBA geotiff images for hazard maps. Color scale is from
+    0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
+    the TIFF with a color-scale legend."""
+    pass
 
 
 class GMFGeoTiffFile(GeoTiffFile):
@@ -244,12 +258,6 @@ class GMFGeoTiffFile(GeoTiffFile):
                                     dtype=numpy.int)
         self.raster_g = numpy.zeros_like(self.raster_r)
         self.raster_b = numpy.zeros_like(self.raster_r)
-
-    def write(self, cell, value):
-        """This method is redefined, because the one from the base class
-        sets transparency to a high level for zero values. For GMF plots,
-        we want fully opaque images."""
-        self.raster[int(cell[0]), int(cell[1])] = float(value)
 
     def _normalize(self):
         """ Normalize the raster matrix """
