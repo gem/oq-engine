@@ -1,9 +1,9 @@
-# pylint: disable=W0232
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-""" Probabilistic Event Mixin: 
-
-    Defines the behaviour of a Job. Calls the compute_risk task
-
+"""
+Probabilistic Event Mixin: defines the behaviour of a Job. Calls the
+compute_risk task
 """
 
 import json
@@ -26,6 +26,7 @@ from openquake.risk.job import output, RiskJobMixin
 LOGGER = logs.LOG
 
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
+
 
 def preload(fn):
     """ Preload decorator """
@@ -219,5 +220,19 @@ class ProbabilisticEventMixin:
                 loss_curve, key))
         kvs.set(key, loss_curve.to_json())
         return loss_curve
+
+    def epsilon(self, asset):
+        """A value from the standard normal distribution for the given asset.
+
+        For uncorrelated risk calculation jobs we sample the standard normal
+        distribution for each asset.
+        In the opposite case ("perfectly correlated" assets) we sample for each
+        building typology i.e. two assets with the same typology will "share"
+        the same standard normal distribution sample.
+        
+        Two assets are considered to be of the same building typology if their
+        structure category is the same.
+        """
+
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
