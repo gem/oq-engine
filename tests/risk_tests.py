@@ -214,6 +214,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
         self.params["AGGREGATE_LOSS_CURVE"] = 1
         self.params["BASE_PATH"] = "."
+        self.params["INVESTIGATION_TIME"] = 50.0
 
         self.job = job.Job(self.params,  self.job_id, base_path=".")
         self.job.to_kvs()
@@ -554,12 +555,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_data["AggregateLossCurve"] = {}
         expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
         expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
-        expected_data["AggregateLossCurve"]["abscissa_property"] = "Loss"
-        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE"
+        expected_data["AggregateLossCurve"]["abscissa_property"] = "Economic Losses"
+        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE in 50.0 years"
         expected_data["AggregateLossCurve"] \
                 ["curve_title"] = "Aggregate Loss Curve"
 
-        self.assertEqual(expected_data, aggregate._for_plotting(curve))
+        self.assertEqual(expected_data, aggregate._for_plotting(curve, 50.0))
 
     def test_plots_the_aggregate_curve(self):
         aggregate.compute_aggregate_curve(self.job_id)
