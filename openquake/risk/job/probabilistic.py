@@ -9,6 +9,7 @@ compute_risk task
 import json
 
 from celery.exceptions import TimeoutError
+from scipy.stats import norm
 
 from openquake import job
 from openquake import kvs
@@ -235,8 +236,10 @@ class ProbabilisticEventMixin:
         only needed for correlated jobs and unlikely to be available for
         uncorrelated ones.
         """
-        correlation = getattr(self, "ASSET_CORRELATION")
-        if correlation is not None and correlation != "perfect":
+        correlation = getattr(self, "ASSET_CORRELATION", None)
+        if correlation is None:
+            return norm.rvs(loc=0, scale=1)
+        elif correlation != "perfect":
             raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
 
 
