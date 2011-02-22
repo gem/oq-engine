@@ -8,6 +8,13 @@ branch_reference=`git branch | grep '^\*' | cut -f2 -d' '`
 
 fetch_remotes=0
 
+git diff --quiet HEAD
+if [ $? -ne 0 ]
+then
+    echo "Your branch has uncommitted changes. Please commit first."
+    exit 1
+fi
+
 for i in $*
 do
     case $i in
@@ -38,7 +45,7 @@ do
         ;;
     *)
         echo "Uknown option: " $i
-        exit 1
+        exit 2
         ;;
     esac
 done
