@@ -19,6 +19,25 @@ from celery.decorators import task
 LOG = logs.LOG
 
 
+def output(fn):
+    """ Decorator for output """
+    def output_writer(self, *args, **kwargs):
+        """ Write the output of a block to kvs. """
+        fn(self, *args, **kwargs)
+        conditional_loss_poes = [float(x) for x in self.params.get(
+                    'CONDITIONAL_LOSS_POE', "0.01").split()]
+        #if result:
+        results = []
+        for block_id in self.blocks_keys:
+            #pylint: disable=W0212
+            results.extend(self._write_output_for_block(self.job_id, block_id))
+        for loss_poe in conditional_loss_poes:
+            results.extend(self.write_loss_map(loss_poe))
+        return results
+
+    return output_writer
+
+
 def _serialize(path, **kwargs):
     """ Serialize the curves """
     LOG.debug("Serializing %s" % kwargs['curve_mode'])

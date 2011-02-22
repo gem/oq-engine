@@ -213,9 +213,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.params = {}
         self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
         self.params["AGGREGATE_LOSS_CURVE"] = 1
+        self.params["BASE_PATH"] = "."
 
-        self.job = job.Job(self.params,  self.job_id, ".")
-    
+        self.job = job.Job(self.params,  self.job_id, base_path=".")
+        self.job.to_kvs()
+
         # deleting old file
         self._delete_test_file()
 
@@ -560,13 +562,17 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.assertEqual(expected_data, aggregate._for_plotting(curve))
 
     def test_plots_the_aggregate_curve(self):
-        aggregate.compute_aggregate_curve(self.job)
+        aggregate.compute_aggregate_curve(self.job_id)
         self._assert_plot_is_produced()
 
     def test_plots_the_aggregate_curve_only_if_specified(self):
         del(self.params["AGGREGATE_LOSS_CURVE"])
 
-        aggregate.compute_aggregate_curve(self.job)
+        # storing a new job definition in kvs
+        self.job = job.Job(self.params,  self.job_id, base_path=".")
+        self.job.to_kvs()
+
+        aggregate.compute_aggregate_curve(self.job_id)
         self._assert_plot_is_not_produced()
 
     def _assert_plot_is_not_produced(self):
