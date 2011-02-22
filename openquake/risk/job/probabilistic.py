@@ -249,7 +249,11 @@ class ProbabilisticEventMixin:
                 # These are two references for the same dictionary.
                 samples = self.samples = dict()
 
-            category = asset['structureCategory']
+            category = asset.get("structureCategory")
+            if category is None:
+                raise ValueError(
+                    "Asset %s has no structure category" % asset["assetID"])
+
             if category not in samples:
                 samples[category] = norm.rvs(loc=0, scale=1)
             return samples[category]
