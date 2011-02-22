@@ -1,0 +1,124 @@
+#!/bin/bash
+
+other_remote=""
+other_reference="master"
+
+branch_remote=""
+branch_reference=`git branch | grep '^\*' | cut -f2 -d' '`
+
+fetch_remotes=1
+
+git diff --quiet HEAD
+if [ $? -ne 0 ]
+then
+    echo "Your branch has uncommitted changes. Please commit first."
+    exit 1
+fi
+
+for i in $*
+do
+    case $i in
+    --other=*)
+        other=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        other_remote=`dirname $other`
+        if [ $other_remote == "." ]
+        then
+            other_remote=""
+        fi
+        other_reference=`basename $other`
+        ;;
+    --branch=*)
+        branch=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        branch_remote=`dirname $branch`
+        if [ $branch_remote == "." ]
+        then
+            branch_remote=""
+        fi
+        branch_reference=`basename $branch`
+        ;;
+    --other-remote=*)
+        other_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --other-reference=*)
+        other_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --branch-remote=*)
+        branch_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --branch-reference=*)
+        branch_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --fetch-remotes)
+        fetch_remotes=1
+        ;;
+    *)
+        echo "Uknown option: " $i
+        exit 2
+        ;;
+    esac
+done
+
+# Update remotes
+
+if [ $fetch_remotes -eq 1 ]
+then
+    echo "Fetching remotes.."
+    if [ ! -z "$other_remote" ]
+    then
+        git fetch $other_remote
+    fi
+    if [ ! -z "$branch_remote" ]
+    then
+        git fetch $branch_remote
+    fi
+fi
+
+git co master
+git branch -D ba >/dev/null 2>&1
+git branch -D bb >/dev/null 2>&1
+
+if [ ! -z "$other_remote" ]
+then
+    git co -b ba $other_remote/$other_reference
+    other_branch="ba"
+else
+    other_branch="$other_reference"
+    git co $other_branch 
+fi
+
+echo "Running pylint on $other_branch.."
+pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
+
+if [ ! -z "$branch_remote" ]
+then
+    git co -b bb $branch_remote/$branch_reference
+    branch_branch="bb"
+else
+    branch_branch="$branch_reference"
+    git co $branch_branch 
+fi
+
+echo "Running pylint on $branch_branch.."
+pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
+
+echo ""
+diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
+if [ $? -ne 0 ]
+then
+    added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
+    if [ $added_issues -gt 0 ]
+    then
+        echo "!! $branch_branch adds $added_issues pylint issues.."
+        cat /tmp/pl.diff
+        exit 2
+    else
+        fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
+        echo "++ $branch_branch fixes $fixed_issues existing pylint issues.."
+    fi
+else
+    echo "** $branch_branch introduces no new pylint issues.."
+fi
+echo ""
+echo "Press <enter> to continue"
+read
+git diff $other_branch...$branch_branch | colordiff | less -R
