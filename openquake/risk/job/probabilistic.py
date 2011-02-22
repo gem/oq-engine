@@ -20,7 +20,7 @@ from openquake.risk import probabilistic_event_based
 from openquake.risk import job as risk_job
 from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.risk.job import RiskJobMixin
+from openquake.risk.job import output, RiskJobMixin
 from openquake.risk.job import aggregate_loss_curve
 
 LOGGER = logs.LOG
@@ -43,12 +43,12 @@ class ProbabilisticEventMixin:
     """ Mixin for Probalistic Event Risk Job """
 
     @preload
+    @output
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
 
-        tasks = []
         results = []
-        
+        tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s" 
                         % (block_id, len(self.blocks_keys)))
@@ -65,33 +65,17 @@ class ProbabilisticEventMixin:
                 # TODO(jmc): Cancel and respawn this task
                 return []
 
-        results = self.write_outputs()
-        aggregate_loss_curve.compute_aggregate_curve(self)
+        try:
+            # this task must be executed after the slicing
+            # of the gmfs has been completed
+            aggregate_curve_computation_task = \
+                    aggregate_loss_curve.compute_aggregate_curve.delay(self.id)
 
-        return results
+            aggregate_curve_computation_task.wait()
+        except TimeoutError:
+            return []
 
-    def write_outputs(self):
-        """Write outputs for the risk computations.
-
-        Supported outputs:
-            * Loss ratio curves in xml (NRML) and svg formats
-            * Loss maps for all the values specified in the
-            CONDITIONAL_LOSS_POE parameter
-        """
-        
-        conditional_loss_poes = [float(x) for x in self.params.get(
-                    'CONDITIONAL_LOSS_POE', "0.01").split()]
-
-        results = []
-        for block_id in self.blocks_keys:
-            #pylint: disable=W0212
-            results.extend(self._write_output_for_block(
-                    self.job_id, block_id))
-
-        for loss_poe in conditional_loss_poes:
-            results.extend(self.write_loss_map(loss_poe))
-
-        return results
+        return results # TODO(jmc): Move output from being a decorator
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
