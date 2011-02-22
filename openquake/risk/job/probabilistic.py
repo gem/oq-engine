@@ -75,10 +75,10 @@ class ProbabilisticEventMixin:
         try:
             # this task must be executed after the slicing
             # of the gmfs has been completed
-            aggregate_curve_computation_task = \
+            aggregate_computation_task = \
                     aggregate_loss_curve.compute_aggregate_curve.delay(self.id)
 
-            aggregate_curve_computation_task.wait()
+            aggregate_computation_task.wait()
         except TimeoutError:
             return []
 
