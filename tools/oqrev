@@ -1,27 +1,89 @@
 #!/bin/bash
 
-if [ -z "$1" ]; then
-    echo "What branch would you like to review?"
-    exit 1
-fi
+other_remote=""
+other_reference="master"
+
+branch_remote=""
+branch_reference=`git branch | grep '^\*' | cut -f2 -d' '`
+
+fetch_remotes=0
+
+for i in $*
+do
+    case $i in
+    --other=*)
+        other=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        other_remote=`dirname $other`
+        other_reference=`basename $other`
+        ;;
+    --branch=*)
+        branch=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        branch_remote=`dirname $branch`
+        branch_reference=`basename $branch`
+        ;;
+    --other-remote=*)
+        other_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --other-reference=*)
+        other_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --branch-remote=*)
+        branch_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --branch-reference=*)
+        branch_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    --fetch-remotes)
+        fetch_remotes=1
+        ;;
+    *)
+        echo "Uknown option: " $i
+        exit 1
+        ;;
+    esac
+done
 
 # Update remotes
 
-echo "Fetching remotes.."
-git fetch gem >/dev/null 2>&1
-git fetch `dirname $1` >/dev/null 2>&1
+if [ $fetch_remotes -eq 1 ]
+then
+    echo "Fetching remotes.."
+    if [ ! -z "$other_remote" ]
+    then
+        git fetch $other_remote >/dev/null 2>&1
+    fi
+    if [ ! -z "$branch_remote" ]
+    then
+        git fetch $branch_remote >/dev/null 2>&1
+    fi
+fi
 
 git co master >/dev/null 2>&1
 git branch -D ba >/dev/null 2>&1
 git branch -D bb >/dev/null 2>&1
 
-# Take a snapshot of gem/master and the branch under review
-git co -b ba gem/master >/dev/null 2>&1
-echo "Running pylint on master.."
+if [ ! -z "$other_remote" ]
+then
+    git co -b ba $other_remote/$other_reference >/dev/null 2>&1
+    other_branch="ba"
+else
+    other_branch="$other_reference"
+    git co $other_branch  >/dev/null 2>&1
+fi
+
+echo "Running pylint on $other_branch.."
 pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
 
-git co -b bb $1 >/dev/null 2>&1
-echo "Running pylint on $1.."
+if [ ! -z "$branch_remote" ]
+then
+    git co -b bb $branch_remote/$branch_reference >/dev/null 2>&1
+    branch_branch="bb"
+else
+    branch_branch="$branch_reference"
+    git co $branch_branch  >/dev/null 2>&1
+fi
+
+echo "Running pylint on $branch_branch.."
 pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
 
 echo ""
@@ -31,17 +93,17 @@ then
     added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
     if [ $added_issues -gt 0 ]
     then
-        echo "!! New branch adds $added_issues pylint issues.."
+        echo "!! $branch_branch adds $added_issues pylint issues.."
         cat /tmp/pl.diff
         exit 2
     else
         fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
-        echo "++ New branch fixes $fixed_issues existing pylint issues.."
+        echo "++ $branch_branch fixes $fixed_issues existing pylint issues.."
     fi
 else
-    echo "** New branch introduces no new pylint issues.."
+    echo "** $branch_branch introduces no new pylint issues.."
 fi
 echo ""
 echo "Press <enter> to continue"
 read
-git diff ba...bb | colordiff | less -R
+git diff $other_branch...$branch_branch | colordiff | less -R
