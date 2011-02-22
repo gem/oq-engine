@@ -235,6 +235,9 @@ class ProbabilisticEventMixin:
         only needed for correlated jobs and unlikely to be available for
         uncorrelated ones.
         """
+        correlation = getattr(self, "ASSET_CORRELATION")
+        if correlation is not None and correlation != "perfect":
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
 
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
