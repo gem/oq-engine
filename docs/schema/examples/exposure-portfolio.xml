@@ -35,7 +35,7 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
+                <assetDescription>Moment-resisting non-ductile concrete frame high rise</assetDescription>
                 <vulnerabilityFunctionReference>RC/DMRF-D/LR</vulnerabilityFunctionReference>
                 <structureCategory>RC-HR-PC</structureCategory>
                 <assetValue unit="EUR">250000</assetValue>
