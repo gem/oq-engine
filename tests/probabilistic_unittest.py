@@ -21,8 +21,11 @@ class EpsilonTestCase(unittest.TestCase):
         self.mixin = ProbabilisticEventMixin()
 
     def test_uncorrelated(self):
-        """In case of uncorrelated jobs we should obtain an independent
-        `epsilon` value for each asset."""
+        """For uncorrelated jobs we sample epsilon values per asset.
+        
+        A new sample should be drawn for each asset irrespective of any
+        building typology similarities.
+        """
         samples = []
         for _, asset in self.exposure_parser:
             sample = self.mixin.epsilon(asset)
@@ -34,8 +37,11 @@ class EpsilonTestCase(unittest.TestCase):
             samples.append(sample)
 
     def test_correlated(self):
-        """In case of correlated jobs we should obtain the same
-        `epsilon` value for assets of the same building typology."""
+        """For correlated jobs we sample epsilon values per building typology.
+        
+        A sample should be drawn whenever an asset with a new building typology
+        is encountered. Assets of the same typology should share sample values.
+        """
         samples = dict()
         self.mixin.__dict__['ASSET_CORRELATION'] = "perfect"
         for _, asset in self.exposure_parser:
