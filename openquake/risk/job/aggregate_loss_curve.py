@@ -5,6 +5,9 @@ Module to compute and plot an aggregate loss curve.
 
 import os
 
+from celery.decorators import task
+
+from openquake import job as engine
 from openquake.logs import LOG
 from openquake.output import curve
 from openquake.risk import probabilistic_event_based as prob
@@ -30,7 +33,8 @@ def _for_plotting(loss_curve):
     return data
 
 
-def compute_aggregate_curve(job):
+@task(is_eager=True)
+def compute_aggregate_curve(job_id):
     """Compute and plot an aggreate loss curve.
 
     This function expects to find in kvs a set of pre computed
@@ -39,6 +43,8 @@ def compute_aggregate_curve(job):
     This function is trigger only if the AGGREGATE_LOSS_CURVE
     parameter has been specified in the configuration file.
     """
+    
+    job = engine.Job.from_kvs(job_id)
 
     if not job.has("AGGREGATE_LOSS_CURVE"):
         LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
@@ -48,7 +54,7 @@ def compute_aggregate_curve(job):
 
     aggregate_loss_curve = prob.AggregateLossCurve.from_kvs(job.id)
 
-    path = os.path.join(job.base_path,
+    path = os.path.join(job.params["BASE_PATH"],
             job.params["OUTPUT_DIR"], _filename(job.id))
 
     plotter = curve.CurvePlot(path)
