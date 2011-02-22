@@ -370,12 +370,12 @@ public class GroundMotionFieldCalculator {
         double intraEventStd_j = Double.NaN;
         double distance = Double.NaN;
         double covarianceValue = Double.NaN;
-        int index_i = 0;
-        for (Site site_i : sites) {
+        for (int i=0;i<sites.size();i++) {
+        	Site site_i = sites.get(i);
             attenRel.setSite(site_i);
             intraEventStd_i = attenRel.getStdDev();
-            int index_j = 0;
-            for (Site site_j : sites) {
+            for (int j=i;j<sites.size();j++) {
+            	Site site_j = sites.get(j);
                 attenRel.setSite(site_j);
                 intraEventStd_j = attenRel.getStdDev();
                 distance =
@@ -384,10 +384,9 @@ public class GroundMotionFieldCalculator {
                 covarianceValue =
                         intraEventStd_i * intraEventStd_j
                                 * Math.exp(-3 * (distance / correlationRange));
-                covarianceMatrix.setEntry(index_i, index_j, covarianceValue);
-                index_j = index_j + 1;
+                covarianceMatrix.setEntry(i, j, covarianceValue);
+                covarianceMatrix.setEntry(j, i, covarianceValue);
             }
-            index_i = index_i + 1;
         }
         return covarianceMatrix;
     }
