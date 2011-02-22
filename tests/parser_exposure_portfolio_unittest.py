@@ -8,6 +8,7 @@ from openquake.parser import exposure
 from openquake import shapes
 from utils import test
 
+
 TEST_FILE = 'exposure-portfolio.xml'
 
 
@@ -49,9 +50,9 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
                                 'downtown Pavia',
              'assetID': 'asset_02',
              'assetDescription': 'Moment-resisting non-ductile concrete ' \
-                                 'frame low rise',
+                                 'frame high rise',
              'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
-             'structureCategory': 'RC-LR-PC',
+             'structureCategory': 'RC-HR-PC',
              'assetValue': 250000.0,
              'assetValueUnit': 'EUR',
             })]
