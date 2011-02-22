@@ -242,7 +242,7 @@ class ProbabilisticEventMixin:
         uncorrelated ones.
         """
         correlation = getattr(self, "ASSET_CORRELATION", None)
-        if correlation is None:
+        if not correlation:
             # Sample per asset
             return norm.rvs(loc=0, scale=1)
         elif correlation != "perfect":
