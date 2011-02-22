@@ -76,12 +76,21 @@ public class GroundMotionFieldCalculator {
      *         values {@link Double}
      */
     public Map<Site, Double> getMeanGroundMotionField() {
-        Map<Site, Double> groundMotionMap = new HashMap<Site, Double>();
+    	
+    	logger.debug("Computing mean ground motion field...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+        
+    	Map<Site, Double> groundMotionMap = new HashMap<Site, Double>();
         attenRel.setEqkRupture(rup);
         for (Site site : sites) {
             attenRel.setSite(site);
             groundMotionMap.put(site, new Double(attenRel.getMean()));
+        
         }
+        
+        getAndPrintElapsedTime(start);
+        
         return groundMotionMap;
     }
 
@@ -101,6 +110,11 @@ public class GroundMotionFieldCalculator {
      *          values {@link Double}
      */
     public Map<Site, Double> getUncorrelatedGroundMotionField(Random rn) {
+    	
+    	logger.debug("Computing uncorrelated ground motion field...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+    	
         checkRandomNumberIsNotNull(rn);
         Map<Site, Double> groundMotionField =
                 getMeanGroundMotionField();
@@ -115,6 +129,9 @@ public class GroundMotionFieldCalculator {
             computeAndAddSiteDependentResidual(rn,
                     groundMotionField,StdDevTypeParam.STD_DEV_TYPE_TOTAL);
         }
+        
+        getAndPrintElapsedTime(start);
+        
         return groundMotionField;
     }
 
@@ -125,6 +142,11 @@ public class GroundMotionFieldCalculator {
      */
     private void computeAndAddInterEventResidual(
             Random rn, Map<Site, Double> groundMotionField) {
+    	
+    	logger.debug("Computing and adding inter event residual...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+    	
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTER);
         double interEventResidual =
@@ -137,6 +159,8 @@ public class GroundMotionFieldCalculator {
             double val = groundMotionField.get(site);
             groundMotionField.put(site, val + interEventResidual);
         }
+        
+        getAndPrintElapsedTime(start);
     }
 
     /**
@@ -148,6 +172,11 @@ public class GroundMotionFieldCalculator {
     private void computeAndAddSiteDependentResidual(
             Random rn, Map<Site, Double> groundMotionField,
             String stdType) {
+    	
+    	logger.debug("Computing and adding "+stdType+" residual...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+    	
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(stdType);
         attenRel.setEqkRupture(rup);
         for (Site site : sites) {
@@ -163,6 +192,7 @@ public class GroundMotionFieldCalculator {
             val = val + deviate;
             groundMotionField.put(site, val);
         }
+        getAndPrintElapsedTime(start);
     }
 
     /**
@@ -188,6 +218,10 @@ public class GroundMotionFieldCalculator {
      */
     public Map<Site, Double> getCorrelatedGroundMotionField_JB2009(Random rn) {
     	
+    	logger.debug("Computing correlated (JB2009) ground motion field...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+    	
         checkRandomNumberIsNotNull(rn);
         validateInputCorrelatedGmfCalc(attenRel);
         
@@ -209,6 +243,8 @@ public class GroundMotionFieldCalculator {
         computeAndAddCorrelatedIntraEventResidual(rn,
                 groundMotionField, covarianceMatrix);
 
+        getAndPrintElapsedTime(start);
+
         return groundMotionField;
     }
 
@@ -220,6 +256,10 @@ public class GroundMotionFieldCalculator {
     private void computeAndAddCorrelatedIntraEventResidual(
             Random rn, Map<Site, Double> groundMotionField,
             BlockRealMatrix covarianceMatrix) {
+    	
+    	logger.debug("Compute and add correlated and intra-event residuals...");
+    	// get current time
+    	long start = System.currentTimeMillis();
 
         int numberOfSites = sites.size();
         double[] gaussianDeviates = new double[numberOfSites];
@@ -251,6 +291,8 @@ public class GroundMotionFieldCalculator {
             groundMotionField.put(site, val + intraEventResiduals[indexSite]);
             indexSite = indexSite + 1;
         }
+
+        getAndPrintElapsedTime(start);
     }
 
     private void
@@ -318,6 +360,11 @@ public class GroundMotionFieldCalculator {
      * @return covariance matrix as {@link BlockRealMatrix}
      */
     private BlockRealMatrix getCovarianceMatrix_JB2009() {
+    	
+    	logger.debug("Compute covariance matrix...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+    	
         int numberOfSites = sites.size();
         BlockRealMatrix covarianceMatrix =
                 new BlockRealMatrix(numberOfSites, numberOfSites);
@@ -346,11 +393,12 @@ public class GroundMotionFieldCalculator {
         double intraEventStd_j = Double.NaN;
         double distance = Double.NaN;
         double covarianceValue = Double.NaN;
-        for (int i=0;i<sites.size();i++) {
+        for (int i=0;i<numberOfSites;i++) {
         	Site site_i = sites.get(i);
             attenRel.setSite(site_i);
             intraEventStd_i = attenRel.getStdDev();
-            for (int j=i;j<sites.size();j++) {
+            logger.debug("Covariance matrix row: "+(i+1)+" of "+numberOfSites);
+            for (int j=i;j<numberOfSites;j++) {
             	Site site_j = sites.get(j);
                 attenRel.setSite(site_j);
                 intraEventStd_j = attenRel.getStdDev();
@@ -407,6 +455,17 @@ public class GroundMotionFieldCalculator {
 
 	public void setInterEvent(boolean interEvent) {
 		this.interEvent = interEvent;
+	}
+	
+	private void getAndPrintElapsedTime(long start) {
+		// get elapsed time in milliseconds
+        long elapsedTimeMillis = System.currentTimeMillis()-start;
+        // get elapsed time in seconds
+        float elapsedTimeSec = elapsedTimeMillis/1000F;
+        // get elapsed time in minutes
+        float elapsedTimeMin = elapsedTimeMillis/(60*1000F);
+        logger.debug("Elapsed time (s): "+elapsedTimeSec);
+        logger.debug("Elapsed time (min): "+elapsedTimeMin+"\n");
 	}
 
 }
