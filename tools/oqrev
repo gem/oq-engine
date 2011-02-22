@@ -50,25 +50,25 @@ then
     echo "Fetching remotes.."
     if [ ! -z "$other_remote" ]
     then
-        git fetch $other_remote >/dev/null 2>&1
+        git fetch $other_remote
     fi
     if [ ! -z "$branch_remote" ]
     then
-        git fetch $branch_remote >/dev/null 2>&1
+        git fetch $branch_remote
     fi
 fi
 
-git co master >/dev/null 2>&1
-git branch -D ba >/dev/null 2>&1
-git branch -D bb >/dev/null 2>&1
+git co master
+git branch -D ba
+git branch -D bb
 
 if [ ! -z "$other_remote" ]
 then
-    git co -b ba $other_remote/$other_reference >/dev/null 2>&1
+    git co -b ba $other_remote/$other_reference
     other_branch="ba"
 else
     other_branch="$other_reference"
-    git co $other_branch  >/dev/null 2>&1
+    git co $other_branch 
 fi
 
 echo "Running pylint on $other_branch.."
@@ -76,11 +76,11 @@ pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0
 
 if [ ! -z "$branch_remote" ]
 then
-    git co -b bb $branch_remote/$branch_reference >/dev/null 2>&1
+    git co -b bb $branch_remote/$branch_reference
     branch_branch="bb"
 else
     branch_branch="$branch_reference"
-    git co $branch_branch  >/dev/null 2>&1
+    git co $branch_branch 
 fi
 
 echo "Running pylint on $branch_branch.."
