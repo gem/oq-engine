@@ -41,6 +41,8 @@ class EpsilonTestCase(unittest.TestCase):
         
         A sample should be drawn whenever an asset with a new building typology
         is encountered. Assets of the same typology should share sample values.
+        Please not that building typologies and structure categories are
+        roughly equivalent.
         """
         samples = dict()
         self.mixin.__dict__['ASSET_CORRELATION'] = "perfect"
@@ -61,3 +63,14 @@ class EpsilonTestCase(unittest.TestCase):
             self.assertTrue(
                 isinstance(sample, float),
                 "Invalid sample (%s) for category %s" % (sample, category))
+
+    def test_incorrect_configuration_setting(self):
+        """The correctness of the asset correlation configuration is enforced.
+        
+        If the `ASSET_CORRELATION` parameter is set in the job configuration
+        file it should have a correct value ("perfect").
+        """
+        self.mixin.__dict__['ASSET_CORRELATION'] = "this-is-wrong"
+        for _, asset in self.exposure_parser:
+            self.assertRaises(ValueError, self.mixin.epsilon, asset)
+            break
