@@ -6,7 +6,7 @@ other_reference="master"
 branch_remote=""
 branch_reference=`git branch | grep '^\*' | cut -f2 -d' '`
 
-fetch_remotes=0
+fetch_remotes=1
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]
