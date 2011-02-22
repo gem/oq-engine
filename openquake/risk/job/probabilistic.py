@@ -238,9 +238,21 @@ class ProbabilisticEventMixin:
         """
         correlation = getattr(self, "ASSET_CORRELATION", None)
         if correlation is None:
+            # Sample per asset
             return norm.rvs(loc=0, scale=1)
         elif correlation != "perfect":
             raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
+        else:
+            # Sample per building typology
+            samples = getattr(self, "samples", None)
+            if samples is None:
+                # These are two references for the same dictionary.
+                samples = self.samples = dict()
+
+            category = asset['structureCategory']
+            if category not in samples:
+                samples[category] = norm.rvs(loc=0, scale=1)
+            return samples[category]
 
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
