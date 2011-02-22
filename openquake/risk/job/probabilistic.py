@@ -42,7 +42,12 @@ def preload(fn):
 
 
 class ProbabilisticEventMixin:
-    """ Mixin for Probalistic Event Risk Job """
+    # TODO (al-maisan) Consider refactoring our job system to make use of
+    # dependency injection techniques as opposed to monkey patching python's
+    # internal class structures. See also:
+    #       https://github.com/gem/openquake/issues/56
+    # pylint: disable=W0232,W0201
+    """Mixin for Probalistic Event Risk Job"""
 
     @preload
     @output
