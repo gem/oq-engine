@@ -18,7 +18,7 @@ def _filename(job_id):
     return "%s-aggregate-loss-curve.svg" % job_id
 
 
-def _for_plotting(loss_curve):
+def _for_plotting(loss_curve, time_span):
     """Translate a loss curve into a dictionary compatible to
     the interface defined in CurvePlot.write."""
     data = {}
@@ -26,8 +26,10 @@ def _for_plotting(loss_curve):
     data["AggregateLossCurve"] = {}
     data["AggregateLossCurve"]["abscissa"] = tuple(loss_curve.abscissae)
     data["AggregateLossCurve"]["ordinate"] = tuple(loss_curve.ordinates)
-    data["AggregateLossCurve"]["abscissa_property"] = "Loss"
-    data["AggregateLossCurve"]["ordinate_property"] = "PoE"
+    data["AggregateLossCurve"]["abscissa_property"] = "Economic Losses"
+    data["AggregateLossCurve"]["ordinate_property"] = \
+            "PoE in %s years" % (str(time_span))
+
     data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
 
     return data
@@ -59,7 +61,8 @@ def compute_aggregate_curve(job_id):
 
     plotter = curve.CurvePlot(path)
     plotter.write(_for_plotting(
-            aggregate_loss_curve.compute()), autoscale_y=False)
+            aggregate_loss_curve.compute(),
+            job.params["INVESTIGATION_TIME"]), autoscale_y=False)
 
     plotter.close()
     LOG.debug("Aggregate loss curve stored at %s" % path)
