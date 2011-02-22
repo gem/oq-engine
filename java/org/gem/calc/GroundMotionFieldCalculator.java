@@ -9,6 +9,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.math.linear.BlockRealMatrix;
 import org.apache.commons.math.linear.CholeskyDecompositionImpl;
+import org.apache.commons.math.linear.OpenMapRealMatrix;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -29,7 +30,7 @@ public class GroundMotionFieldCalculator {
     private ScalarIntensityMeasureRelationshipAPI attenRel;
     private EqkRupture rup;
     private List<Site> sites;
-    private BlockRealMatrix covarianceMatrix;
+    private OpenMapRealMatrix covarianceMatrix;
     
     /**
      * Jayaram and Baker 2009 Vs30 cluster parameter. The default is false 
@@ -241,7 +242,7 @@ public class GroundMotionFieldCalculator {
         }
 
         computeAndAddCorrelatedIntraEventResidual(rn,
-                groundMotionField, covarianceMatrix);
+                groundMotionField);
 
         getAndPrintElapsedTime(start);
 
@@ -254,8 +255,7 @@ public class GroundMotionFieldCalculator {
      * with a vector of univariate Gaussian deviates
      */
     private void computeAndAddCorrelatedIntraEventResidual(
-            Random rn, Map<Site, Double> groundMotionField,
-            BlockRealMatrix covarianceMatrix) {
+            Random rn, Map<Site, Double> groundMotionField) {
     	
     	logger.debug("Compute and add correlated and intra-event residuals...");
     	// get current time
@@ -359,15 +359,15 @@ public class GroundMotionFieldCalculator {
 
      * @return covariance matrix as {@link BlockRealMatrix}
      */
-    private BlockRealMatrix getCovarianceMatrix_JB2009() {
+    private OpenMapRealMatrix getCovarianceMatrix_JB2009() {
     	
     	logger.debug("Compute covariance matrix...");
     	// get current time
     	long start = System.currentTimeMillis();
     	
         int numberOfSites = sites.size();
-        BlockRealMatrix covarianceMatrix =
-                new BlockRealMatrix(numberOfSites, numberOfSites);
+        OpenMapRealMatrix covarianceMatrix =
+                new OpenMapRealMatrix(numberOfSites, numberOfSites);
         attenRel.setEqkRupture(rup);
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
@@ -400,11 +400,16 @@ public class GroundMotionFieldCalculator {
             logger.debug("Covariance matrix row: "+(i+1)+" of "+numberOfSites);
             for (int j=i;j<numberOfSites;j++) {
             	Site site_j = sites.get(j);
+                distance =
+                    LocationUtils.horzDistance(site_i.getLocation(),
+                            site_j.getLocation());
+                if(distance>1.5*correlationRange){
+                    covarianceMatrix.setEntry(i, j, 0.0);
+                    covarianceMatrix.setEntry(j, i, 0.0);
+                	continue;
+                }
                 attenRel.setSite(site_j);
                 intraEventStd_j = attenRel.getStdDev();
-                distance =
-                        LocationUtils.horzDistance(site_i.getLocation(),
-                                site_j.getLocation());
                 covarianceValue =
                         intraEventStd_i * intraEventStd_j
                                 * Math.exp(-3 * (distance / correlationRange));
