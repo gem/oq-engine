@@ -36,6 +36,18 @@ do
         fi
         branch_reference=`basename $branch`
         ;;
+    --pull=*)
+        pull=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        branch=`curl -s https://github.com/gem/openquake/pull/$pull | grep "wants someone to merge .* commits into gem:master" | perl -wane 'if ($_ =~ /\s+from\s+([^:]+):([^"]+)/) { print $1, "/", $2 };'`
+        git_user_name=`dirname $branch`
+        branch_remote=`git remote -v | grep fetch | grep $git_user_name | perl -wane '@words = split(/\s+/, $_); print $words[0];'`
+        if [ -z "$branch_remote" ]
+        then
+            echo "You don't have a remote repository defined for git user $git_user_name. Plase add one and try again."
+            exit 2
+        fi
+        branch_reference=`basename $branch`
+        ;;
     --other-remote=*)
         other_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         ;;
@@ -53,10 +65,11 @@ do
         ;;
     *)
         echo "Uknown option: " $i
-        exit 2
+        exit 3
         ;;
     esac
 done
+
 
 # Update remotes
 
@@ -110,7 +123,6 @@ then
     then
         echo "!! $branch_branch adds $added_issues pylint issues.."
         cat /tmp/pl.diff
-        exit 2
     else
         fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
         echo "++ $branch_branch fixes $fixed_issues existing pylint issues.."
