@@ -13,6 +13,12 @@ from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
 from openquake.job.mixins import Mixin
 from openquake.risk.job import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+
+
+
+
+#import ProbabilisticEventMixin
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
@@ -81,6 +87,19 @@ class JobTestCase(unittest.TestCase):
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
         self.assertEqual(self.job.params, self.job_with_includes.params)
+
+    def test_classical_psha_based_job_execute(self):
+        with Mixin(self.job, RiskJobMixin, key="classical_psha") as psha_mixin:
+            psha_mixin.execute()
+            
+
+    def test_classical_psha_based_job_mixes_in_properly(self):
+        with Mixin(self.job, RiskJobMixin, key="classical_psha"):
+            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+            self.assertTrue(ClassicalPSHABasedMixin in self.job.__class__.__bases__)
+
+        with Mixin(self.job, ClassicalPSHABasedMixin):
+            self.assertTrue(ClassicalPSHABasedMixin in self.job.__class__.__bases__)
 
     def test_job_mixes_in_properly(self):
         with Mixin(self.job, RiskJobMixin, key="risk"):

@@ -106,7 +106,7 @@ class ProbabilisticEventMixin:
             kvs.set_value_json_encoded(key_gmf, gmf)
 
     def store_exposure_assets(self):
-        """ Load exposure assets and write to memcache """
+        """ Load exposure assets and write to kvs """
         
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" % 
             (self.base_path, self.params[job.EXPOSURE]))
@@ -121,7 +121,7 @@ class ProbabilisticEventMixin:
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
-        """ load vulnerability and write to memcache """
+        """ load vulnerability and write to kvs """
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
     
