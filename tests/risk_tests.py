@@ -490,6 +490,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         aggregate_curve = prob.AggregateLossCurve({})
         self.assertEqual(0, aggregate_curve.losses.size)
 
+    def test_with_no_vuln_function_no_distribution_is_added(self):
+        aggregate_curve = prob.AggregateLossCurve(
+                {"ID": shapes.EMPTY_VULN_FUNCTION})
+
+        asset = {"vulnerabilityFunctionReference": "WRONG_ID",
+                "assetValue": 1.0, "assetID": "ASSET_ID"}
+
+        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
+        self.assertEqual(0, aggregate_curve.losses.size)
+
     def test_tses_parameter_must_be_congruent(self):
         aggregate_curve = prob.AggregateLossCurve(
                 {"ID": shapes.EMPTY_VULN_FUNCTION})
