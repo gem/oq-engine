@@ -13,7 +13,7 @@ TEST_FILE = "exposure-portfolio.xml"
 
 
 class EpsilonTestCase(unittest.TestCase):
-    """Tests the method:`epsilon` in class:`ProbabilisticEventMixin`"""
+    """Tests the `epsilon` method in class `ProbabilisticEventMixin`"""
 
     def setUp(self):
         self.exposure_parser = exposure.ExposurePortfolioFile(
