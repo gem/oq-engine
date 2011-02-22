@@ -21,11 +21,19 @@ do
     --other=*)
         other=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         other_remote=`dirname $other`
+        if [ $other_remote == "." ]
+        then
+            other_remote=""
+        fi
         other_reference=`basename $other`
         ;;
     --branch=*)
         branch=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         branch_remote=`dirname $branch`
+        if [ $branch_remote == "." ]
+        then
+            branch_remote=""
+        fi
         branch_reference=`basename $branch`
         ;;
     --other-remote=*)
