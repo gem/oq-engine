@@ -9,7 +9,7 @@ from openquake.parser import exposure
 from utils import test
 
 
-TEST_FILE = 'exposure-portfolio.xml'
+TEST_FILE = "exposure-portfolio.xml"
 
 
 class EpsilonTestCase(unittest.TestCase):
@@ -45,10 +45,10 @@ class EpsilonTestCase(unittest.TestCase):
         roughly equivalent.
         """
         samples = dict()
-        self.mixin.__dict__['ASSET_CORRELATION'] = "perfect"
+        self.mixin.__dict__["ASSET_CORRELATION"] = "perfect"
         for _, asset in self.exposure_parser:
             sample = self.mixin.epsilon(asset)
-            category = asset['structureCategory']
+            category = asset["structureCategory"]
             # This is either the first time we see this structure category or
             # the sample is identical to the one originally drawn for this
             # structure category.
@@ -70,7 +70,15 @@ class EpsilonTestCase(unittest.TestCase):
         If the `ASSET_CORRELATION` parameter is set in the job configuration
         file it should have a correct value ("perfect").
         """
-        self.mixin.__dict__['ASSET_CORRELATION'] = "this-is-wrong"
+        self.mixin.__dict__["ASSET_CORRELATION"] = "this-is-wrong"
         for _, asset in self.exposure_parser:
             self.assertRaises(ValueError, self.mixin.epsilon, asset)
+            break
+
+    def test_correlated_with_no_structure_category(self):
+        """For correlated jobs assets require a structure category property."""
+        self.mixin.__dict__["ASSET_CORRELATION"] = "perfect"
+        for _, asset in self.exposure_parser:
+            del asset["structureCategory"]
+            e = self.assertRaises(ValueError, self.mixin.epsilon, asset)
             break
