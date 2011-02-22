@@ -1,0 +1,47 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "What branch would you like to review?"
+    exit 1
+fi
+
+# Update remotes
+
+echo "Fetching remotes.."
+git fetch gem >/dev/null 2>&1
+git fetch `dirname $1` >/dev/null 2>&1
+
+git co master >/dev/null 2>&1
+git branch -D ba >/dev/null 2>&1
+git branch -D bb >/dev/null 2>&1
+
+# Take a snapshot of gem/master and the branch under review
+git co -b ba gem/master >/dev/null 2>&1
+echo "Running pylint on master.."
+pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
+
+git co -b bb $1 >/dev/null 2>&1
+echo "Running pylint on $1.."
+pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
+
+echo ""
+diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
+if [ $? -ne 0 ]
+then
+    added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
+    if [ $added_issues -gt 0 ]
+    then
+        echo "!! New branch adds $added_issues pylint issues.."
+        cat /tmp/pl.diff
+        exit 2
+    else
+        fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
+        echo "++ New branch fixes $fixed_issues existing pylint issues.."
+    fi
+else
+    echo "** New branch introduces no new pylint issues.."
+fi
+echo ""
+echo "Press <enter> to continue"
+read
+git diff ba...bb | colordiff | less -R
