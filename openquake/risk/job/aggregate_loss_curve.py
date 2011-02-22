@@ -42,7 +42,7 @@ def compute_aggregate_curve(job_id):
     This function expects to find in kvs a set of pre computed
     GMFs and assets.
 
-    This function is trigger only if the AGGREGATE_LOSS_CURVE
+    This function is triggered only if the AGGREGATE_LOSS_CURVE
     parameter has been specified in the configuration file.
     """
     

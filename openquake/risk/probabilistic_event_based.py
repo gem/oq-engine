@@ -180,10 +180,18 @@ class AggregateLossCurve(object):
         assert gmfs["TSES"] == self._tses
         assert len(gmfs["IMLs"]) == self._gmfs_length
 
-        loss_ratios = _compute_loss_ratios(self.vuln_model[
-                asset["vulnerabilityFunctionReference"]], gmfs)
+        if self.vuln_model.has_key(
+                asset["vulnerabilityFunctionReference"]):
 
-        self.distribution.append(loss_ratios * asset["assetValue"])
+            loss_ratios = _compute_loss_ratios(self.vuln_model[
+                    asset["vulnerabilityFunctionReference"]], gmfs)
+
+            self.distribution.append(loss_ratios * asset["assetValue"])
+        else:
+            LOG.debug("Unknown vulnerability function %s, asset %s will " \
+                    "not be included in the aggregate computation" 
+                    % (asset["vulnerabilityFunctionReference"],
+                    asset["assetID"]))
 
     def _initialize_parameters(self, gmfs):
         """Initialize the GMFs parameters."""
