@@ -59,8 +59,8 @@ then
 fi
 
 git co master
-git branch -D ba
-git branch -D bb
+git branch -D ba >/dev/null 2>&1
+git branch -D bb >/dev/null 2>&1
 
 if [ ! -z "$other_remote" ]
 then
