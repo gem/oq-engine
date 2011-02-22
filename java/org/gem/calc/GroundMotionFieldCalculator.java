@@ -19,13 +19,36 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 
+/**
+ * Class providing methods for ground motion field calculation
+ */
 public class GroundMotionFieldCalculator {
 
-    private static Log logger = LogFactory.getLog(HazardCalculator.class);
-
+	private static Log logger = LogFactory.getLog(GroundMotionFieldCalculator.class);
+    
+    private ScalarIntensityMeasureRelationshipAPI attenRel;
+    private EqkRupture rup;
+    private List<Site> sites;
+    private BlockRealMatrix covarianceMatrix;
+    
     /**
-     * Computes mean ground motion for a list of sites.
-     * 
+     * Jayaram and Baker 2009 Vs30 cluster parameter. The default is false 
+     * (no clustering in Vs30 distribution)
+     */
+    private boolean JB2009_Vs30ClusterParam = false;
+    
+    /**
+     *      if true compute correlated ground motion field using both inter- and
+     *      intra-event residuals, if false use only intra-event residuals
+     *      (NOTE: this option has been done mostly for testing purposes,
+     *      some tests put this flag to false to check that the
+     *      correlation in the intra-event residuals in the ground motion
+     *      fiels is correclty computed). Default is true.
+     */
+    private boolean interEvent = true; 
+    
+    /**
+     * Defines a ground motion field calculator
      * @param attenRel
      *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
      *            relationship used for ground motion field calculation
@@ -35,13 +58,24 @@ public class GroundMotionFieldCalculator {
      * @param sites
      *            : array list of {@link Site} where ground motion values have
      *            to be computed
+     */
+    public GroundMotionFieldCalculator(ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
+            List<Site> sites){
+        validateInput(attenRel, rup, sites);
+    	this.attenRel = attenRel;
+    	this.rup = rup;
+    	this.sites = sites;
+    	// covariance matrix is set to null and defined only if correlated 
+    	// ground motion fields calculations are requested
+    	covarianceMatrix = null;
+    }
+
+    /**
+     * Computes mean ground motion for a list of sites.
      * @return : {@link Map} associating sites ({@link Site}) and ground motion
      *         values {@link Double}
      */
-    public static Map<Site, Double> getMeanGroundMotionField(
-            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
-            List<Site> sites) {
-        validateInput(attenRel, rup, sites);
+    public Map<Site, Double> getMeanGroundMotionField() {
         Map<Site, Double> groundMotionMap = new HashMap<Site, Double>();
         attenRel.setEqkRupture(rup);
         for (Site site : sites) {
@@ -52,7 +86,7 @@ public class GroundMotionFieldCalculator {
     }
 
     /**
-     * Computes stochastic ground motion field by adding to the mean ground
+     * Computes uncorrelated ground motion field by adding to the mean ground
      * motion field Gaussian deviates which takes into account the truncation
      * level and the truncation type. If the attenuation relationship supports
      * inter and intra event standard deviations, the method computes ground
@@ -60,42 +94,27 @@ public class GroundMotionFieldCalculator {
      * the sites) and then sum the intra-event residuals (different for each
      * site), otherwise generate residuals for each site according to the total
      * standard deviation
-     * 
-     * @param attenRel
-     *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
-     *            relationship used for ground motion field calculation
-     * @param rup
-     *            : {@link EqkRupture} earthquake rupture generating the ground
-     *            motion field
-     * @param sites
-     *            : array list of {@link Site} where ground motion values have
-     *            to be computed
      * @param rn
      *            : {@link Random} random number generator for Gaussian deviate
      *            calculation
      * @return: {@link Map} associating sites ({@link Site}) and ground motion
      *          values {@link Double}
      */
-    public static Map<Site, Double> getStochasticGroundMotionField(
-            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
-            List<Site> sites, Random rn) {
-        validateInput(attenRel, rup, sites);
+    public Map<Site, Double> getUncorrelatedGroundMotionField(Random rn) {
         checkRandomNumberIsNotNull(rn);
         Map<Site, Double> groundMotionField =
-                getMeanGroundMotionField(attenRel, rup, sites);
+                getMeanGroundMotionField();
         if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
                 .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER)
                 && attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
                         .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTRA)) {
-            computeAndAddInterEventResidual(attenRel, sites, rn,
-                    groundMotionField);
-            computeAndAddSiteDependentResidual(attenRel, sites, rn,
-                    groundMotionField, rup, StdDevTypeParam.STD_DEV_TYPE_INTRA);
+            computeAndAddInterEventResidual(rn,groundMotionField);
+            computeAndAddSiteDependentResidual(rn,
+                    groundMotionField,StdDevTypeParam.STD_DEV_TYPE_INTRA);
         } else {
-            computeAndAddSiteDependentResidual(attenRel, sites, rn,
-                    groundMotionField, rup, StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+            computeAndAddSiteDependentResidual(rn,
+                    groundMotionField,StdDevTypeParam.STD_DEV_TYPE_TOTAL);
         }
-
         return groundMotionField;
     }
 
@@ -104,8 +123,7 @@ public class GroundMotionFieldCalculator {
      * a single inter-event residual, and add this value to the already computed
      * ground motion values
      */
-    private static void computeAndAddInterEventResidual(
-            ScalarIntensityMeasureRelationshipAPI attenRel, List<Site> sites,
+    private void computeAndAddInterEventResidual(
             Random rn, Map<Site, Double> groundMotionField) {
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTER);
@@ -127,9 +145,8 @@ public class GroundMotionFieldCalculator {
      * the standard deviation may depend on the site-rupture distance, rupture
      * magnitude,..), and add to the already computed ground motion value
      */
-    private static void computeAndAddSiteDependentResidual(
-            ScalarIntensityMeasureRelationshipAPI attenRel, List<Site> sites,
-            Random rn, Map<Site, Double> groundMotionField, EqkRupture rup,
+    private void computeAndAddSiteDependentResidual(
+            Random rn, Map<Site, Double> groundMotionField,
             String stdType) {
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(stdType);
         attenRel.setEqkRupture(rup);
@@ -149,7 +166,7 @@ public class GroundMotionFieldCalculator {
     }
 
     /**
-     * Compute stochastic ground motion field with spatial correlation using
+     * Compute ground motion field with spatial correlation using
      * correlation model from Jayamram & Baker (2009):
      * "Correlation model for spatially distributed ground-motion intensities"
      * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
@@ -163,53 +180,33 @@ public class GroundMotionFieldCalculator {
      * a multivariate normal distribution using Cholesky factorization
      * (decompose covariance matrix, take lower triangular and multiply by a
      * vector of uncorrelated, standard Gaussian variables)
-     * 
-     * @param attenRel
-     *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
-     *            relationship used for ground motion field calculation
-     * @param rup
-     *            : {@link EqkRupture} earthquake rupture generating the ground
-     *            motion field
-     * @param sites
-     *            : array list of {@link Site} where ground motion values have
-     *            to be computed
+
      * @param rn
      *            : {@link Random} random number generator
-     * @param inter_event
-     *            : if true compute ground motion field using both inter- and
-     *            intra-event residuals, if false use only intra-event residuals
-     *            (NOTE: this option has been done mostly for testing purposes,
-     *            some tests put this flag to false to check that the
-     *            correlation in the intra-event residuals in the ground motion
-     *            fiels is correclty computed)
-     * @param Vs30Cluster
-     *            : true if Vs30 values show clustering [compute correlation
-     *            range according to case 2 of Jayaram&Baker paper], false if
-     *            Vs30 values do not show clustering [compute correlation range
-     *            according to case 1 of Jayaram&Baker paper]
-     * @return
+     * @return: {@link Map} associating sites ({@link Site}) and ground motion
+     *          values {@link Double}
      */
-    public static Map<Site, Double> getStochasticGroundMotionField_JB2009(
-            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
-            List<Site> sites, Random rn, Boolean inter_event,
-            Boolean Vs30Cluster) {
-
-        validateInputForJB2009(attenRel, rup, sites, rn, inter_event,
-                Vs30Cluster);
-
-        Map<Site, Double> groundMotionField =
-                getMeanGroundMotionField(attenRel, rup, sites);
-
-        if (inter_event == true) {
-            computeAndAddInterEventResidual(attenRel, sites, rn,
-                    groundMotionField);
+    public Map<Site, Double> getCorrelatedGroundMotionField_JB2009(Random rn) {
+    	
+        checkRandomNumberIsNotNull(rn);
+        validateInputCorrelatedGmfCalc(attenRel);
+        
+        // covariance matrix is computed only once.
+        // So if multiple ground motion fields are needed for 
+        // the same rupture, the covariance matrix is not recomputed every time
+        if(covarianceMatrix==null){
+        	covarianceMatrix =
+                getCovarianceMatrix_JB2009();
         }
 
-        BlockRealMatrix covarianceMatrix =
-                getCovarianceMatrix_JB2009(attenRel, rup, sites, rn,
-                        Vs30Cluster);
+        Map<Site, Double> groundMotionField =
+                getMeanGroundMotionField();
 
-        computeAndAddCorrelatedIntraEventResidual(attenRel, sites, rn,
+        if (interEvent == true) {
+            computeAndAddInterEventResidual(rn,groundMotionField);
+        }
+
+        computeAndAddCorrelatedIntraEventResidual(rn,
                 groundMotionField, covarianceMatrix);
 
         return groundMotionField;
@@ -220,8 +217,7 @@ public class GroundMotionFieldCalculator {
      * cholesky decomposition, and by multiplying the lower triangular matrix
      * with a vector of univariate Gaussian deviates
      */
-    private static void computeAndAddCorrelatedIntraEventResidual(
-            ScalarIntensityMeasureRelationshipAPI attenRel, List<Site> sites,
+    private void computeAndAddCorrelatedIntraEventResidual(
             Random rn, Map<Site, Double> groundMotionField,
             BlockRealMatrix covarianceMatrix) {
 
@@ -257,23 +253,10 @@ public class GroundMotionFieldCalculator {
         }
     }
 
-    private static void
-            validateInputForJB2009(
-                    ScalarIntensityMeasureRelationshipAPI attenRel,
-                    EqkRupture rup, List<Site> sites, Random rn,
-                    Boolean interEvent, Boolean Vs30Cluster) {
-        validateInput(attenRel, rup, sites);
-        checkRandomNumberIsNotNull(rn);
-        if (interEvent == null) {
-            throw new IllegalArgumentException(
-                    "Usage of inter event residuals must be specified");
-        }
-        if (Vs30Cluster == null) {
-            throw new IllegalArgumentException(
-                    "Vs30 cluster option must be specified");
-        }
-        if (interEvent == true
-                && attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
+    private void
+            validateInputCorrelatedGmfCalc(
+                    ScalarIntensityMeasureRelationshipAPI attenRel) {
+        if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
                         .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER) == false) {
             throw new IllegalArgumentException(
                     "The specified attenuation relationship does not provide"
@@ -287,7 +270,7 @@ public class GroundMotionFieldCalculator {
         }
     }
 
-    private static void checkRandomNumberIsNotNull(Random rn) {
+    private void checkRandomNumberIsNotNull(Random rn) {
         if (rn == null) {
             throw new IllegalArgumentException(
                     "Random number generator cannot be null");
@@ -309,7 +292,7 @@ public class GroundMotionFieldCalculator {
      *            : random number generator
      * @return : double
      */
-    private static double getGaussianDeviate(double standardDeviation,
+    private double getGaussianDeviate(double standardDeviation,
             double truncationLevel, String truncationType, Random rn) {
         double dev = rn.nextGaussian();
         if (truncationType
@@ -331,17 +314,10 @@ public class GroundMotionFieldCalculator {
      * model of Jayamram & Baker (2009):
      * "Correlation model for spatially distributed ground-motion intensities"
      * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
-     * 
-     * @param attenRel
-     * @param rup
-     * @param sites
-     * @param rn
-     * @param Vs30Cluster
-     * @return
+
+     * @return covariance matrix as {@link BlockRealMatrix}
      */
-    private static BlockRealMatrix getCovarianceMatrix_JB2009(
-            ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
-            List<Site> sites, Random rn, Boolean Vs30Cluster) {
+    private BlockRealMatrix getCovarianceMatrix_JB2009() {
         int numberOfSites = sites.size();
         BlockRealMatrix covarianceMatrix =
                 new BlockRealMatrix(numberOfSites, numberOfSites);
@@ -360,9 +336,9 @@ public class GroundMotionFieldCalculator {
         }
 
         double correlationRange = Double.NaN;
-        if (period < 1 && Vs30Cluster == false)
+        if (period < 1 && JB2009_Vs30ClusterParam == false)
             correlationRange = 8.5 + 17.2 * period;
-        else if (period < 1 && Vs30Cluster == true)
+        else if (period < 1 && JB2009_Vs30ClusterParam == true)
             correlationRange = 40.7 - 15.0 * period;
         else if (period >= 1)
             correlationRange = 22.0 + 3.7 * period;
@@ -416,5 +392,21 @@ public class GroundMotionFieldCalculator {
 
         return true;
     }
+
+    public boolean isJB2009_Vs30ClusterParam() {
+		return JB2009_Vs30ClusterParam;
+	}
+
+	public void setJB2009_Vs30ClusterParam(boolean jB2009_Vs30ClusterParam) {
+		JB2009_Vs30ClusterParam = jB2009_Vs30ClusterParam;
+	}
+
+	public boolean isInterEvent() {
+		return interEvent;
+	}
+
+	public void setInterEvent(boolean interEvent) {
+		this.interEvent = interEvent;
+	}
 
 }
