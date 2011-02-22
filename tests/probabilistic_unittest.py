@@ -24,23 +24,34 @@ class EpsilonTestCase(unittest.TestCase):
         """In case of uncorrelated jobs we should obtain an independent
         `epsilon` value for each asset."""
         samples = []
-        self.mixin.__dict__['ASSET_CORRELATION'] = False
         for _, asset in self.exposure_parser:
             sample = self.mixin.epsilon(asset)
             self.assertTrue(
                 sample not in samples,
                 "%s is already in %s" % (sample, samples))
+            self.assertTrue(
+                isinstance(sample, float), "Invalid sample (%s)" % sample)
             samples.append(sample)
 
     def test_correlated(self):
         """In case of correlated jobs we should obtain the same
         `epsilon` value for assets of the same building typology."""
         samples = dict()
-        self.mixin.__dict__['ASSET_CORRELATION'] = True
+        self.mixin.__dict__['ASSET_CORRELATION'] = "perfect"
         for _, asset in self.exposure_parser:
             sample = self.mixin.epsilon(asset)
+            category = asset['structureCategory']
+            # This is either the first time we see this structure category or
+            # the sample is identical to the one originally drawn for this
+            # structure category.
+            if category not in samples:
+                samples[category] = sample
+            else:
+                self.assertTrue(sample == samples[category])
+        # Make sure we used at least two structure categories in this test.
+        self.assertTrue(len(samples.keys()) > 1)
+        # Are all samples valid values?
+        for category, sample in samples.iteritems():
             self.assertTrue(
-                asset['structureCategory'] not in samples or
-                sample == samples['structureCategory'])
-            if asset['structureCategory'] not in samples:
-                samples['structureCategory'] = sample
+                isinstance(sample, float),
+                "Invalid sample (%s) for category %s" % (sample, category))
