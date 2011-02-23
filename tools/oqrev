@@ -101,10 +101,17 @@ do
     --pull=*)
         pull=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         curl -s https://github.com/gem/openquake/pull/$pull >/tmp/pull.$pull
+        pr_state=`awk '/class="state / { split($0,F,/[<>]/); print F[3];}' /tmp/pull.$pull | head -1`
+        if [ "$pr_state" != "Open" ]
+        then
+            echo "https://github.com/gem/openquake/pull/$pull is not open any more"
+            exit 3
+        fi
+
         if [ $? -ne 0 ]
         then
             echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
-            exit 3
+            exit 4
         fi
         branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
         branch_name="$branch"
@@ -113,7 +120,7 @@ do
         if [ -z "$branch_remote" ]
         then
             echo "You don't have a remote repository defined for git user $git_user. Plase add one and try again."
-            exit 4
+            exit 5
         fi
         branch_reference=`basename $branch`
         ;;
@@ -131,7 +138,7 @@ do
         ;;
     *)
         echo "Uknown option: " $i
-        exit 5
+        exit 6
         ;;
     esac
 done
@@ -142,7 +149,7 @@ then
     if [ $? -ne 0 ]
     then
         echo "Cannot find pylint .. Is it installed?"
-        exit 6
+        exit 7
     fi
 fi
 
@@ -167,7 +174,7 @@ then
         if [ $? -ne 0 ]
         then
             echo "git failed to fetch $other_remote"
-            exit 7
+            exit 8
         fi
     fi
     if [ ! -z "$branch_remote" ]
@@ -176,7 +183,7 @@ then
         if [ $? -ne 0 ]
         then
             echo "git failed to fetch $branch_remote"
-            exit 8
+            exit 9
         fi
     fi
 fi
@@ -191,7 +198,7 @@ then
     if [ $? -ne 0 ]
     then
         echo "git failed to create a tracking branch for $other_remote/$other_reference"
-        exit 9
+        exit 10
     fi
     other_branch="ba"
 else
@@ -211,7 +218,7 @@ then
     if [ $? -ne 0 ]
     then
         echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
-        exit 10
+        exit 11
     fi
     branch_branch="bb"
 else
