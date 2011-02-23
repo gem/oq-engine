@@ -52,7 +52,7 @@ then
         echo "repository."
         echo "Alternatively set the OQ_ROOT environment variable to contain"
         echo "the repository path and the script will use that."
-        exit 2
+        exit 1
     else
         cd $OQ_ROOT
     fi
@@ -73,7 +73,7 @@ git diff --quiet HEAD
 if [ $? -ne 0 ]
 then
     echo "Your branch has uncommitted changes. Please commit first."
-    exit 3
+    exit 2
 fi
 
 for i in $*
@@ -104,7 +104,7 @@ do
         if [ $? -ne 0 ]
         then
             echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
-            exit 4
+            exit 3
         fi
         branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
         branch_name="$branch"
@@ -113,7 +113,7 @@ do
         if [ -z "$branch_remote" ]
         then
             echo "You don't have a remote repository defined for git user $git_user. Plase add one and try again."
-            exit 5
+            exit 4
         fi
         branch_reference=`basename $branch`
         ;;
@@ -131,7 +131,7 @@ do
         ;;
     *)
         echo "Uknown option: " $i
-        exit 6
+        exit 5
         ;;
     esac
 done
@@ -142,7 +142,7 @@ then
     if [ $? -ne 0 ]
     then
         echo "Cannot find pylint .. Is it installed?"
-        exit 1
+        exit 6
     fi
 fi
 
