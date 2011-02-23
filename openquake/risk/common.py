@@ -73,7 +73,8 @@ def compute_mean_loss(curve):
     """Compute the mean loss (or loss ratio) for the given curve."""
 
     mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
-    return sum(i*j for i, j in zip(mid_curve.abscissae, mid_curve.ordinates))
+    return sum(i * j for i, j in zip(
+            mid_curve.abscissae, mid_curve.ordinates))
 
 
 def loop(elements, func, *args):
