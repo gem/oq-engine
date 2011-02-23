@@ -23,12 +23,23 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     if vuln_function.is_empty:
         return array([])
 
-    imls = vuln_function.imls
     loss_ratios = []
+    all_covs_are_zero = (vuln_function.covs <= 0.0).all()
 
+    if all_covs_are_zero:
+        return _mean_based(vuln_function, ground_motion_field_set)
+    else:
+        return array([1, 2, 3])
+
+
+def _mean_based(vuln_function, ground_motion_field_set):
     # seems like with numpy you can only specify a single fill value
     # if the x_new is outside the range. Here we need two different values,
     # depending if the x_new is below or upon the defined values
+
+    loss_ratios = []
+    imls = vuln_function.imls
+
     for ground_motion_field in ground_motion_field_set["IMLs"]:
         if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
@@ -37,7 +48,7 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
         else:
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_field))
-
+    
     return array(loss_ratios)
 
 
