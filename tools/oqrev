@@ -1,5 +1,48 @@
 #!/bin/bash
 
+help() {
+cat <<HSD
+`basename $0` is a tool that helps reviewing OpenQuake branches of others or even
+your own (e.g. prior to creating a pull request).
+
+To review your own branch you merely need to go to your OpenQuake
+repository and check out the desired branch, then invoke `basename $0`.
+
+To review a colleague's branch against your own repo's master you would
+say e.g.
+
+    `basename $0` --branch=<remote-name>/<branch-name>
+
+To review against gem/master
+
+    `basename $0` --other=gem/master --branch=<remote-name>/<branch-name>
+
+To review a branch from a github pull request:
+
+    `basename $0` --pull=59
+
+Same thing against gem/master
+
+    `basename $0` --other=gem/master --pull=59
+
+The command line arguments are as follows:
+
+    --other=[RN/][BN]   The reference branch where RN is the git remote
+                        name and BN is the branch name e.g. "gem/master"
+                        or "master" (defaults: RN="", BN="master")
+    --branch=[RN/BN]    The branch you want to review e.g.
+                        "andrea/fix-aggregate-curve" (defaults: RN="",
+                        BN="<current-branch>")
+    --pull=PRN          Review the branch specified by a github pull
+                        request. PRN is the pull request number e.g. 59
+    -L|--local          Do not fetch any remotes
+    -S|--skip-pylint    Skip the pylint step of the review
+    -C|--colordiff      Pipe the branch diff through the "colordiff"
+                        tool
+HSD
+exit 0
+}
+
 git branch >/dev/null 2>&1
 if [ $? -ne 0 ]
 then
@@ -74,19 +117,7 @@ do
         fi
         branch_reference=`basename $branch`
         ;;
-    --other-remote=*)
-        other_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --other-reference=*)
-        other_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --branch-remote=*)
-        branch_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --branch-reference=*)
-        branch_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    -L|--no-remotes)
+    -L|--local)
         fetch_remotes=0
         ;;
     -C|--colordiff)
@@ -94,6 +125,9 @@ do
         ;;
     -S|--skip-pylint)
         skip_pylint=1
+        ;;
+    -h|--help)
+        help
         ;;
     *)
         echo "Uknown option: " $i
