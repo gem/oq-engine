@@ -19,5 +19,13 @@
 	<classpathentry kind="lib" path="lib/commons-io-1.4.jar"/>
 	<classpathentry kind="lib" path="lib/opensha-lite.jar" sourcepath="/OpenSHA/java"/>
 	<classpathentry kind="lib" path="lib/jredis-core-ri-a.0-SNAPSHOT-jar-with-dependencies.jar"/>
+	<classpathentry kind="lib" path="lib/parallelcolt-0.9.4.jar"/>
+	<classpathentry kind="lib" path="lib/arpack-combo.jar"/>
+	<classpathentry kind="lib" path="lib/csparsej.jar"/>
+	<classpathentry kind="lib" path="lib/jplasma.jar"/>
+	<classpathentry kind="lib" path="lib/jtransforms.jar"/>
+	<classpathentry kind="lib" path="lib/junit.jar"/>
+	<classpathentry kind="lib" path="lib/netlib-java.jar"/>
+	<classpathentry kind="lib" path="lib/optimization.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>

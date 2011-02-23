@@ -20,6 +20,10 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 
+import cern.colt.matrix.tdouble.algo.decomposition.SparseDoubleCholeskyDecomposition;
+import cern.colt.matrix.tdouble.impl.DenseDoubleMatrix1D;
+import cern.colt.matrix.tdouble.impl.SparseCCDoubleMatrix2D;
+
 /**
  * Class providing methods for ground motion field calculation
  */
@@ -30,7 +34,7 @@ public class GroundMotionFieldCalculator {
     private ScalarIntensityMeasureRelationshipAPI attenRel;
     private EqkRupture rup;
     private List<Site> sites;
-    private OpenMapRealMatrix covarianceMatrix;
+    private SparseCCDoubleMatrix2D covarianceMatrix;
     
     /**
      * Jayaram and Baker 2009 Vs30 cluster parameter. The default is false 
@@ -281,17 +285,10 @@ public class GroundMotionFieldCalculator {
                                     SigmaTruncTypeParam.NAME).getValue(), rn);
         }
 
-        CholeskyDecompositionImpl cholDecomp = null;
-        try {
-            cholDecomp = new CholeskyDecompositionImpl(covarianceMatrix);
-        } catch (Exception e) {
-            String msg = "Unexpected exception: " + e.getMessage();
-            logger.error(msg);
-            throw new RuntimeException(e);
-        }
-
-        double[] intraEventResiduals =
-                cholDecomp.getL().operate(gaussianDeviates);
+        SparseDoubleCholeskyDecomposition cholDecomp = new SparseDoubleCholeskyDecomposition(covarianceMatrix, 0);
+        DenseDoubleMatrix1D z = new DenseDoubleMatrix1D(gaussianDeviates.length);
+        cholDecomp.getL().zMult(new DenseDoubleMatrix1D(gaussianDeviates), z);
+        double[] intraEventResiduals = z.toArray();
 
         int indexSite = 0;
         for (Site site : sites) {
@@ -303,7 +300,7 @@ public class GroundMotionFieldCalculator {
         getAndPrintElapsedTime(start);
     }
 
-    private void
+	private void
             validateInputCorrelatedGmfCalc(
                     ScalarIntensityMeasureRelationshipAPI attenRel) {
         if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
@@ -365,17 +362,16 @@ public class GroundMotionFieldCalculator {
      * "Correlation model for spatially distributed ground-motion intensities"
      * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
 
-     * @return covariance matrix as {@link BlockRealMatrix}
+     * @return covariance matrix as {@link SparseCCDoubleMatrix2D}
      */
-    private OpenMapRealMatrix getCovarianceMatrix_JB2009() {
+    private SparseCCDoubleMatrix2D getCovarianceMatrix_JB2009() {
     	
     	logger.debug("Compute covariance matrix...");
     	// get current time
     	long start = System.currentTimeMillis();
     	
         int numberOfSites = sites.size();
-        OpenMapRealMatrix covarianceMatrix =
-                new OpenMapRealMatrix(numberOfSites, numberOfSites);
+        SparseCCDoubleMatrix2D covarianceMatrix = new SparseCCDoubleMatrix2D(numberOfSites, numberOfSites);
         attenRel.setEqkRupture(rup);
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
@@ -412,8 +408,6 @@ public class GroundMotionFieldCalculator {
                     LocationUtils.horzDistance(site_i.getLocation(),
                             site_j.getLocation());
                 if(distance>correlationTruncationLevel*correlationRange){
-                    covarianceMatrix.setEntry(i, j, 0.0);
-                    covarianceMatrix.setEntry(j, i, 0.0);
                 	continue;
                 }
                 attenRel.setSite(site_j);
@@ -421,8 +415,8 @@ public class GroundMotionFieldCalculator {
                 covarianceValue =
                         intraEventStd_i * intraEventStd_j
                                 * Math.exp(-3 * (distance / correlationRange));
-                covarianceMatrix.setEntry(i, j, covarianceValue);
-                covarianceMatrix.setEntry(j, i, covarianceValue);
+                covarianceMatrix.setQuick(i, j, covarianceValue);
+                covarianceMatrix.setQuick(j, i, covarianceValue);
             }
         }
         return covarianceMatrix;
@@ -468,7 +462,16 @@ public class GroundMotionFieldCalculator {
 
 	public void setInterEvent(boolean interEvent) {
 		this.interEvent = interEvent;
+	}	
+
+    public double getCorrelationTruncationLevel() {
+		return correlationTruncationLevel;
 	}
+
+	public void setCorrelationTruncationLevel(double correlationTruncationLevel) {
+		this.correlationTruncationLevel = correlationTruncationLevel;
+	}
+
 	
 	private void getAndPrintElapsedTime(long start) {
 		// get elapsed time in milliseconds
