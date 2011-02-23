@@ -1,12 +1,5 @@
 #!/bin/bash
 
-which pylint >/dev/null 2>&1
-if [ $? -ne 0 ]
-then
-    echo "Cannot find pylint .. Is it installed?"
-    exit 1
-fi
-
 git branch >/dev/null 2>&1
 if [ $? -ne 0 ]
 then
@@ -30,7 +23,7 @@ branch_reference=`git branch | awk '/^\*/ { print $2 }'`
 
 fetch_remotes=1
 use_colordiff=0
-
+skip_pylint=0
 branch_name=""
 
 git diff --quiet HEAD
@@ -93,11 +86,14 @@ do
     --branch-reference=*)
         branch_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         ;;
-    --fetch-remotes)
-        fetch_remotes=1
+    -L|--no-remotes)
+        fetch_remotes=0
         ;;
-    --colordiff)
+    -C|--colordiff)
         use_colordiff=1
+        ;;
+    -S|--skip-pylint)
+        skip_pylint=1
         ;;
     *)
         echo "Uknown option: " $i
@@ -106,6 +102,15 @@ do
     esac
 done
 
+if [ $skip_pylint -eq 0 ]
+then
+    which pylint >/dev/null 2>&1
+    if [ $? -ne 0 ]
+    then
+        echo "Cannot find pylint .. Is it installed?"
+        exit 1
+    fi
+fi
 
 if [ -z "$branch_name" ]
 then
@@ -160,8 +165,11 @@ else
     git co $other_branch 
 fi
 
-echo "Running pylint on $other_branch.."
-pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
+if [ $skip_pylint -eq 0 ]
+then
+    echo "Running pylint on $other_branch.."
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
+fi
 
 if [ ! -z "$branch_remote" ]
 then
@@ -177,28 +185,32 @@ else
     git co $branch_branch 
 fi
 
-echo "Running pylint on $branch_name.."
-pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
-
-echo ""
-diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
-if [ $? -ne 0 ]
+if [ $skip_pylint -eq 0 ]
 then
-    added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
-    if [ $added_issues -gt 0 ]
+    echo "Running pylint on $branch_name.."
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
+
+    echo ""
+    diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
+    if [ $? -ne 0 ]
     then
-        echo "!! $branch_name adds $added_issues pylint issues.."
-        cat /tmp/pl.diff
+        added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
+        if [ $added_issues -gt 0 ]
+        then
+            echo "!! $branch_name adds $added_issues pylint issues.."
+            cat /tmp/pl.diff
+        else
+            fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
+            echo "++ $branch_name fixes $fixed_issues existing pylint issues.."
+        fi
     else
-        fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
-        echo "++ $branch_name fixes $fixed_issues existing pylint issues.."
+        echo "** $branch_name introduces no new pylint issues.."
     fi
-else
-    echo "** $branch_name introduces no new pylint issues.."
+    echo ""
+    echo "Press <enter> to continue"
+    read
 fi
-echo ""
-echo "Press <enter> to continue"
-read
+
 if [ $use_colordiff -ne 0 ]
 then
     git diff $other_branch...$branch_branch | colordiff | less -R
