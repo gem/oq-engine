@@ -7,9 +7,6 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.commons.math.linear.BlockRealMatrix;
-import org.apache.commons.math.linear.CholeskyDecompositionImpl;
-import org.apache.commons.math.linear.OpenMapRealMatrix;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -20,21 +17,35 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 
+import cern.colt.matrix.tdouble.DoubleMatrix2D;
 import cern.colt.matrix.tdouble.algo.decomposition.SparseDoubleCholeskyDecomposition;
 import cern.colt.matrix.tdouble.impl.DenseDoubleMatrix1D;
 import cern.colt.matrix.tdouble.impl.SparseCCDoubleMatrix2D;
 
 /**
- * Class providing methods for ground motion field calculation
+ * Class providing methods for ground motion field calculation.
  */
 public class GroundMotionFieldCalculator {
 
 	private static Log logger = LogFactory.getLog(GroundMotionFieldCalculator.class);
     
+	/**
+	 * attenuation relationship for computing ground motion field
+	 */
     private ScalarIntensityMeasureRelationshipAPI attenRel;
+    /**
+     * earthquake rupture generating ground motion field
+     */
     private EqkRupture rup;
+    /**
+     * list of sites where ground motion field is computed
+     */
     private List<Site> sites;
-    private SparseCCDoubleMatrix2D covarianceMatrix;
+    /**
+     * lower triangular matrix obtained from cholesky decomposition
+     * of covariance matrix (used for correlated ground motion calculations)
+     */
+    private DoubleMatrix2D lowerTriangularCovarianceMatrix;
     
     /**
      * Jayaram and Baker 2009 Vs30 cluster parameter. The default is false 
@@ -72,15 +83,17 @@ public class GroundMotionFieldCalculator {
      *            : array list of {@link Site} where ground motion values have
      *            to be computed
      */
-    public GroundMotionFieldCalculator(ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
+    public GroundMotionFieldCalculator(
+    		ScalarIntensityMeasureRelationshipAPI attenRel, EqkRupture rup,
             List<Site> sites){
         validateInput(attenRel, rup, sites);
     	this.attenRel = attenRel;
     	this.rup = rup;
     	this.sites = sites;
-    	// covariance matrix is set to null and defined only if correlated 
-    	// ground motion fields calculations are requested
-    	covarianceMatrix = null;
+    	// the lower triangular matrix coming from cholesky decomposition of
+    	// covariance matrix is set to null and calculated only if correlated
+    	// ground motion calculation is requested
+    	lowerTriangularCovarianceMatrix = null;
     }
 
     /**
@@ -129,8 +142,10 @@ public class GroundMotionFieldCalculator {
     	long start = System.currentTimeMillis();
     	
         checkRandomNumberIsNotNull(rn);
+        
         Map<Site, Double> groundMotionField =
                 getMeanGroundMotionField();
+        
         if (attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
                 .isAllowed(StdDevTypeParam.STD_DEV_TYPE_INTER)
                 && attenRel.getParameter(StdDevTypeParam.NAME).getConstraint()
@@ -145,6 +160,62 @@ public class GroundMotionFieldCalculator {
         
         getAndPrintElapsedTime(start);
         
+        return groundMotionField;
+    }
+    
+    /**
+     * Compute ground motion field with spatial correlation using
+     * correlation model from Jayamram & Baker (2009):
+     * "Correlation model for spatially distributed ground-motion intensities"
+     * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
+     * The algorithm is structured according to the following steps: 1) Compute
+     * mean ground motion values, 2) Stochastically generate inter-event
+     * residual (which follow a univariate normal distribution), 3)
+     * Stochastically generate intra-event residuals (following the proposed
+     * correlation model) 4) Combine the three terms generated in steps 1-3.
+     * 
+     * Intra-event residuals are calculated by generating Gaussian deviates from
+     * a multivariate normal distribution using Cholesky factorization
+     * (decompose covariance matrix, take lower triangular and multiply by a
+     * vector of uncorrelated, standard Gaussian variables)
+
+     * @param rn
+     *            : {@link Random} random number generator
+     * @return: {@link Map} associating sites ({@link Site}) and ground motion
+     *          values {@link Double}
+     */
+    public Map<Site, Double> getCorrelatedGroundMotionField_JB2009(Random rn) {
+    	
+    	logger.debug("Computing correlated (JB2009) ground motion field...");
+    	// get current time
+    	long start = System.currentTimeMillis();
+    	
+        checkRandomNumberIsNotNull(rn);
+        validateInputCorrelatedGmfCalc(attenRel);
+        
+        // covariance matrix and cholesky decompositions are computed only once.
+        // If multiple ground motion fields are needed for 
+        // the same rupture, these calculations are not redone.
+        if(lowerTriangularCovarianceMatrix==null){
+        	SparseCCDoubleMatrix2D covarianceMatrix =
+                getCovarianceMatrix_JB2009();
+            SparseDoubleCholeskyDecomposition cholDecomp = 
+            	new SparseDoubleCholeskyDecomposition(covarianceMatrix, 0);
+            lowerTriangularCovarianceMatrix = cholDecomp.getL();
+        }
+
+        Map<Site, Double> groundMotionField =
+                getMeanGroundMotionField();
+
+        if (interEvent == true) {
+            computeAndAddInterEventResidual(rn,groundMotionField);
+        }
+
+        computeAndAddCorrelatedIntraEventResidual(rn,
+                groundMotionField);
+
+        getAndPrintElapsedTime(start);
+
         return groundMotionField;
     }
 
@@ -209,61 +280,7 @@ public class GroundMotionFieldCalculator {
     }
 
     /**
-     * Compute ground motion field with spatial correlation using
-     * correlation model from Jayamram & Baker (2009):
-     * "Correlation model for spatially distributed ground-motion intensities"
-     * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
-     * The algorithm is structured according to the following steps: 1) Compute
-     * mean ground motion values, 2) Stochastically generate inter-event
-     * residual (which follow a univariate normal distribution), 3)
-     * Stochastically generate intra-event residuals (following the proposed
-     * correlation model) 4) Combine the three terms generated in steps 1-3.
-     * 
-     * Intra-event residuals are calculated by generating Gaussian deviates from
-     * a multivariate normal distribution using Cholesky factorization
-     * (decompose covariance matrix, take lower triangular and multiply by a
-     * vector of uncorrelated, standard Gaussian variables)
-
-     * @param rn
-     *            : {@link Random} random number generator
-     * @return: {@link Map} associating sites ({@link Site}) and ground motion
-     *          values {@link Double}
-     */
-    public Map<Site, Double> getCorrelatedGroundMotionField_JB2009(Random rn) {
-    	
-    	logger.debug("Computing correlated (JB2009) ground motion field...");
-    	// get current time
-    	long start = System.currentTimeMillis();
-    	
-        checkRandomNumberIsNotNull(rn);
-        validateInputCorrelatedGmfCalc(attenRel);
-        
-        // covariance matrix is computed only once.
-        // So if multiple ground motion fields are needed for 
-        // the same rupture, the covariance matrix is not recomputed every time
-        if(covarianceMatrix==null){
-        	covarianceMatrix =
-                getCovarianceMatrix_JB2009();
-        }
-
-        Map<Site, Double> groundMotionField =
-                getMeanGroundMotionField();
-
-        if (interEvent == true) {
-            computeAndAddInterEventResidual(rn,groundMotionField);
-        }
-
-        computeAndAddCorrelatedIntraEventResidual(rn,
-                groundMotionField);
-
-        getAndPrintElapsedTime(start);
-
-        return groundMotionField;
-    }
-
-    /**
-     * Compute intra-event residuals, by decomposing the covariance matrix with
-     * cholesky decomposition, and by multiplying the lower triangular matrix
+     * Compute intra-event residuals, by multiplying the lower triangular matrix
      * with a vector of univariate Gaussian deviates
      */
     private void computeAndAddCorrelatedIntraEventResidual(
@@ -285,9 +302,10 @@ public class GroundMotionFieldCalculator {
                                     SigmaTruncTypeParam.NAME).getValue(), rn);
         }
 
-        SparseDoubleCholeskyDecomposition cholDecomp = new SparseDoubleCholeskyDecomposition(covarianceMatrix, 0);
+
         DenseDoubleMatrix1D z = new DenseDoubleMatrix1D(gaussianDeviates.length);
-        cholDecomp.getL().zMult(new DenseDoubleMatrix1D(gaussianDeviates), z);
+        lowerTriangularCovarianceMatrix.
+                            zMult(new DenseDoubleMatrix1D(gaussianDeviates), z);
         double[] intraEventResiduals = z.toArray();
 
         int indexSite = 0;
@@ -371,7 +389,9 @@ public class GroundMotionFieldCalculator {
     	long start = System.currentTimeMillis();
     	
         int numberOfSites = sites.size();
-        SparseCCDoubleMatrix2D covarianceMatrix = new SparseCCDoubleMatrix2D(numberOfSites, numberOfSites);
+        SparseCCDoubleMatrix2D covarianceMatrix = 
+        	new SparseCCDoubleMatrix2D(numberOfSites, numberOfSites);
+        
         attenRel.setEqkRupture(rup);
         attenRel.getParameter(StdDevTypeParam.NAME).setValue(
                 StdDevTypeParam.STD_DEV_TYPE_INTRA);
