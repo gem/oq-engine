@@ -39,14 +39,22 @@ public class GroundMotionFieldCalculator {
     private boolean JB2009_Vs30ClusterParam = false;
     
     /**
-     *      if true compute correlated ground motion field using both inter- and
-     *      intra-event residuals, if false use only intra-event residuals
-     *      (NOTE: this option has been done mostly for testing purposes,
-     *      some tests put this flag to false to check that the
-     *      correlation in the intra-event residuals in the ground motion
-     *      fiels is correclty computed). Default is true.
+     * if true compute correlated ground motion field using both inter- and
+     * intra-event residuals, if false use only intra-event residuals
+     * (NOTE: this option has been done mostly for testing purposes,
+     * some tests put this flag to false to check that the
+     * correlation in the intra-event residuals in the ground motion
+     * fiels is correclty computed). Default is true.
      */
     private boolean interEvent = true; 
+    
+    /**
+     * Defines truncation level for covariance matrix calculation.
+     * If distance between sites is greater than 
+     * correlationTruncationLevel*correlationRange then automatically
+     * set to zero correlation value
+     */
+    private double correlationTruncationLevel = 2.0;
     
     /**
      * Defines a ground motion field calculator
@@ -403,7 +411,7 @@ public class GroundMotionFieldCalculator {
                 distance =
                     LocationUtils.horzDistance(site_i.getLocation(),
                             site_j.getLocation());
-                if(distance>1.5*correlationRange){
+                if(distance>correlationTruncationLevel*correlationRange){
                     covarianceMatrix.setEntry(i, j, 0.0);
                     covarianceMatrix.setEntry(j, i, 0.0);
                 	continue;
