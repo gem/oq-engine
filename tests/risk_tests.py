@@ -10,7 +10,7 @@ import numpy
 import unittest
 
 from openquake import job
-from openquake import kvs 
+from openquake import kvs
 from openquake import shapes
 from utils import test
 
@@ -47,7 +47,7 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.002464, 0.00464, 0.064384, 0.001712, 0.01584, 0.012544,
         0.028128, 0.005808, 0.004928, 0.025536, 0.008304, 0.112528,
         0.06472, 0.01824, 0.002624, 0.003456, 0.014832, 0.002592,
-        0.041264, 0.004368, 0.016144, 0.008032, 0.007344, 0.004976, 
+        0.041264, 0.004368, 0.016144, 0.008032, 0.007344, 0.004976,
         0.00072, 0.022192, 0.002496, 0.001456, 0.044976, 0.055424,
         0.009232, 0.010368, 0.000944, 0.002976, 0.00656, 0.003184,
         0.004288, 0.00632, 0.286512, 0.007568, 0.00104, 0.00144,
@@ -67,7 +67,7 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 # TSES = TimeSpan times number of Realizations
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.vuln_function_1 = shapes.VulnerabilityFunction([
                 (0.01, (0.001, 1.00)),
@@ -84,7 +84,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.cum_histogram = numpy.array([112, 46, 26, 18, 14,
                 12, 8, 7, 7, 6, 5, 4, 4, 4, 4, 4, 2, 1,
                 1, 1, 1, 1, 1, 1])
-        
+
         self.vuln_function_2 = shapes.VulnerabilityFunction([
                 (0.00, (0.00, 0.30)), (0.04, (0.00, 0.30)),
                 (0.08, (0.00, 0.30)), (0.12, (0.01, 0.30)),
@@ -151,7 +151,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.6604, 0.1182, 0.1545, 0.7613, 0.5246, 0.2428, 0.2882,
                 0.2179, 1.2939, 0.6042, 0.1418, 0.3637, 0.222, 0.3613,
                 0.113), "TSES": 200, "TimeSpan": 50}
-        
+
         self.asset_2 = {"vulnerabilityFunctionReference": "ID",
                 "assetValue": 124.27}
 
@@ -162,7 +162,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.asset_3 = {"vulnerabilityFunctionReference": "ID",
                 "assetValue": 42.93}
-        
+
         self.gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313,
                 0.9297, 0.2337, 0.2862, 0.5278, 0.6603, 0.3537, 0.2997,
                 0.1097, 1.1875, 0.4752, 0.1575, 0.4009, 0.2519, 0.2653,
@@ -178,7 +178,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.asset_5 = {"vulnerabilityFunctionReference": "ID",
                 "assetValue": 40.68}
-        
+
         self.gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633,
                 0.2095, 0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
                 0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
@@ -191,7 +191,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         kvs.get_client(binary=False).flushall()
 
         kvs.set_value_json_encoded(
-                kvs.tokens.vuln_key(self.job_id), 
+                kvs.tokens.vuln_key(self.job_id),
                 {"ID": self.vuln_function_2.to_json()})
 
         # store the gmfs
@@ -209,14 +209,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self._store_asset(self.asset_4, 1, 4)
         self._store_asset(self.asset_5, 1, 5)
         self._store_asset(self.asset_6, 1, 6)
-        
+
         self.params = {}
         self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
         self.params["AGGREGATE_LOSS_CURVE"] = 1
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 
-        self.job = job.Job(self.params,  self.job_id, base_path=".")
+        self.job = job.Job(self.params, self.job_id, base_path=".")
         self.job.to_kvs()
 
         # deleting old file
@@ -227,7 +227,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def _delete_test_file(self):
         try:
-            os.remove(os.path.join(test.OUTPUT_DIR, 
+            os.remove(os.path.join(test.OUTPUT_DIR,
                     aggregate._filename(self.job_id)))
         except OSError:
             pass
@@ -264,8 +264,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def test_loss_ratios_computation_using_gmfs(self):
         # manually computed values by Vitor Silva
         expected_loss_ratios = numpy.array([0.0605584000000000,
-                0.273100266666667,
-                0.0958560000000000,	0.0184384000000000, 0.270366933333333, 0.0,
+                0.273100266666667, 0.0958560000000000, 0.0184384000000000,
+                0.270366933333333, 0.0,
                 0.0252480000000000, 0.0795669333333333,
                 0.0529024000000000, 0.0,
                 0.0154928000000000, 0.00222080000000000,
@@ -278,7 +278,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.0365850666666667, 0.0, 0.0, 0.0238096000000000,
                 0.0, 0.0, 0.0,
                 0.0, 0.00782080000000000, 0.0115952000000000,
-                0.0, 0.0, 0.0, 
+                0.0, 0.0, 0.0,
                 0.0, 0.0619504000000000, 0.0, 0.0118976000000000,
                 0.0329968000000000,
                 0.0, 0.00245600000000000, 0.0, 0.0, 0.0,
@@ -287,9 +287,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.0, 0.0, 0.186080000000000,
                 0.0, 0.00413600000000000, 0.0196480000000000,
                 0.104992000000000, 0.0,
-                0.0, 0.00498720000000000,	0.0, 0.0, 0.0,
+                0.0, 0.00498720000000000, 0.0, 0.0, 0.0,
                 0.00612960000000000, 0.0,
-                0.0450453333333333,	0.0143728000000000,
+                0.0450453333333333, 0.0143728000000000,
                 0.0, 0.00546880000000000,
                 0.0, 0.0, 0.0, 0.00838080000000000,
                 0.0, 0.00201920000000000, 0.0,
@@ -311,7 +311,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.00125760000000000, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
                 0.290899733333333, 0.0, 0.0, 0.0, 0.0, 0.0348064000000000,
                 0.0279392000000000, 0.00296000000000000, 0.0171504000000000,
-                0.0147760000000000,	0.0,
+                0.0147760000000000, 0.0,
                 0.00870560000000000, 0.00627520000000000,
                 0.0, 0.00522240000000000, 0.00293760000000000, 0.0, 0.0, 0.0,
                 0.0259749333333333, 0.0101504000000000,
@@ -349,9 +349,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
-        loss_ratios = prob._compute_loss_ratios(self.vuln_function_1, self.gmfs)
+        loss_ratios = prob._compute_loss_ratios(
+                self.vuln_function_1, self.gmfs)
+
         loss_ratios_range = prob._compute_loss_ratios_range(loss_ratios)
-        
+
         self.assertTrue(numpy.allclose(self.cum_histogram,
                 prob._compute_cumulative_histogram(
                 loss_ratios, loss_ratios_range)))
@@ -371,7 +373,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def test_tses_is_not_supposed_to_be_zero_or_less(self):
         self.assertRaises(ValueError, prob._compute_rates_of_exceedance,
                 self.cum_histogram, 0.0)
-        
+
         self.assertRaises(ValueError, prob._compute_rates_of_exceedance,
                 self.cum_histogram, -10.0)
 
@@ -382,7 +384,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1992626, 0.1992626, 0.10516068, 0.05404053, 0.05404053,
                 0.05404053, 0.05404053, 0.05404053, 0.05404053, 0.05404053]
 
-        self.assertTrue(numpy.allclose(expected_probs, 
+        self.assertTrue(numpy.allclose(expected_probs,
                 prob._compute_probs_of_exceedance(
                 prob._compute_rates_of_exceedance(
                 self.cum_histogram, self.gmfs["TSES"]),
@@ -479,7 +481,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(
                 expected_losses, aggregate_curve.losses))
-        
+
         expected_curve = shapes.Curve([(39.52702042, 0.99326205),
                 (106.20489077, 0.917915), (172.88276113, 0.77686984),
                 (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
@@ -529,13 +531,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 {"ID": shapes.EMPTY_VULN_FUNCTION})
 
         asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
-        
+
         aggregate_curve.append({
                 "IMLs": (), "TSES": 1, "TimeSpan": 1}, asset)
 
         self.assertRaises(AssertionError,
                 aggregate_curve.append, {
-                "IMLs": (1.0,), "TSES": 1, "TimeSpan": 1}, asset)
+                "IMLs": (1.0, ), "TSES": 1, "TimeSpan": 1}, asset)
 
     def test_creating_the_aggregate_curve_from_kvs_loads_the_vuln_model(self):
         # we have just self.vuln_function_2 stored in kvs
@@ -565,8 +567,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_data["AggregateLossCurve"] = {}
         expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
         expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
-        expected_data["AggregateLossCurve"]["abscissa_property"] = "Economic Losses"
-        expected_data["AggregateLossCurve"]["ordinate_property"] = "PoE in 50.0 years"
+
+        expected_data["AggregateLossCurve"]["abscissa_property"] = \
+                "Economic Losses"
+
+        expected_data["AggregateLossCurve"]["ordinate_property"] = \
+                "PoE in 50.0 years"
+
         expected_data["AggregateLossCurve"] \
                 ["curve_title"] = "Aggregate Loss Curve"
 
@@ -580,7 +587,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         del(self.params["AGGREGATE_LOSS_CURVE"])
 
         # storing a new job definition in kvs
-        self.job = job.Job(self.params,  self.job_id, base_path=".")
+        self.job = job.Job(self.params, self.job_id, base_path=".")
         self.job.to_kvs()
 
         aggregate.compute_aggregate_curve(self.job_id)
@@ -602,7 +609,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
     def setUp(self):
         self.empty_vuln_code = "EMPTY"
         self.vuln_curve_code_test = "TEST"
-        
+
         self.job_id = kvs.generate_random_id()
 
         vuln_curve_test = shapes.Curve([(5.0, (0.25, 0.5)),
@@ -655,7 +662,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
         lrem = psha._compute_lrem(vuln_function)
 
-        lrem_po = psha._compute_lrem_po(vuln_function, 
+        lrem_po = psha._compute_lrem_po(vuln_function,
                 lrem, hazard_curve)
 
         self.assertTrue(numpy.allclose(0.07, lrem_po[0][0], atol=0.005))
@@ -695,7 +702,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def test_bin_width_from_imls(self):
         vuln_function = shapes.VulnerabilityFunction(
-                        [(0.1,0.05), (0.2,0.08),(0.4,0.2),(0.6,0.4)])
+                        [(0.1, 0.05), (0.2, 0.08), (0.4, 0.2), (0.6, 0.4)])
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
         self.assertTrue(numpy.allclose(expected_steps,
                 psha._compute_imls(vuln_function)))
@@ -715,9 +722,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 vuln_function, hazard_curve)
 
         lr_curve_expected = shapes.Curve([(0.0, 0.96),
-                (0.025, 0.96), (0.05, 0.91), (0.065,  0.87),
-                (0.08, 0.83), (0.14, 0.75), (0.2,  0.60),
-                (0.3, 0.47), (0.4, 0.23), (0.7,  0.00),
+                (0.025, 0.96), (0.05, 0.91), (0.065, 0.87),
+                (0.08, 0.83), (0.14, 0.75), (0.2, 0.60),
+                (0.3, 0.47), (0.4, 0.23), (0.7, 0.00),
                 (1.0, 0.00)])
 
         for x_value in lr_curve_expected.abscissae:
@@ -752,7 +759,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
                 7.16E-05, 7.96E-04, 5.37E-03, 2.39E-02, 7.51E-02, 1.77E-01]
 
-        result =  [0.0, 3.9199999999999996e-16,
+        result = [0.0, 3.9199999999999996e-16,
                 7.8399999999999992e-16,
                 1.1759999999999998e-15, 1.5679999999999998e-15,
                 1.9599999999999999e-15, 5.0756799999999998e-13,
@@ -795,14 +802,14 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.0,
-                common.compute_conditional_loss(loss_curve, 0.200))        
+                common.compute_conditional_loss(loss_curve, 0.200))
 
     def test_ratio_is_max_if_probability_is_too_low(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.30,
-                common.compute_conditional_loss(loss_curve, 0.050))        
+                common.compute_conditional_loss(loss_curve, 0.050))
 
     def test_conditional_loss_computation(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
@@ -824,12 +831,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 common._compute_mid_mean_pe(loss_ratio_curve))
 
     def test_loss_ratio_po_computation(self):
-        loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330), 
-                (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295), 
+        loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330),
+                (0.0900, 0.0885), (0.1500, 0.0485), (0.2100, 0.0295),
                 (0.2700, 0.0140), (0.3750, 0.0045)])
 
         expected_curve = shapes.Curve([(0.0600, 0.1445),
-                (0.1200, 0.0400), (0.1800, 0.0190), (0.2400, 0.0155), 
+                (0.1200, 0.0400), (0.1800, 0.0190), (0.2400, 0.0155),
                 (0.3225, 0.0095)])
 
         self.assertEqual(expected_curve,
