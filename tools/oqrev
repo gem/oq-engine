@@ -1,18 +1,41 @@
 #!/bin/bash
 
+which pylint >/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    echo "Cannot find pylint .. Is it installed?"
+    exit 1
+fi
+
+git branch >/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    if [ -z "$OQ_ROOT" ]
+    then
+        echo "This is not a git repository. Please cd to your OpenQuake"
+        echo "repository."
+        echo "Alternatively set the OQ_ROOT environment variable to contain"
+        echo "the repository path and the script will use that."
+        exit 2
+    else
+        cd $OQ_ROOT
+    fi
+fi
+
 other_remote=""
 other_reference="master"
 
 branch_remote=""
-branch_reference=`git branch | grep '^\*' | cut -f2 -d' '`
+branch_reference=`git branch | awk '/^\*/ { print $2 }'`
 
 fetch_remotes=1
+use_colordiff=0
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]
 then
     echo "Your branch has uncommitted changes. Please commit first."
-    exit 1
+    exit 3
 fi
 
 for i in $*
@@ -38,13 +61,19 @@ do
         ;;
     --pull=*)
         pull=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        branch=`curl -s https://github.com/gem/openquake/pull/$pull | grep "wants someone to merge .* commits into gem:master" | perl -wane 'if ($_ =~ /\s+from\s+([^:]+):([^"]+)/) { print $1, "/", $2 };'`
-        git_user_name=`dirname $branch`
-        branch_remote=`git remote -v | grep fetch | grep $git_user_name | perl -wane '@words = split(/\s+/, $_); print $words[0];'`
+        curl -s https://github.com/gem/openquake/pull/$pull >/tmp/pull.$pull
+        if [ $? -ne 0 ]
+        then
+            echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
+            exit 4
+        fi
+        branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
+        branch_remote=`dirname $branch`
+        branch_remote=`git remote -v | awk "/$branch_remote.+fetch.$/ {print \\$1}"`
         if [ -z "$branch_remote" ]
         then
             echo "You don't have a remote repository defined for git user $git_user_name. Plase add one and try again."
-            exit 2
+            exit 5
         fi
         branch_reference=`basename $branch`
         ;;
@@ -63,9 +92,12 @@ do
     --fetch-remotes)
         fetch_remotes=1
         ;;
+    --colordiff)
+        use_colordiff=1
+        ;;
     *)
         echo "Uknown option: " $i
-        exit 3
+        exit 6
         ;;
     esac
 done
@@ -79,10 +111,20 @@ then
     if [ ! -z "$other_remote" ]
     then
         git fetch $other_remote
+        if [ $? -ne 0 ]
+        then
+            echo "git failed to fetch $other_remote"
+            exit 7
+        fi
     fi
     if [ ! -z "$branch_remote" ]
     then
         git fetch $branch_remote
+        if [ $? -ne 0 ]
+        then
+            echo "git failed to fetch $branch_remote"
+            exit 8
+        fi
     fi
 fi
 
@@ -93,6 +135,11 @@ git branch -D bb >/dev/null 2>&1
 if [ ! -z "$other_remote" ]
 then
     git co -b ba $other_remote/$other_reference
+    if [ $? -ne 0 ]
+    then
+        echo "git failed to create a tracking branch for $other_remote/$other_reference"
+        exit 9
+    fi
     other_branch="ba"
 else
     other_branch="$other_reference"
@@ -105,6 +152,11 @@ pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0
 if [ ! -z "$branch_remote" ]
 then
     git co -b bb $branch_remote/$branch_reference
+    if [ $? -ne 0 ]
+    then
+        echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
+        exit 10
+    fi
     branch_branch="bb"
 else
     branch_branch="$branch_reference"
@@ -133,4 +185,9 @@ fi
 echo ""
 echo "Press <enter> to continue"
 read
-git diff $other_branch...$branch_branch | colordiff | less -R
+if [ $use_colordiff -ne 0 ]
+then
+    git diff $other_branch...$branch_branch | colordiff | less -R
+else
+    git diff $other_branch...$branch_branch
+fi
