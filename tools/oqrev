@@ -101,16 +101,15 @@ do
     --pull=*)
         pull=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         curl -s https://github.com/gem/openquake/pull/$pull >/tmp/pull.$pull
+        if [ $? -ne 0 ]
+        then
+            echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
+            exit 3
+        fi
         pr_state=`awk '/class="state / { split($0,F,/[<>]/); print F[3];}' /tmp/pull.$pull | head -1`
         if [ "$pr_state" != "Open" ]
         then
             echo "https://github.com/gem/openquake/pull/$pull is not open any more"
-            exit 3
-        fi
-
-        if [ $? -ne 0 ]
-        then
-            echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
             exit 4
         fi
         branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
