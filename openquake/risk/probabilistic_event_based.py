@@ -180,7 +180,7 @@ class AggregateLossCurve(object):
         assert gmfs["TSES"] == self._tses
         assert len(gmfs["IMLs"]) == self._gmfs_length
 
-        if self.vuln_model in asset["vulnerabilityFunctionReference"]:
+        if asset["vulnerabilityFunctionReference"] in self.vuln_model:
             loss_ratios = _compute_loss_ratios(self.vuln_model[
                     asset["vulnerabilityFunctionReference"]], gmfs)
 
