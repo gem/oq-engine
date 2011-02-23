@@ -124,8 +124,8 @@ def _generate_curve(losses, probs_of_exceedance):
 def _assets_keys_for_gmfs(job_id, gmfs_key):
     """Return the asset related to the GMFs given."""
 
-    row = lambda key: key.split(kvs.MEMCACHE_KEY_SEPARATOR)[3]
-    column = lambda key: key.split(kvs.MEMCACHE_KEY_SEPARATOR)[2]
+    row = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[3]
+    column = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[2]
 
     key = kvs.tokens.asset_key(
             job_id, row(gmfs_key), column(gmfs_key))
@@ -180,16 +180,14 @@ class AggregateLossCurve(object):
         assert gmfs["TSES"] == self._tses
         assert len(gmfs["IMLs"]) == self._gmfs_length
 
-        if self.vuln_model.has_key(
-                asset["vulnerabilityFunctionReference"]):
-
+        if self.vuln_model in asset["vulnerabilityFunctionReference"]:
             loss_ratios = _compute_loss_ratios(self.vuln_model[
                     asset["vulnerabilityFunctionReference"]], gmfs)
 
             self.distribution.append(loss_ratios * asset["assetValue"])
         else:
             LOG.debug("Unknown vulnerability function %s, asset %s will " \
-                    "not be included in the aggregate computation" 
+                    "not be included in the aggregate computation"
                     % (asset["vulnerabilityFunctionReference"],
                     asset["assetID"]))
 
