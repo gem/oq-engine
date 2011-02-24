@@ -67,7 +67,7 @@ class NrmlFileTestCase(unittest.TestCase):
         # (lon=16.35/lat=48.25)
         region_constraint = shapes.RegionConstraint.from_simple(
             (-123.0, 38.0), (-122.0, 37.0))
-        expected_result = [(shapes.Point(-122.5, 37.5),
+        expected_result = [(shapes.Site(-122.5, 37.5),
                            {'IMT': 'PGA',
                             'IDmodel': 'PGA_1_1',
                             'investigationTimeSpan': 50.0,
@@ -149,7 +149,7 @@ class NrmlFileTestCase(unittest.TestCase):
         # we'll use this to construct an 'expected results' list
         nrml_data = [
                      # first hazardCurveField
-                     (shapes.Point(-122.5000, 37.5000),
+                     (shapes.Site(-122.5000, 37.5000),
                       {'IMT': 'PGA',
                        'IDmodel': 'PGA_1_1',
                        'investigationTimeSpan': 50.0,
@@ -158,7 +158,7 @@ class NrmlFileTestCase(unittest.TestCase):
                        'saPeriod': 0.1,
                        'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
                        'PoEValues': [9.8728e-01, 9.8266e-01, 9.4957e-01]}),
-                     (shapes.Point(-123.5000, 37.5000),
+                     (shapes.Site(-123.5000, 37.5000),
                       {'IMT': 'PGA',
                        'IDmodel': 'PGA_1_1',
                        'investigationTimeSpan': 50.0,
@@ -168,7 +168,7 @@ class NrmlFileTestCase(unittest.TestCase):
                        'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
                        'PoEValues': [9.8728e-02, 9.8266e-02, 9.4957e-02]}),
                      # second hazardCurveField
-                     (shapes.Point(-125.5000, 37.5000),
+                     (shapes.Site(-125.5000, 37.5000),
                       {'IMT': 'PGA',
                        'IDmodel': 'PGA_1_1',
                        'investigationTimeSpan': 50.0,
@@ -178,7 +178,7 @@ class NrmlFileTestCase(unittest.TestCase):
                        'IMLValues': [0.0001, 0.0002, 0.0003],
                        'PoEValues': [9.3e-01, 9.2e-01, 9.1e-01]}),
                      # third hazardCurveField
-                     (shapes.Point(-125.5000, 37.5000),
+                     (shapes.Site(-125.5000, 37.5000),
                       {'IMT': 'PGA',
                        'IDmodel': 'PGA_1_1',
                        'investigationTimeSpan': 50.0,

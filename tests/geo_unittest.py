@@ -77,6 +77,7 @@ class RegionTestCase(unittest.TestCase):
             self.assert_(not constraint.match(point),
                          'matched outside: %s' % str(point))
 
+    @test.skipit
     def test_from_file(self):
         fd, path = tempfile.mkstemp(suffix='.wkt')
         with open(path, 'w') as wkt_file:

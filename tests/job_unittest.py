@@ -239,6 +239,10 @@ class BlockSplitterTestCase(unittest.TestCase):
 
     def _assert_blocks_are(self, expected_blocks):
         for idx, block in enumerate(self.splitter):
+            for s in expected_blocks[idx].sites:
+                print "%s" % s
+            for s in block.sites:
+                print "%s" % s 
             self.assertEqual(expected_blocks[idx], block)
 
     def _assert_number_of_blocks_is(self, number):

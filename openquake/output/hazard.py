@@ -378,10 +378,10 @@ class GMFXMLWriter(writer.FileWriter):
         {'groundMotion': 0.8}
         """
         if isinstance(point, shapes.GridPoint):
-            point = point.site.point
+            site = point.site
         if isinstance(point, shapes.Site):
-            point = point.point
-        self._append_site_node(point, val, self.parent_node)
+            site = point
+        self._append_site_node(site, val, self.parent_node)
 
     def write_header(self):
         """Write out the file header."""
@@ -433,7 +433,7 @@ class GMFXMLWriter(writer.FileWriter):
         et.write(self.file, pretty_print=True, xml_declaration=True,
                  encoding="UTF-8")
 
-    def _append_site_node(self, point, val, parent_node):
+    def _append_site_node(self, site, val, parent_node):
         """Write a single GMFNode element."""
 
         gmf_node = etree.SubElement(
@@ -450,7 +450,7 @@ class GMFXMLWriter(writer.FileWriter):
         pos_node = etree.SubElement(
                 point_node, GMFXMLWriter.pos_tag, nsmap=NSMAP)
 
-        pos_node.text = "%s %s" % (str(point.x), str(point.y))
+        pos_node.text = "%s %s" % (str(site.longitude), str(site.latitude))
 
         ground_motion_node = etree.SubElement(
                 gmf_node, GMFXMLWriter.ground_motion_attr, nsmap=NSMAP)

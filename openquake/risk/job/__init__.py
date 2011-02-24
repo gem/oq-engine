@@ -152,7 +152,8 @@ class RiskJobMixin(mixins.Mixin):
     def write_loss_map(self, loss_poe):
         """ Iterates through all the assets and maps losses at loss_poe """
         # Make a special grid at a higher resolution
-        risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
+        self.region.set_cell_size(float(self['RISK_CELL_SIZE']))
+        risk_grid = shapes.Grid(self.region)
         path = os.path.join(self.base_path,
                             self['OUTPUT_DIR'],
                             "losses_at-%s.tiff" % loss_poe) 

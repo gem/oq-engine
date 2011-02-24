@@ -27,7 +27,8 @@ flags.DEFINE_integer('distance_precision', 12,
 
 LineString = geometry.LineString # pylint: disable=C0103
 Point = geometry.Point           # pylint: disable=C0103
-
+COORD_PRECISION = 7
+INTUP = 10**COORD_PRECISION
 
 class Region(object):
     """A container of polygons, used for bounds checking"""
@@ -37,9 +38,13 @@ class Region(object):
         self.cell_size = 0.1
         # TODO(JMC): Make this a multipolygon instead?
 
+    def set_cell_size(self, cell_size):
+        self.cell_size = cell_size * INTUP
+        
     @classmethod
     def from_coordinates(cls, coordinates):
         """Build a region from a set of coordinates"""
+        coordinates = [(int(INTUP * x), int(INTUP * y)) for (x,y) in coordinates]
         polygon = geometry.Polygon(coordinates)
         return cls(polygon)
     
@@ -68,25 +73,25 @@ class Region(object):
     def lower_left_corner(self):
         """Lower left corner of the containing bounding box"""
         (minx, miny, _maxx, _maxy) = self.bounds
-        return Site(minx, miny)
+        return Site.integer_site(minx, miny)
         
     @property
     def lower_right_corner(self):
         """Lower right corner of the containing bounding box"""
         (_minx, miny, maxx, _maxy) = self.bounds
-        return Site(maxx, miny)
+        return Site.integer_site(maxx, miny)
             
     @property
     def upper_left_corner(self):
         """Upper left corner of the containing bounding box"""
         (minx, _miny, _maxx, maxy) = self.bounds
-        return Site(minx, maxy)
+        return Site.integer_site(minx, maxy)
         
     @property
     def upper_right_corner(self):
         """Upper right corner of the containing bounding box"""
         (_minx, _miny, maxx, maxy) = self.bounds
-        return Site(maxx, maxy)
+        return Site.integer_site(maxx, maxy)
     
     @property
     def grid(self):
@@ -97,7 +102,7 @@ class Region(object):
             if not self.cell_size:
                 raise Exception(
                     "Can't generate grid without cell_size being set")
-            self._grid = Grid(self, self.cell_size)
+            self._grid = Grid(self, self.cell_size * INTUP)
         return self._grid
     
     @property
@@ -125,7 +130,7 @@ class RegionConstraint(Region):
         if isinstance(point, Site):
             point = point.point
         if not isinstance(point, geometry.Point): 
-            point = geometry.Point(point[0], point[1])
+            point = geometry.Point(int(point[0]*INTUP), int(point[1]*INTUP))
         test = self.polygon.contains(point) or self.polygon.touches(point)
         return test
 
@@ -174,14 +179,14 @@ class Grid(object):
     """Grid is a proxy interface to Region, which translates
     lat/lon to col/row"""
     
-    def __init__(self, region, cell_size):
+    def __init__(self, region, cell_size=0.1*INTUP):
         self.region = region
         self.cell_size = cell_size
         self.lower_left_corner = self.region.lower_left_corner
         self.columns = self._longitude_to_column(
-                    self.region.upper_right_corner.longitude) + 1
+                    self.region.upper_right_corner._longitude) + 1
         self.rows = self._latitude_to_row(
-                    self.region.upper_right_corner.latitude) + 1
+                    self.region.upper_right_corner._latitude) + 1
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
@@ -204,32 +209,32 @@ class Grid(object):
     
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
-        latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
+        latitude_offset = math.fabs(latitude - self.lower_left_corner._latitude)
         return int(round(latitude_offset / self.cell_size))
 
     def _row_to_latitude(self, row):
         """Determine latitude from given grid row"""
-        return self.lower_left_corner.latitude + ((row) * self.cell_size)
+        return self.lower_left_corner._latitude + ((row) * self.cell_size)
 
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
-        longitude_offset = longitude - self.lower_left_corner.longitude
+        longitude_offset = longitude - self.lower_left_corner._longitude
         return int(round(longitude_offset / self.cell_size))
     
     def _column_to_longitude(self, column):
         """Determine longitude from given grid column"""
-        return self.lower_left_corner.longitude + ((column) * self.cell_size)
+        return self.lower_left_corner._longitude + ((column) * self.cell_size)
 
     def point_at(self, site):
         """Translates a site into a matrix bidimensional point."""
         self.check_site(site)
-        row = self._latitude_to_row(site.latitude)
-        column = self._longitude_to_column(site.longitude)
+        row = self._latitude_to_row(site._latitude)
+        column = self._longitude_to_column(site._longitude)
         return GridPoint(self, column, row)
     
     def site_at(self, gridpoint):    
         """Construct a site at the given grid point"""
-        return Site(self._column_to_longitude(gridpoint.column),
+        return Site.integer_site(self._column_to_longitude(gridpoint.column),
                              self._row_to_latitude(gridpoint.row))
     def __iter__(self):
         for row in range(0, self.rows):
@@ -241,7 +246,7 @@ class Grid(object):
                 except BoundsException:
                     print "GACK! at col %s row %s" % (col, row)
                     print "Point at %s %s isnt on grid" % \
-                        (point.site.longitude, point.site.latitude)
+                        (point.site._longitude, point.site._latitude)
 
 def c_mul(val_a, val_b):
     """Ugly method of hashing string to integer
@@ -253,7 +258,11 @@ class Site(object):
     """Site is a dictionary-keyable point"""
     
     def __init__(self, longitude, latitude):
-        self.point = geometry.Point(longitude, latitude)
+        self.point = geometry.Point(int(longitude*INTUP), int(latitude*INTUP))
+        
+    @classmethod
+    def integer_site(cls, _longitude, _latitude):
+        return cls(_longitude / INTUP, _latitude / INTUP)
     
     @property
     def coords(self):
@@ -263,10 +272,20 @@ class Site(object):
     @property
     def longitude(self):
         """Point x value is longitude"""
-        return self.point.x
+        return self.point.x / INTUP
+        
+    @property
+    def _longitude(self):
+        """Point x value is longitude"""
+        return self.point.x 
 
     @property
     def latitude(self):
+        """Point y value is latitude"""
+        return self.point.y / INTUP
+        
+    @property
+    def _latitude(self):
         """Point y value is latitude"""
         return self.point.y
 
@@ -278,6 +297,8 @@ class Site(object):
 
     def equals(self, other):
         """Verbose wrapper around =="""
+        if isinstance(other, Site):
+            other = other.point
         return self.point.equals(other)
 
     def hash(self):
@@ -307,7 +328,7 @@ class Site(object):
     
     def _geohash(self):
         """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x, 
+        return geohash.encode(self.latitude, self.longitude, 
             precision=FLAGS.distance_precision)
     
     def __cmp__(self, other):
