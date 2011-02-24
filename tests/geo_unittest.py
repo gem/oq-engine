@@ -11,12 +11,6 @@ from openquake import flags
 FLAGS = flags.FLAGS
 
 
-POLYGON_WKT = 'POLYGON ((10.0000000000000000 100.0000000000000000,\
- 100.0000000000000000 100.0000000000000000, 100.0000000000000000\
- 10.0000000000000000, 10.0000000000000000 10.0000000000000000,\
- 10.0000000000000000 100.0000000000000000))'
-
-
 INSIDE = [(50, 50),
           (11, 11),
           (99, 99)]
@@ -76,18 +70,6 @@ class RegionTestCase(unittest.TestCase):
         for point in OUTSIDE:
             self.assert_(not constraint.match(point),
                          'matched outside: %s' % str(point))
-
-    @test.skipit
-    def test_from_file(self):
-        fd, path = tempfile.mkstemp(suffix='.wkt')
-        with open(path, 'w') as wkt_file:
-            wkt_file.write(POLYGON_WKT)
-        
-        try:
-            constraint = shapes.RegionConstraint.from_file(path)
-            self._check_match(constraint)
-        finally:
-            os.unlink(path)
 
     def test_from_coordinates(self):
         constraint = shapes.RegionConstraint.from_coordinates(

@@ -57,13 +57,6 @@ class Region(object):
                   (bottom_right[0], top_left[1])]
         return cls.from_coordinates(points)
     
-    @classmethod
-    def from_file(cls, path):
-        """Load a region from a wkt file with a single polygon"""
-        with open(path) as wkt_file:
-            polygon = wkt.loads(wkt_file.read())
-            return cls(polygon=polygon)
-    
     @property
     def bounds(self):
         """Returns a bounding box containing the whole region"""
