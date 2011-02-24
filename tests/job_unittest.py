@@ -91,7 +91,7 @@ class JobTestCase(unittest.TestCase):
 
     def test_classical_psha_based_job(self):
         job = Job.from_file(TEST_JOB_FILE_CLASSICAL)
-        job.launch()
+        self.assertTrue(job.launch())
 
             
 

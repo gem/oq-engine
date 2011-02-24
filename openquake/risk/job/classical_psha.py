@@ -5,6 +5,8 @@ import json
 from openquake import job
 from openquake.risk import job as risk_job
 from celery.exceptions import TimeoutError
+from celery.decorators import task
+
 from openquake.shapes import Curve
 from openquake.parser import exposure
 from openquake.parser import vulnerability
@@ -53,25 +55,28 @@ class ClassicalPSHABasedMixin:
     @preload
     @output
     def execute(self):
+        tasks = []
+        results = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
             # pylint: disable-msg=E1101
             #tasks.append(risk_job.compute_risk.delay(self.id,block_id))
-            self.compute_risk_london(block_id)
+            tasks.append(risk_job.compute_risk.delay(self.id,block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # redis).
-#        for task in tasks:
-#            try:
-#                # TODO(chris): Figure out where to put that timeout.
-#                task.wait(timeout=None)
-#            except TimeoutError:
-#                # TODO(jmc): Cancel and respawn this task
-#                return []
-        return True
+        for task in tasks:
+            try:
+                # TODO(chris): Figure out where to put that timeout.
+                task.wait(timeout=None)
+            except TimeoutError:
+                # TODO(jmc): Cancel and respawn this task
+                return []
+        return results
 
-    def compute_risk_london(self, block_id, **kwargs):  # pylint: disable=W0613
+    @task
+    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         block = job.Block.from_kvs(block_id)
 
         #pylint: disable=W0201
@@ -231,7 +236,7 @@ class ClassicalPSHABasedMixin:
 #                key = kvs.generate_product_key(job_id,
 #                    risk.loss_token(conditional_loss_poe), block_id, gridpoint)
 #
-#                logger.debug("RESULT: conditional loss is %s, write to key %s"
+#                logger.debug("RESULT: conditional loss i %s, write to key %s"
 #                    % (loss_conditional, key))
 #                memcache_client.set(key, loss_conditional)
 #
@@ -239,4 +244,4 @@ class ClassicalPSHABasedMixin:
 #        # results from all tasks
 #        return True
 
-RiskJobMixin.register("Classical PSHA Based", ClassicalPSHABasedMixin)
+RiskJobMixin.register("Classical PSHA", ClassicalPSHABasedMixin)
