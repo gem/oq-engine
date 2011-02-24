@@ -118,6 +118,10 @@ def _compute_imls(vuln_function):
 
     # "special" cases for lowest part and highest part of the curve
     lowest_curve_value = imls[0] - ((imls[1] - imls[0]) / 2)
+
+    if lowest_curve_value < 0:
+        lowest_curve_value = 0
+
     highest_curve_value = imls[-1] + ((imls[-1] - imls[-2]) / 2)
 
     between_curve_values = collect(loop(imls, lambda x, y: mean([x, y])))

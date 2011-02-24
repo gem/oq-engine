@@ -25,6 +25,7 @@ def compute_mean_curve(curves):
     The input parameter is a list of arrays where each array
     contains just the y values of the corresponding hazard curve.
     """
+    
     return numpy.array(curves).mean(axis=0)
 
 
@@ -56,11 +57,18 @@ def _extract_y_values_from(curve):
         
     return y_values
 
-def _reconstruct_curve_list_from(curve_array):
+def _reconstruct_curve_list_from(poes, imls=None):
     """Reconstruct the x,y hazard curve list from numpy array, and leave
     out the un-needed x value."""
     
-    return [{'y': poe} for poe in curve_array]
+    curve = [{'y': poe} for poe in poes]
+    
+    if imls:
+        for values in curve:
+            values.update(x=imls.pop(0))
+
+    return curve
+    
 
 def _acceptable(value):
     """Return true if the value taken from the configuration
@@ -83,7 +91,7 @@ def curves_at(job_id, site):
     raw_curves = kvs.mget_decoded(pattern)
 
     for raw_curve in raw_curves:
-        curves.append(_extract_y_values_from(raw_curve["curve"]))
+        curves.append(raw_curve["curve"])
     
     return curves
 
@@ -134,9 +142,17 @@ def compute_mean_hazard_curves(job_id, sites):
 
     keys = []
     for site in sites:
+        hazard_curves = curves_at(job_id, site)
+        
+        poes = [_extract_y_values_from(curve) for curve in hazard_curves]
+        mean_poes = compute_mean_curve(poes)
+        
+        hazard_curve = hazard_curves.pop()
+        x_values = [values["x"] for values in hazard_curve]
+        
+        full_curve = _reconstruct_curve_list_from(mean_poes, x_values)
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-            "curve": _reconstruct_curve_list_from(compute_mean_curve(
-            curves_at(job_id, site)))}
+            "curve": full_curve}
 
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
         keys.append(key)
@@ -161,11 +177,14 @@ def compute_quantile_hazard_curves(job, sites):
 
     for site in sites:
         for quantile in quantiles:
+            hazard_curves = curves_at(job.id, site)
+
+            poes = [_extract_y_values_from(curve) for curve in hazard_curves]
+            quantile_poes = compute_quantile_curve(poes, quantile)
 
             quantile_curve = {"site_lat": site.latitude,
                 "site_lon": site.longitude, 
-                "curve": _reconstruct_curve_list_from(compute_quantile_curve(
-                curves_at(job.id, site), quantile))}
+                "curve": _reconstruct_curve_list_from(quantile_poes)}
 
             key = kvs.tokens.quantile_hazard_curve_key(
                     job.id, site, quantile)

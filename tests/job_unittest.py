@@ -25,6 +25,7 @@ CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE_CLASSICAL = test.smoketest_file('classical_psha_simple_london/config.gem')
 
 SITE = shapes.Site(1.0, 1.0)
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
@@ -88,9 +89,10 @@ class JobTestCase(unittest.TestCase):
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
-    def test_classical_psha_based_job_execute(self):
-        with Mixin(self.job, RiskJobMixin, key="classical_psha") as psha_mixin:
-            psha_mixin.execute()
+    def test_classical_psha_based_job(self):
+        job = Job.from_file(TEST_JOB_FILE_CLASSICAL)
+        job.launch()
+
             
 
     def test_classical_psha_based_job_mixes_in_properly(self):
