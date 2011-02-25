@@ -142,11 +142,12 @@ class RiskJobMixin(mixins.Mixin):
         results = self._serialize_and_plot(block_id, 
                                            curves=loss_ratio_curves,
                                            curve_mode='loss_ratio')
-        results.extend(self._serialize_and_plot(block_id, 
-                                                curves=loss_curves,
-                                                curve_mode='loss', 
-                                                curve_mode_prefix='loss_curve',
-                                                render_multi=True))
+        if loss_curves:
+            results.extend(self._serialize_and_plot(block_id, 
+                                                    curves=loss_curves,
+                                                    curve_mode='loss', 
+                                                    curve_mode_prefix='loss_curve',
+                                                    render_multi=True))
         return results
     
     def write_loss_map(self, loss_poe):

@@ -3,9 +3,9 @@
 
 import json
 from openquake import job
-from openquake.risk import job as risk_job
-from celery.exceptions import TimeoutError
-from celery.decorators import task
+#from celery.exceptions import TimeoutError
+#from celery.decorators import task
+
 
 from openquake.shapes import Curve
 from openquake.parser import exposure
@@ -56,6 +56,7 @@ class ClassicalPSHABasedMixin:
     @output
     def execute(self):
         tasks = []
+        results = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
@@ -72,7 +73,7 @@ class ClassicalPSHABasedMixin:
 #            except TimeoutError:
 #                # TODO(jmc): Cancel and respawn this task
 #                return []
-        return True
+        return results
 
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         block = job.Block.from_kvs(block_id)
@@ -95,8 +96,6 @@ class ClassicalPSHABasedMixin:
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
-                LOGGER.debug('myasset*************')
-                LOGGER.debug(asset)
                 LOGGER.debug("processing asset %s" % (asset))
 
                 vuln_function = self.vuln_curves.get(
