@@ -17,7 +17,8 @@ from openquake.risk.common import collect, loop
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 
-def _compute_loss_ratios(vuln_function, ground_motion_field_set):
+def _compute_loss_ratios(vuln_function, ground_motion_field_set,
+        epsilon_provider, asset):
     """Compute loss ratios using the ground motion field set passed."""
 
     if vuln_function.is_empty:
@@ -29,7 +30,31 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
     if all_covs_are_zero:
         return _mean_based(vuln_function, ground_motion_field_set)
     else:
-        return array([1, 2, 3])
+        return _sampled_based(vuln_function, ground_motion_field_set,
+                epsilon_provider, asset)
+
+
+def _sampled_based(vuln_function, ground_motion_field_set,
+        epsilon_provider, asset):
+
+    loss_ratios = []
+    imls = vuln_function.imls
+    
+    for ground_motion_field in ground_motion_field_set["IMLs"]:
+        mean = vuln_function.ordinate_for(ground_motion_field)
+        
+        if mean <= 0.0:
+            loss_ratios.append(0.0)
+        else:
+            variance = (mean * vuln_function.cov_for(
+                    ground_motion_field)) ** 2.0
+
+            epsilon = epsilon_provider.epsilon(asset)
+            sigma = math.sqrt(math.log((variance / mean ** 2.0) + 1.0))
+            mu = math.log(mean ** 2.0 / math.sqrt(variance + mean ** 2.0))
+            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
+
+    return array(loss_ratios)
 
 
 def _mean_based(vuln_function, ground_motion_field_set):
@@ -95,7 +120,7 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
-        number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
+        epsilon_provider, asset, number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -106,8 +131,8 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     if not ground_motion_field_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
-    loss_ratios = _compute_loss_ratios(
-            vuln_function, ground_motion_field_set)
+    loss_ratios = _compute_loss_ratios(vuln_function,
+            ground_motion_field_set, epsilon_provider, asset)
 
     loss_ratios_range = _compute_loss_ratios_range(
             loss_ratios, number_of_samples)
@@ -183,7 +208,7 @@ class AggregateLossCurve(object):
         assert len(gmfs["IMLs"]) is self._gmfs_length
 
         loss_ratios = _compute_loss_ratios(self.vuln_model[
-                asset["VulnerabilityFunction"]], gmfs)
+                asset["VulnerabilityFunction"]], gmfs, None, None)
 
         self.distribution.append(loss_ratios * asset["AssetValue"])
 

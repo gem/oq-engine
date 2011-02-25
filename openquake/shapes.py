@@ -542,6 +542,11 @@ class VulnerabilityFunction(Curve):
                     self.ordinates[idx][0],
                     self.ordinates[idx][1]))
 
+    def cov_for(self, iml):
+        """Return the interpolated CV (Coefficent of Variation) 
+        for the given IML (Intensity Measure Level)."""
+        return self.ordinate_for(iml, 1)
+
     @property
     def imls(self):
         """Return the imls of this function."""

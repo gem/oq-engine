@@ -202,7 +202,7 @@ class ProbabilisticEventMixin:
             return None
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
-                vuln_function, gmf_slice)
+                vuln_function, gmf_slice, self, asset)
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None

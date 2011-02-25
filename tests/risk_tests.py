@@ -66,7 +66,17 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
 # TSES = TimeSpan times number of Realizations
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-    
+
+    class EpsilonProvider(object):
+
+        def __init__(self, asset, epsilons):
+            self.asset = asset
+            self.epsilons = epsilons
+
+        def epsilon(self, asset):
+            assert self.asset is asset
+            return self.epsilons.pop(0)
+
     def setUp(self):
         self.vuln_function_1 = shapes.VulnerabilityFunction([
                 (0.01, (0.001, 0.00)),
@@ -214,11 +224,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_an_empty_function_produces_an_empty_set(self):
         self.assertEqual(0, prob._compute_loss_ratios(
-                shapes.EMPTY_CURVE, self.gmfs).size)
+                shapes.EMPTY_CURVE, self.gmfs, None, None).size)
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
         self.assertEqual(0, prob._compute_loss_ratios(
-                self.vuln_function_1, {"IMLs": ()}).size)
+                self.vuln_function_1, {"IMLs": ()}, None, None).size)
 
     def test_with_valid_covs_we_sample_the_loss_ratios(self):
         """With valid covs we need to sample loss ratios.
@@ -227,34 +237,68 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         to use a different algorithm to compute the loss ratios.
         """
 
-        self.vuln_function = shapes.VulnerabilityFunction([
-                (0.01, (0.001, 0.00)),
-                (0.04, (0.022, 0.00)),
-                (0.07, (0.051, 0.00)),
-                # valid cov
-                (0.10, (0.080, 0.05)),
-                (0.12, (0.100, 0.00)),
-                (0.22, (0.200, 0.00)),
-                (0.37, (0.405, 0.00)),
-                 # valid cov
-                (0.52, (0.700, 0.05))])
+        vuln_function = shapes.VulnerabilityFunction([
+                (0.10, (0.05, 0.30)),
+                (0.30, (0.10, 0.30)),
+                (0.50, (0.15, 0.20)),
+                (1.00, (0.30, 0.20))])
         
-        self.assertTrue(numpy.allclose(numpy.array([1, 2, 3]),
-                prob._compute_loss_ratios(
-                self.vuln_function, self.gmfs)))
+        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077, \
+                -0.4336, 0.3426, 3.5784, 2.7694]
+        
+        expected_asset = object()
+
+        gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
+                0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
+        
+        self.assertTrue(numpy.allclose(numpy.array([0.0722, 0.4106, 0.1800,
+                0.1710, 0.2508, 0.0395, 0.1145, 0.2883, 0.4734, 0.4885]),
+                prob._compute_loss_ratios(vuln_function, gmfs,
+                self.EpsilonProvider(expected_asset, epsilons),
+                expected_asset), atol=0.0001))
+
+    def test_when_the_mean_is_zero_the_loss_ratio_is_zero(self):
+        """When an interpolated mean loss ratio is zero, the resulting
+        loss ratio is also zero.
+
+        This is how the interpolation is done:
+        mean = vuln_function.ordinate_for(ground_motion_field)
+
+        In this case, the first IML from the GMFs is 0.10 and the
+        mean loss ratio in the vulnerability function for that IML
+        is zero. So the resulting loss ratio must be zero.
+        """
+
+        vuln_function = shapes.VulnerabilityFunction([
+                (0.10, (0.00, 0.30)),
+                (0.30, (0.10, 0.30)),
+                (0.50, (0.15, 0.20)),
+                (1.00, (0.30, 0.20))])
+
+        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077, \
+                -0.4336, 0.3426, 3.5784, 2.7694]
+
+        expected_asset = object()
+
+        gmfs = {"IMLs": (0.1000, 0.9706, 0.9572, 0.4854, 0.8003,
+                0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
+
+        self.assertEqual(0.0, prob._compute_loss_ratios(
+                vuln_function, gmfs, self.EpsilonProvider(
+                expected_asset, epsilons), expected_asset)[0])
 
     def test_loss_ratios_boundaries(self):
         # loss ratio is zero if the gmf iml is below the minimum iml
         # defined by the function min iml in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
                 prob._compute_loss_ratios(self.vuln_function_1,
-                {"IMLs": (0.0001, 0.0002, 0.0003)})))
+                {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None)))
 
         # loss ratio is equal to the maximum iml defined by the
         # function is greater than that max iml in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.52, 0.52]),
                 prob._compute_loss_ratios(self.vuln_function_1,
-                {"IMLs": (0.525, 0.53)})))
+                {"IMLs": (0.525, 0.53)}, None, None)))
 
     def test_loss_ratios_computation_using_gmfs(self):
         # manually computed values by Vitor Silva
@@ -333,7 +377,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-                prob._compute_loss_ratios(self.vuln_function_1, self.gmfs)))
+                prob._compute_loss_ratios(self.vuln_function_1,
+                self.gmfs, None, None)))
 
     def test_loss_ratios_range_generation(self):
         loss_ratios = numpy.array([0.0, 2.0])
@@ -344,7 +389,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
-        loss_ratios = prob._compute_loss_ratios(self.vuln_function_1, self.gmfs)
+        loss_ratios = prob._compute_loss_ratios(
+                self.vuln_function_1, self.gmfs, None, None)
+
         loss_ratios_range = prob._compute_loss_ratios_range(loss_ratios)
         
         self.assertTrue(numpy.allclose(self.cum_histogram,
@@ -390,48 +437,56 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.596785, 0.52763345), (0.767295, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_2, self.gmfs_1, 6))
+                self.vuln_function_2, self.gmfs_1,
+                None, None, number_of_samples=6))
 
         expected_curve = shapes.Curve([(0.0935225, 0.99326205),
                 (0.2640675, 0.917915), (0.4346125, 0.77686984),
                 (0.6051575, 0.52763345), (0.7757025, 0.22119922)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_2, self.gmfs_2, 6))
+                self.vuln_function_2, self.gmfs_2,
+                None, None, number_of_samples=6))
 
         expected_curve = shapes.Curve([(0.1047, 0.99326205),
                 (0.2584, 0.89460078), (0.4121, 0.63212056),
                 (0.5658, 0.39346934), (0.7195, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_2, self.gmfs_3, 6))
+                self.vuln_function_2, self.gmfs_3,
+                None, None, number_of_samples=6))
 
         expected_curve = shapes.Curve([(0.09012, 0.99326205),
                 (0.25551, 0.93607214), (0.4209, 0.77686984),
                 (0.58629, 0.52763345), (0.75168, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_2, self.gmfs_4, 6))
+                self.vuln_function_2, self.gmfs_4,
+                None, None, number_of_samples=6))
 
         expected_curve = shapes.Curve([(0.08089, 0.99326205),
                 (0.23872, 0.95021293), (0.39655, 0.7134952),
                 (0.55438, 0.52763345), (0.71221, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_2, self.gmfs_5, 6))
+                self.vuln_function_2, self.gmfs_5,
+                None, None, number_of_samples=6))
 
         expected_curve = shapes.Curve([(0.0717025, 0.99326205),
                 (0.2128575, 0.917915), (0.3540125, 0.82622606),
                 (0.4951675, 0.77686984), (0.6363225, 0.39346934)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_2, self.gmfs_6, 6))
+                self.vuln_function_2, self.gmfs_6,
+                None, None, number_of_samples=6))
 
     def test_with_not_earthquakes_we_have_an_empty_curve(self):
         gmfs = dict(self.gmfs)
         gmfs["IMLs"] = ()
 
-        curve = prob.compute_loss_ratio_curve(self.vuln_function_1, gmfs)
+        curve = prob.compute_loss_ratio_curve(
+                self.vuln_function_1, gmfs, None, None)
+
         self.assertEqual(shapes.EMPTY_CURVE, curve)
 
     def test_with_no_ground_motion_the_curve_degenerates_to_a_single_point(self):
@@ -450,7 +505,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)])
 
         self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
-                self.vuln_function_1, gmfs))
+                self.vuln_function_1, gmfs, None, None))
 
     def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
         self.assertEqual(shapes.EMPTY_CURVE,
