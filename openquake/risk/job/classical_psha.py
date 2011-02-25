@@ -56,26 +56,24 @@ class ClassicalPSHABasedMixin:
     @output
     def execute(self):
         tasks = []
-        results = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
             # pylint: disable-msg=E1101
             #tasks.append(risk_job.compute_risk.delay(self.id,block_id))
-            tasks.append(risk_job.compute_risk.delay(self.id,block_id))
+            tasks.append(self.compute_risk(block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # redis).
-        for task in tasks:
-            try:
-                # TODO(chris): Figure out where to put that timeout.
-                task.wait(timeout=None)
-            except TimeoutError:
-                # TODO(jmc): Cancel and respawn this task
-                return []
-        return results
+#        for task in tasks:
+#            try:
+#                # TODO(chris): Figure out where to put that timeout.
+#                task.wait(timeout=None)
+#            except TimeoutError:
+#                # TODO(jmc): Cancel and respawn this task
+#                return []
+        return True
 
-    @task
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         block = job.Block.from_kvs(block_id)
 
