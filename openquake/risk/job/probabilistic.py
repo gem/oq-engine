@@ -1,14 +1,15 @@
-# pylint: disable=W0232
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-""" Probabilistic Event Mixin: 
-
-    Defines the behaviour of a Job. Calls the compute_risk task
-
+"""
+Probabilistic Event Mixin: defines the behaviour of a Job. Calls the
+compute_risk task
 """
 
 import json
 
 from celery.exceptions import TimeoutError
+from scipy.stats import norm
 
 from openquake import job
 from openquake import kvs
@@ -26,6 +27,7 @@ LOGGER = logs.LOG
 
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
+
 def preload(fn):
     """ Preload decorator """
     def preloader(self, *args, **kwargs):
@@ -39,7 +41,12 @@ def preload(fn):
 
 
 class ProbabilisticEventMixin:
-    """ Mixin for Probalistic Event Risk Job """
+    # TODO (al-maisan) Consider refactoring our job system to make use of
+    # dependency injection techniques as opposed to monkey patching python's
+    # internal class structures. See also:
+    #       https://github.com/gem/openquake/issues/56
+    # pylint: disable=W0232,W0201
+    """Mixin for Probalistic Event Risk Job"""
 
     @preload
     @output
@@ -217,5 +224,42 @@ class ProbabilisticEventMixin:
                 loss_curve, key))
         kvs.set(key, loss_curve.to_json())
         return loss_curve
+
+    def epsilon(self, asset):
+        """Sample from the standard normal distribution for the given asset.
+
+        For uncorrelated risk calculation jobs we sample the standard normal
+        distribution for each asset.
+        In the opposite case ("perfectly correlated" assets) we sample for each
+        building typology i.e. two assets with the same typology will "share"
+        the same standard normal distribution sample.
+        
+        Two assets are considered to be of the same building typology if their
+        structure category is the same. The asset's `structureCategory` is
+        only needed for correlated jobs and unlikely to be available for
+        uncorrelated ones.
+        """
+        correlation = getattr(self, "ASSET_CORRELATION", None)
+        if not correlation:
+            # Sample per asset
+            return norm.rvs(loc=0, scale=1)
+        elif correlation != "perfect":
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
+        else:
+            # Sample per building typology
+            samples = getattr(self, "samples", None)
+            if samples is None:
+                # These are two references for the same dictionary.
+                samples = self.samples = dict()
+
+            category = asset.get("structureCategory")
+            if category is None:
+                raise ValueError(
+                    "Asset %s has no structure category" % asset["assetID"])
+
+            if category not in samples:
+                samples[category] = norm.rvs(loc=0, scale=1)
+            return samples[category]
+
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
