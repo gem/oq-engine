@@ -19,12 +19,12 @@ DEFAULT_NUMBER_OF_SAMPLES = 25
 
 def _compute_loss_ratios(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
-    """Compute loss ratios using the ground motion field set passed."""
+    """Compute the set of loss ratios using the set of
+    ground motion fields passed."""
 
     if vuln_function.is_empty:
         return array([])
 
-    loss_ratios = []
     all_covs_are_zero = (vuln_function.covs <= 0.0).all()
 
     if all_covs_are_zero:
@@ -36,35 +36,41 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set,
 
 def _sampled_based(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
+    """Compute the set of loss ratios when all CVs (Coefficent of Variation)
+    defined in the vulnerability function are greater than zero."""
 
     loss_ratios = []
-    imls = vuln_function.imls
-    
+
     for ground_motion_field in ground_motion_field_set["IMLs"]:
-        mean = vuln_function.ordinate_for(ground_motion_field)
-        
-        if mean <= 0.0:
+        mean_ratio = vuln_function.ordinate_for(ground_motion_field)
+
+        if mean_ratio <= 0.0:
             loss_ratios.append(0.0)
         else:
-            variance = (mean * vuln_function.cov_for(
+            variance = (mean_ratio * vuln_function.cov_for(
                     ground_motion_field)) ** 2.0
 
             epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(math.log((variance / mean ** 2.0) + 1.0))
-            mu = math.log(mean ** 2.0 / math.sqrt(variance + mean ** 2.0))
+            sigma = math.sqrt(math.log((variance / mean_ratio ** 2.0) + 1.0))
+
+            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
+                    variance + mean_ratio ** 2.0))
+
             loss_ratios.append(math.exp(mu + (epsilon * sigma)))
 
     return array(loss_ratios)
 
 
 def _mean_based(vuln_function, ground_motion_field_set):
-    # seems like with numpy you can only specify a single fill value
-    # if the x_new is outside the range. Here we need two different values,
-    # depending if the x_new is below or upon the defined values
+    """Compute the set of loss ratios when the vulnerability function
+    has at least one CV (Coefficent of Variation) set to zero."""
 
     loss_ratios = []
     imls = vuln_function.imls
 
+    # seems like with numpy you can only specify a single fill value
+    # if the x_new is outside the range. Here we need two different values,
+    # depending if the x_new is below or upon the defined values
     for ground_motion_field in ground_motion_field_set["IMLs"]:
         if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
@@ -73,7 +79,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
         else:
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_field))
-    
+
     return array(loss_ratios)
 
 
