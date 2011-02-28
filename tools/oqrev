@@ -1,18 +1,79 @@
 #!/bin/bash
 
+help() {
+cat <<HSD
+`basename $0` is a tool that helps reviewing OpenQuake branches of others or even
+your own (e.g. prior to creating a pull request).
+
+To review your own branch you merely need to go to your OpenQuake
+repository and check out the desired branch, then invoke `basename $0`.
+
+To review a colleague's branch against your own repo's master you would
+say e.g.
+
+    `basename $0` --branch=<remote-name>/<branch-name>
+
+To review against gem/master
+
+    `basename $0` --other=gem/master --branch=<remote-name>/<branch-name>
+
+To review a branch from a github pull request:
+
+    `basename $0` --pull=59
+
+Same thing against gem/master
+
+    `basename $0` --other=gem/master --pull=59
+
+The command line arguments are as follows:
+
+    --other=[RN/][BN]   The reference branch where RN is the git remote
+                        name and BN is the branch name e.g. "gem/master"
+                        or "master" (defaults: RN="", BN="master")
+    --branch=[RN/BN]    The branch you want to review e.g.
+                        "andrea/fix-aggregate-curve" (defaults: RN="",
+                        BN="<current-branch>")
+    --pull=PRN          Review the branch specified by a github pull
+                        request. PRN is the pull request number e.g. 59
+    -L|--local          Do not fetch any remotes
+    -S|--skip-pylint    Skip the pylint step of the review
+    -C|--colordiff      Pipe the branch diff through the "colordiff"
+                        tool
+HSD
+exit 0
+}
+
+git branch >/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+    if [ -z "$OQ_ROOT" ]
+    then
+        echo "This is not a git repository. Please cd to your OpenQuake"
+        echo "repository."
+        echo "Alternatively set the OQ_ROOT environment variable to contain"
+        echo "the repository path and the script will use that."
+        exit 1
+    else
+        cd $OQ_ROOT
+    fi
+fi
+
 other_remote=""
 other_reference="master"
 
 branch_remote=""
-branch_reference=`git branch | grep '^\*' | cut -f2 -d' '`
+branch_reference=`git branch | awk '/^\*/ { print $2 }'`
 
 fetch_remotes=1
+use_colordiff=0
+skip_pylint=0
+branch_name=""
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]
 then
     echo "Your branch has uncommitted changes. Please commit first."
-    exit 1
+    exit 2
 fi
 
 for i in $*
@@ -35,102 +96,164 @@ do
             branch_remote=""
         fi
         branch_reference=`basename $branch`
+        branch_name="$branch"
         ;;
     --pull=*)
         pull=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        branch=`curl -s https://github.com/gem/openquake/pull/$pull | grep "wants someone to merge .* commits into gem:master" | perl -wane 'if ($_ =~ /\s+from\s+([^:]+):([^"]+)/) { print $1, "/", $2 };'`
-        git_user_name=`dirname $branch`
-        branch_remote=`git remote -v | grep fetch | grep $git_user_name | perl -wane '@words = split(/\s+/, $_); print $words[0];'`
+        curl -s https://github.com/gem/openquake/pull/$pull >/tmp/pull.$pull
+        if [ $? -ne 0 ]
+        then
+            echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
+            exit 3
+        fi
+        pr_state=`awk '/class="state / { split($0,F,/[<>]/); print F[3];}' /tmp/pull.$pull | head -1`
+        if [ "$pr_state" != "Open" ]
+        then
+            echo "https://github.com/gem/openquake/pull/$pull is not open any more"
+            exit 4
+        fi
+        branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
+        branch_name="$branch"
+        git_user=`dirname $branch`
+        branch_remote=`git remote -v | awk "/$git_user.+fetch.$/ {print \\$1}"`
         if [ -z "$branch_remote" ]
         then
-            echo "You don't have a remote repository defined for git user $git_user_name. Plase add one and try again."
-            exit 2
+            echo "You don't have a remote repository defined for git user $git_user. Plase add one and try again."
+            exit 5
         fi
         branch_reference=`basename $branch`
         ;;
-    --other-remote=*)
-        other_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    -L|--local)
+        fetch_remotes=0
         ;;
-    --other-reference=*)
-        other_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    -C|--colordiff)
+        use_colordiff=1
         ;;
-    --branch-remote=*)
-        branch_remote=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+    -S|--skip-pylint)
+        skip_pylint=1
         ;;
-    --branch-reference=*)
-        branch_reference=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
-        ;;
-    --fetch-remotes)
-        fetch_remotes=1
+    -h|--help)
+        help
         ;;
     *)
         echo "Uknown option: " $i
-        exit 3
+        exit 6
         ;;
     esac
 done
 
-
-# Update remotes
-
-if [ $fetch_remotes -eq 1 ]
+if [ $skip_pylint -eq 0 ]
 then
-    echo "Fetching remotes.."
-    if [ ! -z "$other_remote" ]
+    which pylint >/dev/null 2>&1
+    if [ $? -ne 0 ]
     then
-        git fetch $other_remote
-    fi
-    if [ ! -z "$branch_remote" ]
-    then
-        git fetch $branch_remote
+        echo "Cannot find pylint .. Is it installed?"
+        exit 7
     fi
 fi
 
-git co master
+if [ -z "$branch_name" ]
+then
+    if [ ! -z "$branch_remote" ]
+    then
+        branch_name="$branch_remote/$branch_reference"
+    else
+        branch_name="$branch_reference"
+    fi
+fi
+
+# Update remotes
+if [ $fetch_remotes -eq 1 ]
+then
+    if [ ! -z "$other_remote" ]
+    then
+        echo "Fetching $other_remote .."
+        git fetch $other_remote
+        if [ $? -ne 0 ]
+        then
+            echo "git failed to fetch $other_remote"
+            exit 8
+        fi
+    fi
+    if [ ! -z "$branch_remote" ]
+    then
+        echo "Fetching $branch_remote .."
+        git fetch $branch_remote
+        if [ $? -ne 0 ]
+        then
+            echo "git failed to fetch $branch_remote"
+            exit 9
+        fi
+    fi
+fi
+
+git co master >/dev/null 2>&1
 git branch -D ba >/dev/null 2>&1
 git branch -D bb >/dev/null 2>&1
 
 if [ ! -z "$other_remote" ]
 then
     git co -b ba $other_remote/$other_reference
+    if [ $? -ne 0 ]
+    then
+        echo "git failed to create a tracking branch for $other_remote/$other_reference"
+        exit 10
+    fi
     other_branch="ba"
 else
     other_branch="$other_reference"
     git co $other_branch 
 fi
 
-echo "Running pylint on $other_branch.."
-pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
+if [ $skip_pylint -eq 0 ]
+then
+    echo "Running pylint on $other_branch.."
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
+fi
 
 if [ ! -z "$branch_remote" ]
 then
     git co -b bb $branch_remote/$branch_reference
+    if [ $? -ne 0 ]
+    then
+        echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
+        exit 11
+    fi
     branch_branch="bb"
 else
     branch_branch="$branch_reference"
     git co $branch_branch 
 fi
 
-echo "Running pylint on $branch_branch.."
-pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
-
-echo ""
-diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
-if [ $? -ne 0 ]
+if [ $skip_pylint -eq 0 ]
 then
-    added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
-    if [ $added_issues -gt 0 ]
+    echo "Running pylint on $branch_name.."
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
+
+    echo ""
+    diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
+    if [ $? -ne 0 ]
     then
-        echo "!! $branch_branch adds $added_issues pylint issues.."
-        cat /tmp/pl.diff
+        added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
+        if [ $added_issues -gt 0 ]
+        then
+            echo "!! $branch_name adds $added_issues pylint issues.."
+            cat /tmp/pl.diff
+        else
+            fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
+            echo "++ $branch_name fixes $fixed_issues existing pylint issues.."
+        fi
     else
-        fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
-        echo "++ $branch_branch fixes $fixed_issues existing pylint issues.."
+        echo "** $branch_name introduces no new pylint issues.."
     fi
-else
-    echo "** $branch_branch introduces no new pylint issues.."
+    echo ""
+    echo "Press <enter> to continue"
+    read
 fi
-echo ""
-echo "Press <enter> to continue"
-read
-git diff $other_branch...$branch_branch | colordiff | less -R
+
+if [ $use_colordiff -ne 0 ]
+then
+    git diff $other_branch...$branch_branch | colordiff | less -R
+else
+    git diff $other_branch...$branch_branch
+fi
