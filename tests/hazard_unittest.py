@@ -110,13 +110,11 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
             # LOG.debug("dir of hazengine is %s" % dir(hazengine))
             for realization in xrange(0, realizations):    
-                for site_list in hazengine.site_list_generator():
-                    for site in site_list:
-                        key = tokens.hazard_curve_key(hazengine.id,
-                                                      realization,
-                                                      site.longitude,
-                                                      site.latitude) 
-                        expected_keys.append(key) 
+                for site in hazengine.sites_for_region():
+                    key = tokens.hazard_curve_key(
+                        hazengine.id, realization, site.longitude,
+                        site.latitude) 
+                    expected_keys.append(key) 
             self.assertEqual(expected_keys, result_keys, 
                 "computation didn't yield hazard curve keys in "\
                 "expected order")
@@ -144,13 +142,11 @@ class HazardEngineTestCase(unittest.TestCase):
             if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
 
                 LOG.debug("verifying KVS entries for mean hazard curves")
-
-                for site_list in hazengine.site_list_generator():
-                    for site in site_list:
-                        key = tokens.mean_hazard_curve_key(hazengine.id, site)
-                        value = self.kvs_client.get(key)
-                        self.assertTrue(value is not None,
-                            "no non-empty value found at KVS key")
+                for site in hazengine.sites_for_region():
+                    key = tokens.mean_hazard_curve_key(hazengine.id, site)
+                    value = self.kvs_client.get(key)
+                    self.assertTrue(
+                        value is not None, "no value found at KVS key")
 
         def verify_mean_haz_maps_stored_to_kvs(hazengine):
             """ Make sure that the keys and non-empty values for mean 
@@ -166,12 +162,12 @@ class HazardEngineTestCase(unittest.TestCase):
                     classical_psha.POES_PARAM_NAME)
 
                 for poe in poes:
-                    for site_list in hazengine.site_list_generator():
-                        for site in site_list:
-                            key = tokens.mean_hazard_map_key(hazengine.id, site, poe)
-                            value = self.kvs_client.get(key)
-                            self.assertTrue(value is not None,
-                                "no non-empty value found at KVS key")
+                    for site in hazengine.sites_for_region():
+                        key = tokens.mean_hazard_map_key(
+                            hazengine.id, site, poe)
+                        value = self.kvs_client.get(key)
+                        self.assertTrue(
+                            value is not None, "no value found at KVS key")
 
         def verify_quantile_haz_curves_stored_to_kvs(hazengine):
             """ Make sure that the keys and non-empty values for quantile 
@@ -184,13 +180,12 @@ class HazardEngineTestCase(unittest.TestCase):
                 "%s quantile values" % len(quantiles))
 
             for quantile in quantiles:
-                for site_list in hazengine.site_list_generator():
-                    for site in site_list:
-                        key = tokens.quantile_hazard_curve_key(hazengine.id, 
-                            site, quantile)
-                        value = self.kvs_client.get(key)
-                        self.assertTrue(value is not None,
-                            "no non-empty value found at KVS key")
+                for site in hazengine.sites_for_region():
+                    key = tokens.quantile_hazard_curve_key(
+                        hazengine.id, site, quantile)
+                    value = self.kvs_client.get(key)
+                    self.assertTrue(
+                        value is not None, "no value found at KVS key")
 
         def verify_quantile_haz_maps_stored_to_kvs(hazengine):
             """ Make sure that the keys and non-empty values for quantile 
@@ -211,14 +206,13 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 for quantile in quantiles:
                     for poe in poes:
-                        for site_list in hazengine.site_list_generator():
-                            for site in site_list:
-                                key = tokens.quantile_hazard_map_key(hazengine.id, 
-                                    site, poe, quantile)
-                                value = self.kvs_client.get(key)
-                                self.assertTrue(value is not None,
-                                    "no non-empty value found at KVS key %s" \
-                                    % key)
+                        for site in hazengine.sites_for_region():
+                            key = tokens.quantile_hazard_map_key(
+                                hazengine.id, site, poe, quantile)
+                            value = self.kvs_client.get(key)
+                            self.assertTrue(
+                                value is not None,
+                                "no value found at KVS key %s" % key)
 
         def verify_realization_haz_curves_stored_to_nrml(hazengine):
             """Tests that a NRML file has been written for each realization,
