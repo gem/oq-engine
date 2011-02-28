@@ -299,7 +299,6 @@ class Job(object):
         if self.base_path is None:
             LOG.debug("Can't slurp files without a base path, homie...")
             return
-            # raise Exception("Can't slurp files without a base path, homie...")
         for key, val in self.params.items():
             if key[-5:] == '_FILE':
                 path = os.path.join(self.base_path, val)
@@ -391,7 +390,8 @@ class Block(object):
 class BlockSplitter(object):
     """Split the sites into a set of blocks."""
 
-    def __init__(self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
+    def __init__(
+        self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
         self.sites = sites
         self.constraint = constraint
         self.sites_per_block = sites_per_block

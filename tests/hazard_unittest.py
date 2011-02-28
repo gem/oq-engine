@@ -30,10 +30,11 @@ from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
 
-MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
-                        "site":"+35.0500 +35.0000", "intensity": 1.9623e+00, \
-                        "site":"+35.1000 +35.0000", "intensity": 2.0320e+00, \
-                        "site":"+35.1500 +35.0000", "intensity": 2.0594e+00}'
+MEAN_GROUND_INTENSITY = (
+    '{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00,'
+    '"site":"+35.0500 +35.0000", "intensity": 1.9623e+00,'
+    '"site":"+35.1000 +35.0000", "intensity": 2.0320e+00,'
+    '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
