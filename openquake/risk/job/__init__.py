@@ -14,11 +14,10 @@ from openquake import shapes
 from openquake.output import curve
 from openquake.output import risk as risk_output
 
-from openquake.risk.job.aggregate_loss_curve import AggregateLossCurveMixin
-
 from celery.decorators import task
 
 LOG = logs.LOG
+
 
 def output(fn):
     """ Decorator for output """
@@ -73,7 +72,7 @@ def compute_risk(job_id, block_id, **kwargs):
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin, key="risk") as mixed:
         mixed.compute_risk(block_id, **kwargs)
-        
+
 
 class RiskJobMixin(mixins.Mixin):
     """ A mixin proxy for Risk jobs """
@@ -178,4 +177,3 @@ class RiskJobMixin(mixins.Mixin):
 
 
 mixins.Mixin.register("Risk", RiskJobMixin, order=2)
-mixins.Mixin.register("AggregateLossCurve", AggregateLossCurveMixin, order=3)
