@@ -208,7 +208,7 @@ fi
 if [ $skip_pylint -eq 0 ]
 then
     echo "Running pylint on $other_branch.."
-    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.a
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
 fi
 
 if [ ! -z "$branch_remote" ]
@@ -228,7 +228,7 @@ fi
 if [ $skip_pylint -eq 0 ]
 then
     echo "Running pylint on $branch_name.."
-    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' > /tmp/pl.b
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 
     echo ""
     diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
