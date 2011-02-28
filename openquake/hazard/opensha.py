@@ -166,15 +166,10 @@ class ClassicalMixin(BasePSHAMixin):
         
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
-        # tally and log the total number of sites
-        # TODO (LB): with a large number of sites, this could get expensive
-        # and we might want to change this
-        total_sites = 0
-        for site_list in self.site_list_generator():
-            total_sites += len(site_list)
+        site_list = self.sites_for_region()
 
         LOG.info('Going to run classical PSHA hazard for %s realizations '\
-                 'and %s sites' % (realizations, total_sites))
+                 'and %s sites' % (realizations, len(site_list)))
 
         for realization in xrange(0, realizations):
             LOG.info('Calculating hazard curves for realization %s'
@@ -184,9 +179,9 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
             
-            for site_list in self.site_list_generator():
-                pending_tasks.append(tasks.compute_hazard_curve.delay(
-                        self.id, site_list, realization))
+            pending_tasks.append(
+                tasks.compute_hazard_curve.delay(self.id, site_list,
+                    realization))
 
             for task in pending_tasks:
                 task.wait()
@@ -206,13 +201,11 @@ class ClassicalMixin(BasePSHAMixin):
         results_quantile = []
 
         LOG.info('Computing mean and quantile hazard curves')
-        for site_list in self.site_list_generator():
-
-            pending_tasks_quantile.append(tasks.compute_quantile_curves.delay(
-                self.id, site_list))
-            if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
-                pending_tasks_mean.append(tasks.compute_mean_curves.delay(
-                    self.id, site_list))
+        pending_tasks_quantile.append(
+            tasks.compute_quantile_curves.delay(self.id, site_list))
+        if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
+            pending_tasks_mean.append(
+                tasks.compute_mean_curves.delay( self.id, site_list))
 
         for task in pending_tasks_mean:
             task.wait()
@@ -538,29 +531,26 @@ class EventBasedMixin(BasePSHAMixin): # pylint: disable=W0232
         
         histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        LOG.info("Going to run hazard for %s histories of %s realizations each."
-                % (histories, realizations))
+        LOG.info(
+            "Going to run hazard for %s histories of %s realizations each."
+            % (histories, realizations))
 
         for i in range(0, histories):
             pending_tasks = []
             for j in range(0, realizations):
                 self.store_source_model(source_model_generator.getrandbits(32))
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
-                for site_list in self.site_list_generator():
-                    stochastic_set_id = "%s!%s" % (i, j)
-                    # pylint: disable=E1101
-                    pending_tasks.append(
-                        tasks.compute_ground_motion_fields.delay(
-                            self.id,
-                            site_list,
-                            stochastic_set_id, gmf_generator.getrandbits(32)))
+                stochastic_set_id = "%s!%s" % (i, j)
+                pending_tasks.append(
+                    tasks.compute_ground_motion_fields.delay(
+                        self.id, self.sites_for_region(), stochastic_set_id,
+                        gmf_generator.getrandbits(32)))
         
             for task in pending_tasks:
                 task.wait()
                 if task.status != 'SUCCESS': 
                     raise Exception(task.result)
                     
-            # if self.params['OUTPUT_GMF_FILES']
             for j in range(0, realizations):
                 stochastic_set_id = "%s!%s" % (i, j)
                 stochastic_set_key = kvs.generate_product_key(

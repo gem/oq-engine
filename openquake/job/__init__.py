@@ -318,14 +318,13 @@ class Job(object):
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
-    def site_list_generator(self):
-        """Will subset and yield portions of the region, depending on the 
-        the computation mode."""
+    def sites_for_region(self):
+        """Return the list of sites for the region at hand."""
         verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
         coords = zip(verts[1::2], verts[::2])
         region = shapes.Region.from_coordinates(coords)
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
-        yield [site for site in region]
+        return [site for site in region]
 
 
 class AlwaysTrueConstraint():
