@@ -130,7 +130,7 @@ def set_value_json_encoded(key, value):
     return True
 
 
-def set(key, encoded_value): #pylint: disable=W0622
+def set(key, encoded_value):  #pylint: disable=W0622
     """ Set value in kvs, for objects that have their own encoding method. """
 
     get_client(binary=False).set(key, encoded_value)
