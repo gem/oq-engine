@@ -140,8 +140,7 @@ class Job(object):
             params.update(new_params)
         params['BASE_PATH'] = base_path
         job = Job(params, sections=sections, base_path=base_path)
-        job.config_file = config_file
-        # job.config_file = job.super_config_path   #pylint: disable=W0201
+        job.config_file = config_file  # pylint: disable=W0201
         return job
 
     def __init__(self, params, job_id=None, sections=list(), base_path=None):
