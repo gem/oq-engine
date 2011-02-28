@@ -159,7 +159,7 @@ class Job(object):
     def has(self, name):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
-        return name in self.params and self.params[name] != ""
+        return name in self.params and self.params[name]
 
     @property
     def id(self):  # pylint: disable=C0103
