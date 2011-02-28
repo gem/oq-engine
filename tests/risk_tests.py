@@ -261,7 +261,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def test_with_valid_covs_we_sample_the_loss_ratios(self):
         """With valid covs we need to sample loss ratios.
         
-        If the vulnerability function has some cov greater than 0.0 we need
+        If the vulnerability function has some covs greater than 0.0 we need
         to use a different algorithm (sampled based) to compute the loss ratios.
         """
 

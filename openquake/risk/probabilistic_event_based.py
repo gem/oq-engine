@@ -37,8 +37,9 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set,
 
 def _sampled_based(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
-    """Compute the set of loss ratios when all CVs (Coefficent of Variation)
-    defined in the vulnerability function are greater than zero."""
+    """Compute the set of loss ratios when at least one CV
+    (Coefficent of Variation) defined in the vulnerability function
+    is greater than zero."""
 
     loss_ratios = []
 
@@ -64,7 +65,7 @@ def _sampled_based(vuln_function, ground_motion_field_set,
 
 def _mean_based(vuln_function, ground_motion_field_set):
     """Compute the set of loss ratios when the vulnerability function
-    has at least one CV (Coefficent of Variation) set to zero."""
+    has all the CVs (Coefficent of Variation) set to zero."""
 
     loss_ratios = []
     imls = vuln_function.imls
