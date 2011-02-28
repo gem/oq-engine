@@ -395,12 +395,12 @@ class ClassicalMixin(BasePSHAMixin):
         if len(poe_list) == 0:
             return None
 
-        if _is_mean_hazard_map_key(map_keys[0]):
+        if _is_mean_hazmap_key(map_keys[0]):
             hm_attrib_update = {'statistics': 'mean'}
             filename_part = 'mean'
             map_mode = 'mean'
 
-        elif _is_quantile_hazard_map_key(map_keys[0]):
+        elif _is_quantile_hazmap_key(map_keys[0]):
 
             # get quantile value from KVS key
             quantile_value = tokens.quantile_value_from_hazard_map_key(
@@ -435,12 +435,12 @@ class ClassicalMixin(BasePSHAMixin):
                 if tokens.poe_value_from_hazard_map_key(hm_key) != poe:
                     continue
 
-                elif map_mode == 'mean' and not _is_mean_hazard_map_key(hm_key):
+                elif map_mode == 'mean' and not _is_mean_hazmap_key(hm_key):
                     error_msg = "non-mean hazard map key found in mean mode"
                     raise RuntimeError(error_msg)
 
                 elif map_mode == 'quantile':
-                    if not _is_quantile_hazard_map_key(hm_key):
+                    if not _is_quantile_hazmap_key(hm_key):
                         error_msg = "non-quantile hazard map key found in "\
                                     "quantile mode"
                         raise RuntimeError(error_msg)
@@ -643,12 +643,12 @@ def _is_quantile_hazard_curve_key(kvs_key):
                 tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
 
-def _is_mean_hazard_map_key(kvs_key):
+def _is_mean_hazmap_key(kvs_key):
     return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
                 tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
 
 
-def _is_quantile_hazard_map_key(kvs_key):
+def _is_quantile_hazmap_key(kvs_key):
     return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
                 tokens.QUANTILE_HAZARD_MAP_KEY_TOKEN)
 
