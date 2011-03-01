@@ -26,6 +26,7 @@ SITES_PER_BLOCK = 100
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
 
+
 def run_job(job_file):
     """ Given a job_file, run the job. If we don't get results log it """
     a_job = Job.from_file(job_file)
@@ -98,14 +99,14 @@ class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     __cwd = os.path.dirname(__file__)
-    __defaults = [os.path.join(__cwd, "../", "default.gem"), #package
+    __defaults = [os.path.join(__cwd, "../", "default.gem"),  # package
                     "openquake.gem",        # Sane Defaults
                     "/etc/openquake.gem",   # Site level configs
                     "~/.openquake.gem"]     # Are we running as a user?
 
     @classmethod
     def default_configs(cls):
-        """ 
+        """
          Default job configuration files, writes a warning if they don't exist.
         """
         if not FLAGS.include_defaults:
@@ -120,7 +121,7 @@ class Job(object):
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
-        
+
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
         return Job(params, job_id)
 
@@ -128,8 +129,8 @@ class Job(object):
     def from_file(config_file):
         """ Create a job from external configuration files. """
         config_file = os.path.abspath(config_file)
-        LOG.debug("Loading Job from %s" % (config_file)) 
-        
+        LOG.debug("Loading Job from %s" % (config_file))
+
         base_path = os.path.abspath(os.path.dirname(config_file))
         params = {}
         sections = []
@@ -139,19 +140,18 @@ class Job(object):
             params.update(new_params)
         params['BASE_PATH'] = base_path
         job = Job(params, sections=sections, base_path=base_path)
-        job.config_file = config_file               #pylint: disable=W0201
-        # job.config_file = job.super_config_path   #pylint: disable=W0201
+        job.config_file = config_file  # pylint: disable=W0201
         return job
 
     def __init__(self, params, job_id=None, sections=list(), base_path=None):
         if job_id is None:
             job_id = kvs.generate_random_id()
-        
+
         self.job_id = job_id
         self.blocks_keys = []
         self.partition = True
         self.params = params
-        self.sections = list(set(sections)) # uniquify
+        self.sections = list(set(sections))
         self.base_path = base_path
         if base_path:
             self.to_kvs()
@@ -159,13 +159,13 @@ class Job(object):
     def has(self, name):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
-        return self.params.has_key(name) and self.params[name] != ""
+        return name in self.params and self.params[name]
 
     @property
-    def id(self): #pylint: disable=C0103
+    def id(self):  # pylint: disable=C0103
         """Return the id of this job."""
         return self.job_id
-    
+
     @property
     def key(self):
         """Returns the kvs key for this job."""
@@ -207,8 +207,8 @@ class Job(object):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key)) 
-                results.extend(self.execute()) #pylint: disable=E1101
+                LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key))
+                results.extend(self.execute())
 
         return results
 
@@ -220,7 +220,7 @@ class Job(object):
         sites = []
         self.blocks_keys = []
         region_constraint = self.region
-        
+
         # we use the exposure, if specified,
         # otherwise we use the input region
         if self.has(EXPOSURE):
@@ -254,7 +254,7 @@ class Job(object):
         if not constraint:
             constraint = AlwaysTrueConstraint()
         else:
-            LOG.debug("Constraining exposure parsing to %s" % 
+            LOG.debug("Constraining exposure parsing to %s" %
                 constraint.polygon)
         for asset_data in reader.filter(constraint):
             sites.append(asset_data[0])
@@ -266,13 +266,13 @@ class Job(object):
 
     def __eq__(self, other):
         return self.params == other.params
-        
+
     def __str__(self):
         return str(self.params)
 
     def _write_super_config(self):
         """
-            Take our params and write them out as a 'super' config file. 
+            Take our params and write them out as a 'super' config file.
             Its name is equal to the job_id, which should be the sha1 of
             the file in production or a random job in dev.
         """
@@ -299,7 +299,6 @@ class Job(object):
         if self.base_path is None:
             LOG.debug("Can't slurp files without a base path, homie...")
             return
-            # raise Exception("Can't slurp files without a base path, homie...")
         for key, val in self.params.items():
             if key[-5:] == '_FILE':
                 path = os.path.join(self.base_path, val)
@@ -318,14 +317,13 @@ class Job(object):
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
-    def site_list_generator(self):
-        """Will subset and yield portions of the region, depending on the 
-        the computation mode."""
+    def sites_for_region(self):
+        """Return the list of sites for the region at hand."""
         verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
         coords = zip(verts[1::2], verts[::2])
         region = shapes.Region.from_coordinates(coords)
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
-        yield [site for site in region]
+        return [site for site in region]
 
 
 class AlwaysTrueConstraint():
@@ -384,7 +382,7 @@ class Block(object):
         kvs.set_value_json_encoded(self.id, raw_sites)
 
     @property
-    def id(self): #pylint: disable=C0103
+    def id(self):  # pylint: disable=C0103
         """Return the id of this block."""
         return self.block_id
 
@@ -392,14 +390,15 @@ class Block(object):
 class BlockSplitter(object):
     """Split the sites into a set of blocks."""
 
-    def __init__(self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
+    def __init__(
+        self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
         self.sites = sites
         self.constraint = constraint
         self.sites_per_block = sites_per_block
-    
-        if not self.constraint:            
+
+        if not self.constraint:
             self.constraint = AlwaysTrueConstraint()
-    
+
     def __iter__(self):
         filtered_sites = []
 
@@ -410,5 +409,5 @@ class BlockSplitter(object):
                     yield(Block(filtered_sites))
                     filtered_sites = []
         if not filtered_sites:
-            return    
+            return
         yield(Block(filtered_sites))
