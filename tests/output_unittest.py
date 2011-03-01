@@ -499,3 +499,33 @@ class OutputTestCase(unittest.TestCase):
         """if used with asymmetic large region, return value 
         range -1..4"""
         return (row_idx * col_idx / (10.0 * 100.0)) - 1.0
+
+    def test_color_map_from_cpt_good_discrete(self):
+        test_file = 'seminf-haxby.cpt'
+        test_path = os.path.join(test.DATA_DIR, test_file)
+        expected_map = {'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
+                        'name': 'seminf-haxby',
+                        'type': 'discrete',
+                        'model': 'RGB',
+                        'z_values': [1.25 * x for x in range(25)], # [0.0, 1.25, ... , 28.75, 30.0]
+                        'red': [255, 208, 186, 143, 97, 0, 25, 12, 24, 49, 67, 96,
+                                105, 123, 138, 172, 205, 223, 240, 247, 255,
+                                255, 244, 238],
+                        'green': [255, 216, 197, 161, 122, 39, 101, 129, 175, 190,
+                                  202, 225, 235, 235, 236, 245, 255, 245, 236,
+                                  215, 189, 160, 116, 79],
+                        'blue': [255, 251, 247, 241, 236, 224, 240, 248, 255, 255,
+                                 255, 240, 225, 200, 174, 168, 162, 141, 120,
+                                 103, 86, 68, 74, 77]}
+        actual_map = geotiff.color_map_from_cpt(test_path)
+        print "expected:"
+        for k,v in expected_map.items():
+            print '%s\t%s' % (k,v)
+        print
+        print "actual:"
+        for k,v in actual_map.items():
+            print '%s\t%s' % (k,v)
+        self.assertEqual(expected_map, actual_map)
+
+    def test_color_map_from_cpt_good_continuous(self):
+        pass
