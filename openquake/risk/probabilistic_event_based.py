@@ -4,6 +4,7 @@ This module defines functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
 """
 
+import json
 import math
 
 from numpy import zeros, array, linspace # pylint: disable=E1101, E0611
@@ -120,16 +121,16 @@ def _generate_curve(losses, probs_of_exceedance):
     return shapes.Curve(zip(mean_losses, probs_of_exceedance))
 
 
-def _asset_for_gmfs(job_id, gmfs_key):
+def _assets_keys_for_gmfs(job_id, gmfs_key):
     """Return the asset related to the GMFs given."""
 
-    row = lambda key: key.split(kvs.MEMCACHE_KEY_SEPARATOR)[2]
-    column = lambda key: key.split(kvs.MEMCACHE_KEY_SEPARATOR)[3]
+    row = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[3]
+    column = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[2]
 
     key = kvs.tokens.asset_key(
             job_id, row(gmfs_key), column(gmfs_key))
 
-    return kvs.get_value_json_decoded(key)
+    return kvs.get_client().lrange(key, 0, -1)
 
 
 class AggregateLossCurve(object):
@@ -143,15 +144,23 @@ class AggregateLossCurve(object):
         vuln_model = vulnerability.load_vuln_model_from_kvs(job_id)
         aggregate_curve = AggregateLossCurve(vuln_model)
 
-        client = kvs.get_client(binary=False)
-        gmfs_keys = client.keys("%s*%s*" % (job_id, kvs.tokens.GMF_KEY_TOKEN))
+        gmfs_keys = kvs.get_keys("%s*%s*" % (
+                job_id, kvs.tokens.GMF_KEY_TOKEN))
+
         LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
+        asset_counter = 0
 
-        for gmfs_key in gmfs_keys: # O(2*n)
-            asset = _asset_for_gmfs(job_id, gmfs_key)
-            gmfs = kvs.get_value_json_decoded(gmfs_key)
-            aggregate_curve.append(gmfs, asset)
+        for gmfs_key in gmfs_keys:
+            assets = _assets_keys_for_gmfs(job_id, gmfs_key)
 
+            for asset in assets:
+                asset_counter += 1
+                gmfs = kvs.get_value_json_decoded(gmfs_key)
+
+                aggregate_curve.append(gmfs,
+                        json.JSONDecoder().decode(asset))
+
+        LOG.debug("Found %s stored assets..." % asset_counter)
         return aggregate_curve
 
     def __init__(self, vuln_model):
@@ -167,14 +176,20 @@ class AggregateLossCurve(object):
         if self.empty:
             self._initialize_parameters(gmfs)
 
-        assert gmfs["TimeSpan"] is self._time_span
-        assert gmfs["TSES"] is self._tses
-        assert len(gmfs["IMLs"]) is self._gmfs_length
+        assert gmfs["TimeSpan"] == self._time_span
+        assert gmfs["TSES"] == self._tses
+        assert len(gmfs["IMLs"]) == self._gmfs_length
 
-        loss_ratios = _compute_loss_ratios(self.vuln_model[
-                asset["VulnerabilityFunction"]], gmfs)
+        if asset["vulnerabilityFunctionReference"] in self.vuln_model:
+            loss_ratios = _compute_loss_ratios(self.vuln_model[
+                    asset["vulnerabilityFunctionReference"]], gmfs)
 
-        self.distribution.append(loss_ratios * asset["AssetValue"])
+            self.distribution.append(loss_ratios * asset["assetValue"])
+        else:
+            LOG.debug("Unknown vulnerability function %s, asset %s will " \
+                    "not be included in the aggregate computation"
+                    % (asset["vulnerabilityFunctionReference"],
+                    asset["assetID"]))
 
     def _initialize_parameters(self, gmfs):
         """Initialize the GMFs parameters."""
