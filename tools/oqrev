@@ -187,13 +187,13 @@ then
     fi
 fi
 
-git co master >/dev/null 2>&1
+git checkout master >/dev/null 2>&1
 git branch -D ba >/dev/null 2>&1
 git branch -D bb >/dev/null 2>&1
 
 if [ ! -z "$other_remote" ]
 then
-    git co -b ba $other_remote/$other_reference
+    git checkout -b ba $other_remote/$other_reference
     if [ $? -ne 0 ]
     then
         echo "git failed to create a tracking branch for $other_remote/$other_reference"
@@ -202,7 +202,7 @@ then
     other_branch="ba"
 else
     other_branch="$other_reference"
-    git co $other_branch 
+    git checkout $other_branch 
 fi
 
 if [ $skip_pylint -eq 0 ]
@@ -213,7 +213,7 @@ fi
 
 if [ ! -z "$branch_remote" ]
 then
-    git co -b bb $branch_remote/$branch_reference
+    git checkout -b bb $branch_remote/$branch_reference
     if [ $? -ne 0 ]
     then
         echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
@@ -222,7 +222,7 @@ then
     branch_branch="bb"
 else
     branch_branch="$branch_reference"
-    git co $branch_branch 
+    git checkout $branch_branch 
 fi
 
 if [ $skip_pylint -eq 0 ]
