@@ -204,29 +204,54 @@ class ProbabilisticEventMixin:
             loss_conditional, key))
         kvs.set(key, loss_conditional)
 
-    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice): # site_id
+    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice):
         """Compute the loss ratio curve for a single site."""
-        # If the asset has a vuln function code we don't have loaded, return
-        # fail
+
+        # if the asset has an unknown vulnerability code, return fail
         vuln_function = self.vuln_curves.get(
                 asset["vulnerabilityFunctionReference"], None)
+
         if not vuln_function:
             LOGGER.error("Unknown vulnerability function %s for asset %s"
-                % (asset["vulnerabilityFunctionReference"], asset["assetID"]))
+                    % (asset["vulnerabilityFunctionReference"],
+                    asset["assetID"]))
+
             return None
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
-                vuln_function, gmf_slice)
+                vuln_function, gmf_slice, self._get_number_of_samples())
+
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None
+
         key = kvs.tokens.loss_ratio_key(self.id, row, col, asset["assetID"])
+        kvs.set(key, loss_ratio_curve.to_json())
 
         LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
                 loss_ratio_curve, key))
 
-        kvs.set(key, loss_ratio_curve.to_json())
         return loss_ratio_curve
+
+    def _get_number_of_samples(self):
+        """Return the number of samples used to compute the loss ratio
+        curve specified in the PROB_NUM_OF_SAMPLES parameter.
+
+        Return None if the parameter is not specified, or empty or
+        the value can't be casted to int.
+        """
+
+        number_of_samples = None
+        raw_value = getattr(self, "PROB_NUM_OF_SAMPLES", None)
+
+        if raw_value:
+            try:
+                number_of_samples = int(raw_value)
+            except ValueError:
+                LOGGER.debug("PROB_NUM_OF_SAMPLES %s can't be converted " \
+                        "to int, using default value..." % raw_value)
+
+        return number_of_samples
 
     def compute_loss_curve(self, column, row, loss_ratio_curve, asset):
         """Compute the loss curve for a single site."""

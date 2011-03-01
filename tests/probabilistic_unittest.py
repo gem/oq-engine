@@ -4,12 +4,15 @@
 import os
 import unittest
 
+from openquake import shapes
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.risk import probabilistic_event_based as prob
 from openquake.parser import exposure
 from utils import test
 
 
 TEST_FILE = "exposure-portfolio.xml"
+NUMBER_OF_SAMPLES_FROM_CONFIG = "10"
 
 
 class EpsilonTestCase(unittest.TestCase):
@@ -82,3 +85,64 @@ class EpsilonTestCase(unittest.TestCase):
             del asset["structureCategory"]
             e = self.assertRaises(ValueError, self.mixin.epsilon, asset)
             break
+
+
+class SamplesFromConfigTestCase(unittest.TestCase):
+    """Tests for the functionality that reads the the number of samples
+    for the probabilistic scenario from the configuration file."""
+
+    def setUp(self):
+        vuln_function = shapes.VulnerabilityFunction([
+                (0.01, (0.001, 0.00)),
+                (0.04, (0.022, 0.00)),
+                (0.07, (0.051, 0.00)),
+                (0.10, (0.080, 0.00))])
+
+        self.gmfs = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118),
+                "TSES": 200, "TimeSpan": 50}
+
+        # TODO (ac): We should consider injecting the scientific
+        # modules into the mixins to ease testing
+
+        # a loss ratio curve computed with the default
+        # number of samples specified in the probablistic_event_based module
+        self.loss_ratio_curve_default = \
+                prob.compute_loss_ratio_curve(vuln_function, self.gmfs)
+
+        # a loss ratio curve computed with a number
+        # of samples set to NUMBER_OF_SAMPLES_FROM_CONFIG
+        self.loss_ratio_curve_config = prob.compute_loss_ratio_curve(
+                vuln_function, self.gmfs, NUMBER_OF_SAMPLES_FROM_CONFIG)
+
+        self.mixin = ProbabilisticEventMixin()
+
+        self.mixin.id = 1234
+        self.mixin.vuln_curves = {"ID": vuln_function}
+        self.asset = {"vulnerabilityFunctionReference": "ID", "assetID": "ID"}
+
+    def test_without_parameter_we_use_the_default_value(self):
+        self.assertEqual(self.loss_ratio_curve_default,
+                self._compute_loss_ratio_curve())
+    
+    def test_with_empty_parameter_we_use_the_default_value(self):
+        self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = ""
+        
+        self.assertEqual(self.loss_ratio_curve_default,
+                self._compute_loss_ratio_curve())
+
+    def test_we_use_the_parameter_when_specified(self):
+        self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = \
+                NUMBER_OF_SAMPLES_FROM_CONFIG
+
+        self.assertEqual(self.loss_ratio_curve_config,
+                self._compute_loss_ratio_curve())
+
+    def test_default_value_with_wrong_parameter(self):
+        self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = "this-is-wrong"
+
+        self.assertEqual(self.loss_ratio_curve_default,
+                self._compute_loss_ratio_curve())
+
+    def _compute_loss_ratio_curve(self):
+        return self.mixin.compute_loss_ratio_curve(
+                1, 1, self.asset, self.gmfs)
