@@ -216,7 +216,7 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
 
     Color scaling can absolute for the calculation IML values, or it can be
     relative for the existing IMLs values in a hazard map.
-    
+ 
     In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend.
     """
