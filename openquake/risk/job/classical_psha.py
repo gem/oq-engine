@@ -102,31 +102,43 @@ class ClassicalPSHABasedMixin:
 
             decoded_curve = kvs.get_value_json_decoded(curve_token)
 
-            curve = Curve([(exp(float(el['x'])), el['y'])
+            hazard_curve = Curve([(exp(float(el['x'])), el['y'])
                             for el in decoded_curve['curve']])
 
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
                 LOGGER.debug("processing asset %s" % (asset))
-
-                vuln_function = self.vuln_curves.get(
-                        asset["vulnerabilityFunctionReference"], None)
-                if not vuln_function:
-                    LOGGER.error("Unknown vulnerability function %s" \
-                                    "for asset %s"
-                                    % (asset["vulnerabilityFunctionReference"],
-                                        asset["assetID"]))
-                    return None
-                # lrc loss ratio curve
-                lrc = cpsha_based.compute_loss_ratio_curve(vuln_function,
-                                    curve)
-
-                loss_key = kvs.tokens.loss_ratio_key(self.job_id, point.row,
-                                            point.column, asset['assetID'])
-                kvs.set(loss_key, lrc.to_json())
-                self._write_output_for_block(self.job_id, block_id)
+                loss_ratio_curve = self.compute_loss_ratio_curve(
+                    point, asset, hazard_curve)
+            self._write_output_for_block(self.job_id, block_id)
         return True
+
+    def compute_loss_ratio_curve(self, point, asset, hazard_curve):
+        """ Helper method to ease the testing phase """
+
+        # we get the vulnerability function related to the asset
+        vuln_function = self.vuln_curves.get(
+            asset["vulnerabilityFunctionReference"], None)
+
+        if not vuln_function:
+            LOGGER.error(
+                "Unknown vulnerability function %s for asset %s"
+                % (asset["vulnerabilityFunctionReference"],
+                asset["assetID"]))
+
+            return None
+
+        loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
+            vuln_function, hazard_curve)
+
+        loss_key = kvs.tokens.loss_ratio_key(
+            self.job_id, point.row, point.column, asset['assetID'])
+
+        kvs.set(loss_key, loss_ratio_curve.to_json())
+
+        return loss_ratio_curve
+
 
 #        results = []
 #        tasks = []
