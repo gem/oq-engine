@@ -17,7 +17,7 @@ def compute_conditional_loss(curve, probability):
 
     Return the max loss (or loss ratio) if the given PoE is smaller
     than the lowest PoE defined.
-    
+
     Return zero if the given PoE is greater than the
     highest PoE defined.
     """
@@ -33,12 +33,12 @@ def compute_conditional_loss(curve, probability):
 
 def compute_loss_curve(loss_ratio_curve, asset):
     """Compute the loss curve for the given asset value.
-    
+
     A loss curve is obtained from a loss ratio curve by
     multiplying each X value (loss ratio) for the given asset.
     """
 
-    if not asset: 
+    if not asset:
         return shapes.EMPTY_CURVE
 
     return loss_ratio_curve.rescale_abscissae(asset)
@@ -73,7 +73,8 @@ def compute_mean_loss(curve):
     """Compute the mean loss (or loss ratio) for the given curve."""
 
     mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
-    return sum(i*j for i, j in zip(mid_curve.abscissae, mid_curve.ordinates))
+    return sum(i * j for i, j in zip(
+            mid_curve.abscissae, mid_curve.ordinates))
 
 
 def loop(elements, func, *args):
@@ -88,5 +89,5 @@ def collect(iterator):
 
     for element in iterator:
         data.append(element)
-    
+
     return data

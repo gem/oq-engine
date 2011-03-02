@@ -14,7 +14,7 @@ from openquake.kvs.redis import Redis
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
 MAX_LENGTH_RANDOM_ID = 36
-MEMCACHE_KEY_SEPARATOR = '!'
+KVS_KEY_SEPARATOR = '!'
 SITES_KEY_TOKEN = "sites"
 
 
@@ -71,7 +71,7 @@ def get_client(**kwargs):
 def generate_key(key_list):
     """ Create a kvs key """
     key_list = [str(x).replace(" ", "") for x in key_list]
-    return MEMCACHE_KEY_SEPARATOR.join(key_list)
+    return KVS_KEY_SEPARATOR.join(key_list)
 
 
 def generate_job_key(job_id):
