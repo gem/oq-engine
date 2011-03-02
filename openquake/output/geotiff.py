@@ -211,49 +211,43 @@ class LossMapGeoTiffFile(MapGeoTiffFile):
 
 
 class HazardMapGeoTiffFile(MapGeoTiffFile):
-    # TODO re-write this
-    """ Write RGBA geotiff images for hazard maps. Color scale is from
-    0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
-    the TIFF with a color-scale legend."""
-    def __init__(self, path, imls, grid, colormap=None,
-                 color_scaling='absolute'):
+    """
+    Writes a GeoTiff image for hazard maps with an arbitrary colormap.
+
+    Color scaling can absolute for the calculation IML values, or it can be
+    relative for the existing IMLs values in a hazard map.
+    
+    In addition, we write out an HTML wrapper around
+    the TIFF with a color-scale legend.
+    """
+    def __init__(self, path, imls, image_grid, colormap,
+                 relative_color_scaling=False):
         """
-        path should be a string specifying the location of output, including file name
+        path:
+            string specifying the location of output, including file name
 
-        imls should be a list of floats representing the IML values for the hazard map
+        imls:
+            list of floats representing the IML values for the hazard map
 
-        grid should be a shapes.Grid object representing the area covered by the hazard map
+        grid:
+            shapes.Grid object representing the area covered by the hazard map
 
-        colormap should be a numpy array with four rows of data:
-            - scale (from 0.0 to 1.0); must be the same length as
-              the RGB value lists
-            - R values
-            - G values
-            - B values
-            Example (white-gray-black):
-            array([[0.0, 0.5, 1.0], 
-                  [255, 127, 0],
-                  [255, 127, 0],
-                  [255, 127, 0]])
+        colormap:
+            dict representation of a colormap, as read by a CPTReader object
 
-        color_scaling should be either 'absolute' or 'relative'
-            - absolute: color is scaled across the range of possible IML values
-                - useful when comparing two or more hazard maps
-            - relative: color is scaled across the range of actual IML values in the map
-                - useful for showing greater contrast between the sites within a single map
-
+        relative_color_scaling (default is False):
+            False / absolute:
+                Color is scaled across the range of possible IML values. This is
+                useful when comparing two or more hazard maps.
+            True / relative:
+                Color is scaled across the range of actual IML values in the
+                map. This is useful for showing greater contrast between the
+                sites within a single map.
         """
-        self.path = file_path
+        super(HazardMapGeoTiffFile, self).__init__(path, image_grid)
         self.imls = imls
-        self.grid = grid
-        self.normalize = normalize
         self.colormap = colormap
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self):
-        self.close()
+        self.relative_color_scaling = relative_color_scaling
 
 
 class GMFGeoTiffFile(GeoTiffFile):
@@ -421,12 +415,13 @@ class CPTReader:
     - colormap Id (example: seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp)
     - colormap name (example: seminf-haxby)
     - color model (RGB, HSV, or CMYK)
-    - RGB, HSV, or CMYK values associated with the ranges defined by the z-values
+    - RGB, HSV, or CMYK values associated with the ranges defined by the
+      z-values
     - Background color
     - Foreground color
     - NaN color
-    - colormap type (discrete or continuous; this is determined by definition of the
-      z-values and associated color values)
+    - colormap type (discrete or continuous; this is determined by the
+      arrangement of z- and color values)
 
     Example RGB colormap:
         {'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
@@ -442,8 +437,10 @@ class CPTReader:
          'NaN': [0, 0, 0]}
 
     See also:
-        Library of cpt files - http://soliton.vm.bytemark.co.uk
-        MAKECPT - http://www.soest.hawaii.edu/gmt/gmt/doc/gmt/html/man/makecpt.html
+        Library of cpt files:
+            http://soliton.vm.bytemark.co.uk
+        MAKECPT:
+            http://www.soest.hawaii.edu/gmt/gmt/doc/gmt/html/man/makecpt.html
 
     TODO(LB): Currently, only RGB colormaps are supported.
     """
@@ -456,10 +453,11 @@ class CPTReader:
 
     def __init__(self, path):
         """
-        path is a string representing the location of a cpt file, including file name
+        path is a string representing the location of a cpt file, including file
+        name
         """
         self.path = path
-        self.color_map = {'id': None,
+        self.colormap = {'id': None,
                           'name': None,
                           'type': None,
                           'model': None,
@@ -473,21 +471,25 @@ class CPTReader:
 
 
     def get_colormap(self):
-        """Read the input cpt file and return a dict representation of the colormap."""
+        """
+        Read the input cpt file and return a dict representation of the
+        colormap.
+        """
         with open(self.path, 'r') as fh:
-                for line in fh:
-                    # ignore empty lines
-                    if not line.strip():
-                        continue
-                    elif line[0] == '#':
-                        self._parse_comment(line)
-                    elif line[0] in ['B', 'F', 'N']:
-                        self._parse_bfn(line)
-                    else:
-                        self._parse_color_table(line)
-        if not self.color_map['model'] in self.SUPPORTED_COLOR_MODELS:
-            raise ValueError('Color model type %s is not supported' % color_map['model'])
-        return self.color_map
+            for line in fh:
+                # ignore empty lines
+                if not line.strip():
+                    continue
+                elif line[0] == '#':
+                    self._parse_comment(line)
+                elif line[0] in ['B', 'F', 'N']:
+                    self._parse_bfn(line)
+                else:
+                    self._parse_color_table(line)
+        if not self.colormap['model'] in self.SUPPORTED_COLOR_MODELS:
+            raise ValueError('Color model type %s is not supported' %
+                             self.colormap['model'])
+        return self.colormap
 
 
     def _parse_comment(self, line):
@@ -500,11 +502,11 @@ class CPTReader:
                              ('id', self.ID_RE),
                              ('model', self.COLOR_MODEL_RE)):
             # if the attr is already defined, skip it
-            if self.color_map[attr]:
+            if self.colormap[attr]:
                 continue
             match = regex.match(text)
             if match:
-                self.color_map[attr] = match.group(1)
+                self.colormap[attr] = match.group(1)
 
 
     def _parse_bfn(self, line):
@@ -515,24 +517,29 @@ class CPTReader:
                            ('F', 'foreground'),
                            ('N', 'NaN')):
             if line[0] == token:
-                bfn, color = line.split(token)
-                self.color_map[key] = [int(x) for x in color.split()]
+                _bfn, color = line.split(token)
+                self.colormap[key] = [int(x) for x in color.split()]
                 return
 
 
     def _protect_map_type(self, map_type):
-        """Prevent the parser from changing map types (discrete vs. continuous),
+        """
+        Prevent the parser from changing map types (discrete vs. continuous),
         which could be caused by a malformed cpt file.
 
-        If a map type is defined (not None) and then changed, this will throw an AssertionError."""
-        assert self.color_map['type'] is None or self.color_map['type'] == map_type
+        If a map type is defined (not None) and then changed, this will throw an
+        AssertionError.
+        """
+        assert (self.colormap['type'] is None
+                or self.colormap['type'] == map_type)
 
 
     def _parse_color_table(self, line):
         """
         Parse z-values and color values from the color table.
 
-        The map type (discrete or continuous) is also implicity determined from these values.
+        The map type (discrete or continuous) is also implicity determined from
+        these values.
         """
         drop_tail_extend = lambda lst, ext: lst[:-1] + [x for x in ext]
         strs_to_ints = lambda strs: [int(x) for x in strs]
@@ -542,7 +549,8 @@ class CPTReader:
 
         # there are two columns of values (each containing z and color values)
         z_vals = (float(values[0]), float(values[4]))
-        self.color_map['z_values'] = drop_tail_extend(self.color_map['z_values'], z_vals)
+        self.colormap['z_values'] = drop_tail_extend(self.colormap['z_values'],
+                                                     z_vals)
 
         rgb1 = strs_to_ints(values[1:4])
         rgb2 = strs_to_ints(values[5:8])
@@ -553,15 +561,16 @@ class CPTReader:
         try:
             self._protect_map_type(map_type)
         except AssertionError:
-            raise ValueError("Could not determine map type (discrete or continuous)."
-                             " The cpt file could be malformed.")
-        self.color_map['type'] = map_type
+            raise ValueError("Could not determine map type (discrete or"
+                             " continuous). The cpt file could be malformed.")
+        self.colormap['type'] = map_type
 
         for i, color in enumerate(('red', 'green', 'blue')):
             if map_type == 'discrete':
-                self.color_map[color].append(rgb1[i])
+                self.colormap[color].append(rgb1[i])
             elif map_type == 'continuous':
-                self.color_map[color] = drop_tail_extend(self.color_map[color], (rgb1[i], rgb2[i]))
+                self.colormap[color] = drop_tail_extend(self.colormap[color],
+                                                        (rgb1[i], rgb2[i]))
             else:
                 raise ValueError("Unknown map type '%s'" % map_type)
 
