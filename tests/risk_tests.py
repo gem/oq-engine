@@ -15,9 +15,14 @@ from openquake import shapes
 from utils import test
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
+from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+from openquake.risk.job import RiskJobMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import common
+
+
+TEST_JOB_FILE_CLASSICAL = test.smoketest_file('classical_psha_simple_london/config.gem')
 
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
@@ -390,6 +395,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.cum_histogram, self.gmfs["TSES"]),
                 self.gmfs["TimeSpan"]), atol=0.0001))
 
+
     def test_computes_the_loss_ratio_curve(self):
         # manually computed results from V. Silva
         expected_curve = shapes.Curve([(0.085255, 0.988891),
@@ -625,6 +631,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(kvs.tokens.vuln_key(
                 self.job_id), self.vulnerability_curves)
 
+
+
     def tearDown(self):
         psha.STEPS_PER_INTERVAL = 5
 
@@ -754,6 +762,21 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(numpy.array(
                 [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]),
                 psha._split_loss_ratios([1.0, 2.0, 3.0], 4)))
+
+
+    def loss_ratio_curve_is_none_when_vuln_function_is_unknown(self):
+
+        vuln_function = shapes.VulnerabilityFunction([
+                        (0.01, (0.001, 0.00)),
+                        (0.04, (0.022, 0.00)),
+                        (0.07, (0.051, 0.00)),
+                        (0.10, (0.080, 0.00))])
+        with RiskJobMixin(job.Job, RiskJobMixin, key='classical_psha'):
+            self.id = 1234
+            self.vuln_curves = {"ID": vuln_function}
+
+            self.asset = {"vulnerabilityFunctionReference": "ID", "assetID": "ID"}
+            return self.execute()
 
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,

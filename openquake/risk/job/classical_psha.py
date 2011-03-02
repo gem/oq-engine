@@ -10,15 +10,17 @@ from openquake import job
 from openquake.shapes import Curve
 from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.risk import classical_psha_based
+from openquake.risk import classical_psha_based as cpsha_based
 from openquake import kvs
 from openquake import logs
 from openquake.risk.job import output, RiskJobMixin
 from math import exp
 LOGGER = logs.LOG
 
+
 def preload(fn):
     """ Preload decorator """
+
     def preloader(self, *args, **kwargs):
         """A decorator for preload steps that must run on the Jobber"""
 
@@ -31,6 +33,7 @@ def preload(fn):
 
 class ClassicalPSHABasedMixin:
 
+    """Mixin for Classical PSHA Based Risk Job"""
     # TODO: move to the RiskJobMixin
     def store_exposure_assets(self):
         """ Load exposure assets and write to kvs """
@@ -54,7 +57,10 @@ class ClassicalPSHABasedMixin:
 
     @preload
     @output
+    # TODO: generalize and
     def execute(self):
+        """ it just calls self.compute_risk
+        TODO: feedcelery tasks"""
         tasks = []
         results = []
         for block_id in self.blocks_keys:
@@ -76,6 +82,14 @@ class ClassicalPSHABasedMixin:
         return results
 
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
+
+        """This task computes risk for a block of sites. It requires to have
+        pre-initialized in kvs:
+         1) list of sites
+         2) exposure portfolio (=assets)
+         3) vulnerability
+
+        """
         block = job.Block.from_kvs(block_id)
 
         #pylint: disable=W0201
@@ -88,10 +102,8 @@ class ClassicalPSHABasedMixin:
 
             decoded_curve = kvs.get_value_json_decoded(curve_token)
 
-            curve = Curve([(exp(float(el['x'])), el['y'])for el in decoded_curve['curve']])
-
-            LOGGER.debug('hazard_curve')
-            LOGGER.debug(curve)
+            curve = Curve([(exp(float(el['x'])), el['y'])
+                            for el in decoded_curve['curve']])
 
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
@@ -101,19 +113,18 @@ class ClassicalPSHABasedMixin:
                 vuln_function = self.vuln_curves.get(
                         asset["vulnerabilityFunctionReference"], None)
                 if not vuln_function:
-                    LOGGER.error("Unknown vulnerability function %s for asset %s"
-                        % (asset["vulnerabilityFunctionReference"], asset["assetID"]))
+                    LOGGER.error("Unknown vulnerability function %s" \
+                                    "for asset %s"
+                                    % (asset["vulnerabilityFunctionReference"],
+                                        asset["assetID"]))
                     return None
-                LOGGER.debug('vuln_function')
-                LOGGER.debug(vuln_function)
-                loss_ratio_curve = classical_psha_based.compute_loss_ratio_curve(vuln_function,
-                                                                    curve)
+                # lrc loss ratio curve
+                lrc = cpsha_based.compute_loss_ratio_curve(vuln_function,
+                                    curve)
 
-                LOGGER.debug('loss_ratio_curve')
-                LOGGER.debug(loss_ratio_curve)
-
-                loss_key = kvs.tokens.loss_ratio_key(self.job_id,point.row,point.column,asset['assetID'])
-                kvs.set(loss_key, loss_ratio_curve.to_json())
+                loss_key = kvs.tokens.loss_ratio_key(self.job_id, point.row,
+                                            point.column, asset['assetID'])
+                kvs.set(loss_key, lrc.to_json())
                 self._write_output_for_block(self.job_id, block_id)
         return True
 
@@ -183,8 +194,6 @@ class ClassicalPSHABasedMixin:
 #         3) exposure portfolio (=assets)
 #         4) vulnerability
 #
-#        TODO(fab): make conditional_loss_poe (set of probabilities of exceedance
-#        for which the loss computation is done) a list of floats, and read it from
 #        the job configuration.
 #        """
 #
@@ -194,7 +203,6 @@ class ClassicalPSHABasedMixin:
 #        risk_engine = engines.ClassicalPSHABasedLossRatioCalculator(job_id,
 #            block_id)
 #
-#        # TODO(jmc): DONT assumes that hazard, assets, and output risk grid are
 #        # the same (no nearest-neighbour search to find hazard)
 #        block = job.Block.from_kvs(block_id)
 #        sites_list = block.sites
@@ -204,7 +212,6 @@ class ClassicalPSHABasedMixin:
 #
 #        for (gridpoint, site) in sites_list:
 #
-#            logger.debug("processing gridpoint %s, site %s" % (gridpoint, site))
 #            loss_ratio_curve = risk_engine.compute_loss_ratio_curve(gridpoint)
 #
 #            if loss_ratio_curve is not None:
@@ -231,7 +238,6 @@ class ClassicalPSHABasedMixin:
 #                loss_conditional = engines.compute_loss(loss_curve,
 #                                                        conditional_loss_poe)
 #                key = kvs.generate_product_key(job_id,
-#                    risk.loss_token(conditional_loss_poe), block_id, gridpoint)
 #
 #                logger.debug("RESULT: conditional loss i %s, write to key %s"
 #                    % (loss_conditional, key))
