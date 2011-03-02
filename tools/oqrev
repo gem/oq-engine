@@ -112,7 +112,7 @@ do
             echo "https://github.com/gem/openquake/pull/$pull is not open any more"
             exit 4
         fi
-        branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
+        branch=`awk '/merge [0-9]+ commits? into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
         branch_name="$branch"
         git_user=`dirname $branch`
         branch_remote=`git remote -v | awk "/$git_user.+fetch.$/ {print \\$1}"`
@@ -187,13 +187,13 @@ then
     fi
 fi
 
-git co master >/dev/null 2>&1
+git checkout master >/dev/null 2>&1
 git branch -D ba >/dev/null 2>&1
 git branch -D bb >/dev/null 2>&1
 
 if [ ! -z "$other_remote" ]
 then
-    git co -b ba $other_remote/$other_reference
+    git checkout -b ba $other_remote/$other_reference
     if [ $? -ne 0 ]
     then
         echo "git failed to create a tracking branch for $other_remote/$other_reference"
@@ -202,7 +202,7 @@ then
     other_branch="ba"
 else
     other_branch="$other_reference"
-    git co $other_branch 
+    git checkout $other_branch 
 fi
 
 if [ $skip_pylint -eq 0 ]
@@ -213,7 +213,7 @@ fi
 
 if [ ! -z "$branch_remote" ]
 then
-    git co -b bb $branch_remote/$branch_reference
+    git checkout -b bb $branch_remote/$branch_reference
     if [ $? -ne 0 ]
     then
         echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
@@ -222,7 +222,7 @@ then
     branch_branch="bb"
 else
     branch_branch="$branch_reference"
-    git co $branch_branch 
+    git checkout $branch_branch 
 fi
 
 if [ $skip_pylint -eq 0 ]
@@ -231,14 +231,33 @@ then
     pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 
     echo ""
-    diff -uw /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
+    diff -w -U 0 /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
     if [ $? -ne 0 ]
     then
         added_issues=`cat /tmp/pl.diff | grep -v '^+++' | grep '^+' | wc -l`
         if [ $added_issues -gt 0 ]
         then
-            echo "!! $branch_name adds $added_issues pylint issues.."
-            cat /tmp/pl.diff
+            # Perform a "fuzzy" comparison of the pylint issues added and
+            # removed respectively. If the source paths and pylint codes do
+            # match there is a high chance that the branch under review is
+            # actually fine.
+            awk '/^[+][^+]/ {printf("%s,.,%s\n", substr($1,2), $2)}' /tmp/pl.diff  >/tmp/pl.added
+            awk '/^[-][^-]/ {printf("%s,.,%s\n", substr($1,2), $2)}' /tmp/pl.diff  >/tmp/pl.removed
+            diff -uw /tmp/pl.added /tmp/pl.removed > /dev/null 2>&1
+            if [ $? -ne 0 ]
+            then
+                echo "!! $branch_name adds $added_issues pylint issues.."
+            else
+                echo "!! $branch_name is *probably* not adding any"
+                echo "   pylint issues but please take a look."
+            fi
+            echo ""
+            if [ $use_colordiff -ne 0 ]
+            then
+                cat /tmp/pl.diff | colordiff
+            else
+                cat /tmp/pl.diff
+            fi
         else
             fixed_issues=`cat /tmp/pl.diff | grep -v '^---' | grep '^-' | wc -l`
             echo "++ $branch_name fixes $fixed_issues existing pylint issues.."
