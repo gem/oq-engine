@@ -25,7 +25,7 @@ class EpsilonTestCase(unittest.TestCase):
 
     def test_uncorrelated(self):
         """For uncorrelated jobs we sample epsilon values per asset.
-        
+
         A new sample should be drawn for each asset irrespective of any
         building typology similarities.
         """
@@ -41,7 +41,7 @@ class EpsilonTestCase(unittest.TestCase):
 
     def test_correlated(self):
         """For correlated jobs we sample epsilon values per building typology.
-        
+
         A sample should be drawn whenever an asset with a new building typology
         is encountered. Assets of the same typology should share sample values.
         Please not that building typologies and structure categories are
@@ -69,7 +69,7 @@ class EpsilonTestCase(unittest.TestCase):
 
     def test_incorrect_configuration_setting(self):
         """The correctness of the asset correlation configuration is enforced.
-        
+
         If the `ASSET_CORRELATION` parameter is set in the job configuration
         file it should have a correct value ("perfect").
         """
@@ -88,7 +88,7 @@ class EpsilonTestCase(unittest.TestCase):
 
 
 class SamplesFromConfigTestCase(unittest.TestCase):
-    """Tests for the functionality that reads the the number of samples
+    """Tests for the functionality that reads the number of samples
     for the probabilistic scenario from the configuration file."""
 
     def setUp(self):
@@ -105,7 +105,7 @@ class SamplesFromConfigTestCase(unittest.TestCase):
         # modules into the mixins to ease testing
 
         # a loss ratio curve computed with the default
-        # number of samples specified in the probablistic_event_based module
+        # number of samples specified in the probabilistic_event_based module
         self.loss_ratio_curve_default = \
                 prob.compute_loss_ratio_curve(vuln_function, self.gmfs)
 
@@ -123,10 +123,10 @@ class SamplesFromConfigTestCase(unittest.TestCase):
     def test_without_parameter_we_use_the_default_value(self):
         self.assertEqual(self.loss_ratio_curve_default,
                 self._compute_loss_ratio_curve())
-    
+
     def test_with_empty_parameter_we_use_the_default_value(self):
         self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = ""
-        
+
         self.assertEqual(self.loss_ratio_curve_default,
                 self._compute_loss_ratio_curve())
 

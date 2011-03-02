@@ -83,7 +83,7 @@ class ProbabilisticEventMixin:
         except TimeoutError:
             return []
 
-        return results # TODO(jmc): Move output from being a decorator
+        return results  # TODO(jmc): Move output from being a decorator
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
@@ -207,14 +207,14 @@ class ProbabilisticEventMixin:
     def compute_loss_ratio_curve(self, col, row, asset, gmf_slice):
         """Compute the loss ratio curve for a single site."""
 
-        # if the asset has an unknown vulnerability code, return fail
+        # fail if the asset has an unknown vulnerability code
         vuln_function = self.vuln_curves.get(
                 asset["vulnerabilityFunctionReference"], None)
 
         if not vuln_function:
-            LOGGER.error("Unknown vulnerability function %s for asset %s"
-                    % (asset["vulnerabilityFunctionReference"],
-                    asset["assetID"]))
+            LOGGER.error(
+                "Unknown vulnerability function %s for asset %s"
+                % (asset["vulnerabilityFunctionReference"], asset["assetID"]))
 
             return None
 
@@ -235,7 +235,7 @@ class ProbabilisticEventMixin:
 
     def _get_number_of_samples(self):
         """Return the number of samples used to compute the loss ratio
-        curve specified in the PROB_NUM_OF_SAMPLES parameter.
+        curve specified by the PROB_NUM_OF_SAMPLES parameter.
 
         Return None if the parameter is not specified, or empty or
         the value can't be casted to int.
@@ -248,8 +248,8 @@ class ProbabilisticEventMixin:
             try:
                 number_of_samples = int(raw_value)
             except ValueError:
-                LOGGER.debug("PROB_NUM_OF_SAMPLES %s can't be converted " \
-                        "to int, using default value..." % raw_value)
+                LOGGER.error("PROB_NUM_OF_SAMPLES %s can't be converted "
+                             "to int, using default value..." % raw_value)
 
         return number_of_samples
 
