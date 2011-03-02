@@ -24,7 +24,6 @@
 	<classpathentry kind="lib" path="lib/csparsej.jar"/>
 	<classpathentry kind="lib" path="lib/jplasma.jar"/>
 	<classpathentry kind="lib" path="lib/jtransforms.jar"/>
-	<classpathentry kind="lib" path="lib/junit.jar"/>
 	<classpathentry kind="lib" path="lib/netlib-java.jar"/>
 	<classpathentry kind="lib" path="lib/optimization.jar"/>
 	<classpathentry kind="output" path="build"/>
