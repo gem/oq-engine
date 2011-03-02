@@ -37,7 +37,6 @@ TIFF_LATITUDE_ROTATION = 0
 
 RGB_SEGMENTS, RGB_RED_BAND, RGB_GREEN_BAND, RGB_BLUE_BAND = range(0, 4)
 
-SUPPORTED_COLOR_MODELS = ('RGB',)
 
 # these are some continuous colormaps, as found on
 # http://soliton.vm.bytemark.co.uk/pub/cpt-city/index.html
@@ -413,11 +412,23 @@ def _interpolate_color(fractional_values, colormap, rgb_band):
     return numpy.reshape(color_interpolate(fractional_values.flatten()), 
                          fractional_values.shape)
 
-def color_map_from_cpt(path):
-    """
-    path is a string representing the path to an input file
 
-    This functions reads the input file and generates a dict. For example:
+class CPTReader:
+    """This class provides utilities for reading colormap data from cpt files.
+
+    Colormaps have the following properties:
+    - z-values: Any sequence of numbers (example: [-2.5, -2.4, ... , 1.4, 1.5])
+    - colormap Id (example: seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp)
+    - colormap name (example: seminf-haxby)
+    - color model (RGB, HSV, or CMYK)
+    - RGB, HSV, or CMYK values associated with the ranges defined by the z-values
+    - Background color
+    - Foreground color
+    - NaN color
+    - colormap type (discrete or continuous; this is determined by definition of the
+      z-values and associated color values)
+
+    Example RGB colormap:
         {'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
          'name': 'seminf-haxby',
          'type': 'discrete',  # 'discrete' or 'continuous'
@@ -425,90 +436,132 @@ def color_map_from_cpt(path):
          'z_values': [0.00, 1.25, 2.50, ... , 28.75, 30.00],
          'red': [255, 208, 186, ... , 244, 238],
          'green': [255, 216, 197, ... , 116, 79],
-         'blue': [255, 251, 247, ... , 74, 77]}
+         'blue': [255, 251, 247, ... , 74, 77],
+         'background': [255, 255, 255],
+         'foreground': [238, 79, 77],
+         'NaN': [0, 0, 0]}
 
-    Note: type is determined by the z_values and RGB values
+    See also:
+        Library of cpt files - http://soliton.vm.bytemark.co.uk
+        MAKECPT - http://www.soest.hawaii.edu/gmt/gmt/doc/gmt/html/man/makecpt.html
 
-    TODO(LB): We may want to add support for HSV and CMYK color maps
-    TODO(LB): B (background), F (foreground), and N (Not a Number) values are ignored
+    TODO(LB): Currently, only RGB colormaps are supported.
     """
 
-    drop_tail_extend = lambda lst, ext: lst[:-1] + [x for x in ext]
-    name_re = re.compile(r'^(.+).cpt')
-    id_re = re.compile(r'\$Id:\s(.+)\s\$')
-    color_model_re = re.compile(r'^COLOR_MODEL\s=\s(.+)')
-    
-    def _parse_comment(color_map, line):
-        # get the text after the comment marker, stripped
-        line = line.split('#')[1].strip()
-        for attr, regex in  (('name', name_re),
-                             ('id', id_re),
-                             ('model', color_model_re)):
+    SUPPORTED_COLOR_MODELS = ('RGB',)
+
+    NAME_RE = re.compile(r'^(.+).cpt')
+    ID_RE = re.compile(r'\$Id:\s(.+)\s\$')
+    COLOR_MODEL_RE = re.compile(r'^COLOR_MODEL\s=\s(.+)')
+
+    def __init__(self, path):
+        """
+        path is a string representing the location of a cpt file, including file name
+        """
+        self.path = path
+        self.color_map = {'id': None,
+                          'name': None,
+                          'type': None,
+                          'model': None,
+                          'z_values': [],
+                          'red': [],
+                          'green': [],
+                          'blue': [],
+                          'background': None,
+                          'foreground': None,
+                          'NaN': None}
+
+
+    def get_colormap(self):
+        """Read the input cpt file and return a dict representation of the colormap."""
+        with open(self.path, 'r') as fh:
+                for line in fh:
+                    # ignore empty lines
+                    if not line.strip():
+                        continue
+                    elif line[0] == '#':
+                        self._parse_comment(line)
+                    elif line[0] in ['B', 'F', 'N']:
+                        self._parse_bfn(line)
+                    else:
+                        self._parse_color_table(line)
+        if not self.color_map['model'] in self.SUPPORTED_COLOR_MODELS:
+            raise ValueError('Color model type %s is not supported' % color_map['model'])
+        return self.color_map
+
+
+    def _parse_comment(self, line):
+        """
+        Look for name, id, and color model type in a comment line
+        (beginning with a '#').
+        """
+        text = line.split('#')[1].strip()
+        for attr, regex in  (('name', self.NAME_RE),
+                             ('id', self.ID_RE),
+                             ('model', self.COLOR_MODEL_RE)):
             # if the attr is already defined, skip it
-            if color_map[attr]:
+            if self.color_map[attr]:
                 continue
-            match = regex.match(line)
+            match = regex.match(text)
             if match:
-                color_map[attr] = match.group(1)
-        return color_map
+                self.color_map[attr] = match.group(1)
 
 
-    def _parse_color_table(color_map, line):
-        # ignore B, F, and N values
-        if line[0] in ['B', 'F', 'N']:
-            # don't do anything; just return the map
-            return color_map
-        # should be z_ and RGB values
+    def _parse_bfn(self, line):
+        """
+        Parse Background, Foreground, and NaN values from the color table.
+        """
+        for token, key in (('B', 'background'),
+                           ('F', 'foreground'),
+                           ('N', 'NaN')):
+            if line[0] == token:
+                bfn, color = line.split(token)
+                self.color_map[key] = [int(x) for x in color.split()]
+                return
+
+
+    def _protect_map_type(self, map_type):
+        """Prevent the parser from changing map types (discrete vs. continuous),
+        which could be caused by a malformed cpt file.
+
+        If a map type is defined (not None) and then changed, this will throw an AssertionError."""
+        assert self.color_map['type'] is None or self.color_map['type'] == map_type
+
+
+    def _parse_color_table(self, line):
+        """
+        Parse z-values and color values from the color table.
+
+        The map type (discrete or continuous) is also implicity determined from these values.
+        """
+        drop_tail_extend = lambda lst, ext: lst[:-1] + [x for x in ext]
+        strs_to_ints = lambda strs: [int(x) for x in strs]
+
         values = line.split()
-        print values
         assert len(values) == 8
-        # TODO get the z values
+
+        # there are two columns of values (each containing z and color values)
         z_vals = (float(values[0]), float(values[4]))
-        color_map['z_values'] = drop_tail_extend(color_map['z_values'], z_vals)
-        # there are two columns of values
+        self.color_map['z_values'] = drop_tail_extend(self.color_map['z_values'], z_vals)
+
         rgb1 = strs_to_ints(values[1:4])
         rgb2 = strs_to_ints(values[5:8])
         if rgb1 == rgb2:
             map_type = 'discrete'
         else:
             map_type = 'continuous'
-        _protect_map_type(color_map, map_type)
-        color_map['type'] = map_type
-        for idx, color in enumerate(('red', 'green', 'blue')):
+        try:
+            self._protect_map_type(map_type)
+        except AssertionError:
+            raise ValueError("Could not determine map type (discrete or continuous)."
+                             " The cpt file could be malformed.")
+        self.color_map['type'] = map_type
+
+        for i, color in enumerate(('red', 'green', 'blue')):
             if map_type == 'discrete':
-                color_map[color].append(rgb1[idx])
+                self.color_map[color].append(rgb1[i])
             elif map_type == 'continuous':
-                # color_map[color] = color_map[color][:-1]
-                # color_map.extend([rgb1[idx], rgb2[idx]])
-                color_map[color] = drop_tail_extend(color_map[color], (rgb1[idx], rgb2[idx]))
+                self.color_map[color] = drop_tail_extend(self.color_map[color], (rgb1[i], rgb2[i]))
             else:
                 raise ValueError("Unknown map type '%s'" % map_type)
-        return color_map
 
-    def _protect_map_type(color_map, type):
-        """Prevent the parser from changing map types (discrete vs. continuous),
-        which could be caused by a malformed cpt file."""
-        assert color_map['type'] is None or color_map['type'] == type
-
-    strs_to_ints = lambda strs: [int(x) for x in strs]
-    color_map = {'id': None,
-                 'name': None,
-                 'type': None,  # 'discrete' or 'continuous'
-                 'model': None,
-                 'z_values': [],
-                 'red': [],
-                 'green': [],
-                 'blue': []}
-
-    with open(path, 'r') as fh:
-        for line in fh:
-            # ignore empty lines
-            if not line.strip():
-                continue
-            elif line[0] == '#':
-                color_map = _parse_comment(color_map, line)
-            else:
-                color_map = _parse_color_table(color_map, line)
-    if not color_map['model'] in SUPPORTED_COLOR_MODELS:
-        raise ValueError('Color model type %s is not supported' % color_map['model'])
-    return color_map
