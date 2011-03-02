@@ -112,7 +112,7 @@ do
             echo "https://github.com/gem/openquake/pull/$pull is not open any more"
             exit 4
         fi
-        branch=`awk '/merge [0-9]+ commits into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
+        branch=`awk '/merge [0-9]+ commits? into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' /tmp/pull.$pull`
         branch_name="$branch"
         git_user=`dirname $branch`
         branch_remote=`git remote -v | awk "/$git_user.+fetch.$/ {print \\$1}"`
