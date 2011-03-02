@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Unit tests for hazard computations with the hazard engine. 
+Unit tests for hazard computations with the hazard engine.
 Includes:
 
 - hazard curves (with mean and quantile)
@@ -8,15 +8,10 @@ Includes:
 """
 
 import json
-import logging
 import os
-import time
 import unittest
 import numpy
 
-from lxml import etree
-
-from openquake import hazard
 from openquake import job
 from openquake import kvs
 from openquake import logs
@@ -28,17 +23,18 @@ from openquake.job import mixins
 from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import classical_psha
-from openquake.hazard import opensha # pylint ignore, needed for register
+from openquake.hazard import opensha
 import openquake.hazard.job
 
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
 
-MEAN_GROUND_INTENSITY='{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00, \
-                        "site":"+35.0500 +35.0000", "intensity": 1.9623e+00, \
-                        "site":"+35.1000 +35.0000", "intensity": 2.0320e+00, \
-                        "site":"+35.1500 +35.0000", "intensity": 2.0594e+00}'
+MEAN_GROUND_INTENSITY = (
+    '{"site":"+35.0000 +35.0000", "intensity": 1.9249e+00,'
+    '"site":"+35.0500 +35.0000", "intensity": 1.9623e+00,'
+    '"site":"+35.1000 +35.0000", "intensity": 2.0320e+00,'
+    '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
@@ -56,14 +52,16 @@ with open(
 NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
 NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
+
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
     return jobobj.id
 
+
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
     Most data returned from the engine is via the KVS."""
-    
+
     def setUp(self):
         self.generated_files = []
         self.kvs_client = kvs.get_client(binary=False)
@@ -72,7 +70,7 @@ class HazardEngineTestCase(unittest.TestCase):
         for cfg in self.generated_files:
             try:
                 os.remove(cfg)
-            except OSError, e:
+            except OSError:
                 pass
 
     def test_hazard_engine_jobber_runs(self):
@@ -81,43 +79,41 @@ class HazardEngineTestCase(unittest.TestCase):
 
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, 
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin,
             key="hazard"):
-            hc = hazengine.execute()
-            
-            source_model_key = kvs.generate_product_key(hazengine.id, 
+            hazengine.execute()
+
+            source_model_key = kvs.generate_product_key(hazengine.id,
                                 kvs.tokens.SOURCE_MODEL_TOKEN)
-            source_model = self.kvs_client.get(source_model_key)
+            self.kvs_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
-            
-            gmpe_key = kvs.generate_product_key(hazengine.id, 
+
+            gmpe_key = kvs.generate_product_key(hazengine.id,
                                 kvs.tokens.GMPE_TOKEN)
-            gmpe_model = self.kvs_client.get(gmpe_key)
+            self.kvs_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
-    
-    def test_generate_hazard_curves_using_classical_psha(self): 
-        
+
+    def test_generate_hazard_curves_using_classical_psha(self):
+
         def verify_order_of_haz_curve_keys(hazengine, result_keys):
-            """ The classical PSHA execute() returns a list of keys 
+            """ The classical PSHA execute() returns a list of keys
             for the curves stored to the KVS. We need to make sure
             the order is correct. """
-            
+
             expected_keys = []
             realizations = int(
                 hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
             # LOG.debug("dir of hazengine is %s" % dir(hazengine))
-            for realization in xrange(0, realizations):    
-                for site_list in hazengine.site_list_generator():
-                    for site in site_list:
-                        key = tokens.hazard_curve_key(hazengine.id,
-                                                      realization,
-                                                      site.longitude,
-                                                      site.latitude) 
-                        expected_keys.append(key) 
-            self.assertEqual(expected_keys, result_keys, 
+            for realization in xrange(0, realizations):
+                for site in hazengine.sites_for_region():
+                    key = tokens.hazard_curve_key(
+                        hazengine.id, realization, site.longitude,
+                        site.latitude)
+                    expected_keys.append(key)
+            self.assertEqual(expected_keys, result_keys,
                 "computation didn't yield hazard curve keys in "\
                 "expected order")
 
@@ -125,7 +121,7 @@ class HazardEngineTestCase(unittest.TestCase):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
-            # TODO (LB): At some point we need to test the actual 
+            # TODO (LB): At some point we need to test the actual
             # results to verify they are correct
 
             LOG.debug("verifying KVS entries for %s hazard curves" % \
@@ -134,26 +130,24 @@ class HazardEngineTestCase(unittest.TestCase):
             for key in result_keys:
                 value = self.kvs_client.get(key)
                 # LOG.debug("kvs value is %s" % value)
-                self.assertTrue(value is not None, 
+                self.assertTrue(value is not None,
                     "no non-empty value found at KVS key")
 
         def verify_mean_haz_curves_stored_to_kvs(hazengine):
-            """ Make sure that the keys and non-empty values for mean 
+            """ Make sure that the keys and non-empty values for mean
             hazard curves have been written to KVS."""
 
             if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
 
                 LOG.debug("verifying KVS entries for mean hazard curves")
-
-                for site_list in hazengine.site_list_generator():
-                    for site in site_list:
-                        key = tokens.mean_hazard_curve_key(hazengine.id, site)
-                        value = self.kvs_client.get(key)
-                        self.assertTrue(value is not None,
-                            "no non-empty value found at KVS key")
+                for site in hazengine.sites_for_region():
+                    key = tokens.mean_hazard_curve_key(hazengine.id, site)
+                    value = self.kvs_client.get(key)
+                    self.assertTrue(
+                        value is not None, "no value found at KVS key")
 
         def verify_mean_haz_maps_stored_to_kvs(hazengine):
-            """ Make sure that the keys and non-empty values for mean 
+            """ Make sure that the keys and non-empty values for mean
             hazard maps have been written to KVS."""
 
             if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
@@ -162,19 +156,19 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("verifying KVS entries for mean hazard maps")
 
-                poes = classical_psha._extract_values_from_config(hazengine, 
+                poes = classical_psha._extract_values_from_config(hazengine,
                     classical_psha.POES_PARAM_NAME)
 
                 for poe in poes:
-                    for site_list in hazengine.site_list_generator():
-                        for site in site_list:
-                            key = tokens.mean_hazard_map_key(hazengine.id, site, poe)
-                            value = self.kvs_client.get(key)
-                            self.assertTrue(value is not None,
-                                "no non-empty value found at KVS key")
+                    for site in hazengine.sites_for_region():
+                        key = tokens.mean_hazard_map_key(
+                            hazengine.id, site, poe)
+                        value = self.kvs_client.get(key)
+                        self.assertTrue(
+                            value is not None, "no value found at KVS key")
 
         def verify_quantile_haz_curves_stored_to_kvs(hazengine):
-            """ Make sure that the keys and non-empty values for quantile 
+            """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
             quantiles = classical_psha._extract_values_from_config(hazengine,
@@ -184,25 +178,24 @@ class HazardEngineTestCase(unittest.TestCase):
                 "%s quantile values" % len(quantiles))
 
             for quantile in quantiles:
-                for site_list in hazengine.site_list_generator():
-                    for site in site_list:
-                        key = tokens.quantile_hazard_curve_key(hazengine.id, 
-                            site, quantile)
-                        value = self.kvs_client.get(key)
-                        self.assertTrue(value is not None,
-                            "no non-empty value found at KVS key")
+                for site in hazengine.sites_for_region():
+                    key = tokens.quantile_hazard_curve_key(
+                        hazengine.id, site, quantile)
+                    value = self.kvs_client.get(key)
+                    self.assertTrue(
+                        value is not None, "no value found at KVS key")
 
         def verify_quantile_haz_maps_stored_to_kvs(hazengine):
-            """ Make sure that the keys and non-empty values for quantile 
+            """ Make sure that the keys and non-empty values for quantile
             hazard maps have been written to KVS."""
 
             quantiles = classical_psha._extract_values_from_config(hazengine,
                 classical_psha.QUANTILE_PARAM_NAME)
 
-            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and 
+            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                poes = classical_psha._extract_values_from_config(hazengine, 
+                poes = classical_psha._extract_values_from_config(hazengine,
                     classical_psha.POES_PARAM_NAME)
 
                 LOG.debug("verifying KVS entries for quantile hazard maps, "\
@@ -211,14 +204,13 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 for quantile in quantiles:
                     for poe in poes:
-                        for site_list in hazengine.site_list_generator():
-                            for site in site_list:
-                                key = tokens.quantile_hazard_map_key(hazengine.id, 
-                                    site, poe, quantile)
-                                value = self.kvs_client.get(key)
-                                self.assertTrue(value is not None,
-                                    "no non-empty value found at KVS key %s" \
-                                    % key)
+                        for site in hazengine.sites_for_region():
+                            key = tokens.quantile_hazard_map_key(
+                                hazengine.id, site, poe, quantile)
+                            value = self.kvs_client.get(key)
+                            self.assertTrue(
+                                value is not None,
+                                "no value found at KVS key %s" % key)
 
         def verify_realization_haz_curves_stored_to_nrml(hazengine):
             """Tests that a NRML file has been written for each realization,
@@ -267,7 +259,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
-                poes = classical_psha._extract_values_from_config(hazengine, 
+                poes = classical_psha._extract_values_from_config(hazengine,
                     classical_psha.POES_PARAM_NAME)
 
                 for poe in poes:
@@ -315,10 +307,10 @@ class HazardEngineTestCase(unittest.TestCase):
             quantiles = classical_psha._extract_values_from_config(hazengine,
                 classical_psha.QUANTILE_PARAM_NAME)
 
-            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and 
+            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                poes = classical_psha._extract_values_from_config(hazengine, 
+                poes = classical_psha._extract_values_from_config(hazengine,
                     classical_psha.POES_PARAM_NAME)
 
                 for quantile in quantiles:
@@ -337,8 +329,8 @@ class HazardEngineTestCase(unittest.TestCase):
 
         test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
-        
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin, 
+
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin,
             key="hazard"):
             result_keys = hazengine.execute()
 
@@ -374,9 +366,9 @@ class HazardEngineTestCase(unittest.TestCase):
         expected_values = {}
 
         print kvs.tokens.ERF_KEY_TOKEN
-        
+
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = kvs.generate_product_key(job_id, 
+            erf_key = kvs.generate_product_key(job_id,
                                                kvs.tokens.ERF_KEY_TOKEN)
 
             # Build the expected values
@@ -413,11 +405,11 @@ class HazardEngineTestCase(unittest.TestCase):
         results = []
         block_id = 8801
         site = "Testville,TestLand"
-    
+
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = kvs.generate_product_key(job_id, 
+            mgm_key = kvs.generate_product_key(job_id,
                 kvs.tokens.MGM_KEY_TOKEN, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
@@ -438,7 +430,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         for site in sites:
             site_key = kvs.generate_product_key(job_id,
-                kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site) 
+                kvs.tokens.HAZARD_CURVE_KEY_TOKEN, block_id, site)
 
             self.kvs_client.set(site_key, ONE_CURVE_MODEL)
 
@@ -462,25 +454,25 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
     def test_process_the_curves_for_a_single_site(self):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), self.empty_curve)
-        
+
         self._run([shapes.Site(2.0, 5.0)])
 
         self._has_computed_mean_curve_for_site(shapes.Site(2.0, 5.0))
-    
+
     def test_process_the_curves_for_multiple_sites(self):
         self._store_hazard_curve_at(shapes.Site(1.5, 1.0), self.empty_curve)
         self._store_hazard_curve_at(shapes.Site(2.0, 1.0), self.empty_curve)
         self._store_hazard_curve_at(shapes.Site(1.5, 1.5), self.empty_curve)
         self._store_hazard_curve_at(shapes.Site(2.0, 1.5), self.empty_curve)
-        
-        self._run([shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0), 
+
+        self._run([shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0),
                 shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)])
 
         self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.0))
         self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.0))
         self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.5))
         self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.5))
-    
+
     def test_computes_the_mean_curve(self):
         hazard_curve_1 = numpy.array([9.8161000e-01, 9.7837000e-01,
                 9.5579000e-01, 9.2555000e-01, 8.7052000e-01, 7.8214000e-01,
@@ -495,7 +487,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 1.8340000e-01, 9.2412000e-02, 4.0202000e-02, 1.4900000e-02,
                 4.5924000e-03, 1.1126000e-03, 1.8647000e-04, 1.8882000e-05,
                 4.7123000e-07])
-    
+
         hazard_curve_3 = numpy.array([9.9178000e-01, 9.8892000e-01,
                 9.6903000e-01, 9.4030000e-01, 8.8405000e-01, 7.8782000e-01,
                 6.4627000e-01, 4.7537000e-01, 3.3168000e-01, 3.0827000e-01,
@@ -516,7 +508,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 1.7279000e-01, 8.8360000e-02, 4.2766000e-02, 1.9643000e-02,
                 8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
                 1.5582000e-05])
-    
+
         mean_hazard_curve = classical_psha.compute_mean_curve([
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5])
@@ -537,7 +529,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         # site is correct
         self.assertEqual(2.0, result["site_lon"])
         self.assertEqual(5.0, result["site_lat"])
-        
+
         # no values
         self.assertTrue(numpy.allclose([], numpy.array(result["curve"])))
 
@@ -565,7 +557,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 {"y": 4.5924000e-03, "x": 0}, {"y": 1.1126000e-03, "x": 0},
                 {"y": 1.8647000e-04, "x": 0}, {"y": 1.8882000e-05, "x": 0},
                 {"y": 4.7123000e-07, "x": 0}]}
-    
+
         hazard_curve_3 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
                 {"y": 9.9178000e-01, "x": 0}, {"y": 9.8892000e-01, "x": 0},
                 {"y": 9.6903000e-01, "x": 0}, {"y": 9.4030000e-01, "x": 0},
@@ -601,13 +593,13 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 {"y": 8.1923000e-03, "x": 0}, {"y": 2.9157000e-03, "x": 0},
                 {"y": 7.9955000e-04, "x": 0}, {"y": 1.5233000e-04, "x": 0},
                 {"y": 1.5582000e-05, "x": 0}]}
-        
+
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_1, 1)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_2, 2)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_3, 3)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_4, 4)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_5, 5)
-        
+
         self._run([shapes.Site(2.0, 5.0)])
 
         result = kvs.get_value_json_decoded(
@@ -617,7 +609,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         # site is correct
         self.assertEqual(2.0, result["site_lon"])
         self.assertEqual(5.0, result["site_lat"])
-        
+
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_mean_curve,
                 classical_psha._extract_y_values_from(result["curve"])))
@@ -637,10 +629,10 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
 
 class QuantileHazardCurveComputationTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.job_id = 1234
-        
+
         self.params = {}
         self.quantiles_levels = classical_psha.QUANTILE_PARAM_NAME
         self.engine = job.Job(self.params,  self.job_id)
@@ -696,7 +688,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 "-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB"
 
         self._run([shapes.Site(2.0, 5.0)])
-        
+
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.00)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.50)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 1.00)
@@ -871,7 +863,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
         # values are correct
         self.assertTrue(numpy.allclose(self.expected_curve,
-                classical_psha._extract_y_values_from(result["curve"]), 
+                classical_psha._extract_y_values_from(result["curve"]),
                 atol=0.005))
 
     def _run(self, sites):
@@ -899,10 +891,10 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
 
 class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.job_id = 1234
-        
+
         self.poes_levels = classical_psha.POES_PARAM_NAME
         self.quantiles_levels = classical_psha.QUANTILE_PARAM_NAME
 
@@ -937,7 +929,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
-    
+
     def test_no_computation_when_the_parameter_is_empty(self):
         self.params[self.poes_levels] = ""
 
@@ -959,13 +951,13 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.params[self.poes_levels] = "0.25"
 
         self._run()
-        
+
         im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.25)
         self.assertEqual(500, im_level["vs30"])
 
     def test_computes_the_iml(self):
         self.params[self.poes_levels] = "0.10"
-        
+
         mean_curve = {"site_lon": 3.0, "site_lat": 3.0,
                 "curve": classical_psha._reconstruct_curve_list_from(
                 [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
@@ -976,7 +968,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self._store_curve_at(shapes.Site(3.0, 3.0), mean_curve)
 
         self._run()
-        
+
         im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.10)
         self.assertEqual(2.0, im_level["site_lon"])
         self.assertEqual(5.0, im_level["site_lat"])
@@ -994,9 +986,9 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
     def test_when_poe_is_too_high_the_min_iml_is_taken(self):
         # highest value is 9.8728e-01
         self.params[self.poes_levels] = "0.99"
-        
+
         self._run()
-        
+
         im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.99)
 
         self.assertTrue(numpy.allclose([5.0000e-03],
@@ -1065,10 +1057,10 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         # asserting imls have been produced for all poes and quantiles
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
                 self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.25)))
-        
+
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
                 self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.50)))
-        
+
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
                 self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.75)))
 
