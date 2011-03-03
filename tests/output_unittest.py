@@ -87,6 +87,7 @@ TEST_COLORMAP = {
     'foreground': [238, 79, 77],
     'NaN': [0, 0, 0]}
 
+
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
 
