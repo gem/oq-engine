@@ -250,6 +250,21 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
         self.relative_color_scaling = relative_color_scaling
 
 
+    def __enter__(self):
+        pass
+
+
+    def __exit__(self):
+        self.close()
+
+
+    def write(self):
+        pass
+
+    def close(self):
+        pass
+
+
 class GMFGeoTiffFile(GeoTiffFile):
     """Writes RGB GeoTIFF image for ground motion fields. Color scale is
     from green (value 0.0) to red (value 2.0). In addition, writes an
