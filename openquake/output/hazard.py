@@ -170,7 +170,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         poe_el.text = " ".join([str(x) for x in values["PoEValues"]])
 
 
-class HazardMapXMLWriter(writer.FileWriter):
+class HazardMapXMLWriter(writer.XMLFileWriter):
     """This class serializes hazard map information
     to NRML format.
     """
@@ -336,7 +336,7 @@ class HazardMapXMLWriter(writer.FileWriter):
 
 # TODO Add support rupture element (not implemented so far)
 # TODO Add support full GMPEParameters (not implemented so far)
-class GMFXMLWriter(writer.FileWriter):
+class GMFXMLWriter(writer.XMLFileWriter):
     """This class serializes ground motion field (GMF) informatiuon
     to NRML format.
 
