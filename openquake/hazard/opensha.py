@@ -470,8 +470,8 @@ class ClassicalMixin(BasePSHAMixin):
 
             print "hm_data is %s" % hm_data
             print "self.params are %s" % self.params
-            with hazard_output.HazardMapGeoTiffFile(  ) as hm_geotiff_writer:
-                pass # TODO: write the geotiff data
+            # with hazard_output.HazardMapGeoTiffFile(  ) as hm_geotiff_writer:
+            #     pass # TODO: write the geotiff data
             xmlwriter.serialize(hm_data)
             files.append(nrml_path)
 
