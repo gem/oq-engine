@@ -214,8 +214,10 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
     """
     Writes a GeoTiff image for hazard maps with an arbitrary colormap.
 
-    Color scaling can absolute for the calculation IML values, or it can be
-    relative for the existing IMLs values in a hazard map.
+    IML values for each site in the map are represented by a color. Color scaling
+    can be applied in one of two ways: 'fixed' or 'relative'.
+        - fixed: colors are mapped across a range of min and max IML values (defined in the job config)
+        - relative: Colors are mapped across only the min and max IML values existing in a given map
  
     In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend.
