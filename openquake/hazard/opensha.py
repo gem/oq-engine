@@ -389,7 +389,8 @@ class ClassicalMixin(BasePSHAMixin):
         Mixing of these three cases is not allowed, i.e., all hazard maps
         from the set of curve_keys have to be either for mean, or quantile.
         """
-
+        iml_list = [float(x) for x in \
+            self.params['INTENSITY_MEASURE_LEVELS'].split(',')]
         poe_list = [float(x) for x in \
             self.params[classical_psha.POES_PARAM_NAME].split()]
         if len(poe_list) == 0:
@@ -467,6 +468,10 @@ class ClassicalMixin(BasePSHAMixin):
                 hm_attrib.update(hm_attrib_update)
                 hm_data.append((site_obj, hm_attrib))
 
+            print "hm_data is %s" % hm_data
+            print "self.params are %s" % self.params
+            with hazard_output.HazardMapGeoTiffFile(  ) as hm_geotiff_writer:
+                pass # TODO: write the geotiff data
             xmlwriter.serialize(hm_data)
             files.append(nrml_path)
 
