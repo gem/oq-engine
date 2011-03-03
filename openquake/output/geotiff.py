@@ -161,7 +161,8 @@ class GeoTiffFile(writer.FileWriter):
         NOTE: this cannot be viewed out-of-the-box in all browsers."""
 
         if self.html_wrapper:
-            # replace placeholders in HTML template with filename, height, width
+            # replace placeholders in HTML template with filename, height,
+            # width
             # TODO(fab): read IMT from config
             html_string = template.generate_html(
                 os.path.basename(self.path),
@@ -218,15 +219,18 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
     """
     Writes a GeoTiff image for hazard maps with an arbitrary colormap.
 
-    IML values for each site in the map are represented by a color. Color scaling
-    can be applied in one of two ways: 'fixed' or 'relative'.
-        - fixed: colors are mapped across a range of min and max IML values (defined in the job config)
-        - relative: Colors are mapped across only the min and max IML values existing in a given map
- 
+    IML values for each site in the map are represented by a color. Color
+    scaling can be applied in one of two ways: 'fixed' or 'relative'.
+        - fixed: colors are mapped across a range of min and max IML values
+            (defined in the job config)
+        - relative: Colors are mapped across only the min and max IML values
+            existing in a given map
+
     In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend.
     """
-    def __init__(self, path, image_grid, colormap, iml_min_max=None, html_wrapper=False):
+    def __init__(self, path, image_grid, colormap, iml_min_max=None,
+                 html_wrapper=False):
         """
         :param path: location of output, including file
             name
@@ -239,14 +243,17 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
             object
         :type colormap: dict
 
-        :param iml_min_max: defines the min and max values of the IML scale for this hazard map;
-            if defined, map color scaling will be 'fixed'; else, 'relative'
+        :param iml_min_max: defines the min and max values of the IML scale for
+            this hazard map; if defined, map color scaling will be 'fixed';
+            else, 'relative'
         :type iml_min_max: tuple of a pair of floats (example: (0.005, 2.13))
 
-        :param html_wrapper: if True, a simple html wrapper file will be created to display the geotiff and a color legend
+        :param html_wrapper: if True, a simple html wrapper file will be
+            created to display the geotiff and a color legend
         :type html_wrapper: boolean
         """
-        super(HazardMapGeoTiffFile, self).__init__(path, image_grid)
+        super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
+            html_wrapper=html_wrapper)
         self.colormap = colormap
         self.html_wrapper = html_wrapper
         self.iml_min = None
@@ -261,12 +268,15 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
                 assert self.iml_min >= 0.0
                 assert self.iml_max >= 0.0 and self.iml_max > self.iml_min
             except AssertionError:
-                raise ValueError('Invalid iml_min_max value. Expected a tuple of two postive floats, the second larger than the first.')
+                raise ValueError(
+                    "Invalid iml_min_max value. Expected a tuple of two "
+                    "postive floats, the second larger than the first.")
 
     @property
     def scaling(self):
         """
-        If the IML min and max are both defined, scaling is 'fixed'; else, 'relative'.
+        If the IML min and max are both defined, scaling is 'fixed'; else,
+        'relative'.
         """
         if not None in (self.iml_min, self.iml_max):
             return 'fixed'
@@ -276,16 +286,8 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
     def __enter__(self):
         pass
 
-
     def __exit__(self):
         self.close()
-
-
-    def write(self):
-        pass
-
-    def close(self):
-        pass
 
 
 class GMFGeoTiffFile(GeoTiffFile):

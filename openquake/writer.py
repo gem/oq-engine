@@ -12,7 +12,7 @@ class FileWriter(object):
         self.file = None
         self._init_file()
         self.root_node = None
-    
+
     def __enter__(self):
         pass
 
