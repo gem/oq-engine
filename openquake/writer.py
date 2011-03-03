@@ -13,22 +13,27 @@ class FileWriter(object):
         self._init_file()
         self.root_node = None
     
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        self.close()
+
     def _init_file(self):
         """Get the file handle open for writing"""
         self.file = open(self.path, "w")
 
     def write(self, point, value):
-        """Write out an individual point (unimplemented)"""
+        """
+        Write out an individual point (unimplemented).
+
+        :param point: location associated with the data to be written
+        :type point: should be a shapes.Site object
+
+        :param value: some value to be written to the file
+        :type value: determined by concrete class implementation
+        """
         raise NotImplementedError
-
-    def write_header(self):
-        """Write out the file header"""
-        pass
-
-    def write_footer(self):
-        """Write out the file footer"""
-        pass
-
 
     def close(self):
         """Close and flush the file. Send finished messages."""
@@ -36,6 +41,34 @@ class FileWriter(object):
 
     def serialize(self, iterable):
         """Wrapper for writing all items in an iterable object."""
+        if isinstance(iterable, dict):
+            iterable = iterable.items()
+        for key, val in iterable:
+            self.write(key, val)
+        self.close()
+
+
+class XMLFileWriter(FileWriter):
+    """
+    Base class for writing XML files.
+    """
+
+    def write_header(self):
+        """
+        Write out the file header.
+        """
+        raise NotImplementedError
+
+    def write_footer(self):
+        """
+        Write out the file footer.
+        """
+        raise NotImplementedError
+
+    def serialize(self, iterable):
+        """
+        Wrapper for writing all items in an iterable object.
+        """
         if isinstance(iterable, dict):
             iterable = iterable.items()
         self.write_header()
