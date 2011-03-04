@@ -9,6 +9,7 @@ compute_risk task
 import json
 
 from celery.exceptions import TimeoutError
+from celery.decorators import task
 from scipy.stats import norm
 
 from openquake import job
@@ -18,6 +19,7 @@ from openquake import shapes
 
 from openquake.risk import common
 from openquake.risk import probabilistic_event_based
+from openquake.risk import job as risk_job
 from openquake.parser import exposure
 from openquake.parser import vulnerability
 from openquake.risk.job import output, RiskJobMixin
@@ -54,12 +56,13 @@ class ProbabilisticEventMixin:
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
 
+        results = []
         tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
             # pylint: disable-msg=E1101
-            tasks.append(self.compute_risk(block_id))
+            tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs)
@@ -141,6 +144,7 @@ class ProbabilisticEventMixin:
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
+    @task
     def compute_risk(self, block_id, **kwargs): #pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
