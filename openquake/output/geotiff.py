@@ -244,13 +244,6 @@ class LossMapGeoTiffFile(MapGeoTiffFile):
     0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend."""
 
-    def __init__(self, path, image_grid, init_value=numpy.nan,
-                 normalize=True, html_wrapper=True):
-        super(LossMapGeoTiffFile, self).__init__(
-            path, image_grid, init_value=init_value, normalize=normalize,
-            html_wrapper=html_wrapper) 
-
-   
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
         serialization. Make sure these are zero-based cell addresses."""
