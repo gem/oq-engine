@@ -144,7 +144,6 @@ class ProbabilisticEventMixin:
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
-    @task
     def compute_risk(self, block_id, **kwargs): #pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
