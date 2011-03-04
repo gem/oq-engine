@@ -279,6 +279,8 @@ class LossMapGeoTiffFile(MapGeoTiffFile):
         except AttributeError:
             pass
 
+        self.target = None  # This required to flush the file
+
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
         serialization. Make sure these are zero-based cell addresses."""
