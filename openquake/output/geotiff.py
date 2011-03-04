@@ -193,6 +193,7 @@ class GeoTiffFile(writer.FileWriter):
             self._write_html_wrapper()
 
         self.target = None  # This is required to flush the file
+        self.file.close()
 
     def _get_rgb(self):
         raise NotImplementedError
@@ -280,6 +281,7 @@ class LossMapGeoTiffFile(MapGeoTiffFile):
             pass
 
         self.target = None  # This required to flush the file
+        self.file.close()
 
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
