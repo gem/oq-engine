@@ -339,7 +339,7 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
         """
         super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
             html_wrapper=html_wrapper)
-        self.colormap = colormap
+        self.colormap = colormap  # TODO: Validate the rgb list lengths
         self.html_wrapper = html_wrapper
         self.iml_min = None
         self.iml_max = None
@@ -400,6 +400,47 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
         point = self.grid.point_at(site)
         return super(HazardMapGeoTiffFile, self).write(
             (point.row, point.column), haz_map_data['IML'])
+
+    def _normalize(self):
+        # TODO (LB): Add support for continuous colormaps
+        if self.colormap['type'] == 'continuous':
+            raise NotImplementedError("Continuous colormaps are not currently"
+                " supported for rendering hazard maps")
+        min = self.iml_min
+        max = self.iml_max
+        z_vals = self.colormap['z_values']
+        normalize = lambda raster, z_vals: raster * z_vals[-1] / (max - min)
+        self.raster = normalize(self.raster, z_vals)
+
+
+        # now get rgb values
+        bins = numpy.digitize(normalized_raster.flatten(), z_vals)
+        # type is discrete, so we subtract 1
+        # because len(z_vals) == len(rgb_vals) + 1
+        bins -= 1
+        # the last z_val range is inclusive on the high-end
+        numpy.putmask(
+            bins,
+            bins > len(self.colormap['red']) - 1,
+            len(self.colormap['red']) - 1)
+
+    # TODO: should this be a function instead of a method?
+    def _get_rgb(self):
+        if self.colormap['type'] == 'continuous':
+            raise NotImplementedError
+        # TODO: the following code only applies to discrete colormaps
+        # add an implementation for continuous colormaps
+        assert self.colormap['type'] == 'discrete'
+        bins = numpy.digitize(self.raster.flatten(), z_vals)
+        bins -= 1  # transform to a 0-indexed array
+        numpy.putmask(bins, bin > len(self.colormap['red']) - 1,
+            len(self.colormap['red']))
+      
+        # TODO: make this a module function, not a lambda 
+        get_color_vals = lambda color_list:
+            numpy.array([color_list[x] for x in bins])
+        red, green, blue = [get_color_vals(self.colormap[x]) for x in ['red', 'green', 'blue']]
+        return (red, green, blue)
 
 
 class GMFGeoTiffFile(GeoTiffFile):
