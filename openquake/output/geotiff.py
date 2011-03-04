@@ -4,13 +4,7 @@
 A trivial implementation of the GeoTiff format,
 using GDAL.
 
-In order to make this run, you'll need GDAL installed,
-and on the Mac I couldn't get the brew recipe to work.
-I recommend the DMG framework at
-http://www.kyngchaos.com/software:frameworks.
-
-I had to add the installed folders to
-PYTHONPATH in my .bash_profile file to get them to load.
+In order to make this run, you'll need GDAL installed.
 """
 
 import numpy
@@ -68,8 +62,27 @@ class GeoTiffFile(writer.FileWriter):
 
     def __init__(self, path, image_grid, init_value=numpy.nan,
                  normalize=False, html_wrapper=True):
+        """
+        :param path: location of output file, including file name
+        :type path: string
+
+        :param grid: the geographical area covered by the hazard map
+        :type grid: shapes.Grid object
+
+        :param init_value: initial value for each member of the raster matrix
+        :type init_value: float
+
+        :param normalize: TODO
+        :type normalize: TODO
+
+        :param html_wrapper: if True, a simple html wrapper file will be
+            created to display the geotiff and a color legend
+        :type html_wrapper: boolean
+        """
+        super(GeoTiffFile, self).__init__(path)
         self.grid = image_grid
         self.normalize = normalize
+        self.html_wrapper = html_wrapper
         # NOTE(fab): GDAL initializes the image as columns x rows.
         # numpy arrays, however, have usually rows as first axis,
         # and columns as second axis (as it is the convention for
@@ -81,18 +94,23 @@ class GeoTiffFile(writer.FileWriter):
         self.alpha_raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * 32.0
         self.target = None
-        self.html_wrapper = html_wrapper
-        super(GeoTiffFile, self).__init__(path)
+        self._init_target()
 
     @property
     def html_path(self):
-        """Path to the generated html file"""
+        """
+        Path to the generated html file.
+        """
         if self.path.endswith(('tiff', 'TIFF')):
             return ''.join((self.path[0:-4], 'html'))
         else:
             return ''.join((self.path, '.html'))
 
-    def _init_file(self):
+    def _init_target(self):
+        """
+        Initialize the target dataset for writing raster data and set spatial
+        reference info.
+        """
         driver = gdal.GetDriverByName(self.format)
 
         # NOTE(fab): use GDAL data type GDT_Float32 for science data
@@ -122,39 +140,62 @@ class GeoTiffFile(writer.FileWriter):
         srs.SetWellKnownGeogCS(SPATIAL_REFERENCE_SYSTEM)
         self.target.SetProjection(srs.ExportToWkt())
 
-    def write(self, cell, value):
-        """Stores the cell values in the NumPy array for later
-        serialization. Make sure these are zero-based cell addresses."""
-        self.raster[int(cell[0]), int(cell[1])] = float(value)
+    def write(self, coords, value, alpha=255.0):
+        """
+        Plot an IML value to the image raster. These values will need to be
+        converted to color values before writing the geotiff file.
+
+        :param coords: matrix coordinates where we want to store the input
+            value; coordinates are zero-based
+        :type coords: tuple of integers (row, column)
+
+        :param value: raw IML value; this will be transformed to a color value
+            and written to the geotiff
+        :type value: float
+
+        :param alpha: alpha layer value for this point (from 0.0 to 255.0,
+            where 0.0 is fully transparent and 255.0 is fully opaque)
+        :type alpha: float or integer
+        """
+        self.raster[int(coords[0]), int(coords[1])] = float(value)
         # Set AlphaLayer
         if value:
-            self.alpha_raster[int(cell[0]), int(cell[1])] = 255.0
+            assert alpha >= 0.0 and alpha <= 255.0
+            self.alpha_raster[int(coords[0]), int(coords[1])] = float(alpha)
 
     def _normalize(self):
-        """ Normalize the raster matrix """
-        # NOTE(fab): numpy raster does not have to be transposed, although
-        # it has rows x columns
-        if self.normalize:
-            self.raster = self.raster * 254.0 / self.raster.max()
+        """
+        Convert the range of pixel intensity values in the raster to color
+        values.
+
+        Subclasses will be responsible for specific implementation.
+
+        For more information, see:
+        http://en.wikipedia.org/wiki/Normalization_(image_processing)
+        """
+        raise NotImplementedError
 
     def close(self):
-        """Make sure the file is flushed, and send exit event"""
         self._normalize()
 
-        self.target.GetRasterBand(1).WriteArray(self.raster)
-        self.target.GetRasterBand(2).Fill(0.0)
-        self.target.GetRasterBand(3).Fill(0.0)
-
-        # Write alpha channel
+        red, green, blue = self._get_rgb()
+        # TODO: Write the RGB and Alpha data
+        # red band
+        self.target.GetRasterBand(1).WriteArray(red)
+        # green band
+        self.target.GetRasterBand(2).WriteArray(green)
+        # blue band
+        self.target.GetRasterBand(3).WriteArray(blue)
+        # alpha band
         self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
 
-        # Try to write the HTML wrapper
-        try:
+        if self.html_wrapper:
             self._write_html_wrapper()
-        except AttributeError:
-            pass
 
         self.target = None  # This is required to flush the file
+
+    def _get_rgb(self):
+        raise NotImplementedError
 
     def _write_html_wrapper(self):
         """Write an html wrapper that embeds the geotiff in an <img> tag.
@@ -174,14 +215,14 @@ class GeoTiffFile(writer.FileWriter):
             with open(self.html_path, 'w') as f:
                 f.write(html_string)
 
-    def serialize(self, iterable):
-        # TODO(JMC): Normalize the values
-        maxval = max(iterable.values())
-        for key, val in iterable.items():
-            if self.normalize:
-                val = val / maxval * 254
-            self.write((key.column, key.row), val)
-        self.close()
+    #def serialize(self, iterable):
+    #    # TODO(JMC): Normalize the values
+    #    maxval = max(iterable.values())
+    #    for key, val in iterable.items():
+    #        if self.normalize:
+    #            val = val / maxval * 254
+    #        self.write((key.column, key.row), val)
+    #    self.close()
 
 
 class MapGeoTiffFile(GeoTiffFile):
@@ -189,6 +230,27 @@ class MapGeoTiffFile(GeoTiffFile):
     0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend."""
 
+    # def _normalize(self):
+    #     """ Normalize the raster matrix """
+    #     if self.normalize:
+    #         # This gives us a color scale of 0 to 100 with a 16 step.
+    #         self.raster = numpy.abs((255 * self.raster) / 100.0)
+    #         modulo = self.raster % 0x10
+    #         self.raster -= modulo
+
+    
+class LossMapGeoTiffFile(MapGeoTiffFile):
+    """ Write RGBA geotiff images for loss maps. Color scale is from
+    0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
+    the TIFF with a color-scale legend."""
+
+    def __init__(self, path, image_grid, init_value=numpy.nan,
+                 normalize=True, html_wrapper=True):
+        super(LossMapGeoTiffFile, self).__init__(
+            path, image_grid, init_value=init_value, normalize=normalize,
+            html_wrapper=html_wrapper) 
+
+   
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
         serialization. Make sure these are zero-based cell addresses."""
@@ -207,17 +269,39 @@ class MapGeoTiffFile(GeoTiffFile):
             modulo = self.raster % 0x10
             self.raster -= modulo
 
+    def close(self):
+        """Make sure the file is flushed, and send exit event"""
+        self._normalize()
 
-class LossMapGeoTiffFile(MapGeoTiffFile):
-    """ Write RGBA geotiff images for loss maps. Color scale is from
-    0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
-    the TIFF with a color-scale legend."""
-    pass
+        self.target.GetRasterBand(1).WriteArray(self.raster)
+        self.target.GetRasterBand(2).Fill(0.0)
+        self.target.GetRasterBand(3).Fill(0.0)
+
+        # Write alpha channel
+        self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
+
+        # Try to write the HTML wrapper
+        try:
+            self._write_html_wrapper()
+        except AttributeError:
+            pass
+
+    def write(self, cell, value):
+        """Stores the cell values in the NumPy array for later
+        serialization. Make sure these are zero-based cell addresses."""
+        self.raster[int(cell[0]), int(cell[1])] = float(value)
+
+        # Set AlphaLayer
+        if value:
+            # 0x10 less than full opacity
+            self.alpha_raster[int(cell[0]), int(cell[1])] = float(0xfa)
 
 
 class HazardMapGeoTiffFile(MapGeoTiffFile):
     """
     Writes a GeoTiff image for hazard maps with an arbitrary colormap.
+    Colormap input is expected to be a dict and can be read from a standard
+    cpt file by the :py:class: `CPTReader` class.
 
     IML values for each site in the map are represented by a color. Color
     scaling can be applied in one of two ways: 'fixed' or 'relative'.
@@ -241,7 +325,8 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
 
         :param colormap: colormap data, as read by a :py:class: `CPTReader`
             object
-        :type colormap: dict
+        :type colormap: dict (see :py:class: `CPTReader` documentation for
+            details about the dict structure)
 
         :param iml_min_max: defines the min and max values of the IML scale for
             this hazard map; if defined, map color scaling will be 'fixed';
@@ -251,6 +336,9 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
         :param html_wrapper: if True, a simple html wrapper file will be
             created to display the geotiff and a color legend
         :type html_wrapper: boolean
+
+        TODO (LB): In the future, we may also want this class to track the map
+        mode (mean or quantile) so we can display this to the user.
         """
         super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
             html_wrapper=html_wrapper)
@@ -283,11 +371,38 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
         else:
             return 'relative'
 
-    def __enter__(self):
-        pass
+    def write(self, site, haz_map_data):
+        """
+        Plot hazard curve data for a single point on the map.
 
-    def __exit__(self):
-        self.close()
+        :param site: location associated with the data to be written
+        :type site: shapes.Site object
+
+        :param haz_map_data: hazard curve data, either 'quantile' or 'mean'
+            Quantile hazard curve example:
+            {'investigationTimeSpan': '50.0',
+             'statistics': 'quantile',
+             'vs30': 760.0,
+             'IMT': 'PGA',
+             'poE': 0.10000000000000001,
+             'IML': 0.27353200850839826,
+             'quantileValue': 0.25}
+
+            Mean hazard curve example:
+            {'investigationTimeSpan': '50.0',
+             'endBranchLabel': '1_1',
+             'vs30': 760.0,
+             'IMT': 'PGA',
+             'poE': 0.10000000000000001,
+             'IML': 0.27353200850839826}
+        :type haz_map_data: dict
+        """
+        # TODO (LB): Typically, hazard maps display IML values (with a fixed
+        # probability). In the future, we may need to support the opposite
+        # (display probablilities with a fixed IML value).
+        point = self.grid.point_at(site)
+        return super(HazardMapGeoTiffFile, self).write(
+            (point.row, point.column), haz_map_data['IML'])
 
 
 class GMFGeoTiffFile(GeoTiffFile):
@@ -359,22 +474,26 @@ class GMFGeoTiffFile(GeoTiffFile):
         self.raster_r, self.raster_g, self.raster_b = _rgb_for(
             self.raster, COLORMAP[self.colormap])
 
-    def close(self):
-        """Make sure the file is flushed, and send exit event"""
-        self._normalize()
+    def _get_rgb(self):
+        return self.raster_r, self.raster_g, self.raster_b
 
-        self.target.GetRasterBand(1).WriteArray(self.raster_r)
-        self.target.GetRasterBand(2).WriteArray(self.raster_g)
-        self.target.GetRasterBand(3).WriteArray(self.raster_b)
+    #def close(self):
+    #    """Make sure the file is flushed, and send exit event"""
+    #    self._normalize()
 
-        # set alpha channel to fully opaque
-        self.target.GetRasterBand(4).Fill(255)
+    #    print "self.raster_r is %s" % self.raster_r
+    #    self.target.GetRasterBand(1).WriteArray(self.raster_r)
+    #    self.target.GetRasterBand(2).WriteArray(self.raster_g)
+    #    self.target.GetRasterBand(3).WriteArray(self.raster_b)
 
-        # write wrapper before closing file, so that raster dimensions are
-        # still accessible
-        self._write_html_wrapper()
+    #    # set alpha channel to fully opaque
+    #    self.target.GetRasterBand(4).Fill(255)
 
-        self.target = None  # This is required to flush the file
+    #    # write wrapper before closing file, so that raster dimensions are
+    #    # still accessible
+    #    self._write_html_wrapper()
+
+    #    self.target = None  # This is required to flush the file
 
     def _condense_iml_range_to_unity(self, array, remove_outliers=False):
         """Requires a one- or multi-dim. numpy array as argument."""
@@ -429,6 +548,7 @@ class CPTReader:
     """This class provides utilities for reading colormap data from cpt files.
 
     Colormaps have the following properties:
+    
     - z-values: Any sequence of numbers (example: [-2.5, -2.4, ... , 1.4, 1.5])
     - colormap Id (example: seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp)
     - colormap name (example: seminf-haxby)
@@ -444,7 +564,7 @@ class CPTReader:
     Example RGB colormap:
         {'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
          'name': 'seminf-haxby',
-         'type': 'discrete',  # 'discrete' or 'continuous'
+         'type': 'discrete',
          'model': 'RGB',
          'z_values': [0.00, 1.25, 2.50, ... , 28.75, 30.00],
          'red': [255, 208, 186, ... , 244, 238],
