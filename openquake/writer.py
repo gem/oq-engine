@@ -13,12 +13,6 @@ class FileWriter(object):
         self._init_file()
         self.root_node = None
 
-    def __enter__(self):
-        pass
-
-    def __exit__(self):
-        self.close()
-
     def _init_file(self):
         """Get the file handle open for writing"""
         self.file = open(self.path, "w")
