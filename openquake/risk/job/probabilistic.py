@@ -9,7 +9,6 @@ compute_risk task
 import json
 
 from celery.exceptions import TimeoutError
-from celery.decorators import task
 from scipy.stats import norm
 
 from openquake import job

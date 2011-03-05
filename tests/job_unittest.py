@@ -16,16 +16,12 @@ from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
 
-
-
-#import ProbabilisticEventMixin
-
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
 TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
-TEST_JOB_FILE_CLASSICAL = test.smoketest_file('classical_psha_simple_london/config.gem')
+TEST_JOB_FILE_CLASSICAL = test.smoketest_file('classical_psha_simple/classical-psha-config.gem')
 
 SITE = shapes.Site(1.0, 1.0)
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
@@ -96,9 +92,8 @@ class JobTestCase(unittest.TestCase):
             
 
     def test_classical_psha_based_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin, key="classical_psha"):
+        with Mixin(self.job, RiskJobMixin, key="risk"):
             self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
-            self.assertTrue(ClassicalPSHABasedMixin in self.job.__class__.__bases__)
 
         with Mixin(self.job, ClassicalPSHABasedMixin):
             self.assertTrue(ClassicalPSHABasedMixin in self.job.__class__.__bases__)
