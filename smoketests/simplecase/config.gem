@@ -130,6 +130,8 @@ COMPUTE_MEAN_HAZARD_CURVE = true
 # List of POEs to use for computing hazard maps
 POES_HAZARD_MAPS = 0.01 0.10
 
+HAZARD_MAP_CPT = seminf-haxby.cpt
+
 [RISK]
 
 RISK_CALCULATION_MODE = Probabilistic Event
