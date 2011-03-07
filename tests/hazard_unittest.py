@@ -621,7 +621,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
         print x_values
 
-        self.assertTrue(numpy.allclose(numpy.array([0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]),
+        self.assertTrue(numpy.allclose(numpy.array(19 * [0.5]),
         numpy.array(x_values)))
 
     def _run(self, sites):
