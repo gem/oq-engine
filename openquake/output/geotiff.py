@@ -437,7 +437,7 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
             len(self.colormap['red']))
       
         # TODO: make this a module function, not a lambda 
-        get_color_vals = lambda color_list:
+        get_color_vals = lambda color_list: \
             numpy.array([color_list[x] for x in bins])
         red, green, blue = [get_color_vals(self.colormap[x]) for x in ['red', 'green', 'blue']]
         return (red, green, blue)
