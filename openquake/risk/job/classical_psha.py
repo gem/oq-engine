@@ -15,6 +15,7 @@ from openquake.risk.job import preload, output, RiskJobMixin
 from math import exp
 LOGGER = logs.LOG
 
+
 class ClassicalPSHABasedMixin:
 
     """Mixin for Classical PSHA Based Risk Job"""

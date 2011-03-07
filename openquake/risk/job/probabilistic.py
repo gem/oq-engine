@@ -27,6 +27,7 @@ LOGGER = logs.LOG
 
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
+
 class ProbabilisticEventMixin:
     # TODO (al-maisan) Consider refactoring our job system to make use of
     # dependency injection techniques as opposed to monkey patching python's
@@ -68,7 +69,7 @@ class ProbabilisticEventMixin:
         except TimeoutError:
             return []
 
-        return results # TODO(jmc): Move output from being a decorator
+        return results  # TODO(jmc): Move output from being a decorator
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
@@ -108,7 +109,7 @@ class ProbabilisticEventMixin:
                     "TimeSpan": timespan}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
-    def compute_risk(self, block_id, **kwargs): #pylint: disable=W0613
+    def compute_risk(self, block_id, **kwargs):  #pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
          1) list of sites
@@ -169,7 +170,7 @@ class ProbabilisticEventMixin:
             loss_conditional, key))
         kvs.set(key, loss_conditional)
 
-    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice): # site_id
+    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice):  # site_id
         """Compute the loss ratio curve for a single site."""
         # If the asset has a vuln function code we don't have loaded, return
         # fail
