@@ -13,10 +13,24 @@ from openquake import logs
 from openquake import shapes
 from openquake.output import curve
 from openquake.output import risk as risk_output
+from openquake.parser import exposure
+from openquake.parser import vulnerability
 
 from celery.decorators import task
 
 LOG = logs.LOG
+
+def preload(fn):
+    """ Preload decorator """
+
+    def preloader(self, *args, **kwargs):
+        """A decorator for preload steps that must run on the Jobber"""
+
+        self.store_exposure_assets()
+        self.store_vulnerability_model()
+
+        return fn(self, *args, **kwargs)
+    return preloader
 
 
 def output(fn):
@@ -77,6 +91,26 @@ def compute_risk(job_id, block_id, **kwargs):
 class RiskJobMixin(mixins.Mixin):
     """ A mixin proxy for Risk jobs """
     mixins = {}
+
+
+    def store_exposure_assets(self):
+        """ Load exposure assets and write to kvs """
+        exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
+            (self.base_path, self.params[job.EXPOSURE]))
+
+        for site, asset in exposure_parser.filter(self.region):
+            # TODO(JMC): This is kludgey
+            asset['lat'] = site.latitude
+            asset['lon'] = site.longitude
+            gridpoint = self.region.grid.point_at(site)
+            asset_key = kvs.tokens.asset_key(self.id, gridpoint.row,
+                gridpoint.column)
+            kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
+
+    def store_vulnerability_model(self):
+        """ load vulnerability and write to kvs """
+        vulnerability.load_vulnerability_model(self.id,
+            "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
     def _serialize_and_plot(self, block_id, **kwargs):
         """

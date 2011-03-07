@@ -5,54 +5,19 @@ import json
 from openquake import job
 from celery.exceptions import TimeoutError
 
-from openquake.shapes import Curve
-from openquake.parser import exposure
 from openquake.parser import vulnerability
+from openquake.shapes import Curve
 from openquake.risk import job as risk_job
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake import kvs
 from openquake import logs
-from openquake.risk.job import output, RiskJobMixin
+from openquake.risk.job import preload, output, RiskJobMixin
 from math import exp
 LOGGER = logs.LOG
-
-
-def preload(fn):
-    """ Preload decorator """
-
-    def preloader(self, *args, **kwargs):
-        """A decorator for preload steps that must run on the Jobber"""
-
-        self.store_exposure_assets()
-        self.store_vulnerability_model()
-
-        return fn(self, *args, **kwargs)
-    return preloader
-
 
 class ClassicalPSHABasedMixin:
 
     """Mixin for Classical PSHA Based Risk Job"""
-    # TODO: move to the RiskJobMixin
-    def store_exposure_assets(self):
-        """ Load exposure assets and write to kvs """
-        exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
-            (self.base_path, self.params[job.EXPOSURE]))
-
-        for site, asset in exposure_parser.filter(self.region):
-            # TODO(JMC): This is kludgey
-            asset['lat'] = site.latitude
-            asset['lon'] = site.longitude
-            gridpoint = self.region.grid.point_at(site)
-            asset_key = kvs.tokens.asset_key(self.id, gridpoint.row,
-                gridpoint.column)
-            kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
-
-    # TODO: move to the RiskJobMixin
-    def store_vulnerability_model(self):
-        """ load vulnerability and write to kvs """
-        vulnerability.load_vulnerability_model(self.id,
-            "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
     @preload
     @output
