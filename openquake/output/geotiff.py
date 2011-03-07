@@ -95,6 +95,9 @@ class GeoTiffFile(writer.FileWriter):
                                  dtype=numpy.float) * 32.0
         self.target = None
         self._init_target()
+        self.red = None
+        self.green = None
+        self.blue = None
 
     @property
     def html_path(self):
@@ -175,17 +178,27 @@ class GeoTiffFile(writer.FileWriter):
         """
         raise NotImplementedError
 
+    def _generate_colorscale(self):
+        raise NotImplementedError
+
+    def _get_rgb(self):
+        raise NotImplementedError
+
+    @property
+    def html_template(self):
+        return None
+        
     def close(self):
         self._normalize()
 
-        red, green, blue = self._get_rgb()
-        # TODO: Write the RGB and Alpha data
+        self.red, self.green, self.blue = self._get_rgb()
+
         # red band
-        self.target.GetRasterBand(1).WriteArray(red)
+        self.target.GetRasterBand(1).WriteArray(self.red)
         # green band
-        self.target.GetRasterBand(2).WriteArray(green)
+        self.target.GetRasterBand(2).WriteArray(self.green)
         # blue band
-        self.target.GetRasterBand(3).WriteArray(blue)
+        self.target.GetRasterBand(3).WriteArray(self.blue)
         # alpha band
         self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
 
@@ -194,9 +207,6 @@ class GeoTiffFile(writer.FileWriter):
 
         self.target = None  # This is required to flush the file
         self.file.close()
-
-    def _get_rgb(self):
-        raise NotImplementedError
 
     def _write_html_wrapper(self):
         """Write an html wrapper that embeds the geotiff in an <img> tag.
@@ -210,8 +220,9 @@ class GeoTiffFile(writer.FileWriter):
                 os.path.basename(self.path),
                 width=str(self.target.RasterXSize * SCALE_UP),
                 height=str(self.target.RasterYSize * SCALE_UP),
-                colorscale=self.colorscale_values,
-                imt='PGA/g')
+                colorscale=self._generate_colorscale(),
+                imt='PGA/g',
+                template=self.html_template)
 
             with open(self.html_path, 'w') as f:
                 f.write(html_string)
@@ -230,16 +241,8 @@ class MapGeoTiffFile(GeoTiffFile):
     """ Write RGBA geotiff images for loss/hazard maps. Color scale is from
     0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend."""
+# TODO: there's nothing in this class... remove?
 
-    # def _normalize(self):
-    #     """ Normalize the raster matrix """
-    #     if self.normalize:
-    #         # This gives us a color scale of 0 to 100 with a 16 step.
-    #         self.raster = numpy.abs((255 * self.raster) / 100.0)
-    #         modulo = self.raster % 0x10
-    #         self.raster -= modulo
-
-    
 class LossMapGeoTiffFile(MapGeoTiffFile):
     """ Write RGBA geotiff images for loss maps. Color scale is from
     0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
@@ -275,10 +278,10 @@ class LossMapGeoTiffFile(MapGeoTiffFile):
         self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
 
         # Try to write the HTML wrapper
-        try:
-            self._write_html_wrapper()
-        except AttributeError:
-            pass
+        # try:
+        self._write_html_wrapper()
+        # except AttributeError:
+        #     pass
 
         self.target = None  # This required to flush the file
         self.file.close()
@@ -292,6 +295,13 @@ class LossMapGeoTiffFile(MapGeoTiffFile):
         if value:
             # 0x10 less than full opacity
             self.alpha_raster[int(cell[0]), int(cell[1])] = float(0xfa)
+
+    def _generate_colorscale(self):
+        return None
+
+    @property
+    def html_template(self):
+        return template.HTML_TEMPLATE_LOSSRATIO
 
 
 class HazardMapGeoTiffFile(MapGeoTiffFile):
@@ -402,45 +412,42 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
             (point.row, point.column), haz_map_data['IML'])
 
     def _normalize(self):
-        # TODO (LB): Add support for continuous colormaps
-        if self.colormap['type'] == 'continuous':
+
+        def _normalize_continuous():
+            # TODO (LB): Add support for continuous colormaps
             raise NotImplementedError("Continuous colormaps are not currently"
                 " supported for rendering hazard maps")
-        min = self.iml_min
-        max = self.iml_max
-        z_vals = self.colormap['z_values']
-        normalize = lambda raster, z_vals: raster * z_vals[-1] / (max - min)
-        self.raster = normalize(self.raster, z_vals)
 
+        def _normalize_discrete():
+            """
+            Use a typical graphics normalization formula to map an arbitrary
+            range of intensity values (IMLs) to a range of z-values
+            (0.0 to 1.0, inclusive).
 
-        # now get rgb values
-        bins = numpy.digitize(normalized_raster.flatten(), z_vals)
-        # type is discrete, so we subtract 1
-        # because len(z_vals) == len(rgb_vals) + 1
-        bins -= 1
-        # the last z_val range is inclusive on the high-end
-        numpy.putmask(
-            bins,
-            bins > len(self.colormap['red']) - 1,
-            len(self.colormap['red']) - 1)
+            More info:
+            http://en.wikipedia.org/wiki/Normalization_(image_processing)
+            """
 
-    # TODO: should this be a function instead of a method?
-    def _get_rgb(self):
+            min = self.iml_min
+            max = self.iml_max
+            z_vals = self.colormap['z_values']
+            normalize = lambda raster, z_vals: \
+                raster * z_vals[-1] / (max - min)
+            self.raster = normalize(self.raster, z_vals)
+
+            
         if self.colormap['type'] == 'continuous':
-            raise NotImplementedError
-        # TODO: the following code only applies to discrete colormaps
-        # add an implementation for continuous colormaps
-        assert self.colormap['type'] == 'discrete'
-        bins = numpy.digitize(self.raster.flatten(), z_vals)
-        bins -= 1  # transform to a 0-indexed array
-        numpy.putmask(bins, bin > len(self.colormap['red']) - 1,
-            len(self.colormap['red']))
-      
-        # TODO: make this a module function, not a lambda 
-        get_color_vals = lambda color_list: \
-            numpy.array([color_list[x] for x in bins])
-        red, green, blue = [get_color_vals(self.colormap[x]) for x in ['red', 'green', 'blue']]
-        return (red, green, blue)
+            return _normalize_continous()
+        elif self.colormap['type'] == 'discrete':
+            return _normalize_discrete()
+        else:
+            raise ValueError("Unsupported colormap type '%s'" %
+                self.colormap['type'])
+
+    def _get_rgb(self):
+        return rgb_from_raster(
+            self.colormap, self.raster, self.iml_min, self.iml_max)
+
 
 
 class GMFGeoTiffFile(GeoTiffFile):
@@ -477,11 +484,8 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.color_buckets = len(iml_list) - 1
             self.iml_step = None
 
-        # list with pairs of RGB color hex codes and corresponding
-        # floats as values
-        self.colorscale_values = self._generate_colorscale()
-
         # set image rasters
+        # TODO: refactor these
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
         self.raster_g = numpy.zeros_like(self.raster_r)
@@ -514,24 +518,6 @@ class GMFGeoTiffFile(GeoTiffFile):
 
     def _get_rgb(self):
         return self.raster_r, self.raster_g, self.raster_b
-
-    #def close(self):
-    #    """Make sure the file is flushed, and send exit event"""
-    #    self._normalize()
-
-    #    print "self.raster_r is %s" % self.raster_r
-    #    self.target.GetRasterBand(1).WriteArray(self.raster_r)
-    #    self.target.GetRasterBand(2).WriteArray(self.raster_g)
-    #    self.target.GetRasterBand(3).WriteArray(self.raster_b)
-
-    #    # set alpha channel to fully opaque
-    #    self.target.GetRasterBand(4).Fill(255)
-
-    #    # write wrapper before closing file, so that raster dimensions are
-    #    # still accessible
-    #    self._write_html_wrapper()
-
-    #    self.target = None  # This is required to flush the file
 
     def _condense_iml_range_to_unity(self, array, remove_outliers=False):
         """Requires a one- or multi-dim. numpy array as argument."""
@@ -580,6 +566,42 @@ def _interpolate_color(fractional_values, colormap, rgb_band):
     color_interpolate = interp1d(colormap[RGB_SEGMENTS], colormap[rgb_band])
     return numpy.reshape(color_interpolate(fractional_values.flatten()),
                          fractional_values.shape)
+
+
+# TODO: should this be a function instead of a method?
+def rgb_from_raster(colormap, raster, iml_min, iml_max):
+
+    if colormap['type'] == 'continuous':
+        raise NotImplementedError
+    elif colormap['type'] == 'discrete':
+        # now figure out the proper colors
+        # we need to build a list of indices to grab the right
+        # colors from the colormap
+        bins = numpy.digitize(raster.flatten(), z_vals)
+        # type is discrete; we need the bins to correspond to color indices
+        # we subtract 1 because (len(z_vals) == len(rgb_vals) + 1)
+        bins -= 1
+        # the last z_val range is inclusive on the high end
+        # TODO: document the ranges [a, b), [c, d), ... , [y, z]
+        numpy.putmask(
+            bins,
+            bins > len(colormap['red']) - 1,
+            len(colormap['red']) - 1)
+        # TODO: verify color value list lengths in the constructor
+        # all of them should be equal
+        return rgb_values_from_colormap(colormap, bins)
+
+def rgb_values_from_colormap(colormap, index_list):
+    # make sure the color value lists are equal in length
+    # if they're not, this is a bad colormap
+    assert len(colormap['red']) == len(colormap['green']) \
+        and len(colormap['red']) == len(colormap['blue'])
+
+    get_colors = lambda color_list: \
+        numpy.array([color_list[x] for x in index_list])
+    red, green, blue = \
+        [get_colors(colormap[x]) for x in ('red', 'green', 'blue')]
+    return red, green, blue
 
 
 class CPTReader:

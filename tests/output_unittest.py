@@ -586,3 +586,20 @@ class OutputTestCase(unittest.TestCase):
         hm_writer = geotiff.HazardMapGeoTiffFile(
             test_file_path, test_region.grid, TEST_COLORMAP)
         self.assertEqual('relative', hm_writer.scaling)
+
+    def test_rgb_values_from_colormap(self):
+        # get colors for 8 points 
+        indices = [0, 23, 3, 2, 17, 1, 19, 22]
+        red_expected = numpy.array([255, 238, 143, 186, 223, 208, 247, 244])
+        green_expected = numpy.array([255, 79, 161, 197, 245, 216, 215, 116])
+        blue_expected = numpy.array([255, 77, 241, 247, 141, 251, 103, 74])
+
+        red, green, blue = geotiff.rgb_values_from_colormap(TEST_COLORMAP, indices)
+
+        for expect, actual in (
+            (red_expected, red),
+            (green_expected, green),
+            (blue_expected, blue)):
+            # values here are numpy.array objects
+            # cast to list for easy comparison
+            self.assertEqual(list(expect), list(actual))
