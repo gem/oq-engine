@@ -12,6 +12,7 @@ import numpy
 import struct
 import subprocess
 import unittest
+import copy
 
 from osgeo import gdal, gdalconst
 
@@ -603,3 +604,13 @@ class OutputTestCase(unittest.TestCase):
             # values here are numpy.array objects
             # cast to list for easy comparison
             self.assertEqual(list(expect), list(actual))
+
+    def test_rgb_values_from_bad_colormap(self):
+        colormap = copy.deepcopy(TEST_COLORMAP)
+        indices = []  # these don't matter in this test
+        # the lists of r, g, and b values should all be the same length
+        # let's create a failure:
+        colormap['green'].pop()
+        self.assertRaises(
+                AssertionError, geotiff.rgb_values_from_colormap, colormap, indices)
+
