@@ -320,8 +320,29 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
     In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend.
     """
-    def __init__(self, path, image_grid, colormap, iml_min_max=None,
-                 html_wrapper=False):
+
+    DEFAULT_COLORMAP = {
+        'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
+        'name': 'seminf-haxby',
+        'type': 'discrete',
+        'model': 'RGB',
+        # z_values = [0.0, 1.25, ... , 28.75, 30.0]
+        'z_values': [1.25 * x for x in range(25)],
+        'red': [255, 208, 186, 143, 97, 0, 25, 12, 24, 49, 67, 96,
+                105, 123, 138, 172, 205, 223, 240, 247, 255,
+                255, 244, 238],
+        'green': [255, 216, 197, 161, 122, 39, 101, 129, 175, 190,
+                  202, 225, 235, 235, 236, 245, 255, 245, 236,
+                  215, 189, 160, 116, 79],
+        'blue': [255, 251, 247, 241, 236, 224, 240, 248, 255, 255,
+                 255, 240, 225, 200, 174, 168, 162, 141, 120,
+                 103, 86, 68, 74, 77],
+        'background': [255, 255, 255],
+        'foreground': [238, 79, 77],
+        'NaN': [0, 0, 0]}
+
+    def __init__(self, path, image_grid, colormap=DEFAULT_COLORMAP,
+                 iml_min_max=None, html_wrapper=False):
         """
         :param path: location of output, including file
             name
@@ -428,8 +449,12 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
             http://en.wikipedia.org/wiki/Normalization_(image_processing)
             """
 
-            min = self.iml_min
-            max = self.iml_max
+            if self.scaling == 'fixed':
+                min = self.iml_min
+                max = self.iml_max
+            else:
+                min = self.raster.min()
+                max = self.raster.max()
             z_vals = self.colormap['z_values']
             normalize = lambda raster, z_vals: \
                 raster * z_vals[-1] / (max - min)
@@ -447,7 +472,6 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
     def _get_rgb(self):
         return rgb_from_raster(
             self.colormap, self.raster, self.iml_min, self.iml_max)
-
 
 
 class GMFGeoTiffFile(GeoTiffFile):
@@ -577,7 +601,7 @@ def rgb_from_raster(colormap, raster, iml_min, iml_max):
         # now figure out the proper colors
         # we need to build a list of indices to grab the right
         # colors from the colormap
-        bins = numpy.digitize(raster.flatten(), z_vals)
+        bins = numpy.digitize(raster.flatten(), colormap['z_values'])
         # type is discrete; we need the bins to correspond to color indices
         # we subtract 1 because (len(z_vals) == len(rgb_vals) + 1)
         bins -= 1
@@ -745,6 +769,7 @@ class CPTReader:
 
         :param line: a single line read from the cpt file
         """
+        print "line is %s" % line
         drop_tail_extend = lambda lst, ext: lst[:-1] + [x for x in ext]
         strs_to_ints = lambda strs: [int(x) for x in strs]
 

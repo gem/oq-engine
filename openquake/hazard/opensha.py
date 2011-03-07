@@ -476,8 +476,8 @@ class ClassicalMixin(BasePSHAMixin):
             print "hm_geotiff_name is %s" % hm_geotiff_name
             print "hm_data is %s" % hm_data
             print "self.params are %s" % self.params
+            
             self._write_hazard_map_geotiff(geotiff_path, hm_data)
-
             xmlwriter.serialize(hm_data)
 
             files.append(nrml_path)
@@ -486,8 +486,17 @@ class ClassicalMixin(BasePSHAMixin):
         return files
 
     def _write_hazard_map_geotiff(self, path, haz_map_data):
-        # TODO (LB): Need to read in a real color map
-        colormap = {}
+        try:
+            path = os.path.join(
+                    self.params['BASE_PATH'], self.params['HAZARD_MAP_CPT'])
+            cpt_reader = geotiff.CPTReader(path)
+            colormap = cpt_reader.get_colormap()
+        except (IOError, KeyError):
+            LOG.info(
+                "Unable to read hazard map CPT file from job config."
+                " Using default colormap.")
+            colormap = geotiff.HazardMapGeoTiffFile.DEFAULT_COLORMAP
+        
         iml_min_max = None
         if 'HAZARD_MAP_IML_MIN' in self.params and \
             'HAZARD_MAP_IML_MAX' in self.params:
@@ -495,7 +504,7 @@ class ClassicalMixin(BasePSHAMixin):
                 float(self.params['HAZARD_MAP_IML_MIN']),
                 float(self.params['HAZARD_MAP_IML_MAX']))
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            path, self.region.grid, colormap, iml_min_max=iml_min_max,
+            path, self.region.grid, colormap=colormap, iml_min_max=iml_min_max,
             html_wrapper=True)
 
         # write the hazard map and close the file
