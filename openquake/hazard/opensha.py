@@ -468,10 +468,7 @@ class ClassicalMixin(BasePSHAMixin):
                 hm_attrib.update(hm_attrib_update)
                 hm_data.append((site_obj, hm_attrib))
 
-            print "hm_data is %s" % hm_data
-            print "self.params are %s" % self.params
-            # with hazard_output.HazardMapGeoTiffFile(  ) as hm_geotiff_writer:
-            #     pass # TODO: write the geotiff data
+            # TODO: write hazard map geotiff here
             xmlwriter.serialize(hm_data)
             files.append(nrml_path)
 
