@@ -88,6 +88,25 @@ TEST_COLORMAP = {
     'foreground': [238, 79, 77],
     'NaN': [0, 0, 0]}
 
+TEST_CONTINUOUS_COLORMAP = {
+    'id': 'green-red',
+    'name': 'green-red',
+    'type': 'continuous',
+    'model': 'RGB',
+    'z_values': [0.0, 1.0],
+    'red': [0, 255],
+    'green': [255, 0],
+    'blue': [0, 0],
+    'background': None,
+    'foreground': None,
+    'NaN': None}
+
+TEST_IML_LIST = [
+    0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376,
+    0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397,
+    0.556, 0.778, 1.09, 1.52, 2.13]
+
+
 
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
@@ -100,12 +119,10 @@ class OutputTestCase(unittest.TestCase):
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
-        iml_list = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376,
-                    0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397,
-                    0.556, 0.778, 1.09, 1.52, 2.13]
+        iml_list = TEST_IML_LIST
 
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=iml_list, discrete=True, colormap='matlab-polar')
+            iml_list=iml_list, discrete=True, colormap=geotiff.COLORMAPS['matlab-polar'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -113,6 +130,7 @@ class OutputTestCase(unittest.TestCase):
         self._fill_rasters(asymmetric_region, gwriter, reference_raster,
             self._colorscale_cuts_fill)
         gwriter.close()
+        self.assertTrue(False)
 
     def test_geotiff_generation_discrete_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
@@ -122,7 +140,7 @@ class OutputTestCase(unittest.TestCase):
             TEST_REGION_LARGE_ASYMMETRIC)
 
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, discrete=True, colormap='gmt-seis')
+            iml_list=None, discrete=True, colormap=geotiff.COLORMAPS['gmt-seis'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -140,7 +158,7 @@ class OutputTestCase(unittest.TestCase):
             TEST_REGION_LARGE_ASYMMETRIC)
 
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, discrete=False, colormap='gmt-seis')
+            iml_list=None, discrete=False, colormap=geotiff.COLORMAPS['gmt-seis'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -157,7 +175,7 @@ class OutputTestCase(unittest.TestCase):
             TEST_REGION_LARGE_ASYMMETRIC)
 
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, discrete=False, colormap='gmt-green-red')
+            iml_list=None, discrete=False, colormap=geotiff.COLORMAPS['gmt-green-red'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -564,7 +582,7 @@ class OutputTestCase(unittest.TestCase):
         for bad in bad_test_data:
             self.assertRaises(
                 ValueError, geotiff.HazardMapGeoTiffFile, test_file_path,
-                test_region.grid, TEST_COLORMAP, iml_min_max=bad)
+                test_region.grid, TEST_IML_LIST, TEST_COLORMAP, iml_min_max=bad)
 
     def test_hazard_map_geotiff_scaling(self):
         """
@@ -579,13 +597,14 @@ class OutputTestCase(unittest.TestCase):
 
         # test 'fixed' color scaling
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            test_file_path, test_region.grid, TEST_COLORMAP,
-            iml_min_max=test_iml_min_max)
+            test_file_path, test_region.grid, TEST_IML_LIST,
+            TEST_COLORMAP, iml_min_max=test_iml_min_max)
         self.assertEqual('fixed', hm_writer.scaling)
 
         # test 'relative' color scaling
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            test_file_path, test_region.grid, TEST_COLORMAP)
+            test_file_path, test_region.grid, TEST_IML_LIST,
+            TEST_COLORMAP)
         self.assertEqual('relative', hm_writer.scaling)
 
     def test_rgb_values_from_colormap(self):
@@ -597,13 +616,12 @@ class OutputTestCase(unittest.TestCase):
 
         red, green, blue = geotiff.rgb_values_from_colormap(TEST_COLORMAP, indices)
 
-        for expect, actual in (
+        for expected, actual in (
             (red_expected, red),
             (green_expected, green),
             (blue_expected, blue)):
             # values here are numpy.array objects
-            # cast to list for easy comparison
-            self.assertEqual(list(expect), list(actual))
+            self.assertTrue((expected == actual).all())
 
     def test_rgb_values_from_bad_colormap(self):
         colormap = copy.deepcopy(TEST_COLORMAP)
@@ -612,5 +630,146 @@ class OutputTestCase(unittest.TestCase):
         # let's create a failure:
         colormap['green'].pop()
         self.assertRaises(
-                AssertionError, geotiff.rgb_values_from_colormap, colormap, indices)
+                AssertionError, geotiff.rgb_values_from_colormap, colormap,
+                indices)
 
+    def test_rgb_from_raster(self):
+        # 3x3 image example
+        raster = numpy.array(
+            [[0.0, -0.01, 0.1],
+             [30.0, 28.75, 30.1],
+             [10.0, 10.333, 11.249]])
+        expected_red = numpy.array(
+            [[255, 255, 255],
+             [238, 238, 238],
+             [24, 24, 24]])
+        expected_green = numpy.array(
+            [[255, 255, 255],
+             [79, 79, 79],
+             [175, 175, 175]])
+        expected_blue = numpy.array(
+            [[255, 255, 255],
+             [77, 77, 77],
+             [255, 255, 255]])
+
+        actual_red, actual_green, actual_blue = \
+            geotiff.rgb_from_raster(TEST_COLORMAP, raster)
+
+        for expected, actual in (
+            (expected_red, actual_red),
+            (expected_green, actual_green),
+            (expected_blue, actual_blue)):
+            # numpy array objects
+            print "expected %s" % expected
+            print "actual %s" % actual
+            self.assertTrue((expected == actual).all())
+
+    def test_condense_to_unity(self):
+        test_input = numpy.array([0.005, 0.007, 0.0098])
+        expected_output = numpy.array([0.0, 0.416666666667, 1.0])
+
+        actual_output = geotiff.condense_to_unity(test_input)
+
+        self._assert_numpy_arrays_almost_equal(expected_output, actual_output)
+
+    def test_condense_to_unity_with_min_max(self):
+        test_input = numpy.array([0.4, 0.7, 1.3, 2.2, 4.1])
+        expected_output = numpy.array([0.0, 0.0, 0.15625, 0.4375, 1.0])
+        fixed_min_max = (0.8, 4.0)
+
+        actual_output = geotiff.condense_to_unity(test_input, min_max=fixed_min_max)
+
+        self._assert_numpy_arrays_almost_equal(expected_output, actual_output)
+
+    def test_condense_to_unity_2d(self):
+        test_input = numpy.array([[0.005, 0.007], [0.0098, 0.005]])
+        expected_output = numpy.array([[0.0, 0.416666666667], [1.0, 0.0]])
+
+        actual_output = geotiff.condense_to_unity(test_input)
+
+        self._assert_numpy_arrays_almost_equal(expected_output, actual_output)
+
+    def test_condense_to_unity_no_change(self):
+        test_input = numpy.array([0.0, 0.25, 0.5, 0.75, 1.0])
+        # input should be the same as output
+
+        actual_output = geotiff.condense_to_unity(test_input)
+
+        self._assert_numpy_arrays_almost_equal(test_input, actual_output)
+
+    def _assert_numpy_arrays_almost_equal(self, expected, actual, precision=6):
+        """
+        Compares 1- or 2-dimensional numpy.arrays of floats for equality,
+        up to 6 digits of precision (by default).
+        """
+        self.assertEqual(len(expected), len(actual))
+        for i, exp in enumerate(expected):
+            if type(exp) is numpy.ndarray:
+                # handle 2-d arrays
+                for j, exp2 in enumerate(exp):
+                    self.assertAlmostEqual(exp2, actual[i][j], precision)
+            else:
+                self.assertAlmostEqual(exp, actual[i], precision)
+
+
+    def test_interpolate_color(self):
+        iml_fractions = numpy.array([[0.0, 0.22988505747126439], [0.55172413793103448, 1.0]])
+        colormap = TEST_CONTINUOUS_COLORMAP
+
+        expected_red = numpy.array([[0.0, 58.62068966], [140.68965517, 255.0]])
+        expected_green = numpy.array([[255.0, 196.37931034], [114.31034483, 0.0]])
+        expected_blue = numpy.array([[0.0, 0.0], [0.0, 0.0]])
+
+        actual_red = geotiff.interpolate_color(iml_fractions, colormap, 'red')
+        actual_green = geotiff.interpolate_color(iml_fractions, colormap, 'green')
+        actual_blue = geotiff.interpolate_color(iml_fractions, colormap, 'blue')
+
+        self._assert_numpy_arrays_almost_equal(expected_red, actual_red)
+        self._assert_numpy_arrays_almost_equal(expected_green, actual_green)
+        self._assert_numpy_arrays_almost_equal(expected_blue, actual_blue)
+
+    def test_rgb_for_continuous(self):
+        iml_fractions = numpy.array([[0.0, 0.22988505747126439], [0.55172413793103448, 1.0]])
+        colormap = TEST_CONTINUOUS_COLORMAP
+
+        expected_red = numpy.array([[0.0, 58.62068966], [140.68965517, 255.0]])
+        expected_green = numpy.array([[255.0, 196.37931034], [114.31034483, 0.0]])
+        expected_blue = numpy.array([[0.0, 0.0], [0.0, 0.0]])
+
+        actual_red, actual_green, actual_blue = \
+            geotiff.rgb_for_continuous(iml_fractions, colormap)
+
+        self._assert_numpy_arrays_almost_equal(expected_red, actual_red)
+        self._assert_numpy_arrays_almost_equal(expected_green, actual_green)
+        self._assert_numpy_arrays_almost_equal(expected_blue, actual_blue)
+
+    def test_discrete_colorscale(self):
+        
+        min = 0.8
+        max = 0.4
+        expected_output = [
+            ('#ffffff', '0.80 - 0.93'), ('#d0d8fb', '0.93 - 1.07'),
+            ('#bac5f7', '1.07 - 1.20'), ('#8fa1f1', '1.20 - 1.33'),
+            ('#617aec', '1.33 - 1.47'), ('#0027e0', '1.47 - 1.60'),
+            ('#1965f0', '1.60 - 1.73'), ('#0c81f8', '1.73 - 1.87'),
+            ('#18afff', '1.87 - 2.00'), ('#31beff', '2.00 - 2.13'),
+            ('#43caff', '2.13 - 2.27'), ('#60e1f0', '2.27 - 2.40'),
+            ('#69ebe1', '2.40 - 2.53'), ('#7bebc8', '2.53 - 2.67'),
+            ('#8aecae', '2.67 - 2.80'), ('#acf5a8', '2.80 - 2.93'),
+            ('#cdffa2', '2.93 - 3.07'), ('#dff58d', '3.07 - 3.20'),
+            ('#f0ec78', '3.20 - 3.33'), ('#f7d767', '3.33 - 3.47'),
+            ('#ffbd56', '3.47 - 3.60'), ('#ffa044', '3.60 - 3.73'),
+            ('#f4744a', '3.73 - 3.87'), ('#ee4f4d', '3.87 - 4.00')]
+
+        colorscale = geotiff.discrete_colorscale(TEST_COLORMAP, 0.8, 4.0)
+        self.assertEqual(expected_output, colorscale)         
+
+    def test_continuous_colorscale(self):
+        iml_list = numpy.array([0.005, 0.007, 0.0098, 0.0137])
+        colormap = TEST_CONTINUOUS_COLORMAP
+        expected_output = [
+            ('#00ff00', '0.005'), ('#3ac400', '0.007'), ('#8c7200', '0.0098'), ('#ff0000', '0.0137')]
+
+        actual_output = geotiff.continuous_colorscale(colormap, iml_list)
+
+        self.assertEqual(expected_output, actual_output)
