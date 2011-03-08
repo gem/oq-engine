@@ -390,8 +390,6 @@ class ClassicalMixin(BasePSHAMixin):
         from the set of curve_keys have to be either for mean, or quantile.
         """
         print "map_keys are %s" % map_keys
-        iml_list = [float(x) for x in \
-            self.params['INTENSITY_MEASURE_LEVELS'].split(',')]
         poe_list = [float(x) for x in \
             self.params[classical_psha.POES_PARAM_NAME].split()]
         if len(poe_list) == 0:
@@ -476,7 +474,7 @@ class ClassicalMixin(BasePSHAMixin):
             print "hm_geotiff_name is %s" % hm_geotiff_name
             print "hm_data is %s" % hm_data
             print "self.params are %s" % self.params
-            
+
             self._write_hazard_map_geotiff(geotiff_path, hm_data)
             xmlwriter.serialize(hm_data)
 
@@ -486,17 +484,30 @@ class ClassicalMixin(BasePSHAMixin):
         return files
 
     def _write_hazard_map_geotiff(self, path, haz_map_data):
+        """
+        Write out a hazard map geotiff using the input hazard map data.
+
+        :param path: path to output file, including file name
+        :param haz_map_data: list of hazard map data to be serialized to the
+            geotiff
+        :type haz_map_data: list of tuples of (shapes.Site object, hazard map
+            data dict)
+        """
         try:
-            path = os.path.join(
+            cpt_path = os.path.join(
                     self.params['BASE_PATH'], self.params['HAZARD_MAP_CPT'])
-            cpt_reader = geotiff.CPTReader(path)
+            cpt_reader = geotiff.CPTReader(cpt_path)
             colormap = cpt_reader.get_colormap()
         except (IOError, KeyError):
             LOG.info(
                 "Unable to read hazard map CPT file from job config."
                 " Using default colormap.")
             colormap = geotiff.HazardMapGeoTiffFile.DEFAULT_COLORMAP
-        
+
+
+        iml_list = [float(x) for x in \
+            self.params['INTENSITY_MEASURE_LEVELS'].split(',')]
+
         iml_min_max = None
         if 'HAZARD_MAP_IML_MIN' in self.params and \
             'HAZARD_MAP_IML_MAX' in self.params:
@@ -504,8 +515,8 @@ class ClassicalMixin(BasePSHAMixin):
                 float(self.params['HAZARD_MAP_IML_MIN']),
                 float(self.params['HAZARD_MAP_IML_MAX']))
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            path, self.region.grid, colormap=colormap, iml_min_max=iml_min_max,
-            html_wrapper=True)
+            path, self.region.grid, iml_list, colormap=colormap,
+            iml_min_max=iml_min_max, html_wrapper=True)
 
         # write the hazard map and close the file
         return hm_writer.serialize(haz_map_data)
