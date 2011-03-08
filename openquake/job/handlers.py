@@ -1,4 +1,4 @@
-# This file is part of OpenQuake.
+# Copyright (c) 2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3
@@ -13,6 +13,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
 
 """ Handlers for guarantee_file """
 

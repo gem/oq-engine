@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# This file is part of OpenQuake.
+# Copyright (c) 2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3
