@@ -15,7 +15,7 @@ develop detailed schemas. Please contribute by providing your input, suggestions
 recommendations, etc. 
 
 We would also like to rename the ML, in this document we are using for an 
-example NRML (Natural Risk Mark up Language), please provide your ideas.
+example NRML (Natural hazards’ Risk Markup Language), please provide your ideas.
 
 Some issues to consider:
 - Should we use: Multiple Document Types, Multi Root Document Types, or 
