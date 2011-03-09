@@ -252,7 +252,7 @@ class BlockSplitterTestCase(unittest.TestCase):
                 job.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
                 job.Block((shapes.Site(2.0, 2.0),)))
 
-        self.splitter = job.BlockSplitter(sites, 2, 
+        self.splitter = job.BlockSplitter(sites, 2,
                                             constraint=region_constraint)
         self._assert_blocks_are(expected_blocks)
 
