@@ -224,15 +224,6 @@ if [ ! -z "$other_remote" ]; then
     other_branch="ba"
 else
     other_branch="$other_reference"
-    git checkout $other_branch 
-fi
-
-# How many python files were added or modified?
-num_of_py_files=`git diff master...HEAD --name-only --diff-filter=AM | grep py$ | wc -l`
-
-if [ $skip_pylint -eq 0 -a $num_of_py_files -gt 0 ]; then
-    echo "Running pylint on $other_branch.."
-    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
 fi
 
 if [ ! -z "$branch_remote" ]; then
@@ -244,10 +235,17 @@ if [ ! -z "$branch_remote" ]; then
     branch_branch="bb"
 else
     branch_branch="$branch_reference"
-    git checkout $branch_branch 
 fi
 
-if [ $skip_pylint -eq 0 -a $num_of_py_files -gt 0 ]; then
+# How many python files were added or modified?
+num_of_py_files=`git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | wc -l`
+
+if [ $skip_pylint -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
+    git checkout $other_branch 
+    echo "Running pylint on $other_branch.."
+    pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
+
+    git checkout $branch_branch 
     echo "Running pylint on $branch_name.."
     pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 
@@ -286,10 +284,11 @@ if [ $skip_pylint -eq 0 -a $num_of_py_files -gt 0 ]; then
     echo "Press <enter> to continue"
     read
 fi
-if [ $skip_pep8 -eq 0 -a $num_of_py_files -gt 0 ]; then
+
+if [ $skip_pep8 -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
     echo "Running pep8 on $branch_name.."
     echo ""
-    git diff master...HEAD --name-only --diff-filter=AM | grep py$ | xargs pep8 --repeat
+    git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | xargs pep8 --repeat
     echo ""
     echo "Press <enter> to continue"
     read
