@@ -64,7 +64,7 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
         0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
         "TSES": 900, "TimeSpan": 50}
-# TSES = TimeSpan times number of Realizations
+
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
@@ -260,9 +260,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_with_valid_covs_we_sample_the_loss_ratios(self):
         """With valid covs we need to sample loss ratios.
-        
+
         If the vulnerability function has some covs greater than 0.0 we need
-        to use a different algorithm (sampled based) to compute the loss ratios.
+        to use a different algorithm (sampled based)
+        to compute the loss ratios.
         """
 
         vuln_function = shapes.VulnerabilityFunction([
@@ -270,15 +271,15 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.30, (0.10, 0.30)),
                 (0.50, (0.15, 0.20)),
                 (1.00, (0.30, 0.20))])
-        
+
         epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077, \
                 -0.4336, 0.3426, 3.5784, 2.7694]
-        
+
         expected_asset = object()
 
         gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
-        
+
         self.assertTrue(numpy.allclose(numpy.array([0.0722, 0.4106, 0.1800,
                 0.1710, 0.2508, 0.0395, 0.1145, 0.2883, 0.4734, 0.4885]),
                 prob._compute_loss_ratios(vuln_function, gmfs,
@@ -312,14 +313,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
-        
+
         The vulnerability function used in this test has all covs equal
         to zero, so the mean based algorithm is used. This test checks
         the boundary conditions.
 
         The resulting loss ratio is zero if the GMF is below the minimum IML
         defined the vulnerability function.
-        
+
         The resulting loss ratio is equal to the maximum loss ratio
         defined by the function if the GMF is greater than the maximum
         IML defined.
@@ -336,7 +337,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_loss_ratios_computation_using_gmfs(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
-        
+
         The vulnerability function used in this test has all covs equal
         to zero, so the mean based algorithm is used. It basically
         takes each IML defined in the GMFs and interpolates them using
