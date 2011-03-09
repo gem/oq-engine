@@ -22,7 +22,7 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
     """Compute the set of loss ratios using the set of
     ground motion fields passed.
-    
+
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: shapes.VulnerabilityFunction
@@ -151,7 +151,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
 
     A loss ratio curve is a function that has loss ratios as X values
     and PoEs (Probabilities of Exceendance) as Y values.
-    
+
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: shapes.VulnerabilityFunction
