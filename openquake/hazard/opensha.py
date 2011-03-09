@@ -504,10 +504,6 @@ class ClassicalMixin(BasePSHAMixin):
                 " Using default colormap.")
             colormap = geotiff.HazardMapGeoTiffFile.DEFAULT_COLORMAP
 
-
-        iml_list = [float(x) for x in \
-            self.params['INTENSITY_MEASURE_LEVELS'].split(',')]
-
         iml_min_max = None
         if 'HAZARD_MAP_IML_MIN' in self.params and \
             'HAZARD_MAP_IML_MAX' in self.params:
@@ -515,7 +511,7 @@ class ClassicalMixin(BasePSHAMixin):
                 float(self.params['HAZARD_MAP_IML_MIN']),
                 float(self.params['HAZARD_MAP_IML_MAX']))
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            path, self.region.grid, iml_list, colormap=colormap,
+            path, self.region.grid, colormap=colormap,
             iml_min_max=iml_min_max, html_wrapper=True)
 
         # write the hazard map and close the file
