@@ -241,8 +241,8 @@ class OutputTestCase(unittest.TestCase):
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
-        gwriter = geotiff.LossMapGeoTiffFile(path, asymmetric_region.grid,
-            normalize=True)
+        gwriter = geotiff.LossMapGeoTiffFile(
+            path, asymmetric_region.grid, normalize=True)
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
                                        dtype=numpy.float)
@@ -397,8 +397,8 @@ class OutputTestCase(unittest.TestCase):
         the value of the raster nodes."""
         path = test.do_test_output_file(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
-        gwriter = geotiff.LossMapGeoTiffFile(path, smallregion.grid,
-                                      GEOTIFF_TEST_PIXEL_VALUE)
+        gwriter = geotiff.LossMapGeoTiffFile(
+            path, smallregion.grid, init_value=GEOTIFF_TEST_PIXEL_VALUE)
         gwriter.close()
 
         self._assert_geotiff_metadata_is_correct(path, smallregion)
@@ -419,7 +419,7 @@ class OutputTestCase(unittest.TestCase):
 
         reference_raster = numpy.zeros((squareregion.grid.rows,
                                         squareregion.grid.columns),
-                                       dtype=numpy.float)
+                                        dtype=numpy.float)
         self._fill_rasters(squareregion, gwriter, reference_raster,
             self._trivial_fill)
         gwriter.close()
@@ -832,12 +832,20 @@ class OutputTestCase(unittest.TestCase):
             data['IML'] = iml_list[i]
             hm_data.append((site, data))
         print "the test hm data is %s" % hm_data
-       
-        hm_writer = geotiff.HazardMapGeoTiffFile("/Users/larsbutler/First_Hazard_Map.tiff",
+      
+        path = "/Users/larsbutler/TEST_HAZARD_MAP.tiff"
+        print "path is %s" % path 
+        hm_writer = geotiff.HazardMapGeoTiffFile(path,
             small_region.grid, html_wrapper=True)
-        hm_writer.serialize(hm_data)
-        print hm_writer._get_rgb()
-        red_band = hm_writer.target.GetRasterBand(1)
-        print red_band.GetRasterColorTable()
-        print red_band.GetColorTable()
-        self.assertTrue(False)
+
+        for site, data in hm_data:
+            hm_writer.write(site, data)
+
+        hm_writer._normalize()
+        red, green, blue = hm_writer._get_rgb()
+
+        hm_writer.target.GetRasterBand(1).WriteArray(red)
+        hm_writer.target.GetRasterBand(2).WriteArray(green)
+        hm_writer.target.GetRasterBand(3).WriteArray(blue)
+        hm_writer.target.GetRasterBand(4).Fill(255)
+        print "red band array", hm_writer.target.GetRasterBand(1).ReadAsArray()
