@@ -8,6 +8,7 @@ and (eventually) test performance of various serializers.
 """
 
 import os
+import copy
 import numpy
 import struct
 import subprocess
@@ -130,7 +131,6 @@ class OutputTestCase(unittest.TestCase):
         self._fill_rasters(asymmetric_region, gwriter, reference_raster,
             self._colorscale_cuts_fill)
         gwriter.close()
-        self.assertTrue(False)
 
     def test_geotiff_generation_discrete_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
@@ -582,7 +582,7 @@ class OutputTestCase(unittest.TestCase):
         for bad in bad_test_data:
             self.assertRaises(
                 ValueError, geotiff.HazardMapGeoTiffFile, test_file_path,
-                test_region.grid, TEST_IML_LIST, TEST_COLORMAP, iml_min_max=bad)
+                test_region.grid, TEST_COLORMAP, iml_min_max=bad)
 
     def test_hazard_map_geotiff_scaling(self):
         """
@@ -597,14 +597,13 @@ class OutputTestCase(unittest.TestCase):
 
         # test 'fixed' color scaling
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            test_file_path, test_region.grid, TEST_IML_LIST,
-            TEST_COLORMAP, iml_min_max=test_iml_min_max)
+            test_file_path, test_region.grid, TEST_COLORMAP,
+            iml_min_max=test_iml_min_max)
         self.assertEqual('fixed', hm_writer.scaling)
 
         # test 'relative' color scaling
         hm_writer = geotiff.HazardMapGeoTiffFile(
-            test_file_path, test_region.grid, TEST_IML_LIST,
-            TEST_COLORMAP)
+            test_file_path, test_region.grid, TEST_COLORMAP)
         self.assertEqual('relative', hm_writer.scaling)
 
     def test_rgb_values_from_colormap(self):
@@ -773,3 +772,72 @@ class OutputTestCase(unittest.TestCase):
         actual_output = geotiff.continuous_colorscale(colormap, iml_list)
 
         self.assertEqual(expected_output, actual_output)
+
+    def test_write_hazard_map_geotiff(self):
+       
+        # 8x8 px
+        small_region_coords = [(0.0, 0.0), (0.5, 0.0), (0.5, 0.5), (0.0, 0.5)]
+        small_region = shapes.Region.from_coordinates(small_region_coords)
+            
+        hm_point_data = {
+            'investigationTimeSpan': '50.0',
+            'statistics': 'quantile',
+            'vs30': 760.0,
+            'IMT': 'PGA',
+            'poE': 0.1,
+            'IML': None,
+            'quantileValue': 0.25}
+
+        iml_list = [
+            0.361937801476,
+            0.273532008508,
+            0.242229898865,
+            0.419417963875,
+            0.272285730608,
+            0.348273115152,
+            0.305440556821,
+            0.264260394999,
+            0.377844386865,
+            0.313182264442,
+            0.249751814648,
+            0.351339245536,
+            0.27965491195,
+            0.245197064505,
+            0.404364061323,
+            0.274841943048,
+            0.281393272007,
+            0.304689514445,
+            0.267924606026,
+            0.308982744041,
+            0.249441042426,
+            0.275752227615,
+            0.528185455822,
+            0.280781760955,
+            0.247868614611,
+            0.270997983466,
+            0.309521592277,
+            0.268810429387,
+            0.33831815943,
+            0.451071839091,
+            0.244078269563,
+            0.284520817008,
+            0.261061308897,
+            0.540030551854,
+            0.29261888758,
+            0.306303457108]
+        hm_data = []
+
+        for i, site in enumerate(small_region.sites):
+            data = copy.copy(hm_point_data)
+            data['IML'] = iml_list[i]
+            hm_data.append((site, data))
+        print "the test hm data is %s" % hm_data
+       
+        hm_writer = geotiff.HazardMapGeoTiffFile("/Users/larsbutler/First_Hazard_Map.tiff",
+            small_region.grid, html_wrapper=True)
+        hm_writer.serialize(hm_data)
+        print hm_writer._get_rgb()
+        red_band = hm_writer.target.GetRasterBand(1)
+        print red_band.GetRasterColorTable()
+        print red_band.GetColorTable()
+        self.assertTrue(False)
