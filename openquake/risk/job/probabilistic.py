@@ -78,7 +78,7 @@ class ProbabilisticEventMixin:
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            # pylint: disable-msg=E1101
+            # pylint: disable=E1101
             tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to

@@ -42,7 +42,7 @@ class Redis(object):
 
     def __new__(cls, host=settings.KVS_HOST, 
                      port=settings.KVS_PORT, 
-                     **kwargs): #pylint: disable-msg=W0613
+                     **kwargs): #pylint: disable=W0613
         self = object.__new__(cls)
         self.__dict__ = cls.__shared_state
         return self
