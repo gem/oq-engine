@@ -557,7 +557,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 {"y": 4.5924000e-03, "x": 0.5}, {"y": 1.1126000e-03, "x": 0.5},
                 {"y": 1.8647000e-04, "x": 0.5}, {"y": 1.8882000e-05, "x": 0.5},
                 {"y": 4.7123000e-07, "x": 0.5}]}
-    
+
         hazard_curve_3 = {"site_lon": 2.0, "site_lat": 5.0, "curve": [
                 {"y": 9.9178000e-01, "x": 0.5}, {"y": 9.8892000e-01, "x": 0.5},
                 {"y": 9.6903000e-01, "x": 0.5}, {"y": 9.4030000e-01, "x": 0.5},
@@ -593,7 +593,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 {"y": 8.1923000e-03, "x": 0.5}, {"y": 2.9157000e-03, "x": 0.5},
                 {"y": 7.9955000e-04, "x": 0.5}, {"y": 1.5233000e-04, "x": 0.5},
                 {"y": 1.5582000e-05, "x": 0.5}]}
-        
+
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_1, 1)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_2, 2)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_3, 3)
@@ -614,7 +614,6 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(self.expected_mean_curve,
                 classical_psha._extract_y_values_from(result["curve"])))
 
-        
         x_values = []
         for values in result["curve"]:
             x_values.append(values["x"])

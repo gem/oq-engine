@@ -109,7 +109,7 @@ class ProbabilisticEventMixin:
                     "TimeSpan": timespan}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
-    def compute_risk(self, block_id, **kwargs):  #pylint: disable=W0613
+    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
          1) list of sites
