@@ -150,8 +150,12 @@ class GeoTiffFile(writer.FileWriter):
                                  dtype=numpy.float) * init_value
         self.alpha_raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * 32.0
-        self.target = None
-        self._init_target()
+        if self.normalize:
+            pixel_type = gdal.GDT_Byte
+        else:
+            pixel_type = GDAL_PIXEL_DATA_TYPE
+        self.target = make_target(
+            self.path, self.grid, GDAL_FORMAT, pixel_type)
         self.red = None
         self.green = None
         self.blue = None
@@ -166,39 +170,6 @@ class GeoTiffFile(writer.FileWriter):
         else:
             return ''.join((self.path, '.html'))
 
-    def _init_target(self):
-        """
-        Initialize the target dataset for writing raster data and set spatial
-        reference info.
-        """
-        driver = gdal.GetDriverByName(self.format)
-
-        # NOTE(fab): use GDAL data type GDT_Float32 for science data
-        pixel_type = GDAL_PIXEL_DATA_TYPE
-        if self.normalize:
-            pixel_type = gdal.GDT_Byte
-        self.target = driver.Create(self.path, self.grid.columns,
-            self.grid.rows, TIFF_BAND, pixel_type)
-
-        corner = self.grid.region.upper_left_corner
-
-        # this is the order of arguments to SetGeoTransform()
-        # top left x, w-e pixel resolution, rotation,
-        # top left y, rotation, n-s pixel resolution
-        # rotation is 0 if image is "north up"
-        # taken from http://www.gdal.org/gdal_tutorial.html
-
-        # NOTE(fab): the last parameter (grid spacing in N-S direction) is
-        # negative, because the reference point for the image is the
-        # upper left (north-western) corner
-        self.target.SetGeoTransform(
-            [corner.longitude, self.grid.cell_size, TIFF_LONGITUDE_ROTATION,
-             corner.latitude, TIFF_LATITUDE_ROTATION, -self.grid.cell_size])
-
-        # set the reference info
-        srs = osr.SpatialReference()
-        srs.SetWellKnownGeogCS(SPATIAL_REFERENCE_SYSTEM)
-        self.target.SetProjection(srs.ExportToWkt())
 
     def write(self, coords, value, alpha=255):
         """
@@ -363,7 +334,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
     DEFAULT_COLORMAP = COLORMAPS['seminf-haxby']
     
     def __init__(self, path, image_grid, colormap=None, iml_min_max=None,
-                 html_wrapper=False):
+                 html_wrapper=False, normalize=True):
         """
         :param path: location of output, including file
             name
@@ -390,7 +361,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         mode (mean or quantile) so we can display this to the user.
         """
         super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
-            html_wrapper=html_wrapper)
+            html_wrapper=html_wrapper, normalize=normalize)
         self.colormap = colormap  # TODO: Validate the rgb list lengths
         if not self.colormap:
             self.colormap = self.DEFAULT_COLORMAP
@@ -746,6 +717,48 @@ def rgb_values_from_colormap(colormap, index_list):
     red, green, blue = \
         [get_colors(colormap[j]) for j in ('red', 'green', 'blue')]
     return red, green, blue
+
+
+def make_target(path, grid, format, pixel_type, bands=4):
+    """
+    Boiler plate stuff for creating a target for writing geotiffs.
+
+    :param path: path to the output file, including file name
+    :type path: string
+
+    :param format: string representing to output format type (for example,
+        'GTiff')
+
+    :param pixel_type: integer representing the pixel data type, which
+        corresponds to a GDAL data type (for example, gdal.GDT_Byte,
+        gdal.GDT_Float32, etc.)
+
+    :param bands: number of raster bands; 4 is default (R,G,B, and Alpha)
+
+    :returns: gdal.Dataset object representing the file target
+    """
+    driver = gdal.GetDriverByName(format)
+
+    target = driver.Create(path, grid.columns, grid.rows, bands, pixel_type)
+
+    # upper left corner of the region
+    ul_corner = grid.region.upper_left_corner
+
+    # this is the order of arguments to SetGeoTransform()
+    # top left x, w-e pixel resolution, rotation,
+    # top left y, rotation, n-s pixel resolution
+    # rotation is 0 if image is "north up"
+    # taken from http://www.gdal.org/gdal_tutorial.html
+    target.SetGeoTransform(
+        [ul_corner.longitude, grid.cell_size, TIFF_LONGITUDE_ROTATION,
+         ul_corner.latitude, TIFF_LATITUDE_ROTATION, -grid.cell_size])
+
+    # set the reference info
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS(SPATIAL_REFERENCE_SYSTEM)
+    target.SetProjection(srs.ExportToWkt())
+
+    return target
 
 
 class CPTReader:
