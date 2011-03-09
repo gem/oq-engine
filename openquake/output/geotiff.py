@@ -438,22 +438,19 @@ class HazardMapGeoTiffFile(GeoTiffFile):
             More info:
             http://en.wikipedia.org/wiki/Normalization_(image_processing)
             """
-
             if self.scaling == 'relative':
                 # we need to hold on to the min/max values for html colorscale
                 # generation later
                 self.iml_min = self.raster.min()
                 self.iml_max = self.raster.max()
-                print "relative scaling, normalize"
-                print "raster min is %s" % self.raster.min()
-                print "raster max is %s" % self.raster.max()
             _min = self.iml_min
             _max = self.iml_max
 
             z_vals = self.colormap['z_values']
             normalize = lambda raster, z_vals: \
-                raster * z_vals[-1] / (_max - _min)
+                (raster - _min) * z_vals[-1] / (_max - _min)
             self.raster = normalize(self.raster, z_vals)
+
 
         if self.colormap['type'] == 'continuous':
             return _normalize_continuous()

@@ -702,10 +702,12 @@ class OutputTestCase(unittest.TestCase):
         up to 6 digits of precision (by default).
         """
         self.assertEqual(len(expected), len(actual))
+        self.assertEqual(len(expected.flatten()), len(actual.flatten()))
         for i, exp in enumerate(expected):
             if type(exp) is numpy.ndarray:
                 # handle 2-d arrays
                 for j, exp2 in enumerate(exp):
+                    print "i, j: %s, %s" % (i, j)
                     self.assertAlmostEqual(exp2, actual[i][j], precision)
             else:
                 self.assertAlmostEqual(exp, actual[i], precision)
@@ -773,8 +775,125 @@ class OutputTestCase(unittest.TestCase):
 
         self.assertEqual(expected_output, actual_output)
 
+    def _assert_image_rgb_is_correct(
+        self, path, expected_red, expected_green, expected_blue):
+        """
+        :param path: path to an existing geotiff file
+
+        :param expected_red: 2-dimensional numpy.array representing
+            the red intensity for each pixel
+
+        :param expected_green: 2-dimensional numpy.array representing
+            the green intensity for each pixel
+
+        :param expected_blue: 2-dimensional numpy.array representing
+            the blue intensity for each pixel
+        """
+        # read the image file
+        dataset = gdal.Open(path, gdalconst.GA_ReadOnly)
+        red_vals = dataset.GetRasterBand(1).ReadAsArray()
+        green_vals = dataset.GetRasterBand(2).ReadAsArray()
+        blue_vals = dataset.GetRasterBand(3).ReadAsArray()
+
+        print "checking red"
+        self._assert_numpy_arrays_almost_equal(expected_red, red_vals)
+        print "checking green"
+        self._assert_numpy_arrays_almost_equal(expected_green, green_vals)
+        print "checking blue"
+        self._assert_numpy_arrays_almost_equal(expected_blue, blue_vals)
+
+
     def test_write_hazard_map_geotiff(self):
-       
+        """
+        Tests writing hazard maps using two methods:
+            * relative scaling
+            * fixed scaling
+
+        Relative scaling: Colors are scaled from the lowest IML value
+            (min) in the hazard map to the highest IML value (max). This
+            is useful for showing higher resolution/detail within a single
+            hazard map.
+
+        Fixed scaling: The most common use case. Colors are are applied
+            to the map with a specified min and max. This is useful if you
+            want to compare two different maps using the same color scale.
+
+        These tests assume that the default color map is used.
+        """
+        def _test_hazard_map_fixed_scaling(region, hm_data):
+            path = test.do_test_output_file(
+                'TEST_HAZARD_MAP_fixed_scaling.tiff')
+            
+            # expected colors for each pixel in the map:
+            exp_red_vals = numpy.array([
+                [],
+                [],
+                [],
+                [],
+                [],
+                []])
+            exp_green_vals = numpy.array([
+                [],
+                [],
+                [],
+                [],
+                [],
+                []])
+            exp_blue_vals = numpy.array([
+                [],
+                [],
+                [],
+                [],
+                [],
+                []]) 
+
+            iml_min = 0.0
+            iml_max = 0.3
+
+            hm_writer = geotiff.HazardMapGeoTiffFile(
+                path, small_region.grid, html_wrapper=True,
+                iml_min_max=(iml_min, iml_max))
+
+            hm_writer.serialize(hm_data)
+
+            self._assert_image_rgb_is_correct(path, exp_red_vals, exp_green_vals, exp_blue_vals)
+
+
+        def _test_hazard_map_relative_scaling(region, hm_data):
+            path = test.do_test_output_file(
+                'TEST_HAZARD_MAP_relative_scaling.tiff')
+
+            # expected colors for each pixel in the map:
+            exp_red_vals = numpy.array([
+                [49, 186, 255, 138, 186, 24],
+                [0, 208, 67, 0, 255, 24],
+                [143, 255, 123, 186, 143, 0],
+                [186, 0, 255, 186, 238, 143],
+                [255, 186, 0, 186, 12, 205],
+                [255, 143, 208, 238, 97, 0]])
+            exp_green_vals = numpy.array([
+                [190, 197, 255, 236, 197, 175],
+                [39, 216, 202, 39, 255, 175],
+                [161, 255, 235, 197, 161, 39],
+                [197, 39, 255, 197, 79, 161],
+                [255, 197, 39, 197, 129, 255],
+                [255, 161, 216, 79, 122, 39]])
+            exp_blue_vals = numpy.array([
+                [255, 247, 255, 174, 247, 255],
+                [224, 251, 255, 224, 255, 255],
+                [241, 255, 200, 247, 241, 224],
+                [247, 224, 255, 247, 77, 241],
+                [255, 247, 224, 247, 248, 162],
+                [255, 241, 251, 77, 236, 224]])
+
+            hm_writer = geotiff.HazardMapGeoTiffFile(
+                path, small_region.grid, html_wrapper=True)
+
+            hm_writer.serialize(hm_data)
+
+            self._assert_image_rgb_is_correct(path, exp_red_vals, exp_green_vals, exp_blue_vals)
+
+
         # 8x8 px
         small_region_coords = [(0.0, 0.0), (0.5, 0.0), (0.5, 0.5), (0.0, 0.5)]
         small_region = shapes.Region.from_coordinates(small_region_coords)
@@ -831,21 +950,6 @@ class OutputTestCase(unittest.TestCase):
             data = copy.copy(hm_point_data)
             data['IML'] = iml_list[i]
             hm_data.append((site, data))
-        print "the test hm data is %s" % hm_data
-      
-        path = "/Users/larsbutler/TEST_HAZARD_MAP.tiff"
-        print "path is %s" % path 
-        hm_writer = geotiff.HazardMapGeoTiffFile(path,
-            small_region.grid, html_wrapper=True)
 
-        for site, data in hm_data:
-            hm_writer.write(site, data)
-
-        hm_writer._normalize()
-        red, green, blue = hm_writer._get_rgb()
-
-        hm_writer.target.GetRasterBand(1).WriteArray(red)
-        hm_writer.target.GetRasterBand(2).WriteArray(green)
-        hm_writer.target.GetRasterBand(3).WriteArray(blue)
-        hm_writer.target.GetRasterBand(4).Fill(255)
-        print "red band array", hm_writer.target.GetRasterBand(1).ReadAsArray()
+        _test_hazard_map_fixed_scaling(small_region, hm_data)
+        _test_hazard_map_relative_scaling(small_region, hm_data)
