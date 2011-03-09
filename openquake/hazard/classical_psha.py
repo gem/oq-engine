@@ -7,7 +7,7 @@ as input data produced with the classical psha method.
 import math
 import numpy
 
-from scipy.interpolate import interp1d  # pylint: disable=E1101, E0611
+from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
@@ -59,8 +59,7 @@ def _extract_y_values_from(curve):
 
 
 def _reconstruct_curve_list_from(poes, imls=None):
-    """Reconstruct the x,y hazard curve list from numpy array, and leave
-    out the un-needed x value."""
+    """Reconstruct the x,y hazard curve list from numpy array"""
 
     curve = [{'y': poe} for poe in poes]
 
