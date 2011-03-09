@@ -473,6 +473,9 @@ class HazardMapGeoTiffFile(GeoTiffFile):
                 # generation later
                 self.iml_min = self.raster.min()
                 self.iml_max = self.raster.max()
+                print "relative scaling, normalize"
+                print "raster min is %s" % self.raster.min()
+                print "raster max is %s" % self.raster.max()
             _min = self.iml_min
             _max = self.iml_max
 
@@ -495,9 +498,9 @@ class HazardMapGeoTiffFile(GeoTiffFile):
     def _generate_colorscale(self):
         if self.colormap['type'] == 'continuous':
             return continuous_colorscale(self.colormap, self.raster)
-        elif self.colormap['type'] === 'discrete':
+        elif self.colormap['type'] == 'discrete':
             return discrete_colorscale(
-                self.colormap, self.iml, self.iml_max)
+                self.colormap, self.iml_min, self.iml_max)
         else:
             raise ValueError("Unsupported colormap type '%s'" %
                 self.colormap['type'])
@@ -575,12 +578,7 @@ class GMFGeoTiffFile(GeoTiffFile):
         return self.raster_r, self.raster_g, self.raster_b
 
     def _generate_colorscale(self):
-
-        print "generating color scale for GMF"
-        print "self.iml_list is %s" % self.iml_list
-        print "self.colormap is %s" % self.colormap
-        colorscale = continuous_colorscale(self.colormap, self.iml_list)
-        print "colorscale is %s" % colorscale
+        # TODO: what about discrete colorscale support?
         return continuous_colorscale(self.colormap, self.iml_list)
 
 
@@ -633,7 +631,6 @@ def discrete_colorscale(colormap, min, max):
     delta = (max - min) / num_colors
     seg_intervals = [min + (x * delta) for x in range(num_colors + 1)]
    
-    print "segments are %s" % seg_intervals 
     colorscale = []
     for i in range(len(seg_intervals) - 1):
         seg_range = "%.2f - %.2f" % (seg_intervals[i], seg_intervals[i + 1])
@@ -687,18 +684,12 @@ def rgb_for_continuous(fractional_values, colormap):
 
 
 def interpolate_color(fractional_values, colormap, color):
-    print "interpolate: "
-    print "color is %s" % color
-    print "colormap is %s" % colormap
-    print "fractional values are %s" % fractional_values
     color_interpolate = interp1d(
         condense_to_unity(numpy.array(colormap['z_values'])),
         colormap[color])
-    foo =  numpy.reshape(
+    return numpy.reshape(
         color_interpolate(fractional_values.flatten()),
         fractional_values.shape)
-    print "return value of interp_color is %s" % foo
-    return foo
 
 
 def rgb_from_raster(colormap, raster):
@@ -730,7 +721,6 @@ def rgb_from_raster(colormap, raster):
         # i.e., [a, b), [c, d), ... , [y, z]
 
         # handle low-end outliers (set to lowest value in range):
-        print "bins are %s" % bins
         numpy.putmask(bins, bins < 0, 0)
         # handle high-end outliers (set to highest value in range):
         numpy.putmask(
