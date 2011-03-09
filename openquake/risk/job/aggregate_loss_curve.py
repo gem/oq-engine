@@ -39,7 +39,10 @@ def compute_aggregate_curve(job):
     GMFs and assets.
 
     This function is triggered only if the AGGREGATE_LOSS_CURVE
-    parameter has been specified in the configuration file.
+    parameter is specified in the configuration file.
+
+    :param job: the job the engine is currently processing.
+    :type job: openquake.risk.job.probabilistic.ProbabilisticEventMixin
     """
 
     if not job.has("AGGREGATE_LOSS_CURVE"):

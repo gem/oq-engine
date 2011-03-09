@@ -21,7 +21,25 @@ DEFAULT_NUMBER_OF_SAMPLES = 25
 def _compute_loss_ratios(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
     """Compute the set of loss ratios using the set of
-    ground motion fields passed."""
+    ground motion fields passed.
+    
+    :param vuln_function: the vulnerability function used to
+        compute the loss ratios.
+    :type vuln_function: shapes.VulnerabilityFunction
+    :param ground_motion_field_set: the set of ground motion
+        fields used to compute the loss ratios.
+    :type ground_motion_field_set: dict with the following
+        keys:
+        IMLs - tuple of ground motion fields (float)
+        TimeSpan - time span parameter (float)
+        TSES - Time representative of the Stochastic Event Set (float)
+    :param epsilon_provider: service used to get the epsilon when
+        using the sampled based algorithm.
+    :type epsilon_provider: callable that defines an epsilon(asset)
+        method
+    :param asset: the asset used to compute the loss ratios.
+    :type asset: dict as provided by openquake.parser.ExposurePortfolioFile
+    """
 
     if vuln_function.is_empty:
         return array([])
@@ -133,6 +151,26 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
 
     A loss ratio curve is a function that has loss ratios as X values
     and PoEs (Probabilities of Exceendance) as Y values.
+    
+    :param vuln_function: the vulnerability function used to
+        compute the loss ratios.
+    :type vuln_function: shapes.VulnerabilityFunction
+    :param ground_motion_field_set: the set of ground motion
+        fields used to compute the loss ratios.
+    :type ground_motion_field_set: dict with the following
+        keys:
+        IMLs - tuple of ground motion fields (float)
+        TimeSpan - time span parameter (float)
+        TSES - Time representative of the Stochastic Event Set (float)
+    :param epsilon_provider: service used to get the epsilon when
+        using the sampled based algorithm.
+    :type epsilon_provider: callable that defines an epsilon(asset)
+        method
+    :param asset: the asset used to compute the loss ratios.
+    :type asset: dict as provided by openquake.parser.ExposurePortfolioFile
+    :param number_of_samples: the number of samples used when computing
+        the range of loss ratios used to build the curve.
+    :type number_of_samples: integer
     """
 
     # with no gmfs (no earthquakes), an empty curve is enough
