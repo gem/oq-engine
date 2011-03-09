@@ -61,8 +61,12 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
 
 
 def _compute_loss_ratios_range(loss_ratios,
-        number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
+        number_of_samples=None):
     """Compute the range of loss ratios used to build the loss ratio curve."""
+
+    if number_of_samples is None:
+        number_of_samples = DEFAULT_NUMBER_OF_SAMPLES
+
     return linspace(loss_ratios.min(), loss_ratios.max(), number_of_samples)
 
 
@@ -103,7 +107,7 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
-        number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
+        number_of_samples=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -229,7 +233,7 @@ class AggregateLossCurve(object):
         else: # if needed because numpy returns a scalar if the list is empty
             return array(self.distribution).sum(axis=0)
 
-    def compute(self, number_of_samples=DEFAULT_NUMBER_OF_SAMPLES):
+    def compute(self, number_of_samples=None):
         """Compute the aggregate loss curve."""
 
         if self.empty:
