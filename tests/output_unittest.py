@@ -825,26 +825,26 @@ class OutputTestCase(unittest.TestCase):
             
             # expected colors for each pixel in the map:
             exp_red_vals = numpy.array([
-                [],
-                [],
-                [],
-                [],
-                [],
-                []])
+                [238, 255, 247, 238, 255, 238],
+                [238, 255, 238, 238, 247, 238],
+                [244, 247, 238, 255, 244, 238],
+                [255, 238, 247, 244, 238, 244],
+                [247, 255, 238, 255, 238, 238],
+                [247, 244, 255, 238, 238, 238]])
             exp_green_vals = numpy.array([
-                [],
-                [],
-                [],
-                [],
-                [],
-                []])
+                [79, 160, 215, 79, 160, 79],
+                [79, 160, 79, 79, 215, 79],
+                [116, 215, 79, 160, 116, 79],
+                [160, 79, 215, 116, 79, 116],
+                [215, 160, 79, 160, 79, 79],
+                [215, 116, 189, 79, 79, 79]])
             exp_blue_vals = numpy.array([
-                [],
-                [],
-                [],
-                [],
-                [],
-                []]) 
+                [77, 68, 103, 77, 68, 77],
+                [77, 68, 77, 77, 103, 77],
+                [74, 103, 77, 68, 74, 77],
+                [68, 77, 103, 74, 77, 74],
+                [103, 68, 77, 68, 77, 77],
+                [103, 74, 86, 77, 77, 77]])
 
             iml_min = 0.0
             iml_max = 0.3
@@ -855,7 +855,8 @@ class OutputTestCase(unittest.TestCase):
 
             hm_writer.serialize(hm_data)
 
-            self._assert_image_rgb_is_correct(path, exp_red_vals, exp_green_vals, exp_blue_vals)
+            self._assert_image_rgb_is_correct(
+                path, exp_red_vals, exp_green_vals, exp_blue_vals)
 
 
         def _test_hazard_map_relative_scaling(region, hm_data):
@@ -890,7 +891,8 @@ class OutputTestCase(unittest.TestCase):
 
             hm_writer.serialize(hm_data)
 
-            self._assert_image_rgb_is_correct(path, exp_red_vals, exp_green_vals, exp_blue_vals)
+            self._assert_image_rgb_is_correct(
+                path, exp_red_vals, exp_green_vals, exp_blue_vals)
 
 
         # 8x8 px
