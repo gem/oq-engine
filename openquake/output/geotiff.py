@@ -423,9 +423,16 @@ class HazardMapGeoTiffFile(GeoTiffFile):
             (point.row, point.column), haz_map_data['IML'], alpha=alpha)
 
     def _normalize(self):
+        """
+        Transform the raw IML values in the raster to the corresponding color
+        intensity value in the colormap.
+        """
 
         def _normalize_continuous():
-            # TODO (LB): Add support for continuous colormaps
+            """
+            Continuous colormaps not currently suppported for hazard maps.
+            """
+            # TODO (LB): Add support for continuous
             raise NotImplementedError("Continuous colormaps are not currently"
                 " supported for rendering hazard maps")
 
@@ -461,9 +468,19 @@ class HazardMapGeoTiffFile(GeoTiffFile):
                 self.colormap['type'])
 
     def _get_rgb(self):
+        """
+        Get red, green, and blue values for each pixel in the image. Raster
+        values should be normalized before this is called.
+
+        :returns: List of numpy.arrays: [red, green, blue]. Each array is the
+            same shape as the image raster (self.raster).
+        """
         return rgb_from_raster(self.colormap, self.raster)
 
     def _generate_colorscale(self):
+        """
+        
+        """
         if self.colormap['type'] == 'continuous':
             return continuous_colorscale(self.colormap, self.raster)
         elif self.colormap['type'] == 'discrete':
@@ -594,8 +611,37 @@ def condense_to_unity(array, min_max=None):
 
 
 def discrete_colorscale(colormap, min, max):
-    num_colors = len(colormap['red'])
-    
+    """
+    Generate a list of pairs of corresponding RGB hex values (as strings) and
+    IML value ranges (as strings) for the colorscale in HTML output.
+
+    Color intervals range from 'Min' to 'Max'. The number of color segments is
+    equal to the number of colors defined in the colormap.
+
+    Note: Currently, IML values are displayed only up to 2 decimal places.
+
+    :param colormap: colormap as produced by the :py:class: `CPTReader`
+    :type colormap: dict
+
+    :param min: lowest IML value to be displayed on the colorscale
+    :type min: integer
+
+    :param max: highest IML value to be displayed on the colorscale
+    :type max: integer
+
+    :returns: list of tuples of hex color and value ranges, like so:
+        [('#ffffff', '0.80 - 0.93'),
+         ('#d0d8fb', '0.93 - 1.07'),
+         ...
+         ('#ee4f4d', '3.87 - 4.00')]
+    """
+    if colormap['type'] == 'discrete':
+        num_colors = len(colormap['z_values']) - 1
+    elif colormap['type'] == 'continuous':
+        num_colors = len(colormap['z_values'])
+    else:
+        raise ValueError("Invalid colormap type '%s'" % colormap['type'])
+
     delta = (max - min) / num_colors
     seg_intervals = [min + (x * delta) for x in range(num_colors + 1)]
    
@@ -612,20 +658,14 @@ def discrete_colorscale(colormap, min, max):
 
 def continuous_colorscale(colormap, iml_list):
     """
-    TODO: update me
-
     Generate a list of pairs of corresponding RGB hex values (as strings) and
     IML values (as strings) for the colorscale in HTML output.
 
     :param colormap: colormap as produced by the :py:class: `CPTReader`
     :type colormap: dict
 
-    :param iml_list:
+    :param iml_list: complete list of IML values defined in the job config
     :type iml_list: 1-dimensional numpy.array of IML values (as floats)
-
-    :param iml_min_max: if defined, scaling is fixed; else, scaling is relative
-    :type iml_min_max: tuple of two floats, the second greater than the first
-        (example: (0.8, 4.0))
 
     :returns: list of tuples of (<color hex string>, <IML intensity value>);
         For example:
