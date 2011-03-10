@@ -109,11 +109,11 @@ class GeoTiffFile(writer.FileWriter):
                 python-gdal-adding-geotiff-meta-data.html
     """
     format = GDAL_FORMAT
-    normalize = True
     html_template = None
 
-    def __init__(self, path, image_grid, init_value=numpy.nan,
-                 normalize=False, html_wrapper=True):
+    def __init__(
+        self, path, image_grid, init_value=numpy.nan, html_wrapper=True,
+        pixel_type=gdal.GDT_Byte):
         """
         :param path: location of output file, including file name
         :type path: string
@@ -124,16 +124,16 @@ class GeoTiffFile(writer.FileWriter):
         :param init_value: initial value for each member of the raster matrix
         :type init_value: float
 
-        :param normalize: TODO
-        :type normalize: TODO
-
         :param html_wrapper: if True, a simple html wrapper file will be
             created to display the geotiff and a color legend
         :type html_wrapper: boolean
+
+        :param pixel_type: data type for each pixel in the image raster (for
+            example: gdal.GDT_Byte, gdal.GDT_Float32)
+        :type pixel_type: gdal numeric data type
         """
         super(GeoTiffFile, self).__init__(path)
         self.grid = image_grid
-        self.normalize = normalize
         self.html_wrapper = html_wrapper
         # NOTE(fab): GDAL initializes the image as columns x rows.
         # numpy arrays, however, have usually rows as first axis,
@@ -145,10 +145,6 @@ class GeoTiffFile(writer.FileWriter):
                                  dtype=numpy.float) * init_value
         self.alpha_raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * 32.0
-        if self.normalize:
-            pixel_type = gdal.GDT_Byte
-        else:
-            pixel_type = GDAL_PIXEL_DATA_TYPE
         self.target = make_target(
             self.path, self.grid, GDAL_FORMAT, pixel_type)
 
@@ -263,6 +259,30 @@ class LossMapGeoTiffFile(GeoTiffFile):
 
     html_template = template.HTML_TEMPLATE_LOSSRATIO
 
+    def __init__(
+        self, path, grid, init_value=numpy.nan, pixel_type=gdal.GDT_Byte,
+        normalize=True):
+        """
+        :param path: path to output file, include file name
+
+        :param grid: defines the geographic region associated with this map
+        :type grid: shapes.Grid object
+
+        :param init_value: initial value for each point in the image raster
+
+        :param pixel_type: data type for each pixel in the image raster
+            (gdal.GDT_Byte, gdal.GDT_Float32, etc.)
+        :type pixel_type: gdal numeric data type
+
+        :param normalize: if true, the raster data will be normalized; else,
+            the raw data values in the raster are converted to rgb and written
+            to the image
+        """
+        super(LossMapGeoTiffFile, self).__init__(
+            path, grid, init_value=init_value, pixel_type=pixel_type)
+        self.normalize = normalize
+
+
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
         serialization. Make sure these are zero-based cell addresses."""
@@ -362,7 +382,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         mode (mean or quantile) so we can display this to the user.
         """
         super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
-            html_wrapper=html_wrapper, normalize=True)
+            html_wrapper=html_wrapper)
         self.colormap = colormap  # TODO: Validate the rgb list lengths
         if not self.colormap:
             self.colormap = self.DEFAULT_COLORMAP
@@ -497,15 +517,31 @@ class GMFGeoTiffFile(GeoTiffFile):
     COLOR_BUCKETS = 16  # yields 0.125 step size
     DEFAULT_COLORMAP = COLORMAPS['green-red']
 
-    def __init__(self, path, image_grid, init_value=numpy.nan,
-                 normalize=True, iml_list=None, discrete=True,
-                 colormap=None):
-        super(GMFGeoTiffFile, self).__init__(path, image_grid, init_value,
-                                             normalize)
+    def __init__(
+        self, path, image_grid, init_value=numpy.nan, iml_list=None,
+        discrete=True, colormap=None):
+        """
+        :param path: path to the output file, including file name
+
+        :param image_grid: geographical location associated with this GMF
+        :type image_grid: shapes.Grid
+
+        :param init_value: initial value for each pixel in the image raster
+
+        :param iml_list: entire list of IMLs defined in the job config (hazard
+            section)
+        :type iml_list: list of floats
+
+        :param discrete: if true, apply discrete color scaling
+        :type discrete: boolean
+
+        :param colormap: colormap as read by the :py:class: `cpt.CPTReader`
+            class
+        """
+        super(GMFGeoTiffFile, self).__init__(path, image_grid, init_value)
 
         # NOTE(fab): for the moment, the image is always normalized
         # and 4-band RGBA (argument normalize is disabled)
-        self.normalize = True
         self.discrete = discrete
         self.colormap = colormap
         if not self.colormap:
@@ -522,7 +558,6 @@ class GMFGeoTiffFile(GeoTiffFile):
             self.iml_step = None
 
         # set image rasters
-        # TODO: refactor these
         self.raster_r = numpy.zeros((self.grid.rows, self.grid.columns),
                                     dtype=numpy.int)
         self.raster_g = numpy.zeros_like(self.raster_r)

@@ -626,7 +626,7 @@ class EventBasedMixin(BasePSHAMixin):
                 tiff_path = "%s.tiff" % common_path
                 nrml_path = "%s.xml" % common_path
                 gwriter = geotiff.GMFGeoTiffFile(tiff_path, image_grid,
-                    init_value=0.0, normalize=True, iml_list=iml_list,
+                    init_value=0.0, iml_list=iml_list,
                     discrete=True)
                 xmlwriter = hazard_output.GMFXMLWriter(nrml_path)
                 gmf_data = {}
