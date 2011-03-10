@@ -215,7 +215,7 @@ class OutputTestCase(unittest.TestCase):
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
-                                       dtype=numpy.float)
+                                        dtype=numpy.float)
         self._fill_rasters(asymmetric_region, gwriter, reference_raster,
             self._colorscale_cuts_fill)
         gwriter.close()
@@ -230,7 +230,7 @@ class OutputTestCase(unittest.TestCase):
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
-                                       dtype=numpy.float)
+                                        dtype=numpy.float)
         self._fill_rasters(asymmetric_region, gwriter, reference_raster,
             self._colorscale_fill)
         gwriter.close()
@@ -241,10 +241,10 @@ class OutputTestCase(unittest.TestCase):
             TEST_REGION_LARGE_ASYMMETRIC)
 
         gwriter = geotiff.LossMapGeoTiffFile(
-            path, asymmetric_region.grid, normalize=True)
+            path, asymmetric_region.grid, pixel_type=gdal.GDT_Byte)
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
-                                       dtype=numpy.float)
+                                        dtype=numpy.float)
 
         color_fill = lambda x, y:  (x * y) / 50
         self._fill_rasters(asymmetric_region, gwriter, reference_raster,
@@ -373,7 +373,8 @@ class OutputTestCase(unittest.TestCase):
         correct metadata."""
         path = test.do_test_output_file(GEOTIFF_FILENAME_WITHOUT_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
-        gwriter = geotiff.LossMapGeoTiffFile(path, smallregion.grid)
+        gwriter = geotiff.LossMapGeoTiffFile(
+            path, smallregion.grid, normalize=False)
         gwriter.close()
 
         self._assert_geotiff_metadata_is_correct(path, smallregion)
@@ -384,7 +385,8 @@ class OutputTestCase(unittest.TestCase):
         filename do not work."""
         path = test.do_test_output_file(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
-        gwriter = geotiff.LossMapGeoTiffFile(path, smallregion.grid)
+        gwriter = geotiff.LossMapGeoTiffFile(
+            path, smallregion.grid, normalize=False)
         gwriter.close()
 
         self._assert_geotiff_metadata_is_correct(path, smallregion)
@@ -397,7 +399,8 @@ class OutputTestCase(unittest.TestCase):
         path = test.do_test_output_file(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.LossMapGeoTiffFile(
-            path, smallregion.grid, init_value=GEOTIFF_TEST_PIXEL_VALUE)
+            path, smallregion.grid, init_value=GEOTIFF_TEST_PIXEL_VALUE,
+            pixel_type=gdal.GDT_Byte, normalize=False)
         gwriter.close()
 
         self._assert_geotiff_metadata_is_correct(path, smallregion)
@@ -414,7 +417,8 @@ class OutputTestCase(unittest.TestCase):
         correctly."""
         path = test.do_test_output_file(GEOTIFF_FILENAME_SQUARE_REGION)
         squareregion = shapes.Region.from_coordinates(TEST_REGION_SQUARE)
-        gwriter = geotiff.LossMapGeoTiffFile(path, squareregion.grid)
+        gwriter = geotiff.LossMapGeoTiffFile(
+            path, squareregion.grid, normalize=False)
 
         reference_raster = numpy.zeros((squareregion.grid.rows,
                                         squareregion.grid.columns),
@@ -434,7 +438,9 @@ class OutputTestCase(unittest.TestCase):
             GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
-        gwriter = geotiff.LossMapGeoTiffFile(path, asymmetric_region.grid)
+        gwriter = geotiff.LossMapGeoTiffFile(
+            path, asymmetric_region.grid, pixel_type=gdal.GDT_Float32,
+            normalize=False)
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
