@@ -75,7 +75,8 @@ class ClassicalPSHABasedMixin:
         return True
 
     def compute_loss_ratio_curve(self, point, asset, hazard_curve):
-        """ Helper method to ease the testing phase """
+        """ Computes the loss ratio curve and stores in kvs
+            the curve itself """
 
         # we get the vulnerability function related to the asset
         vuln_function = self.vuln_curves.get(

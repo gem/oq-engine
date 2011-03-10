@@ -120,6 +120,7 @@ def _compute_imls(vuln_function):
     lowest_curve_value = imls[0] - ((imls[1] - imls[0]) / 2)
 
     # if the calculated lowest_curve_value goes < 0 we have to force the 0
+    # IMLs have to be >= 0
     if lowest_curve_value < 0:
         lowest_curve_value = 0
 
