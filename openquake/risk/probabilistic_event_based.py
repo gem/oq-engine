@@ -18,14 +18,75 @@ from openquake.risk.common import collect, loop
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 
-def _compute_loss_ratios(vuln_function, ground_motion_field_set):
-    """Compute loss ratios using the ground motion field set passed."""
+def _compute_loss_ratios(vuln_function, ground_motion_field_set,
+        epsilon_provider, asset):
+    """Compute the set of loss ratios using the set of
+    ground motion fields passed.
+
+    :param vuln_function: the vulnerability function used to
+        compute the loss ratios.
+    :type vuln_function: shapes.VulnerabilityFunction
+    :param ground_motion_field_set: the set of ground motion
+        fields used to compute the loss ratios.
+    :type ground_motion_field_set: dict with the following
+        keys:
+        IMLs - tuple of ground motion fields (float)
+        TimeSpan - time span parameter (float)
+        TSES - Time representative of the Stochastic Event Set (float)
+    :param epsilon_provider: service used to get the epsilon when
+        using the sampled based algorithm.
+    :type epsilon_provider: callable that defines an epsilon(asset)
+        method
+    :param asset: the asset used to compute the loss ratios.
+    :type asset: dict as provided by openquake.parser.ExposurePortfolioFile
+    """
 
     if vuln_function.is_empty:
         return array([])
 
-    imls = vuln_function.imls
+    all_covs_are_zero = (vuln_function.covs <= 0.0).all()
+
+    if all_covs_are_zero:
+        return _mean_based(vuln_function, ground_motion_field_set)
+    else:
+        return _sampled_based(vuln_function, ground_motion_field_set,
+                epsilon_provider, asset)
+
+
+def _sampled_based(vuln_function, ground_motion_field_set,
+        epsilon_provider, asset):
+    """Compute the set of loss ratios when at least one CV
+    (Coefficent of Variation) defined in the vulnerability function
+    is greater than zero."""
+
     loss_ratios = []
+
+    for ground_motion_field in ground_motion_field_set["IMLs"]:
+        mean_ratio = vuln_function.ordinate_for(ground_motion_field)
+
+        if mean_ratio <= 0.0:
+            loss_ratios.append(0.0)
+        else:
+            variance = (mean_ratio * vuln_function.cov_for(
+                    ground_motion_field)) ** 2.0
+
+            epsilon = epsilon_provider.epsilon(asset)
+            sigma = math.sqrt(math.log((variance / mean_ratio ** 2.0) + 1.0))
+
+            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
+                    variance + mean_ratio ** 2.0))
+
+            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
+
+    return array(loss_ratios)
+
+
+def _mean_based(vuln_function, ground_motion_field_set):
+    """Compute the set of loss ratios when the vulnerability function
+    has all the CVs (Coefficent of Variation) set to zero."""
+
+    loss_ratios = []
+    imls = vuln_function.imls
 
     # seems like with numpy you can only specify a single fill value
     # if the x_new is outside the range. Here we need two different values,
@@ -34,7 +95,7 @@ def _compute_loss_ratios(vuln_function, ground_motion_field_set):
         if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
         elif ground_motion_field > imls[-1]:
-            loss_ratios.append(imls[-1])
+            loss_ratios.append(vuln_function.means[-1])
         else:
             loss_ratios.append(vuln_function.ordinate_for(
                     ground_motion_field))
@@ -89,19 +150,39 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
-        number_of_samples=None):
+        epsilon_provider, asset, number_of_samples=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
     and PoEs (Probabilities of Exceendance) as Y values.
+
+    :param vuln_function: the vulnerability function used to
+        compute the loss ratios.
+    :type vuln_function: shapes.VulnerabilityFunction
+    :param ground_motion_field_set: the set of ground motion
+        fields used to compute the loss ratios.
+    :type ground_motion_field_set: dict with the following
+        keys:
+        IMLs - tuple of ground motion fields (float)
+        TimeSpan - time span parameter (float)
+        TSES - Time representative of the Stochastic Event Set (float)
+    :param epsilon_provider: service used to get the epsilon when
+        using the sampled based algorithm.
+    :type epsilon_provider: callable that defines an epsilon(asset)
+        method
+    :param asset: the asset used to compute the loss ratios.
+    :type asset: dict as provided by openquake.parser.ExposurePortfolioFile
+    :param number_of_samples: the number of samples used when computing
+        the range of loss ratios used to build the curve.
+    :type number_of_samples: integer
     """
 
     # with no gmfs (no earthquakes), an empty curve is enough
     if not ground_motion_field_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
-    loss_ratios = _compute_loss_ratios(
-            vuln_function, ground_motion_field_set)
+    loss_ratios = _compute_loss_ratios(vuln_function,
+            ground_motion_field_set, epsilon_provider, asset)
 
     loss_ratios_range = _compute_loss_ratios_range(
             loss_ratios, number_of_samples)
@@ -141,12 +222,12 @@ class AggregateLossCurve(object):
     """Aggregate a set of losses and produce the resulting loss curve."""
 
     @staticmethod
-    def from_kvs(job_id):
+    def from_kvs(job_id, epsilon_provider):
         """Return an aggregate curve using the GMFs and assets
         stored in the underlying kvs system."""
 
         vuln_model = vulnerability.load_vuln_model_from_kvs(job_id)
-        aggregate_curve = AggregateLossCurve(vuln_model)
+        aggregate_curve = AggregateLossCurve(vuln_model, epsilon_provider)
 
         gmfs_keys = kvs.get_keys("%s*%s*" % (
                 job_id, kvs.tokens.GMF_KEY_TOKEN))
@@ -167,11 +248,12 @@ class AggregateLossCurve(object):
         LOG.debug("Found %s stored assets..." % asset_counter)
         return aggregate_curve
 
-    def __init__(self, vuln_model):
+    def __init__(self, vuln_model, epsilon_provider):
         self._tses = self._time_span = self._gmfs_length = None
 
         self.distribution = []
         self.vuln_model = vuln_model
+        self.epsilon_provider = epsilon_provider
 
     def append(self, gmfs, asset):
         """Add the losses distribution identified by the given GMFs
@@ -186,7 +268,8 @@ class AggregateLossCurve(object):
 
         if asset["vulnerabilityFunctionReference"] in self.vuln_model:
             loss_ratios = _compute_loss_ratios(self.vuln_model[
-                    asset["vulnerabilityFunctionReference"]], gmfs)
+                    asset["vulnerabilityFunctionReference"]], gmfs,
+                    self.epsilon_provider, asset)
 
             self.distribution.append(loss_ratios * asset["assetValue"])
         else:

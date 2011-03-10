@@ -73,15 +73,9 @@ class ProbabilisticEventMixin:
                 # TODO(jmc): Cancel and respawn this task
                 return []
 
-        try:
-            # this task must be executed after the slicing
-            # of the gmfs has been completed
-            aggregate_computation_task = \
-                    aggregate_loss_curve.compute_aggregate_curve.delay(self.id)
-
-            aggregate_computation_task.wait()
-        except TimeoutError:
-            return []
+        # the aggregation must be computed after the slicing
+        # of the gmfs has been completed
+        aggregate_loss_curve.compute_aggregate_curve(self)
 
         return results  # TODO(jmc): Move output from being a decorator
 
@@ -219,7 +213,8 @@ class ProbabilisticEventMixin:
             return None
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
-                vuln_function, gmf_slice, self._get_number_of_samples())
+                vuln_function, gmf_slice, self, asset,
+                self._get_number_of_samples())
 
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
