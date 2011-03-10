@@ -117,6 +117,7 @@ NUMBER_OF_PROCESSORS = 1
 [RISK]
 
 RISK_CALCULATION_MODE = Probabilistic Event
+CLASSICAL_PSHA_CALCULATION_MODE = Classical PSHA
 
 # file containing the exposure in nrml format
 EXPOSURE = exposure.xml

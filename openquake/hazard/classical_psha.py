@@ -25,7 +25,7 @@ as input data produced with the classical psha method.
 import math
 import numpy
 
-from scipy.interpolate import interp1d # pylint: disable=E1101, E0611
+from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
@@ -39,10 +39,11 @@ POES_PARAM_NAME = "POES_HAZARD_MAPS"
 
 def compute_mean_curve(curves):
     """Compute a mean hazard curve.
-    
+
     The input parameter is a list of arrays where each array
     contains just the y values of the corresponding hazard curve.
     """
+
     return numpy.array(curves).mean(axis=0)
 
 
@@ -56,14 +57,14 @@ def compute_quantile_curve(curves, quantile):
 
     if len(numpy.array(curves).flat):
         result = mquantiles(curves, quantile, axis=0)[0]
-    
+
     return result
 
 
 def _extract_y_values_from(curve):
     """Extract from a serialized hazard curve (in json format)
     the y values (PoEs) used to compute the mean hazard curve.
-    
+
     The serialized hazard curve has this format:
     {"site_lon": 1.0, "site_lat": 1.0, "curve": [{"x": 0.1, "y": 0.2}, ...]}
     """
@@ -71,14 +72,21 @@ def _extract_y_values_from(curve):
 
     for point in curve:
         y_values.append(float(point["y"]))
-        
+
     return y_values
 
-def _reconstruct_curve_list_from(curve_array):
-    """Reconstruct the x,y hazard curve list from numpy array, and leave
-    out the un-needed x value."""
-    
-    return [{'y': poe} for poe in curve_array]
+
+def _reconstruct_curve_list_from(poes, imls=None):
+    """Reconstruct the x,y hazard curve list from numpy array"""
+
+    curve = [{'y': poe} for poe in poes]
+
+    if imls:
+        for values in curve:
+            values.update(x=imls.pop(0))
+
+    return curve
+
 
 def _acceptable(value):
     """Return true if the value taken from the configuration
@@ -101,11 +109,12 @@ def curves_at(job_id, site):
     raw_curves = kvs.mget_decoded(pattern)
 
     for raw_curve in raw_curves:
-        curves.append(_extract_y_values_from(raw_curve["curve"]))
-    
+        curves.append(raw_curve["curve"])
+
     return curves
 
-def hazard_curve_keys_for_job(job_id, sites, 
+
+def hazard_curve_keys_for_job(job_id, sites,
                               hc_token=kvs.tokens.HAZARD_CURVE_KEY_TOKEN):
     """Return the KVS keys of hazard curves for a given job_id
     and for a given list of sites.
@@ -113,27 +122,30 @@ def hazard_curve_keys_for_job(job_id, sites,
 
     kvs_keys = []
     for site in sites:
-        pattern = "%s*%s*%s*%s" % (hc_token, job_id, site.longitude, 
+        pattern = "%s*%s*%s*%s" % (hc_token, job_id, site.longitude,
                                    site.latitude)
         curr_keys = kvs.get_keys(pattern)
         if curr_keys is not None and len(curr_keys) > 0:
             kvs_keys.extend(curr_keys)
-    
+
     return kvs_keys
+
 
 def mean_hazard_curve_keys_for_job(job_id, sites):
     """Return the KVS keys of mean hazard curves for a given job_id
     and for a given list of sites.
     """
-    return hazard_curve_keys_for_job(job_id, sites, 
+    return hazard_curve_keys_for_job(job_id, sites,
         kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN)
-    
+
+
 def quantile_hazard_curve_keys_for_job(job_id, sites):
     """Return the KVS keys of quantile hazard curves for a given job_id
     and for a given list of sites.
     """
-    return hazard_curve_keys_for_job(job_id, sites, 
+    return hazard_curve_keys_for_job(job_id, sites,
         kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
+
 
 def _extract_values_from_config(job, param_name):
     """Extract the set of valid values from the configuration file."""
@@ -152,9 +164,17 @@ def compute_mean_hazard_curves(job_id, sites):
 
     keys = []
     for site in sites:
+        hazard_curves = curves_at(job_id, site)
+
+        poes = [_extract_y_values_from(curve) for curve in hazard_curves]
+        mean_poes = compute_mean_curve(poes)
+
+        hazard_curve = hazard_curves.pop()
+        x_values = [values["x"] for values in hazard_curve]
+
+        full_curve = _reconstruct_curve_list_from(mean_poes, x_values)
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-            "curve": _reconstruct_curve_list_from(compute_mean_curve(
-            curves_at(job_id, site)))}
+            "curve": full_curve}
 
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
         keys.append(key)
@@ -167,7 +187,7 @@ def compute_mean_hazard_curves(job_id, sites):
 def compute_quantile_hazard_curves(job, sites):
     """Compute a quantile hazard curve for each site in the list
     using as input all the pre-computed curves for different realizations.
-    
+
     The QUANTILE_LEVELS parameter in the configuration file specifies
     all the values used in the computation.
     """
@@ -179,11 +199,14 @@ def compute_quantile_hazard_curves(job, sites):
 
     for site in sites:
         for quantile in quantiles:
+            hazard_curves = curves_at(job.id, site)
+
+            poes = [_extract_y_values_from(curve) for curve in hazard_curves]
+            quantile_poes = compute_quantile_curve(poes, quantile)
 
             quantile_curve = {"site_lat": site.latitude,
-                "site_lon": site.longitude, 
-                "curve": _reconstruct_curve_list_from(compute_quantile_curve(
-                curves_at(job.id, site), quantile))}
+                "site_lon": site.longitude,
+                "curve": _reconstruct_curve_list_from(quantile_poes)}
 
             key = kvs.tokens.quantile_hazard_curve_key(
                     job.id, site, quantile)
@@ -204,12 +227,12 @@ def _get_iml_from(curve, job, poe):
     """Return the interpolated IML using the values defined in
     the INTENSITY_MEASURE_LEVELS parameter as the reference grid to
     interpolate in.
-    
+
     IML from config is in ascending order (abscissa of hazard curve)
     PoE from curve is in descending order (ordinate of hazard curve)
 
     In our interpolation, PoE becomes the x axis, IML the y axis, therefore
-    the arrays have to be reversed (x axis has to be monotonically 
+    the arrays have to be reversed (x axis has to be monotonically
     increasing).
     """
 
@@ -232,6 +255,7 @@ def _get_iml_from(curve, job, poe):
         return math.exp(imls[0])
 
     return math.exp(interp1d(poes, imls, kind='linear')(poe))
+
 
 def _store_iml_for(curve, key, job, poe):
     """Store an interpolated IML in kvs along with all
@@ -283,14 +307,14 @@ def compute_quantile_hazard_maps(job):
                 keys.append(key)
 
                 _store_iml_for(quantile_curve, key, job, poe)
-                
+
     return keys
 
 
 def compute_mean_hazard_maps(job):
     """Compute mean hazard maps using as input all the
     pre computed mean hazard curves.
-    
+
     The POES_HAZARD_MAPS parameter in the configuration file specifies
     all the values used in the computation.
     """
@@ -317,5 +341,5 @@ def compute_mean_hazard_maps(job):
             keys.append(key)
 
             _store_iml_for(mean_curve, key, job, poe)
-            
+
     return keys

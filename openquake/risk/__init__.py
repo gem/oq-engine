@@ -24,3 +24,4 @@ or a single GMF file."""
 
 import openquake.risk.job
 import openquake.risk.job.probabilistic
+import openquake.risk.job.classical_psha
