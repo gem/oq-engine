@@ -26,7 +26,8 @@ def flush():
 def get_keys(regexp):
     """Get all KVS keys that match a given regexp pattern."""
     return get_client(binary=False).keys(regexp)
-     
+
+
 def mget(regexp):
     """Get all the values whose keys satisfy the given regexp.
 
@@ -39,7 +40,7 @@ def mget(regexp):
 
     if keys:
         values = get_client(binary=False).mget(keys)
-    
+
     return values
 
 
@@ -129,7 +130,7 @@ def set_value_json_encoded(key, value):
     return True
 
 
-def set(key, encoded_value): #pylint: disable=W0622
+def set(key, encoded_value):  # pylint: disable=W0622
     """ Set value in kvs, for objects that have their own encoding method. """
 
     get_client(binary=False).set(key, encoded_value)
@@ -150,5 +151,4 @@ BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
 
 def generate_block_id():
     """Generate a unique id for a block."""
-    return BLOCK_ID_GENERATOR.next() #pylint: disable=E1101
-
+    return BLOCK_ID_GENERATOR.next()  # pylint: disable=E1101
