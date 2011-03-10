@@ -13,12 +13,6 @@ class FileWriter(object):
         self._init_file()
         self.root_node = None
 
-    def __enter__(self):
-        pass
-
-    def __exit__(self):
-        self.close()
-
     def _init_file(self):
         """Get the file handle open for writing"""
         self.file = open(self.path, "w")
@@ -29,6 +23,8 @@ class FileWriter(object):
 
         :param point: location associated with the data to be written
         :type point: should be a shapes.Site object
+            Note(LB): Some sublcasses override this behavior in their
+            write() methods. Be careful.
 
         :param value: some value to be written to the file
         :type value: determined by concrete class implementation

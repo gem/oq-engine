@@ -260,17 +260,13 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
         self.iml_max = None
         if iml_min_max:
             # if the iml min/max are defined, let's do some validation
-            try:
-                assert isinstance(iml_min_max, tuple)
-                assert len(iml_min_max) == 2
-                self.iml_min = float(iml_min_max[0])
-                self.iml_max = float(iml_min_max[1])
-                assert self.iml_min >= 0.0
-                assert self.iml_max >= 0.0 and self.iml_max > self.iml_min
-            except AssertionError:
-                raise ValueError(
-                    "Invalid iml_min_max value. Expected a tuple of two "
-                    "postive floats, the second larger than the first.")
+            assert isinstance(iml_min_max, tuple), "Wrong data type"
+            assert len(iml_min_max) == 2, "More than two values"
+            self.iml_min = float(iml_min_max[0])
+            self.iml_max = float(iml_min_max[1])
+            assert self.iml_min >= 0.0, "Negative min value"
+            assert self.iml_max >= 0.0, "Negative max value"
+            assert self.iml_max > self.iml_min, "Min value exceeds max value"
 
     @property
     def scaling(self):

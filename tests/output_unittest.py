@@ -555,13 +555,14 @@ class OutputTestCase(unittest.TestCase):
                 ValueError, geotiff.HazardMapGeoTiffFile, test_file_path,
                 test_region.grid, TEST_COLORMAP, iml_min_max=bad)
 
-    def test_hazard_map_geotiff_scaling(self):
+    def test_hazard_map_geotiff_scaling_fixed(self):
         """
-        Scaling type for a HazardMapGeoTiffFile is 'fixed' if iml_min_max is
-        defined, else 'relative.
+        Scaling type for a HazardMapGeoTiffFile is 'fixed' if the iml_min_max
+        is specified in the constructor.
 
-        This test ensures the scaling type is set properly.
+        This test ensures the scaling type is properly set to 'fixed'.
         """
+        # Nothing is actually written to this file in this test
         test_file_path = "test.tiff"
         test_region = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         test_iml_min_max = ('0.0', '4.8')
@@ -571,6 +572,20 @@ class OutputTestCase(unittest.TestCase):
             test_file_path, test_region.grid, TEST_COLORMAP,
             iml_min_max=test_iml_min_max)
         self.assertEqual('fixed', hm_writer.scaling)
+
+    def test_hazard_map_geotiff_scaling_relative(self):
+        """
+        Scaling type for a HazardMapGeoTiffFile is 'relative' if the iml_min_max
+        is not specified in the constructor. Instead, the min and max values are
+        derived from the lowest and highest existing values in the hazard map raster
+        (the min and max values are calculated later when the raw raster values are
+        normalized; see the HazardMapGeoTiffFile class doc for more info).
+
+        This test ensures that the scaling type is properly set to 'relative'.
+        """
+        # Nothing is actually written to this file in this test
+        test_file_path = "test.tiff"
+        test_region = shapes.Region.from_coordinates(TEST_REGION_SMALL)
 
         # test 'relative' color scaling
         hm_writer = geotiff.HazardMapGeoTiffFile(

@@ -389,7 +389,7 @@ class ClassicalMixin(BasePSHAMixin):
         Mixing of these three cases is not allowed, i.e., all hazard maps
         from the set of curve_keys have to be either for mean, or quantile.
         """
-        poe_list = [float(x) for x in \
+        poe_list = [float(x) for x in
             self.params[classical_psha.POES_PARAM_NAME].split()]
         if len(poe_list) == 0:
             return None
