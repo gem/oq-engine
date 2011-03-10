@@ -33,6 +33,7 @@
                         <xs:element ref="hazardResult"/>
                         <xs:element ref="sourceModel"/>
                         <xs:element ref="logicTreeSet"/>
+                        <xs:element ref="rupture"/>
                         <xs:element ref="riskResult"/>
                         <xs:element ref="exposurePortfolio"/>
                         <xs:element ref="vulnerabilityModel"/>
