@@ -28,8 +28,6 @@ TIFF_BAND = 4
 TIFF_LONGITUDE_ROTATION = 0
 TIFF_LATITUDE_ROTATION = 0
 
-RGB_SEGMENTS, RGB_RED_BAND, RGB_GREEN_BAND, RGB_BLUE_BAND = range(0, 4)
-
 COLORMAPS = {
     'green-red': {
         'id': 'green-red',
