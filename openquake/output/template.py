@@ -112,7 +112,7 @@ def generate_html(path, width="", height="", colorscale=None, imt='PGA/g',
     colorscale as HTML table. The HTML can be created from an explicitly 
     given template, or automatically based on color scale values."""
 
-    if template is None:
+    if not template:
         curr_html = HTML_TEMPLATE_HEADER
         header_html = curr_html.replace('PLACEHOLDER_TITLE', title)
 
