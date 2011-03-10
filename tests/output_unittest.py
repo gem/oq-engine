@@ -575,11 +575,12 @@ class OutputTestCase(unittest.TestCase):
 
     def test_hazard_map_geotiff_scaling_relative(self):
         """
-        Scaling type for a HazardMapGeoTiffFile is 'relative' if the iml_min_max
-        is not specified in the constructor. Instead, the min and max values are
-        derived from the lowest and highest existing values in the hazard map raster
-        (the min and max values are calculated later when the raw raster values are
-        normalized; see the HazardMapGeoTiffFile class doc for more info).
+        Scaling type for a HazardMapGeoTiffFile is 'relative' if the
+        iml_min_max is not specified in the constructor. Instead, the min and
+        max values are derived from the lowest and highest existing values in
+        the hazard map raster (the min and max values are calculated later when
+        the raw raster values are normalized; see the HazardMapGeoTiffFile
+        class doc for more info).
 
         This test ensures that the scaling type is properly set to 'relative'.
         """
