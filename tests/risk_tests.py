@@ -15,9 +15,11 @@ from openquake import shapes
 from utils import test
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
+from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import common
+
 
 ASSET_VALUE = 5.0
 INVALID_ASSET_VALUE = 0.0
@@ -64,6 +66,7 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         0.007872, 0.001072, 0.021136, 0.029568, 0.012944, 0.004064,
         0.002336, 0.010832, 0.10104, 0.00096, 0.01296, 0.037104),
         "TSES": 900, "TimeSpan": 50}
+
 
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
@@ -831,6 +834,47 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(numpy.array(
                 [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]),
                 psha._split_loss_ratios([1.0, 2.0, 3.0], 4)))
+
+    def test_loss_ratio_curve_is_none_with_unknown_vuln_function(self):
+
+        # mixin "instance"
+        mixin = ClassicalPSHABasedMixin()
+
+        # empty vuln curves
+        mixin.vuln_curves = {}
+
+        # "empty" asset
+        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 1}
+
+        self.assertEqual(None, mixin.compute_loss_ratio_curve(
+                         None, asset, None))
+
+    def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
+
+        # mixin "instance"
+        mixin = ClassicalPSHABasedMixin()
+
+        hazard_curve = shapes.Curve([
+              (0.01, 0.99), (0.08, 0.96),
+              (0.17, 0.89), (0.26, 0.82),
+              (0.36, 0.70), (0.55, 0.40),
+              (0.70, 0.01)])
+
+        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
+              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+
+        # pre computed values just use one intermediate
+        # values between the imls
+        psha.STEPS_PER_INTERVAL = 2
+
+        mixin.job_id = 1234
+        mixin.vuln_curves = {"ID": vuln_function}
+
+        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 1}
+
+        self.assertTrue(mixin.compute_loss_ratio_curve(
+                        shapes.GridPoint(None, 10, 20),
+                        asset, hazard_curve) is not None)
 
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,

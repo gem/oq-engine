@@ -3,6 +3,7 @@
 [RISK]
 
 RISK_CALCULATION_MODE = Probabilistic Event
+CLASSICAL_PSHA_CALCULATION_MODE = Classical PSHA
 
 # file containing the exposure in nrml format
 EXPOSURE = exposure.xml
