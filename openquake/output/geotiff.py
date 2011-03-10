@@ -9,10 +9,9 @@ In order to make this run, you'll need GDAL installed.
 
 import numpy
 import os
-import re
 
 from osgeo import osr, gdal
-from scipy.interpolate import interp1d
+from scipy import interpolate
 
 
 from openquake import logs
@@ -106,9 +105,6 @@ COLORMAPS = {
 SCALE_UP = 8
 
 
-
-
-
 class GeoTiffFile(writer.FileWriter):
     """Rough implementation of the GeoTiff format,
     based on http://adventuresindevelopment.blogspot.com/2008/12/
@@ -116,6 +112,7 @@ class GeoTiffFile(writer.FileWriter):
     """
     format = GDAL_FORMAT
     normalize = True
+    html_template = None
 
     def __init__(self, path, image_grid, init_value=numpy.nan,
                  normalize=False, html_wrapper=True):
@@ -156,9 +153,6 @@ class GeoTiffFile(writer.FileWriter):
             pixel_type = GDAL_PIXEL_DATA_TYPE
         self.target = make_target(
             self.path, self.grid, GDAL_FORMAT, pixel_type)
-        self.red = None
-        self.green = None
-        self.blue = None
 
     @property
     def html_path(self):
@@ -170,8 +164,7 @@ class GeoTiffFile(writer.FileWriter):
         else:
             return ''.join((self.path, '.html'))
 
-
-    def write(self, coords, value, alpha=255):
+    def write(self, coords, value):
         """
         Plot an IML value to the image raster. These values will need to be
         converted to color values before writing the geotiff file.
@@ -183,16 +176,13 @@ class GeoTiffFile(writer.FileWriter):
         :param value: raw IML value; this will be transformed to a color value
             and written to the geotiff
         :type value: float
-
-        :param alpha: alpha layer value for this point (from 0 to 255,
-            where 0 is fully transparent and 255 is fully opaque)
-        :type alpha: integer
         """
         self.raster[int(coords[0]), int(coords[1])] = float(value)
         # Set AlphaLayer
         if value:
-            assert alpha >= 0 and alpha <= 255
-            self.alpha_raster[int(coords[0]), int(coords[1])] = float(alpha)
+            # set the alpha at this point to fully opqaue
+            # TODO (LB): we might want to make this configurable in the future
+            self.alpha_raster[int(coords[0]), int(coords[1])] = 255.0
 
     def _normalize(self):
         """
@@ -207,30 +197,38 @@ class GeoTiffFile(writer.FileWriter):
         raise NotImplementedError
 
     def _generate_colorscale(self):
+        """
+        Override this in subclasses. Typically, the return value should be a
+        list of tuples of (hex color string, value range string), which will be
+        rendered in an html file as a color legend.
+
+        Exact implementation of this method will vary between subclasses.
+
+        If no color scale is required for the subclass, simply override and
+        return None.
+        """
         raise NotImplementedError
 
     def _get_rgb(self):
-        raise NotImplementedError
+        """
+        Get red, green, and blue values for each pixel in the image. Raster
+        values should be normalized before this is called.
 
-    @property
-    def html_template(self):
-        return None
+        :returns: List of numpy.arrays: [red, green, blue]. Each array is the
+            same shape as the image raster (self.raster).
+        """
+        raise NotImplementedError
 
     def close(self):
         self._normalize()
 
-        self.red, self.green, self.blue = self._get_rgb()
-        print self.red
-        print self.green
-        print self.blue
-        print self.raster
-        print self.alpha_raster
+        red, green, blue = self._get_rgb()
         # red band
-        self.target.GetRasterBand(1).WriteArray(self.red)
+        self.target.GetRasterBand(1).WriteArray(red)
         # green band
-        self.target.GetRasterBand(2).WriteArray(self.green)
+        self.target.GetRasterBand(2).WriteArray(green)
         # blue band
-        self.target.GetRasterBand(3).WriteArray(self.blue)
+        self.target.GetRasterBand(3).WriteArray(blue)
         # alpha band
         self.target.GetRasterBand(4).WriteArray(self.alpha_raster)
 
@@ -265,14 +263,18 @@ class LossMapGeoTiffFile(GeoTiffFile):
     0(0x00)-100(0xff). In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend."""
 
-    def write(self, cell, value, alpha=250):
+    html_template = template.HTML_TEMPLATE_LOSSRATIO
+
+    def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
         serialization. Make sure these are zero-based cell addresses."""
         self.raster[int(cell[0]), int(cell[1])] = float(value)
 
         # Set AlphaLayer
         if value:
-            self.alpha_raster[int(cell[0]), int(cell[1])] = float(alpha)
+            # TODO (LB): I don't like this hard-coded alpha value
+            # this should probably be configurable
+            self.alpha_raster[int(cell[0]), int(cell[1])] = 250.0
 
     def _normalize(self):
         """ Normalize the raster matrix """
@@ -308,16 +310,18 @@ class LossMapGeoTiffFile(GeoTiffFile):
         """
         return None
 
-    @property
-    def html_template(self):
-        return template.HTML_TEMPLATE_LOSSRATIO
+    def _get_rgb(self):
+        """
+        Not used.
+        """
+        return None
 
 
 class HazardMapGeoTiffFile(GeoTiffFile):
     """
     Writes a GeoTiff image for hazard maps with an arbitrary colormap.
     Colormap input is expected to be a dict and can be produced from a standard
-    cpt file by the :py:class: `CPTReader` class.
+    cpt file by the :py:class: `cpt.CPTReader` class.
 
     IML values for each site in the map are represented by a color. Color
     scaling can be applied in one of two ways: 'fixed' or 'relative'.
@@ -330,11 +334,10 @@ class HazardMapGeoTiffFile(GeoTiffFile):
     the TIFF with a color-scale legend.
     """
 
-
     DEFAULT_COLORMAP = COLORMAPS['seminf-haxby']
     
     def __init__(self, path, image_grid, colormap=None, iml_min_max=None,
-                 html_wrapper=False, normalize=True):
+                 html_wrapper=False):
         """
         :param path: location of output, including file
             name
@@ -343,9 +346,9 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         :param grid: the geographical area covered by the hazard map
         :type grid: shapes.Grid object
 
-        :param colormap: colormap data, as produced by a :py:class: `CPTReader`
-            object
-        :type colormap: dict (see :py:class: `CPTReader` documentation for
+        :param colormap: colormap data, as produced by a
+            :py:class: `cpt.CPTReader` object
+        :type colormap: dict (see :py:class: `cpt.CPTReader` documentation for
             details about the dict structure)
 
         :param iml_min_max: defines the min and max values of the IML scale for
@@ -361,7 +364,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         mode (mean or quantile) so we can display this to the user.
         """
         super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
-            html_wrapper=html_wrapper, normalize=normalize)
+            html_wrapper=html_wrapper, normalize=True)
         self.colormap = colormap  # TODO: Validate the rgb list lengths
         if not self.colormap:
             self.colormap = self.DEFAULT_COLORMAP
@@ -386,7 +389,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         else:
             self.scaling = 'relative'
 
-    def write(self, site, haz_map_data, alpha=255):
+    def write(self, site, haz_map_data):
         """
         Plot hazard curve data for a single point on the map.
 
@@ -411,16 +414,13 @@ class HazardMapGeoTiffFile(GeoTiffFile):
              'poE': 0.10000000000000001,
              'IML': 0.27353200850839826}
         :type haz_map_data: dict
-
-        :param alpha: alpha channel value for this point
-        :type alpha: integer from 0 to 255
         """
         # TODO (LB): Typically, hazard maps display IML values (with a fixed
         # probability). In the future, we may need to support the opposite
         # (display probablilities with a fixed IML value).
         point = self.grid.point_at(site)
         return super(HazardMapGeoTiffFile, self).write(
-            (point.row, point.column), haz_map_data['IML'], alpha=alpha)
+            (point.row, point.column), haz_map_data['IML'])
 
     def _normalize(self):
         """
@@ -457,7 +457,6 @@ class HazardMapGeoTiffFile(GeoTiffFile):
             normalize = lambda raster, z_vals: \
                 (raster - _min) * z_vals[-1] / (_max - _min)
             self.raster = normalize(self.raster, z_vals)
-
 
         if self.colormap['type'] == 'continuous':
             return _normalize_continuous()
@@ -596,11 +595,11 @@ def condense_to_unity(array, min_max=None):
     :returns: numpy.array of the same length and shape as the input
     """
     if min_max:
-        min, max = min_max
+        _min, _max = min_max
     else:
-        min = array.min()
-        max = array.max()
-    array = (array - min) * 1.0 / (max - min)
+        _min = array.min()
+        _max = array.max()
+    array = (array - _min) * 1.0 / (_max - _min)
 
     # fold in the outliers
     # if a value is < 0.0, set it to 0.0
@@ -610,7 +609,7 @@ def condense_to_unity(array, min_max=None):
     return array
 
 
-def discrete_colorscale(colormap, min, max):
+def discrete_colorscale(colormap, _min, _max):
     """
     Generate a list of pairs of corresponding RGB hex values (as strings) and
     IML value ranges (as strings) for the colorscale in HTML output.
@@ -620,14 +619,14 @@ def discrete_colorscale(colormap, min, max):
 
     Note: Currently, IML values are displayed only up to 2 decimal places.
 
-    :param colormap: colormap as produced by the :py:class: `CPTReader`
+    :param colormap: colormap as produced by the :py:class: `cpt.CPTReader`
     :type colormap: dict
 
-    :param min: lowest IML value to be displayed on the colorscale
-    :type min: integer
+    :param _min: lowest IML value to be displayed on the colorscale
+    :type _min: integer
 
-    :param max: highest IML value to be displayed on the colorscale
-    :type max: integer
+    :param _max: highest IML value to be displayed on the colorscale
+    :type _max: integer
 
     :returns: list of tuples of hex color and value ranges, like so:
         [('#ffffff', '0.80 - 0.93'),
@@ -636,14 +635,17 @@ def discrete_colorscale(colormap, min, max):
          ('#ee4f4d', '3.87 - 4.00')]
     """
     if colormap['type'] == 'discrete':
+        # discrete: (color count == len(z_values) + 1)
         num_colors = len(colormap['z_values']) - 1
     elif colormap['type'] == 'continuous':
+        # continuous: (color count == len(z_values))
         num_colors = len(colormap['z_values'])
     else:
         raise ValueError("Invalid colormap type '%s'" % colormap['type'])
 
-    delta = (max - min) / num_colors
-    seg_intervals = [min + (x * delta) for x in range(num_colors + 1)]
+    delta = (_max - _min) / num_colors
+    # color segment interval 'fence posts'
+    seg_intervals = [_min + (n * delta) for n in range(num_colors + 1)]
    
     colorscale = []
     for i in range(len(seg_intervals) - 1):
@@ -661,7 +663,8 @@ def continuous_colorscale(colormap, iml_list):
     Generate a list of pairs of corresponding RGB hex values (as strings) and
     IML values (as strings) for the colorscale in HTML output.
 
-    :param colormap: colormap as produced by the :py:class: `CPTReader`
+    :param colormap: colormap as produced by the :py:class: `cpt.CPTReader`
+        class
     :type colormap: dict
 
     :param iml_list: complete list of IML values defined in the job config
@@ -686,13 +689,51 @@ def continuous_colorscale(colormap, iml_list):
         
 
 def rgb_for_continuous(fractional_values, colormap):
+    """
+    Given a color map and a numpy.array of normalized raster values
+    (normalized to the colormap's scale), get a tuple of 3 numpy.array objects
+    (red, green, and blue). Each numpy.array is the same size and shape as the
+    input fractional_values array.
+
+    Actual color values are interpolated from the color ranges defined in the
+    colormap.
+
+    :param fractional_values: array of normalized raster values
+    :type fractional_values: numpy.array
+
+    :param colormap: colormap as produced by the :py:class: `cpt.CPTReader`
+        class
+    :type colormap: dict
+
+    :returns: a tuple of 3 numpy.arrays representing red, green, and blue
+        values for each pixel in the image
+    """
     return (interpolate_color(fractional_values, colormap, 'red'),
             interpolate_color(fractional_values, colormap, 'green'),
             interpolate_color(fractional_values, colormap, 'blue'))
 
 
 def interpolate_color(fractional_values, colormap, color):
-    color_interpolate = interp1d(
+    """
+    Given a list of normalized raster values, a colormap, and a color key (red,
+    green, or blue), generate an array of color values for the given color key
+    by interpolating a color value within the color range defined by the
+    colormap.
+
+    :param fractional_values: array of normalized raster_values
+    :type fractional_values: numpy.array
+
+    :param colormap: colormap as produced by the :py:class: `cpt.CPTReader`
+        class
+    :type colormap: dict
+
+    :param color: 'red', 'green', or 'blue'
+    :type color: string
+
+    :returns: a numpy.array of color values for each pixel in the image from
+        the color band defined by the input color parameter
+    """
+    color_interpolate = interpolate.interp1d(
         condense_to_unity(numpy.array(colormap['z_values'])),
         colormap[color])
     return numpy.reshape(
@@ -707,8 +748,8 @@ def rgb_from_raster(colormap, raster):
 
     Handles continuous and discrete color maps.
 
-    :param colormap: colormap dict as produced by the :py:class: `CPTReader`
-        class
+    :param colormap: colormap dict as produced by the
+        :py:class: `cpt.CPTReader` class
     :type colormap: dict
 
     :param raster: raw intensity values for the
@@ -744,6 +785,47 @@ def rgb_from_raster(colormap, raster):
 
 
 def rgb_values_from_colormap(colormap, index_list):
+    """
+    Given a list of color band indices, get the color values at each index from
+    the given colormap.
+
+    Example:
+        Input colormap:
+        {'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
+         'name': 'seminf-haxby',
+         'type': 'discrete',
+         'model': 'RGB',
+         'z_values': [1.25 * x for x in range(25)],
+         'red': [255, 208, 186, 143, 97, 0, 25, 12, 24, 49, 67, 96,
+                 105, 123, 138, 172, 205, 223, 240, 247, 255,
+                 255, 244, 238],
+         'green': [255, 216, 197, 161, 122, 39, 101, 129, 175, 190,
+                   202, 225, 235, 235, 236, 245, 255, 245, 236,
+                   215, 189, 160, 116, 79],
+         'blue': [255, 251, 247, 241, 236, 224, 240, 248, 255, 255,
+                  255, 240, 225, 200, 174, 168, 162, 141, 120,
+                  103, 86, 68, 74, 77],
+         'background': [255, 255, 255],
+         'foreground': [238, 79, 77],
+         'NaN': [0, 0, 0]}
+
+        Input index_list:
+        [0, 1, 2, 3, 23]
+
+        Returns (in the order of red, green, then blue):
+        (numpy.array([255, 208, 186, 143, 238]),
+         numpy.array([255, 216, 197, 161, 79]),
+         numpy.array([255, 251, 247, 241, 77]))
+
+    :param colormap: colormap as read by a :py:class: `cpt.CPTReader` object
+    :type colormap: dict
+
+    :param index_list: color value indices
+    :type index_list: list of integers
+
+    :returns: tuple of three 1-dimensional numpy.array objects (red, green,
+        blue)
+    """
     # make sure the color value lists are equal in length
     # if they're not, this is a bad colormap
     assert len(colormap['red']) == len(colormap['green']) \
@@ -756,15 +838,15 @@ def rgb_values_from_colormap(colormap, index_list):
     return red, green, blue
 
 
-def make_target(path, grid, format, pixel_type, bands=4):
+def make_target(path, grid, output_format, pixel_type, bands=4):
     """
     Boiler plate stuff for creating a target for writing geotiffs.
 
     :param path: path to the output file, including file name
     :type path: string
 
-    :param format: string representing to output format type (for example,
-        'GTiff')
+    :param output_format: string representing to output format type (for
+        example, 'GTiff')
 
     :param pixel_type: integer representing the pixel data type, which
         corresponds to a GDAL data type (for example, gdal.GDT_Byte,
@@ -774,7 +856,7 @@ def make_target(path, grid, format, pixel_type, bands=4):
 
     :returns: gdal.Dataset object representing the file target
     """
-    driver = gdal.GetDriverByName(format)
+    driver = gdal.GetDriverByName(output_format)
 
     target = driver.Create(path, grid.columns, grid.rows, bands, pixel_type)
 
@@ -796,178 +878,3 @@ def make_target(path, grid, format, pixel_type, bands=4):
     target.SetProjection(srs.ExportToWkt())
 
     return target
-
-
-class CPTReader:
-    """This class provides utilities for reading colormap data from cpt files.
-
-    Colormaps have the following properties:
-
-    - z-values: Any sequence of numbers (example: [-2.5, -2.4, ... , 1.4, 1.5])
-    - colormap Id (example: seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp)
-    - colormap name (example: seminf-haxby)
-    - color model (RGB, HSV, or CMYK)
-    - RGB, HSV, or CMYK values associated with the ranges defined by the
-      z-values
-    - Background color
-    - Foreground color
-    - NaN color
-    - colormap type (discrete or continuous; this is determined by the
-      arrangement of z- and color values)
-
-    Example RGB colormap:
-        {'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
-         'name': 'seminf-haxby',
-         'type': 'discrete',
-         'model': 'RGB',
-         'z_values': [0.00, 1.25, 2.50, ... , 28.75, 30.00],
-         'red': [255, 208, 186, ... , 244, 238],
-         'green': [255, 216, 197, ... , 116, 79],
-         'blue': [255, 251, 247, ... , 74, 77],
-         'background': [255, 255, 255],
-         'foreground': [238, 79, 77],
-         'NaN': [0, 0, 0]}
-
-    See also:
-        Library of cpt files:
-            http://soliton.vm.bytemark.co.uk
-        MAKECPT:
-            http://www.soest.hawaii.edu/gmt/gmt/doc/gmt/html/man/makecpt.html
-
-    TODO(LB): Currently, only RGB colormaps are supported. HSV and CMYK
-    colormaps are not supported.
-    """
-
-    SUPPORTED_COLOR_MODELS = ('RGB',)
-
-    NAME_RE = re.compile(r'^(.+).cpt$')
-    ID_RE = re.compile(r'\$Id:\s+(.+)\s+\$')
-    COLOR_MODEL_RE = re.compile(r'^COLOR_MODEL\s+=\s+(.+)')
-
-    def __init__(self, path):
-        """
-        :param path: location of a cpt file, including file name
-        :type path: string
-        """
-        self.path = path
-        self.colormap = {
-            'id': None,
-            'name': None,
-            'type': None,
-            'model': None,
-            'z_values': [],
-            'red': [],
-            'green': [],
-            'blue': [],
-            'background': None,
-            'foreground': None,
-            'NaN': None}
-
-    def get_colormap(self):
-        """
-        Read the input cpt file and attempt to parse colormap data.
-
-        :returns: dict representation of the colormap
-        """
-        with open(self.path, 'r') as fh:
-            for line in fh:
-                # ignore empty lines
-                if not line.strip():
-                    continue
-                elif line[0] == '#':
-                    self._parse_comment(line)
-                elif line[0] in ['B', 'F', 'N']:
-                    self._parse_bfn(line)
-                else:
-                    self._parse_color_table(line)
-        if not self.colormap['model'] in self.SUPPORTED_COLOR_MODELS:
-            raise ValueError('Color model type %s is not supported' %
-                             self.colormap['model'])
-        return self.colormap
-
-    def _parse_comment(self, line):
-        """
-        Look for name, id, and color model type in a comment line
-        (beginning with a '#').
-
-        :param line: a single line read from the cpt file
-        """
-        text = line.split('#')[1].strip()
-        for attr, regex in  (('name', self.NAME_RE),
-                             ('id', self.ID_RE),
-                             ('model', self.COLOR_MODEL_RE)):
-            # if the attr is already defined, skip it
-            if self.colormap[attr]:
-                continue
-            match = regex.match(text)
-            if match:
-                self.colormap[attr] = match.group(1)
-
-    def _parse_bfn(self, line):
-        """
-        Parse Background, Foreground, and NaN values from the color table.
-
-        :param line: a single line read from the cpt file
-        """
-        for token, key in (('B', 'background'),
-                           ('F', 'foreground'),
-                           ('N', 'NaN')):
-            if line[0] == token:
-                _bfn, color = line.split(token)
-                self.colormap[key] = [int(i) for i in color.split()]
-                return
-
-    def _protect_map_type(self, map_type):
-        """
-        Prevent the parser from changing map types (discrete vs. continuous),
-        which could be caused by a malformed cpt file.
-
-        If a map type is defined (not None) and then changed, this will throw
-        an :py:exc: `AssertionError`.
-
-        :param map_type: 'discrete' or 'continuous'
-        """
-        assert (self.colormap['type'] is None
-                or self.colormap['type'] == map_type)
-
-    def _parse_color_table(self, line):
-        """
-        Parse z-values and color values from the color table.
-
-        The map type (discrete or continuous) is also implicity determined from
-        these values.
-
-        :param line: a single line read from the cpt file
-        """
-        drop_tail_extend = lambda lst, ext: lst[:-1] + [x for x in ext]
-        strs_to_ints = lambda strs: [int(x) for x in strs]
-
-        values = line.split()
-        assert len(values) == 8
-
-        # there are two columns of values (each containing z and color values)
-        z_vals = (float(values[0]), float(values[4]))
-        self.colormap['z_values'] = drop_tail_extend(self.colormap['z_values'],
-                                                     z_vals)
-
-        rgb1 = strs_to_ints(values[1:4])
-        rgb2 = strs_to_ints(values[5:8])
-        if rgb1 == rgb2:
-            map_type = 'discrete'
-        else:
-            map_type = 'continuous'
-        try:
-            self._protect_map_type(map_type)
-        except AssertionError:
-            raise ValueError("Could not determine map type (discrete or"
-                             " continuous). The cpt file could be malformed.")
-        self.colormap['type'] = map_type
-
-        for i, color in enumerate(('red', 'green', 'blue')):
-            if map_type == 'discrete':
-                self.colormap[color].append(rgb1[i])
-            elif map_type == 'continuous':
-                self.colormap[color] = drop_tail_extend(self.colormap[color],
-                                                        (rgb1[i], rgb2[i]))
-            else:
-                raise ValueError("Unknown map type '%s'" % map_type)
