@@ -19,7 +19,7 @@ from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
-from openquake.output import geotiff
+from openquake.output import geotiff, cpt
 from openquake.output import hazard as hazard_output
 
 LOG = logs.LOG
@@ -471,9 +471,6 @@ class ClassicalMixin(BasePSHAMixin):
             hm_geotiff_name = '%s-%s-%s.tiff' % (
                 HAZARD_MAP_FILENAME_PREFIX, str(poe), filename_part)
             geotiff_path = os.path.join(output_path, hm_geotiff_name)
-            print "hm_geotiff_name is %s" % hm_geotiff_name
-            print "hm_data is %s" % hm_data
-            print "self.params are %s" % self.params
 
             self._write_hazard_map_geotiff(geotiff_path, hm_data)
             xmlwriter.serialize(hm_data)
@@ -496,7 +493,7 @@ class ClassicalMixin(BasePSHAMixin):
         try:
             cpt_path = os.path.join(
                     self.params['BASE_PATH'], self.params['HAZARD_MAP_CPT'])
-            cpt_reader = geotiff.CPTReader(cpt_path)
+            cpt_reader = cpt.CPTReader(cpt_path)
             colormap = cpt_reader.get_colormap()
         except (IOError, KeyError):
             LOG.info(
