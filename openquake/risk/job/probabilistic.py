@@ -19,27 +19,13 @@ from openquake import shapes
 from openquake.risk import common
 from openquake.risk import probabilistic_event_based
 from openquake.risk import job as risk_job
-from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.risk.job import output, RiskJobMixin
+from openquake.risk.job import preload, output, RiskJobMixin
 from openquake.risk.job import aggregate_loss_curve
 
 LOGGER = logs.LOG
 
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
-
-
-def preload(fn):
-    """ Preload decorator """
-
-    def preloader(self, *args, **kwargs):
-        """A decorator for preload steps that must run on the Jobber"""
-
-        self.store_exposure_assets()
-        self.store_vulnerability_model()
-
-        return fn(self, *args, **kwargs)
-    return preloader
 
 
 class ProbabilisticEventMixin:
@@ -73,15 +59,9 @@ class ProbabilisticEventMixin:
                 # TODO(jmc): Cancel and respawn this task
                 return []
 
-        try:
-            # this task must be executed after the slicing
-            # of the gmfs has been completed
-            aggregate_computation_task = \
-                    aggregate_loss_curve.compute_aggregate_curve.delay(self.id)
-
-            aggregate_computation_task.wait()
-        except TimeoutError:
-            return []
+        # the aggregation must be computed after the slicing
+        # of the gmfs has been completed
+        aggregate_loss_curve.compute_aggregate_curve(self)
 
         return results  # TODO(jmc): Move output from being a decorator
 
@@ -123,27 +103,7 @@ class ProbabilisticEventMixin:
                     "TimeSpan": timespan}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
-    def store_exposure_assets(self):
-        """ Load exposure assets and write to memcache """
-
-        exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
-            (self.base_path, self.params[job.EXPOSURE]))
-
-        for site, asset in exposure_parser.filter(self.region):
-            # TODO(JMC): This is kludgey
-            asset['lat'] = site.latitude
-            asset['lon'] = site.longitude
-            gridpoint = self.region.grid.point_at(site)
-            asset_key = kvs.tokens.asset_key(self.id, gridpoint.row,
-                gridpoint.column)
-            kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
-
-    def store_vulnerability_model(self):
-        """ load vulnerability and write to memcache """
-        vulnerability.load_vulnerability_model(self.id,
-            "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
-
-    def compute_risk(self, block_id, **kwargs): #pylint: disable=W0613
+    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
          1) list of sites
@@ -219,7 +179,8 @@ class ProbabilisticEventMixin:
             return None
 
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
-                vuln_function, gmf_slice, self._get_number_of_samples())
+                vuln_function, gmf_slice, self, asset,
+                self._get_number_of_samples())
 
         # NOTE(JMC): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
