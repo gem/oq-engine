@@ -282,7 +282,6 @@ class LossMapGeoTiffFile(GeoTiffFile):
             path, grid, init_value=init_value, pixel_type=pixel_type)
         self.normalize = normalize
 
-
     def write(self, cell, value):
         """Stores the cell values in the NumPy array for later
         serialization. Make sure these are zero-based cell addresses."""
@@ -353,7 +352,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
     """
 
     DEFAULT_COLORMAP = COLORMAPS['seminf-haxby']
-    
+
     def __init__(self, path, image_grid, colormap=None, iml_min_max=None,
                  html_wrapper=False):
         """
@@ -496,7 +495,11 @@ class HazardMapGeoTiffFile(GeoTiffFile):
 
     def _generate_colorscale(self):
         """
-        
+        Generates a discrete or continous colorscale legend to be rendered in
+        an html file.
+
+        See :py:func: `continuous_colorscale` and
+        :py:func: `discrete_colorscale` for more info.
         """
         if self.colormap['type'] == 'continuous':
             return continuous_colorscale(self.colormap, self.raster)
@@ -506,6 +509,7 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         else:
             raise ValueError("Unsupported colormap type '%s'" %
                 self.colormap['type'])
+
 
 class GMFGeoTiffFile(GeoTiffFile):
     """Writes RGB GeoTIFF image for ground motion fields. Color scale is
@@ -679,7 +683,7 @@ def discrete_colorscale(colormap, _min, _max):
     delta = (_max - _min) / num_colors
     # color segment interval 'fence posts'
     seg_intervals = [_min + (n * delta) for n in range(num_colors + 1)]
-   
+
     colorscale = []
     for i in range(len(seg_intervals) - 1):
         seg_range = "%.2f - %.2f" % (seg_intervals[i], seg_intervals[i + 1])
@@ -690,6 +694,7 @@ def discrete_colorscale(colormap, _min, _max):
         colorscale.append((hex_color, seg_range))
 
     return colorscale
+
 
 def continuous_colorscale(colormap, iml_list):
     """
@@ -719,7 +724,7 @@ def continuous_colorscale(colormap, iml_list):
         colorscale.append((hex_color, str(iml)))
 
     return colorscale
-        
+
 
 def rgb_for_continuous(fractional_values, colormap):
     """
