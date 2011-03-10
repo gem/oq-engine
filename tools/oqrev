@@ -2,11 +2,13 @@
 
 help() {
 cat <<HSD
-`basename $0` is a tool that helps reviewing OpenQuake branches of others or even
-your own (e.g. prior to creating a pull request).
+`basename $0` is a tool that helps reviewing OpenQuake branches of others
+or even your own (e.g. prior to creating a pull request).
 
-To review your own branch you merely need to go to your OpenQuake
-repository and check out the desired branch, then invoke `basename $0`.
+To review one of your branches against your own repo's master you would
+say:
+
+    `basename $0` --branch=<branch-name>
 
 To review a colleague's branch against your own repo's master you would
 say e.g.
@@ -31,8 +33,7 @@ The command line arguments are as follows:
                         name and BN is the branch name e.g. "gem/master"
                         or "master" (defaults: RN="", BN="master")
     --branch=[RN/BN]    The branch you want to review e.g.
-                        "andrea/fix-aggregate-curve" (defaults: RN="",
-                        BN="<current-branch>")
+                        "andrea/fix-aggregate-curve" (defaults: RN="")
     --pull=PRN          Review the branch specified by a github pull
                         request. PRN is the pull request number e.g. 59
     -L|--local          Do not fetch any remotes
@@ -43,6 +44,10 @@ The command line arguments are as follows:
 HSD
 exit 0
 }
+
+if [ $# -eq 0 ]; then
+    help
+fi
 
 git branch >/dev/null 2>&1
 if [ $? -ne 0 ]
@@ -63,7 +68,7 @@ other_remote=""
 other_reference="master"
 
 branch_remote=""
-branch_reference=`git branch | awk '/^\*/ { print $2 }'`
+branch_reference=""
 
 fetch_remotes=1
 use_colordiff=0
@@ -167,11 +172,17 @@ do
     esac
 done
 
+if [ -z "$branch_reference" ]; then
+    echo "Please specify the branch you wish to review"
+    echo "(run \"`basename $0` --help\" for more information)."
+    exit 7
+fi
+
 if [ $skip_pylint -eq 0 ]; then
     which pylint >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "Cannot find pylint .. Is it installed?"
-        exit 7
+        exit 8
     fi
 fi
 
@@ -179,7 +190,7 @@ if [ $skip_pep8 -eq 0 ]; then
     which pep8 >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "Cannot find pep8 .. Is it installed?"
-        exit 8
+        exit 9
     fi
 fi
 
@@ -198,7 +209,7 @@ if [ $fetch_remotes -eq 1 ]; then
         git fetch $other_remote
         if [ $? -ne 0 ]; then
             echo "git failed to fetch $other_remote"
-            exit 9
+            exit 10
         fi
     fi
     if [ ! -z "$branch_remote" ]; then
@@ -206,7 +217,7 @@ if [ $fetch_remotes -eq 1 ]; then
         git fetch $branch_remote
         if [ $? -ne 0 ]; then
             echo "git failed to fetch $branch_remote"
-            exit 10
+            exit 11
         fi
     fi
 fi
@@ -219,7 +230,7 @@ if [ ! -z "$other_remote" ]; then
     git checkout -b ba $other_remote/$other_reference
     if [ $? -ne 0 ]; then
         echo "git failed to create a tracking branch for $other_remote/$other_reference"
-        exit 11
+        exit 12
     fi
     other_branch="ba"
 else
@@ -230,7 +241,7 @@ if [ ! -z "$branch_remote" ]; then
     git checkout -b bb $branch_remote/$branch_reference
     if [ $? -ne 0 ]; then
         echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
-        exit 12
+        exit 13
     fi
     branch_branch="bb"
 else
@@ -241,11 +252,11 @@ fi
 num_of_py_files=`git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | wc -l`
 
 if [ $skip_pylint -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
-    git checkout $other_branch 
+    git checkout $other_branch
     echo "Running pylint on $other_branch.."
     pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
 
-    git checkout $branch_branch 
+    git checkout $branch_branch
     echo "Running pylint on $branch_name.."
     pylint -f parseable -dI -rn --disable=E1101,E0611 openquake | sed -e 's/:[0-9][0-9]*:/:/' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 
