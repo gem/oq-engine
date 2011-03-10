@@ -125,6 +125,12 @@ POES_HAZARD_MAPS = 0.1
 
 HAZARD_MAP_CPT = seminf-haxby.cpt
 
+# Fixed scaling for output hazard maps
+# (optional)
+HAZARD_MAP_IML_MIN = 0.02
+HAZARD_MAP_IML_MAX = 1.0
+
+
 [RISK]
 
 RISK_CALCULATION_MODE = Probabilistic Event
