@@ -19,8 +19,7 @@ from osgeo import gdal, gdalconst
 
 from openquake import shapes
 from utils import test
-from openquake.output import geotiff
-from openquake.output import curve
+from openquake.output import geotiff, curve, cpt
 
 # we define some test regions which have a lower-left corner at 0.0/0.0
 # the default grid spacing of 0.1 degrees is used
@@ -558,7 +557,7 @@ class OutputTestCase(unittest.TestCase):
         test_file = 'seminf-haxby.cpt'
         test_path = os.path.join(test.DATA_DIR, test_file)
 
-        reader = geotiff.CPTReader(test_path)
+        reader = cpt.CPTReader(test_path)
         expected_map = TEST_COLORMAP
 
         actual_map = reader.get_colormap()
