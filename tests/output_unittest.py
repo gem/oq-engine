@@ -67,6 +67,26 @@ GEOTIFF_USED_CHANNEL_IDX = 1
 GEOTIFF_TOTAL_CHANNELS = 4
 GEOTIFF_TEST_PIXEL_VALUE = 1.0
 
+TEST_COLORMAP = {
+    'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
+    'name': 'seminf-haxby',
+    'type': 'discrete',
+    'model': 'RGB',
+    # z_values = [0.0, 1.25, ... , 28.75, 30.0]
+    'z_values': [1.25 * x for x in range(25)],
+    'red': [255, 208, 186, 143, 97, 0, 25, 12, 24, 49, 67, 96,
+            105, 123, 138, 172, 205, 223, 240, 247, 255,
+            255, 244, 238],
+    'green': [255, 216, 197, 161, 122, 39, 101, 129, 175, 190,
+              202, 225, 235, 235, 236, 245, 255, 245, 236,
+              215, 189, 160, 116, 79],
+    'blue': [255, 251, 247, 241, 236, 224, 240, 248, 255, 255,
+             255, 240, 225, 200, 174, 168, 162, 141, 120,
+             103, 86, 68, 74, 77],
+    'background': [255, 255, 255],
+    'foreground': [238, 79, 77],
+    'NaN': [0, 0, 0]}
+
 
 class OutputTestCase(unittest.TestCase):
     """Test all our output file formats, generally against sample content"""
@@ -510,25 +530,65 @@ class OutputTestCase(unittest.TestCase):
         test_path = os.path.join(test.DATA_DIR, test_file)
 
         reader = geotiff.CPTReader(test_path)
-        expected_map = {
-            'id': 'seminf-haxby.cpt,v 1.1 2004/02/25 18:15:50 jjg Exp',
-            'name': 'seminf-haxby',
-            'type': 'discrete',
-            'model': 'RGB',
-            # z_values = [0.0, 1.25, ... , 28.75, 30.0]
-            'z_values': [1.25 * x for x in range(25)],
-            'red': [255, 208, 186, 143, 97, 0, 25, 12, 24, 49, 67, 96,
-                    105, 123, 138, 172, 205, 223, 240, 247, 255,
-                    255, 244, 238],
-            'green': [255, 216, 197, 161, 122, 39, 101, 129, 175, 190,
-                      202, 225, 235, 235, 236, 245, 255, 245, 236,
-                      215, 189, 160, 116, 79],
-            'blue': [255, 251, 247, 241, 236, 224, 240, 248, 255, 255,
-                     255, 240, 225, 200, 174, 168, 162, 141, 120,
-                     103, 86, 68, 74, 77],
-            'background': [255, 255, 255],
-            'foreground': [238, 79, 77],
-            'NaN': [0, 0, 0]}
+        expected_map = TEST_COLORMAP
 
         actual_map = reader.get_colormap()
         self.assertEqual(expected_map, actual_map)
+
+    def test_hazard_map_geotiff_constructor_raises(self):
+        """
+        Test the parameter validation of the HazardMapGeoTiffFile constructor.
+        """
+
+        test_file_path = 'test.tiff'  # this test won't actually write anything
+        test_region = shapes.Region.from_coordinates(TEST_REGION_SMALL)
+
+        bad_test_data = (
+            ('foo', 'bar'),
+            ('foo', 17),
+            (17, 'foo'),
+            (-1.0, 5.5),
+            (-2, -0.5),
+            (2.13, 0.005))
+        for bad in bad_test_data:
+            self.assertRaises(
+                (AssertionError, ValueError), geotiff.HazardMapGeoTiffFile, test_file_path,
+                test_region.grid, TEST_COLORMAP, iml_min_max=bad)
+
+    def test_hazard_map_geotiff_scaling_fixed(self):
+        """
+        Scaling type for a HazardMapGeoTiffFile is 'fixed' if the iml_min_max
+        is specified in the constructor.
+
+        This test ensures the scaling type is properly set to 'fixed'.
+        """
+        # Nothing is actually written to this file in this test
+        test_file_path = "test.tiff"
+        test_region = shapes.Region.from_coordinates(TEST_REGION_SMALL)
+        test_iml_min_max = ('0.0', '4.8')
+
+        # test 'fixed' color scaling
+        hm_writer = geotiff.HazardMapGeoTiffFile(
+            test_file_path, test_region.grid, TEST_COLORMAP,
+            iml_min_max=test_iml_min_max)
+        self.assertEqual('fixed', hm_writer.scaling)
+
+    def test_hazard_map_geotiff_scaling_relative(self):
+        """
+        Scaling type for a HazardMapGeoTiffFile is 'relative' if the
+        iml_min_max is not specified in the constructor. Instead, the min and
+        max values are derived from the lowest and highest existing values in
+        the hazard map raster (the min and max values are calculated later when
+        the raw raster values are normalized; see the HazardMapGeoTiffFile
+        class doc for more info).
+
+        This test ensures that the scaling type is properly set to 'relative'.
+        """
+        # Nothing is actually written to this file in this test
+        test_file_path = "test.tiff"
+        test_region = shapes.Region.from_coordinates(TEST_REGION_SMALL)
+
+        # test 'relative' color scaling
+        hm_writer = geotiff.HazardMapGeoTiffFile(
+            test_file_path, test_region.grid, TEST_COLORMAP)
+        self.assertEqual('relative', hm_writer.scaling)
