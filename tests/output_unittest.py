@@ -586,7 +586,7 @@ class OutputTestCase(unittest.TestCase):
             (2.13, 0.005))
         for bad in bad_test_data:
             self.assertRaises(
-                ValueError, geotiff.HazardMapGeoTiffFile, test_file_path,
+                (ValueError, AssertionError), geotiff.HazardMapGeoTiffFile, test_file_path,
                 test_region.grid, TEST_COLORMAP, iml_min_max=bad)
 
     def test_hazard_map_geotiff_scaling(self):
