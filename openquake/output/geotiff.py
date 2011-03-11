@@ -382,15 +382,10 @@ class HazardMapGeoTiffFile(GeoTiffFile):
         """
         super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
             html_wrapper=html_wrapper)
-        self.colormap = colormap
+        self.colormap = colormap  # TODO: Validate the rgb list lengths
         if not self.colormap:
             self.colormap = self.DEFAULT_COLORMAP
-        # validate the number of color values in the map
-        assert len(self.colormap['red']) == len(self.colormap['green'])
-        assert len(self.colormap['red']) == len(self.colormap['blue'])
-
         self.html_wrapper = html_wrapper
-
         self.iml_min = None
         self.iml_max = None
         if iml_min_max:
@@ -817,10 +812,10 @@ def rgb_from_raster(colormap, raster):
         # handle high-end outliers (set to highest value in range):
         numpy.putmask(
             bins,
-            # LB: I don't like the use of 'red' here, but the len of all color
-            # lists should be the same
             bins > len(colormap['red']) - 1,
             len(colormap['red']) - 1)
+        # TODO: verify color value list lengths in the constructor
+        # all of them should be equal
         red, green, blue = rgb_values_from_colormap(colormap, bins)
         # now re-shape the color lists per the image shape and return
         return [numpy.reshape(color, raster.shape) for color in \
@@ -831,9 +826,6 @@ def rgb_values_from_colormap(colormap, index_list):
     """
     Given a list of color band indices, get the color values at each index from
     the given colormap.
-
-    This function also ensures that there is an equal number of color values in
-    each band (r, g, b).
 
     Example:
         Input colormap:
