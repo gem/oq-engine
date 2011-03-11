@@ -880,9 +880,6 @@ def make_target(path, grid, output_format, pixel_type, bands=4):
     """
     Boiler plate stuff for creating a target for writing geotiffs.
 
-    Note: The input grid object is built on the spatial coordinate system
-    (thus, origin is in the lower left corner).
-
     :param path: path to the output file, including file name
     :type path: string
 
@@ -901,29 +898,17 @@ def make_target(path, grid, output_format, pixel_type, bands=4):
 
     target = driver.Create(path, grid.columns, grid.rows, bands, pixel_type)
 
-    # NOTE(LB): shapes.Grid objects are oriented using the spatial coordinate
-    # system. The image raster is the same size and shape as the grid, but it
-    # is of course based on the image coordinate system, which is mirrored over
-    # the x-axis.
-    # If we plot a color to the coordinates (0,0) in the image raster, this
-    # would be the upper left corner of the image. However, the position (0,0)
-    # in the grid is the _lower_ left corner.
-    # Thus, the image will be constructed with South pointing up. The next few
-    # line of code will ensure that the image is properly oriented when viewed
-    # in a GIS application.
-
-    # Lower left corner of the region.
-    ll_corner = grid.region.lower_left_corner
+    # upper left corner of the region
+    ul_corner = grid.region.upper_left_corner
 
     # this is the order of arguments to SetGeoTransform()
-    # origin x, pixel width, longitude rotation,
-    # origin y, latitude rotation, pixel height
-
+    # top left x, w-e pixel resolution, rotation,
+    # top left y, rotation, n-s pixel resolution
     # rotation is 0 if image is "north up"
     # taken from http://www.gdal.org/gdal_tutorial.html
     target.SetGeoTransform(
-        [ll_corner.longitude, grid.cell_size, TIFF_LONGITUDE_ROTATION,
-         ll_corner.latitude, TIFF_LATITUDE_ROTATION, grid.cell_size])
+        [ul_corner.longitude, grid.cell_size, TIFF_LONGITUDE_ROTATION,
+         ul_corner.latitude, TIFF_LATITUDE_ROTATION, -grid.cell_size])
 
     # set the reference info
     srs = osr.SpatialReference()
