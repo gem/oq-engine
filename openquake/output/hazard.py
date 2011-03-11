@@ -206,7 +206,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
     def __init__(self, path):
-        writer.XMLFileWriter.__init__(self, path)
+        super(HazardMapXMLWriter, self).__init__(path)
 
         self.hmnode_counter = 0
         self.root_node = None
@@ -360,7 +360,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
     ground_motion_attr = "groundMotion"
 
     def __init__(self, path):
-        writer.XMLFileWriter.__init__(self, path)
+        super(GMFXMLWriter, self).__init__(path)
         self.node_counter = 0
 
         # <GMF/> where all the fields are appended
