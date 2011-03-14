@@ -9,7 +9,7 @@ For a good source of cpt examples, visit: http://soliton.vm.bytemark.co.uk
 import re
 
 
-class CPTReader:
+class CPTReader(object):
     """This class provides utilities for reading colormap data from cpt files.
 
     Colormaps have the following properties:
