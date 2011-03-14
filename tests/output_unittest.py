@@ -597,7 +597,7 @@ class OutputTestCase(unittest.TestCase):
         """
 
     def test_rgb_values_from_colormap(self):
-        # get colors for 8 points 
+        # get colors for 8 points
         indices = [0, 23, 3, 2, 17, 1, 19, 22]
         red_expected = numpy.array([255, 238, 143, 186, 223, 208, 247, 244])
         green_expected = numpy.array([255, 79, 161, 197, 245, 216, 215, 116])
@@ -734,7 +734,7 @@ class OutputTestCase(unittest.TestCase):
         self._assert_numpy_arrays_almost_equal(expected_blue, actual_blue)
 
     def test_discrete_colorscale(self):
-        
+
         min = 0.8
         max = 0.4
         expected_output = [
@@ -752,7 +752,7 @@ class OutputTestCase(unittest.TestCase):
             ('#f4744a', '3.73 - 3.87'), ('#ee4f4d', '3.87 - 4.00')]
 
         colorscale = geotiff.discrete_colorscale(TEST_COLORMAP, 0.8, 4.0)
-        self.assertEqual(expected_output, colorscale)         
+        self.assertEqual(expected_output, colorscale)
 
     def test_continuous_colorscale(self):
         iml_list = numpy.array([0.005, 0.007, 0.0098, 0.0137])
@@ -812,7 +812,7 @@ class OutputTestCase(unittest.TestCase):
         def _test_hazard_map_fixed_scaling(region, hm_data):
             path = test.do_test_output_file(
                 'TEST_HAZARD_MAP_fixed_scaling.tiff')
-            
+
             # expected colors for each pixel in the map:
             exp_red_vals = numpy.array([
                 [238, 255, 247, 238, 255, 238],
@@ -888,7 +888,7 @@ class OutputTestCase(unittest.TestCase):
         # 8x8 px
         small_region_coords = [(0.0, 0.0), (0.5, 0.0), (0.5, 0.5), (0.0, 0.5)]
         small_region = shapes.Region.from_coordinates(small_region_coords)
-            
+
         hm_point_data = {
             'investigationTimeSpan': '50.0',
             'statistics': 'quantile',
