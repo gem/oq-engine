@@ -235,7 +235,6 @@ class GeoTiffFile(writer.FileWriter):
     def _write_html_wrapper(self):
         """Write an html wrapper that embeds the geotiff in an <img> tag.
         NOTE: this cannot be viewed out-of-the-box in all browsers."""
-
         if self.html_wrapper:
             # replace placeholders in HTML template with filename, height,
             # width
