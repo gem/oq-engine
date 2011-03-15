@@ -29,6 +29,8 @@
 #   You should have received a copy of the GNU Lesser General Public License
 #   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+""" Mixin class """
+
 def loader(target, mixin):
     """ Load the mixin into the target's class """
     target.__class__.__bases__ += (mixin,)
