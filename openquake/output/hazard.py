@@ -24,7 +24,7 @@ to NRML format.
 
 * Hazard curves:
 
-For the serialization of hazard curves, it currently takes 
+For the serialization of hazard curves, it currently takes
 all the lxml object model in memory
 due to the fact that curves can be grouped by IDmodel and
 IML. Couldn't find a way to do so writing an object at a
@@ -33,7 +33,7 @@ objects are received.
 
 * Hazard maps:
 
-Hazard maps are serialized per object (=Site) as implemented 
+Hazard maps are serialized per object (=Site) as implemented
 in the base class.
 
 * Ground Motion Fields (GMFs):
@@ -80,10 +80,10 @@ class HazardCurveXMLWriter(writer.FileWriter):
             xml_declaration=True, encoding="UTF-8"))
 
         writer.FileWriter.close(self)
-            
+
     def write(self, point, values):
-        """Write an hazard curve.
-        
+        """Write a hazard curve.
+
         point must be of type shapes.Site
         values is a dictionary that matches the one produced by the
         parser nrml.NrmlFile
@@ -91,7 +91,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
         # if we are writing the first hazard curve, create wrapping elements
         if self.nrml_el is None:
-            
+
             # nrml:nrml, needs gml:id
             self.nrml_el = etree.Element("%snrml" % NRML, nsmap=NSMAP)
 
@@ -99,7 +99,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
                     NRML_GML_ID))
 
             # nrml:hazardResult, needs gml:id
-            self.result_el = etree.SubElement(self.nrml_el, 
+            self.result_el = etree.SubElement(self.nrml_el,
                 "%shazardResult" % NRML)
 
             _set_gml_id(self.result_el, _gml_id("hazres_id", values,
@@ -107,11 +107,11 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
             # nrml:config
             config_el = etree.SubElement(self.result_el, "%sconfig" % NRML)
-            
+
             # nrml:hazardProcessing
-            hazard_processing_el = etree.SubElement(config_el, 
+            hazard_processing_el = etree.SubElement(config_el,
                 "%shazardProcessing" % NRML)
-            
+
             # the following XML attributes are all optional
             _set_optional_attributes(hazard_processing_el, values,
                 ('investigationTimeSpan', 'IDmodel', 'saPeriod', 'saDamping'))
@@ -131,11 +131,11 @@ class HazardCurveXMLWriter(writer.FileWriter):
                         "or a statistics label"
             raise ValueError(error_msg)
 
-        if self.curves_per_branch_label.has_key(curve_label):
+        if curve_label in self.curves_per_branch_label:
             hazard_curve_field_el = self.curves_per_branch_label[curve_label]
         else:
             # nrml:hazardCurveField, needs gml:id
-            hazard_curve_field_el = etree.SubElement(self.result_el, 
+            hazard_curve_field_el = etree.SubElement(self.result_el,
                 "%shazardCurveField" % NRML)
 
             _set_gml_id(hazard_curve_field_el, _gml_id(
@@ -146,13 +146,13 @@ class HazardCurveXMLWriter(writer.FileWriter):
                 self.hcfield_counter += 1
 
             if 'endBranchLabel' in values:
-                hazard_curve_field_el.set("endBranchLabel", 
+                hazard_curve_field_el.set("endBranchLabel",
                     str(values["endBranchLabel"]))
             elif 'statistics' in values:
-                hazard_curve_field_el.set("statistics", 
+                hazard_curve_field_el.set("statistics",
                     str(values["statistics"]))
                 if 'quantileValue' in values:
-                    hazard_curve_field_el.set("quantileValue", 
+                    hazard_curve_field_el.set("quantileValue",
                         str(values["quantileValue"]))
 
             # nrml:IML
@@ -161,7 +161,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
             iml_el.set("IMT", str(values["IMT"]))
 
             self.curves_per_branch_label[curve_label] = hazard_curve_field_el
-        
+
         # nrml:HCNode, needs gml:id
         hcnode_el = etree.SubElement(hazard_curve_field_el, "%sHCNode" % NRML)
 
@@ -188,7 +188,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         poe_el.text = " ".join([str(x) for x in values["PoEValues"]])
 
 
-class HazardMapXMLWriter(writer.FileWriter):
+class HazardMapXMLWriter(writer.XMLFileWriter):
     """This class serializes hazard map information
     to NRML format.
     """
@@ -197,7 +197,7 @@ class HazardMapXMLWriter(writer.FileWriter):
     hazard_result_tag = "%shazardResult" % NRML
     config_tag = "%sconfig" % NRML
     hazard_processing_tag = "%shazardProcessing" % NRML
-    
+
     hazard_map_tag = "%shazardMap" % NRML
 
     node_tag = "%sHMNode" % NRML
@@ -212,10 +212,10 @@ class HazardMapXMLWriter(writer.FileWriter):
         {'name': 'investigationTimeSpan', 'required': False},)
 
     MAP_ATTRIBUTES_TO_CHECK = (
-        {'name': 'poE', 'required': True}, 
-        {'name': 'IMT', 'required': True}, 
-        {'name': 'endBranchLabel', 'required': False}, 
-        {'name': 'statistics', 'required': False}, 
+        {'name': 'poE', 'required': True},
+        {'name': 'IMT', 'required': True},
+        {'name': 'endBranchLabel', 'required': False},
+        {'name': 'statistics', 'required': False},
         {'name': 'quantileValue', 'required': False})
 
     NRML_DEFAULT_ID = 'nrml'
@@ -224,7 +224,7 @@ class HazardMapXMLWriter(writer.FileWriter):
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
     def __init__(self, path):
-        writer.FileWriter.__init__(self, path)
+        super(HazardMapXMLWriter, self).__init__(path)
 
         self.hmnode_counter = 0
         self.root_node = None
@@ -258,18 +258,18 @@ class HazardMapXMLWriter(writer.FileWriter):
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
         self.root_node.attrib['%sid' % GML] = self.NRML_DEFAULT_ID
 
-        hazard_result_node = etree.SubElement(self.root_node, 
+        hazard_result_node = etree.SubElement(self.root_node,
             self.hazard_result_tag, nsmap=NSMAP)
         hazard_result_node.attrib['%sid' % GML] = self.HAZARD_RESULT_DEFAULT_ID
 
-        config_node = etree.SubElement(hazard_result_node, 
+        config_node = etree.SubElement(hazard_result_node,
             self.config_tag, nsmap=NSMAP)
 
-        self.hazard_processing_node = etree.SubElement(config_node, 
+        self.hazard_processing_node = etree.SubElement(config_node,
             self.hazard_processing_tag, nsmap=NSMAP)
 
         # parent node for hazard map nodes: hazardMap
-        self.parent_node = etree.SubElement(hazard_result_node, 
+        self.parent_node = etree.SubElement(hazard_result_node,
             self.hazard_map_tag, nsmap=NSMAP)
         self.parent_node.attrib['%sid' % GML] = self.HAZARD_MAP_DEFAULT_ID
 
@@ -284,10 +284,10 @@ class HazardMapXMLWriter(writer.FileWriter):
             error_msg = "not all required attributes set in hazard curve " \
                         "dataset"
             raise ValueError(error_msg)
-    
+
     def _append_node(self, point, val, parent_node):
         """Write HMNode element."""
-        
+
         self.hmnode_counter += 1
         node_node = etree.SubElement(parent_node, self.node_tag, nsmap=NSMAP)
         node_node.attrib["%sid" % GML] = "%s%s" % (
@@ -301,7 +301,7 @@ class HazardMapXMLWriter(writer.FileWriter):
         pos_node.text = "%s %s" % (str(point.x), str(point.y))
 
         if 'vs30' in val:
-            vs30_node = etree.SubElement(site_node, self.vs30_tag, 
+            vs30_node = etree.SubElement(site_node, self.vs30_tag,
                 nsmap=NSMAP)
             vs30_node.text = str(val['vs30'])
 
@@ -309,18 +309,18 @@ class HazardMapXMLWriter(writer.FileWriter):
         iml_node.text = str(val['IML'])
 
         # check/set common attributes
-        # TODO(fab): this could be moved to common base class 
+        # TODO(fab): this could be moved to common base class
         # of all serializers
-        _set_common_attributes(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
+        _set_common_attributes(self.PROCESSING_ATTRIBUTES_TO_CHECK,
                 self.hazard_processing_node, val)
-        _set_common_attributes(self.MAP_ATTRIBUTES_TO_CHECK, 
+        _set_common_attributes(self.MAP_ATTRIBUTES_TO_CHECK,
                 parent_node, val)
 
     def _ensure_all_attributes_set(self):
         """Ensure that all the attributes are set if required."""
-        if (_ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK, 
-                                        self.hazard_processing_node) and 
-             _ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK, 
+        if (_ensure_attributes_set(self.PROCESSING_ATTRIBUTES_TO_CHECK,
+                                        self.hazard_processing_node) and
+             _ensure_attributes_set(self.MAP_ATTRIBUTES_TO_CHECK,
                                          self.parent_node) and
              self._ensure_attribute_rules()):
             return True
@@ -328,7 +328,7 @@ class HazardMapXMLWriter(writer.FileWriter):
             return False
 
     def _ensure_attribute_rules(self):
-        """Ensure business constraints on attributes 
+        """Ensure business constraints on attributes
         of an HazardCurveField node."""
 
         # special checks: end branch label and statistics
@@ -354,14 +354,14 @@ class HazardMapXMLWriter(writer.FileWriter):
 
 # TODO Add support rupture element (not implemented so far)
 # TODO Add support full GMPEParameters (not implemented so far)
-class GMFXMLWriter(writer.FileWriter):
+class GMFXMLWriter(writer.XMLFileWriter):
     """This class serializes ground motion field (GMF) informatiuon
     to NRML format.
 
     As of now, only the GMFNode information is supported. GMPEParameters is
     serialized as a stub with the only attribute that is formally required
     (but doesn't have a useful definition in the schema).
-    Rupture information and full GMPEParameters are currently 
+    Rupture information and full GMPEParameters are currently
     not supported."""
 
     root_tag = NRML + "nrml"
@@ -378,9 +378,9 @@ class GMFXMLWriter(writer.FileWriter):
     ground_motion_attr = "groundMotion"
 
     def __init__(self, path):
-        writer.FileWriter.__init__(self, path)
+        super(GMFXMLWriter, self).__init__(path)
         self.node_counter = 0
-        
+
         # <GMF/> where all the fields are appended
         self.parent_node = None
 
@@ -408,12 +408,12 @@ class GMFXMLWriter(writer.FileWriter):
                 GMFXMLWriter.root_tag, nsmap=NSMAP_WITH_QUAKEML)
 
         _set_gml_id(self.root_node, NRML_GML_ID)
-        
+
         hazard_result_node = etree.SubElement(self.root_node,
                 GMFXMLWriter.hazard_result_tag, nsmap=NSMAP)
 
         _set_gml_id(hazard_result_node, HAZARDRESULT_GML_ID)
-        
+
         config_node = etree.SubElement(hazard_result_node,
                 GMFXMLWriter.config_tag, nsmap=NSMAP)
 
@@ -429,7 +429,6 @@ class GMFXMLWriter(writer.FileWriter):
                 GMFXMLWriter.groun_motion_field_set_tag, nsmap=NSMAP)
 
         _set_gml_id(ground_motion_field_set_node, GMFS_GML_ID)
-
 
         gmpe_params_node = etree.SubElement(
                 ground_motion_field_set_node,
@@ -456,9 +455,9 @@ class GMFXMLWriter(writer.FileWriter):
 
         gmf_node = etree.SubElement(
                 parent_node, GMFXMLWriter.node_tag, nsmap=NSMAP)
-        
+
         _set_gml_id(gmf_node, "node%s" % self.node_counter)
-        
+
         site_node = etree.SubElement(
                 gmf_node, GMFXMLWriter.site_tag, nsmap=NSMAP)
 
@@ -516,11 +515,10 @@ def _set_common_attributes(attr_list, node, val):
                         "same value for common attribute %s" % attr['name']
                 raise ValueError(error_msg)
 
-                
+
 def _ensure_attributes_set(attr_list, node):
     """Ensure that all the given attributes are set if required."""
     for attr in attr_list:
         if attr['name'] not in node.attrib and attr['required'] is True:
             return False
     return True
-

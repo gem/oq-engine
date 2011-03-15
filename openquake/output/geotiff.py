@@ -85,7 +85,7 @@ class GeoTiffFile(writer.FileWriter):
     normalize = True
 
     def __init__(self, path, image_grid, init_value=numpy.nan,
-                 normalize=False):
+                 normalize=False, html_wrapper=True):
         self.grid = image_grid
         self.normalize = normalize
         # NOTE(fab): GDAL initializes the image as columns x rows.
@@ -99,7 +99,16 @@ class GeoTiffFile(writer.FileWriter):
         self.alpha_raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * 32.0
         self.target = None
+        self.html_wrapper = html_wrapper
         super(GeoTiffFile, self).__init__(path)
+
+    @property
+    def html_path(self):
+        """Path to the generated html file"""
+        if self.path.endswith(('tiff', 'TIFF')):
+            return ''.join((self.path[0:-4], 'html'))
+        else:
+            return ''.join((self.path, '.html'))
 
     def _init_file(self):
         driver = gdal.GetDriverByName(self.format)
@@ -166,8 +175,22 @@ class GeoTiffFile(writer.FileWriter):
         self.target = None  # This is required to flush the file
 
     def _write_html_wrapper(self):
-        """write an html wrapper that embeds the geotiff."""
-        pass
+        """Write an html wrapper that embeds the geotiff in an <img> tag.
+        NOTE: this cannot be viewed out-of-the-box in all browsers."""
+
+        if self.html_wrapper:
+            # replace placeholders in HTML template with filename, height,
+            # width
+            # TODO(fab): read IMT from config
+            html_string = template.generate_html(
+                os.path.basename(self.path),
+                width=str(self.target.RasterXSize * SCALE_UP),
+                height=str(self.target.RasterYSize * SCALE_UP),
+                colorscale=self.colorscale_values,
+                imt='PGA/g')
+
+            with open(self.html_path, 'w') as f:
+                f.write(html_string)
 
     def serialize(self, iterable):
         # TODO(JMC): Normalize the values
@@ -202,25 +225,6 @@ class MapGeoTiffFile(GeoTiffFile):
             modulo = self.raster % 0x10
             self.raster -= modulo
 
-    def _write_html_wrapper(self):
-        """write an html wrapper that <embed>s the geotiff."""
-
-        if self.path.endswith(('tiff', 'TIFF')):
-            html_path = ''.join((self.path[0:-4], 'html'))
-        else:
-            html_path = ''.join((self.path, '.html'))
-
-        # replace placeholders in HTML template with filename, height, width
-        html_string = template.generate_html(
-            os.path.basename(self.path),
-            width=str(self.target.RasterXSize * SCALE_UP),
-            height=str(self.target.RasterYSize * SCALE_UP),
-            imt='Loss Ratio/percent',
-            template=template.HTML_TEMPLATE_LOSSRATIO)
-
-        with open(html_path, 'w') as f:
-            f.write(html_string)
-
 
 class LossMapGeoTiffFile(MapGeoTiffFile):
     """ Write RGBA geotiff images for loss maps. Color scale is from
@@ -233,23 +237,22 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
     """
     Writes a GeoTiff image for hazard maps with an arbitrary colormap.
 
-    Color scaling can be absolute for the range of IML values defined for the
-    calculation, or it can be relative to the only the range IML values
-    existing in the map.
+    IML values for each site in the map are represented by a color. Color
+    scaling can be applied in one of two ways: 'fixed' or 'relative'.
+        - fixed: colors are mapped across a range of min and max IML values
+            (defined in the job config)
+        - relative: Colors are mapped across only the min and max IML values
+            existing in a given map
 
     In addition, we write out an HTML wrapper around
     the TIFF with a color-scale legend.
     """
-    def __init__(self, path, imls, image_grid, colormap,
-                 relative_color_scaling=False):
+    def __init__(self, path, image_grid, colormap, iml_min_max=None,
+                 html_wrapper=False):
         """
         :param path: location of output, including file
             name
         :type path: string
-
-        :param imls: list of IML values defined for the calculation which
-            produced the hazard map data
-        :type imls: list of floats
 
         :param grid: the geographical area covered by the hazard map
         :type grid: shapes.Grid object
@@ -258,20 +261,47 @@ class HazardMapGeoTiffFile(MapGeoTiffFile):
             object
         :type colormap: dict
 
-        :param relative_color_scaling:
-            False / absolute:
-                Color is scaled across the range of possible IML values. This
-                is useful when comparing two or more hazard maps.
-            True / relative:
-                Color is scaled across the range of actual IML values in the
-                map. This is useful for showing greater contrast between the
-                sites within a single map.
-        :type relative_color_scaling: boolean
+        :param iml_min_max: defines the min and max values of the IML scale for
+            this hazard map; if defined, map color scaling will be 'fixed';
+            else, 'relative'
+        :type iml_min_max: tuple of a pair of floats (example: (0.005, 2.13))
+
+        :param html_wrapper: if True, a simple html wrapper file will be
+            created to display the geotiff and a color legend
+        :type html_wrapper: boolean
         """
-        super(HazardMapGeoTiffFile, self).__init__(path, image_grid)
-        self.imls = imls
+        super(HazardMapGeoTiffFile, self).__init__(path, image_grid,
+            html_wrapper=html_wrapper)
         self.colormap = colormap
-        self.relative_color_scaling = relative_color_scaling
+        self.html_wrapper = html_wrapper
+        self.iml_min = None
+        self.iml_max = None
+        if iml_min_max:
+            # if the iml min/max are defined, let's do some validation
+            assert isinstance(iml_min_max, tuple), "Wrong data type"
+            assert len(iml_min_max) == 2, "More than two values"
+            self.iml_min = float(iml_min_max[0])
+            self.iml_max = float(iml_min_max[1])
+            assert self.iml_min >= 0.0, "Negative min value"
+            assert self.iml_max >= 0.0, "Negative max value"
+            assert self.iml_max > self.iml_min, "Min value exceeds max value"
+
+    @property
+    def scaling(self):
+        """
+        If the IML min and max are both defined, scaling is 'fixed'; else,
+        'relative'.
+        """
+        if not None in (self.iml_min, self.iml_max):
+            return 'fixed'
+        else:
+            return 'relative'
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self):
+        self.close()
 
 
 class GMFGeoTiffFile(GeoTiffFile):
@@ -359,30 +389,6 @@ class GMFGeoTiffFile(GeoTiffFile):
         self._write_html_wrapper()
 
         self.target = None  # This is required to flush the file
-
-    @property
-    def html_path(self):
-        """Path to the generated html file"""
-        if self.path.endswith(('tiff', 'TIFF')):
-            return ''.join((self.path[0:-4], 'html'))
-        else:
-            return ''.join((self.path, '.html'))
-
-    def _write_html_wrapper(self):
-        """Write an html wrapper that embeds the geotiff in an <img> tag.
-        NOTE: this cannot be viewed out-of-the-box in all browsers."""
-
-        # replace placeholders in HTML template with filename, height, width
-        # TODO(fab): read IMT from config
-        html_string = template.generate_html(
-            os.path.basename(self.path),
-            width=str(self.target.RasterXSize * SCALE_UP),
-            height=str(self.target.RasterYSize * SCALE_UP),
-            colorscale=self.colorscale_values,
-            imt='PGA/g')
-
-        with open(self.html_path, 'w') as f:
-            f.write(html_string)
 
     def _condense_iml_range_to_unity(self, array, remove_outliers=False):
         """Requires a one- or multi-dim. numpy array as argument."""
@@ -521,8 +527,8 @@ class CPTReader:
 
     def _parse_comment(self, line):
         """
-        Looks for name, id, and color model type in a comment line (beginnning
-        with a '#').
+        Look for name, id, and color model type in a comment line
+        (beginning with a '#').
 
         :param line: a single line read from the cpt file
         """
