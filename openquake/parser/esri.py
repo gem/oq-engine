@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# encoding: utf-8
+
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -16,8 +19,6 @@
 
 
 
-#!/usr/bin/env python
-# encoding: utf-8
 
 """This module contains classes to parse ESRI stuff ported from
 the Java version of the risk engine.
