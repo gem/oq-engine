@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -16,7 +18,6 @@
 
 
 
-# -*- coding: utf-8 -*-
 """
 Module to compute and plot an aggregate loss curve.
 """

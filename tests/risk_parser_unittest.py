@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+
+
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -16,7 +19,6 @@
 
 
 
-# -*- coding: utf-8 -*-
 """
 Tests for the NRML parser of loss/loss ratio curves.
 """

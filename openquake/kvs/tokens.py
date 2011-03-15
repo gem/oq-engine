@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -16,7 +18,6 @@
 
 
 
-# -*- coding: utf-8 -*-
 """Tokens for KVS keys."""
 
 import openquake.kvs

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 #   Redis Client from https://github.com/ChristopherMacGown/pynpoint
 #   Copyright 2010 Christopher MacGown (http://github.com/ChristopherMacGown)
 #
