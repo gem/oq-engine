@@ -58,7 +58,7 @@
 			</instr>
 		</emma>
 
-		<junit dir="." haltonerror="yes" haltonfailure="yes" fork="yes" maxmemory="500m">
+		<junit dir="." haltonerror="yes" haltonfailure="yes" fork="yes">
 			<classpath>
 				<!-- External libraries -->
 				<path refid="dependencies" />
