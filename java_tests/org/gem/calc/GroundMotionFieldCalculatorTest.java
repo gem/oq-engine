@@ -51,7 +51,7 @@ public class GroundMotionFieldCalculatorTest {
 
 	double tolerance = 1e-1;
 	long seed = 123456789;
-	int numRealizations = 3000;
+	int numRealizations = 500;
 
 	private final ParameterChangeWarningListener testParamChangeListener = 
 		new ParameterChangeWarningListener() {
@@ -220,7 +220,6 @@ public class GroundMotionFieldCalculatorTest {
 		 * correlation matrix.
 		 */
 		Random rn = new Random(seed);
-		int numRealizations = 500;
 
 		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
 		double truncationLevel = 1.0;
@@ -250,7 +249,6 @@ public class GroundMotionFieldCalculatorTest {
 		 */
 
 		Random rn = new Random(seed);
-		int numRealizations = 500;
 
 		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
 		double truncationLevel = 1.0;
@@ -323,7 +321,6 @@ public class GroundMotionFieldCalculatorTest {
 		 * standard deviations for sites i and j
 		 */
 		Random rn = new Random(seed);
-		int numRealizations = 500;
 
 		String truncationType = SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_NONE;
 		double truncationLevel = 1.0;
