@@ -31,7 +31,7 @@ def _mean_loss_from_loss_ratios(loss_ratios, asset):
 
     :param loss_ratios: the set of loss ratios used.
     :type loss_ratios: numpy.ndarray
-    :param asset: the asset used to compute the loss ratios.
+    :param asset: the asset used to compute the losses.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
     """
@@ -41,12 +41,12 @@ def _mean_loss_from_loss_ratios(loss_ratios, asset):
 
 
 def _stddev_loss_from_loss_ratios(loss_ratios, asset):
-    """Compute the standard deviation of the loss
+    """Compute the standard deviation of the losses
     using the set of loss ratios given.
 
     :param loss_ratios: the set of loss ratios used.
     :type loss_ratios: numpy.ndarray
-    :param asset: the asset used to compute the loss ratios.
+    :param asset: the asset used to compute the losses.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
     """
@@ -73,7 +73,7 @@ def compute_mean_loss(vuln_function, ground_motion_field_set,
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-    :param asset: the asset used to compute the loss ratios.
+    :param asset: the asset used to compute the loss ratios and losses.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
     """
@@ -86,8 +86,8 @@ def compute_mean_loss(vuln_function, ground_motion_field_set,
 
 def compute_stddev_loss(vuln_function, ground_motion_field_set,
                         epsilon_provider, asset):
-    """Compute the mean loss for the given asset using the
-    related ground motion field set and vulnerability function.
+    """Compute the standard deviation of the losses for the given asset
+    using the related ground motion field set and vulnerability function.
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
@@ -102,7 +102,7 @@ def compute_stddev_loss(vuln_function, ground_motion_field_set,
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
-        :param asset: the asset used to compute the loss ratios.
+        :param asset: the asset used to compute the loss ratios and losses.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
     """
