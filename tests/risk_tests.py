@@ -34,6 +34,7 @@ from openquake import shapes
 from utils import test
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
+from openquake.job import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
@@ -718,8 +719,49 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 os.path.join(test.OUTPUT_DIR,
                 aggregate._filename(self.job_id))))
 
-
+SITE = shapes.Site(1.0, 1.0)
 class ClassicalPSHABasedTestCase(unittest.TestCase):
+
+    def setUp(self):
+
+        # deletes all keys from kvs
+        kvs.get_client(binary=False).flushall()
+
+
+        self.hazard_curve = {'curve' : [
+              {'x' : '0.01', 'y' : '0.99'}, {'x' : '0.08', 'y' : '0.96'},
+              {'x' : '0.17', 'y' : '0.89'}, {'x' : '0.26', 'y' : '0.82'},
+              {'x' : '0.36', 'y' : '0.70'}, {'x' :'0.55', 'y' : '0.40'},
+              {'x' : '0.70', 'y' : '0.01'}]}
+
+
+        self.vuln_function_2 = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
+              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+
+        self.job_id = 1234
+
+        self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
+                0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
+                0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
+                0.1756), "TSES": 200, "TimeSpan": 50}
+
+        self.asset_1 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 22.61}
+
+        self.region = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+
+        self.block_id = kvs.generate_block_id()
+        block = Block((SITE,SITE), self.block_id)
+        block.to_kvs()
+
+        haz_curve_key = kvs.tokens.mean_hazard_curve_key(self.job_id, SITE)
+
+        kvs.set_value_json_encoded(haz_curve_key, self.hazard_curve)
+
+        kvs.set_value_json_encoded(
+                kvs.tokens.vuln_key(self.job_id),
+                {"ID": self.vuln_function_2.to_json()})
 
     def tearDown(self):
         psha.STEPS_PER_INTERVAL = 5
@@ -867,6 +909,34 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
         self.assertEqual(None, mixin.compute_loss_ratio_curve(
                          None, asset, None))
+
+
+    def test_compute_risk_in_the_classical_psha_mixin(self):
+        # mixin "instance"
+        mixin = ClassicalPSHABasedMixin()
+        mixin.region = self.region
+        mixin.job_id = self.job_id
+        mixin.id = self.job_id
+
+        self.assertTrue(mixin.compute_risk(self.block_id,
+            point=shapes.GridPoint(None, 10, 20)))
+
+    def test_loss_curve_in_the_classical_psha_mixin(self):
+        loss_curve = shapes.Curve([(0.085255, 0.988891),
+                (0.255765, 0.82622606), (0.426275, 0.77686984),
+                (0.596785, 0.52763345), (0.767295, 0.39346934)])
+
+        # mixin "instance"
+        mixin = ClassicalPSHABasedMixin()
+
+        mixin.job_id = 1234
+
+        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 1,
+        "assetValue" : 1}
+
+        self.assertTrue(mixin.compute_loss_curve(
+            shapes.GridPoint(None, 10, 20),
+            loss_curve, asset) is None)
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 

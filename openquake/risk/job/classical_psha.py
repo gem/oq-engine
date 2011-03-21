@@ -27,6 +27,7 @@ from openquake.parser import vulnerability
 from openquake.shapes import Curve
 from openquake.risk import job as risk_job
 from openquake.risk import classical_psha_based as cpsha_based
+from openquake.risk.common import  compute_loss_curve
 from openquake import kvs
 from openquake import logs
 from openquake.risk.job import preload, output, RiskJobMixin
@@ -81,6 +82,7 @@ class ClassicalPSHABasedMixin:
 
             decoded_curve = kvs.get_value_json_decoded(curve_token)
 
+
             hazard_curve = Curve([(exp(float(el['x'])), el['y'])
                             for el in decoded_curve['curve']])
 
@@ -88,9 +90,24 @@ class ClassicalPSHABasedMixin:
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
                 LOGGER.debug("processing asset %s" % (asset))
-                self.compute_loss_ratio_curve(
+                loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve)
+
+                self.compute_loss_curve(point, loss_ratio_curve, asset)
+
         return True
+
+    def compute_loss_curve(self, point, loss_ratio_curve, asset):
+        """
+        Computes the loss ratio and store in kvs for NRML
+        "magical" (@output) serialization within the mixin
+        """
+
+        loss_curve = compute_loss_curve(loss_ratio_curve, asset['assetValue'])
+        loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
+            point.column, asset['assetID'])
+
+        kvs.set(loss_key, loss_curve.to_json())
 
     def compute_loss_ratio_curve(self, point, asset, hazard_curve):
         """ Computes the loss ratio curve and stores in kvs
@@ -111,10 +128,10 @@ class ClassicalPSHABasedMixin:
         loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
             vuln_function, hazard_curve)
 
-        loss_key = kvs.tokens.loss_ratio_key(
+        loss_ratio_key = kvs.tokens.loss_ratio_key(
             self.job_id, point.row, point.column, asset['assetID'])
 
-        kvs.set(loss_key, loss_ratio_curve.to_json())
+        kvs.set(loss_ratio_key, loss_ratio_curve.to_json())
 
         return loss_ratio_curve
 
