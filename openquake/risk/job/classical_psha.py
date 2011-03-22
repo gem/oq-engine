@@ -82,7 +82,6 @@ class ClassicalPSHABasedMixin:
 
             decoded_curve = kvs.get_value_json_decoded(curve_token)
 
-
             hazard_curve = Curve([(exp(float(el['x'])), el['y'])
                             for el in decoded_curve['curve']])
 
@@ -101,6 +100,10 @@ class ClassicalPSHABasedMixin:
         """
         Computes the loss ratio and store in kvs for NRML
         "magical" (@output) serialization within the mixin
+
+        :param point: the point of the grid we want to compute
+        :param loss_ratio_curve: the loss ratio curve
+        :param asset: the asset used to compute the loss curve
         """
 
         loss_curve = compute_loss_curve(loss_ratio_curve, asset['assetValue'])
@@ -127,6 +130,8 @@ class ClassicalPSHABasedMixin:
 
         loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
             vuln_function, hazard_curve)
+
+        print 'asdrubale'
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
             self.job_id, point.row, point.column, asset['assetID'])
