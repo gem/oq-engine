@@ -751,8 +751,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 #              {'x' : '0.2', 'y' : '0.99'}, {'x' : '0.3', 'y' : '0.96'},
 #              {'x' : '0.4', 'y' : '0.89'}]}
 
-        psha.STEPS_PER_INTERVAL = 2
-
         self.vuln_function_2 = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
               (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
