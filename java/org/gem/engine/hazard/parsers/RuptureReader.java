@@ -12,7 +12,9 @@ import org.dom4j.xpath.DefaultXPath;
 import org.jaxen.SimpleNamespaceContext;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.PointSurface;
+import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.util.TectonicRegionType;
 
 /**
@@ -32,6 +34,122 @@ public class RuptureReader
         namespaces.put("gml", "http://www.opengis.net/gml");
         namespaces.put("qml", "http://quakeml.org/xmlns/quakeml/1.1");
         namespaces.put("nrml", "http://openquake.org/xmlns/nrml/0.2");
+    }
+
+    interface RuptureParser
+    {
+
+        void update(EqkRupture rupture);
+
+    }
+
+    class PointRuptureParser implements RuptureParser
+    {
+
+        private final Document document;
+
+        PointRuptureParser(Document document)
+        {
+            this.document = document;
+        }
+
+        @Override
+        public void update(EqkRupture rupture)
+        {
+            rupture.setHypocenterLocation(location());
+            rupture.setAveRake(averageRake());
+
+            PointSurface surface = new PointSurface(location());
+            surface.setAveStrike(strike());
+            surface.setAveDip(dip());
+
+            rupture.setRuptureSurface(surface);
+        }
+
+        private double dip()
+        {
+            return Double.parseDouble(xpath("//qml:dip/qml:value").selectSingleNode(document).getText());
+        }
+
+        private double strike()
+        {
+            return Double.parseDouble(xpath("//qml:strike/qml:value").selectSingleNode(document).getText());
+        }
+
+        private double averageRake()
+        {
+            return Double.parseDouble(xpath("//qml:rake/qml:value").selectSingleNode(document).getText());
+        }
+
+        private Location location()
+        {
+            String pos = xpath("//gml:pos").selectSingleNode(document).getText();
+            StringTokenizer splitter = new StringTokenizer(pos);
+
+            double lon = Double.parseDouble(splitter.nextToken());
+            double lat = Double.parseDouble(splitter.nextToken());
+            double depth = Double.parseDouble(splitter.nextToken());
+
+            return new Location(lat, lon, depth);
+        }
+
+    }
+
+    class SimpleFaultRuptureParser implements RuptureParser
+    {
+
+        private final Document document;
+
+        SimpleFaultRuptureParser(Document document)
+        {
+            this.document = document;
+        }
+
+        @Override
+        public void update(EqkRupture rupture)
+        {
+            rupture.setAveRake(averageRake());
+            StirlingGriddedSurface surface = new StirlingGriddedSurface(trace(), dip(), usd(), lsd(), 0.1);
+            rupture.setRuptureSurface(surface);
+        }
+
+        private FaultTrace trace()
+        {
+            FaultTrace trace = new FaultTrace("");
+            String values = xpath("//gml:posList").selectSingleNode(document).getText();
+            StringTokenizer splitter = new StringTokenizer(values);
+
+            while (splitter.hasMoreTokens())
+            {
+                double lon = Double.parseDouble(splitter.nextToken());
+                double lat = Double.parseDouble(splitter.nextToken());
+
+                trace.add(new Location(lat, lon));
+            }
+
+            return trace;
+        }
+
+        private double usd()
+        {
+            return Double.parseDouble(xpath("//nrml:upperSeismogenicDepth").selectSingleNode(document).getText());
+        }
+
+        private double lsd()
+        {
+            return Double.parseDouble(xpath("//nrml:lowerSeismogenicDepth").selectSingleNode(document).getText());
+        }
+
+        private double dip()
+        {
+            return Double.parseDouble(xpath("//nrml:dip").selectSingleNode(document).getText());
+        }
+
+        private double averageRake()
+        {
+            return Double.parseDouble(xpath("//nrml:rake").selectSingleNode(document).getText());
+        }
+
     }
 
     public RuptureReader(File file)
@@ -61,43 +179,17 @@ public class RuptureReader
 
         rupture.setMag(magnitude());
         rupture.setTectRegType(tectonicRegionType());
-        rupture.setHypocenterLocation(location());
-        rupture.setAveRake(averageRake());
 
-        PointSurface surface = new PointSurface(location());
-        surface.setAveStrike(strike());
-        surface.setAveDip(dip());
-
-        rupture.setRuptureSurface(surface);
+        if (xpath("//nrml:pointRupture").matches(document))
+        {
+            new PointRuptureParser(document).update(rupture);
+        }
+        else
+        {
+            new SimpleFaultRuptureParser(document).update(rupture);
+        }
 
         return rupture;
-    }
-
-    private double dip()
-    {
-        return Double.parseDouble(xpath("//qml:dip/qml:value[1]").selectSingleNode(document).getText());
-    }
-
-    private double strike()
-    {
-        return Double.parseDouble(xpath("//qml:strike/qml:value[1]").selectSingleNode(document).getText());
-    }
-
-    private double averageRake()
-    {
-        return Double.parseDouble(xpath("//qml:rake/qml:value[1]").selectSingleNode(document).getText());
-    }
-
-    private Location location()
-    {
-        String pos = xpath("//gml:pos").selectSingleNode(document).getText();
-        StringTokenizer splitter = new StringTokenizer(pos);
-
-        double lon = Double.parseDouble(splitter.nextToken());
-        double lat = Double.parseDouble(splitter.nextToken());
-        double depth = Double.parseDouble(splitter.nextToken());
-
-        return new Location(lat, lon, depth);
     }
 
     private XPath xpath(String pattern)
