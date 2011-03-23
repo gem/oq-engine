@@ -102,8 +102,12 @@ class ClassicalPSHABasedMixin:
         "magical" (@output) serialization within the mixin
 
         :param point: the point of the grid we want to compute
+        :type point: :py:class:`openquake.shapes.GridPoint`
         :param loss_ratio_curve: the loss ratio curve
-        :param asset: the asset used to compute the loss curve
+        :type loss_ratio_curve: :py:class `openquake.shapes.Curve`
+        :param asset: the asset for which to compute the loss curve
+        :type asset: :py:class:`dict` as provided by
+               :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
         """
 
         loss_curve = compute_loss_curve(loss_ratio_curve, asset['assetValue'])
@@ -114,7 +118,17 @@ class ClassicalPSHABasedMixin:
 
     def compute_loss_ratio_curve(self, point, asset, hazard_curve):
         """ Computes the loss ratio curve and stores in kvs
-            the curve itself """
+            the curve itself
+
+        :param point: the point of the grid we want to compute
+        :type point: :py:class:`openquake.shapes.GridPoint`
+        :param asset: the asset used to compute the loss curve
+        :type asset: :py:class:`dict` as provided by
+            :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+        :param hazard_curve: the hazard curve used to compute the
+            loss ratio curve
+        :type hazard_curve: :py:class:`openquake.shapes.Curve`
+        """
 
         # we get the vulnerability function related to the asset
         vuln_function = self.vuln_curves.get(
@@ -130,8 +144,6 @@ class ClassicalPSHABasedMixin:
 
         loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
             vuln_function, hazard_curve)
-
-        print 'asdrubale'
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
             self.job_id, point.row, point.column, asset['assetID'])
