@@ -748,13 +748,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.37, (0.405, 0.00)),
                 (0.52, (0.700, 0.00))])
 
-#        self.vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-#              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
-
-#        self.hazard_curve = {'curve' : [
-#              {'x' : '0.2', 'y' : '0.99'}, {'x' : '0.3', 'y' : '0.96'},
-#              {'x' : '0.4', 'y' : '0.89'}]}
-
         self.vuln_function_2 = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
               (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
@@ -764,9 +757,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
                 0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
                 0.1756), "TSES": 200, "TimeSpan": 50}
-
-#        self.asset_1 = {"vulnerabilityFunctionReference": "ID",
-#                "assetValue": 22.61, "assetID" : self.job_id}
 
         self.asset_1 = {"vulnerabilityFunctionReference": "ID",
                 "assetValue": 124.27}
@@ -955,7 +945,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
         self.assertTrue(mixin.compute_risk(self.block_id,
             point=shapes.GridPoint(None, 10, 20)))
-       
+
         for point in block.grid(mixin.region):
             asset_key = kvs.tokens.asset_key(self.job_id, point.row,
                 point.column)
