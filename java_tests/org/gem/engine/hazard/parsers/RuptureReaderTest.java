@@ -155,7 +155,7 @@ public class RuptureReaderTest
     }
 
     @Test
-    public void readsTheTopFaultTraceWhenParsingTheComplexFaultRupture()
+    public void readsTheFaultTracesWhenParsingTheComplexFaultRupture()
     {
         reader = new RuptureReader(new File(COMPLEX_FAULT_RUPTURE_FILE), 0.5);
         EqkRupture rupture = reader.read();
