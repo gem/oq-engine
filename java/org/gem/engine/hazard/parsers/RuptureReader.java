@@ -12,6 +12,7 @@ import org.dom4j.xpath.DefaultXPath;
 import org.jaxen.SimpleNamespaceContext;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.PointSurface;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
@@ -19,14 +20,13 @@ import org.opensha.sha.util.TectonicRegionType;
 
 /**
  * Reads NRML definitions of rupture elements.
- * <p>
- * It currently supports point ruptures.
  */
 public class RuptureReader
 {
 
     private final File file;
     private Document document;
+    private final double gridSpacing;
 
     private static final Map<String, String> namespaces = new HashMap<String, String>();
 
@@ -36,9 +36,15 @@ public class RuptureReader
         namespaces.put("nrml", "http://openquake.org/xmlns/nrml/0.2");
     }
 
+    /**
+     * Parses the document and updates the rupture object.
+     */
     interface RuptureParser
     {
 
+        /**
+         * Updates the given rupture with the data found in the document.
+         */
         void update(EqkRupture rupture);
 
     }
@@ -109,7 +115,7 @@ public class RuptureReader
         public void update(EqkRupture rupture)
         {
             rupture.setAveRake(averageRake());
-            StirlingGriddedSurface surface = new StirlingGriddedSurface(trace(), dip(), usd(), lsd(), 0.1);
+            StirlingGriddedSurface surface = new StirlingGriddedSurface(trace(), dip(), usd(), lsd(), gridSpacing);
             rupture.setRuptureSurface(surface);
         }
 
@@ -152,7 +158,57 @@ public class RuptureReader
 
     }
 
-    public RuptureReader(File file)
+    class ComplexFaultRuptureParser implements RuptureParser
+    {
+
+        private final Document document;
+
+        ComplexFaultRuptureParser(Document document)
+        {
+            this.document = document;
+        }
+
+        @Override
+        public void update(EqkRupture rupture)
+        {
+            rupture.setAveRake(averageRake());
+
+            String topFaultXPath = "//nrml:faultTopEdge/gml:LineString/gml:posList";
+            String bottomFaultXPath = "//nrml:faultBottomEdge/gml:LineString/gml:posList";
+
+            FaultTrace topFault = trace(topFaultXPath);
+            FaultTrace bottomFault = trace(bottomFaultXPath);
+            ApproxEvenlyGriddedSurface surface = new ApproxEvenlyGriddedSurface(topFault, bottomFault, gridSpacing);
+
+            rupture.setRuptureSurface(surface);
+        }
+
+        private FaultTrace trace(String xpath)
+        {
+            FaultTrace trace = new FaultTrace(null);
+            String values = xpath(xpath).selectSingleNode(document).getText();
+            StringTokenizer splitter = new StringTokenizer(values);
+
+            while (splitter.hasMoreTokens())
+            {
+                double lon = Double.parseDouble(splitter.nextToken());
+                double lat = Double.parseDouble(splitter.nextToken());
+                double depth = Double.parseDouble(splitter.nextToken());
+
+                trace.add(new Location(lat, lon, depth));
+            }
+
+            return trace;
+        }
+
+        private double averageRake()
+        {
+            return Double.parseDouble(xpath("//nrml:rake").selectSingleNode(document).getText());
+        }
+
+    }
+
+    public RuptureReader(File file, double gridSpacing)
     {
         if (!file.isFile())
         {
@@ -160,8 +216,14 @@ public class RuptureReader
         }
 
         this.file = file;
+        this.gridSpacing = gridSpacing;
     }
 
+    /**
+     * Reads the document and returns the rupture object.
+     * 
+     * @return the rupture defined in the document
+     */
     public EqkRupture read()
     {
         SAXReader reader = new SAXReader();
@@ -184,9 +246,13 @@ public class RuptureReader
         {
             new PointRuptureParser(document).update(rupture);
         }
-        else
+        else if (xpath("//nrml:simpleFaultRupture").matches(document))
         {
             new SimpleFaultRuptureParser(document).update(rupture);
+        }
+        else
+        {
+            new ComplexFaultRuptureParser(document).update(rupture);
         }
 
         return rupture;

@@ -8,7 +8,9 @@ import java.io.File;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.geo.LocationList;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.faultSurface.StirlingGriddedSurface;
 import org.opensha.sha.util.TectonicRegionType;
@@ -19,19 +21,20 @@ public class RuptureReaderTest
 
     public static final String POINT_RUPTURE_FILE = "docs/schema/examples/point-rupture.xml";
     public static final String SIMPLE_FAULT_RUPTURE_FILE = "docs/schema/examples/simple-fault-rupture.xml";
+    public static final String COMPLEX_FAULT_RUPTURE_FILE = "docs/schema/examples/complex-fault-rupture.xml";
 
     private RuptureReader reader;
 
     @Before
     public void setUp()
     {
-        reader = new RuptureReader(new File(POINT_RUPTURE_FILE));
+        reader = new RuptureReader(new File(POINT_RUPTURE_FILE), 0.5);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void throwsAnErrorWithAnInvalidFile()
     {
-        new RuptureReader(new File("invalid-file.xml"));
+        new RuptureReader(new File("invalid-file.xml"), 0.5);
     }
 
     @Test
@@ -42,7 +45,7 @@ public class RuptureReaderTest
     }
 
     @Test
-    public void readsTheMagnitudeAndTheTectonicRegionForThePointRupture()
+    public void readsTheMagnitudeAndTheTectonicRegionWhenParsingThePointRupture()
     {
         EqkRupture rupture = reader.read();
 
@@ -51,7 +54,7 @@ public class RuptureReaderTest
     }
 
     @Test
-    public void readsTheLocationOfTheRuptureForThePointRupture()
+    public void readsTheLocationOfTheRuptureWhenParsingThePointRupture()
     {
         EqkRupture rupture = reader.read();
         Location location = new Location(40.363, -124.704, 30.0);
@@ -60,14 +63,14 @@ public class RuptureReaderTest
     }
 
     @Test
-    public void readsTheAverageRakeForThePointRupture()
+    public void readsTheAverageRakeWhenParsingThePointRupture()
     {
         EqkRupture rupture = reader.read();
         assertEquals(10.0, rupture.getAveRake(), 0.0);
     }
 
     @Test
-    public void readsTheAverageStrikeAndDipForThePointRupture()
+    public void readsTheAverageStrikeAndDipWhenParsingThePointRupture()
     {
         EqkRupture rupture = reader.read();
         assertEquals(90.0, rupture.getRuptureSurface().getAveDip(), 0.0);
@@ -77,15 +80,15 @@ public class RuptureReaderTest
     @Test
     public void isAbleToReadSimpleFaultRuptures()
     {
-        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE));
+        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE), 0.5);
         EqkRupture rupture = reader.read();
         assertNotNull(rupture);
     }
 
     @Test
-    public void readsTheMagnitudeAndTheTectonicRegionForTheSimpleFaultRupture()
+    public void readsTheMagnitudeAndTheTectonicRegionWhenParsingTheSimpleFaultRupture()
     {
-        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE));
+        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE), 0.5);
         EqkRupture rupture = reader.read();
 
         assertEquals(7.65, rupture.getMag(), 0.0);
@@ -93,17 +96,17 @@ public class RuptureReaderTest
     }
 
     @Test
-    public void readsTheAverageRakeForTheSimpleFaultRupture()
+    public void readsTheAverageRakeWhenParsingTheSimpleFaultRupture()
     {
-        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE));
+        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE), 0.5);
         EqkRupture rupture = reader.read();
         assertEquals(15.0, rupture.getAveRake(), 0.0);
     }
 
     @Test
-    public void readsTheDipUpperAndLowerSeismogenicDepthForTheSimpleFaultRupture()
+    public void readsTheDipUpperAndLowerSeismogenicDepthWhenParsingTheSimpleFaultRupture()
     {
-        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE));
+        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE), 0.5);
         EqkRupture rupture = reader.read();
 
         assertEquals(50.0, rupture.getRuptureSurface().getAveDip(), 0.0);
@@ -112,9 +115,9 @@ public class RuptureReaderTest
     }
 
     @Test
-    public void readsTheFaultTraceForTheSimpleFaultRupture()
+    public void readsTheFaultTraceWhenParsingTheSimpleFaultRupture()
     {
-        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE));
+        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE), 0.5);
         EqkRupture rupture = reader.read();
 
         FaultTrace trace = new FaultTrace(null);
@@ -123,6 +126,53 @@ public class RuptureReaderTest
         trace.add(new Location(42.096, -125.140));
 
         assertEquals(trace, ((StirlingGriddedSurface) rupture.getRuptureSurface()).getFaultTrace());
+    }
+
+    @Test
+    public void isAbleToReadComplexFaultRuptures()
+    {
+        reader = new RuptureReader(new File(COMPLEX_FAULT_RUPTURE_FILE), 0.5);
+        EqkRupture rupture = reader.read();
+        assertNotNull(rupture);
+    }
+
+    @Test
+    public void readsTheMagnitudeAndTheTectonicRegionWhenParsingTheComplexFaultRupture()
+    {
+        reader = new RuptureReader(new File(COMPLEX_FAULT_RUPTURE_FILE), 0.5);
+        EqkRupture rupture = reader.read();
+
+        assertEquals(9.0, rupture.getMag(), 0.0);
+        assertEquals(TectonicRegionType.SUBDUCTION_INTERFACE, rupture.getTectRegType());
+    }
+
+    @Test
+    public void readsTheAverageRakeWhenParsingTheComplexFaultRupture()
+    {
+        reader = new RuptureReader(new File(COMPLEX_FAULT_RUPTURE_FILE), 0.5);
+        EqkRupture rupture = reader.read();
+        assertEquals(0.0, rupture.getAveRake(), 0.0);
+    }
+
+    @Test
+    public void readsTheTopFaultTraceWhenParsingTheComplexFaultRupture()
+    {
+        reader = new RuptureReader(new File(COMPLEX_FAULT_RUPTURE_FILE), 0.5);
+        EqkRupture rupture = reader.read();
+
+        FaultTrace top = new FaultTrace(null);
+        top.add(new Location(40.363, -124.704, 0.5493260E+01));
+        top.add(new Location(41.214, -124.977, 0.4988560E+01));
+        top.add(new Location(42.096, -125.140, 0.4897340E+01));
+
+        FaultTrace bottom = new FaultTrace(null);
+        bottom.add(new Location(40.347, -123.829, 0.2038490E+02));
+        bottom.add(new Location(41.218, -124.137, 0.1741390E+02));
+        bottom.add(new Location(42.115, -124.252, 0.1752740E+02));
+
+        ApproxEvenlyGriddedSurface surface = new ApproxEvenlyGriddedSurface(top, bottom, 0.5);
+        LocationList locations = ((ApproxEvenlyGriddedSurface) rupture.getRuptureSurface()).getLocationList();
+        assertEquals(surface.getLocationList(), locations);
     }
 
 }
