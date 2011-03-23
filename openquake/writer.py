@@ -41,7 +41,7 @@ class FileWriter(object):
 
         :param point: location associated with the data to be written
         :type point: should be a shapes.Site object
-            Note(LB): Some sublcasses override this behavior in their
+            Note(LB): Some subclasses override this behavior in their
             write() methods. Be careful.
 
         :param value: some value to be written to the file
