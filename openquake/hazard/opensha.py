@@ -38,7 +38,7 @@ from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
-from openquake.output import geotiff
+from openquake.output import geotiff, cpt
 from openquake.output import hazard as hazard_output
 
 LOG = logs.LOG
@@ -433,13 +433,14 @@ class ClassicalMixin(BasePSHAMixin):
             raise RuntimeError(error_msg)
 
         files = []
+        # path to the output directory
+        output_path = os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'])
         for poe in poe_list:
 
             nrml_file = "%s-%s-%s.xml" % (
                 HAZARD_MAP_FILENAME_PREFIX, str(poe), filename_part)
 
-            nrml_path = os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'],
-                nrml_file)
+            nrml_path = os.path.join(output_path, nrml_file)
 
             LOG.debug("Generating NRML hazard map file for PoE %s, mode %s, "\
                 "%s nodes in hazard map: %s" % (
@@ -485,11 +486,51 @@ class ClassicalMixin(BasePSHAMixin):
                 hm_attrib.update(hm_attrib_update)
                 hm_data.append((site_obj, hm_attrib))
 
-            # TODO: write hazard map geotiff here
+            hm_geotiff_name = '%s-%s-%s.tiff' % (
+                HAZARD_MAP_FILENAME_PREFIX, str(poe), filename_part)
+            geotiff_path = os.path.join(output_path, hm_geotiff_name)
+
+            self._write_hazard_map_geotiff(geotiff_path, hm_data)
             xmlwriter.serialize(hm_data)
+
             files.append(nrml_path)
+            files.append(geotiff_path)
 
         return files
+
+    def _write_hazard_map_geotiff(self, path, haz_map_data):
+        """
+        Write out a hazard map geotiff using the input hazard map data.
+
+        :param path: path to output file, including file name
+        :param haz_map_data: list of hazard map data to be serialized to the
+            geotiff
+        :type haz_map_data: list of tuples of (shapes.Site object, hazard map
+            data dict)
+        """
+        try:
+            cpt_path = os.path.join(
+                    self.params['BASE_PATH'], self.params['HAZARD_MAP_CPT'])
+            cpt_reader = cpt.CPTReader(cpt_path)
+            colormap = cpt_reader.get_colormap()
+        except (IOError, KeyError):
+            LOG.info(
+                "Unable to read hazard map CPT file from job config."
+                " Using default colormap.")
+            colormap = geotiff.HazardMapGeoTiffFile.DEFAULT_COLORMAP
+
+        iml_min_max = None
+        if 'HAZARD_MAP_IML_MIN' in self.params and \
+            'HAZARD_MAP_IML_MAX' in self.params:
+            iml_min_max = (
+                float(self.params['HAZARD_MAP_IML_MIN']),
+                float(self.params['HAZARD_MAP_IML_MAX']))
+        hm_writer = geotiff.HazardMapGeoTiffFile(
+            path, self.region.grid, colormap=colormap,
+            iml_min_max=iml_min_max, html_wrapper=True)
+
+        # write the hazard map and close the file
+        return hm_writer.serialize(haz_map_data)
 
     @preload
     def compute_hazard_curve(self, site_list, realization):
@@ -604,7 +645,7 @@ class EventBasedMixin(BasePSHAMixin):
                 tiff_path = "%s.tiff" % common_path
                 nrml_path = "%s.xml" % common_path
                 gwriter = geotiff.GMFGeoTiffFile(tiff_path, image_grid,
-                    init_value=0.0, normalize=True, iml_list=iml_list,
+                    init_value=0.0, iml_list=iml_list,
                     discrete=True)
                 xmlwriter = hazard_output.GMFXMLWriter(nrml_path)
                 gmf_data = {}
