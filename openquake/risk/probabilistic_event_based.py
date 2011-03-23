@@ -16,8 +16,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 This module defines functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
@@ -37,27 +35,27 @@ from openquake.risk.common import collect, loop
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 
-def _compute_loss_ratios(vuln_function, ground_motion_field_set,
+def compute_loss_ratios(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
     """Compute the set of loss ratios using the set of
     ground motion fields passed.
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
-    :type vuln_function: shapes.VulnerabilityFunction
+    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
     :param ground_motion_field_set: the set of ground motion
         fields used to compute the loss ratios.
-    :type ground_motion_field_set: dict with the following
+    :type ground_motion_field_set: :py:class:`dict` with the following
         keys:
-        IMLs - tuple of ground motion fields (float)
-        TimeSpan - time span parameter (float)
-        TSES - Time representative of the Stochastic Event Set (float)
+        **IMLs** - tuple of ground motion fields (float)
+        **TimeSpan** - time span parameter (float)
+        **TSES** - Time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
-    :type epsilon_provider: callable that defines an epsilon(asset)
-        method
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
-    :type asset: dict as provided by openquake.parser.ExposurePortfolioFile
+    :type asset: :py:class:`dict` as provided by
+        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
     """
 
     if vuln_function.is_empty:
@@ -76,7 +74,25 @@ def _sampled_based(vuln_function, ground_motion_field_set,
         epsilon_provider, asset):
     """Compute the set of loss ratios when at least one CV
     (Coefficent of Variation) defined in the vulnerability function
-    is greater than zero."""
+    is greater than zero.
+
+    :param vuln_function: the vulnerability function used to
+        compute the loss ratios.
+    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :param ground_motion_field_set: the set of ground motion
+        fields used to compute the loss ratios.
+    :type ground_motion_field_set: :py:class:`dict` with the following
+        keys:
+        **IMLs** - tuple of ground motion fields (float)
+        **TimeSpan** - time span parameter (float)
+        **TSES** - Time representative of the Stochastic Event Set (float)
+    :param epsilon_provider: service used to get the epsilon when
+        using the sampled based algorithm.
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
+    :param asset: the asset used to compute the loss ratios.
+    :type asset: :py:class:`dict` as provided by
+        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    """
 
     loss_ratios = []
 
@@ -102,7 +118,19 @@ def _sampled_based(vuln_function, ground_motion_field_set,
 
 def _mean_based(vuln_function, ground_motion_field_set):
     """Compute the set of loss ratios when the vulnerability function
-    has all the CVs (Coefficent of Variation) set to zero."""
+    has all the CVs (Coefficent of Variation) set to zero.
+
+    :param vuln_function: the vulnerability function used to
+        compute the loss ratios.
+    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :param ground_motion_field_set: the set of ground motion
+        fields used to compute the loss ratios.
+    :type ground_motion_field_set: :py:class:`dict` with the following
+        keys:
+        **IMLs** - tuple of ground motion fields (float)
+        **TimeSpan** - time span parameter (float)
+        **TSES** - Time representative of the Stochastic Event Set (float)
+    """
 
     loss_ratios = []
     imls = vuln_function.imls
@@ -122,9 +150,19 @@ def _mean_based(vuln_function, ground_motion_field_set):
     return array(loss_ratios)
 
 
-def _compute_loss_ratios_range(loss_ratios,
-        number_of_samples=None):
-    """Compute the range of loss ratios used to build the loss ratio curve."""
+def _compute_loss_ratios_range(loss_ratios, number_of_samples=None):
+    """Compute the range of loss ratios used to build the loss ratio curve.
+
+    The range is obtained by computing the set of evenly spaced numbers
+    over the interval [min_loss_ratio, max_loss_ratio].
+
+    :param loss_ratios: the set of loss ratios used.
+    :type loss_ratios: numpy.ndarray
+    :param number_of_samples: the number of samples used when computing
+        the range of loss ratios. The default value is
+        :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
+    :type number_of_samples: integer
+    """
 
     if number_of_samples is None:
         number_of_samples = DEFAULT_NUMBER_OF_SAMPLES
@@ -177,22 +215,23 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
-    :type vuln_function: shapes.VulnerabilityFunction
+    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
     :param ground_motion_field_set: the set of ground motion
         fields used to compute the loss ratios.
-    :type ground_motion_field_set: dict with the following
+    :type ground_motion_field_set: :py:class:`dict` with the following
         keys:
-        IMLs - tuple of ground motion fields (float)
-        TimeSpan - time span parameter (float)
-        TSES - Time representative of the Stochastic Event Set (float)
+        **IMLs** - tuple of ground motion fields (float)
+        **TimeSpan** - time span parameter (float)
+        **TSES** - Time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
-    :type epsilon_provider: callable that defines an epsilon(asset)
-        method
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
-    :type asset: dict as provided by openquake.parser.ExposurePortfolioFile
+    :type asset: :py:class:`dict` as provided by
+        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
     :param number_of_samples: the number of samples used when computing
-        the range of loss ratios used to build the curve.
+        the range of loss ratios. The default value is
+        :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
     :type number_of_samples: integer
     """
 
@@ -200,7 +239,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     if not ground_motion_field_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
-    loss_ratios = _compute_loss_ratios(vuln_function,
+    loss_ratios = compute_loss_ratios(vuln_function,
             ground_motion_field_set, epsilon_provider, asset)
 
     loss_ratios_range = _compute_loss_ratios_range(
@@ -286,7 +325,7 @@ class AggregateLossCurve(object):
         assert len(gmfs["IMLs"]) == self._gmfs_length
 
         if asset["vulnerabilityFunctionReference"] in self.vuln_model:
-            loss_ratios = _compute_loss_ratios(self.vuln_model[
+            loss_ratios = compute_loss_ratios(self.vuln_model[
                     asset["vulnerabilityFunctionReference"]], gmfs,
                     self.epsilon_provider, asset)
 
