@@ -728,12 +728,16 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # deletes all keys from kvs
         kvs.get_client(binary=False).flushall()
 
+        # at the moment the hazard part doesn't do exp on the 'x'
+        # so it's done on the risk part. To adapt the calculation
+        # we do the reverse of the exp, i.e. log(x)
         self.hazard_curve = {'curve' : [
               {'x' :  str(log(0.001)), 'y' : '0.99'}, {'x' : str(log(0.08)), 'y' : '0.96'},
               {'x' : str(log(0.17)), 'y' : '0.89'}, {'x' : str(log(0.26)), 'y' : '0.82'},
               {'x' : str(log(0.36)), 'y' : '0.70'}, {'x' : str(log(0.55)), 'y' : '0.40'},
               {'x' : str(log(0.70)), 'y' : '0.01'}]}
 
+        # Vitor provided this Vulnerability Function
         self.vuln_function = shapes.VulnerabilityFunction([
                 (0.03, (0.001, 0.00)),
                 (0.04, (0.022, 0.00)),
