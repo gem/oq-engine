@@ -40,7 +40,7 @@ public class GemFileParser {
 
     /**
      * This gives the list of GEMSourceData parsed from the input ascii file
-     * 
+     *
      * @return srcDataList
      */
     public ArrayList<GEMSourceData> getList() {
@@ -69,7 +69,7 @@ public class GemFileParser {
     // }
 
     /**
-     * 
+     *
      * @return number of source data objects
      */
     public int getNumSources() {
@@ -81,7 +81,7 @@ public class GemFileParser {
      * outfile is compatible with the GMT psxy multiple segment file. The
      * separator adopted here is the default separator suggested in GMT (i.e.
      * '>')
-     * 
+     *
      * @param file
      * @throws IOException
      */
@@ -1887,7 +1887,7 @@ public class GemFileParser {
      * the outfile is compatible with the GMT psxy multiple segment file format.
      * The separator adopted here is the default separator suggested in GMT
      * (i.e. '>')
-     * 
+     *
      * @param file
      * @throws IOException
      */
@@ -1942,7 +1942,7 @@ public class GemFileParser {
      * the outfile is compatible with the GMT psxy multiple segment file format.
      * The separator adopted here is the default separator suggested in GMT
      * (i.e. '>')
-     * 
+     *
      * @param file
      * @throws IOException
      */
