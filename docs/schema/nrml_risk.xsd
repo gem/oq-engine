@@ -207,7 +207,8 @@
         <xs:complexContent>
             <xs:extension base="LMFieldNode">
                 <xs:sequence>
-                    <xs:element name="LossType" type="xs:double"/>
+                    <xs:element name="LossValue" type="xs:double"/>
+                    <xs:element name="StandardDeviationValues" type="xs:double"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
