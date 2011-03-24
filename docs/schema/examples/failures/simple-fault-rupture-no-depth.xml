@@ -12,8 +12,8 @@
 				<gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
 					<gml:posList>
 						-124.704 40.363 0.1
-						-124.977 41.214 0.1
-						-125.140 42.096 0.1
+						-124.977 41.214
+						-125.140 42.096
 					</gml:posList>
 				</gml:LineString>
 			</faultTrace>

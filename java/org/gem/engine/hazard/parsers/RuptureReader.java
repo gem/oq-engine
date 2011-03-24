@@ -36,6 +36,18 @@ public class RuptureReader
         namespaces.put("nrml", "http://openquake.org/xmlns/nrml/0.2");
     }
 
+    class InvalidFormatException extends RuntimeException
+    {
+
+        private static final long serialVersionUID = 4430401704068185529L;
+
+        public InvalidFormatException(String message)
+        {
+            super(message);
+        }
+
+    }
+
     /**
      * Parses the document and updates the rupture object.
      */
@@ -91,12 +103,7 @@ public class RuptureReader
         {
             String pos = xpath("//gml:pos").selectSingleNode(document).getText();
             StringTokenizer splitter = new StringTokenizer(pos);
-
-            double lon = Double.parseDouble(splitter.nextToken());
-            double lat = Double.parseDouble(splitter.nextToken());
-            double depth = Double.parseDouble(splitter.nextToken());
-
-            return new Location(lat, lon, depth);
+            return nextLocation(splitter);
         }
 
     }
@@ -127,10 +134,7 @@ public class RuptureReader
 
             while (splitter.hasMoreTokens())
             {
-                double lon = Double.parseDouble(splitter.nextToken());
-                double lat = Double.parseDouble(splitter.nextToken());
-
-                trace.add(new Location(lat, lon));
+                trace.add(nextLocation(splitter));
             }
 
             return trace;
@@ -191,11 +195,7 @@ public class RuptureReader
 
             while (splitter.hasMoreTokens())
             {
-                double lon = Double.parseDouble(splitter.nextToken());
-                double lat = Double.parseDouble(splitter.nextToken());
-                double depth = Double.parseDouble(splitter.nextToken());
-
-                trace.add(new Location(lat, lon, depth));
+                trace.add(nextLocation(splitter));
             }
 
             return trace;
@@ -275,6 +275,20 @@ public class RuptureReader
     private double magnitude()
     {
         return Double.parseDouble(xpath("//nrml:magnitude").selectSingleNode(document).getText());
+    }
+
+    private Location nextLocation(StringTokenizer splitter)
+    {
+        if (splitter.countTokens() % 3 != 0)
+        {
+            throw new InvalidFormatException("longitude, latitude and depth must be always specified!");
+        }
+
+        double lon = Double.parseDouble(splitter.nextToken());
+        double lat = Double.parseDouble(splitter.nextToken());
+        double depth = Double.parseDouble(splitter.nextToken());
+
+        return new Location(lat, lon, depth);
     }
 
 }

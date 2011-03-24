@@ -5,6 +5,7 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 
+import org.gem.engine.hazard.parsers.RuptureReader.InvalidFormatException;
 import org.junit.Before;
 import org.junit.Test;
 import org.opensha.commons.geo.Location;
@@ -19,9 +20,12 @@ import org.opensha.sha.util.TectonicRegionType;
 public class RuptureReaderTest
 {
 
-    public static final String POINT_RUPTURE_FILE = "docs/schema/examples/point-rupture.xml";
-    public static final String SIMPLE_FAULT_RUPTURE_FILE = "docs/schema/examples/simple-fault-rupture.xml";
-    public static final String COMPLEX_FAULT_RUPTURE_FILE = "docs/schema/examples/complex-fault-rupture.xml";
+    private static final String POINT_RUPTURE_FILE = "docs/schema/examples/point-rupture.xml";
+    private static final String SIMPLE_FAULT_RUPTURE_FILE = "docs/schema/examples/simple-fault-rupture.xml";
+    private static final String COMPLEX_FAULT_RUPTURE_FILE = "docs/schema/examples/complex-fault-rupture.xml";
+
+    private static final String SIMPLE_FAULT_RUPTURE_FILE_NO_DEPTH = "docs/schema/examples/failures/simple-fault-rupture-no-depth.xml";
+    private static final String COMPLEX_FAULT_RUPTURE_FILE_NO_DEPTH = "docs/schema/examples/failures/complex-fault-rupture-no-depth.xml";
 
     private RuptureReader reader;
 
@@ -121,11 +125,18 @@ public class RuptureReaderTest
         EqkRupture rupture = reader.read();
 
         FaultTrace trace = new FaultTrace(null);
-        trace.add(new Location(40.363, -124.704));
-        trace.add(new Location(41.214, -124.977));
-        trace.add(new Location(42.096, -125.140));
+        trace.add(new Location(40.363, -124.704, 0.1));
+        trace.add(new Location(41.214, -124.977, 0.1));
+        trace.add(new Location(42.096, -125.140, 0.1));
 
         assertEquals(trace, ((StirlingGriddedSurface) rupture.getRuptureSurface()).getFaultTrace());
+    }
+
+    @Test(expected = InvalidFormatException.class)
+    public void theDepthMustAlwaysBeSpecifiedWhenParsingTheSimpleFaultRupture()
+    {
+        reader = new RuptureReader(new File(SIMPLE_FAULT_RUPTURE_FILE_NO_DEPTH), 0.5);
+        reader.read();
     }
 
     @Test
@@ -173,6 +184,13 @@ public class RuptureReaderTest
         ApproxEvenlyGriddedSurface surface = new ApproxEvenlyGriddedSurface(top, bottom, 0.5);
         LocationList locations = ((ApproxEvenlyGriddedSurface) rupture.getRuptureSurface()).getLocationList();
         assertEquals(surface.getLocationList(), locations);
+    }
+
+    @Test(expected = InvalidFormatException.class)
+    public void theDepthMustAlwaysBeSpecifiedWhenParsingTheComplexFaultRupture()
+    {
+        reader = new RuptureReader(new File(COMPLEX_FAULT_RUPTURE_FILE_NO_DEPTH), 0.5);
+        reader.read();
     }
 
 }
