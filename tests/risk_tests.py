@@ -17,12 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
-"""
-This is a basic set of tests for risk engine.
-"""
-
 import os
 import json
 import numpy
@@ -39,6 +33,7 @@ from openquake.job import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
+from openquake.risk import deterministic_event_based as det
 from openquake.risk import common
 
 
@@ -89,18 +84,18 @@ GMFs = {"IMLs": (0.079888, 0.273488, 0.115856, 0.034912, 0.271488, 0.00224,
         "TSES": 900, "TimeSpan": 50}
 
 
+class EpsilonProvider(object):
+
+    def __init__(self, asset, epsilons):
+        self.asset = asset
+        self.epsilons = epsilons
+
+    def epsilon(self, asset):
+        assert self.asset is asset
+        return self.epsilons.pop(0)
+
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
-
-    class EpsilonProvider(object):
-
-        def __init__(self, asset, epsilons):
-            self.asset = asset
-            self.epsilons = epsilons
-
-        def epsilon(self, asset):
-            assert self.asset is asset
-            return self.epsilons.pop(0)
 
     def setUp(self):
         self.vuln_function_1 = shapes.VulnerabilityFunction([
@@ -275,11 +270,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
-        self.assertEqual(0, prob._compute_loss_ratios(
+        self.assertEqual(0, prob.compute_loss_ratios(
                 shapes.EMPTY_CURVE, self.gmfs, None, None).size)
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
-        self.assertEqual(0, prob._compute_loss_ratios(
+        self.assertEqual(0, prob.compute_loss_ratios(
                 self.vuln_function_1, {"IMLs": ()}, None, None).size)
 
     def test_with_valid_covs_we_sample_the_loss_ratios(self):
@@ -306,8 +301,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(numpy.array([0.0722, 0.4106, 0.1800,
                 0.1710, 0.2508, 0.0395, 0.1145, 0.2883, 0.4734, 0.4885]),
-                prob._compute_loss_ratios(vuln_function, gmfs,
-                self.EpsilonProvider(expected_asset, epsilons),
+                prob.compute_loss_ratios(vuln_function, gmfs,
+                EpsilonProvider(expected_asset, epsilons),
                 expected_asset), atol=0.0001))
 
     def test_when_the_mean_is_zero_the_loss_ratio_is_zero(self):
@@ -331,8 +326,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmfs = {"IMLs": (0.1000, )}
 
-        self.assertEqual(0.0, prob._compute_loss_ratios(
-                vuln_function, gmfs, self.EpsilonProvider(
+        self.assertEqual(0.0, prob.compute_loss_ratios(
+                vuln_function, gmfs, EpsilonProvider(
                 expected_asset, epsilons), expected_asset)[0])
 
     def test_loss_ratios_boundaries(self):
@@ -351,12 +346,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         # min IML in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-                prob._compute_loss_ratios(self.vuln_function_1,
+                prob.compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None)))
 
         # max IML in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.700, 0.700]),
-                prob._compute_loss_ratios(self.vuln_function_1,
+                prob.compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.525, 0.530)}, None, None)))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -444,7 +439,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-                prob._compute_loss_ratios(self.vuln_function_1,
+                prob.compute_loss_ratios(self.vuln_function_1,
                 self.gmfs, None, None)))
 
     def test_loss_ratios_range_generation(self):
@@ -456,7 +451,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
-        loss_ratios = prob._compute_loss_ratios(
+        loss_ratios = prob.compute_loss_ratios(
                 self.vuln_function_1, self.gmfs, None, None)
 
         loss_ratios_range = prob._compute_loss_ratios_range(loss_ratios)
@@ -1100,3 +1095,48 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                 common.compute_mean_loss(loss_ratio_curve), 3)
+
+
+class DeterministicEventBasedTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.vuln_function = shapes.VulnerabilityFunction(
+            [(0.10, (0.05, 0.30)), (0.30, (0.10, 0.30)),
+            (0.50, (0.15, 0.20)), (1.00, (0.30, 0.20))])
+
+        self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+                    -0.4336, 0.3426, 3.5784, 2.7694]
+
+        self.gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
+                     0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
+
+    def test_computes_the_mean_loss_from_loss_ratios(self):
+        asset = {"assetValue": 1000}
+        loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
+
+        self.assertEqual(100, det._mean_loss_from_loss_ratios(
+                         loss_ratios, asset))
+
+    def test_computes_the_mean_loss(self):
+        asset = {"assetValue": 10}
+        epsilon_provider = EpsilonProvider(asset, self.epsilons)
+
+        self.assertTrue(numpy.allclose([2.4887999999999999],
+                        det.compute_mean_loss(self.vuln_function, self.gmfs,
+                        epsilon_provider, asset), atol=0.0001))
+
+    def test_computes_the_stddev_loss_from_loss_ratios(self):
+        asset = {"assetValue": 1000}
+        loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
+
+        self.assertTrue(numpy.allclose(61.237,
+                        det._stddev_loss_from_loss_ratios(
+                        loss_ratios, asset), atol=0.001))
+
+    def test_computes_the_stddev_loss(self):
+        asset = {"assetValue": 10}
+        epsilon_provider = EpsilonProvider(asset, self.epsilons)
+
+        self.assertTrue(numpy.allclose([1.631],
+                        det.compute_stddev_loss(self.vuln_function, self.gmfs,
+                        epsilon_provider, asset), atol=0.002))
