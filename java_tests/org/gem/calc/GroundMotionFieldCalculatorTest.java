@@ -53,7 +53,7 @@ public class GroundMotionFieldCalculatorTest {
 	long seed = 123456789;
 	int numRealizations = 500;
 
-	private final ParameterChangeWarningListener testParamChangeListener = 
+	private final ParameterChangeWarningListener testParamChangeListener =
 		new ParameterChangeWarningListener() {
 		@Override
 		public void parameterChangeWarning(ParameterChangeWarningEvent event) {
@@ -313,9 +313,9 @@ public class GroundMotionFieldCalculatorTest {
 		 * from the same set of ground motion realizations) with total standard
 		 * deviations for the site of interest. That is validate the following
 		 * equality:
-		 * 
+		 *
 		 * cov_ij = corr_ij * totalStd_i * totalStd_j,
-		 * 
+		 *
 		 * cov_ij = covariance value between site i and j, corr_ij = correlation
 		 * value between site i and j, totalStd_i and totalStd_j are the total
 		 * standard deviations for sites i and j

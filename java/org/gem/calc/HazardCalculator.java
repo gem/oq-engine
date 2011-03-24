@@ -26,9 +26,9 @@ import com.google.gson.Gson;
 
 /**
  * This class provides methods for hazard calculations.
- * 
+ *
  * @author damianomonelli
- * 
+ *
  */
 
 public class HazardCalculator {
@@ -38,7 +38,7 @@ public class HazardCalculator {
     /**
      * Calculate hazard curves for a set of sites from an earthquake rupture
      * forecast using the classical PSHA approach
-     * 
+     *
      * @param siteList
      *            : list of sites ({@link Site}) where to compute hazard curves
      * @param erf
@@ -97,7 +97,7 @@ public class HazardCalculator {
 
     /**
      * Get the site/hazard curve pairs as a list of JSON Strings.
-     * 
+     *
      * @param siteList
      * @param erf
      * @param gmpeMap
@@ -124,7 +124,7 @@ public class HazardCalculator {
      * Calculate ground motion fields (correlated or uncorrelated) from a
      * stochastic event set generated through random sampling of an earthquake
      * rupture forecast
-     * 
+     *
      * @param siteList
      *            : list of sites ({@link Site}) where to compute ground motion
      *            values
@@ -160,23 +160,16 @@ public class HazardCalculator {
         List<EqkRupture> eqkRupList =
                 StochasticEventSetGenerator
                         .getStochasticEventSetFromPoissonianERF(erf, rn);
-        if (correlation == true) {
-            Boolean inter_event = true;
-            for (EqkRupture rup : eqkRupList) {
-                logger.debug("rupture mag is " + rup.getMag());
-                GroundMotionFieldCalculator gmfCalc = 
-                	new GroundMotionFieldCalculator(
-                			gmpeMap.get(rup.getTectRegType()),rup,siteList);
+        for (EqkRupture rup : eqkRupList) {
+            logger.debug("rupture mag is " + rup.getMag());
+            GroundMotionFieldCalculator gmfCalc =
+                new GroundMotionFieldCalculator(
+                        gmpeMap.get(rup.getTectRegType()),rup,siteList);
+            if (correlation == true) {
                 groundMotionFields.put(rup, gmfCalc
                         .getCorrelatedGroundMotionField_JB2009(
                         		rn));
-            }
-        } else {
-            for (EqkRupture rup : eqkRupList) {
-                logger.debug("rupture mag is " + rup.getMag());
-                GroundMotionFieldCalculator gmfCalc = 
-                	new GroundMotionFieldCalculator(
-                			gmpeMap.get(rup.getTectRegType()),rup,siteList);
+            } else {
                 groundMotionFields.put(rup, gmfCalc
                         .getUncorrelatedGroundMotionField(rn));
             }
@@ -251,13 +244,13 @@ public class HazardCalculator {
      * The suggested format for a jsonized GMF is<br>
      * {'gmf_id' : { 'eqkrupture_id' : { 'site_id' : {'lat' : lat_val, 'lon' :
      * lon_val, 'mag' : double_val}}, { 'site_id' : { ...}} , {...} }}
-     * 
+     *
      * From identifiers.py, these are what the expected keys look like (this
      * makes no expectation of the values), the keys are after the colon.
-     * 
+     *
      * sites: job_id!block_id!!sites gmf: job_id!block_id!!gmf gmf:
      * job_id!block_id!site!gmf
-     * 
+     *
      * @return
      */
     protected static String gmfToJson(String gmfId, String[] eqkRuptureIds,
@@ -329,9 +322,9 @@ public class HazardCalculator {
      * {"eqkRupture_id_0":<br>
      * {"site_id_0":{"lat":35.0,"lon":37.6,"mag":-4.7}},
      * {"site_id_1":{"lat":37.5,"lon":35.6,"mag":-2.8}},...
-     * 
+     *
      * 2) Saves the json string to memCache.
-     * 
+     *
      * @param memCacheKey
      * @param gmfId
      *            The "json key" for the GMF (ground motion field)
