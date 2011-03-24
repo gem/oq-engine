@@ -191,7 +191,7 @@
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="LossMap">
+    <xs:complexType name="LossMapType">
         <xs:complexContent>
             <xs:extension base="FieldNode">
                 <xs:sequence>
@@ -203,6 +203,7 @@
         </xs:complexContent>
     </xs:complexType>
     <xs:element name="LMNode" substitutionGroup="fieldNode" type="LMNodeType"/>
+    <xs:element name="LossMap" type="LossMapType"/>
     <xs:complexType name="LMNodeType">
         <xs:complexContent>
             <xs:extension base="LMFieldNode">

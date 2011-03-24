@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml:LossMap xmlns:gml="http://www.opengis.net/gml"
+ xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.2 file:/Users/benwyss/Projects/bens_fork/openquake/docs/schema/nrml_risk.xsd" gml:id="ID000">
+    <nrml:site/>
+    <nrml:LMNode gml:id="ID001">
+        <nrml:LMSite>
+            <gml:Point>
+                <gml:pos>-117.0 30.0</gml:pos>
+            </gml:Point>
+        </nrml:LMSite>
+        <nrml:LossValue>100</nrml:LossValue>
+        <nrml:StandardDeviationValue>10</nrml:StandardDeviationValue>
+    </nrml:LMNode>
+    <nrml:LMNode gml:id="ID002">
+        <nrml:LMSite>
+            <gml:Point>
+                <gml:pos>-117.0 35.0</gml:pos>
+            </gml:Point>
+        </nrml:LMSite>
+        <nrml:LossValue>300</nrml:LossValue>
+        <nrml:StandardDeviationValue>30</nrml:StandardDeviationValue>
+    </nrml:LMNode>
+    <nrml:LMNode gml:id="ID003">
+        <nrml:LMSite>
+            <gml:Point>
+                <gml:pos>-117.0 36.0</gml:pos>
+            </gml:Point>
+        </nrml:LMSite>
+        <nrml:LossValue>200</nrml:LossValue>
+        <nrml:StandardDeviationValue>20</nrml:StandardDeviationValue>
+    </nrml:LMNode>
+</nrml:LossMap>
