@@ -71,7 +71,7 @@ public class GroundMotionFieldCalculator {
 
 	/**
 	 * Defines a ground motion field calculator
-	 * 
+	 *
 	 * @param attenRel
 	 *            : {@link ScalarIntensityMeasureRelationshipAPI} attenuation
 	 *            relationship used for ground motion field calculation
@@ -97,7 +97,7 @@ public class GroundMotionFieldCalculator {
 
 	/**
 	 * Computes mean ground motion for a list of sites.
-	 * 
+	 *
 	 * @return : {@link Map} associating sites ({@link Site}) and ground motion
 	 *         values {@link Double}
 	 */
@@ -129,7 +129,7 @@ public class GroundMotionFieldCalculator {
 	 * the sites) and then sum the intra-event residuals (different for each
 	 * site), otherwise generate residuals for each site according to the total
 	 * standard deviation
-	 * 
+	 *
 	 * @param rn
 	 *            : {@link Random} random number generator for Gaussian deviate
 	 *            calculation
@@ -173,12 +173,12 @@ public class GroundMotionFieldCalculator {
 	 * residual (which follow a univariate normal distribution), 3)
 	 * Stochastically generate intra-event residuals (following the proposed
 	 * correlation model) 4) Combine the three terms generated in steps 1-3.
-	 * 
+	 *
 	 * Intra-event residuals are calculated by generating Gaussian deviates from
 	 * a multivariate normal distribution using Cholesky factorization
 	 * (decompose covariance matrix, take lower triangular and multiply by a
 	 * vector of uncorrelated, standard Gaussian variables)
-	 * 
+	 *
 	 * @param rn
 	 *            : {@link Random} random number generator
 	 * @return: {@link Map} associating sites ({@link Site}) and ground motion
@@ -337,7 +337,7 @@ public class GroundMotionFieldCalculator {
 	/**
 	 * Generate Gaussian deviate (mean zero, standard deviation =
 	 * standardDeviation)
-	 * 
+	 *
 	 * @param standardDeviation
 	 *            : double standard deviation
 	 * @param truncationLevel
@@ -371,7 +371,7 @@ public class GroundMotionFieldCalculator {
 	 * model of Jayamram & Baker (2009):
 	 * "Correlation model for spatially distributed ground-motion intensities"
 	 * Nirmal Jayaram and Jack W. Baker, Earthquake Engng. Struct. Dyn (2009)
-	 * 
+	 *
 	 * @return covariance matrix as {@link OpenMapRealMatrix}
 	 */
 	private OpenMapRealMatrix getCovarianceMatrix_JB2009() {
