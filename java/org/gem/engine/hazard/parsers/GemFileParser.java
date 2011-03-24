@@ -800,27 +800,27 @@ public class GemFileParser {
                                     + "Mmin = "
                                     + src.getMagfreqDistFocMech()
                                             .getMagFreqDist(ifm).getMinX()
-                                    + ", "
+                                    + "\n"
                                     + "Mmax = "
                                     + src.getMagfreqDistFocMech()
                                             .getMagFreqDist(ifm).getMaxX()
-                                    + ", "
+                                    + "\n"
                                     + "TotalCumulativeRate (ev/yr) = "
                                     + src.getMagfreqDistFocMech()
                                             .getMagFreqDist(ifm)
                                             .getTotalIncrRate()
-                                    + ", "
+                                    + "\n"
                                     + "Strike: "
                                     + src.getMagfreqDistFocMech().getFocalMech(
                                             ifm).getStrike()
-                                    + ", "
+                                    + "\n"
                                     + "Dip: "
                                     + src.getMagfreqDistFocMech().getFocalMech(
                                             ifm).getDip()
-                                    + ", "
+                                    + "\n"
                                     + "Rake: "
                                     + src.getMagfreqDistFocMech().getFocalMech(
-                                            ifm).getRake() + ", "
+                                            ifm).getRake() + "\n"
                                     + "Average Hypo Depth (km): "
                                     + src.getAveHypoDepth();
 
@@ -834,13 +834,14 @@ public class GemFileParser {
                         double bVal = mfd.get_bValue();
 
                         double aVal =
-                                bVal * mfd.getMagLower()
+                                bVal * (mfd.getMagLower()-mfd.getDelta()/2)
                                         + Math.log10(mfd.getTotCumRate());
 
                         descr =
-                                descr + ", a value: " + aVal + ", b value: "
+                                descr + ", a value: " + aVal + "\n b value: "
                                         + bVal;
                     }
+                    descr = descr+ "\n\n";
 
                 }
 
@@ -1299,7 +1300,7 @@ public class GemFileParser {
                                         .getSeismDepthLow(), 10.0);
 
                 // total moment rate
-                double tmr = src.getMfd().getTotalMomentRate();
+                double tmr = src.getMfd().getTotalMomentRate()/faultSurface.getSurfaceArea();
 
                 sourceTMR.add(tmr);
 
@@ -1359,7 +1360,7 @@ public class GemFileParser {
         out.write("</visibility>\n");
 
         out.write("<description>\n");
-        out.write("Total Moment Rate (J/year) \n");
+        out.write("Total Moment Rate (J/year/km2) \n");
         out.write("<![CDATA[<TABLE border=1 bgcolor=#FFFFFF>\n");
         // define colorbar
         for (int i = 0; i < colorName.size(); i++) {
@@ -1437,12 +1438,16 @@ public class GemFileParser {
 
                 // description
                 String descr =
-                        "Mmin = " + src.getMfd().getMinX() + ", " + "Mmax = "
-                                + src.getMfd().getMaxX() + ", "
+                        "Mmin = " + src.getMfd().getMinX() + "\n" + "Mmax = "
+                                + src.getMfd().getMaxX() + "\n"
                                 + "TotalCumulativeRate (ev/yr) = "
-                                + src.getMfd().getTotalIncrRate() + ", "
-                                + "Dip: " + src.getDip() + ", " + "Rake: "
-                                + src.getRake() + ".";
+                                + src.getMfd().getTotalIncrRate() + "\n"
+                                + "Dip: " + src.getDip() + "\n" + "Rake: "
+                                + src.getRake()+"\n";
+                if(src.getMfd() instanceof GutenbergRichterMagFreqDist){
+                	 GutenbergRichterMagFreqDist grMfd = (GutenbergRichterMagFreqDist)src.getMfd();
+                	 descr = descr + "b value: "+grMfd.get_bValue();
+                }
 
                 // number of rows
                 int nrows = faultSurface.getNumRows();
@@ -1549,13 +1554,13 @@ public class GemFileParser {
                         out.write("</altitudeMode>");
                         out.write("<coordinates>");
                         out.write(lon1 + "," + lat1 + "," + (maxDepth - depth1)
-                                * 10e3 + "\n");
+                                * 1e3 + "\n");
                         out.write(lon2 + "," + lat2 + "," + (maxDepth - depth2)
-                                * 10e3 + "\n");
+                                * 1e3 + "\n");
                         out.write(lon3 + "," + lat3 + "," + (maxDepth - depth3)
-                                * 10e3 + "\n");
+                                * 1e3 + "\n");
                         out.write(lon4 + "," + lat4 + "," + (maxDepth - depth4)
-                                * 10e3 + "\n");
+                                * 1e3 + "\n");
                         out.write("</coordinates>\n");
                         out.write("</LinearRing>\n");
                         out.write("</outerBoundaryIs>\n");
