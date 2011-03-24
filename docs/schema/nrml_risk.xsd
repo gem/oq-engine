@@ -197,7 +197,7 @@
                 <xs:sequence>
                     <xs:element ref="LMNode"/>
                 </xs:sequence>
-                <xs:attribute name="LossType" type="xs:string" use="required"/>
+                <xs:attribute name="LossType" type="xs:string"/>
                 <xs:attribute name="endBranchLabel" type="xs:string"/>
             </xs:extension>
         </xs:complexContent>
@@ -208,7 +208,7 @@
             <xs:extension base="LMFieldNode">
                 <xs:sequence>
                     <xs:element name="LossValue" type="xs:double"/>
-                    <xs:element name="StandardDeviationValues" type="xs:double"/>
+                    <xs:element name="StandardDeviationValue" type="xs:double"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
