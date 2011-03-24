@@ -162,21 +162,23 @@ public class HazardCalculator {
                         .getStochasticEventSetFromPoissonianERF(erf, rn);
         if (correlation == true) {
             Boolean inter_event = true;
-            Boolean Vs30Cluster = false;
             for (EqkRupture rup : eqkRupList) {
                 logger.debug("rupture mag is " + rup.getMag());
-                groundMotionFields.put(rup, GroundMotionFieldCalculator
-                        .getStochasticGroundMotionField_JB2009(
-                                gmpeMap.get(rup.getTectRegType()), rup,
-                                siteList, rn, inter_event, Vs30Cluster));
+                GroundMotionFieldCalculator gmfCalc = 
+                	new GroundMotionFieldCalculator(
+                			gmpeMap.get(rup.getTectRegType()),rup,siteList);
+                groundMotionFields.put(rup, gmfCalc
+                        .getCorrelatedGroundMotionField_JB2009(
+                        		rn));
             }
         } else {
             for (EqkRupture rup : eqkRupList) {
                 logger.debug("rupture mag is " + rup.getMag());
-                groundMotionFields.put(rup, GroundMotionFieldCalculator
-                        .getStochasticGroundMotionField(
-                                gmpeMap.get(rup.getTectRegType()), rup,
-                                siteList, rn));
+                GroundMotionFieldCalculator gmfCalc = 
+                	new GroundMotionFieldCalculator(
+                			gmpeMap.get(rup.getTectRegType()),rup,siteList);
+                groundMotionFields.put(rup, gmfCalc
+                        .getUncorrelatedGroundMotionField(rn));
             }
         }
         return groundMotionFields;
