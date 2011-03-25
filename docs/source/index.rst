@@ -12,22 +12,17 @@ Contents:
    :maxdepth: 2
    
    architecture
-   converter
    flags
    formats
    hazard
    java
    job
-   jobber
    logs
    output
    producer
    risk
    schema
-   seismicsources
    tasks
-   urls
-   utils
    writer
    xml
 
