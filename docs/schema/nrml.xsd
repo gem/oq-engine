@@ -1,12 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-           xmlns="http://openquake.org/xmlns/nrml/0.2"
-           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
-           xmlns:gmlsf="http://www.opengis.net/gmlsf"
-           xmlns:gml="http://www.opengis.net/gml"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
-           elementFormDefault="qualified"
-           xml:lang="en"> 
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://openquake.org/xmlns/nrml/0.2"
+    xmlns:nrml="http://openquake.org/xmlns/nrml/0.2" xmlns:gmlsf="http://www.opengis.net/gmlsf"
+    xmlns:gml="http://www.opengis.net/gml" targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+    elementFormDefault="qualified" xml:lang="en">
 
     <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gmlsfLevels.xsd"/>
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
@@ -16,7 +12,7 @@
             <gmlsf:ComplianceLevel>1</gmlsf:ComplianceLevel>
             <gmlsf:GMLProfileSchema>http://schemas.opengis.net/gml/3.1.1/profiles/gmlSimpleFeatureProfile/1.0.0/gmlsf.xsd</gmlsf:GMLProfileSchema>
         </xs:appinfo>
-   </xs:annotation>
+    </xs:annotation>
 
     <!-- Include schemas being part of NRML -->
     <xs:include schemaLocation="./nrml_common.xsd"/>
@@ -42,5 +38,4 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
 </xs:schema>

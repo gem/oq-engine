@@ -163,6 +163,7 @@
                         <xs:element ref="lossCurveList"/>
                         <xs:element ref="lossRatioCurveList"/>
                     </xs:choice>
+                    <xs:element ref="LossMap"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -226,9 +227,14 @@
     <xs:element name="LMSite" substitutionGroup="site" type="LMSiteType"/>
     <xs:complexType name="LMSiteType">
         <xs:complexContent>
-            <xs:extension base="gml:PointPropertyType">
-                <xs:sequence> </xs:sequence>
-            </xs:extension>
+            <xs:extension base="gml:PointPropertyType"> </xs:extension>
         </xs:complexContent>
+    </xs:complexType>
+    <xs:complexType name="HazardProcessing">
+        <!-- NOTE: renamed timeSpanDuration (OpenSHA name) to investigationTimeSpan.
+             This parameter should be given in the unit years, since the base
+             SI unit (seconds) would yield values that are not instructive.
+             We use a simple non-negative float here, not the xs:duration type,
+             because xs:duration could be hard to match with a database type -->
     </xs:complexType>
 </xs:schema>
