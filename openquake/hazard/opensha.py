@@ -217,8 +217,9 @@ class ClassicalMixin(BasePSHAMixin):
             results.extend(results_per_realization)
 
         del results_per_realization
+        return results
 
-    def do_hazard(self):
+    def do_mean(self):
         pass
 
     def do_quantile(self):
