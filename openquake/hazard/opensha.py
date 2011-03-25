@@ -171,11 +171,18 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    @preload
-    def execute(self):
+    def do_hazard(self, site_list, serializer=None):
+        """Trigger hazard curve calculations, serialize as needed.
 
+        :param site_list: The list of sites for which to calculate hazard
+            curves.
+        :type site_list: XXX
+        :param serializer: A callable that serializes the calculated hazard
+            curves.
+        :type serializer: A callable that takes a single parameter: a list of
+            kvs keys of the calculated hazard curves.
+        """
         results = []
-
         source_model_generator = random.Random()
         source_model_generator.seed(
                 self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
@@ -184,8 +191,6 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self.params.get('GMPE_LT_RANDOM_SEED', None))
 
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-
-        site_list = self.sites_for_region()
 
         LOG.info('Going to run classical PSHA hazard for %s realizations '\
                  'and %s sites' % (realizations, len(site_list)))
@@ -212,6 +217,18 @@ class ClassicalMixin(BasePSHAMixin):
             results.extend(results_per_realization)
 
         del results_per_realization
+
+    def do_hazard(self):
+        pass
+
+    def do_quantile(self):
+        pass
+
+    @preload
+    def execute(self):
+
+        site_list = self.sites_for_region()
+        results = self.do_hazard(site_list, self.write_hazardcurve_file)
 
         # compute and serialize mean and quantile hazard curves
         pending_tasks_mean = []
