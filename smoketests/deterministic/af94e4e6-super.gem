@@ -1,0 +1,10 @@
+[openquake]
+risk_calculation_mode = Deterministic
+region_grid_spacing = 0.02
+vulnerability = vulnerability.xml
+region_vertex = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
+base_path = /Users/acerisara/Projects/MineOpenQuake/smoketests/deterministic
+output_dir = computed_output
+hazard_calculation_mode = Deterministic
+exposure = small_exposure.xml
+

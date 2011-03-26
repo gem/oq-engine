@@ -1,0 +1,25 @@
+[general]
+
+# NOTE: The order of the vertices is to be kept!!!
+# lat, lon of polygon vertices (in clock or counter-clock wise order)
+REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
+# degrees
+REGION_GRID_SPACING = 0.02
+
+[HAZARD]
+
+# output directory - relative to this file
+OUTPUT_DIR = computed_output
+
+HAZARD_CALCULATION_MODE = Deterministic
+
+[RISK]
+
+RISK_CALCULATION_MODE = Deterministic
+
+# file containing the exposure in nrml format
+EXPOSURE = small_exposure.xml
+
+# file containing the vulnerability functions
+VULNERABILITY = vulnerability.xml
+

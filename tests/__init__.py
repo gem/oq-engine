@@ -36,3 +36,4 @@ from risk_parser_unittest import *
 from risk_tests import *
 from schema_unittest import *
 from probabilistic_unittest import *
+from deterministic_hazard_unittest import *
