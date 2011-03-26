@@ -21,6 +21,8 @@ This module performs hazard calculations using the deterministic
 event based approach.
 """
 
+from openquake import kvs
+from openquake import shapes
 from openquake.hazard import job
 
 
@@ -33,10 +35,16 @@ class DeterministicEventBasedMixin:
 
     def execute(self):
         """Entry point for triggering the computation."""
-        
-        print "Deterministic Event Based hazard"
+
+        site = shapes.Site(1.0, 2.0)
+        gmv = {"site_lon": 1.0, "site_lat": 2.0, "mag": 0.5}
+
+        kvs.set_value_json_encoded(
+            kvs.tokens.ground_motion_value_key(
+            self.job_id, site.hash(), 1), gmv)
 
         return [True]
 
 
-job.HazJobMixin.register("Deterministic", DeterministicEventBasedMixin, order=2)
+job.HazJobMixin.register(
+    "Deterministic", DeterministicEventBasedMixin, order=2)

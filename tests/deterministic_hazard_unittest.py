@@ -25,6 +25,9 @@ event based calculation.
 import unittest
 
 from utils import test
+
+from openquake import kvs
+from openquake import shapes
 from openquake import job
 from openquake import flags
 
@@ -36,15 +39,30 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
     def setUp(self):
         flags.FLAGS.include_defaults = False
 
+        self.engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
+        self.engine.job_id = 1234
+
     def test_triggered_with_deterministic_calculation_mode(self):
-        """The deterministic calculator is trigger.
-        
+        """The deterministic calculator is triggered.
+
         When HAZARD_CALCULATION_MODE and RISK_CALCULATION_MODE
         are set to "Deterministic" the deterministic event
         based calculator is triggered.
         """
 
-        engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
-
         # True, True means that both mixins (hazard and risk) are triggered
-        self.assertEqual([True, True], engine.launch())
+        self.assertEqual([True, True], self.engine.launch())
+
+    def test_the_hazard_subsystem_stores_gmfs_in_kvs(self):
+        site = shapes.Site(1.0, 2.0)
+
+        gmv = kvs.get_value_json_decoded(
+            kvs.tokens.ground_motion_value_key(
+            self.engine.id, site.hash(), 1))
+
+        self.engine.launch()
+
+        self.assertEqual(0.5, gmv["mag"])
+
+        self.assertEqual(1.0, gmv["site_lon"])
+        self.assertEqual(2.0, gmv["site_lat"])
