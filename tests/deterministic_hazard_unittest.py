@@ -41,6 +41,8 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         self.engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
         self.engine.job_id = 1234
+        
+        kvs.flush()
 
     def test_triggered_with_deterministic_calculation_mode(self):
         """The deterministic calculator is triggered.
@@ -53,16 +55,20 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         # True, True means that both mixins (hazard and risk) are triggered
         self.assertEqual([True, True], self.engine.launch())
 
-    def test_the_hazard_subsystem_stores_gmfs_in_kvs(self):
-        site = shapes.Site(1.0, 2.0)
+    def test_the_hazard_subsystem_stores_gmfs_for_all_the_sites(self):
+        self.engine.params["REGION_VERTEX"] = \
+            "33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30"
 
-        gmv = kvs.get_value_json_decoded(
-            kvs.tokens.ground_motion_value_key(
-            self.engine.id, site.hash(), 1))
+        self.engine.params["REGION_GRID_SPACING"] = 0.1
 
         self.engine.launch()
 
-        self.assertEqual(0.5, gmv["mag"])
+        for site in self.engine.sites_for_region():
+            key = kvs.tokens.ground_motion_value_key(
+                self.engine.id, site.hash(), 1)
 
-        self.assertEqual(1.0, gmv["site_lon"])
-        self.assertEqual(2.0, gmv["site_lat"])
+            self.assertTrue(kvs.get(key))
+            gmv = kvs.get_value_json_decoded(key)
+            
+            self.assertEqual(site.latitude, gmv["site_lat"])
+            self.assertEqual(site.longitude, gmv["site_lon"])
