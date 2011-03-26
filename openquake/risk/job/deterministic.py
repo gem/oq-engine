@@ -14,12 +14,29 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
+# pylint: disable=W0232
 
 """
-Ostensibly core computation methods for hazard engine. Most of the hard
-computation is backed by the Java HazardEngine via the hazard_wrapper
+This module performs risk calculations using the deterministic
+event based approach.
 """
 
-import openquake.hazard.opensha
-import openquake.hazard.deterministic
+from openquake.risk.job import RiskJobMixin
+
+
+class DeterministicEventBasedMixin:
+    """Deterministic Event Based method for performing risk calculations.
+
+    Note that this mixin, during execution, will always be an instance of the
+    Job class, and thus has access to the self.params dict, full of config
+    params loaded from the job configuration file."""
+
+    def execute(self):
+        """Entry point for triggering the computation."""
+
+        print "Deterministic Event Based risk"
+
+        return [True]
+
+
+RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
