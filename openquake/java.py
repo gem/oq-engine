@@ -57,6 +57,9 @@ JAVA_CLASSES = {
     "DiscretizedFuncAPI" : 
         "org.opensha.commons.data.function.DiscretizedFuncAPI",
     "ProbabilityMassFunctionCalc" : "org.gem.calc.ProbabilityMassFunctionCalc",
+    "Location" : "org.opensha.commons.geo.Location",
+    "Site" : "org.opensha.commons.data.Site",
+    "HashMap" : "java.util.HashMap",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)

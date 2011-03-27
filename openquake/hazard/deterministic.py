@@ -21,6 +21,7 @@ This module performs hazard calculations using the deterministic
 event based approach.
 """
 
+from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.hazard import job
@@ -36,15 +37,45 @@ class DeterministicEventBasedMixin:
     def execute(self):
         """Entry point for triggering the computation."""
 
-        for site in self.sites_for_region():
-            gmv = {"site_lon": site.longitude,
-                   "site_lat": site.latitude, "mag": 0.5}
+        number_of_calculations = self.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"]
 
-            kvs.set_value_json_encoded(
-                kvs.tokens.ground_motion_value_key(
-                self.job_id, site.hash(), 1), gmv)
+        for i in xrange(number_of_calculations):
+            gmf = self.compute_ground_motion_field()
+            gmf_as_dict = gmf_to_dict(gmf)
+            
+            for gmv in gmf_as_dict:
+                site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
+                
+                kvs.set_value_json_encoded(
+                    kvs.tokens.ground_motion_value_key(
+                    self.job_id, site.hash(), i + 1), gmv)
 
         return [True]
+
+# TODO (ac): Stubbed for now, needs to call the Java calculator
+    def compute_ground_motion_field(self):
+        hashmap = java.jclass("HashMap")()
+
+        for site in self.sites_for_region():
+            location = java.jclass("Location")(site.latitude, site.longitude)
+            site = java.jclass("Site")(location)
+            hashmap.put(site, 0.5)
+
+        return hashmap
+
+
+def gmf_to_dict(hashmap):
+    gmf = []
+    
+    for site in hashmap.keySet():
+        mag = hashmap.get(site).doubleValue()
+        lat = site.getLocation().getLatitude()
+        lon = site.getLocation().getLongitude()
+        
+        gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
+        gmf.append(gmv)
+
+    return gmf
 
 
 job.HazJobMixin.register(
