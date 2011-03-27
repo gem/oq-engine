@@ -37,23 +37,35 @@ class DeterministicEventBasedMixin:
     def execute(self):
         """Entry point for triggering the computation."""
 
-        number_of_calculations = self.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"]
-
-        for i in xrange(number_of_calculations):
+        for i in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field()
-            gmf_as_dict = gmf_to_dict(gmf)
-            
-            for gmv in gmf_as_dict:
+
+# TODO (ac): Add doc, saying that we might store multiple sites for each key
+            for gmv in gmf_to_dict(gmf):
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
-                
+
                 kvs.set_value_json_encoded(
                     kvs.tokens.ground_motion_value_key(
                     self.job_id, site.hash(), i + 1), gmv)
 
         return [True]
 
-# TODO (ac): Stubbed for now, needs to call the Java calculator
+    def _number_of_calculations(self):
+        """Return the number of calculations to trigger."""
+
+        value = int(self.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
+
+        if value <= 0:
+            raise ValueError("NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS "
+                             "must be grater than zero.")
+
+        return value
+
+# TODO (ac): Stubbed for now, needs to call the java calculator
+# TODO (ac): Add doc, saying that there's no way to split the computation
     def compute_ground_motion_field(self):
+        """Compute the ground motion field for the entire region."""
+
         hashmap = java.jclass("HashMap")()
 
         for site in self.sites_for_region():
@@ -65,17 +77,23 @@ class DeterministicEventBasedMixin:
 
 
 def gmf_to_dict(hashmap):
-    gmf = []
-    
+    """Transform the ground motion field as returned by the java
+    calculator into a simple dict.
+
+    The java calculator returns an implementation of java.util.Map
+    where the key is an instance of org.opensha.commons.data.Site
+    and the value is an instance of java.lang.Double.
+
+    This function is implemented as an iterator.
+    """
+
     for site in hashmap.keySet():
         mag = hashmap.get(site).doubleValue()
         lat = site.getLocation().getLatitude()
         lon = site.getLocation().getLongitude()
-        
-        gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
-        gmf.append(gmv)
 
-    return gmf
+        gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
+        yield gmv
 
 
 job.HazJobMixin.register(
