@@ -42,10 +42,12 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
     def execute(self):
         """Entry point for triggering the computation."""
 
-        for i in xrange(self._number_of_calculations()):
-            gmf = self.compute_ground_motion_field()
+        random_generator = java.jclass(
+            "Random")(int(self.params["GMF_RANDOM_SEED"]))
 
-# TODO (ac): Add doc, saying that we might store multiple sites for each key
+        for i in xrange(self._number_of_calculations()):
+            gmf = self.compute_ground_motion_field(random_generator)
+
             for gmv in gmf_to_dict(
                 gmf, self.params["INTENSITY_MEASURE_TYPE"]):
 
@@ -69,15 +71,10 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
         return value
 
 # TODO (ac): Add doc, saying that there's no way to split the computation
-    def compute_ground_motion_field(self):
+    def compute_ground_motion_field(self, random_generator):
         """Compute the ground motion field for the entire region."""
         
-        rupture = self._load_rupture_model()
-        gmpe = self._load_gmpe()
-
-        sites = self.parameterize_sites(self.sites_for_region())
-        calculator = java.jclass("GMFCalculator")(gmpe, rupture, sites)
-        random_generator = java.jclass("Random")(int(self.params["GMF_RANDOM_SEED"]))
+        calculator = self.gmf_calculator(self.sites_for_region())
 
         if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
             return calculator.getUncorrelatedGroundMotionField(
@@ -86,7 +83,21 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             return calculator.getCorrelatedGroundMotionField_JB2009(
                 random_generator)
 
-    def _load_rupture_model(self):
+    def gmf_calculator(self, sites):
+        calculator = getattr(self, "calculator", None)
+        
+        if calculator is None:
+            sites = self.parameterize_sites(sites)
+            
+            calculator = java.jclass(
+                "GMFCalculator")(self.gmpe, self.rupture_model, sites)
+
+            setattr(self, "calculator", calculator)
+
+        return self.calculator
+
+    @property
+    def rupture_model(self):
         """Load the rupture model specified in the configuration file."""
         
         rel_path = self.params["SINGLE_RUPTURE_MODEL"]
@@ -95,7 +106,8 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
         return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
 
-    def _load_gmpe(self):
+    @property
+    def gmpe(self):
         """Load the ground motion prediction equation specified
         in the configuration file."""
         

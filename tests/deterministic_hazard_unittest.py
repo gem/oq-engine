@@ -32,6 +32,7 @@ from openquake import java
 from openquake import kvs
 from openquake import job
 from openquake import flags
+from openquake import shapes
 
 from openquake.hazard import deterministic as det
 
@@ -39,7 +40,7 @@ DETERMINISTIC_SMOKE_TEST = test.smoketest_file("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
 
 
-def compute_ground_motion_field(self):
+def compute_ground_motion_field(self, random_generator):
     """Stubbed version of the method that computes the ground motion
     field calling java stuff."""
 
@@ -176,12 +177,14 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.engine.params[NUMBER_OF_CALC_KEY] = "-1"
         self.assertRaises(ValueError, self.engine.launch)
 
-    def test_rupture_and_gmpe_parameters_must_be_specified(self):
-        pass
-
     def test_simple_computation_using_the_java_calculator(self):
         self.engine.launch()
-# TODO (ac): asserts
+
+        for site in self.engine.sites_for_region():
+            key = kvs.tokens.ground_motion_value_key(
+                self.engine.id, site.hash(), 1)
+
+            self.assertTrue(kvs.get_value_json_decoded(key))
 
     def test_when_measure_type_is_not_mmi_exp_is_stored(self):
         location = java.jclass("Location")(1.0, 2.0)
@@ -192,8 +195,6 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         for gmv in det.gmf_to_dict(hashmap, "PGA"):
             self.assertEqual(math.exp(0.1), gmv["mag"])
-            self.assertEqual(2.0, gmv["site_lon"])
-            self.assertEqual(1.0, gmv["site_lat"])
 
     def test_when_measure_type_is_mmi_we_store_as_is(self):
         location = java.jclass("Location")(1.0, 2.0)
@@ -204,14 +205,26 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         for gmv in det.gmf_to_dict(hashmap, "MMI"):
             self.assertEqual(0.1, gmv["mag"])
-            self.assertEqual(2.0, gmv["site_lon"])
-            self.assertEqual(1.0, gmv["site_lat"])
 
     def test_loads_the_rupture_model(self):
-        pass
+        calculator = det.DeterministicEventBasedMixin(None, None)
+        calculator.params = self.engine.params
+        
+        self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
+                         calculator.rupture_model.__class__.__name__)
 
     def test_loads_the_gmpe(self):
-        pass
+        calculator = det.DeterministicEventBasedMixin(None, None)
+        calculator.params = self.engine.params
+    
+        self.assertTrue("org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel",
+                        calculator.gmpe.__class__.__name__)
     
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
-        pass
+        calculator = det.DeterministicEventBasedMixin(None, None)
+        calculator.params = self.engine.params
+        
+        gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
+        gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
+
+        self.assertTrue(gmf_calculator1 == gmf_calculator2)
