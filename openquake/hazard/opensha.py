@@ -171,16 +171,20 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    def do_hazard(self, site_list, serializer=None):
-        """Trigger hazard curve calculations, serialize as needed.
+    def do_hazard(self, sites, serializer=None):
+        """Trigger the calculation of hazard curves, serialize as requested.
 
-        :param site_list: The list of sites for which to calculate hazard
-            curves.
-        :type site_list: XXX
-        :param serializer: A callable that serializes the calculated hazard
-            curves.
-        :type serializer: A callable that takes a single parameter: a list of
-            kvs keys of the calculated hazard curves.
+        The calculated hazard curves will only be serialized if the
+        `serializer` parameter is not `None`.
+
+        :param sites: The sites for which to calculate hazard curves.
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param serializer: A serializer for the calculated hazard curves,
+            receives the KVS keys of the calculated hazard curves in
+            its single parameter.
+        :type serializer: a callable with a single parameter: list of strings
+        :returns: KVS keys of the calculated hazard curves.
+        :rtype: list of string
         """
         results = []
         source_model_generator = random.Random()
@@ -193,7 +197,7 @@ class ClassicalMixin(BasePSHAMixin):
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
         LOG.info('Going to run classical PSHA hazard for %s realizations '\
-                 'and %s sites' % (realizations, len(site_list)))
+                 'and %s sites' % (realizations, len(sites)))
 
         for realization in xrange(0, realizations):
             LOG.info('Calculating hazard curves for realization %s'
@@ -204,8 +208,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
             pending_tasks.append(
-                tasks.compute_hazard_curve.delay(self.id, site_list,
-                    realization))
+                tasks.compute_hazard_curve.delay(self.id, sites, realization))
 
             for task in pending_tasks:
                 task.wait()
@@ -213,10 +216,10 @@ class ClassicalMixin(BasePSHAMixin):
                     raise Exception(task.result)
                 results_per_realization.extend(task.result)
 
-            self.write_hazardcurve_file(results_per_realization)
+            if serializer:
+                serializer(results_per_realization)
             results.extend(results_per_realization)
 
-        del results_per_realization
         return results
 
     def do_mean(self):
