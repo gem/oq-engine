@@ -26,10 +26,11 @@ Includes:
 - hazard maps (only mean and quantile)
 """
 
+from celery.decorators import task
 import json
+import numpy
 import os
 import unittest
-import numpy
 
 from openquake import job
 from openquake import kvs
@@ -1123,3 +1124,75 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
                 self.job_id, site.longitude, site.latitude,
                 str(poe))))
+
+
+class JobCache(object):
+
+    latest_job_id = 0
+    job_cache = dict()
+
+    @staticmethod
+    def register(job):
+        JobCache.latest_job_id += 1
+        JobCache.job_cache[JobCache.latest_job_id] =  job
+        return JobCache.latest_job_id
+
+    @staticmethod
+    def deregister(jid):
+        del JobCache.job_cache[jid]
+
+    @staticmethod
+    def lookup(jid):
+        return JobCache.job_cache.get(jid)
+
+
+@task
+def fake_compute_hazard_curve(job_id, sites, realization):
+    the_job = JobCache.lookup(job_id)
+    keys = the_job.compute_hazard_curve(sites, realization)
+    return keys
+
+
+class DoHazardTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.do_hazard()."""
+
+
+    class FakeLogicTreeProcessor(object):
+        def sampleAndSaveERFTree(self, cache, key, seed):
+            pass
+        def sampleAndSaveGMPETree(self, cache, key, seed):
+            pass
+
+    mocked_results = [
+        'hazard_curve!38cdc377!1!-121.9!38.0',
+        'hazard_curve!38cdc377!1!-121.8!38.0',
+        'hazard_curve!38cdc377!1!-121.7!38.0']
+
+    def fake_compute_hazard_curve(self, site_list, realization):
+        return self.mocked_results
+
+    def setUp(self):
+        self.mixin = opensha.ClassicalMixin(
+            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+        self.mixin.compute_hazard_curve = self.fake_compute_hazard_curve
+        self.mixin.id = JobCache.register(self.mixin)
+        self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2)
+        self.mixin.calc = self.FakeLogicTreeProcessor()
+        self.mixin.cache = dict()
+
+    def tearDown(self):
+        JobCache.deregister(self.mixin.id)
+
+    def test_serializer_called_when_passed(self):
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            self.assertEqual(self.mocked_results, kvs_keys)
+            fake_serializer.number_of_calls += 1
+
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.do_hazard(sites, serializer=fake_serializer,
+                             task=fake_compute_hazard_curve)
+        self.assertEqual(1, fake_serializer.number_of_calls)
