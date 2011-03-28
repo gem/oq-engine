@@ -170,7 +170,7 @@ class ClassicalMixin(BasePSHAMixin):
     params loaded from the Job configuration file."""
 
     def do_hazard(self,
-        sites, serializer=None, task=tasks.compute_hazard_curve):
+        sites, serializer=None, the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
         The calculated hazard curves will only be serialized if the
@@ -182,12 +182,12 @@ class ClassicalMixin(BasePSHAMixin):
             receives the KVS keys of the calculated hazard curves in
             its single parameter.
         :type serializer: a callable with a single parameter: list of strings
-        :param task: The task to use for the hazard curve calculation, it
+        :param the_task: The task to use for the hazard curve calculation, it
             takes the following parameters:
                 * job ID
                 * the sites for which to calculate the hazard curves
                 * the logic tree realization number
-        :type task: a callable taking three parameters
+        :type the_task: a callable taking three parameters
         :returns: KVS keys of the calculated hazard curves.
         :rtype: list of string
         """
@@ -212,7 +212,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            pending_tasks.append(task.delay(self.id, sites, realization))
+            pending_tasks.append(the_task.delay(self.id, sites, realization))
 
             for task in pending_tasks:
                 task.wait()

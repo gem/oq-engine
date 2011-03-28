@@ -36,7 +36,7 @@ from utils import helpers
 
 log = logs.RISK_LOG
 
-EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples')
+EXAMPLE_DIR = os.path.join(helpers.SCHEMA_DIR, 'examples')
 LOSS_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-curves.xml')
 LOSS_RATIO_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-ratio-curves.xml')
 

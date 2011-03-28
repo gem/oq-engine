@@ -57,7 +57,7 @@ class FileProducerTestCase(unittest.TestCase):
 
     def test_iterator_interface(self):
         path = self._make_data_file('test')
-        prod = test.WordProducer(path)
+        prod = helpers.WordProducer(path)
         for ((cell_x, cell_y), data) in prod:
             self.assertEqual(data, 'test%s' % int(cell_x))
 
@@ -65,7 +65,7 @@ class FileProducerTestCase(unittest.TestCase):
         constraint = shapes.RegionConstraint.from_simple((10, 10), (100, 100))
 
         path = self._make_data_file('test')
-        prod = test.WordProducer(path)
+        prod = helpers.WordProducer(path)
 
         # TODO(termie): Right now the bound
         expected = dict(zip(range(10, 101), range(10, 101)))

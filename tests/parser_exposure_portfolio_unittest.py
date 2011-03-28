@@ -39,7 +39,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
+            os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
         ctr = None
 
         # this loop is not expected to be entered - generator should
@@ -60,7 +60,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.15332, 45.12201), (9.15334, 45.12199))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
+            os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result = [
             (shapes.Point(9.15333, 45.12200),
@@ -107,7 +107,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
                 shapes.RegionConstraint.from_simple((9.14776, 45.18000),
                                                     (9.15334, 45.12199))
         ep = exposure.ExposurePortfolioFile(
-            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
+            os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result_ctr = 3
         ctr = None

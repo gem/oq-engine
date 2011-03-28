@@ -37,8 +37,8 @@ class SchemaValidationTestCase(unittest.TestCase):
     """Confirm that all XML examples in docs/schema/examples match schema."""
     
     def setUp(self):
-        self.example_dir = os.path.join(test.SCHEMA_DIR, XML_TEST_DIRECTORY)
-        self.schema_path = os.path.join(test.SCHEMA_DIR, SCHEMA_FILE)
+        self.example_dir = os.path.join(helpers.SCHEMA_DIR, XML_TEST_DIRECTORY)
+        self.schema_path = os.path.join(helpers.SCHEMA_DIR, SCHEMA_FILE)
         
     def test_xml_is_valid(self):
         """Assert that the instance documents in the example directory

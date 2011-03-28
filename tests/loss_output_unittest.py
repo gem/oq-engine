@@ -45,8 +45,8 @@ SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves-single.xml'
 
 LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
-NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 TEST_LOSS_CURVE = shapes.Curve(
     [(0.0, 0.44), (256.0, 0.23), (512.0, 0.2), (832.0, 0.16), (1216.0, 0.06)])
@@ -60,13 +60,13 @@ class LossOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.loss_curve_path = test.get_output_path(LOSS_XML_OUTPUT_FILE)
-        self.loss_ratio_curve_path = test.get_output_path(
+        self.loss_curve_path = helpers.get_output_path(LOSS_XML_OUTPUT_FILE)
+        self.loss_ratio_curve_path = helpers.get_output_path(
             LOSS_RATIO_XML_OUTPUT_FILE)
 
-        self.single_loss_curve_path = test.get_output_path(
+        self.single_loss_curve_path = helpers.get_output_path(
             SINGLE_LOSS_XML_OUTPUT_FILE)
-        self.single_loss_ratio_curve_path = test.get_output_path(
+        self.single_loss_ratio_curve_path = helpers.get_output_path(
             SINGLE_LOSS_RATIO_XML_OUTPUT_FILE)
 
         self.schema_path = NRML_SCHEMA_PATH
@@ -128,7 +128,7 @@ class LossOutputTestCase(unittest.TestCase):
         """Assert that serialization of illegal loss curve data 
         raises error."""
         xml_writer = risk_output.LossCurveXMLWriter(
-            test.get_output_path(LOSS_XML_FAIL_OUTPUT_FILE))
+            helpers.get_output_path(LOSS_XML_FAIL_OUTPUT_FILE))
         self.assertRaises(ValueError, xml_writer.serialize, 
             self.loss_curves_fail)
     

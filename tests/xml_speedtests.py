@@ -62,10 +62,10 @@ class MySAXHandler(saxutils.XMLGenerator):
 class XMLSpeedTestCase(unittest.TestCase):
     """Tests parsing of large xml file using several methods"""
     def setUp(self):
-        self.file = os.path.join(test.DATA_DIR, TEST_FILE)
-        test.guarantee_file(self.file, TEST_FILE_URL)
+        self.file = os.path.join(helpers.DATA_DIR, TEST_FILE)
+        helpers.guarantee_file(self.file, TEST_FILE_URL)
 
-    @test.timeit
+    @helpers.timeit
     def test_lxml_iterparse(self):
         """Displays time and memory used for empty lxml parsing"""
         for _event, _element in etree.iterparse(self.file,
@@ -74,7 +74,7 @@ class XMLSpeedTestCase(unittest.TestCase):
         print guppy.hpy().heap()
     
     @helpers.skipit
-    @test.timeit
+    @helpers.timeit
     def test_native_iterparse(self):
         """Displays time and memory used for empty native parsing"""
         for _event, _element in ElementTree.iterparse(self.file,
@@ -83,7 +83,7 @@ class XMLSpeedTestCase(unittest.TestCase):
             pass
         print guppy.hpy().heap()
     
-    @test.timeit
+    @helpers.timeit
     def test_native_sax(self):
         """Displays time and memory used for empty native sax parsing"""
         handler = MySAXHandler()

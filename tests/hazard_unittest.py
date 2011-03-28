@@ -57,20 +57,20 @@ MEAN_GROUND_INTENSITY = (
     '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
-TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
 with open(
-    test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+    helpers.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
 with open(
-    test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+    helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
-NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 
 def generate_job():
@@ -400,7 +400,7 @@ class HazardEngineTestCase(unittest.TestCase):
             # Spawn our tasks.
             results.append(tasks.generate_erf.apply_async(args=[job_id]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         result_values = self.kvs_client.get_multi(result_keys)
 
@@ -415,7 +415,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_hazard_curve.apply_async(
                 args=[job_id, block_id]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         for result in results:
             for res in result.get():
@@ -436,7 +436,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         for result in results:
             self.assertEqual(mgm_intensity, result.get())
@@ -1126,24 +1126,24 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 str(poe))))
 
 
-class JobCache(object):
+#class JobCache(object):
 
-    latest_job_id = 0
-    job_cache = dict()
+#    latest_job_id = 0
+#    job_cache = dict()
 
-    @staticmethod
-    def register(job):
-        JobCache.latest_job_id += 1
-        JobCache.job_cache[JobCache.latest_job_id] =  job
-        return JobCache.latest_job_id
+#    @staticmethod
+#    def register(job):
+#        JobCache.latest_job_id += 1
+#        JobCache.job_cache[JobCache.latest_job_id] =  job
+#        return JobCache.latest_job_id
 
-    @staticmethod
-    def deregister(jid):
-        del JobCache.job_cache[jid]
+#    @staticmethod
+#    def deregister(jid):
+#        del JobCache.job_cache[jid]
 
-    @staticmethod
-    def lookup(jid):
-        return JobCache.job_cache.get(jid)
+#    @staticmethod
+#    def lookup(jid):
+#        return JobCache.job_cache.get(jid)
 
 
 #@task
@@ -1185,7 +1185,7 @@ class JobCache(object):
 
 #    def test_serializer_called_when_passed(self):
 #        def fake_serializer(kvs_keys):
-#            """Fake serialization function to be used in this test."""
+#            """Fake serialization function to be used in this helpers."""
 #            self.assertEqual(self.mocked_results, kvs_keys)
 #            fake_serializer.number_of_calls += 1
 

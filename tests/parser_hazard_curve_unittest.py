@@ -38,7 +38,7 @@ FILES_KNOWN_TO_FAIL = [
 
 FILE_FLAVOUR_NOT_IMPLEMENTED = 'hazard-map.xml'
 
-EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples')
+EXAMPLE_DIR = os.path.join(helpers.SCHEMA_DIR, 'examples')
 FAIL_EXAMPLE_DIR = os.path.join(EXAMPLE_DIR, 'failures')
 TEST_FILE = os.path.join(EXAMPLE_DIR,
                          'hazard-curves.xml')

@@ -69,7 +69,7 @@ class KVSTestCase(unittest.TestCase):
     
     def _delete_test_file(self):
         try:
-            os.remove(os.path.join(test.DATA_DIR, TEST_FILE))
+            os.remove(os.path.join(helpers.DATA_DIR, TEST_FILE))
         except OSError:
              pass
     
@@ -220,7 +220,7 @@ class KVSTestCase(unittest.TestCase):
         
         # writing result
         writer = hazard_output.HazardCurveXMLWriter(
-                os.path.join(test.DATA_DIR, TEST_FILE))
+                os.path.join(helpers.DATA_DIR, TEST_FILE))
 
         writer.serialize(nrmls)
         
@@ -229,7 +229,7 @@ class KVSTestCase(unittest.TestCase):
                 (1.5, 1.5), (2.5, 0.5))
 
         reader = hazard_parser.NrmlFile(
-                os.path.join(test.DATA_DIR, TEST_FILE))
+                os.path.join(helpers.DATA_DIR, TEST_FILE))
         
         number_of_curves = 0
 
