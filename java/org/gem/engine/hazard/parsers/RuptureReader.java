@@ -219,6 +219,11 @@ public class RuptureReader
         this.gridSpacing = gridSpacing;
     }
 
+    public RuptureReader(String path, double gridSpacing)
+    {
+        this(new File(path), gridSpacing);
+    }
+
     /**
      * Reads the document and returns the rupture object.
      * 

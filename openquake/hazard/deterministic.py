@@ -21,6 +21,10 @@ This module performs hazard calculations using the deterministic
 event based approach.
 """
 
+import os
+import math
+import jpype
+
 from openquake import java
 from openquake import kvs
 from openquake import shapes
@@ -65,7 +69,77 @@ class DeterministicEventBasedMixin:
     def compute_ground_motion_field(self):
         """Compute the ground motion field for the entire region."""
         
-        pass
+        rupture = self._load_rupture_model()
+        gmpe = self._load_gmpe()
+
+        calculator = java.jclass("GMFCalculator")(gmpe, rupture, self._sites())
+        random_generator = java.jclass("Random")(int(self.params["GMF_RANDOM_SEED"]))
+
+        if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
+            return calculator.getUncorrelatedGroundMotionField(
+                random_generator)
+        else:
+            return calculator.getCorrelatedGroundMotionField_JB2009(
+                random_generator)
+
+    def _sites(self):
+        sites = java.jclass("ArrayList")()
+
+# TODO (ac): Refactoring, already coded in opensha.py
+        for site in self.sites_for_region():
+            jsite = site.to_java()
+            
+            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
+            vs30.setValue(float(self.params["REFERENCE_VS30_VALUE"]))
+            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
+
+            depth25.setValue(float(
+                    self.params["REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM"]))
+
+            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
+            sadigh.setValue(self.params["SADIGH_SITE_TYPE"])
+
+            jsite.addParameter(vs30)
+            jsite.addParameter(depth25)
+            jsite.addParameter(sadigh)
+
+            sites.add(jsite)
+
+        return sites
+
+    def _load_rupture_model(self):
+        """Load the rupture model specified in the configuration file."""
+        
+        rel_path = self.params["SINGLE_RUPTURE_MODEL"]
+        abs_path = os.path.join(self.params["BASE_PATH"], rel_path)
+        grid_spacing = self.params["REGION_GRID_SPACING"]
+
+        return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
+
+    def _load_gmpe(self):
+        """Load the ground motion prediction equation specified
+        in the configuration file."""
+        
+        deserializer = java.jclass("GMPEDeserializer")()
+        class_name = self.params["GMPE_MODEL_NAME"]
+        
+        gmpe = deserializer.deserialize(
+            java.jclass("JsonPrimitive")(class_name), None, None)
+        
+        tree_data = java.jclass("GmpeLogicTreeData")()
+
+        tree_data.setGmpeParams(
+            self.params["COMPONENT"],
+            self.params["INTENSITY_MEASURE_TYPE"],
+            jpype.JDouble(float(self.params["PERIOD"])),
+            jpype.JDouble(float(self.params["DAMPING"])),
+            self.params["GMPE_TRUNCATION_TYPE"],
+            jpype.JDouble(float(self.params["TRUNCATION_LEVEL"])),
+            self.params["STANDARD_DEVIATION_TYPE"],
+            jpype.JDouble(float(self.params["REFERENCE_VS30_VALUE"])),
+            jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+
+        return gmpe
 
 
 def gmf_to_dict(hashmap):
@@ -84,7 +158,7 @@ def gmf_to_dict(hashmap):
         lat = site.getLocation().getLatitude()
         lon = site.getLocation().getLongitude()
 
-        gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
+        gmv = {"site_lat": lat, "site_lon": lon, "mag": math.exp(mag)}
         yield gmv
 
 

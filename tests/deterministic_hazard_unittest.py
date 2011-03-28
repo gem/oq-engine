@@ -66,7 +66,16 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.engine.params["REGION_GRID_SPACING"] = 0.1
         self.engine.params[NUMBER_OF_CALC_KEY] = "1"
 
+# TODO (ac): Makes this clearer!
+        self.default = \
+            det.DeterministicEventBasedMixin.compute_ground_motion_field
+
         kvs.flush()
+
+# TODO (ac): Makes this clearer!
+    def tearDown(self):
+        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+            self.default
 
     def test_triggered_with_deterministic_calculation_mode(self):
         """The deterministic calculator is triggered.
@@ -170,5 +179,4 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         pass
 
     def test_simple_computation_using_the_java_calculator(self):
-        pass
-
+        self.engine.launch()
