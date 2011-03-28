@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:gml="http://www.opengis.net/gml"
-    xmlns:nrml="http://openquake.org/xmlns/nrml/0.2" xmlns="http://openquake.org/xmlns/nrml/0.2"
-    targetNamespace="http://openquake.org/xmlns/nrml/0.2" elementFormDefault="qualified"
-    xml:lang="en">
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
+           xmlns="http://openquake.org/xmlns/nrml/0.2"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+           elementFormDefault="qualified"
+           xml:lang="en">
 
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
-    <xs:include schemaLocation="nrml_common.xsd"/>
+	<xs:include schemaLocation="nrml_common.xsd"/>
 
     <!-- ============================================================= -->
-
+    
     <xs:complexType name="AssetValue">
         <xs:simpleContent>
             <xs:extension base="NonNegativeDoubleType">
@@ -18,57 +21,54 @@
     </xs:complexType>
 
     <!-- ============================================================= -->
-
+    
     <xs:simpleType name="AssetCategory">
         <xs:restriction base="xs:string">
             <xs:enumeration value="population"/>
             <xs:enumeration value="buildings"/>
         </xs:restriction>
     </xs:simpleType>
-
+    
     <xs:simpleType name="LossCategory">
         <xs:restriction base="xs:string">
             <xs:enumeration value="fatalities"/>
             <xs:enumeration value="economic_loss"/>
         </xs:restriction>
     </xs:simpleType>
-
+    
     <xs:simpleType name="AssetValueUnit">
         <xs:restriction base="xs:string">
             <xs:enumeration value="USD"/>
             <xs:enumeration value="EUR"/>
         </xs:restriction>
     </xs:simpleType>
-
+    
     <!-- ============================================================= -->
-
+    
     <xs:complexType name="DiscreteVulnerabilitySet">
         <xs:sequence>
             <xs:element name="IML" type="IMLType"/>
-            <xs:element name="discreteVulnerability" type="DiscreteVulnerability" minOccurs="1"
-                maxOccurs="unbounded"/>
+            <xs:element name="discreteVulnerability" type="DiscreteVulnerability" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="vulnerabilitySetID" type="xs:string" use="required"/>
         <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
         <xs:attribute name="lossCategory" type="LossCategory" use="required"/>
     </xs:complexType>
-
+    
     <xs:complexType name="DiscreteVulnerability">
         <xs:sequence>
             <xs:element name="lossRatio" type="NormalizedDoubleList"/>
             <xs:element name="coefficientsVariation" type="gml:doubleList"/>
         </xs:sequence>
         <xs:attribute name="vulnerabilityFunctionID" type="xs:string" use="required"/>
-        <xs:attribute name="probabilisticDistribution" type="ProbabilisticDistributionType"
-            use="required"/>
+        <xs:attribute name="probabilisticDistribution" type="ProbabilisticDistributionType" use="required"/>
     </xs:complexType>
 
     <!-- ============================================================= -->
 
     <xs:complexType name="LossRatioCurve">
         <xs:sequence>
-            <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0"
-                maxOccurs="unbounded"/>
+            <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="endBranchLabel" type="xs:string"/>
@@ -94,6 +94,8 @@
         </xs:sequence>
     </xs:complexType>
 
+
+
     <!-- GML substitution groups -->
 
     <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
@@ -108,7 +110,7 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
+    
     <xs:element name="lossCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
     <xs:element name="lossRatioCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="AssetList">
@@ -120,9 +122,8 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
-    <xs:element name="_abstractAsset" type="FieldNode" substitutionGroup="gml:_Feature"
-        abstract="true"/>
+    
+    <xs:element name="_abstractAsset" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
 
     <xs:element name="asset" type="Asset" substitutionGroup="_abstractAsset"/>
     <xs:complexType name="Asset">
@@ -132,12 +133,14 @@
                     <xs:choice minOccurs="0" maxOccurs="2">
                         <xs:element name="lossRatioCurves" type="LossRatioCurves"/>
                         <xs:element name="lossCurves" type="LossCurves"/>
+                        <xs:element name="MeanLossValue" minOccurs="0" maxOccurs="unbounded" type="xs:string"/>
+                        <xs:element name="StandardDeviationValue"  minOccurs="0" maxOccurs="unbounded" type="xs:string"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
+    
     <xs:element name="assetDefinition" type="AssetDefinition" substitutionGroup="_abstractAsset"/>
     <xs:complexType name="AssetDefinition">
         <xs:complexContent>
@@ -151,7 +154,8 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
+    
+    <xs:element name="lossMap" type="AssetList" substitutionGroup="gml:_Feature"/>
     <!-- child elements of nrml -->
     <xs:element name="riskResult" type="RiskResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="RiskResult">
@@ -162,7 +166,6 @@
                     <xs:choice>
                         <xs:element ref="lossCurveList"/>
                         <xs:element ref="lossRatioCurveList"/>
-                        <xs:element ref="LossMap"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
@@ -180,7 +183,7 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-
+    
     <xs:element name="vulnerabilityModel" type="VulnerabilityModel"/>
     <xs:complexType name="VulnerabilityModel">
         <xs:sequence>
@@ -192,42 +195,4 @@
         </xs:sequence>
     </xs:complexType>
 
-    <xs:complexType name="LossMapType">
-        <xs:complexContent>
-            <xs:extension base="FieldNode">
-                <xs:sequence>
-                    <xs:element ref="LMNode"/>
-                </xs:sequence>
-                <xs:attribute name="LossType" type="xs:string"/>
-                <xs:attribute name="endBranchLabel" type="xs:string"/>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-    <xs:element name="LMNode" substitutionGroup="fieldNode" type="LMNodeType"/>
-    <xs:element name="LossMap" type="LossMapType"/>
-    <xs:complexType name="LMNodeType">
-        <xs:complexContent>
-            <xs:extension base="LMFieldNode">
-                <xs:sequence>
-                    <xs:element name="LossValue" type="xs:double"/>
-                    <xs:element name="StandardDeviationValue" type="xs:double"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-    <xs:complexType name="LMFieldNode">
-        <xs:complexContent>
-            <xs:restriction base="FieldNode">
-                <xs:sequence>
-                    <xs:element ref="LMSite"/>
-                </xs:sequence>
-            </xs:restriction>
-        </xs:complexContent>
-    </xs:complexType>
-    <xs:element name="LMSite" substitutionGroup="site" type="LMSiteType"/>
-    <xs:complexType name="LMSiteType">
-        <xs:complexContent>
-            <xs:extension base="gml:PointPropertyType"> </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
 </xs:schema>
