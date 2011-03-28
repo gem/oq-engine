@@ -29,9 +29,10 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.hazard import job
+from openquake.hazard.opensha import BasePSHAMixin
 
 
-class DeterministicEventBasedMixin:
+class DeterministicEventBasedMixin(BasePSHAMixin):
     """Deterministic Event Based method for performing hazard calculations.
 
     Note that this mixin, during execution, will always be an instance of the
@@ -45,7 +46,9 @@ class DeterministicEventBasedMixin:
             gmf = self.compute_ground_motion_field()
 
 # TODO (ac): Add doc, saying that we might store multiple sites for each key
-            for gmv in gmf_to_dict(gmf):
+            for gmv in gmf_to_dict(
+                gmf, self.params["INTENSITY_MEASURE_TYPE"]):
+
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
 
                 kvs.set_value_json_encoded(
@@ -72,7 +75,8 @@ class DeterministicEventBasedMixin:
         rupture = self._load_rupture_model()
         gmpe = self._load_gmpe()
 
-        calculator = java.jclass("GMFCalculator")(gmpe, rupture, self._sites())
+        sites = self.parameterize_sites(self.sites_for_region())
+        calculator = java.jclass("GMFCalculator")(gmpe, rupture, sites)
         random_generator = java.jclass("Random")(int(self.params["GMF_RANDOM_SEED"]))
 
         if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
@@ -81,31 +85,6 @@ class DeterministicEventBasedMixin:
         else:
             return calculator.getCorrelatedGroundMotionField_JB2009(
                 random_generator)
-
-    def _sites(self):
-        sites = java.jclass("ArrayList")()
-
-# TODO (ac): Refactoring, already coded in opensha.py
-        for site in self.sites_for_region():
-            jsite = site.to_java()
-            
-            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
-            vs30.setValue(float(self.params["REFERENCE_VS30_VALUE"]))
-            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-
-            depth25.setValue(float(
-                    self.params["REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM"]))
-
-            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
-            sadigh.setValue(self.params["SADIGH_SITE_TYPE"])
-
-            jsite.addParameter(vs30)
-            jsite.addParameter(depth25)
-            jsite.addParameter(sadigh)
-
-            sites.add(jsite)
-
-        return sites
 
     def _load_rupture_model(self):
         """Load the rupture model specified in the configuration file."""
@@ -142,7 +121,7 @@ class DeterministicEventBasedMixin:
         return gmpe
 
 
-def gmf_to_dict(hashmap):
+def gmf_to_dict(hashmap, intensity_measure_type):
     """Transform the ground motion field as returned by the java
     calculator into a simple dict.
 
@@ -155,10 +134,14 @@ def gmf_to_dict(hashmap):
 
     for site in hashmap.keySet():
         mag = hashmap.get(site).doubleValue()
+
+        if intensity_measure_type.lower() != "mmi":
+            mag = math.exp(mag)
+
         lat = site.getLocation().getLatitude()
         lon = site.getLocation().getLongitude()
 
-        gmv = {"site_lat": lat, "site_lon": lon, "mag": math.exp(mag)}
+        gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
         yield gmv
 
 

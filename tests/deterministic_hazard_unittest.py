@@ -22,6 +22,7 @@ This module tests the hazard side of the deterministic
 event based calculation.
 """
 
+import math
 import numpy
 import unittest
 
@@ -161,7 +162,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         hashmap.put(site2, 0.2)
         hashmap.put(site3, 0.3)
 
-        gmf_as_dict = det.gmf_to_dict(hashmap)
+        gmf_as_dict = det.gmf_to_dict(hashmap, "MMI")
 
         for gmv in gmf_as_dict:
             self.assertTrue(gmv["mag"] in (0.1, 0.2, 0.3))
@@ -180,3 +181,37 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
     def test_simple_computation_using_the_java_calculator(self):
         self.engine.launch()
+# TODO (ac): asserts
+
+    def test_when_measure_type_is_not_mmi_exp_is_stored(self):
+        location = java.jclass("Location")(1.0, 2.0)
+        site = java.jclass("Site")(location)
+
+        hashmap = java.jclass("HashMap")()
+        hashmap.put(site, 0.1)
+
+        for gmv in det.gmf_to_dict(hashmap, "PGA"):
+            self.assertEqual(math.exp(0.1), gmv["mag"])
+            self.assertEqual(2.0, gmv["site_lon"])
+            self.assertEqual(1.0, gmv["site_lat"])
+
+    def test_when_measure_type_is_mmi_we_store_as_is(self):
+        location = java.jclass("Location")(1.0, 2.0)
+        site = java.jclass("Site")(location)
+
+        hashmap = java.jclass("HashMap")()
+        hashmap.put(site, 0.1)
+
+        for gmv in det.gmf_to_dict(hashmap, "MMI"):
+            self.assertEqual(0.1, gmv["mag"])
+            self.assertEqual(2.0, gmv["site_lon"])
+            self.assertEqual(1.0, gmv["site_lat"])
+
+    def test_loads_the_rupture_model(self):
+        pass
+
+    def test_loads_the_gmpe(self):
+        pass
+    
+    def test_the_same_calculator_is_used_between_multiple_invocations(self):
+        pass
