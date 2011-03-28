@@ -222,12 +222,6 @@ class ClassicalMixin(BasePSHAMixin):
 
         return results
 
-    def do_mean(self):
-        pass
-
-    def do_quantile(self):
-        pass
-
     @preload
     def execute(self):
 
