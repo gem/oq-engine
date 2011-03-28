@@ -31,7 +31,7 @@ from xml.sax import saxutils
 import guppy
 from lxml import etree
 
-from utils import test
+from utils import helpers
 from openquake import flags
 FLAGS = flags.FLAGS
 
@@ -73,7 +73,7 @@ class XMLSpeedTestCase(unittest.TestCase):
             pass
         print guppy.hpy().heap()
     
-    @test.skipit
+    @helpers.skipit
     @test.timeit
     def test_native_iterparse(self):
         """Displays time and memory used for empty native parsing"""

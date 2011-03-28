@@ -55,10 +55,10 @@ WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
 
 
-def do_test_file(file_name):
+def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
-def do_test_output_file(file_name):
+def get_output_path(file_name):
     return os.path.join(OUTPUT_DIR, file_name)
 
 def smoketest_file(file_name):

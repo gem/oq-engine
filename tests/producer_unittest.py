@@ -26,7 +26,7 @@ import tempfile
 
 from openquake import producer
 from openquake import shapes
-from utils import test
+from utils import helpers
 
 
 def generate_data(prefix):

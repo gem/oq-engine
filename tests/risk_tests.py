@@ -25,7 +25,7 @@ import unittest
 from openquake import job
 from openquake import kvs
 from openquake import shapes
-from utils import test
+from utils import helpers
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin

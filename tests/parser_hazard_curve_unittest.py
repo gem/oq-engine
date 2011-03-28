@@ -24,7 +24,7 @@ import os
 import unittest
 
 from openquake import shapes
-from utils import test
+from utils import helpers
 from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
@@ -55,7 +55,7 @@ class NrmlFileTestCase(unittest.TestCase):
 
             self.assertRaises(ValueError, map, None, nrml_element)
 
-    @test.skipit
+    @helpers.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
         nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR,

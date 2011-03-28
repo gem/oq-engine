@@ -27,7 +27,7 @@ from openquake import shapes
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.parser import exposure
-from utils import test
+from utils import helpers
 
 
 TEST_FILE = "exposure-portfolio.xml"

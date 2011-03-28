@@ -29,7 +29,7 @@ from openquake import logs
 from openquake import kvs
 from openquake import settings
 from openquake import shapes
-from utils import test
+from utils import helpers
 from openquake import settings
 
 from openquake.kvs import reader
@@ -206,7 +206,7 @@ class KVSTestCase(unittest.TestCase):
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
 
-    @test.skipit
+    @helpers.skipit
     def test_end_to_end_from_kvs_to_nrml(self):
         # storing in kvs from java side
         self.java_client.set("KEY", ONE_CURVE_MODEL)

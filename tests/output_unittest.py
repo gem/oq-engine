@@ -37,7 +37,7 @@ import copy
 from osgeo import gdal, gdalconst
 
 from openquake import shapes
-from utils import test
+from utils import helpers
 from openquake.output import geotiff, curve, cpt
 
 # we define some test regions which have a lower-left corner at 0.0/0.0
@@ -132,7 +132,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_discrete_colorscale_custom_bins(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
         discrete colorscale based on IML values, with custom IML."""
-        path = test.do_test_output_file(
+        path = test.get_output_path(
             GEOTIFF_FILENAME_DISCRETE_CUSTOMBIN_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
@@ -152,7 +152,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_discrete_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
         discrete colorscale based on IML values, with default IML."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_DISCRETE_COLORSCALE)
+        path = test.get_output_path(GEOTIFF_FILENAME_DISCRETE_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
@@ -169,7 +169,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_multisegment_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
         multisegment colorscale."""
-        path = test.do_test_output_file(
+        path = test.get_output_path(
             GEOTIFF_FILENAME_MULTISEGMENT_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
@@ -187,7 +187,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_nondefault_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF. Use
         alternative colorscale."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_NONDEFAULT_COLORSCALE)
+        path = test.get_output_path(GEOTIFF_FILENAME_NONDEFAULT_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
@@ -204,7 +204,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_explicit_colorscale_bins(self):
         """Check RGB geotiff generation with colorscale for GMF. Limits
         and bins of colorscale are explicitly given."""
-        path = test.do_test_output_file(
+        path = test.get_output_path(
             GEOTIFF_FILENAME_EXPLICIT_COLORSCALE_BINS)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
@@ -225,7 +225,7 @@ class OutputTestCase(unittest.TestCase):
 
     def test_geotiff_generation_colorscale_cuts(self):
         """Check RGB geotiff generation with colorscale for GMF."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_COLORSCALE_CUTS)
+        path = test.get_output_path(GEOTIFF_FILENAME_COLORSCALE_CUTS)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
@@ -240,7 +240,7 @@ class OutputTestCase(unittest.TestCase):
 
     def test_geotiff_generation_colorscale(self):
         """Check RGB geotiff generation with colorscale for GMF."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_COLORSCALE)
+        path = test.get_output_path(GEOTIFF_FILENAME_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
         gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
@@ -254,7 +254,7 @@ class OutputTestCase(unittest.TestCase):
         gwriter.close()
 
     def test_geotiff_loss_ratio_map_colorscale(self):
-        path = test.do_test_output_file(GEOTIFF_LOSS_RATIO_MAP_COLORSCALE)
+        path = test.get_output_path(GEOTIFF_LOSS_RATIO_MAP_COLORSCALE)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
@@ -278,8 +278,8 @@ class OutputTestCase(unittest.TestCase):
         file contains data for several sites.
         For each site, a separate SVG file is created."""
 
-        path = test.do_test_output_file(LOSS_RATIO_CURVE_PLOT_FILENAME)
-        loss_ratio_curve_path = test.do_test_file(
+        path = test.get_output_path(LOSS_RATIO_CURVE_PLOT_FILENAME)
+        loss_ratio_curve_path = test.get_data_path(
             LOSS_RATIO_CURVE_PLOT_INPUTFILE)
 
         plotter = curve.RiskCurvePlotter(path, loss_ratio_curve_path,
@@ -301,8 +301,8 @@ class OutputTestCase(unittest.TestCase):
         file contains data for several sites.
         For each site, a separate SVG file is created."""
 
-        path = test.do_test_output_file(LOSS_CURVE_PLOT_FILENAME)
-        loss_curve_path = test.do_test_file(LOSS_CURVE_PLOT_INPUTFILE)
+        path = test.get_output_path(LOSS_CURVE_PLOT_FILENAME)
+        loss_curve_path = test.get_data_path(LOSS_CURVE_PLOT_INPUTFILE)
 
         plotter = curve.RiskCurvePlotter(path, loss_curve_path, mode='loss',
             curve_title="This is a test loss curve")
@@ -323,8 +323,8 @@ class OutputTestCase(unittest.TestCase):
         file contains data for several sites.
         For each site, a separate SVG file is created."""
 
-        path = test.do_test_output_file(LOSS_CURVE_PLOT_FILENAME)
-        loss_curve_path = test.do_test_file(LOSS_CURVE_PLOT_INPUTFILE)
+        path = test.get_output_path(LOSS_CURVE_PLOT_FILENAME)
+        loss_curve_path = test.get_data_path(LOSS_CURVE_PLOT_INPUTFILE)
 
         plotter = curve.RiskCurvePlotter(path, loss_curve_path, mode='loss',
             curve_title="This is a test loss curve", render_multi=True)
@@ -353,7 +353,7 @@ class OutputTestCase(unittest.TestCase):
                  'curve_title': 'Hazard Curve',
                  'Site': test_site}}
 
-        path = test.do_test_output_file(HAZARDCURVE_PLOT_SIMPLE_FILENAME)
+        path = test.get_output_path(HAZARDCURVE_PLOT_SIMPLE_FILENAME)
         plot = curve.CurvePlot(path)
         plot.write(test_hc_data)
         plot.close()
@@ -367,8 +367,8 @@ class OutputTestCase(unittest.TestCase):
         file contains data for several sites, and several end branches of
         the logic tree. For each site, a separate SVG file is created."""
 
-        path = test.do_test_output_file(HAZARDCURVE_PLOT_FILENAME)
-        hazardcurve_path = test.do_test_file(HAZARDCURVE_PLOT_INPUTFILE)
+        path = test.get_output_path(HAZARDCURVE_PLOT_FILENAME)
+        hazardcurve_path = test.get_data_path(HAZARDCURVE_PLOT_INPUTFILE)
 
         plotter = curve.HazardCurvePlotter(path, hazardcurve_path,
             curve_title='Example Hazard Curves')
@@ -389,7 +389,7 @@ class OutputTestCase(unittest.TestCase):
     def test_geotiff_generation_and_metadata_validation(self):
         """Create a GeoTIFF, and check if it has the
         correct metadata."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_WITHOUT_NUMBER)
+        path = test.get_output_path(GEOTIFF_FILENAME_WITHOUT_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.LossMapGeoTiffFile(
             path, smallregion.grid, normalize=False)
@@ -401,7 +401,7 @@ class OutputTestCase(unittest.TestCase):
         """Create a GeoTIFF with a number in its filename. This
         test has been written because it has been reported that numbers in the
         filename do not work."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_WITH_NUMBER)
+        path = test.get_output_path(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.LossMapGeoTiffFile(
             path, smallregion.grid, normalize=False)
@@ -414,7 +414,7 @@ class OutputTestCase(unittest.TestCase):
         check through metadata if it has been done correctly. We check the
         minumum and maximum values of the band, which are expected to have
         the value of the raster nodes."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_WITH_NUMBER)
+        path = test.get_output_path(GEOTIFF_FILENAME_WITH_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.LossMapGeoTiffFile(
             path, smallregion.grid, init_value=GEOTIFF_TEST_PIXEL_VALUE,
@@ -433,7 +433,7 @@ class OutputTestCase(unittest.TestCase):
         """Create a GeoTIFF and assign values to the raster nodes according
         to a simple function. Then check if the raster values have been set
         correctly."""
-        path = test.do_test_output_file(GEOTIFF_FILENAME_SQUARE_REGION)
+        path = test.get_output_path(GEOTIFF_FILENAME_SQUARE_REGION)
         squareregion = shapes.Region.from_coordinates(TEST_REGION_SQUARE)
         gwriter = geotiff.LossMapGeoTiffFile(
             path, squareregion.grid, normalize=False)
@@ -452,7 +452,7 @@ class OutputTestCase(unittest.TestCase):
         """Create a GeoTIFF and assign values to the raster nodes according
         to a simple function. Use a somewhat larger, non-square region for
         that. Then check if the raster values have been set correctly."""
-        path = test.do_test_output_file(
+        path = test.get_output_path(
             GEOTIFF_FILENAME_LARGE_ASYMMETRIC_REGION)
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
@@ -470,10 +470,10 @@ class OutputTestCase(unittest.TestCase):
         self._assert_geotiff_metadata_and_raster_is_correct(path,
             asymmetric_region, GEOTIFF_USED_CHANNEL_IDX, reference_raster)
 
-    @test.skipit
+    @helpers.skipit
     def test_geotiff_output(self):
         """Generate a geotiff file with a smiley face."""
-        path = test.do_test_file("test.1.tiff")
+        path = test.get_data_path("test.1.tiff")
         switzerland = shapes.Region.from_coordinates(
             [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
         image_grid = switzerland.grid
@@ -829,7 +829,7 @@ class OutputTestCase(unittest.TestCase):
         These tests assume that the default color map is used.
         """
         def _test_hazard_map_fixed_scaling(region, hm_data):
-            path = test.do_test_output_file(
+            path = test.get_output_path(
                 'TEST_HAZARD_MAP_fixed_scaling.tiff')
 
             # expected colors for each pixel in the map:
@@ -869,7 +869,7 @@ class OutputTestCase(unittest.TestCase):
 
 
         def _test_hazard_map_relative_scaling(region, hm_data):
-            path = test.do_test_output_file(
+            path = test.get_output_path(
                 'TEST_HAZARD_MAP_relative_scaling.tiff')
 
             # expected colors for each pixel in the map:
