@@ -2,7 +2,7 @@
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
+REGION_VERTEX = 38.0, -122.2, 38.0, -121.7, 37.5, -121.7, 37.5, -122.2
 # degrees
 REGION_GRID_SPACING = 0.02
 
@@ -12,6 +12,12 @@ REGION_GRID_SPACING = 0.02
 OUTPUT_DIR = computed_output
 
 HAZARD_CALCULATION_MODE = Deterministic
+
+GMPE_MODEL_NAME = BA_2008_AttenRel
+
+NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATION = 5
+
+GMF_RANDOM_SEED = 3
 
 [RISK]
 

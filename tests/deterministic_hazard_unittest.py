@@ -32,10 +32,24 @@ from openquake import kvs
 from openquake import job
 from openquake import flags
 
-from openquake.hazard import deterministic
+from openquake.hazard import deterministic as det
 
 DETERMINISTIC_SMOKE_TEST = test.smoketest_file("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
+
+
+def compute_ground_motion_field(self):
+    """Stubbed version of the method that computes the ground motion
+    field calling java stuff."""
+
+    hashmap = java.jclass("HashMap")()
+
+    for site in self.sites_for_region():
+        location = java.jclass("Location")(site.latitude, site.longitude)
+        site = java.jclass("Site")(location)
+        hashmap.put(site, 0.5)
+
+    return hashmap
 
 
 class DeterministicEventBasedTestCase(unittest.TestCase):
@@ -62,6 +76,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         based calculator is triggered.
         """
 
+        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+            compute_ground_motion_field
+
         # True, True means that both mixins (hazard and risk) are triggered
         self.assertEqual([True, True], self.engine.launch())
 
@@ -71,6 +88,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         For each site in the region, a ground motion value is store
         in the underlying kvs system.
         """
+
+        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+            compute_ground_motion_field
 
         self.engine.launch()
 
@@ -94,6 +114,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         calls the computation of the values for the entire region
         multiple times.
         """
+
+        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+            compute_ground_motion_field
 
         self.engine.params[NUMBER_OF_CALC_KEY] = "3"
         self.engine.launch()
@@ -129,7 +152,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         hashmap.put(site2, 0.2)
         hashmap.put(site3, 0.3)
 
-        gmf_as_dict = deterministic.gmf_to_dict(hashmap)
+        gmf_as_dict = det.gmf_to_dict(hashmap)
 
         for gmv in gmf_as_dict:
             self.assertTrue(gmv["mag"] in (0.1, 0.2, 0.3))
@@ -148,3 +171,4 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
     def test_simple_computation_using_the_java_calculator(self):
         pass
+

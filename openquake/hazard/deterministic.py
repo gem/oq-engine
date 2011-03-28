@@ -61,19 +61,11 @@ class DeterministicEventBasedMixin:
 
         return value
 
-# TODO (ac): Stubbed for now, needs to call the java calculator
 # TODO (ac): Add doc, saying that there's no way to split the computation
     def compute_ground_motion_field(self):
         """Compute the ground motion field for the entire region."""
-
-        hashmap = java.jclass("HashMap")()
-
-        for site in self.sites_for_region():
-            location = java.jclass("Location")(site.latitude, site.longitude)
-            site = java.jclass("Site")(location)
-            hashmap.put(site, 0.5)
-
-        return hashmap
+        
+        pass
 
 
 def gmf_to_dict(hashmap):
