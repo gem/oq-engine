@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+	xmlns="http://openquake.org/xmlns/nrml/0.2" gml:id="n1">
+
+	<pointRupture gml:id="pr_1">
+		<magnitude type="Mw">6.5</magnitude>
+		<tectonicRegion>Active Shallow Crust</tectonicRegion>
+
+		<focalMechanism publicID="smi:local/1">
+			<qml:nodalPlanes>
+				<qml:nodalPlane1>
+					<qml:strike>
+						<qml:value>20.0</qml:value>
+					</qml:strike>
+					<qml:dip>
+						<qml:value>90.0</qml:value>
+					</qml:dip>
+					<qml:rake>
+						<qml:value>10.0</qml:value>
+					</qml:rake>
+				</qml:nodalPlane1>
+			</qml:nodalPlanes>
+		</focalMechanism>
+
+		<hypocenterLocation>
+			<gml:Point srsName="urn:ogc:def:crs:EPSG::4979">
+				<gml:pos>-124.704 40.363 30.0</gml:pos>
+			</gml:Point>
+		</hypocenterLocation>
+	</pointRupture>
+</nrml>
