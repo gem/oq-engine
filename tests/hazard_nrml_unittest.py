@@ -25,7 +25,7 @@ import unittest
 
 from lxml import etree
 
-from utils import helpers
+from tests.utils import helpers
 from openquake import shapes
 from openquake import xml
 

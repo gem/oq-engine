@@ -25,7 +25,7 @@ import unittest
 import sys
 
 from openquake import shapes
-from utils import helpers
+from tests.utils import helpers
 from openquake import job
 from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG

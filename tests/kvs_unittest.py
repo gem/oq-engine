@@ -29,7 +29,7 @@ from openquake import logs
 from openquake import kvs
 from openquake import settings
 from openquake import shapes
-from utils import helpers
+from tests.utils import helpers
 from openquake import settings
 
 from openquake.kvs import reader

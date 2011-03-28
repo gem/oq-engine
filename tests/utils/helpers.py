@@ -156,4 +156,39 @@ def wait_for_celery_tasks(celery_results,
             raise RuntimeError, "wait too long for celery worker threads"
 
         time.sleep(wait_time)
-    
+
+
+class TestStore(object):
+    """Simple cache of objects."""
+
+    _last_obj_id = 0
+    _store = dict()
+
+    @staticmethod
+    def register(obj):
+        """Register an object with the store.
+
+        :param obj: The object to be added to the store.
+        :returns: The ID for the object added.
+        :rtype: integer
+        """
+        TestStore._last_obj_id += 1
+        TestStore._store[TestStore._last_obj_id] =  obj
+        return TestStore._last_obj_id
+
+    @staticmethod
+    def deregister(oid):
+        """Remove object with given identifier from the store.
+
+        :param oid: The identifier associated with the object to be removed.
+        """
+        del TestStore._store[oid]
+
+    @staticmethod
+    def lookup(oid):
+        """Return object associated with `oid` or `None`.
+
+        :param oid: The identifier of the object saught.
+        """
+        return TestStore._store.get(oid)
+

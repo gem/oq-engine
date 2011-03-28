@@ -22,7 +22,7 @@ import os
 import unittest
 import tempfile
 
-from utils import helpers
+from tests.utils import helpers
 from openquake import shapes
 
 from openquake import flags

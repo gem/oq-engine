@@ -32,7 +32,7 @@ from openquake import xml
 
 from openquake.parser import risk as risk_parser
 
-from utils import helpers
+from tests.utils import helpers
 
 log = logs.RISK_LOG
 

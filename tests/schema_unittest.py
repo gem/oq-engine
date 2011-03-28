@@ -25,7 +25,7 @@ import os
 import unittest
 
 from lxml import etree
-from utils import helpers
+from tests.utils import helpers
 from openquake import logs
 
 log = logs.LOG

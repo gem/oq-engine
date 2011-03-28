@@ -37,7 +37,7 @@ import copy
 from osgeo import gdal, gdalconst
 
 from openquake import shapes
-from utils import helpers
+from tests.utils import helpers
 from openquake.output import geotiff, curve, cpt
 
 # we define some test regions which have a lower-left corner at 0.0/0.0

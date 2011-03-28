@@ -18,32 +18,19 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
-Config for all installed OpenGEM binaries and modules.
-Should be installed by setup.py into /etc/openquake 
-eventually.
+Task functions for our unit tests.
 """
 
-import sys
 
-from openquake import flags
-from openquake import java
-flags.FLAGS.capture_java_debug = True
-flags.FLAGS.debug = "warn"
-from openquake import logs
-logs.init_logs()
+from celery.decorators import task
 
-sys.path.append('.')
-
-BROKER_HOST = "localhost"
-BROKER_PORT = 5672
-BROKER_USER = "celeryuser"
-BROKER_PASSWORD = "celery"
-BROKER_VHOST = "celeryvhost"
-
-CELERY_RESULT_BACKEND = "amqp"
+from tests.utils import helpers
 
 
-CELERY_IMPORTS = (
-    "openquake.risk.job", "openquake.hazard.tasks", "tests.utils.tasks")
+@task
+def fake_compute_hazard_curve(job_id, sites, realization):
+    the_job = helpers.TestStore.lookup(job_id)
+    keys = the_job.compute_hazard_curve(sites, realization)
+    return keys
+

@@ -31,7 +31,7 @@ from lxml import etree
 from openquake import logs
 from openquake import shapes
 from openquake import xml
-from utils import helpers
+from tests.utils import helpers
 
 from openquake.output import risk as risk_output
 
