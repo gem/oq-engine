@@ -94,8 +94,6 @@
         </xs:sequence>
     </xs:complexType>
 
-
-
     <!-- GML substitution groups -->
 
     <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
@@ -123,6 +121,43 @@
         </xs:complexContent>
     </xs:complexType>
     
+    <!-- lossMap -->
+
+    <xs:element name="lossMap" type="LossMap" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="LossMap">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="LMNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attribute name="lossCategory" type="LossCategory"/>
+                <xs:attribute name="unit" type="AssetValueUnit"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="LMNode" type="LMNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="LMNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                    <xs:element name="loss" type="LMLossType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="LMLossType">
+        <xs:sequence>
+            <xs:element name="mean" type="NonNegativeDoubleType"/>
+            <xs:element name="stdDev" type="NonNegativeDoubleType"/>
+        </xs:sequence>
+        <xs:attribute name="assetRef" type="xs:ID" use="required"/>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    
     <xs:element name="_abstractAsset" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
 
     <xs:element name="asset" type="Asset" substitutionGroup="_abstractAsset"/>
@@ -133,8 +168,6 @@
                     <xs:choice minOccurs="0" maxOccurs="2">
                         <xs:element name="lossRatioCurves" type="LossRatioCurves"/>
                         <xs:element name="lossCurves" type="LossCurves"/>
-                        <xs:element name="MeanLossValue" minOccurs="0" maxOccurs="unbounded" type="xs:string"/>
-                        <xs:element name="StandardDeviationValue"  minOccurs="0" maxOccurs="unbounded" type="xs:string"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
@@ -155,7 +188,6 @@
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:element name="lossMap" type="AssetList" substitutionGroup="gml:_Feature"/>
     <!-- child elements of nrml -->
     <xs:element name="riskResult" type="RiskResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="RiskResult">
@@ -166,6 +198,7 @@
                     <xs:choice>
                         <xs:element ref="lossCurveList"/>
                         <xs:element ref="lossRatioCurveList"/>
+                        <xs:element ref="lossMap"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
