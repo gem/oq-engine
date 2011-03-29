@@ -129,7 +129,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
         rel_path = self.params["SINGLE_RUPTURE_MODEL"]
         abs_path = os.path.join(self.params["BASE_PATH"], rel_path)
-        grid_spacing = self.params["REGION_GRID_SPACING"]
+        grid_spacing = float(self.params["REGION_GRID_SPACING"])
 
         return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
 
