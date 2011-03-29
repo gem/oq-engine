@@ -69,7 +69,8 @@ with open(
     TEST_GMPE_MODEL = f.read()
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH_OLD = \
+    os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 
 def generate_job():
@@ -1135,6 +1136,7 @@ class DoHazardTestCase(unittest.TestCase):
         """
         def sampleAndSaveERFTree(self, cache, key, seed):
             pass
+
         def sampleAndSaveGMPETree(self, cache, key, seed):
             pass
 
@@ -1172,4 +1174,3 @@ class DoHazardTestCase(unittest.TestCase):
         self.mixin.do_hazard(sites, serializer=fake_serializer,
                              the_task=test_data_reflector_task)
         self.assertEqual(2, fake_serializer.number_of_calls)
-
