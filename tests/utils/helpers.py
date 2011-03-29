@@ -195,15 +195,25 @@ class TestStore(object):
         return TestStore._conn.incr('the-key', amount=1)
 
     @staticmethod
-    def register(obj):
-        """Register an object with the store.
+    def add(obj):
+        """Add an object to the store and return the key chosen.
 
         :param obj: The object to be added to the store.
         :returns: The identifier of the object added.
         :rtype: integer
         """
         TestStore.open()
-        key = TestStore.nextkey()
+        return TestStore.put(TestStore.nextkey(), obj)
+
+    @staticmethod
+    def put(key, obj):
+        """Add an object to the store and associate it with the given `key`.
+
+        :param key: The key for the object to be added to the store.
+        :param obj: The object to be added to the store.
+        :returns: The `key` given.
+        """
+        TestStore.open()
         if isinstance(obj, list) or isinstance(obj, tuple):
             for elem in obj:
                 TestStore._conn.rpush(key, elem)
@@ -212,7 +222,7 @@ class TestStore(object):
         return key
 
     @staticmethod
-    def deregister(oid):
+    def remove(oid):
         """Remove object with given identifier from the store.
 
         :param oid: The identifier associated with the object to be removed.

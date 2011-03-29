@@ -44,7 +44,7 @@ from openquake.hazard import opensha
 import openquake.hazard.job
 
 from tests.utils import helpers
-from tests.utils.tasks import test_data_reflector_task
+from tests.utils.tasks import test_compute_hazard_curve
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
@@ -1126,8 +1126,12 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 str(poe))))
 
 
-class DoHazardTestCase(unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_hazard()."""
+class DoCurvesTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.curves()."""
+
+    def __init__(self, *args, **kwargs):
+        super(DoCurvesTestCase, self).__init__(*args, **kwargs)
+        self.keys = []
 
     class FakeLogicTreeProcessor(object):
         """
@@ -1141,15 +1145,27 @@ class DoHazardTestCase(unittest.TestCase):
             pass
 
     mocked_results = [
-        'hazard_curve!38cdc377!1!-121.9!38.0',
-        'hazard_curve!38cdc377!1!-121.8!38.0',
-        'hazard_curve!38cdc377!1!-121.7!38.0']
+        [
+            'hazard_curve!38cdc377!1!-121.9!38.0',
+            'hazard_curve!38cdc377!1!-121.8!38.0',
+            'hazard_curve!38cdc377!1!-121.7!38.0'],
+        [
+            'hazard_curve!38cdc377!2!-121.9!38.0',
+            'hazard_curve!38cdc377!2!-121.8!38.0',
+            'hazard_curve!38cdc377!2!-121.7!38.0']]
 
     def setUp(self):
+
         self.mixin = opensha.ClassicalMixin(
             job.Job(dict()), opensha.ClassicalMixin, "hazard")
         # Store the canned result data in the KVS.
-        self.mixin.id = helpers.TestStore.register(self.mocked_results)
+        key = self.mixin.id = helpers.TestStore.nextkey()
+        self.keys.append(key)
+        for realization in xrange(2):
+            key = "%s/%s" % (self.mixin.id, realization+1)
+            helpers.TestStore.put(key, self.mocked_results[realization])
+            self.keys.append(key)
+        LOG.debug("keys = '%s'" % self.keys)
         # Initialize the mixin instance.
         self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2)
         self.mixin.calc = self.FakeLogicTreeProcessor()
@@ -1157,20 +1173,24 @@ class DoHazardTestCase(unittest.TestCase):
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
-        helpers.TestStore.deregister(self.mixin.id)
+        for key in self.keys:
+            helpers.TestStore.remove(key)
 
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
-            self.assertEqual(self.mocked_results, kvs_keys)
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            self.assertEqual(
+                self.mocked_results[fake_serializer.number_of_calls], kvs_keys)
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.do_hazard(sites, serializer=fake_serializer,
-                             the_task=test_data_reflector_task)
+        self.mixin.do_curves(sites, serializer=fake_serializer,
+                             the_task=test_compute_hazard_curve)
         self.assertEqual(2, fake_serializer.number_of_calls)

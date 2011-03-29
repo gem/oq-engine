@@ -36,7 +36,21 @@ def test_data_reflector_task(job_id, *args, **kwargs):
     data expected in test setup and then use this task to play that data back
     to the test.
 
-    See :py:class:`DoHazardTestCase` for an example of how this task should be
+    See :py:class:`DoCurvesTestCase` for an example of how this task should be
     used.
     """
     return helpers.TestStore.lookup(job_id)
+
+
+@task
+def test_compute_hazard_curve(job_id, _, realization):
+    """This task will be used to test :py:class`ClassicalMixin` code.
+
+    The test setup code will prepare a result set for each `realization`.
+    This task will fetch these canned result sets and throw them back
+    simulating the real hazard curve calculator.
+
+    See also :py:meth:`DoCurvesTestCase.do_curves`.
+    """
+    key = "%s/%s" % (job_id, realization+1)
+    return helpers.TestStore.lookup(key)

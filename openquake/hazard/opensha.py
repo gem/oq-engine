@@ -169,7 +169,7 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    def do_hazard(self,
+    def do_curves(self,
         sites, serializer=None, the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
@@ -230,7 +230,7 @@ class ClassicalMixin(BasePSHAMixin):
     def execute(self):
 
         site_list = self.sites_for_region()
-        results = self.do_hazard(site_list, self.write_hazardcurve_file)
+        results = self.do_curves(site_list, self.write_hazardcurve_file)
 
         # compute and serialize mean and quantile hazard curves
         pending_tasks_mean = []
