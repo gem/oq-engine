@@ -42,21 +42,21 @@ TEST_FILE_URL = "http://gemsun02.ethz.ch/~jmckenty/large.xml"
 class MySAXHandler(saxutils.XMLGenerator):
     def startElementNS(self, *_args, **_kw):
         pass
-    def endElementNS(self, *_args, **_kw): 
+    def endElementNS(self, *_args, **_kw):
         pass
-    def startElement(self, *_args, **_kw): 
+    def startElement(self, *_args, **_kw):
         pass
-    def endElement(self, *_args, **_kw): 
+    def endElement(self, *_args, **_kw):
         pass
-    def startDocument(self, *_args, **_kw): 
+    def startDocument(self, *_args, **_kw):
         pass
-    def endDocument(self, *_args, **_kw): 
+    def endDocument(self, *_args, **_kw):
         pass
-    def startPrefixMapping(self, *_args, **_kw): 
+    def startPrefixMapping(self, *_args, **_kw):
         pass
-    def endPrefixMapping(self, *_args, **_kw): 
+    def endPrefixMapping(self, *_args, **_kw):
         pass
-    def characters(self, *_args, **_kw): 
+    def characters(self, *_args, **_kw):
         pass
 
 class XMLSpeedTestCase(unittest.TestCase):
@@ -72,7 +72,7 @@ class XMLSpeedTestCase(unittest.TestCase):
                                                   events=('start', 'end')):
             pass
         print guppy.hpy().heap()
-    
+
     @helpers.skipit
     @helpers.timeit
     def test_native_iterparse(self):
@@ -82,7 +82,7 @@ class XMLSpeedTestCase(unittest.TestCase):
             # Do something here
             pass
         print guppy.hpy().heap()
-    
+
     @helpers.timeit
     def test_native_sax(self):
         """Displays time and memory used for empty native sax parsing"""

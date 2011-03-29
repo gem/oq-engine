@@ -48,11 +48,11 @@ class RiskXMLReaderTestCase(unittest.TestCase):
             xml.RISK_LOSS_ABSCISSA_TAG, xml.NRML)
         self.loss_ratio_attr_name = xml.strip_namespace_from_tag(
             xml.RISK_LOSS_RATIO_ABSCISSA_TAG, xml.NRML)
-        self.poe_attr_name = xml.strip_namespace_from_tag(xml.RISK_POE_TAG, 
+        self.poe_attr_name = xml.strip_namespace_from_tag(xml.RISK_POE_TAG,
             xml.NRML)
 
         self.LOSS_CURVE_REFERENCE_DATA = [
-                            (shapes.Site(-117.0, 30.0), 
+                            (shapes.Site(-117.0, 30.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossCurveList_1",
@@ -61,7 +61,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               xml.RISK_END_BRANCH_ATTR_NAME: 'vf_1',
                               self.loss_attr_name: [0.0, 100.0, 200.0],
                               self.poe_attr_name: [0.4, 0.2, 0.1]}),
-                             (shapes.Site(-117.0, 30.0), 
+                             (shapes.Site(-117.0, 30.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossCurveList_1",
@@ -70,7 +70,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               xml.RISK_END_BRANCH_ATTR_NAME: 'vf_2',
                               self.loss_attr_name: [0.0, 200.0, 400.0],
                               self.poe_attr_name: [0.2, 0.1, 0.05]}),
-                             (shapes.Site(-117.0, 35.0), 
+                             (shapes.Site(-117.0, 35.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossCurveList_1",
@@ -79,7 +79,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               xml.RISK_END_BRANCH_ATTR_NAME: 'vf_3',
                               self.loss_attr_name: [0.0, 1000.0, 2000.0],
                               self.poe_attr_name: [0.6, 0.3, 0.1]}),
-                             (shapes.Site(-117.0, 35.0), 
+                             (shapes.Site(-117.0, 35.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossCurveList_1",
@@ -89,7 +89,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               self.poe_attr_name: [0.1, 0.01, 0.001]})]
 
         self.LOSS_RATIO_CURVE_REFERENCE_DATA = [
-                            (shapes.Site(-117.0, 30.0), 
+                            (shapes.Site(-117.0, 30.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossRatioCurveList_1",
@@ -98,7 +98,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               xml.RISK_END_BRANCH_ATTR_NAME: 'vf_1',
                               self.loss_ratio_attr_name: [0.0, 0.2, 0.4],
                               self.poe_attr_name: [0.4, 0.2, 0.1]}),
-                             (shapes.Site(-117.0, 30.0), 
+                             (shapes.Site(-117.0, 30.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossRatioCurveList_1",
@@ -107,7 +107,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               xml.RISK_END_BRANCH_ATTR_NAME: 'vf_2',
                               self.loss_ratio_attr_name: [0.0, 0.5, 0.8],
                               self.poe_attr_name: [0.2, 0.1, 0.05]}),
-                             (shapes.Site(-117.0, 35.0), 
+                             (shapes.Site(-117.0, 35.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossRatioCurveList_1",
@@ -116,7 +116,7 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               xml.RISK_END_BRANCH_ATTR_NAME: 'vf_3',
                               self.loss_ratio_attr_name: [0.0, 0.0001, 0.0002],
                               self.poe_attr_name: [0.6, 0.3, 0.1]}),
-                             (shapes.Site(-117.0, 35.0), 
+                             (shapes.Site(-117.0, 35.0),
                              {'nrml_id': "n1",
                               'result_id': "rr1",
                               'list_id': "lossRatioCurveList_1",
@@ -140,17 +140,17 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
             self.assertEqual(nrml_attr, expected_result[counter][1],
                 "filter yielded unexpected attribute values at position " \
-                "%s: %s, %s" % (counter, nrml_attr, 
+                "%s: %s, %s" % (counter, nrml_attr,
                                 expected_result[counter][1]))
 
         # ensure that generator yielded at least one item
-        self.assertTrue(counter is not None, 
+        self.assertTrue(counter is not None,
             "filter yielded nothing although %s item(s) were expected" % \
             len(expected_result))
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1, 
+        self.assertEqual(counter, len(expected_result)-1,
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, len(expected_result)))
 
@@ -171,16 +171,16 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
             self.assertEqual(nrml_attr, expected_result[counter][1],
                 "filter yielded unexpected attribute values at position " \
-                "%s: %s, %s" % (counter, nrml_attr, 
+                "%s: %s, %s" % (counter, nrml_attr,
                                 expected_result[counter][1]))
 
         # ensure that generator yielded at least one item
-        self.assertTrue(counter is not None, 
+        self.assertTrue(counter is not None,
             "filter yielded nothing although %s item(s) were expected" % \
             len(expected_result))
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1, 
+        self.assertEqual(counter, len(expected_result)-1,
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, len(expected_result)))

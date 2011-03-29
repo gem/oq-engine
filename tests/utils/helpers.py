@@ -38,9 +38,9 @@ from openquake import settings
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('download_test_data', True, 
+flags.DEFINE_boolean('download_test_data', True,
         'Fetch test data files if needed')
-        
+
 DATA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../data'))
 
@@ -70,7 +70,7 @@ def smoketest_file(file_name):
         os.path.dirname(__file__), "../../smoketests", file_name)
 
 class WordProducer(producer.FileProducer):
-    """Simple File parser that looks for three 
+    """Simple File parser that looks for three
     space-separated values on each line - lat, long and value"""
     def _parse(self):
         for line in self.file:
@@ -105,7 +105,7 @@ def timeit(method):
         return nose.tools.make_decorator(method)(_timed)
     except ImportError, _e:
         pass
-    return _timed    
+    return _timed
 
 
 def skipit(method):
@@ -138,11 +138,11 @@ def measureit(method):
         return nose.tools.make_decorator(method)(_measured)
     except ImportError, _e:
         pass
-    return _measured  
+    return _measured
 
 
-def wait_for_celery_tasks(celery_results, 
-                          max_wait_loops=MAX_WAIT_LOOPS, 
+def wait_for_celery_tasks(celery_results,
+                          max_wait_loops=MAX_WAIT_LOOPS,
                           wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
     """celery_results is a list of celery task result objects.
     This function waits until all tasks have finished.

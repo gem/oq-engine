@@ -21,7 +21,7 @@
 
 """
 Config for all installed OpenGEM binaries and modules.
-Should be installed by setup.py into /etc/openquake 
+Should be installed by setup.py into /etc/openquake
 eventually.
 """
 

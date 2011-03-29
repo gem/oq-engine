@@ -7,7 +7,7 @@ Super job type happy stuff
 --------------------------
 
 
-A Job is an object responsible for parsing a configuration, loading the appropriate behaviour based on that configuration, and then executing the tasks associated with that behaviour. The workflow of a Job is broken up into four parts: the Job class, the Mixin class, the Risk and Hazard mixin proxies, and the various Hazard and Risk mixins to define behaviour. 
+A Job is an object responsible for parsing a configuration, loading the appropriate behaviour based on that configuration, and then executing the tasks associated with that behaviour. The workflow of a Job is broken up into four parts: the Job class, the Mixin class, the Risk and Hazard mixin proxies, and the various Hazard and Risk mixins to define behaviour.
 
 
 The :mod:`job` class

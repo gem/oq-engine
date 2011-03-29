@@ -46,7 +46,7 @@ DATABASE_PASSWORD = ''         # Not used with sqlite3.
 DATABASE_HOST = ''             # Set to empty string for localhost.
 DATABASE_PORT = ''             # Set to empty string for default.
 
-# Not used at this point but you'll need it here if you 
+# Not used at this point but you'll need it here if you
 # want to enable a google maps baselayer within your
 # OpenLayers maps
 GOOGLE_MAPS_API_KEY = 'abcdefg'

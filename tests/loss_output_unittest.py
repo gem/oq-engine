@@ -52,13 +52,13 @@ TEST_LOSS_CURVE = shapes.Curve(
     [(0.0, 0.44), (256.0, 0.23), (512.0, 0.2), (832.0, 0.16), (1216.0, 0.06)])
 
 TEST_LOSS_RATIO_CURVE = shapes.Curve(
-    [(0.0, 0.89), (0.2, 0.72), (0.4, 0.45), (0.6, 0.22), (0.8, 0.17), 
+    [(0.0, 0.89), (0.2, 0.72), (0.4, 0.45), (0.6, 0.22), (0.8, 0.17),
      (1.0, 0.03)])
 
 class LossOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
     as well as correct given the inputs."""
-    
+
     def setUp(self):
         self.loss_curve_path = helpers.get_output_path(LOSS_XML_OUTPUT_FILE)
         self.loss_ratio_curve_path = helpers.get_output_path(
@@ -84,24 +84,24 @@ class LossOutputTestCase(unittest.TestCase):
             (first_site, (TEST_LOSS_CURVE, first_asset_a)),
             (first_site, (TEST_LOSS_CURVE, first_asset_b)),
             (second_site, (TEST_LOSS_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, second_asset_b))] 
+            (second_site, (TEST_LOSS_CURVE, second_asset_b))]
 
         self.loss_ratio_curves = [
             (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a)),
             (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_b)),
             (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))] 
+            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))]
 
         self.single_loss_curve = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a))] 
+            (first_site, (TEST_LOSS_CURVE, first_asset_a))]
 
         self.single_loss_ratio_curve = [
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))] 
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))]
 
         # loss curve that fails with inconsistent sites for an asset
         self.loss_curves_fail = [
             (first_site, (TEST_LOSS_CURVE, first_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, first_asset_a))] 
+            (second_site, (TEST_LOSS_CURVE, first_asset_a))]
 
     def test_loss_is_serialized_to_file_and_validates(self):
         """Serialize loss curve to NRML and validate against schema."""
@@ -125,15 +125,15 @@ class LossOutputTestCase(unittest.TestCase):
             self.loss_ratio_curve_path)
 
     def test_loss_serialization_with_inconsistent_site_fails(self):
-        """Assert that serialization of illegal loss curve data 
+        """Assert that serialization of illegal loss curve data
         raises error."""
         xml_writer = risk_output.LossCurveXMLWriter(
             helpers.get_output_path(LOSS_XML_FAIL_OUTPUT_FILE))
-        self.assertRaises(ValueError, xml_writer.serialize, 
+        self.assertRaises(ValueError, xml_writer.serialize,
             self.loss_curves_fail)
-    
+
     def test_loss_xml_is_correct(self):
-        """Assert that content of serialized loss curve data 
+        """Assert that content of serialized loss curve data
         is correct."""
 
         # serialize curves
@@ -152,7 +152,7 @@ class LossOutputTestCase(unittest.TestCase):
         loss_values = [float(x) \
             for x in loss_el_txt.strip().split()]
 
-        self.assertEqual(len(loss_values), len(TEST_LOSS_CURVE.abscissae), 
+        self.assertEqual(len(loss_values), len(TEST_LOSS_CURVE.abscissae),
             "curve length mismatch")
 
         for idx, val in enumerate(TEST_LOSS_CURVE.abscissae):
@@ -165,7 +165,7 @@ class LossOutputTestCase(unittest.TestCase):
     # Optionally, compare it to another XML file.
 
     def test_loss_ratio_xml_is_correct(self):
-        """Assert that content of serialized loss ratio curve data 
+        """Assert that content of serialized loss ratio curve data
         is correct."""
 
         # serialize curves
@@ -185,8 +185,8 @@ class LossOutputTestCase(unittest.TestCase):
         loss_ratio_values = [float(x) \
             for x in loss_ratio_el_txt.strip().split()]
 
-        self.assertEqual(len(loss_ratio_values), 
-            len(TEST_LOSS_RATIO_CURVE.abscissae), 
+        self.assertEqual(len(loss_ratio_values),
+            len(TEST_LOSS_RATIO_CURVE.abscissae),
             "curve length mismatch")
 
         for idx, val in enumerate(TEST_LOSS_RATIO_CURVE.abscissae):

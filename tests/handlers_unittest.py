@@ -43,7 +43,7 @@ class FileHandlerTestCase(unittest.TestCase):
 class SFTPHandlerTestCase(unittest.TestCase):
     def test_ssh_handler_raises_on_bad_credentials(self):
         url = urlparse.urlparse("sftp://baduser:badpass@localhost:22/path/to/file")
-        sftp_handler = handlers.SFTPHandler(url, '') 
+        sftp_handler = handlers.SFTPHandler(url, '')
         self.assertRaises(handlers.HandlerError, sftp_handler.handle)
 
     def test_ssh_handler_raises_on_bad_netloc(self):
@@ -82,7 +82,7 @@ class HTTPHandlerTestCase(unittest.TestCase):
                 pass
 
             def request(self, req_type, path):
-                self.remote_path = path 
+                self.remote_path = path
                 return self
 
             def getresponse(self):

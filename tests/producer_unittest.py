@@ -72,5 +72,5 @@ class FileProducerTestCase(unittest.TestCase):
         for ((cell_x, cell_y), data) in prod.filter(constraint):
             test_cell = expected.pop(int(cell_x))
             self.assertEqual(data, 'test%s' % int(test_cell))
-        
+
         self.assertEqual(len(expected), 0)

@@ -49,13 +49,13 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
             pass
 
         # ensure that generator didn't yield an item
-        self.assertTrue(ctr is None, 
+        self.assertTrue(ctr is None,
             "filter yielded item(s) although no items were expected")
 
     def test_filter_region_constraint_one_site(self):
 
         # look for sites within specified rectangle
-        # constraint is met by one and only one site in the example file 
+        # constraint is met by one and only one site in the example file
         # 9.15333 45.12200
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.15332, 45.12201), (9.15334, 45.12199))
@@ -90,19 +90,19 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
                 "%s: %s, %s" % (ctr, exposure_attr, expected_result[ctr][1]))
 
         # ensure that generator yielded at least one item
-        self.assertTrue(ctr is not None, 
+        self.assertTrue(ctr is not None,
             "filter yielded nothing although %s item(s) were expected" % \
             len(expected_result))
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(ctr == len(expected_result)-1, 
+        self.assertTrue(ctr == len(expected_result)-1,
             "filter yielded wrong number of items (%s), expected were %s" % (
                 ctr+1, len(expected_result)))
 
     def test_filter_region_constraint_all_sites(self):
 
-        # specified rectangle contains all sites in example file 
+        # specified rectangle contains all sites in example file
         region_constraint = \
                 shapes.RegionConstraint.from_simple((9.14776, 45.18000),
                                                     (9.15334, 45.12199))
@@ -118,12 +118,12 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
             pass
 
         # ensure that generator yielded at least one item
-        self.assertTrue(ctr is not None, 
+        self.assertTrue(ctr is not None,
             "filter yielded nothing although %s item(s) were expected" % \
             expected_result_ctr)
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(ctr == expected_result_ctr-1, 
+        self.assertTrue(ctr == expected_result_ctr-1,
             "filter yielded wrong number of items (%s), expected were %s" % (
                 ctr+1, expected_result_ctr))
