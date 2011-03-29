@@ -78,7 +78,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         # restoring the default java implementation
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             self.default
-        
+
         flags.FLAGS.include_defaults = True
 
     def test_triggered_with_deterministic_calculation_mode(self):
@@ -215,21 +215,21 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
     def test_loads_the_rupture_model(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
         calculator.params = self.engine.params
-        
+
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_loads_the_gmpe(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
         calculator.params = self.engine.params
-    
+
         self.assertTrue("org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel",
                         calculator.gmpe.__class__.__name__)
-    
+
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
         calculator.params = self.engine.params
-        
+
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
         gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
 
