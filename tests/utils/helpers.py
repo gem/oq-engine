@@ -18,7 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Helper functions for our unit and smoke tests.
 """
@@ -60,14 +59,17 @@ MAX_WAIT_LOOPS = 10
 def get_data_path(file_name):
     return os.path.join(DATA_DIR, file_name)
 
+
 def get_output_path(file_name):
     return os.path.join(OUTPUT_DIR, file_name)
+
 
 def smoketest_file(file_name):
     """ Take a file name and return the full path to the file in the smoketests
     directory """
     return os.path.join(
         os.path.dirname(__file__), "../../smoketests", file_name)
+
 
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three
@@ -86,7 +88,8 @@ def guarantee_file(path, url):
         LOG.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
-            raise Exception("Test data could not be downloaded from %s" % (url))
+            raise Exception(
+                "Test data could not be downloaded from %s" % (url))
 
 
 def timeit(method):
@@ -97,8 +100,8 @@ def timeit(method):
         result = method(*args, **kw)
         timeend = time.time()
 
-        print '%r (%r, %r) %2.2f sec' % \
-              (method.__name__, args, kw, timeend-timestart)
+        print '%r (%r, %r) %2.2f sec' % (
+            method.__name__, args, kw, timeend - timestart)
         return result
     try:
         import nose
@@ -114,15 +117,18 @@ def skipit(method):
         import nose
         from nose.plugins.skip import SkipTest
     except ImportError, _e:
+
         def skip_me(*_args, **_kw):
             """The skipped method"""
             print "Can't raise nose SkipTest error, silently skipping %r" % (
                 method.__name__)
         return skip_me
+
     def skipme(*_args, **_kw):
         """The skipped method"""
         print "Raising a nose SkipTest error"
         raise SkipTest("skipping method %r" % method.__name__)
+
     return nose.tools.make_decorator(method)(skipme)
 
 
@@ -130,7 +136,7 @@ def measureit(method):
     """Decorator that profiles memory usage"""
     def _measured(*args, **kw):
         """Decorator that profiles memory usage"""
-        result =  method(*args, **kw)
+        result = method(*args, **kw)
         print guppy.hpy().heap()
         return result
     try:
@@ -155,7 +161,7 @@ def wait_for_celery_tasks(celery_results,
         counter += 1
 
         if counter > max_wait_loops:
-            raise RuntimeError, "wait too long for celery worker threads"
+            raise RuntimeError("wait too long for celery worker threads")
 
         time.sleep(wait_time)
 
@@ -226,4 +232,3 @@ class TestStore(object):
             return TestStore._conn.lrange(oid, 0, num_of_words + 1)
         else:
             return TestStore._conn.lindex(oid, 0)
-

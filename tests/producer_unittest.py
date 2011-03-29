@@ -18,13 +18,10 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import os
 import unittest
 import tempfile
 
-from openquake import producer
 from openquake import shapes
 from tests.utils import helpers
 

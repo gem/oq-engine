@@ -18,7 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Config for all installed OpenGEM binaries and modules.
 Should be installed by setup.py into /etc/openquake

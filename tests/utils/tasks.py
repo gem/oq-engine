@@ -40,4 +40,3 @@ def test_data_reflector_task(job_id, *args, **kwargs):
     used.
     """
     return helpers.TestStore.lookup(job_id)
-
