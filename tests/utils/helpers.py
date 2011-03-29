@@ -198,11 +198,11 @@ class TestStore(object):
         """
         TestStore.open()
         key = TestStore.nextkey()
-        if not isinstance(obj, list):
-            TestStore._conn.rpush(key, obj)
-        else:
+        if isinstance(obj, list) or isinstance(obj, tuple):
             for elem in obj:
                 TestStore._conn.rpush(key, elem)
+        else:
+            TestStore._conn.rpush(key, obj)
         return key
 
     @staticmethod

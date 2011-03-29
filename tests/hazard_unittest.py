@@ -1129,6 +1129,10 @@ class DoHazardTestCase(unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_hazard()."""
 
     class FakeLogicTreeProcessor(object):
+        """
+        Fake logic tree processor class. This test will not manipulate any
+        logic trees.
+        """
         def sampleAndSaveERFTree(self, cache, key, seed):
             pass
         def sampleAndSaveGMPETree(self, cache, key, seed):
@@ -1139,24 +1143,25 @@ class DoHazardTestCase(unittest.TestCase):
         'hazard_curve!38cdc377!1!-121.8!38.0',
         'hazard_curve!38cdc377!1!-121.7!38.0']
 
-    def fake_compute_hazard_curve(self, site_list, realization):
-        return self.mocked_results
-
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
             job.Job(dict()), opensha.ClassicalMixin, "hazard")
-        self.mixin.compute_hazard_curve = self.fake_compute_hazard_curve
+        # Store the canned result data in the KVS.
         self.mixin.id = helpers.TestStore.register(self.mocked_results)
+        # Initialize the mixin instance.
         self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2)
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
 
     def tearDown(self):
+        # Remove the canned result data from the KVS.
         helpers.TestStore.deregister(self.mixin.id)
 
     def test_serializer_called_when_passed(self):
+        """The passed serialization function is called for each realization."""
+
         def fake_serializer(kvs_keys):
-            """Fake serialization function to be used in this helpers."""
+            """Fake serialization function to be used in this test."""
             self.assertEqual(self.mocked_results, kvs_keys)
             fake_serializer.number_of_calls += 1
 

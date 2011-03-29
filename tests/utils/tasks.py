@@ -29,6 +29,15 @@ from tests.utils import helpers
 
 
 @task
-def test_data_reflector_task(job_id, *args):
+def test_data_reflector_task(job_id, *args, **kwargs):
+    """Throw back the data stored in the KVS for the given `job_id`.
+
+    This should be used for testing purposes only. The idea is to store the
+    data expected in test setup and then use this task to play that data back
+    to the test.
+
+    See :py:class:`DoHazardTestCase` for an example of how this task should be
+    used.
+    """
     return helpers.TestStore.lookup(job_id)
 
