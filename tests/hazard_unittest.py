@@ -44,7 +44,7 @@ from openquake.hazard import opensha
 import openquake.hazard.job
 
 from tests.utils import helpers
-from tests.utils.tasks import test_compute_hazard_curve
+from tests.utils.tasks import test_compute_hazard_curve, test_data_reflector
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
@@ -1144,7 +1144,7 @@ class DoCurvesTestCase(unittest.TestCase):
         def sampleAndSaveGMPETree(self, cache, key, seed):
             pass
 
-    mocked_results = [
+    mock_results = [
         [
             'hazard_curve!38cdc377!1!-121.9!38.0',
             'hazard_curve!38cdc377!1!-121.8!38.0',
@@ -1162,7 +1162,7 @@ class DoCurvesTestCase(unittest.TestCase):
         self.keys.append(key)
         for realization in xrange(2):
             key = "%s/%s" % (self.mixin.id, realization + 1)
-            helpers.TestStore.put(key, self.mocked_results[realization])
+            helpers.TestStore.put(key, self.mock_results[realization])
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
         # Initialize the mixin instance.
@@ -1183,7 +1183,7 @@ class DoCurvesTestCase(unittest.TestCase):
             # Check that the data returned is the one we expect for the current
             # realization.
             self.assertEqual(
-                self.mocked_results[fake_serializer.number_of_calls], kvs_keys)
+                self.mock_results[fake_serializer.number_of_calls], kvs_keys)
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
@@ -1193,3 +1193,48 @@ class DoCurvesTestCase(unittest.TestCase):
         self.mixin.do_curves(sites, serializer=fake_serializer,
                              the_task=test_compute_hazard_curve)
         self.assertEqual(2, fake_serializer.number_of_calls)
+
+
+class DoMeansTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.curves()."""
+
+    def __init__(self, *args, **kwargs):
+        super(DoMeansTestCase, self).__init__(*args, **kwargs)
+        self.keys = []
+
+    mock_results = [
+        'hazard_curve!38cdc377!1!-121.9!38.0',
+        'hazard_curve!38cdc377!1!-121.8!38.0',
+        'hazard_curve!38cdc377!1!-121.7!38.0']
+
+    def setUp(self):
+        self.mixin = opensha.ClassicalMixin(
+            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+        # Store the canned result data in the KVS.
+        key = self.mixin.id = helpers.TestStore.add(self.mock_results)
+        self.keys.append(key)
+        # Initialize the mixin instance.
+        self.mixin.params = dict(COMPUTE_MEAN_HAZARD_CURVE="True")
+
+    def tearDown(self):
+        # Remove the canned result data from the KVS.
+        for key in self.keys:
+            helpers.TestStore.remove(key)
+
+    def test_curve_serializer_called_when_passed(self):
+        """The passed mean curve serialization function is called."""
+
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            self.assertEqual(self.mock_results, kvs_keys)
+            fake_serializer.number_of_calls += 1
+
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.do_means(sites, curve_serializer=fake_serializer,
+                            curve_task=test_data_reflector)
+        self.assertEqual(1, fake_serializer.number_of_calls)

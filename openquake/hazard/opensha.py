@@ -282,7 +282,6 @@ class ClassicalMixin(BasePSHAMixin):
                 LOG.info("results = '%s'" % results)
                 map_serializer(results)
 
-
     @preload
     def execute(self):
         site_list = self.sites_for_region()

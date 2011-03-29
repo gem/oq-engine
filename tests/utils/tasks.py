@@ -29,7 +29,7 @@ from tests.utils import helpers
 
 
 @task
-def test_data_reflector_task(job_id, *args, **kwargs):
+def test_data_reflector(job_id, *args, **kwargs):
     """Throw back the data stored in the KVS for the given `job_id`.
 
     This should be used for testing purposes only. The idea is to store the
