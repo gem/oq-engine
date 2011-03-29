@@ -68,14 +68,14 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.engine.params["REGION_GRID_SPACING"] = 0.1
         self.engine.params[NUMBER_OF_CALC_KEY] = "1"
 
-# TODO (ac): Makes this clearer!
+        # saving the default java implementation
         self.default = \
             det.DeterministicEventBasedMixin.compute_ground_motion_field
 
         kvs.flush()
 
-# TODO (ac): Makes this clearer!
     def tearDown(self):
+        # restoring the default java implementation
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             self.default
 
@@ -129,7 +129,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
+        self.engine.params["INTENSITY_MEASURE_TYPE"] = "MMI"
         self.engine.params[NUMBER_OF_CALC_KEY] = "3"
+
         self.engine.launch()
 
         for i in xrange(3):
@@ -138,6 +140,8 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
                     self.engine.id, site.hash(), i + 1)
 
                 gmv = kvs.get_value_json_decoded(key)
+
+                self.assertEqual(0.5, gmv["mag"])
 
                 # since the org.opensha.commons.geo.Location object
                 # stores lat/lon in radians, values are not

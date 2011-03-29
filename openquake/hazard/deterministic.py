@@ -40,7 +40,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
     params loaded from the job configuration file."""
 
     def execute(self):
-        """Entry point for triggering the computation."""
+        """Entry point to trigger the computation."""
 
         random_generator = java.jclass(
             "Random")(int(self.params["GMF_RANDOM_SEED"]))
@@ -60,7 +60,13 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
         return [True]
 
     def _number_of_calculations(self):
-        """Return the number of calculations to trigger."""
+        """Return the number of calculations to trigger.
+
+        NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS is the key used
+        in the configuration file.
+
+        :returns: the number of computations to trigger.
+        """
 
         value = int(self.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
 
@@ -70,25 +76,40 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
         return value
 
-# TODO (ac): Add doc, saying that there's no way to split the computation
     def compute_ground_motion_field(self, random_generator):
-        """Compute the ground motion field for the entire region."""
-        
+        """Compute the ground motion field for the entire region.
+
+        :param random_generator: a generator used internally
+            by the calculator.
+        :type random_generator: jpype wrapper around an instance of
+            java.util.Random
+        :returns: the computed ground motion field as a jpype wrapper
+            around an instance of java.util.Map.
+        """
+
         calculator = self.gmf_calculator(self.sites_for_region())
 
         if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
-            return calculator.getUncorrelatedGroundMotionField(
+            return calculator.getCorrelatedGroundMotionField_JB2009(
                 random_generator)
         else:
-            return calculator.getCorrelatedGroundMotionField_JB2009(
+            return calculator.getUncorrelatedGroundMotionField(
                 random_generator)
 
     def gmf_calculator(self, sites):
+        """Return the ground motion field calculator.
+
+        :param sites: sites used to compute the ground motion field.
+        :type sites: list of :py:class:`shapes.Site`
+        :returns: jpype wrapper around an instance of
+            org.gem.calc.GroundMotionFieldCalculator.
+        """
+
         calculator = getattr(self, "calculator", None)
-        
+
         if calculator is None:
             sites = self.parameterize_sites(sites)
-            
+
             calculator = java.jclass(
                 "GMFCalculator")(self.gmpe, self.rupture_model, sites)
 
@@ -98,8 +119,14 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
     @property
     def rupture_model(self):
-        """Load the rupture model specified in the configuration file."""
-        
+        """Load the rupture model specified in the configuration file.
+
+        The key used in the configuration file is SINGLE_RUPTURE_MODEL.
+
+        :returns: jpype wrapper around an instance of
+            org.opensha.sha.earthquake.EqkRupture.
+        """
+
         rel_path = self.params["SINGLE_RUPTURE_MODEL"]
         abs_path = os.path.join(self.params["BASE_PATH"], rel_path)
         grid_spacing = self.params["REGION_GRID_SPACING"]
@@ -109,14 +136,20 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
     @property
     def gmpe(self):
         """Load the ground motion prediction equation specified
-        in the configuration file."""
-        
+        in the configuration file.
+
+        The key used in the configuration file is GMPE_MODEL_NAME.
+
+        :returns: jpype wrapper around an instance of the
+            ground motion prediction equation.
+        """
+
         deserializer = java.jclass("GMPEDeserializer")()
         class_name = self.params["GMPE_MODEL_NAME"]
-        
+
         gmpe = deserializer.deserialize(
             java.jclass("JsonPrimitive")(class_name), None, None)
-        
+
         tree_data = java.jclass("GmpeLogicTreeData")()
 
         tree_data.setGmpeParams(
@@ -142,6 +175,20 @@ def gmf_to_dict(hashmap, intensity_measure_type):
     and the value is an instance of java.lang.Double.
 
     This function is implemented as an iterator.
+
+    :param hashmap: map containing the ground motion field.
+    :type hashmap: jpype wrapper around java.util.Map. The map
+        contains instances of org.opensha.commons.data.Site as
+        keys and java.lang.Double as values (the ground motion
+        value for that specific site)
+    :param intensity_measure_type: the intensity measure type
+        specified for this job. If the type is not "MMI" we
+        need to save the exponential.
+    :returns: the ground motion field as :py:class:`dict`.
+        The dictionary contians the following keys:
+        **site_lat** - the latitude of the site
+        **site_lon** - the longitude of the site
+        **mag** - the ground motion value
     """
 
     for site in hashmap.keySet():
