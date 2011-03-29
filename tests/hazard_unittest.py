@@ -44,7 +44,7 @@ from openquake.hazard import opensha
 import openquake.hazard.job
 
 from tests.utils import helpers
-from tests.utils import tasks as test_tasks
+from tests.utils.tasks import test_data_reflector_task
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
@@ -1165,6 +1165,6 @@ class DoHazardTestCase(unittest.TestCase):
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
         self.mixin.do_hazard(sites, serializer=fake_serializer,
-                             the_task=test_tasks.fake_compute_hazard_curve)
+                             the_task=test_data_reflector_task)
         self.assertEqual(2, fake_serializer.number_of_calls)
 

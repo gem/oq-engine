@@ -31,9 +31,10 @@ import subprocess
 
 import guppy
 
+from openquake import flags
 from openquake.logs import LOG
 from openquake import producer
-from openquake import flags
+from openquake import settings
 
 FLAGS = flags.FLAGS
 
@@ -160,10 +161,8 @@ def wait_for_celery_tasks(celery_results,
 
 
 class TestStore(object):
-    """Simple object store."""
+    """Simple object store, to be used in tests only."""
 
-    _db = 3
-    _last_key = None
     _conn = None
 
     @staticmethod
@@ -171,8 +170,7 @@ class TestStore(object):
         """Initialize the test store."""
         if TestStore._conn is not None:
             return
-        TestStore._last_key = 100
-        TestStore._conn = redis.Redis(db=TestStore._db)
+        TestStore._conn = redis.Redis(db=settings.TEST_KVS_DB)
 
     @staticmethod
     def close():
@@ -181,21 +179,31 @@ class TestStore(object):
         TestStore._conn = None
 
     @staticmethod
+    def nextkey():
+        """Generate an unused key
+
+        :return: The test store key generated.
+        :rtype: integer
+        """
+        TestStore.open()
+        return TestStore._conn.incr('the-key', amount=1)
+
+    @staticmethod
     def register(obj):
         """Register an object with the store.
 
         :param obj: The object to be added to the store.
-        :returns: The ID for the object added.
+        :returns: The identifier of the object added.
         :rtype: integer
         """
         TestStore.open()
-        TestStore._last_key += 1
+        key = TestStore.nextkey()
         if not isinstance(obj, list):
-            TestStore._conn.rpush(TestStore._last_key, obj)
+            TestStore._conn.rpush(key, obj)
         else:
             for elem in obj:
-                TestStore._conn.rpush(TestStore._last_key, elem)
-        return TestStore._last_key
+                TestStore._conn.rpush(key, elem)
+        return key
 
     @staticmethod
     def deregister(oid):

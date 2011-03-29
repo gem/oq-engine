@@ -125,3 +125,5 @@ KVS_HOST = "localhost"
 
 SOURCEGEOM_SHP = 'seismicsources/data/sourcegeometrycatalog.shp'
 WORLD_SHP = 'world/data/TM_WORLD_BORDERS-0.3.shp'
+
+TEST_KVS_DB = 3

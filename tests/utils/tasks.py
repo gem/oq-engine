@@ -29,6 +29,6 @@ from tests.utils import helpers
 
 
 @task
-def fake_compute_hazard_curve(job_id, sites, realization):
+def test_data_reflector_task(job_id, *args):
     return helpers.TestStore.lookup(job_id)
 
