@@ -227,27 +227,31 @@ class ClassicalMixin(BasePSHAMixin):
         return results
 
     def do_means(
-        self, sites, serializer=None, curve_task=tasks.compute_mean_curves,
+        self, sites, curve_serializer=None, map_serializer=None,
+        curve_task=tasks.compute_mean_curves,
         map_func=classical_psha.compute_mean_hazard_maps):
         """Trigger the calculation of mean curves, serialize as requested.
 
-        The calculated mean curves will only be serialized if the `serializer`
-        parameter is not `None`.
+        The calculated mean curves/maps will only be serialized if the
+        corresponding`serializer` parameter was set.
 
-        :param sites: The sites for which to calculate curves.
+        :param sites: The sites for which to calculate mean curves/maps.
         :type sites: list of :py:class:`openquake.shapes.Site`
-        :param serializer: A serializer for the calculated curves,
-            receives the KVS keys of the calculated curves/maps in
+        :param curve_serializer: A serializer for the calculated curves,
+            receives the KVS keys of the calculated curves in
             its single parameter.
-        :type serializer: a callable with a single parameter: list of strings
+        :type curve_serializer: function([string])
+        :param map_serializer: A serializer for the calculated maps,
+            receives the KVS keys of the calculated maps in its single
+            parameter.
+        :type map_serializer: function([string])
         :param curve_task: The `celery` task to use for the curve calculation,
             it takes the following parameters:
                 * job ID
                 * the sites for which to calculate the hazard curves
-        :type curve_task: a callable taking two parameters
+        :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
         :param map_func: A function that computes mean hazard maps.
-        :type map_func: a callable with a single parameter:
-            :py:class:`openquake.job.Job`
+        :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
         pending_tasks = []
@@ -267,14 +271,16 @@ class ClassicalMixin(BasePSHAMixin):
                 raise Exception(task.result)
             results.extend(task.result)
 
-        if serializer:
+        if curve_serializer:
             LOG.info('Serializing mean hazard curves')
-            serializer(results)
+            curve_serializer(results)
 
+        if map_serializer:
             if self.params[classical_psha.POES_PARAM_NAME] != '':
                 LOG.info('Computing/serializing mean hazard maps')
                 results = map_func(self)
-                serializer(results)
+                LOG.info("results = '%s'" % results)
+                map_serializer(results)
 
 
     @preload
@@ -282,7 +288,8 @@ class ClassicalMixin(BasePSHAMixin):
         site_list = self.sites_for_region()
         results = self.do_curves(site_list, self.write_hazardcurve_file)
 
-        self.do_means(site_list, self.write_hazardcurve_file)
+        self.do_means(site_list, self.write_hazardcurve_file,
+                      self.write_hazardmap_file)
 
         # compute and serialize quantile hazard curves
         pending_tasks_quantile = []
