@@ -182,8 +182,8 @@ class ClassicalMixin(BasePSHAMixin):
             receives the KVS keys of the calculated hazard curves in
             its single parameter.
         :type serializer: a callable with a single parameter: list of strings
-        :param the_task: The task to use for the hazard curve calculation, it
-            takes the following parameters:
+        :param the_task: The `celery` task to use for the hazard curve
+            calculation, it takes the following parameters:
                 * job ID
                 * the sites for which to calculate the hazard curves
                 * the logic tree realization number
@@ -227,60 +227,54 @@ class ClassicalMixin(BasePSHAMixin):
         return results
 
     def do_means(
-        sites, serializer=None, the_task=tasks.compute_mean_curves):
+        self, sites, serializer=None, curve_task=tasks.compute_mean_curves,
+        map_func=classical_psha.compute_mean_hazard_maps):
         """Trigger the calculation of mean curves, serialize as requested.
 
-        The calculated curves will only be serialized if the `serializer`
+        The calculated mean curves will only be serialized if the `serializer`
         parameter is not `None`.
 
         :param sites: The sites for which to calculate curves.
         :type sites: list of :py:class:`openquake.shapes.Site`
         :param serializer: A serializer for the calculated curves,
-            receives the KVS keys of the calculated curves in
+            receives the KVS keys of the calculated curves/maps in
             its single parameter.
         :type serializer: a callable with a single parameter: list of strings
-        :param the_task: The task to use for the hazard curve calculation, it
-            takes the following parameters:
+        :param curve_task: The `celery` task to use for the curve calculation,
+            it takes the following parameters:
                 * job ID
                 * the sites for which to calculate the hazard curves
-                * the logic tree realization number
-        :type the_task: a callable taking three parameters
-        :returns: KVS keys of the calculated hazard curves.
-        :rtype: list of string
+        :type curve_task: a callable taking two parameters
+        :param map_func: A function that computes mean hazard maps.
+        :type map_func: a callable with a single parameter:
+            :py:class:`openquake.job.Job`
+        :returns: `None`
         """
-        pending_tasks_mean = []
-        results_mean = []
+        pending_tasks = []
+        results = []
+        do_mean_curves = (
+            self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true')
+
+        if not do_mean_curves:
+            return
 
         LOG.info('Computing mean hazard curves')
-        pending_tasks_quantile.append(
-            tasks.compute_quantile_curves.delay(self.id, site_list))
-        if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
-            pending_tasks_mean.append(
-                tasks.compute_mean_curves.delay(self.id, site_list))
+        pending_tasks.append(curve_task.delay(self.id, sites))
 
-        for task in pending_tasks_mean:
+        for task in pending_tasks:
             task.wait()
             if task.status != 'SUCCESS':
                 raise Exception(task.result)
-            results_mean.extend(task.result)
+            results.extend(task.result)
 
-        for task in pending_tasks_quantile:
-            task.wait()
-            if task.status != 'SUCCESS':
-                raise Exception(task.result)
-            results_quantile.extend(task.result)
-
-        if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
+        if serializer:
             LOG.info('Serializing mean hazard curves')
-            self.write_hazardcurve_file(results_mean)
-            del results_mean
+            serializer(results)
 
             if self.params[classical_psha.POES_PARAM_NAME] != '':
                 LOG.info('Computing/serializing mean hazard maps')
-                results_mean_maps = classical_psha.compute_mean_hazard_maps(
-                    self)
-                self.write_hazardmap_file(results_mean_maps)
-                del results_mean_maps
+                results = map_func(self)
+                serializer(results)
 
 
     @preload
@@ -288,42 +282,21 @@ class ClassicalMixin(BasePSHAMixin):
         site_list = self.sites_for_region()
         results = self.do_curves(site_list, self.write_hazardcurve_file)
 
-        # compute and serialize mean and quantile hazard curves
-        pending_tasks_mean = []
-        results_mean = []
+        self.do_means(site_list, self.write_hazardcurve_file)
+
+        # compute and serialize quantile hazard curves
         pending_tasks_quantile = []
         results_quantile = []
 
-        LOG.info('Computing mean and quantile hazard curves')
+        LOG.info('Computing quantile hazard curves')
         pending_tasks_quantile.append(
             tasks.compute_quantile_curves.delay(self.id, site_list))
-        if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
-            pending_tasks_mean.append(
-                tasks.compute_mean_curves.delay(self.id, site_list))
-
-        for task in pending_tasks_mean:
-            task.wait()
-            if task.status != 'SUCCESS':
-                raise Exception(task.result)
-            results_mean.extend(task.result)
 
         for task in pending_tasks_quantile:
             task.wait()
             if task.status != 'SUCCESS':
                 raise Exception(task.result)
             results_quantile.extend(task.result)
-
-        if self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
-            LOG.info('Serializing mean hazard curves')
-            self.write_hazardcurve_file(results_mean)
-            del results_mean
-
-            if self.params[classical_psha.POES_PARAM_NAME] != '':
-                LOG.info('Computing/serializing mean hazard maps')
-                results_mean_maps = classical_psha.compute_mean_hazard_maps(
-                    self)
-                self.write_hazardmap_file(results_mean_maps)
-                del results_mean_maps
 
         # collect hazard curve keys per quantile value
         quantile_values = _collect_curve_keys_per_quantile(results_quantile)
