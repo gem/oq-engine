@@ -52,5 +52,5 @@ def test_compute_hazard_curve(job_id, _, realization):
 
     See also :py:meth:`DoCurvesTestCase.do_curves`.
     """
-    key = "%s/%s" % (job_id, realization+1)
+    key = "%s/%s" % (job_id, realization + 1)
     return helpers.TestStore.lookup(key)
