@@ -30,7 +30,5 @@ from tests.utils import helpers
 
 @task
 def fake_compute_hazard_curve(job_id, sites, realization):
-    the_job = helpers.TestStore.lookup(job_id)
-    keys = the_job.compute_hazard_curve(sites, realization)
-    return keys
+    return helpers.TestStore.lookup(job_id)
 

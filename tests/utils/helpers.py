@@ -25,6 +25,7 @@ Helper functions for our unit and smoke tests.
 
 
 import os
+import redis
 import time
 import subprocess
 
@@ -159,10 +160,25 @@ def wait_for_celery_tasks(celery_results,
 
 
 class TestStore(object):
-    """Simple cache of objects."""
+    """Simple object store."""
 
-    _last_obj_id = 0
-    _store = dict()
+    _db = 3
+    _last_key = None
+    _conn = None
+
+    @staticmethod
+    def open():
+        """Initialize the test store."""
+        if TestStore._conn is not None:
+            return
+        TestStore._last_key = 100
+        TestStore._conn = redis.Redis(db=TestStore._db)
+
+    @staticmethod
+    def close():
+        """Close the test store."""
+        TestStore._conn.flushdb()
+        TestStore._conn = None
 
     @staticmethod
     def register(obj):
@@ -172,9 +188,14 @@ class TestStore(object):
         :returns: The ID for the object added.
         :rtype: integer
         """
-        TestStore._last_obj_id += 1
-        TestStore._store[TestStore._last_obj_id] =  obj
-        return TestStore._last_obj_id
+        TestStore.open()
+        TestStore._last_key += 1
+        if not isinstance(obj, list):
+            TestStore._conn.rpush(TestStore._last_key, obj)
+        else:
+            for elem in obj:
+                TestStore._conn.rpush(TestStore._last_key, elem)
+        return TestStore._last_key
 
     @staticmethod
     def deregister(oid):
@@ -182,7 +203,8 @@ class TestStore(object):
 
         :param oid: The identifier associated with the object to be removed.
         """
-        del TestStore._store[oid]
+        TestStore.open()
+        del TestStore._conn[oid]
 
     @staticmethod
     def lookup(oid):
@@ -190,5 +212,10 @@ class TestStore(object):
 
         :param oid: The identifier of the object saught.
         """
-        return TestStore._store.get(oid)
+        TestStore.open()
+        num_of_words = TestStore._conn.llen(oid)
+        if num_of_words > 1:
+            return TestStore._conn.lrange(oid, 0, num_of_words + 1)
+        else:
+            return TestStore._conn.lindex(oid, 0)
 

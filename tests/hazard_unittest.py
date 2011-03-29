@@ -1146,7 +1146,7 @@ class DoHazardTestCase(unittest.TestCase):
         self.mixin = opensha.ClassicalMixin(
             job.Job(dict()), opensha.ClassicalMixin, "hazard")
         self.mixin.compute_hazard_curve = self.fake_compute_hazard_curve
-        self.mixin.id = helpers.TestStore.register(self.mixin)
+        self.mixin.id = helpers.TestStore.register(self.mocked_results)
         self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2)
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
@@ -1166,5 +1166,5 @@ class DoHazardTestCase(unittest.TestCase):
                  shapes.Site(-121.7, 38.0)]
         self.mixin.do_hazard(sites, serializer=fake_serializer,
                              the_task=test_tasks.fake_compute_hazard_curve)
-        self.assertEqual(1, fake_serializer.number_of_calls)
+        self.assertEqual(2, fake_serializer.number_of_calls)
 
