@@ -78,6 +78,8 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         # restoring the default java implementation
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             self.default
+        
+        flags.FLAGS.include_defaults = True
 
     def test_triggered_with_deterministic_calculation_mode(self):
         """The deterministic calculator is triggered.
