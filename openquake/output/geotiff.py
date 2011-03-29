@@ -160,8 +160,6 @@ class GeoTiffFile(writer.FileWriter):
         # matrices in maths)
 
         # initialize raster to init_value values (default in NaN)
-        print "initializing grid for geotiff with %s by %s" % \
-            (self.grid.rows, self.grid.columns)
         self.raster = numpy.ones((self.grid.rows, self.grid.columns),
                                  dtype=numpy.float) * init_value
         self.alpha_raster = numpy.ones((self.grid.rows, self.grid.columns),
