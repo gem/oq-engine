@@ -1,7 +1,26 @@
 # -*- coding: utf-8 -*-
+
+# Copyright (c) 2010-2011, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU Lesser General Public License
+# version 3 along with OpenQuake.  If not, see
+# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+
 """HTML template to embed geotiffs of GMF/Loss Ratio maps."""
 
-HTML_TEMPLATE_LOSSRATIO = """<!DOCTYPE html PUBLIC 
+HTML_TEMPLATE_LOSSRATIO = """<!DOCTYPE html PUBLIC
     "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html lang="en-US" xml:lang="en-US" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -9,7 +28,7 @@ HTML_TEMPLATE_LOSSRATIO = """<!DOCTYPE html PUBLIC
 </head>
 <body>
 <center>
-<img width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT" 
+<img width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT"
     src="PLACEHOLDER_IMAGE_NAME" type="image/tiff" negative="yes"/>
 <br/>
 <table cellspacing="0" border="1" width="20%">
@@ -78,7 +97,7 @@ HTML_TEMPLATE_HEADER = """<!DOCTYPE html PUBLIC
 """
 
 HTML_TEMPLATE_IMAGE = """
-<img width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT" 
+<img width="PLACEHOLDER_WIDTH" height="PLACEHOLDER_HEIGHT"
     src="PLACEHOLDER_IMAGE_NAME" type="image/tiff" negative="yes"/>
 """
 
@@ -106,13 +125,14 @@ HTML_TEMPLATE_TABLE_ROW = """
 </tr>
 """
 
+
 def generate_html(path, width="", height="", colorscale=None, imt='PGA/g',
                   title="", template=None):
-    """This function creates an HTML page with a Geotiff image linked, and a 
-    colorscale as HTML table. The HTML can be created from an explicitly 
+    """This function creates an HTML page with a Geotiff image linked, and a
+    colorscale as HTML table. The HTML can be created from an explicitly
     given template, or automatically based on color scale values."""
 
-    if template is None:
+    if not template:
         curr_html = HTML_TEMPLATE_HEADER
         header_html = curr_html.replace('PLACEHOLDER_TITLE', title)
 
@@ -122,19 +142,19 @@ def generate_html(path, width="", height="", colorscale=None, imt='PGA/g',
         curr_html = curr_html.replace('PLACEHOLDER_HEIGHT', height)
         image_html = curr_html
 
-        curr_html = HTML_TEMPLATE_TABLE_START 
+        curr_html = HTML_TEMPLATE_TABLE_START
         table_start_html = curr_html.replace('PLACEHOLDER_IMT', imt)
 
-        table_body_html = '' 
+        table_body_html = ''
         for curr_color in colorscale:
             curr_row_html = HTML_TEMPLATE_TABLE_ROW
-            curr_row_html = curr_row_html.replace('PLACEHOLDER_COLOR_HEX_CODE', 
+            curr_row_html = curr_row_html.replace('PLACEHOLDER_COLOR_HEX_CODE',
                                                 curr_color[0])
-            curr_row_html = curr_row_html.replace('PLACEHOLDER_IML_VALUE', 
+            curr_row_html = curr_row_html.replace('PLACEHOLDER_IML_VALUE',
                                                 curr_color[1])
             table_body_html += curr_row_html
 
-        return ''.join((header_html, image_html, table_start_html, 
+        return ''.join((header_html, image_html, table_start_html,
                         table_body_html, HTML_TEMPLATE_FOOTER))
     else:
         curr_html = template

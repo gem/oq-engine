@@ -1,14 +1,33 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright (c) 2010-2011, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU Lesser General Public License
+# version 3 along with OpenQuake.  If not, see
+# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+
 """
 This module defines functions to compute loss ratio curves
 using the classical psha based approach.
 """
 
-from scipy import sqrt, stats, log, exp # pylint: disable=F0401,E0611
-from numpy import empty, linspace # pylint: disable=F0401,E0611
-from numpy import array, concatenate # pylint: disable=F0401,E0611
-from numpy import subtract, mean # pylint: disable=F0401,E0611
+from scipy import sqrt, stats, log, exp  # pylint: disable=F0401,E0611
+from numpy import empty, linspace  # pylint: disable=F0401,E0611
+from numpy import array, concatenate  # pylint: disable=F0401,E0611
+from numpy import subtract, mean  # pylint: disable=F0401,E0611
 
 from openquake import shapes
 from openquake.risk.common import loop, collect
@@ -118,6 +137,12 @@ def _compute_imls(vuln_function):
 
     # "special" cases for lowest part and highest part of the curve
     lowest_curve_value = imls[0] - ((imls[1] - imls[0]) / 2)
+
+    # if the calculated lowest_curve_value goes < 0 we have to force the 0
+    # IMLs have to be >= 0
+    if lowest_curve_value < 0:
+        lowest_curve_value = 0
+
     highest_curve_value = imls[-1] + ((imls[-1] - imls[-2]) / 2)
 
     between_curve_values = collect(loop(imls, lambda x, y: mean([x, y])))

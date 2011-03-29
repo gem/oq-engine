@@ -1,4 +1,23 @@
 # -*- coding: utf-8 -*-
+
+# Copyright (c) 2010-2011, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU Lesser General Public License
+# version 3 along with OpenQuake.  If not, see
+# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+
 """
 This module contains generic functions to access
 the underlying kvs systems.
@@ -14,7 +33,7 @@ from openquake.kvs.redis import Redis
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
 MAX_LENGTH_RANDOM_ID = 36
-MEMCACHE_KEY_SEPARATOR = '!'
+KVS_KEY_SEPARATOR = '!'
 SITES_KEY_TOKEN = "sites"
 
 
@@ -26,7 +45,8 @@ def flush():
 def get_keys(regexp):
     """Get all KVS keys that match a given regexp pattern."""
     return get_client(binary=False).keys(regexp)
-     
+
+
 def mget(regexp):
     """Get all the values whose keys satisfy the given regexp.
 
@@ -39,7 +59,7 @@ def mget(regexp):
 
     if keys:
         values = get_client(binary=False).mget(keys)
-    
+
     return values
 
 
@@ -71,7 +91,7 @@ def get_client(**kwargs):
 def generate_key(key_list):
     """ Create a kvs key """
     key_list = [str(x).replace(" ", "") for x in key_list]
-    return MEMCACHE_KEY_SEPARATOR.join(key_list)
+    return KVS_KEY_SEPARATOR.join(key_list)
 
 
 def generate_job_key(job_id):
@@ -129,7 +149,7 @@ def set_value_json_encoded(key, value):
     return True
 
 
-def set(key, encoded_value): #pylint: disable=W0622
+def set(key, encoded_value):  # pylint: disable=W0622
     """ Set value in kvs, for objects that have their own encoding method. """
 
     get_client(binary=False).set(key, encoded_value)
@@ -150,5 +170,4 @@ BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
 
 def generate_block_id():
     """Generate a unique id for a block."""
-    return BLOCK_ID_GENERATOR.next() #pylint: disable=E1101
-
+    return BLOCK_ID_GENERATOR.next()  # pylint: disable=E1101
