@@ -1155,14 +1155,13 @@ class DoCurvesTestCase(unittest.TestCase):
             'hazard_curve!38cdc377!2!-121.7!38.0']]
 
     def setUp(self):
-
         self.mixin = opensha.ClassicalMixin(
             job.Job(dict()), opensha.ClassicalMixin, "hazard")
         # Store the canned result data in the KVS.
         key = self.mixin.id = helpers.TestStore.nextkey()
         self.keys.append(key)
         for realization in xrange(2):
-            key = "%s/%s" % (self.mixin.id, realization+1)
+            key = "%s/%s" % (self.mixin.id, realization + 1)
             helpers.TestStore.put(key, self.mocked_results[realization])
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
