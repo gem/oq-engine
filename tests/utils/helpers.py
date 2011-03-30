@@ -228,7 +228,7 @@ class TestStore(object):
         :param oid: The identifier associated with the object to be removed.
         """
         TestStore.open()
-        del TestStore._conn[oid]
+        TestStore._conn.delete(oid)
 
     @staticmethod
     def lookup(oid):
