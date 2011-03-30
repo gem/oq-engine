@@ -169,7 +169,8 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    def do_curves(self, sites, serializer=None, the_task=None):
+    def do_curves(self, sites, serializer=None,
+                  the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
         The calculated curves will only be serialized if the `serializer`
@@ -191,11 +192,6 @@ class ClassicalMixin(BasePSHAMixin):
         :rtype: list of string
         """
         results = []
-
-        if not serializer:
-            serializer = self.write_hazardcurve_file
-        if not the_task:
-            the_task = tasks.compute_hazard_curve
 
         source_model_generator = random.Random()
         source_model_generator.seed(
@@ -232,7 +228,8 @@ class ClassicalMixin(BasePSHAMixin):
         return results
 
     def do_means(self, sites, curve_serializer=None, map_serializer=None,
-                 curve_task=None, map_func=None):
+                 curve_task=tasks.compute_mean_curves,
+                 map_func=classical_psha.compute_mean_hazard_maps):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
@@ -257,26 +254,21 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
-        if not curve_serializer:
-            curve_serializer = self.write_hazardcurve_file
-        if not map_serializer:
-            map_serializer = self.write_hazardmap_file
-        if not curve_task:
-            curve_task = tasks.compute_mean_curves
-        if not map_func:
-            map_func = classical_psha.compute_mean_hazard_maps
 
-        pending_tasks = []
-        results = []
-        do_mean_curves = (
-            self.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true')
+        def param_set(name):
+            """Is the parameter with the given `name` set and non-empty?"""
+            value = self.params.get(name)
+            return value is not None and value.strip()
 
-        if not do_mean_curves:
+        if not param_set("COMPUTE_MEAN_HAZARD_CURVE"):
             return
 
+        # Compute and serialize the mean curves.
+        pending_tasks = []
+        results = []
         LOG.info('Computing mean hazard curves')
-        pending_tasks.append(curve_task.delay(self.id, sites))
 
+        pending_tasks.append(curve_task.delay(self.id, sites))
         for task in pending_tasks:
             task.wait()
             if task.status != 'SUCCESS':
@@ -287,20 +279,25 @@ class ClassicalMixin(BasePSHAMixin):
             LOG.info('Serializing mean hazard curves')
             curve_serializer(results)
 
-        if map_serializer:
-            do_mean_maps = self.params.get(classical_psha.POES_PARAM_NAME)
-            do_mean_maps = do_mean_maps is not None and do_mean_maps.strip()
-            if do_mean_maps:
-                LOG.info('Computing/serializing mean hazard maps')
-                results = map_func(self)
-                LOG.info("results = '%s'" % results)
-                map_serializer(results)
+        if not param_set(classical_psha.POES_PARAM_NAME):
+            return
+
+        assert map_func, "No calculation function for mean hazard maps set."
+        assert map_serializer, "No serializer for the mean hazard maps set."
+
+        # Compute and serialize the mean curves.
+        LOG.info('Computing/serializing mean hazard maps')
+        results = map_func(self)
+        LOG.info("results = '%s'" % results)
+        map_serializer(results)
 
     @preload
     def execute(self):
         site_list = self.sites_for_region()
-        results = self.do_curves(site_list)
-        self.do_means(site_list)
+        results = self.do_curves(
+            site_list, serializer=self.write_hazardcurve_file)
+        self.do_means(site_list, curve_serializer=self.write_hazardcurve_file,
+                      map_serializer=self.write_hazardmap_file)
 
         # compute and serialize quantile hazard curves
         pending_tasks_quantile = []
