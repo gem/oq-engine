@@ -35,6 +35,7 @@
                         <xs:element ref="logicTreeSet"/>
                         <xs:element ref="rupture"/>
                         <xs:element ref="riskResult"/>
+                        <xs:element ref="lossMap"/>
                         <xs:element ref="exposurePortfolio"/>
                         <xs:element ref="vulnerabilityModel"/>
                     </xs:choice>
