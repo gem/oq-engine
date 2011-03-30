@@ -22,6 +22,7 @@ Contents:
    producer
    risk
    schema
+   shapes
    tasks
    writer
    xml
