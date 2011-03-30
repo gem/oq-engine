@@ -293,6 +293,10 @@ class ClassicalMixin(BasePSHAMixin):
 
     @preload
     def execute(self):
+        """
+        Trigger the calculation and serialization of hazard curves, mean hazard
+        curves/maps and quantile curves.
+        """
         site_list = self.sites_for_region()
         results = self.do_curves(
             site_list, serializer=self.write_hazardcurve_file)

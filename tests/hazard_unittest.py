@@ -1139,10 +1139,10 @@ class DoCurvesTestCase(unittest.TestCase):
         logic trees.
         """
         def sampleAndSaveERFTree(self, cache, key, seed):
-            pass
+            "Do nothing."
 
         def sampleAndSaveGMPETree(self, cache, key, seed):
-            pass
+            "Do nothing."
 
     mock_results = [
         [
@@ -1288,6 +1288,9 @@ class DoMeansTestCase(unittest.TestCase):
         """
         When the mean map serialization function is not set an `AssertionError`
         is raised.
+
+        TODO: once everyone is on python rev. > 2.7 extend the test to check
+        for the specific assertion message.
         """
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
@@ -1302,6 +1305,9 @@ class DoMeansTestCase(unittest.TestCase):
         """
         When the mean map calculation function is not set an `AssertionError`
         is raised.
+
+        TODO: once everyone is on python rev. > 2.7 extend the test to check
+        for the specific assertion message.
         """
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
