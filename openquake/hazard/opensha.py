@@ -16,8 +16,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 Wrapper around the OpenSHA-lite java library.
 """
@@ -171,11 +169,29 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    @preload
-    def execute(self):
+    def do_curves(
+        self, sites, serializer=None, the_task=tasks.compute_hazard_curve):
+        """Trigger the calculation of hazard curves, serialize as requested.
 
+        The calculated hazard curves will only be serialized if the
+        `serializer` parameter is not `None`.
+
+        :param sites: The sites for which to calculate hazard curves.
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param serializer: A serializer for the calculated hazard curves,
+            receives the KVS keys of the calculated hazard curves in
+            its single parameter.
+        :type serializer: a callable with a single parameter: list of strings
+        :param the_task: The task to use for the hazard curve calculation, it
+            takes the following parameters:
+                * job ID
+                * the sites for which to calculate the hazard curves
+                * the logic tree realization number
+        :type the_task: a callable taking three parameters
+        :returns: KVS keys of the calculated hazard curves.
+        :rtype: list of string
+        """
         results = []
-
         source_model_generator = random.Random()
         source_model_generator.seed(
                 self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
@@ -185,10 +201,8 @@ class ClassicalMixin(BasePSHAMixin):
 
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
-        site_list = self.sites_for_region()
-
         LOG.info('Going to run classical PSHA hazard for %s realizations '\
-                 'and %s sites' % (realizations, len(site_list)))
+                 'and %s sites' % (realizations, len(sites)))
 
         for realization in xrange(0, realizations):
             LOG.info('Calculating hazard curves for realization %s'
@@ -198,9 +212,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            pending_tasks.append(
-                tasks.compute_hazard_curve.delay(self.id, site_list,
-                    realization))
+            pending_tasks.append(the_task.delay(self.id, sites, realization))
 
             for task in pending_tasks:
                 task.wait()
@@ -208,10 +220,17 @@ class ClassicalMixin(BasePSHAMixin):
                     raise Exception(task.result)
                 results_per_realization.extend(task.result)
 
-            self.write_hazardcurve_file(results_per_realization)
+            if serializer:
+                serializer(results_per_realization)
             results.extend(results_per_realization)
 
-        del results_per_realization
+        return results
+
+    @preload
+    def execute(self):
+
+        site_list = self.sites_for_region()
+        results = self.do_curves(site_list, self.write_hazardcurve_file)
 
         # compute and serialize mean and quantile hazard curves
         pending_tasks_mean = []

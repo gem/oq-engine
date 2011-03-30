@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Unit tests for hazard computations with the hazard engine.
 Includes:
@@ -27,15 +26,14 @@ Includes:
 """
 
 import json
+import numpy
 import os
 import unittest
-import numpy
 
 from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from utils import test
 from openquake import xml
 
 from openquake.job import mixins
@@ -45,6 +43,8 @@ from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 import openquake.hazard.job
 
+from tests.utils import helpers
+from tests.utils.tasks import test_compute_hazard_curve
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
@@ -56,20 +56,21 @@ MEAN_GROUND_INTENSITY = (
     '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
-TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
 with open(
-    test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+    helpers.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
 with open(
-    test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+    helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
-NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = \
+    os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 
 def generate_job():
@@ -399,13 +400,13 @@ class HazardEngineTestCase(unittest.TestCase):
             # Spawn our tasks.
             results.append(tasks.generate_erf.apply_async(args=[job_id]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         result_values = self.kvs_client.get_multi(result_keys)
 
         self.assertEqual(result_values, expected_values)
 
-    @test.skipit
+    @helpers.skipit
     def test_compute_hazard_curve_all_sites(self):
         results = []
         block_id = 8801
@@ -414,7 +415,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_hazard_curve.apply_async(
                 args=[job_id, block_id]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         for result in results:
             for res in result.get():
@@ -435,7 +436,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         for result in results:
             self.assertEqual(mgm_intensity, result.get())
@@ -1123,3 +1124,74 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
                 self.job_id, site.longitude, site.latitude,
                 str(poe))))
+
+
+class DoCurvesTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.curves()."""
+
+    def __init__(self, *args, **kwargs):
+        super(DoCurvesTestCase, self).__init__(*args, **kwargs)
+        self.keys = []
+
+    class FakeLogicTreeProcessor(object):
+        """
+        Fake logic tree processor class. This test will not manipulate any
+        logic trees.
+        """
+        def sampleAndSaveERFTree(self, cache, key, seed):
+            pass
+
+        def sampleAndSaveGMPETree(self, cache, key, seed):
+            pass
+
+    mocked_results = [
+        [
+            'hazard_curve!38cdc377!1!-121.9!38.0',
+            'hazard_curve!38cdc377!1!-121.8!38.0',
+            'hazard_curve!38cdc377!1!-121.7!38.0'],
+        [
+            'hazard_curve!38cdc377!2!-121.9!38.0',
+            'hazard_curve!38cdc377!2!-121.8!38.0',
+            'hazard_curve!38cdc377!2!-121.7!38.0']]
+
+    def setUp(self):
+        self.mixin = opensha.ClassicalMixin(
+            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+        # Store the canned result data in the KVS.
+        key = self.mixin.id = helpers.TestStore.nextkey()
+        self.keys.append(key)
+        for realization in xrange(2):
+            key = "%s/%s" % (self.mixin.id, realization + 1)
+            helpers.TestStore.put(key, self.mocked_results[realization])
+            self.keys.append(key)
+        LOG.debug("keys = '%s'" % self.keys)
+        # Initialize the mixin instance.
+        self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2)
+        self.mixin.calc = self.FakeLogicTreeProcessor()
+        self.mixin.cache = dict()
+
+    def tearDown(self):
+        # Remove the canned result data from the KVS.
+        for key in self.keys:
+            helpers.TestStore.remove(key)
+
+    def test_serializer_called_when_passed(self):
+        """The passed serialization function is called for each realization."""
+
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            self.assertEqual(
+                self.mocked_results[fake_serializer.number_of_calls], kvs_keys)
+            fake_serializer.number_of_calls += 1
+
+        # We will count the number of invocations using a property of the fake
+        # serializer function.
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.do_curves(sites, serializer=fake_serializer,
+                             the_task=test_compute_hazard_curve)
+        self.assertEqual(2, fake_serializer.number_of_calls)

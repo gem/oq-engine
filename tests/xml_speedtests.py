@@ -31,7 +31,7 @@ from xml.sax import saxutils
 import guppy
 from lxml import etree
 
-from utils import test
+from tests.utils import helpers
 from openquake import flags
 FLAGS = flags.FLAGS
 
@@ -42,39 +42,39 @@ TEST_FILE_URL = "http://gemsun02.ethz.ch/~jmckenty/large.xml"
 class MySAXHandler(saxutils.XMLGenerator):
     def startElementNS(self, *_args, **_kw):
         pass
-    def endElementNS(self, *_args, **_kw): 
+    def endElementNS(self, *_args, **_kw):
         pass
-    def startElement(self, *_args, **_kw): 
+    def startElement(self, *_args, **_kw):
         pass
-    def endElement(self, *_args, **_kw): 
+    def endElement(self, *_args, **_kw):
         pass
-    def startDocument(self, *_args, **_kw): 
+    def startDocument(self, *_args, **_kw):
         pass
-    def endDocument(self, *_args, **_kw): 
+    def endDocument(self, *_args, **_kw):
         pass
-    def startPrefixMapping(self, *_args, **_kw): 
+    def startPrefixMapping(self, *_args, **_kw):
         pass
-    def endPrefixMapping(self, *_args, **_kw): 
+    def endPrefixMapping(self, *_args, **_kw):
         pass
-    def characters(self, *_args, **_kw): 
+    def characters(self, *_args, **_kw):
         pass
 
 class XMLSpeedTestCase(unittest.TestCase):
     """Tests parsing of large xml file using several methods"""
     def setUp(self):
-        self.file = os.path.join(test.DATA_DIR, TEST_FILE)
-        test.guarantee_file(self.file, TEST_FILE_URL)
+        self.file = os.path.join(helpers.DATA_DIR, TEST_FILE)
+        helpers.guarantee_file(self.file, TEST_FILE_URL)
 
-    @test.timeit
+    @helpers.timeit
     def test_lxml_iterparse(self):
         """Displays time and memory used for empty lxml parsing"""
         for _event, _element in etree.iterparse(self.file,
                                                   events=('start', 'end')):
             pass
         print guppy.hpy().heap()
-    
-    @test.skipit
-    @test.timeit
+
+    @helpers.skipit
+    @helpers.timeit
     def test_native_iterparse(self):
         """Displays time and memory used for empty native parsing"""
         for _event, _element in ElementTree.iterparse(self.file,
@@ -82,8 +82,8 @@ class XMLSpeedTestCase(unittest.TestCase):
             # Do something here
             pass
         print guppy.hpy().heap()
-    
-    @test.timeit
+
+    @helpers.timeit
     def test_native_sax(self):
         """Displays time and memory used for empty native sax parsing"""
         handler = MySAXHandler()
