@@ -1186,6 +1186,8 @@ class DoCurvesTestCase(unittest.TestCase):
                 self.mock_results[fake_serializer.number_of_calls], kvs_keys)
             fake_serializer.number_of_calls += 1
 
+        # We will count the number of invocations using a property of the fake
+        # serializer function.
         fake_serializer.number_of_calls = 0
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
