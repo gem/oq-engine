@@ -8,6 +8,8 @@ REGION_GRID_SPACING = 0.1
 
 [HAZARD]
 
+RUPTURE_SURFACE_DISCRETIZATION = 0.1
+
 # (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
 COMPONENT = Average Horizontal (GMRotI50)
 
@@ -24,8 +26,6 @@ GMPE_TRUNCATION_TYPE = 2 Sided
 
 # (1,2,3,...)
 TRUNCATION_LEVEL = 3
-# (Total, Inter-Event, Intra-Event, None (zero), Total (Mag Dependent), Total (PGA Dependent), Intra-Event (Mag Dependent))
-STANDARD_DEVIATION_TYPE = Total
 
 # if true compute ground motion fields using correlated model of Jayaram and Baker 2009
 GROUND_MOTION_CORRELATION = true
@@ -45,7 +45,7 @@ OUTPUT_DIR = computed_output
 
 HAZARD_CALCULATION_MODE = Deterministic
 
-GMPE_MODEL_NAME = org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel
+GMPE_MODEL_NAME = BA_2008_AttenRel
 
 NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 5
 

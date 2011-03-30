@@ -129,7 +129,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
         rel_path = self.params["SINGLE_RUPTURE_MODEL"]
         abs_path = os.path.join(self.params["BASE_PATH"], rel_path)
-        grid_spacing = float(self.params["REGION_GRID_SPACING"])
+        grid_spacing = float(self.params["RUPTURE_SURFACE_DISCRETIZATION"])
 
         return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
 
@@ -145,10 +145,13 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
         """
 
         deserializer = java.jclass("GMPEDeserializer")()
+
+        package_name = "org.opensha.sha.imr.attenRelImpl"
         class_name = self.params["GMPE_MODEL_NAME"]
+        fqn = package_name + "." + class_name
 
         gmpe = deserializer.deserialize(
-            java.jclass("JsonPrimitive")(class_name), None, None)
+            java.jclass("JsonPrimitive")(fqn), None, None)
 
         tree_data = java.jclass("GmpeLogicTreeData")()
 
@@ -158,8 +161,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             jpype.JDouble(float(self.params["PERIOD"])),
             jpype.JDouble(float(self.params["DAMPING"])),
             self.params["GMPE_TRUNCATION_TYPE"],
-            jpype.JDouble(float(self.params["TRUNCATION_LEVEL"])),
-            self.params["STANDARD_DEVIATION_TYPE"],
+            jpype.JDouble(float(self.params["TRUNCATION_LEVEL"])), "Total",
             jpype.JDouble(float(self.params["REFERENCE_VS30_VALUE"])),
             jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
 

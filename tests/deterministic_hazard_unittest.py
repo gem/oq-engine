@@ -65,7 +65,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.engine.params["REGION_VERTEX"] = \
             "33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30"
 
-        self.engine.params["REGION_GRID_SPACING"] = "0.1"
+        self.engine.params["RUPTURE_SURFACE_DISCRETIZATION"] = "0.1"
         self.engine.params[NUMBER_OF_CALC_KEY] = "1"
 
         # saving the default java implementation
