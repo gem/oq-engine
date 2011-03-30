@@ -1283,3 +1283,31 @@ class DoMeansTestCase(unittest.TestCase):
             curve_task=test_data_reflector, map_serializer=fake_serializer,
             map_func=lambda _: [1, 2, 3])
         self.assertEqual(1, fake_serializer.number_of_calls)
+
+    def test_missing_map_serializer_assertion(self):
+        """
+        When the mean map serialization function is not set an `AssertionError`
+        is raised.
+        """
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.assertRaises(
+            AssertionError, self.mixin.do_means,
+            sites, curve_serializer=lambda _: True,
+            curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
+
+    def test_missing_map_function_assertion(self):
+        """
+        When the mean map calculation function is not set an `AssertionError`
+        is raised.
+        """
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.assertRaises(
+            AssertionError, self.mixin.do_means, sites,
+            curve_serializer=lambda _: True, curve_task=test_data_reflector,
+            map_serializer=lambda _: True, map_func=None)
