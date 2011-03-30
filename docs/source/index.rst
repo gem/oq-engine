@@ -10,24 +10,20 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
+
    architecture
-   converter
    flags
    formats
    hazard
    java
    job
-   jobber
    logs
    output
    producer
    risk
    schema
-   seismicsources
+   shapes
    tasks
-   urls
-   utils
    writer
    xml
 

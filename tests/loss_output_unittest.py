@@ -31,7 +31,7 @@ from lxml import etree
 from openquake import logs
 from openquake import shapes
 from openquake import xml
-from utils import test
+from tests.utils import helpers
 
 from openquake.output import risk as risk_output
 
@@ -45,28 +45,28 @@ SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves-single.xml'
 
 LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
-NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 TEST_LOSS_CURVE = shapes.Curve(
     [(0.0, 0.44), (256.0, 0.23), (512.0, 0.2), (832.0, 0.16), (1216.0, 0.06)])
 
 TEST_LOSS_RATIO_CURVE = shapes.Curve(
-    [(0.0, 0.89), (0.2, 0.72), (0.4, 0.45), (0.6, 0.22), (0.8, 0.17), 
+    [(0.0, 0.89), (0.2, 0.72), (0.4, 0.45), (0.6, 0.22), (0.8, 0.17),
      (1.0, 0.03)])
 
 class LossOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
     as well as correct given the inputs."""
-    
+
     def setUp(self):
-        self.loss_curve_path = test.do_test_output_file(LOSS_XML_OUTPUT_FILE)
-        self.loss_ratio_curve_path = test.do_test_output_file(
+        self.loss_curve_path = helpers.get_output_path(LOSS_XML_OUTPUT_FILE)
+        self.loss_ratio_curve_path = helpers.get_output_path(
             LOSS_RATIO_XML_OUTPUT_FILE)
 
-        self.single_loss_curve_path = test.do_test_output_file(
+        self.single_loss_curve_path = helpers.get_output_path(
             SINGLE_LOSS_XML_OUTPUT_FILE)
-        self.single_loss_ratio_curve_path = test.do_test_output_file(
+        self.single_loss_ratio_curve_path = helpers.get_output_path(
             SINGLE_LOSS_RATIO_XML_OUTPUT_FILE)
 
         self.schema_path = NRML_SCHEMA_PATH
@@ -84,24 +84,24 @@ class LossOutputTestCase(unittest.TestCase):
             (first_site, (TEST_LOSS_CURVE, first_asset_a)),
             (first_site, (TEST_LOSS_CURVE, first_asset_b)),
             (second_site, (TEST_LOSS_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, second_asset_b))] 
+            (second_site, (TEST_LOSS_CURVE, second_asset_b))]
 
         self.loss_ratio_curves = [
             (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a)),
             (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_b)),
             (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))] 
+            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))]
 
         self.single_loss_curve = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a))] 
+            (first_site, (TEST_LOSS_CURVE, first_asset_a))]
 
         self.single_loss_ratio_curve = [
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))] 
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))]
 
         # loss curve that fails with inconsistent sites for an asset
         self.loss_curves_fail = [
             (first_site, (TEST_LOSS_CURVE, first_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, first_asset_a))] 
+            (second_site, (TEST_LOSS_CURVE, first_asset_a))]
 
     def test_loss_is_serialized_to_file_and_validates(self):
         """Serialize loss curve to NRML and validate against schema."""
@@ -125,15 +125,15 @@ class LossOutputTestCase(unittest.TestCase):
             self.loss_ratio_curve_path)
 
     def test_loss_serialization_with_inconsistent_site_fails(self):
-        """Assert that serialization of illegal loss curve data 
+        """Assert that serialization of illegal loss curve data
         raises error."""
         xml_writer = risk_output.LossCurveXMLWriter(
-            test.do_test_output_file(LOSS_XML_FAIL_OUTPUT_FILE))
-        self.assertRaises(ValueError, xml_writer.serialize, 
+            helpers.get_output_path(LOSS_XML_FAIL_OUTPUT_FILE))
+        self.assertRaises(ValueError, xml_writer.serialize,
             self.loss_curves_fail)
-    
+
     def test_loss_xml_is_correct(self):
-        """Assert that content of serialized loss curve data 
+        """Assert that content of serialized loss curve data
         is correct."""
 
         # serialize curves
@@ -152,7 +152,7 @@ class LossOutputTestCase(unittest.TestCase):
         loss_values = [float(x) \
             for x in loss_el_txt.strip().split()]
 
-        self.assertEqual(len(loss_values), len(TEST_LOSS_CURVE.abscissae), 
+        self.assertEqual(len(loss_values), len(TEST_LOSS_CURVE.abscissae),
             "curve length mismatch")
 
         for idx, val in enumerate(TEST_LOSS_CURVE.abscissae):
@@ -165,7 +165,7 @@ class LossOutputTestCase(unittest.TestCase):
     # Optionally, compare it to another XML file.
 
     def test_loss_ratio_xml_is_correct(self):
-        """Assert that content of serialized loss ratio curve data 
+        """Assert that content of serialized loss ratio curve data
         is correct."""
 
         # serialize curves
@@ -185,8 +185,8 @@ class LossOutputTestCase(unittest.TestCase):
         loss_ratio_values = [float(x) \
             for x in loss_ratio_el_txt.strip().split()]
 
-        self.assertEqual(len(loss_ratio_values), 
-            len(TEST_LOSS_RATIO_CURVE.abscissae), 
+        self.assertEqual(len(loss_ratio_values),
+            len(TEST_LOSS_RATIO_CURVE.abscissae),
             "curve length mismatch")
 
         for idx, val in enumerate(TEST_LOSS_RATIO_CURVE.abscissae):
