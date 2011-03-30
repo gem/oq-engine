@@ -1127,7 +1127,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
 
 class DoCurvesTestCase(unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.curves()."""
+    """Tests the behaviour of ClassicalMixin.do_curves()."""
 
     def __init__(self, *args, **kwargs):
         super(DoCurvesTestCase, self).__init__(*args, **kwargs)
@@ -1196,7 +1196,7 @@ class DoCurvesTestCase(unittest.TestCase):
 
 
 class DoMeansTestCase(unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.curves()."""
+    """Tests the behaviour of ClassicalMixin.do_means()."""
 
     def __init__(self, *args, **kwargs):
         super(DoMeansTestCase, self).__init__(*args, **kwargs)
@@ -1315,5 +1315,129 @@ class DoMeansTestCase(unittest.TestCase):
         self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
         self.assertRaises(
             AssertionError, self.mixin.do_means, sites,
+            curve_serializer=lambda _: True, curve_task=test_data_reflector,
+            map_serializer=lambda _: True, map_func=None)
+
+
+class DoQuantilesTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.do_quantiles()."""
+
+    def __init__(self, *args, **kwargs):
+        super(DoQuantilesTestCase, self).__init__(*args, **kwargs)
+        self.keys = []
+
+    mock_results = [
+        'quantile_hazard_curve!38cdc377!1!-121.9!38.0',
+        'quantile_hazard_curve!38cdc377!1!-121.8!38.0',
+        'quantile_hazard_curve!38cdc377!1!-121.7!38.0']
+
+    def setUp(self):
+        self.mixin = opensha.ClassicalMixin(
+            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+        # Store the canned result data in the KVS.
+        key = self.mixin.id = helpers.TestStore.add(self.mock_results)
+        self.keys.append(key)
+        # Initialize the mixin instance.
+        self.mixin.params = dict(COMPUTE_MEAN_HAZARD_CURVE="True")
+
+    def tearDown(self):
+        # Remove the canned result data from the KVS.
+        for key in self.keys:
+            helpers.TestStore.remove(key)
+
+    def test_curve_serializer_called_when_passed(self):
+        """The passed quantile curve serialization function is called."""
+
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            self.assertEqual(self.mock_results, kvs_keys)
+            fake_serializer.number_of_calls += 1
+
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.do_quantiles(sites, curve_serializer=fake_serializer,
+                            curve_task=test_data_reflector)
+        self.assertEqual(1, fake_serializer.number_of_calls)
+
+    def test_map_serializer_not_called_unless_configured(self):
+        """
+        The quantile map serialization function is not called unless the
+        POES_HAZARD_MAPS parameter was specified in the configuration file.
+        """
+
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            fake_serializer.number_of_calls += 1
+
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.do_quantiles(sites, curve_serializer=lambda _: True,
+                            curve_task=test_data_reflector,
+                            map_serializer=fake_serializer)
+        self.assertEqual(0, fake_serializer.number_of_calls)
+
+    def test_map_serializer_called_when_configured(self):
+        """
+        The quantile map serialization function is called when the POES_HAZARD_MAPS
+        parameter is specified in the configuration file.
+        """
+
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            self.assertEqual([1, 2, 3], kvs_keys)
+            fake_serializer.number_of_calls += 1
+
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.do_quantiles(
+            sites, curve_serializer=lambda _: True,
+            curve_task=test_data_reflector, map_serializer=fake_serializer,
+            map_func=lambda _: [1, 2, 3])
+        self.assertEqual(1, fake_serializer.number_of_calls)
+
+    def test_missing_map_serializer_assertion(self):
+        """
+        When the quantile map serialization function is not set an
+        `AssertionError` is raised.
+
+        TODO: once everyone is on python rev. > 2.7 extend the test to check
+        for the specific assertion message.
+        """
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.assertRaises(
+            AssertionError, self.mixin.do_quantiles,
+            sites, curve_serializer=lambda _: True,
+            curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
+
+    def test_missing_map_function_assertion(self):
+        """
+        When the quantile map calculation function is not set an
+        `AssertionError` is raised.
+
+        TODO: once everyone is on python rev. > 2.7 extend the test to check
+        for the specific assertion message.
+        """
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.assertRaises(
+            AssertionError, self.mixin.do_quantiles, sites,
             curve_serializer=lambda _: True, curve_task=test_data_reflector,
             map_serializer=lambda _: True, map_func=None)
