@@ -1242,7 +1242,7 @@ class DoMeansTestCase(unittest.TestCase):
     def test_map_serializer_not_called_unless_configured(self):
         """
         The mean map serialization function is not called unless the
-        POES_HAZARD_MAPS parameter was specified in the configuration file
+        POES_HAZARD_MAPS parameter was specified in the configuration file.
         """
 
         def fake_serializer(kvs_keys):
@@ -1259,3 +1259,27 @@ class DoMeansTestCase(unittest.TestCase):
                             curve_task=test_data_reflector,
                             map_serializer=fake_serializer)
         self.assertEqual(0, fake_serializer.number_of_calls)
+
+    def test_map_serializer_called_when_configured(self):
+        """
+        The mean map serialization function is called when the POES_HAZARD_MAPS
+        parameter is specified in the configuration file.
+        """
+
+        def fake_serializer(kvs_keys):
+            """Fake serialization function to be used in this test."""
+            # Check that the data returned is the one we expect for the current
+            # realization.
+            self.assertEqual([1, 2, 3], kvs_keys)
+            fake_serializer.number_of_calls += 1
+
+        fake_serializer.number_of_calls = 0
+
+        sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                 shapes.Site(-121.7, 38.0)]
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.do_means(
+            sites, curve_serializer=lambda _: True,
+            curve_task=test_data_reflector, map_serializer=fake_serializer,
+            map_func=lambda _: [1, 2, 3])
+        self.assertEqual(1, fake_serializer.number_of_calls)
