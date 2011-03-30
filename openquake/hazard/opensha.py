@@ -288,7 +288,9 @@ class ClassicalMixin(BasePSHAMixin):
             curve_serializer(results)
 
         if map_serializer:
-            if self.params[classical_psha.POES_PARAM_NAME] != '':
+            do_mean_maps = self.params.get(classical_psha.POES_PARAM_NAME)
+            do_mean_maps = do_mean_maps is not None and do_mean_maps.strip()
+            if do_mean_maps:
                 LOG.info('Computing/serializing mean hazard maps')
                 results = map_func(self)
                 LOG.info("results = '%s'" % results)
