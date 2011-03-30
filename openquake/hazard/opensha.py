@@ -227,13 +227,18 @@ class ClassicalMixin(BasePSHAMixin):
 
         return results
 
+    def param_set(self, name):
+        """Is the parameter with the given `name` set and non-empty?"""
+        value = self.params.get(name)
+        return value is not None and value.strip()
+
     def do_means(self, sites, curve_serializer=None, map_serializer=None,
                  curve_task=tasks.compute_mean_curves,
                  map_func=classical_psha.compute_mean_hazard_maps):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
-        corresponding`serializer` parameter was set.
+        corresponding `serializer` parameter was set.
 
         :param sites: The sites for which to calculate mean curves/maps.
         :type sites: list of :py:class:`openquake.shapes.Site`
@@ -255,12 +260,7 @@ class ClassicalMixin(BasePSHAMixin):
         :returns: `None`
         """
 
-        def param_set(name):
-            """Is the parameter with the given `name` set and non-empty?"""
-            value = self.params.get(name)
-            return value is not None and value.strip()
-
-        if not param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+        if not self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
             return
 
         # Compute and serialize the mean curves.
@@ -279,7 +279,7 @@ class ClassicalMixin(BasePSHAMixin):
             LOG.info('Serializing mean hazard curves')
             curve_serializer(results)
 
-        if not param_set(classical_psha.POES_PARAM_NAME):
+        if not self.param_set(classical_psha.POES_PARAM_NAME):
             return
 
         assert map_func, "No calculation function for mean hazard maps set."
@@ -290,6 +290,69 @@ class ClassicalMixin(BasePSHAMixin):
         results = map_func(self)
         LOG.info("results = '%s'" % results)
         map_serializer(results)
+
+    def do_quantiles(self, sites, curve_serializer=None, map_serializer=None,
+                     curve_task=tasks.compute_quantile_curves,
+                     map_func=classical_psha.compute_quantile_hazard_maps):
+        """Trigger the calculation/serialization of quantile curves/maps.
+
+        The calculated quantile curves/maps will only be serialized if the
+        corresponding `serializer` parameter was set.
+
+        :param sites: The sites for which to calculate quantile curves/maps.
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param curve_serializer: A serializer for the calculated curves,
+            receives the KVS keys of the calculated curves in
+            its single parameter.
+        :type curve_serializer: function([string])
+        :param map_serializer: A serializer for the calculated maps,
+            receives the KVS keys of the calculated maps in its single
+            parameter.
+        :type map_serializer: function([string])
+        :param curve_task: The `celery` task to use for the curve calculation,
+            it takes the following parameters:
+                * job ID
+                * the sites for which to calculate the hazard curves
+        :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
+        :param map_func: A function that computes quantile hazard maps.
+        :type map_func: function(:py:class:`openquake.job.Job`)
+        :returns: `None`
+        """
+        # compute and serialize quantile hazard curves
+        pending_tasks = []
+        results = []
+
+        LOG.info("Computing quantile hazard curves")
+        pending_tasks.append(curve_task.delay(self.id, sites))
+
+        for task in pending_tasks:
+            task.wait()
+            if task.status != "SUCCESS":
+                raise Exception(task.result)
+            results.extend(task.result)
+
+        # collect hazard curve keys per quantile value
+        quantiles = _collect_curve_keys_per_quantile(results)
+
+        LOG.info("Serializing quantile curves for %s values" % len(quantiles))
+        for keys in quantiles.values():
+            curve_serializer(keys)
+
+        # compute quantile hazard maps
+        if (not self.param_set("classical_psha.POES_PARAM_NAME") or
+            len(quantiles) < 1):
+            return
+
+        assert map_func, "No calculation function for quantile maps set."
+        assert map_serializer, "No serializer for the quantile maps set."
+
+        LOG.info("Computing quantile hazard maps")
+        results = map_func(self)
+        quantiles = _collect_map_keys_per_quantile(results)
+
+        LOG.info("Serializing quantile maps for %s values" % len(quantiles))
+        for keys in quantiles.values():
+            map_serializer(keys)
 
     @preload
     def execute(self):
@@ -302,45 +365,9 @@ class ClassicalMixin(BasePSHAMixin):
             site_list, serializer=self.write_hazardcurve_file)
         self.do_means(site_list, curve_serializer=self.write_hazardcurve_file,
                       map_serializer=self.write_hazardmap_file)
-
-        # compute and serialize quantile hazard curves
-        pending_tasks_quantile = []
-        results_quantile = []
-
-        LOG.info('Computing quantile hazard curves')
-        pending_tasks_quantile.append(
-            tasks.compute_quantile_curves.delay(self.id, site_list))
-
-        for task in pending_tasks_quantile:
-            task.wait()
-            if task.status != 'SUCCESS':
-                raise Exception(task.result)
-            results_quantile.extend(task.result)
-
-        # collect hazard curve keys per quantile value
-        quantile_values = _collect_curve_keys_per_quantile(results_quantile)
-
-        LOG.info('Serializing quantile hazard curves for %s quantile values' \
-            % len(quantile_values))
-        for key_list in quantile_values.values():
-            self.write_hazardcurve_file(key_list)
-
-        # compute quantile hazard maps
-        if (self.params[classical_psha.POES_PARAM_NAME] != '' and
-            len(quantile_values) > 0):
-
-            LOG.info('Computing quantile hazard maps')
-            results_quantile_maps = \
-                classical_psha.compute_quantile_hazard_maps(self)
-
-            quantile_values = _collect_map_keys_per_quantile(
-                results_quantile_maps)
-
-            LOG.info(
-                "Serializing quantile hazard maps for %s quantile values"
-                % len(quantile_values))
-            for key_list in quantile_values.values():
-                self.write_hazardmap_file(key_list)
+        self.do_quantiles(
+            site_list, curve_serializer=self.write_hazardcurve_file,
+            map_serializer=self.write_hazardmap_file)
 
         return results
 
