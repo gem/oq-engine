@@ -6,15 +6,16 @@ OpenQuake Computational Hazard Engine
 The :mod:`Hazard` Sub-package
 -----------------------------
 
-The hazard sub package includes:
+The :mod:`classical_psha` Module
+--------------------------------
+.. automodule:: openquake.hazard.classical_psha
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
-:mod:`tasks` module which is the core of the computational engine.
-(currently most of the core computational engine is in Java and not documented here)
-
-The :mod:`tasks` Module
------------------------
-
-.. automodule:: openquake.hazard.tasks
+The :mod:`opensha` Module
+-------------------------
+.. automodule:: openquake.hazard.opensha
     :members:
     :undoc-members:
     :show-inheritance:

@@ -18,15 +18,12 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import os
 import unittest
 import tempfile
 
-from openquake import producer
 from openquake import shapes
-from utils import test
+from tests.utils import helpers
 
 
 def generate_data(prefix):
@@ -57,7 +54,7 @@ class FileProducerTestCase(unittest.TestCase):
 
     def test_iterator_interface(self):
         path = self._make_data_file('test')
-        prod = test.WordProducer(path)
+        prod = helpers.WordProducer(path)
         for ((cell_x, cell_y), data) in prod:
             self.assertEqual(data, 'test%s' % int(cell_x))
 
@@ -65,12 +62,12 @@ class FileProducerTestCase(unittest.TestCase):
         constraint = shapes.RegionConstraint.from_simple((10, 10), (100, 100))
 
         path = self._make_data_file('test')
-        prod = test.WordProducer(path)
+        prod = helpers.WordProducer(path)
 
         # TODO(termie): Right now the bound
         expected = dict(zip(range(10, 101), range(10, 101)))
         for ((cell_x, cell_y), data) in prod.filter(constraint):
             test_cell = expected.pop(int(cell_x))
             self.assertEqual(data, 'test%s' % int(test_cell))
-        
+
         self.assertEqual(len(expected), 0)
