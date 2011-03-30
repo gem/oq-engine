@@ -233,7 +233,7 @@ class ClassicalMixin(BasePSHAMixin):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
-        corresponding`serializer` parameter was set.
+        corresponding `serializer` parameter was set.
 
         :param sites: The sites for which to calculate mean curves/maps.
         :type sites: list of :py:class:`openquake.shapes.Site`

@@ -1205,9 +1205,9 @@ class DoMeansTestCase(unittest.TestCase):
         self.keys = []
 
     mock_results = [
-        'hazard_curve!38cdc377!1!-121.9!38.0',
-        'hazard_curve!38cdc377!1!-121.8!38.0',
-        'hazard_curve!38cdc377!1!-121.7!38.0']
+        'mean_hazard_curve!38cdc377!1!-121.9!38.0',
+        'mean_hazard_curve!38cdc377!1!-121.8!38.0',
+        'mean_hazard_curve!38cdc377!1!-121.7!38.0']
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
@@ -1233,6 +1233,8 @@ class DoMeansTestCase(unittest.TestCase):
             self.assertEqual(self.mock_results, kvs_keys)
             fake_serializer.number_of_calls += 1
 
+        # Count the number of invocations using this property of the fake
+        # serializer function.
         fake_serializer.number_of_calls = 0
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
@@ -1268,11 +1270,13 @@ class DoMeansTestCase(unittest.TestCase):
         parameter is specified in the configuration file.
         """
 
+        fake_map_keys = list(xrange(3))
+
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
             # Check that the data returned is the one we expect for the current
             # realization.
-            self.assertEqual([1, 2, 3], kvs_keys)
+            self.assertEqual(fake_map_keys, kvs_keys)
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
@@ -1283,7 +1287,7 @@ class DoMeansTestCase(unittest.TestCase):
         self.mixin.do_means(
             sites, curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_serializer=fake_serializer,
-            map_func=lambda _: [1, 2, 3])
+            map_func=lambda _: fake_map_keys)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_missing_map_serializer_assertion(self):
