@@ -15,7 +15,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """ Django settings for openquake project.  """
 
 #ADD THIS
@@ -40,13 +39,13 @@ MANAGERS = ADMINS
 SPATIALITE_LIBRARY_PATH = '/Library/Frameworks/SQLite3.framework/SQLite3'
 # 'postgresql_psycopg2', 'postgresql', 'mysql', 'sqlite3' or 'oracle'.
 DATABASE_ENGINE = 'postgresql_psycopg2'
-DATABASE_NAME = 'openquake.db' # Or path to database file if using sqlite3.
-DATABASE_USER = ''             # Not used with sqlite3.
-DATABASE_PASSWORD = ''         # Not used with sqlite3.
-DATABASE_HOST = ''             # Set to empty string for localhost.
-DATABASE_PORT = ''             # Set to empty string for default.
+DATABASE_NAME = 'openquake.db'  # Or path to database file if using sqlite3.
+DATABASE_USER = ''              # Not used with sqlite3.
+DATABASE_PASSWORD = ''          # Not used with sqlite3.
+DATABASE_HOST = ''              # Set to empty string for localhost.
+DATABASE_PORT = ''              # Set to empty string for default.
 
-# Not used at this point but you'll need it here if you 
+# Not used at this point but you'll need it here if you
 # want to enable a google maps baselayer within your
 # OpenLayers maps
 GOOGLE_MAPS_API_KEY = 'abcdefg'
@@ -125,3 +124,5 @@ KVS_HOST = "localhost"
 
 SOURCEGEOM_SHP = 'seismicsources/data/sourcegeometrycatalog.shp'
 WORLD_SHP = 'world/data/TM_WORLD_BORDERS-0.3.shp'
+
+TEST_KVS_DB = 3
