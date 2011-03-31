@@ -195,18 +195,18 @@ class ClassicalMixin(BasePSHAMixin):
 
         source_model_generator = random.Random()
         source_model_generator.seed(
-                self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
+                self.params.get("SOURCE_MODEL_LT_RANDOM_SEED", None))
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.params.get('GMPE_LT_RANDOM_SEED', None))
+        gmpe_generator.seed(self.params.get("GMPE_LT_RANDOM_SEED", None))
 
-        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+        realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
 
-        LOG.info('Going to run classical PSHA hazard for %s realizations '\
-                 'and %s sites' % (realizations, len(sites)))
+        LOG.info("Going to run classical PSHA hazard for %s realizations "
+                 "and %s sites" % (realizations, len(sites)))
 
         for realization in xrange(0, realizations):
-            LOG.info('Calculating hazard curves for realization %s'
+            LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             pending_tasks = []
             results_per_realization = []
@@ -217,7 +217,7 @@ class ClassicalMixin(BasePSHAMixin):
 
             for task in pending_tasks:
                 task.wait()
-                if task.status != 'SUCCESS':
+                if task.status != "SUCCESS":
                     raise Exception(task.result)
                 results_per_realization.extend(task.result)
 
@@ -266,17 +266,17 @@ class ClassicalMixin(BasePSHAMixin):
         # Compute and serialize the mean curves.
         pending_tasks = []
         results = []
-        LOG.info('Computing mean hazard curves')
+        LOG.info("Computing mean hazard curves")
 
         pending_tasks.append(curve_task.delay(self.id, sites))
         for task in pending_tasks:
             task.wait()
-            if task.status != 'SUCCESS':
+            if task.status != "SUCCESS":
                 raise Exception(task.result)
             results.extend(task.result)
 
         if curve_serializer:
-            LOG.info('Serializing mean hazard curves')
+            LOG.info("Serializing mean hazard curves")
             curve_serializer(results)
 
         if not self.param_set(classical_psha.POES_PARAM_NAME):
@@ -286,7 +286,7 @@ class ClassicalMixin(BasePSHAMixin):
         assert map_serializer, "No serializer for the mean hazard maps set."
 
         # Compute and serialize the mean curves.
-        LOG.info('Computing/serializing mean hazard maps')
+        LOG.info("Computing/serializing mean hazard maps")
         results = map_func(self)
         LOG.info("results = '%s'" % results)
         map_serializer(results)

@@ -57,13 +57,13 @@ class DoCurvesTestCase(unittest.TestCase):
 
     mock_results = [
         [
-            'hazard_curve!38cdc377!1!-121.9!38.0',
-            'hazard_curve!38cdc377!1!-121.8!38.0',
-            'hazard_curve!38cdc377!1!-121.7!38.0'],
+            "hazard_curve!38cdc377!1!-121.9!38.0",
+            "hazard_curve!38cdc377!1!-121.8!38.0",
+            "hazard_curve!38cdc377!1!-121.7!38.0"],
         [
-            'hazard_curve!38cdc377!2!-121.9!38.0',
-            'hazard_curve!38cdc377!2!-121.8!38.0',
-            'hazard_curve!38cdc377!2!-121.7!38.0']]
+            "hazard_curve!38cdc377!2!-121.9!38.0",
+            "hazard_curve!38cdc377!2!-121.8!38.0",
+            "hazard_curve!38cdc377!2!-121.7!38.0"]]
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
@@ -116,9 +116,9 @@ class DoMeansTestCase(unittest.TestCase):
                       shapes.Site(-122.9, 38.0), shapes.Site(-122.8, 38.0)]
 
     mock_results = [
-        'mean_hazard_curve!38cdc377!1!-121.9!38.0',
-        'mean_hazard_curve!38cdc377!1!-121.8!38.0',
-        'mean_hazard_curve!38cdc377!1!-121.7!38.0']
+        "mean_hazard_curve!38cdc377!1!-121.9!38.0",
+        "mean_hazard_curve!38cdc377!1!-121.8!38.0",
+        "mean_hazard_curve!38cdc377!1!-121.7!38.0"]
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
@@ -236,10 +236,10 @@ class DoQuantilesTestCase(unittest.TestCase):
                       shapes.Site(-122.9, 38.0), shapes.Site(-122.8, 38.0)]
 
     mock_results = [
-        'quantile_hazard_curve!10!-121.9!38.0!0.2',
-        'quantile_hazard_curve!10!-122.9!38.0!0.2',
-        'quantile_hazard_curve!10!-121.8!38.0!0.4',
-        'quantile_hazard_curve!10!-122.8!38.0!0.4']
+        "quantile_hazard_curve!10!-121.9!38.0!0.2",
+        "quantile_hazard_curve!10!-122.9!38.0!0.2",
+        "quantile_hazard_curve!10!-121.8!38.0!0.4",
+        "quantile_hazard_curve!10!-122.8!38.0!0.4"]
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
@@ -275,10 +275,10 @@ class DoQuantilesTestCase(unittest.TestCase):
         POES_HAZARD_MAPS parameter is specified in the configuration file.
         """
         mock_data = [
-            'quantile_hazard_map!10!-122.9!38.0!0.2',
-            'quantile_hazard_map!10!-121.9!38.0!0.2',
-            'quantile_hazard_map!10!-122.8!38.0!0.4',
-            'quantile_hazard_map!10!-121.8!38.0!0.4']
+            "quantile_hazard_map!10!-122.9!38.0!0.2",
+            "quantile_hazard_map!10!-121.9!38.0!0.2",
+            "quantile_hazard_map!10!-122.8!38.0!0.4",
+            "quantile_hazard_map!10!-121.8!38.0!0.4"]
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
