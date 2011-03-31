@@ -34,6 +34,7 @@ from tests.utils.tasks import test_compute_hazard_curve, test_data_reflector
 
 LOG = logs.LOG
 
+
 class DoCurvesTestCase(unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_curves()."""
 
@@ -255,32 +256,17 @@ class DoQuantilesTestCase(unittest.TestCase):
         for key in self.keys:
             helpers.TestStore.remove(key)
 
-    @staticmethod
-    def expected(data, run):
-        start = run*2
-        return data[start:start+2]
-
     def test_curve_serializer_called_when_passed(self):
         """The passed quantile curve serialization function is called."""
-        mock_data = [
-            'quantile_hazard_curve!10!-122.9!38.0!0.2',
-            'quantile_hazard_curve!10!-121.9!38.0!0.2',
-            'quantile_hazard_curve!10!-122.8!38.0!0.4',
-            'quantile_hazard_curve!10!-121.8!38.0!0.4']
-
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
-            # Check that the data returned is the one we expect for the current
-            # realization.
-            self.assertEqual(
-                self.expected(mock_data, fake_serializer.number_of_calls),
-                kvs_keys)
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
 
         self.mixin.do_quantiles(self.sites, curve_serializer=fake_serializer,
                                 curve_task=test_data_reflector)
+        # The serializer is called once for each quantile.
         self.assertEqual(2, fake_serializer.number_of_calls)
 
     def test_map_serializer_called_when_configured(self):
@@ -296,11 +282,6 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
-            # Check that the data returned is the one we expect for the current
-            # realization.
-            self.assertEqual(
-                self.expected(mock_data, fake_serializer.number_of_calls),
-                list(reversed(kvs_keys)))
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
@@ -310,6 +291,7 @@ class DoQuantilesTestCase(unittest.TestCase):
             self.sites, curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_serializer=fake_serializer,
             map_func=lambda _: mock_data)
+        # The serializer is called once for each quantile.
         self.assertEqual(2, fake_serializer.number_of_calls)
 
     def test_map_serializer_not_called_unless_configured(self):
