@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 """
 The following tasks are defined in the hazard engine:
     * generate_erf
@@ -58,6 +56,7 @@ def generate_erf(job_id):
 
     return job_id
 
+
 @task
 def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
     """ Generate ground motion fields """
@@ -74,6 +73,7 @@ def write_out_ses(job_file, stochastic_set_key):
         ses = kvs.get_value_json_decoded(stochastic_set_key)
         hazengine.write_gmf_files(ses)
 
+
 @task
 def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
@@ -85,6 +85,7 @@ def compute_hazard_curve(job_id, site_list, realization, callback=None):
             subtask(callback).delay(job_id, site_list)
 
         return keys
+
 
 @task
 def compute_mgm_intensity(job_id, block_id, site_id):
@@ -109,6 +110,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     return json.JSONDecoder().decode(mgm)
 
+
 @task
 def compute_mean_curves(job_id, sites):
     """Compute the mean hazard curve for each site given."""
@@ -119,6 +121,7 @@ def compute_mean_curves(job_id, sites):
             % (len(sites), job_id))
 
     return classical_psha.compute_mean_hazard_curves(job_id, sites)
+
 
 @task
 def compute_quantile_curves(job_id, sites):

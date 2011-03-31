@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 """
 This module plots curves (hazard/loss/loss ratio) as read from an NRML file.
 As plotting engine, matplotlib is used. The plots are in SVG format.
@@ -131,7 +129,7 @@ class RiskCurvePlotter(CurvePlotter):
             nrml_input_path, curve_title, render_multi)
 
     def _parse_nrml_file(self):
-        """Parse loss/loss ratio curve data from NRML file into a dictionary."""
+        """Parse loss/loss ratio curve data from NRML file into dictionary."""
 
         if self.mode == 'loss_ratio':
             nrml_element = risk_parser.LossRatioCurveXMLReader(
@@ -269,11 +267,13 @@ class CurvePlot(writer.FileWriter):
         pylab.clf()
 
     def write(self, data, autoscale_y=True):
-        """The method expects a dictionary that holds the labels for the
-        separate curves to be plotted as keys. For each key, the corresponding
-        value is a dictionary that holds lists for abscissa and ordinate values,
-        strings for abscissa and ordinate properties, and the title of the plot,
-        and the site as shapes.Site object.."""
+        """
+        The method expects a dictionary that holds the labels for the separate
+        curves to be plotted as keys. For each key, the corresponding value is
+        a dictionary that holds lists for abscissa and ordinate values, strings
+        for abscissa and ordinate properties, and the title of the plot, and
+        the site as shapes.Site object..
+        """
 
         for curve in data:
             pylab.plot(data[curve]['abscissa'],
@@ -286,7 +286,7 @@ class CurvePlot(writer.FileWriter):
         if autoscale_y is False:
             pylab.ylim(self._plotAxes['ymin'], self._plotAxes['ymax'])
 
-        curve = data.keys()[0] # We apparently only need to get this once?
+        curve = data.keys()[0]  # We apparently only need to get this once?
         pylab.xlabel(data[curve]['abscissa_property'], self._plotLabelsFont)
         pylab.ylabel(data[curve]['ordinate_property'], self._plotLabelsFont)
 
@@ -324,6 +324,7 @@ class CurvePlot(writer.FileWriter):
         """Make sure the file is flushed, and send exit event."""
         pylab.savefig(self.path)
         pylab.close()
+
 
 def _color_code_generator():
     """Generator that walks through a sequence of color codes for matplotlib.

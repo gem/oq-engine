@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 This module contains generic functions to access
 the underlying kvs systems.

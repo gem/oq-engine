@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010-2011, GEM Foundation.
 #
@@ -15,6 +16,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
 
 """
 This module defines functions used to compute loss ratio and loss curves
@@ -353,7 +355,7 @@ class AggregateLossCurve(object):
         """Return the losses used to compute the aggregate curve."""
         if self.empty:
             return array([])
-        else: # if needed because numpy returns a scalar if the list is empty
+        else:  # if needed because numpy returns a scalar if the list is empty
             return array(self.distribution).sum(axis=0)
 
     def compute(self, number_of_samples=None):
