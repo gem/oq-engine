@@ -1283,7 +1283,7 @@ class DoMeansTestCase(unittest.TestCase):
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.mixin.do_means(
             sites, curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_serializer=fake_serializer,
@@ -1301,7 +1301,7 @@ class DoMeansTestCase(unittest.TestCase):
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_means,
             sites, curve_serializer=lambda _: True,
@@ -1318,7 +1318,7 @@ class DoMeansTestCase(unittest.TestCase):
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_means, sites,
             curve_serializer=lambda _: True, curve_task=test_data_reflector,
@@ -1333,32 +1333,47 @@ class DoQuantilesTestCase(unittest.TestCase):
         self.keys = []
 
     mock_results = [
-        'quantile_hazard_curve!38cdc377!1!-121.9!38.0',
-        'quantile_hazard_curve!38cdc377!1!-121.8!38.0',
-        'quantile_hazard_curve!38cdc377!1!-121.7!38.0']
+        'quantile_hazard_curve!10!-121.9!38.0!0.2',
+        'quantile_hazard_curve!10!-121.8!38.0!0.4',
+        'quantile_hazard_curve!10!-122.9!38.0!0.2',
+        'quantile_hazard_curve!10!-122.8!38.0!0.4']
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
             job.Job(dict()), opensha.ClassicalMixin, "hazard")
         # Store the canned result data in the KVS.
-        key = self.mixin.id = helpers.TestStore.add(self.mock_results)
+        key = self.mixin.id = helpers.TestStore.nextkey()
+        helpers.TestStore.put(key, self.mock_results)
         self.keys.append(key)
         # Initialize the mixin instance.
-        self.mixin.params = dict(COMPUTE_MEAN_HAZARD_CURVE="True")
+        self.mixin.params = dict()
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
         for key in self.keys:
             helpers.TestStore.remove(key)
 
+    @staticmethod
+    def expected(data, run):
+        start = run*2
+        return data[start:start+2]
+
     def test_curve_serializer_called_when_passed(self):
         """The passed quantile curve serialization function is called."""
+        mock_data = [
+            'quantile_hazard_curve!10!-122.9!38.0!0.2',
+            'quantile_hazard_curve!10!-121.9!38.0!0.2',
+            'quantile_hazard_curve!10!-122.8!38.0!0.4',
+            'quantile_hazard_curve!10!-121.8!38.0!0.4']
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
             # Check that the data returned is the one we expect for the current
             # realization.
-            self.assertEqual(self.mock_results, kvs_keys)
+            self.assertEqual(
+                self.expected(mock_data, fake_serializer.number_of_calls),
+                kvs_keys)
+
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
@@ -1367,7 +1382,7 @@ class DoQuantilesTestCase(unittest.TestCase):
                  shapes.Site(-121.7, 38.0)]
         self.mixin.do_quantiles(sites, curve_serializer=fake_serializer,
                             curve_task=test_data_reflector)
-        self.assertEqual(1, fake_serializer.number_of_calls)
+        self.assertEqual(2, fake_serializer.number_of_calls)
 
     def test_map_serializer_not_called_unless_configured(self):
         """
@@ -1392,26 +1407,34 @@ class DoQuantilesTestCase(unittest.TestCase):
 
     def test_map_serializer_called_when_configured(self):
         """
-        The quantile map serialization function is called when the POES_HAZARD_MAPS
-        parameter is specified in the configuration file.
+        The quantile map serialization function is called when the
+        POES_HAZARD_MAPS parameter is specified in the configuration file.
         """
+        mock_map_data = [
+            "quantile_hazard_map!11!-121.9!38.0!0.2",
+            "quantile_hazard_map!11!-122.9!38.0!0.2",
+            "quantile_hazard_map!11!-121.8!38.0!0.4",
+            "quantile_hazard_map!11!-122.8!38.0!0.4"]
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
             # Check that the data returned is the one we expect for the current
             # realization.
-            self.assertEqual([1, 2, 3], kvs_keys)
+            import pdb; pdb.set_trace()
+            self.assertEqual(
+                self.expected(mock_map_data, fake_serializer.number_of_calls),
+                kvs_keys)
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.mixin.do_quantiles(
             sites, curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_serializer=fake_serializer,
-            map_func=lambda _: [1, 2, 3])
+            map_func=lambda _: mock_map_data)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_missing_map_serializer_assertion(self):
@@ -1425,7 +1448,7 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_quantiles,
             sites, curve_serializer=lambda _: True,
@@ -1442,7 +1465,7 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                  shapes.Site(-121.7, 38.0)]
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.2 0.4 0.6"
+        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_quantiles, sites,
             curve_serializer=lambda _: True, curve_task=test_data_reflector,

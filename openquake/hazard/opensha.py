@@ -339,7 +339,7 @@ class ClassicalMixin(BasePSHAMixin):
             curve_serializer(keys)
 
         # compute quantile hazard maps
-        if (not self.param_set("classical_psha.POES_PARAM_NAME") or
+        if (not self.param_set(classical_psha.POES_PARAM_NAME) or
             len(quantiles) < 1):
             return
 
