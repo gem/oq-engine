@@ -43,12 +43,12 @@ from openquake.job import mixins
 @task
 def generate_erf(job_id):
     """
-    Stubbed ERF generator 
+    Stubbed ERF generator
 
-    Takes a job_id, returns a job_id. 
+    Takes a job_id, returns a job_id.
 
     Connects to the Java HazardEngine using hazardwrapper, waits for an ERF to
-    be generated, and then writes it to KVS. 
+    be generated, and then writes it to KVS.
     """
 
     # TODO(JM): implement real ERF computation

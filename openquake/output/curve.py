@@ -44,7 +44,7 @@ CURVE_BRANCH_PLACEHOLDER = 'Curve'
 
 class CurvePlotter(object):
     """Base class for plotting curves from NRML files to SVG.
-    For a specific curve plot (hazard/loss/loss ratio), 
+    For a specific curve plot (hazard/loss/loss ratio),
     a class has to be derived from this one."""
 
     def __init__(self, output_base_path, nrml_input_path, curve_title=None,
@@ -116,7 +116,7 @@ class RiskCurvePlotter(CurvePlotter):
     TODO(fab): In the future, we may want to plot loss/loss ratio curves
     per asset, multiple assets per site (according to Vitor)."""
 
-    def __init__(self, output_base_path, nrml_input_path, mode='loss', 
+    def __init__(self, output_base_path, nrml_input_path, mode='loss',
                  curve_title=None, render_multi=False):
         """mode can be 'loss' or 'loss_ratio', 'loss' is the default."""
         self.mode = mode
@@ -127,7 +127,7 @@ class RiskCurvePlotter(CurvePlotter):
             else:
                 curve_title = 'Loss Curve'
 
-        super(RiskCurvePlotter, self).__init__(output_base_path, 
+        super(RiskCurvePlotter, self).__init__(output_base_path,
             nrml_input_path, curve_title, render_multi)
 
     def _parse_nrml_file(self):
@@ -138,7 +138,7 @@ class RiskCurvePlotter(CurvePlotter):
                 self.nrml_input_path)
         else:
             nrml_element = risk_parser.LossCurveXMLReader(self.nrml_input_path)
-        
+
         # loss/loss ratio curves have a common *ordinate* for all curves
         # in an NRML file
         for (nrml_point, nrml_attr) in nrml_element.filter(
@@ -168,7 +168,7 @@ class RiskCurvePlotter(CurvePlotter):
 class HazardCurvePlotter(CurvePlotter):
     """This class plots hazard curves as read from an NRML file. For
     each Site listed in the NRML file, a separate plot is created. A plot
-    can contain multiple hazard curves, one for each logic tree end branch 
+    can contain multiple hazard curves, one for each logic tree end branch
     given in the NRML file."""
 
     def __init__(self, output_base_path, nrml_input_path, curve_title=None,
@@ -177,7 +177,7 @@ class HazardCurvePlotter(CurvePlotter):
         if curve_title is None:
             curve_title = 'Hazard Curves'
 
-        super(HazardCurvePlotter, self).__init__(output_base_path, 
+        super(HazardCurvePlotter, self).__init__(output_base_path,
             nrml_input_path, curve_title, render_multi=False)
 
     def _parse_nrml_file(self):
@@ -186,7 +186,7 @@ class HazardCurvePlotter(CurvePlotter):
         nrml_element = hazard_parser.NrmlFile(self.nrml_input_path)
 
         # we collect hazard curves for one site into one plot
-        # one plot contains hazard curves for several end branches 
+        # one plot contains hazard curves for several end branches
         # of the logic tree
         # each end branch can have its own abscissa value set
         for (nrml_point, nrml_attr) in nrml_element.filter(
@@ -205,7 +205,7 @@ class HazardCurvePlotter(CurvePlotter):
                 self.data[site_hash]['curves'][ebl] = {}
 
             self.data[site_hash]['curves'][ebl] = {
-                'abscissa': nrml_attr['IMLValues'], 
+                'abscissa': nrml_attr['IMLValues'],
                 'abscissa_property': nrml_attr['IMT'],
                 'ordinate': nrml_attr['Values'],
                 'ordinate_property': 'Probability of Exceedance',
@@ -214,7 +214,7 @@ class HazardCurvePlotter(CurvePlotter):
 
 
 class CurvePlot(writer.FileWriter):
-    """Creates an SVG  plot containing curve data for one site. 
+    """Creates an SVG  plot containing curve data for one site.
     At the moment, the class is used for hazard, loss, and loss ratio curves.
     One plot can contain several curves. In the case of hazard curves, this
     would be one curve for each end branch of a logic tree. For loss/loss
@@ -275,11 +275,11 @@ class CurvePlot(writer.FileWriter):
         strings for abscissa and ordinate properties, and the title of the plot,
         and the site as shapes.Site object.."""
 
-        for curve in data: 
-            pylab.plot(data[curve]['abscissa'], 
-                       data[curve]['ordinate'], 
+        for curve in data:
+            pylab.plot(data[curve]['abscissa'],
+                       data[curve]['ordinate'],
                        color=self.color_code_generator.next(),
-                       linestyle=self._plotCurve['linestyle'][2], 
+                       linestyle=self._plotCurve['linestyle'][2],
                        label=curve)
 
         # set x and y dimension of plot
@@ -314,7 +314,7 @@ class CurvePlot(writer.FileWriter):
 
             pylab.title("%s for (%7.3f, %6.3f)" % (
                     data[curve]['curve_title'],
-                    data[curve]['Site'].longitude, 
+                    data[curve]['Site'].longitude,
                     data[curve]['Site'].latitude))
         except KeyError:
             # no site related to this curve
@@ -329,6 +329,6 @@ def _color_code_generator():
     """Generator that walks through a sequence of color codes for matplotlib.
     When reaching the end of the color code list, start at the beginning again.
     """
-    while(True): 
-        for code in COLOR_CODES: 
+    while(True):
+        for code in COLOR_CODES:
             yield code
