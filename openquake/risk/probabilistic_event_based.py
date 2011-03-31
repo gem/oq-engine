@@ -24,8 +24,8 @@ using the probabilistic event based approach.
 import json
 import math
 
-from numpy import zeros, array, linspace # pylint: disable=E1101, E0611
-from numpy import histogram, where, mean # pylint: disable=E1101, E0611
+from numpy import zeros, array, linspace
+from numpy import histogram, where, mean
 
 from openquake import kvs, shapes
 from openquake.parser import vulnerability

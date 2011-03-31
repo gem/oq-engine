@@ -170,4 +170,4 @@ BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
 
 def generate_block_id():
     """Generate a unique id for a block."""
-    return BLOCK_ID_GENERATOR.next()  # pylint: disable=E1101
+    return BLOCK_ID_GENERATOR.next()

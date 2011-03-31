@@ -24,10 +24,10 @@ This module defines functions to compute loss ratio curves
 using the classical psha based approach.
 """
 
-from scipy import sqrt, stats, log, exp  # pylint: disable=F0401,E0611
-from numpy import empty, linspace  # pylint: disable=F0401,E0611
-from numpy import array, concatenate  # pylint: disable=F0401,E0611
-from numpy import subtract, mean  # pylint: disable=F0401,E0611
+from scipy import sqrt, stats, log, exp
+from numpy import empty, linspace
+from numpy import array, concatenate
+from numpy import subtract, mean
 
 from openquake import shapes
 from openquake.risk.common import loop, collect

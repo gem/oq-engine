@@ -276,7 +276,6 @@ class CurvePlot(writer.FileWriter):
         and the site as shapes.Site object.."""
 
         for curve in data: 
-            #pylint: disable=E1101
             pylab.plot(data[curve]['abscissa'], 
                        data[curve]['ordinate'], 
                        color=self.color_code_generator.next(),

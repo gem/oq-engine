@@ -28,13 +28,13 @@ import math
 import geohash
 import json
 
-from numpy import zeros # pylint: disable=F0401,E0611
-from numpy import empty # pylint: disable=F0401,E0611
-from numpy import allclose # pylint: disable=F0401,E0611
+from numpy import zeros
+from numpy import empty
+from numpy import allclose
 
 from shapely import wkt
 from shapely import geometry
-from scipy.interpolate import interp1d # pylint: disable=F0401,E0611
+from scipy.interpolate import interp1d
 
 from openquake import flags
 from openquake import java
