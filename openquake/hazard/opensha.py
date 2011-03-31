@@ -335,8 +335,8 @@ class ClassicalMixin(BasePSHAMixin):
         quantiles = _collect_curve_keys_per_quantile(results)
 
         LOG.info("Serializing quantile curves for %s values" % len(quantiles))
-        for keys in quantiles.values():
-            curve_serializer(keys)
+        for curves in quantiles.values():
+            curve_serializer(curves)
 
         # compute quantile hazard maps
         if (not self.param_set(classical_psha.POES_PARAM_NAME) or
@@ -351,8 +351,8 @@ class ClassicalMixin(BasePSHAMixin):
         quantiles = _collect_map_keys_per_quantile(results)
 
         LOG.info("Serializing quantile maps for %s values" % len(quantiles))
-        for keys in quantiles.values():
-            map_serializer(keys)
+        for maps in quantiles.values():
+            map_serializer(maps)
 
     @preload
     def execute(self):
