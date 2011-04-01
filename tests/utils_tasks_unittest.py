@@ -87,13 +87,13 @@ class DistributeTestCase(unittest.TestCase):
         """
         # The keyword arguments below will be passed to the celery subtasks in
         # addition to the data that is to be processed.
-        other_args = {"1+1" : 2, "2/1" : 1}
+        other_args = {"1+1": 2, "2/1": 1}
 
         # We expect the subtasks to see the following positional and keyword
         # arguments respectively.
         expected = [
-            ((), {"data_to_process": [88], "1+1" : 2, "2/1" : 1}),
-            ((), {"data_to_process": [99], "1+1" : 2, "2/1" : 1})]
+            ((), {"data_to_process": [88], "1+1": 2, "2/1": 1}),
+            ((), {"data_to_process": [99], "1+1": 2, "2/1": 1})]
         actual = []
 
         # Two subtasks will be spawned and just return the arguments they

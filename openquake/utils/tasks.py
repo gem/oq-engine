@@ -55,7 +55,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     """
     def kwargs(data_portion):
         """Construct full set of parameters for the task to be invoked."""
-        params = {name : data_portion}
+        params = {name: data_portion}
         if other_args:
             params.update(other_args)
         return params
