@@ -54,3 +54,36 @@ def test_compute_hazard_curve(job_id, _, realization):
     """
     key = "%s/%s" % (job_id, realization+1)
     return helpers.TestStore.lookup(key)
+
+
+@task
+def reflect_args(*args, **kwargs):
+    """Merely returns the parameters received."""
+    return (args, kwargs)
+
+
+@task
+def just_say_hello(*args, **kwargs):
+    """Merely returns 'hello'."""
+    return "hello"
+
+
+@task
+def single_arg_called_a(a):
+    """Takes a single argument called `a` and merely returns `True`."""
+    return True
+
+
+@task
+def failing_task(data):
+    """
+    Takes a single argument called `data` and raises a `NotImplementedError`
+    exception throwing it back.
+    """
+    raise NotImplementedError(data)
+
+
+@task
+def reflect_data_to_be_processed(data):
+    """Merely returns the data received."""
+    return data
