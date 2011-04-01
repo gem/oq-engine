@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+	xmlns="http://openquake.org/xmlns/nrml/0.2" gml:id="n1">
+
+	<complexFaultRupture gml:id="cfr_1">
+		<magnitude type="Mw">9.0</magnitude>
+		<tectonicRegion>Subduction Interface</tectonicRegion>
+		<rake>0.0</rake>
+
+		<complexFaultGeometry>
+			<faultEdges>
+				<faultTopEdge>
+					<gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+						<gml:posList>
+							-124.704 40.363 0.5493260E+01
+							-124.977 41.214
+							-125.140 42.096 0.4897340E+01
+                     	</gml:posList>
+					</gml:LineString>
+				</faultTopEdge>
+
+				<faultBottomEdge>
+					<gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+						<gml:posList>
+							-123.829 40.347 0.2038490E+02
+							-124.137 41.218 0.1741390E+02
+							-124.252 42.115 0.1752740E+02
+                     	</gml:posList>
+					</gml:LineString>
+				</faultBottomEdge>
+			</faultEdges>
+		</complexFaultGeometry>
+	</complexFaultRupture>
+</nrml>
