@@ -379,3 +379,17 @@ class NumberOfTasksTestCase(unittest.TestCase):
             pass
         else:
             raise Exception("ValueError not thrown!")
+
+    def test_number_of_tasks_with_param_set_but_all_whitespace(self):
+        """
+        When the `HAZARD_TASKS` parameter is set to whitespace a
+        `ValueError` will be raised.
+        """
+        self.mixin.params = dict(HAZARD_TASKS=" 	")
+        try:
+            self.mixin.number_of_tasks()
+        except ValueError:
+            # This is what we expect.
+            pass
+        else:
+            raise Exception("ValueError not thrown!")

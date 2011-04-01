@@ -170,6 +170,12 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
+    def number_of_tasks(self):
+        """How many `celery` tasks should be used for the calculations?"""
+        value = self.params.get("HAZARD_TASKS")
+        value = value.strip() if value else None
+        return 1 if value is None else int(value)
+
     def do_curves(self, sites, serializer=None,
                   the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
@@ -227,11 +233,6 @@ class ClassicalMixin(BasePSHAMixin):
         """Is the parameter with the given `name` set and non-empty?"""
         value = self.params.get(name)
         return value is not None and value.strip()
-
-    def number_of_tasks(self):
-        """How many `celery` tasks should be used for the calculations?"""
-        value = self.params.get("HAZARD_TASKS")
-        return int(value.strip()) if value else 1
 
     def do_means(self, sites, curve_serializer=None, map_serializer=None,
                  curve_task=tasks.compute_mean_curves,
