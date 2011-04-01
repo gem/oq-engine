@@ -119,7 +119,7 @@ class DistributeTestCase(unittest.TestCase):
         self.assertEqual(expected, (args, actual_kwargs(kwargs)))
 
     def test_distribute_with_even_data_and_cardinality_above_one(self):
-        """The data set devides evenly among the subtasks in the task set."""
+        """The data set divides evenly among the subtasks in the task set."""
         expected = (
             (), {"data_to_process": range(2)},
             (), {"data_to_process": range(2, 4)})
@@ -131,7 +131,7 @@ class DistributeTestCase(unittest.TestCase):
 
     def test_distribute_with_noneven_data_and_cardinality_above_one(self):
         """
-        The data set does *not* devide evenly among the subtasks in the task
+        The data set does *not* divide evenly among the subtasks in the task
         set. The last subtask gets all the remaining data.
         """
         expected = (
