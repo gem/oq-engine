@@ -26,7 +26,7 @@ from math import log
 from openquake import job
 from openquake import kvs
 from openquake import shapes
-from utils import test
+from tests.utils import helpers
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.job import Block
@@ -240,7 +240,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self._store_asset(self.asset_6, 1, 6)
 
         self.params = {}
-        self.params["OUTPUT_DIR"] = test.OUTPUT_DIR
+        self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
         self.params["AGGREGATE_LOSS_CURVE"] = 1
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
@@ -256,7 +256,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def _delete_test_file(self):
         try:
-            os.remove(os.path.join(test.OUTPUT_DIR,
+            os.remove(os.path.join(helpers.OUTPUT_DIR,
                     aggregate._filename(self.job_id)))
         except OSError:
             pass
@@ -707,12 +707,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def _assert_plot_is_not_produced(self):
         self.assertFalse(os.path.exists(
-                os.path.join(test.OUTPUT_DIR,
+                os.path.join(helpers.OUTPUT_DIR,
                 aggregate._filename(self.job_id))))
 
     def _assert_plot_is_produced(self):
         self.assertTrue(os.path.exists(
-                os.path.join(test.OUTPUT_DIR,
+                os.path.join(helpers.OUTPUT_DIR,
                 aggregate._filename(self.job_id))))
 
 SITE = shapes.Site(1.0, 1.0)

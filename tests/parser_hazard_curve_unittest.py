@@ -24,7 +24,7 @@ import os
 import unittest
 
 from openquake import shapes
-from utils import test
+from tests.utils import helpers
 from openquake import producer
 from openquake.parser import hazard as hazard_parser
 
@@ -38,13 +38,13 @@ FILES_KNOWN_TO_FAIL = [
 
 FILE_FLAVOUR_NOT_IMPLEMENTED = 'hazard-map.xml'
 
-EXAMPLE_DIR = os.path.join(test.SCHEMA_DIR, 'examples')
+EXAMPLE_DIR = os.path.join(helpers.SCHEMA_DIR, 'examples')
 FAIL_EXAMPLE_DIR = os.path.join(EXAMPLE_DIR, 'failures')
 TEST_FILE = os.path.join(EXAMPLE_DIR,
                          'hazard-curves.xml')
 
 class NrmlFileTestCase(unittest.TestCase):
-    
+
     def setUp(self):
         self.nrml_element = hazard_parser.NrmlFile(TEST_FILE)
 
@@ -55,14 +55,14 @@ class NrmlFileTestCase(unittest.TestCase):
 
             self.assertRaises(ValueError, map, None, nrml_element)
 
-    @test.skipit
+    @helpers.skipit
     # Not yet implemented
     def test_nrml_files_hazardmap_not_implemented(self):
         nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR,
             FILE_FLAVOUR_NOT_IMPLEMENTED))
 
         self.assertRaises(NotImplementedError, map, None, nrml_element)
-    
+
     def test_filter_region_constraint_known_to_fail(self):
         # set region in which no site is found in input file
         region_constraint = shapes.RegionConstraint.from_simple(
@@ -76,13 +76,13 @@ class NrmlFileTestCase(unittest.TestCase):
             pass
 
         # ensure that generator didn't yield an item
-        self.assertTrue(counter is None, 
+        self.assertTrue(counter is None,
             "filter yielded item(s) although no items were expected")
-    
+
     def test_filter_region_constraint_one_site(self):
 
         # look for sites within specified rectangle
-        # constraint is met by one and only one site in the example file 
+        # constraint is met by one and only one site in the example file
         # (lon=16.35/lat=48.25)
         region_constraint = shapes.RegionConstraint.from_simple(
             (-123.0, 38.0), (-122.0, 37.0))
@@ -107,23 +107,23 @@ class NrmlFileTestCase(unittest.TestCase):
 
             self.assertEqual(nrml_attr, expected_result[counter][1],
                 "filter yielded unexpected attribute values at position " \
-                "%s: %s, %s" % (counter, nrml_attr, 
+                "%s: %s, %s" % (counter, nrml_attr,
                                 expected_result[counter][1]))
 
         # ensure that generator yielded at least one item
-        self.assertTrue(counter is not None, 
+        self.assertTrue(counter is not None,
             "filter yielded nothing although %s item(s) were expected" % \
             len(expected_result))
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1, 
+        self.assertEqual(counter, len(expected_result)-1,
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, len(expected_result)))
-    
+
     def test_filter_region_constraint_all_sites(self):
 
-        # specified rectangle contains all sites in example file 
+        # specified rectangle contains all sites in example file
         region_constraint = shapes.RegionConstraint.from_simple(
             (-126.0, 40.0), (-120.0, 20.0))
 
@@ -136,24 +136,24 @@ class NrmlFileTestCase(unittest.TestCase):
             pass
 
         # ensure that generator yielded at least one item
-        self.assertTrue(counter is not None, 
+        self.assertTrue(counter is not None,
             "filter yielded nothing although %s item(s) were expected" % \
             expected_result_counter)
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, expected_result_counter-1, 
+        self.assertEqual(counter, expected_result_counter-1,
             "filter yielded wrong number of items (%s), expected were %s" % (
                 counter+1, expected_result_counter))
-    
+
     def test_reads_from_different_branch_labels(self):
         pass
-        
+
     def test_filter_attribute_constraint(self):
         """ This test uses the attribute constraint filter to select items
         from the input file. We assume here that the parser yields the
         items in the same order as specified in the example XML file. In
-        a general case it would be better not to assume the order of 
+        a general case it would be better not to assume the order of
         yielded items to be known, but to locate each yielded result
         item in a set of expected results.
         """
@@ -213,10 +213,10 @@ class NrmlFileTestCase(unittest.TestCase):
                             [nrml_data[2], nrml_data[3]],
                             [nrml_data[3]]]
 
-        # set a region constraint that inlcudes all points 
+        # set a region constraint that inlcudes all points
         region_constraint = shapes.RegionConstraint.from_simple(
             (-126.0, 40.0), (-120.0, 30.0))
-      
+
         for filter_counter, filter_dict in enumerate(
             test_filters):
             attribute_constraint = producer.AttributeConstraint(
@@ -224,7 +224,7 @@ class NrmlFileTestCase(unittest.TestCase):
 
             counter = None
             for counter, (nrml_point, nrml_attr) in enumerate(
-                            self.nrml_element.filter(region_constraint, 
+                            self.nrml_element.filter(region_constraint,
                                     attribute_constraint)):
                 if expected_results[filter_counter]:
                     # only perform the following tests if the expected
@@ -238,7 +238,7 @@ class NrmlFileTestCase(unittest.TestCase):
                     self.assertTrue(nrml_point.equals(expected_nrml_point),
                         "filter yielded unexpected point at position" \
                         " %s: \n Got: %s, \n Expected: %s " \
-                        % (counter, nrml_point, 
+                        % (counter, nrml_point,
                         expected_nrml_point))
 
                     self.assertEqual(nrml_attr, expected_nrml_attr,

@@ -20,7 +20,7 @@ import os
 import unittest
 import urlparse
 
-from utils import test
+from tests.utils import helpers
 from openquake.job import handlers
 
 class StubbedGetter(object):
@@ -31,7 +31,7 @@ class StubbedGetter(object):
 class FileHandlerTestCase(unittest.TestCase):
     def test_file_handler_writes_a_file(self):
         expected_path = "/tmp/fake_file"
-        remote_path = test.do_test_file("config.gem")
+        remote_path = helpers.get_data_path("config.gem")
         url = urlparse.urlparse(remote_path)
 
         file_handler = handlers.FileHandler(url, expected_path)
@@ -43,7 +43,7 @@ class FileHandlerTestCase(unittest.TestCase):
 class SFTPHandlerTestCase(unittest.TestCase):
     def test_ssh_handler_raises_on_bad_credentials(self):
         url = urlparse.urlparse("sftp://baduser:badpass@localhost:22/path/to/file")
-        sftp_handler = handlers.SFTPHandler(url, '') 
+        sftp_handler = handlers.SFTPHandler(url, '')
         self.assertRaises(handlers.HandlerError, sftp_handler.handle)
 
     def test_ssh_handler_raises_on_bad_netloc(self):
@@ -59,7 +59,7 @@ class SFTPHandlerTestCase(unittest.TestCase):
                         writer.write(reader.read())
 
         expected_path = "/tmp/fake_file"
-        remote_path = "sftp://localhost/%s" % test.do_test_file("config.gem")
+        remote_path = "sftp://localhost/%s" % helpers.get_data_path("config.gem")
         url = urlparse.urlparse(remote_path)
 
         sftp_handler = handlers.SFTPHandler(url, expected_path)
@@ -82,7 +82,7 @@ class HTTPHandlerTestCase(unittest.TestCase):
                 pass
 
             def request(self, req_type, path):
-                self.remote_path = path 
+                self.remote_path = path
                 return self
 
             def getresponse(self):
@@ -93,7 +93,7 @@ class HTTPHandlerTestCase(unittest.TestCase):
                     return reader.read()
 
         expected_path = "/tmp/fake_file"
-        remote_path = "http://localhost/%s" % test.do_test_file("config.gem")
+        remote_path = "http://localhost/%s" % helpers.get_data_path("config.gem")
         url = urlparse.urlparse(remote_path)
 
         http_handler = handlers.HTTPHandler(url, expected_path)
