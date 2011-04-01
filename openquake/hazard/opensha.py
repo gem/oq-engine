@@ -310,17 +310,11 @@ class ClassicalMixin(BasePSHAMixin):
         :returns: `None`
         """
         # compute and serialize quantile hazard curves
-        pending_tasks = []
-        results = []
-
         LOG.info("Computing quantile hazard curves")
-        pending_tasks.append(curve_task.delay(self.id, sites))
 
-        for task in pending_tasks:
-            task.wait()
-            if task.status != "SUCCESS":
-                raise Exception(task.result)
-            results.extend(task.result)
+        results = utils_tasks.distribute(
+            1, curve_task, ("sites", sites), dict(job_id=self.id),
+            flatten_results=True)
 
         # collect hazard curve keys per quantile value
         quantiles = _collect_curve_keys_per_quantile(results)
