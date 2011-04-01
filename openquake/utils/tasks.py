@@ -93,8 +93,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     # At this point we have created all the subtasks and each one got a
     # portion of the data that is to be processed. Now we will create and run
     # the task set.
-    job = TaskSet(tasks=subtasks)
-    result = job.apply_async()
+    result = TaskSet(tasks=subtasks).apply_async()
 
     # Wait for all subtasks to complete.
     while not result.ready():
