@@ -209,7 +209,6 @@ class ClassicalMixin(BasePSHAMixin):
         for realization in xrange(0, realizations):
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
-            results_per_realization = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
@@ -261,16 +260,11 @@ class ClassicalMixin(BasePSHAMixin):
             return
 
         # Compute and serialize the mean curves.
-        pending_tasks = []
-        results = []
         LOG.info("Computing mean hazard curves")
 
-        pending_tasks.append(curve_task.delay(self.id, sites))
-        for task in pending_tasks:
-            task.wait()
-            if task.status != "SUCCESS":
-                raise Exception(task.result)
-            results.extend(task.result)
+        results = utils_tasks.distribute(
+            1, curve_task, ("sites", sites), dict(job_id=self.id),
+            flatten_results=True)
 
         if curve_serializer:
             LOG.info("Serializing mean hazard curves")
