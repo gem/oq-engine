@@ -38,6 +38,7 @@ from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
 from openquake.output import geotiff, cpt
 from openquake.output import hazard as hazard_output
+from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
 
@@ -208,18 +209,14 @@ class ClassicalMixin(BasePSHAMixin):
         for realization in xrange(0, realizations):
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
-            pending_tasks = []
             results_per_realization = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            pending_tasks.append(the_task.delay(self.id, sites, realization))
-
-            for task in pending_tasks:
-                task.wait()
-                if task.status != "SUCCESS":
-                    raise Exception(task.result)
-                results_per_realization.extend(task.result)
+            results_per_realization = utils_tasks.distribute(
+                1, the_task, ("site_list", sites),
+                dict(job_id=self.id, realization=realization),
+                flatten_results=True)
 
             if serializer:
                 serializer(results_per_realization)
