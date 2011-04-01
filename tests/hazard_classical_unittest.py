@@ -342,3 +342,43 @@ class DoQuantilesTestCase(unittest.TestCase):
             AssertionError, self.mixin.do_quantiles, self.sites,
             curve_serializer=lambda _: True, curve_task=test_data_reflector,
             map_serializer=lambda _: True, map_func=None)
+
+
+class NumberOfTasksTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
+
+    def setUp(self):
+        self.mixin = opensha.ClassicalMixin(
+            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+
+    def test_number_of_tasks_with_param_not_set(self):
+        """
+        A value of 1 is expected when the `HAZARD_TASKS` parameter is not set.
+        """
+        # Initialize the mixin instance.
+        self.mixin.params = dict()
+        self.assertEqual(1, self.mixin.number_of_tasks())
+
+    def test_number_of_tasks_with_param_set_and_valid(self):
+        """
+        When the `HAZARD_TASKS` parameter is set and a valid integer, the value
+        will be returned.
+        """
+        # Initialize the mixin instance.
+        self.mixin.params = dict(HAZARD_TASKS="5")
+        self.assertEqual(5, self.mixin.number_of_tasks())
+
+    def test_number_of_tasks_with_param_set_and_invalid(self):
+        """
+        When the `HAZARD_TASKS` parameter is set but not a valid integer a
+        `ValueError` will be raised.
+        """
+        # Initialize the mixin instance.
+        self.mixin.params = dict(HAZARD_TASKS="111")
+        try:
+            self.mixin.number_of_tasks()
+        except ValueError:
+            # This is what we expect.
+            pass
+        else:
+            raise Exception("ValueError not thrown!")

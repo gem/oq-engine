@@ -228,6 +228,11 @@ class ClassicalMixin(BasePSHAMixin):
         value = self.params.get(name)
         return value is not None and value.strip()
 
+    def number_of_tasks(self):
+        """How many `celery` tasks should be used for the calculations?"""
+        value = self.params.get("HAZARD_TASKS")
+        return int(value.strip()) if value else 1
+
     def do_means(self, sites, curve_serializer=None, map_serializer=None,
                  curve_task=tasks.compute_mean_curves,
                  map_func=classical_psha.compute_mean_hazard_maps):
