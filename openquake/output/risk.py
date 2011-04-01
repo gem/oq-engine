@@ -36,7 +36,7 @@ LOG = logs.RISK_LOG
 
 
 class BaseXMLWriter(nrml.TreeNRMLWriter):
-    """ This is the base class which prepares the XML document
+    """ This is the base class which prepares the XML document (for risk)
         to be customized in another class
     """
     container_tag = None
