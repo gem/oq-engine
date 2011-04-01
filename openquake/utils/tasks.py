@@ -58,6 +58,9 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
     """
+    # Too many local variables (18/15)
+    # pylint: disable=R0914
+
     def kwargs(data_portion):
         """
         Construct the full set of keyword parameters for the task to be
