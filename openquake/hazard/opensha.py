@@ -213,7 +213,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
             results_per_realization = utils_tasks.distribute(
-                1, the_task, ("site_list", sites),
+                self.number_of_tasks(), the_task, ("site_list", sites),
                 dict(job_id=self.id, realization=realization),
                 flatten_results=True)
 
@@ -268,8 +268,8 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Computing mean hazard curves")
 
         results = utils_tasks.distribute(
-            1, curve_task, ("sites", sites), dict(job_id=self.id),
-            flatten_results=True)
+            self.number_of_tasks(), curve_task, ("sites", sites),
+            dict(job_id=self.id), flatten_results=True)
 
         if curve_serializer:
             LOG.info("Serializing mean hazard curves")
@@ -318,8 +318,8 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Computing quantile hazard curves")
 
         results = utils_tasks.distribute(
-            1, curve_task, ("sites", sites), dict(job_id=self.id),
-            flatten_results=True)
+            self.number_of_tasks(), curve_task, ("sites", sites),
+            dict(job_id=self.id), flatten_results=True)
 
         # collect hazard curve keys per quantile value
         quantiles = _collect_curve_keys_per_quantile(results)

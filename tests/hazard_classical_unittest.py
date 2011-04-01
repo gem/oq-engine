@@ -355,26 +355,23 @@ class NumberOfTasksTestCase(unittest.TestCase):
         """
         A value of 1 is expected when the `HAZARD_TASKS` parameter is not set.
         """
-        # Initialize the mixin instance.
         self.mixin.params = dict()
         self.assertEqual(1, self.mixin.number_of_tasks())
 
     def test_number_of_tasks_with_param_set_and_valid(self):
         """
-        When the `HAZARD_TASKS` parameter is set and a valid integer, the value
-        will be returned.
+        When the `HAZARD_TASKS` parameter *is* set and a valid integer its
+        value will be returned.
         """
-        # Initialize the mixin instance.
         self.mixin.params = dict(HAZARD_TASKS="5")
         self.assertEqual(5, self.mixin.number_of_tasks())
 
-    def test_number_of_tasks_with_param_set_and_invalid(self):
+    def test_number_of_tasks_with_param_set_but_invalid(self):
         """
         When the `HAZARD_TASKS` parameter is set but not a valid integer a
         `ValueError` will be raised.
         """
-        # Initialize the mixin instance.
-        self.mixin.params = dict(HAZARD_TASKS="111")
+        self.mixin.params = dict(HAZARD_TASKS="this-is-not-a-number")
         try:
             self.mixin.number_of_tasks()
         except ValueError:
