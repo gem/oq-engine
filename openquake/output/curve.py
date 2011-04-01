@@ -240,16 +240,16 @@ class CurvePlot(writer.FileWriter):
                  'xmin': 0.0,
                  'xmax': None}
 
-    _plotLegend = {'style'        : 0,
-                   'borderpad'    : 1.0,
+    _plotLegend = {'style': 0,
+                   'borderpad': 1.0,
                    'borderaxespad': 1.0,
-                   'markerscale'  : 5.0,
+                   'markerscale': 5.0,
                    'handletextpad': 0.5,
-                   'handlelength' : 2.0,
-                   'labelspacing' : 0.5}
+                   'handlelength': 2.0,
+                   'labelspacing': 0.5}
 
-    _plotLegendFont = {'size'  : 'small',
-                       'style' : 'normal',
+    _plotLegendFont = {'size': 'small',
+                       'style': 'normal',
                        'family': ('serif', 'sans-serif', 'monospace')}
 
     def __init__(self, path, use_title=False):
