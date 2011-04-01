@@ -40,21 +40,29 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
                flatten_results=False):
     """Runs `the_task` in a task set with the given `cardinality`.
 
-    The given `data` is aportioned across the subtasks in the task set.
+    The given `data` is portioned across the subtasks in the task set.
+    The results returned by the subtasks are returned in a list e.g.:
+        [result1, result2, ..]
+    If each subtask returns a list that will result in list of lists. Please
+    set `flatten_results` to `True` if you want the results to be returned in a
+    single list.
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
-    :param str name: The parameter name under which the aportioned
-        `data` is to be passed to `the_task`.
-    :param data: The `data` that is to be aportioned and passed to the
-        subtasks for processing.
-    :param dict other_args: The remaining parameters that are to be passed to
-        the subtasks.
+    :param str name: The parameter name under which the portioned `data` is to
+        be passed to `the_task`.
+    :param data: The `data` that is to be portioned and passed to the subtasks
+        for processing.
+    :param dict other_args: The remaining (keyword) parameters that are to be
+        passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
     """
     def kwargs(data_portion):
-        """Construct full set of parameters for the task to be invoked."""
+        """
+        Construct the full set of keyword parameters for the task to be
+        invoked.
+        """
         params = {name: data_portion}
         if other_args:
             params.update(other_args)
@@ -100,7 +108,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         raise TaskFailed(exc.args[0])
 
     if flatten_results:
-        if the_results is not None:
+        if the_results:
             if isinstance(the_results, list) or isinstance(the_results, tuple):
                 the_results = list(itertools.chain(*the_results))
 

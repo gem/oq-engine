@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010-2011, GEM Foundation.
 #
@@ -23,14 +24,11 @@ Unit tests for the utils.tasks module.
 
 import unittest
 
-from openquake import logs
 from openquake.utils import tasks
 
 from tests.utils.tasks import (
     failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
     single_arg_called_a)
-
-LOG = logs.LOG
 
 # The keyword args below are injected by the celery framework.
 celery_injected_kwargs = set((
@@ -41,7 +39,7 @@ celery_injected_kwargs = set((
 def actual_kwargs(kwargs):
     """Filter the keyword arguments injected by celery.
 
-    :param dict kwargs: All keyword arguments thrown back by a celery task.
+    :param dict kwargs: The keyword arguments thrown back by a celery task.
     :returns: The keyword arguments that were actually passed.
     :rtype: dict
     """
@@ -68,7 +66,7 @@ class DistributeTestCase(unittest.TestCase):
     def test_distribute_with_no_other_args(self):
         """The subtask is only invoked with the data to be processed."""
         # We expect the subtasks to see no positional arguments. The
-        # data to process is passed in the keyword arguments.
+        # data to be processed is passed in the keyword arguments.
         expected = [
             ((), {"data_to_process": [100]}),
             ((), {"data_to_process": [101]})]
@@ -107,7 +105,7 @@ class DistributeTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_distribute_with_empty_data_and_cardinality_one(self):
-        """A single subtask will be spawned even with an empty data set."""
+        """A *single* subtask will be spawned even with an empty data set."""
         expected = ((), {"data_to_process": []})
         [(args, kwargs)] = tasks.distribute(
             1, reflect_args, ("data_to_process", []))
@@ -151,7 +149,7 @@ class DistributeTestCase(unittest.TestCase):
         `TypeError` exception.
         """
         try:
-            tasks.distribute(1, single_arg_called_a, ("data", range(5)))
+            tasks.distribute(2, single_arg_called_a, ("data", range(5)))
         except tasks.WrongTaskParameters, exc:
             self.assertEqual(
                 "single_arg_called_a() got an unexpected keyword argument "
