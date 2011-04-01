@@ -98,8 +98,11 @@ class ClassicalPSHABasedMixin:
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):
         """
-        Computes the loss ratio and store in kvs for NRML
-        "magical" (@output) serialization within the mixin
+        Computes the loss ratio and store it in kvs to provide
+        data to the @output decorator which does the serialization
+        in the RiskJobMixin, more details inside 
+        openquake.risk.job.RiskJobMixin -- for details see
+        RiskJobMixin._write_output_for_block and the output decorator
 
         :param point: the point of the grid we want to compute
         :type point: :py:class:`openquake.shapes.GridPoint`

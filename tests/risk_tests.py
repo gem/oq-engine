@@ -925,6 +925,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
 
     def test_compute_risk_in_the_classical_psha_mixin(self):
+        """
+            tests ClassicalPSHABasedMixin.compute_risk by retrieving
+            all the loss curves in the kvs and checks their presence
+        """
         # mixin "instance"
         mixin = ClassicalPSHABasedMixin()
         mixin.region = self.region
@@ -938,6 +942,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         "assetValue" : 1}
         self._store_asset(asset, 10, 10)
 
+        # computes the loss curves and puts them in kvs
         self.assertTrue(mixin.compute_risk(self.block_id,
             point=shapes.GridPoint(None, 10, 20)))
 
@@ -955,23 +960,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                     point.column, asset['assetID'])
 
                 self.assertTrue(kvs.get(loss_key))
-
-    def test_loss_curve_in_the_classical_psha_mixin(self):
-        loss_curve = shapes.Curve([(0.085255, 0.988891),
-                (0.255765, 0.82622606), (0.426275, 0.77686984),
-                (0.596785, 0.52763345), (0.767295, 0.39346934)])
-
-        # mixin "instance"
-        mixin = ClassicalPSHABasedMixin()
-
-        mixin.job_id = 1234
-
-        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 1,
-        "assetValue" : 1}
-
-        self.assertTrue(mixin.compute_loss_curve(
-            shapes.GridPoint(None, 10, 20),
-            loss_curve, asset) is None)
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
