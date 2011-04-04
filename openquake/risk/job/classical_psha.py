@@ -42,16 +42,15 @@ class ClassicalPSHABasedMixin:
     @output
     def execute(self):
         """ execute -- general mixin entry point """
-
-        tasks = []
+        celery_tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            tasks.append(risk_job.compute_risk.delay(self.id, block_id))
+            celery_tasks.append(risk_job.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs).
-        for task in tasks:
+        for task in celery_tasks:
             try:
                 # TODO(chris): Figure out where to put that timeout.
                 task.wait(timeout=None)
