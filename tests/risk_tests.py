@@ -1000,6 +1000,8 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                      0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
+        
+
     def test_computes_the_mean_loss_from_loss_ratios(self):
         asset = {"assetValue": 1000}
         loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
@@ -1030,3 +1032,89 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose([1.631],
                         det.compute_stddev_loss(self.vuln_function, self.gmfs,
                         epsilon_provider, asset), atol=0.002))
+
+    def test_calls_the_loss_ratios_calculator_correctly(self):
+        gmfs = {"IMLs": ()}
+        epsilon_provider = object()
+        vuln_model = {"ID": self.vuln_function}
+        asset = {"assetValue": 10, "vulnerabilityFunctionReference": "ID"}
+
+        def loss_ratios_calculator(
+            vuln_function, ground_motion_field_set, e_provider, a):
+
+            self.assertTrue(a == asset)
+            self.assertTrue(epsilon_provider == e_provider)
+            self.assertTrue(ground_motion_field_set == gmfs)
+            self.assertTrue(vuln_function == self.vuln_function)
+            
+            return numpy.array([])
+
+        calculator = det.SumPerGroundMotionField(
+            vuln_model, epsilon_provider, lr_calculator=loss_ratios_calculator)
+
+        calculator.add(gmfs, asset)
+
+    def test_keeps_track_of_the_sum_of_the_losses(self):
+        loss_ratios = [
+            [0.20, 0.05, 0.10, 0.05, 0.10],
+            [0.15, 0.20, 0.20, 0.25, 0.25],
+            [0.15, 0.15, 0.10, 0.20, 0.15]]
+        
+        def loss_ratios_calculator(
+            vuln_function, ground_motion_field_set, e_provider, a):
+            
+            return loss_ratios.pop(0)
+
+        vuln_model = {"ID": self.vuln_function}
+        asset = {"assetValue": 100, "vulnerabilityFunctionReference": "ID"}
+        
+        calculator = det.SumPerGroundMotionField(
+            vuln_model, None, lr_calculator=loss_ratios_calculator)
+
+        self.assertEqual(None, calculator.losses)
+
+        calculator.add({}, asset)
+
+        self.assertTrue(numpy.allclose([20.0, 5.0, 10.0, 5.0, 10.0],
+                        calculator.losses))
+
+        calculator.add({}, asset)
+
+        self.assertTrue(numpy.allclose([35.0, 25.0, 30.0, 30.0, 35.0],
+                        calculator.losses))
+
+        calculator.add({}, asset)
+
+        self.assertTrue(numpy.allclose([50.0, 40.0, 40.0, 50.0, 50.0],
+                        calculator.losses))
+
+    def test_computes_the_mean_from_the_current_sum(self):
+        calculator = det.SumPerGroundMotionField(None, None)
+        sum_of_losses = numpy.array([50.0, 40.0, 40.0, 50.0, 50.0])
+        
+        calculator.losses = sum_of_losses
+
+        self.assertTrue(
+            numpy.allclose(numpy.mean(sum_of_losses), calculator.mean))
+    
+    def test_computes_the_stddev_from_the_current_sum(self):
+        calculator = det.SumPerGroundMotionField(None, None)
+        sum_of_losses = numpy.array([50.0, 40.0, 40.0, 50.0, 50.0])
+        
+        calculator.losses = sum_of_losses
+
+        self.assertTrue(numpy.allclose(numpy.std(
+                        sum_of_losses, ddof=1), calculator.stddev))
+
+    def test_skips_the_distribution_with_unknown_vuln_function(self):
+        vuln_model = {"ID": self.vuln_function}
+        asset = {"assetValue": 100, "assetID": "ID",
+                 "vulnerabilityFunctionReference": "XX"}
+
+        calculator = det.SumPerGroundMotionField(vuln_model, None)
+
+        self.assertEqual(None, calculator.losses)
+        
+        calculator.add({}, asset)
+        
+        self.assertEqual(None, calculator.losses)

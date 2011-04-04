@@ -24,6 +24,7 @@ using the deterministic event based approach.
 import numpy
 
 from openquake.risk import probabilistic_event_based as prob
+from openquake.logs import LOG
 
 
 def _mean_loss_from_loss_ratios(loss_ratios, asset):
@@ -111,3 +112,48 @@ def compute_stddev_loss(vuln_function, ground_motion_field_set,
         vuln_function, ground_motion_field_set, epsilon_provider, asset)
 
     return _stddev_loss_from_loss_ratios(loss_ratios, asset)
+
+
+class SumPerGroundMotionField(object):
+    
+    def __init__(self, vuln_model, epsilon_provider, lr_calculator=None):
+        self.vuln_model = vuln_model
+        self.lr_calculator = lr_calculator
+        self.epsilon_provider = epsilon_provider
+        
+        self.losses = None
+
+        if lr_calculator is None:
+            self.lr_calculator = prob.compute_loss_ratios
+
+    def add(self, ground_motion_field_set, asset):
+        if asset["vulnerabilityFunctionReference"] not in self.vuln_model:
+
+            LOG.debug("Unknown vulnerability function %s, asset %s will " \
+                      "not be included in the aggregate computation"
+                      % (asset["vulnerabilityFunctionReference"],
+                      asset["assetID"]))
+
+            return
+
+        vuln_function = self.vuln_model[
+            asset["vulnerabilityFunctionReference"]]
+
+        loss_ratios = self.lr_calculator(
+            vuln_function, ground_motion_field_set,
+            self.epsilon_provider, asset)
+
+        losses = numpy.array(loss_ratios) * asset["assetValue"]
+
+        if self.losses is None:
+            self.losses = losses
+        else:
+            self.losses = self.losses + losses
+
+    @property
+    def mean(self):
+        return numpy.mean(self.losses)
+
+    @property
+    def stddev(self):
+        return numpy.std(self.losses, ddof=1)
