@@ -44,7 +44,6 @@ class ClassicalPSHABasedMixin:
         """ execute -- general mixin entry point """
 
         tasks = []
-        results = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
@@ -59,7 +58,7 @@ class ClassicalPSHABasedMixin:
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return []
-        return results
+        return True
 
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
@@ -85,9 +84,10 @@ class ClassicalPSHABasedMixin:
             hazard_curve = Curve([(exp(float(el['x'])), el['y'])
                             for el in decoded_curve['curve']])
 
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
+            asset_key = kvs.tokens.asset_key(self.id, 
+                            point.row, point.column)
+            assets = kvs.get_client().lrange(asset_key, 0, -1)
+            for asset in [json.JSONDecoder().decode(x) for x in assets]:
                 LOGGER.debug("processing asset %s" % (asset))
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve)
@@ -134,8 +134,10 @@ class ClassicalPSHABasedMixin:
         """
 
         # we get the vulnerability function related to the asset
+
+        vuln_function_reference = asset["vulnerabilityFunctionReference"]
         vuln_function = self.vuln_curves.get(
-            asset["vulnerabilityFunctionReference"], None)
+            vuln_function_reference, None)
 
         if not vuln_function:
             LOGGER.error(
