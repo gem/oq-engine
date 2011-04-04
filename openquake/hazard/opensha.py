@@ -238,7 +238,6 @@ class ClassicalMixin(BasePSHAMixin):
             otherwise.
         :rtype: bool
         """
-
         value = self.params.get(name)
         return value is not None and value.strip()
 
