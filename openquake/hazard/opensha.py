@@ -230,7 +230,15 @@ class ClassicalMixin(BasePSHAMixin):
         return results
 
     def param_set(self, name):
-        """Is the parameter with the given `name` set and non-empty?"""
+        """Is the parameter with the given `name` set and non-empty?
+
+        :param name: The name of the parameter that should be set and
+            non-empty.
+        :return: `True` if the parameter in question set and non-empty, `False`
+            otherwise.
+        :rtype: bool
+        """
+
         value = self.params.get(name)
         return value is not None and value.strip()
 
