@@ -715,7 +715,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 os.path.join(helpers.OUTPUT_DIR,
                 aggregate._filename(self.job_id))))
 
-SITE = shapes.Site(1.0, 1.0)
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def _store_asset(self, asset, row, column):
@@ -870,6 +869,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                          None, asset, None))
 
     def _compute_risk_classical_psha_setup(self):
+        SITE = shapes.Site(1.0, 1.0)
         # deletes all keys from kvs
         kvs.get_client(binary=False).flushall()
 
