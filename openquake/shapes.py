@@ -18,23 +18,20 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-"""
-Collection of base classes for processing
-spatially-related data."""
+"""Collection of base classes for processing spatially-related data."""
 
 import math
 
 import geohash
 import json
 
-from numpy import zeros # pylint: disable=F0401,E0611
-from numpy import empty # pylint: disable=F0401,E0611
-from numpy import allclose # pylint: disable=F0401,E0611
+from numpy import zeros
+from numpy import empty
+from numpy import allclose
 
 from shapely import wkt
 from shapely import geometry
-from scipy.interpolate import interp1d # pylint: disable=F0401,E0611
+from scipy.interpolate import interp1d
 
 from openquake import flags
 from openquake import java
@@ -44,8 +41,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('distance_precision', 12,
     "Points within this geohash precision will be considered the same point")
 
-LineString = geometry.LineString # pylint: disable=C0103
-Point = geometry.Point           # pylint: disable=C0103
+LineString = geometry.LineString  # pylint: disable=C0103
+Point = geometry.Point            # pylint: disable=C0103
 
 
 class Region(object):
@@ -312,7 +309,7 @@ class Site(object):
 
     def __hash__(self):
         if not self:
-            return 0 # empty
+            return 0  # empty
         geohash_val = self._geohash()
         value = ord(geohash_val[0]) << 7
         for char in geohash_val:
@@ -381,7 +378,7 @@ class Field(object):
         assert grid.cell_size
         field = zeros((grid.rows, grid.columns))
 
-        for key, field_site in values.items(): #pylint: disable=W0612
+        for key, field_site in values.items():  # pylint: disable=W0612
             point = grid.point_at(
                 Site(field_site['lon'], field_site['lat']))
             field[point.row][point.column] = transform(
@@ -396,7 +393,7 @@ class FieldSet(object):
     def __init__(self, as_dict, grid):
         assert grid
         self.grid = grid
-        self.fields = as_dict.values()[0] # NOTE: There's a junk wrapper
+        self.fields = as_dict.values()[0]  # NOTE: There's a junk wrapper
 
     @classmethod
     def from_json(cls, json_str, grid=None):
