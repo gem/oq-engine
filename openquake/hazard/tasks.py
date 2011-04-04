@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 """
 The following tasks are defined in the hazard engine:
     * generate_erf
@@ -43,12 +41,12 @@ from openquake.job import mixins
 @task
 def generate_erf(job_id):
     """
-    Stubbed ERF generator 
+    Stubbed ERF generator
 
-    Takes a job_id, returns a job_id. 
+    Takes a job_id, returns a job_id.
 
     Connects to the Java HazardEngine using hazardwrapper, waits for an ERF to
-    be generated, and then writes it to KVS. 
+    be generated, and then writes it to KVS.
     """
 
     # TODO(JM): implement real ERF computation
@@ -58,13 +56,13 @@ def generate_erf(job_id):
 
     return job_id
 
+
 @task
 def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
     """ Generate ground motion fields """
     # TODO(JMC): Use a block_id instead of a site_list
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
-        #pylint: disable=E1101
         hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
 
 
@@ -73,7 +71,8 @@ def write_out_ses(job_file, stochastic_set_key):
     hazengine = job.Job.from_file(job_file)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
         ses = kvs.get_value_json_decoded(stochastic_set_key)
-        hazengine.write_gmf_files(ses) #pylint: disable=E1101
+        hazengine.write_gmf_files(ses)
+
 
 @task
 def compute_hazard_curve(job_id, site_list, realization, callback=None):
@@ -86,6 +85,7 @@ def compute_hazard_curve(job_id, site_list, realization, callback=None):
             subtask(callback).delay(job_id, site_list)
 
         return keys
+
 
 @task
 def compute_mgm_intensity(job_id, block_id, site_id):
@@ -110,24 +110,23 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     return json.JSONDecoder().decode(mgm)
 
+
 @task
 def compute_mean_curves(job_id, sites):
     """Compute the mean hazard curve for each site given."""
 
-    # pylint: disable=E1101
     logger = compute_mean_curves.get_logger()
 
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
     return classical_psha.compute_mean_hazard_curves(job_id, sites)
-    #subtask(compute_quantile_curves).delay(job_id, sites)
+
 
 @task
 def compute_quantile_curves(job_id, sites):
     """Compute the quantile hazard curve for each site given."""
 
-    # pylint: disable=E1101
     logger = compute_quantile_curves.get_logger()
 
     logger.info("Computing QUANTILE curves for %s sites (job_id %s)"
@@ -136,4 +135,3 @@ def compute_quantile_curves(job_id, sites):
     engine = job.Job.from_kvs(job_id)
 
     return classical_psha.compute_quantile_hazard_curves(engine, sites)
-    #subtask(serialize_quantile_curves).delay(job_id, sites)
