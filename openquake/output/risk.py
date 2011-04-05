@@ -188,19 +188,21 @@ class CurveXMLWriter(BaseXMLWriter):
         self.assets_per_id = {}
 
     def write(self, point, values):
-        """Writes an asset element with loss/loss ratio information.
+        """Writes an asset element with loss map ratio information.
 
-        point must be of type shapes.Site or shapes.GridPoint
-        values is a pair of (curve_object, asset_object), with curve_object
-        of type shapes.Curve.
-        asset_object is a dictionary that looks like:
+        :param point: the point of the grid we want to compute
+        :type point: :py:class:`openquake.shapes.Site`,
+                     :py:class:`openquake.shapes.GridPoint`
 
-        {'assetID': foo, # this is the only required item
-         'nrml_id': 'nrml',
-         'riskres_id': 'rr',
-         'list_id': 'list',
-         'endBranchLabel' : '1_1'
-        }
+        :param values: is a pair of (loss map values, asset_object)
+        :type values: with the following members
+            :py:class:`openquake.shapes.Curve`
+
+            :py:class:`dict` (asset_object)
+                ***assetID*** - the assetID
+                ***endBranchLabel*** - endBranchLabel
+                ***riskres_id*** - for example, 'rr'
+                ***list_id*** - 'list'
         """
         super(CurveXMLWriter, self).write(point, values)
 

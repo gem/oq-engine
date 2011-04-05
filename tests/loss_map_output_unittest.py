@@ -35,12 +35,14 @@ from tests.utils import helpers
 
 from openquake.output import risk as risk_output
 
-log = logs.RISK_LOG
+LOG = logs.RISK_LOG
 
 SINGLE_LOSS_MAP_XML_OUTPUT_FILE = 'loss-map-single-event.xml'
 
-NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR,
+                                 xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, 
+                                    xml.NRML_SCHEMA_FILE_OLD)
 
 
 class LossMapOutputTestCase(unittest.TestCase):
@@ -71,7 +73,8 @@ class LossMapOutputTestCase(unittest.TestCase):
     def test_loss_map_output_writes_and_validates(self):
         xml_writer = risk_output.LossMapXMLWriter(self.single_loss_map_path)
         xml_writer.serialize(self.loss_map_data)
-        self.assertTrue(xml.validates_against_xml_schema(self.single_loss_map_path,
+        self.assertTrue(
+            xml.validates_against_xml_schema(self.single_loss_map_path,
             NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
             self.loss_map_path)
@@ -99,7 +102,8 @@ class LossMapOutputTestCase(unittest.TestCase):
                 self.assertAlmostEqual(
                     len(site.findtext('.//%s' % xml.GML_POS_TAG).split()), 2)
 
-            for loss in lmnode.findall('.//%s' % xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG):
+            for loss in lmnode.findall('.//%s' % 
+                                        xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG):
                 self.assertTrue(isinstance(
                     loss.findtext('.//%s' % 
                         xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG),
