@@ -21,6 +21,7 @@ import os
 import json
 import numpy
 import unittest
+from math import log
 
 from openquake import job
 from openquake import kvs
@@ -28,6 +29,7 @@ from openquake import shapes
 from tests.utils import helpers
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
+from openquake.job import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
@@ -713,8 +715,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 os.path.join(helpers.OUTPUT_DIR,
                 aggregate._filename(self.job_id))))
 
-
 class ClassicalPSHABasedTestCase(unittest.TestCase):
+
+    def _store_asset(self, asset, row, column):
+        key = kvs.tokens.asset_key(self.job_id, row, column)
+        kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
 
     def tearDown(self):
         psha.STEPS_PER_INTERVAL = 5
@@ -862,6 +867,99 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
         self.assertEqual(None, mixin.compute_loss_ratio_curve(
                          None, asset, None))
+
+    def _compute_risk_classical_psha_setup(self):
+        SITE = shapes.Site(1.0, 1.0)
+        # deletes all keys from kvs
+        kvs.get_client(binary=False).flushall()
+
+        # at the moment the hazard part doesn't do exp on the 'x'
+        # so it's done on the risk part. To adapt the calculation
+        # we do the reverse of the exp, i.e. log(x)
+        self.hazard_curve = {'curve' : [
+              {'x' :  str(log(0.001)), 'y' : '0.99'}, {'x' : str(log(0.08)), 'y' : '0.96'},
+              {'x' : str(log(0.17)), 'y' : '0.89'}, {'x' : str(log(0.26)), 'y' : '0.82'},
+              {'x' : str(log(0.36)), 'y' : '0.70'}, {'x' : str(log(0.55)), 'y' : '0.40'},
+              {'x' : str(log(0.70)), 'y' : '0.01'}]}
+
+        # Vitor provided this Vulnerability Function
+        self.vuln_function = shapes.VulnerabilityFunction([
+                (0.03, (0.001, 0.00)),
+                (0.04, (0.022, 0.00)),
+                (0.07, (0.051, 0.00)),
+                (0.10, (0.080, 0.00)),
+                (0.12, (0.100, 0.00)),
+                (0.22, (0.200, 0.00)),
+                (0.37, (0.405, 0.00)),
+                (0.52, (0.700, 0.00))])
+
+        self.vuln_function_2 = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
+              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+
+        self.job_id = 1234
+
+        self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
+                0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
+                0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
+                0.1756), "TSES": 200, "TimeSpan": 50}
+
+        self.asset_1 = {"vulnerabilityFunctionReference": "ID",
+                "assetValue": 124.27}
+
+        self.region = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+
+        self.block_id = kvs.generate_block_id()
+        block = Block((SITE,SITE), self.block_id)
+        block.to_kvs()
+
+        self.haz_curve_key = kvs.tokens.mean_hazard_curve_key(self.job_id, SITE)
+
+        kvs.set_value_json_encoded(self.haz_curve_key, self.hazard_curve)
+
+        kvs.set_value_json_encoded(
+                kvs.tokens.vuln_key(self.job_id),
+                {"ID": self.vuln_function.to_json()})
+
+
+    def test_compute_risk_in_the_classical_psha_mixin(self):
+        """
+            tests ClassicalPSHABasedMixin.compute_risk by retrieving
+            all the loss curves in the kvs and checks their presence
+        """
+
+        self._compute_risk_classical_psha_setup()
+        # mixin "instance"
+        mixin = ClassicalPSHABasedMixin()
+        mixin.region = self.region
+        mixin.job_id = self.job_id
+        mixin.id = self.job_id
+        mixin.vuln_curves = {"ID": self.vuln_function}
+
+        block = job.Block.from_kvs(self.block_id)
+
+        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 22.61,
+        "assetValue" : 1}
+        self._store_asset(asset, 10, 10)
+
+        # computes the loss curves and puts them in kvs
+        self.assertTrue(mixin.compute_risk(self.block_id,
+            point=shapes.GridPoint(None, 10, 20)))
+
+        for point in block.grid(mixin.region):
+            asset_key = kvs.tokens.asset_key(self.job_id, point.row,
+                point.column)
+            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
+
+            for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
+                loss_ratio_key = kvs.tokens.loss_ratio_key(
+                    self.job_id, point.row, point.column, asset['assetID'])
+                self.assertTrue(kvs.get(loss_ratio_key))
+
+                loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
+                    point.column, asset['assetID'])
+
+                self.assertTrue(kvs.get(loss_key))
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
@@ -1030,3 +1128,94 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose([1.631],
                         det.compute_stddev_loss(self.vuln_function, self.gmfs,
                         epsilon_provider, asset), atol=0.002))
+
+    def test_calls_the_loss_ratios_calculator_correctly(self):
+        gmfs = {"IMLs": ()}
+        epsilon_provider = object()
+        vuln_model = {"ID": self.vuln_function}
+        asset = {"assetValue": 10, "vulnerabilityFunctionReference": "ID"}
+
+        def loss_ratios_calculator(
+            vuln_function, ground_motion_field_set, epsilon_provider, asset):
+
+            self.assertTrue(asset == asset)
+            self.assertTrue(epsilon_provider == epsilon_provider)
+            self.assertTrue(ground_motion_field_set == gmfs)
+            self.assertTrue(vuln_function == self.vuln_function)
+
+            return numpy.array([])
+
+        calculator = det.SumPerGroundMotionField(
+            vuln_model, epsilon_provider, lr_calculator=loss_ratios_calculator)
+
+        calculator.add(gmfs, asset)
+
+    def test_keeps_track_of_the_sum_of_the_losses(self):
+        loss_ratios = [
+            [0.140147324, 0.151530140, 0.016176042, 0.101786402, 0.025190577],
+            [0.154760019, 0.001203867, 0.370820698, 0.220145117, 0.067291408],
+            [0.010945875, 0.413257970, 0.267141193, 0.040157738, 0.001981645]]
+
+        def loss_ratios_calculator(
+            vuln_function, ground_motion_field_set, epsilon_provider, asset):
+
+            return loss_ratios.pop(0)
+
+        vuln_model = {"ID": self.vuln_function}
+        asset = {"assetValue": 100, "vulnerabilityFunctionReference": "ID"}
+
+        calculator = det.SumPerGroundMotionField(
+            vuln_model, None, lr_calculator=loss_ratios_calculator)
+
+        self.assertEqual(None, calculator.losses)
+
+        calculator.add(None, asset)
+        asset = {"assetValue": 300, "vulnerabilityFunctionReference": "ID"}
+        calculator.add(None, asset)
+        asset = {"assetValue": 200, "vulnerabilityFunctionReference": "ID"}
+        calculator.add(None, asset)
+
+        expected_sum = [62.63191284, 98.16576808,
+                        166.2920523, 84.25372286, 23.10280904]
+
+        self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
+
+    def test_computes_the_mean_from_the_current_sum(self):
+        calculator = det.SumPerGroundMotionField(None, None)
+
+        sum_of_losses = numpy.array(
+            [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
+
+        calculator.losses = sum_of_losses
+
+        self.assertTrue(numpy.allclose([86.88925302], calculator.mean))
+
+    def test_computes_the_stddev_from_the_current_sum(self):
+        calculator = det.SumPerGroundMotionField(None, None)
+
+        sum_of_losses = numpy.array(
+            [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
+
+        calculator.losses = sum_of_losses
+
+        self.assertTrue([52.66886967], calculator.stddev)
+
+    def test_skips_the_distribution_with_unknown_vuln_function(self):
+        """The asset refers to an unknown vulnerability function.
+
+        In case the asset defines an unknown vulnerability function
+        (key 'vulnerabilityFunctionReference') the given ground
+        motion field set is ignored.
+        """
+        vuln_model = {"ID": self.vuln_function}
+        asset = {"assetValue": 100, "assetID": "ID",
+                 "vulnerabilityFunctionReference": "XX"}
+
+        calculator = det.SumPerGroundMotionField(vuln_model, None)
+
+        self.assertEqual(None, calculator.losses)
+
+        calculator.add(None, asset)
+
+        # still None, no losses are added
+        self.assertEqual(None, calculator.losses)
