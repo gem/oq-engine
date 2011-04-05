@@ -129,7 +129,6 @@ class SumPerGroundMotionField(object):
         :param lr_calculator: service used to compute the loss ratios.
             For the list of parameters, see
     :py:function:`openquake.risk.probabilistic_event_based.compute_loss_ratios`
-            using the sampled based algorithm.
         :type lr_calculator: object that defines an :py:meth:`epsilon` method
         """
         self.vuln_model = vuln_model

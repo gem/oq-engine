@@ -1059,7 +1059,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
             [0.010945875, 0.413257970, 0.267141193, 0.040157738, 0.001981645]]
 
         def loss_ratios_calculator(
-            vuln_function, ground_motion_field_set, e_provider, a):
+            vuln_function, ground_motion_field_set, epsilon_provider, asset):
 
             return loss_ratios.pop(0)
 
