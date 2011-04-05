@@ -15,7 +15,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 import os
@@ -40,6 +39,7 @@ OUTSIDE = [(50, 9),
            (101, 50),
            (50, 101),
            (101, 101)]
+
 
 class SiteTestCase(unittest.TestCase):
 
@@ -114,6 +114,7 @@ class RegionTestCase(unittest.TestCase):
         switzerland = shapes.Region.from_coordinates(
             [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
 
+
 class GridTestCase(unittest.TestCase):
 
     def test_grid_iterates_all_points(self):
@@ -124,6 +125,7 @@ class GridTestCase(unittest.TestCase):
         for point in grid:
             print "Point at %s and %s" % (point.row, point.column)
             # TODO(JMC): assert the sequence is correct
+
 
 class ShapesTestCase(unittest.TestCase):
 
@@ -175,7 +177,7 @@ class FieldTestCase(unittest.TestCase):
         self.gmf_string = open(helpers.get_data_path("gmfs.json")).readline()
         region = shapes.Region.from_coordinates(
                  [(-118.30, 34.12), (-118.18, 34.12),
-                 (-118.18,  34.00), (-118.30,  34.00)] )
+                 (-118.18,  34.00), (-118.30,  34.00)])
         region.cell_size = 0.02
         self.grid = region.grid
 
@@ -184,4 +186,4 @@ class FieldTestCase(unittest.TestCase):
         for field in field_set:
             print field.field
             self.assertTrue(field)
-            print field.get(5,5)
+            print field.get(5, 5)

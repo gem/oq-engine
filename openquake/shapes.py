@@ -41,10 +41,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('distance_precision', 12,
     "Points within this geohash precision will be considered the same point")
 
-LineString = geometry.LineString # pylint: disable=C0103
-Point = geometry.Point           # pylint: disable=C0103
+LineString = geometry.LineString  # pylint: disable=C0103
+Point = geometry.Point  # pylint: disable=C0103
 COORD_PRECISION = 7
-INTUP = 10**COORD_PRECISION
+INTUP = 10 ** COORD_PRECISION
+
 
 class Region(object):
     """A container of polygons, used for bounds checking"""
@@ -57,12 +58,12 @@ class Region(object):
 
     def set_cell_size(self, cell_size):
         self.cell_size = cell_size * INTUP
-        
+
     @classmethod
     def from_coordinates(cls, coordinates):
         """Build a region from a set of coordinates"""
         coordinates = \
-            [(int(INTUP * x), int(INTUP * y)) for (x,y) in coordinates]
+            [(int(INTUP * x), int(INTUP * y)) for (x, y) in coordinates]
         polygon = geometry.Polygon(coordinates)
         return cls(polygon)
 
@@ -98,13 +99,13 @@ class Region(object):
         """Lower right corner of the containing bounding box"""
         (_minx, miny, maxx, _maxy) = self.bounds
         return Site.integer_site(maxx, miny)
-            
+
     @property
     def upper_left_corner(self):
         """Upper left corner of the containing bounding box"""
         (minx, _miny, _maxx, maxy) = self.bounds
         return Site.integer_site(minx, maxy)
-        
+
     @property
     def upper_right_corner(self):
         """Upper right corner of the containing bounding box"""
@@ -148,8 +149,9 @@ class RegionConstraint(Region):
         """Point (specified by Point class or tuple) is contained?"""
         if isinstance(point, Site):
             point = point.point
-        if not isinstance(point, geometry.Point): 
-            point = geometry.Point(int(point[0]*INTUP), int(point[1]*INTUP))
+        if not isinstance(point, geometry.Point):
+            point = geometry.Point(
+                int(point[0] * INTUP), int(point[1] * INTUP))
         test = self.polygon.contains(point) or self.polygon.touches(point)
         return test
 
@@ -199,8 +201,8 @@ class BoundsException(Exception):
 class Grid(object):
     """Grid is a proxy interface to Region, which translates
     lat/lon to col/row"""
-    
-    def __init__(self, region, cell_size=0.1*INTUP):
+
+    def __init__(self, region, cell_size=0.1 * INTUP):
         self.region = region
         self.cell_size = cell_size
         self.lower_left_corner = self.region.lower_left_corner
@@ -282,12 +284,13 @@ class Site(object):
     """Site is a dictionary-keyable point"""
 
     def __init__(self, longitude, latitude):
-        self.point = geometry.Point(int(longitude*INTUP), int(latitude*INTUP))
-        
+        self.point = geometry.Point(
+            int(longitude * INTUP), int(latitude * INTUP))
+
     @classmethod
     def integer_site(cls, _longitude, _latitude):
         return cls(_longitude / INTUP, _latitude / INTUP)
-    
+
     @property
     def coords(self):
         """Return a tuple with the coordinates of this point"""
@@ -297,17 +300,17 @@ class Site(object):
     def longitude(self):
         """Point x value is longitude"""
         return self.point.x / INTUP
-        
+
     @property
     def _longitude(self):
         """Point x value is longitude"""
-        return self.point.x 
+        return self.point.x
 
     @property
     def latitude(self):
         """Point y value is latitude"""
         return self.point.y / INTUP
-        
+
     @property
     def _latitude(self):
         """Point y value is latitude"""
@@ -352,7 +355,7 @@ class Site(object):
 
     def _geohash(self):
         """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.latitude, self.longitude, 
+        return geohash.encode(self.latitude, self.longitude,
             precision=FLAGS.distance_precision)
 
     def __cmp__(self, other):
