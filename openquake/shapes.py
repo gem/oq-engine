@@ -57,6 +57,13 @@ class Region(object):
         self.cell_size = 0.1
 
     def set_cell_size(self, cell_size):
+        """
+        Set the cell size to the input cell_size * the INTUP constant.
+
+        Note: When the cell size is used, we will then need to divide by INTUP.
+
+        This is necessary to help avoid float errors.
+        """
         self.cell_size = cell_size * INTUP
 
     @classmethod
@@ -207,9 +214,9 @@ class Grid(object):
         self.cell_size = cell_size
         self.lower_left_corner = self.region.lower_left_corner
         self.columns = self._longitude_to_column(
-                    self.region.upper_right_corner._longitude) + 1
+                    self.region.upper_right_corner.longitude) + 1
         self.rows = self._latitude_to_row(
-                    self.region.upper_right_corner._latitude) + 1
+                    self.region.upper_right_corner.latitude) + 1
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
@@ -233,27 +240,27 @@ class Grid(object):
     def _latitude_to_row(self, latitude):
         """Calculate row from latitude value"""
         latitude_offset = \
-            math.fabs(latitude - self.lower_left_corner._latitude)
+            math.fabs(latitude - self.lower_left_corner.latitude)
         return int(round(latitude_offset / self.cell_size))
 
     def _row_to_latitude(self, row):
         """Determine latitude from given grid row"""
-        return self.lower_left_corner._latitude + ((row) * self.cell_size)
+        return self.lower_left_corner.latitude + ((row) * self.cell_size)
 
     def _longitude_to_column(self, longitude):
         """Calculate column from longitude value"""
-        longitude_offset = longitude - self.lower_left_corner._longitude
+        longitude_offset = longitude - self.lower_left_corner.longitude
         return int(round(longitude_offset / self.cell_size))
 
     def _column_to_longitude(self, column):
         """Determine longitude from given grid column"""
-        return self.lower_left_corner._longitude + ((column) * self.cell_size)
+        return self.lower_left_corner.longitude + ((column) * self.cell_size)
 
     def point_at(self, site):
         """Translates a site into a matrix bidimensional point."""
         self.check_site(site)
-        row = self._latitude_to_row(site._latitude)
-        column = self._longitude_to_column(site._longitude)
+        row = self._latitude_to_row(site.latitude)
+        column = self._longitude_to_column(site.longitude)
         return GridPoint(self, column, row)
 
     def site_at(self, gridpoint):
@@ -271,7 +278,7 @@ class Grid(object):
                 except BoundsException:
                     print "GACK! at col %s row %s" % (col, row)
                     print "Point at %s %s isnt on grid" % \
-                        (point.site._longitude, point.site._latitude)
+                        (point.site.longitude, point.site.latitude)
 
 
 def c_mul(val_a, val_b):
@@ -289,6 +296,10 @@ class Site(object):
 
     @classmethod
     def integer_site(cls, _longitude, _latitude):
+        """
+        Converts coordinates (which were multiplied by INTUP) back to the real
+        coord values and return a Site object from those coordinates.
+        """
         return cls(_longitude / INTUP, _latitude / INTUP)
 
     @property
