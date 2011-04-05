@@ -83,7 +83,7 @@ class ClassicalPSHABasedMixin:
             hazard_curve = Curve([(exp(float(el['x'])), el['y'])
                             for el in decoded_curve['curve']])
 
-            asset_key = kvs.tokens.asset_key(self.id, 
+            asset_key = kvs.tokens.asset_key(self.id,
                             point.row, point.column)
             assets = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in assets]:
@@ -99,7 +99,7 @@ class ClassicalPSHABasedMixin:
         """
         Computes the loss ratio and store it in kvs to provide
         data to the @output decorator which does the serialization
-        in the RiskJobMixin, more details inside 
+        in the RiskJobMixin, more details inside
         openquake.risk.job.RiskJobMixin -- for details see
         RiskJobMixin._write_output_for_block and the output decorator
 
