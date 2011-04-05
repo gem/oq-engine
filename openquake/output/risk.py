@@ -168,7 +168,6 @@ class CurveXMLWriter(BaseXMLWriter):
 
         self.curve_list_el = None
         self.assets_per_id = {}
-        self.container_count = 0
 
     def write(self, point, values):
         """Writes an asset element with loss/loss ratio information.
@@ -193,10 +192,9 @@ class CurveXMLWriter(BaseXMLWriter):
         (curve_object, asset_object) = values
 
         # container element, needs gml:id
-        if not self.container_count:
+        if self.curve_list_el is None:
             self.curve_list_el = etree.SubElement(self.result_el,
                 self.container_tag)
-            self.container_count += 1
 
         if 'list_id' in asset_object:
             nrml.set_gml_id(self.curve_list_el, str(
