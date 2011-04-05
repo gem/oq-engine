@@ -37,8 +37,6 @@ from openquake.output import risk as risk_output
 
 log = logs.RISK_LOG
 
-LOSS_MAP_XML_OUTPUT_FILE = 'loss-map.xml'
-
 SINGLE_LOSS_MAP_XML_OUTPUT_FILE = 'loss-map-single-event.xml'
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
@@ -50,8 +48,6 @@ class LossMapOutputTestCase(unittest.TestCase):
     as well as correct given the inputs."""
     
     def setUp(self):
-        self.loss_map_path = helpers.get_output_path(LOSS_MAP_XML_OUTPUT_FILE)
-
         self.single_loss_map_path = helpers.get_output_path(
             SINGLE_LOSS_MAP_XML_OUTPUT_FILE)
 
@@ -79,7 +75,6 @@ class LossMapOutputTestCase(unittest.TestCase):
             NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
             self.loss_map_path)
-
 
     def test_loss_map_xml_is_correct(self):
         """Assert that content of serialized loss map data 
