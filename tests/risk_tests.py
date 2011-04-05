@@ -1000,8 +1000,6 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                      0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
-        
-
     def test_computes_the_mean_loss_from_loss_ratios(self):
         asset = {"assetValue": 1000}
         loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
@@ -1056,10 +1054,10 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
     def test_keeps_track_of_the_sum_of_the_losses(self):
         loss_ratios = [
-            [0.20, 0.05, 0.10, 0.05, 0.10],
-            [0.15, 0.20, 0.20, 0.25, 0.25],
-            [0.15, 0.15, 0.10, 0.20, 0.15]]
-        
+            [0.140147324, 0.151530140, 0.016176042, 0.101786402, 0.025190577],
+            [0.154760019, 0.001203867, 0.370820698, 0.220145117, 0.067291408],
+            [0.010945875, 0.413257970, 0.267141193, 0.040157738, 0.001981645]]
+
         def loss_ratios_calculator(
             vuln_function, ground_motion_field_set, e_provider, a):
             
@@ -1073,38 +1071,36 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(None, calculator.losses)
 
-        calculator.add({}, asset)
+        calculator.add(None, asset)
+        asset = {"assetValue": 300, "vulnerabilityFunctionReference": "ID"}
+        calculator.add(None, asset)
+        asset = {"assetValue": 200, "vulnerabilityFunctionReference": "ID"}
+        calculator.add(None, asset)
 
-        self.assertTrue(numpy.allclose([20.0, 5.0, 10.0, 5.0, 10.0],
-                        calculator.losses))
+        expected_sum = [62.63191284, 98.16576808, 
+                        166.2920523, 84.25372286, 23.10280904]
 
-        calculator.add({}, asset)
-
-        self.assertTrue(numpy.allclose([35.0, 25.0, 30.0, 30.0, 35.0],
-                        calculator.losses))
-
-        calculator.add({}, asset)
-
-        self.assertTrue(numpy.allclose([50.0, 40.0, 40.0, 50.0, 50.0],
-                        calculator.losses))
+        self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
 
     def test_computes_the_mean_from_the_current_sum(self):
         calculator = det.SumPerGroundMotionField(None, None)
-        sum_of_losses = numpy.array([50.0, 40.0, 40.0, 50.0, 50.0])
+
+        sum_of_losses = numpy.array(
+            [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
         
         calculator.losses = sum_of_losses
 
-        self.assertTrue(
-            numpy.allclose(numpy.mean(sum_of_losses), calculator.mean))
+        self.assertTrue(numpy.allclose([86.88925302], calculator.mean))
     
     def test_computes_the_stddev_from_the_current_sum(self):
         calculator = det.SumPerGroundMotionField(None, None)
-        sum_of_losses = numpy.array([50.0, 40.0, 40.0, 50.0, 50.0])
-        
+
+        sum_of_losses = numpy.array(
+            [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
+
         calculator.losses = sum_of_losses
 
-        self.assertTrue(numpy.allclose(numpy.std(
-                        sum_of_losses, ddof=1), calculator.stddev))
+        self.assertTrue([52.66886967], calculator.stddev)
 
     def test_skips_the_distribution_with_unknown_vuln_function(self):
         vuln_model = {"ID": self.vuln_function}
@@ -1115,6 +1111,6 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(None, calculator.losses)
         
-        calculator.add({}, asset)
+        calculator.add(None, asset)
         
         self.assertEqual(None, calculator.losses)
