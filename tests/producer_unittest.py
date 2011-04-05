@@ -23,7 +23,10 @@ import unittest
 import tempfile
 
 from openquake import shapes
+from openquake import producer
 from tests.utils import helpers
+
+TEST_FILE_PATH = helpers.get_data_path('config.gem')
 
 
 def generate_data(prefix):
@@ -71,3 +74,50 @@ class FileProducerTestCase(unittest.TestCase):
             self.assertEqual(data, 'test%s' % int(test_cell))
 
         self.assertEqual(len(expected), 0)
+
+    def test_reset_open_file(self):
+        """
+        Test the reset() method of a FileProducer object.
+
+        In this case, we want to test the behavior of the reset when the
+        producer's file handle is still open.
+        """
+        fp = producer.FileProducer(TEST_FILE_PATH)
+
+        # the file should be open
+        self.assertFalse(fp.file.closed)
+        # seek position starts at 0
+        self.assertEqual(0, fp.file.tell())
+
+        # change the file seek position to something != 0
+        fp.file.seek(1)
+        self.assertEqual(1, fp.file.tell())
+
+        fp.reset()
+
+        # the file should be open still
+        self.assertFalse(fp.file.closed)
+        # verify the file seek position was reset
+        self.assertEqual(0, fp.file.tell())
+
+    def test_reset_closed_file(self):
+        """
+        Test the reset() method of a FileProducer object.
+
+        In this case, we want to test the behavior of the reset when the
+        producer's file handle is closed.
+        """
+        fp = producer.FileProducer(TEST_FILE_PATH)
+        file_name = fp.file.name
+
+        # close the file to start the test
+        fp.file.close()
+
+        self.assertTrue(fp.file.closed)
+
+        fp.reset()
+
+        # the same file should be open, seek position at 0
+        self.assertFalse(fp.file.closed)
+        self.assertEqual(file_name, fp.file.name)
+        self.assertEqual(0, fp.file.tell())
