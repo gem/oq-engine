@@ -86,6 +86,23 @@ class LossMapXMLWriter(BaseXMLWriter):
         self.loss_map_el = None
 
     def write(self, point, values):
+        """Writes an asset element with loss map ratio information.
+
+        :param point: the point of the grid we want to compute
+        :type point: :py:class:`openquake.shapes.Site`
+
+        :param values: is a pair of (loss map values, asset_object)
+        :type values: with the following members
+            :py:class:`dict` (loss_map_vals) with the following keys:
+                ***mean_loss*** - the Mean Loss for a certain Node/Site
+                ***stdev*** - the Standard Deviation for a certain Node/Site
+
+            :py:class:`dict` (asset_object)
+                ***assetID*** - the assetID
+                ***endBranchLabel*** - endBranchLabel
+                ***lossCategory*** - for example, "economic_loss"
+                ***unit*** - for example EUR
+        """
         super(LossMapXMLWriter, self).write(point, values)
 
         (loss_map_vals, asset_object) = values
@@ -93,6 +110,7 @@ class LossMapXMLWriter(BaseXMLWriter):
         if not self.lmnode_counter:
             self.loss_map_el = etree.SubElement(self.result_el,
                 self.container_tag)
+
         if 'list_id' in asset_object:
             nrml.set_gml_id(self.loss_map_el, str(
                 asset_object['list_id']))
@@ -152,7 +170,7 @@ class CurveXMLWriter(BaseXMLWriter):
     """This class serializes a set of loss or loss ratio curves to NRML.
     Since the curves have to be collected under several different asset
     objects, we have to build the whole tree before serializing
-    (use base class BaseXMLWriter).
+    (uses base class BaseXMLWriter).
     """
 
     # these tag names have to be redefined in the derived classes
