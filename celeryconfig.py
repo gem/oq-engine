@@ -18,10 +18,9 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Config for all installed OpenGEM binaries and modules.
-Should be installed by setup.py into /etc/openquake 
+Should be installed by setup.py into /etc/openquake
 eventually.
 """
 
@@ -45,4 +44,5 @@ BROKER_VHOST = "celeryvhost"
 CELERY_RESULT_BACKEND = "amqp"
 
 
-CELERY_IMPORTS = ("openquake.risk.job", "openquake.hazard.tasks")
+CELERY_IMPORTS = (
+    "openquake.risk.job", "openquake.hazard.tasks", "tests.utils.tasks")

@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """Tokens for KVS keys."""
 
 import openquake.kvs
@@ -126,7 +125,7 @@ def quantile_value_from_hazard_map_key(kvs_key):
     """Extract quantile value from a KVS key for a quantile hazard map node."""
     if extract_product_type_from_kvs_key(kvs_key) == \
         QUANTILE_HAZARD_MAP_KEY_TOKEN:
-        (part_before, sep, quantile_str) = kvs_key.rpartition(
+        (_part_before, _sep, quantile_str) = kvs_key.rpartition(
             openquake.kvs.KVS_KEY_SEPARATOR)
         return float(quantile_str)
     else:

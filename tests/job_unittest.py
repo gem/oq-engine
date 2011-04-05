@@ -25,7 +25,7 @@ import unittest
 import sys
 
 from openquake import shapes
-from utils import test
+from tests.utils import helpers
 from openquake import job
 from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
@@ -39,13 +39,13 @@ CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
-TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
-TEST_JOB_FILE_CLASSICAL = test.smoketest_file(
+TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE_CLASSICAL = helpers.smoketest_file(
                             'classical_psha_simple/classical-psha-config.gem')
 
 SITE = shapes.Site(1.0, 1.0)
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
-REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-test.region"
+REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
 
@@ -55,9 +55,9 @@ FLAGS = flags.FLAGS
 class JobTestCase(unittest.TestCase):
     def setUp(self):
         self.generated_files = []
-        self.job = Job.from_file(test.do_test_file(CONFIG_FILE))
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE))
         self.job_with_includes = Job.from_file(
-                                    test.do_test_file(CONFIG_WITH_INCLUDES))
+                                    helpers.get_data_path(CONFIG_WITH_INCLUDES))
 
         self.generated_files.append(self.job.super_config_path)
         self.generated_files.append(self.job_with_includes.super_config_path)
@@ -96,7 +96,7 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
-        job_with_only_hazard = Job.from_file(test.do_test_file(HAZARD_ONLY))
+        job_with_only_hazard = Job.from_file(helpers.get_data_path(HAZARD_ONLY))
         self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
         FLAGS.include_defaults = True
 
@@ -137,12 +137,12 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(1, Job({}, 1).id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = Job.from_file(os.path.join(test.DATA_DIR, CONFIG_FILE))
+        self.job = Job.from_file(os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
     def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({EXPOSURE: os.path.join(test.SCHEMA_EXAMPLES_DIR,
+        a_job = Job({EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
                                             EXPOSURE_TEST_FILE)})
         a_job._partition()
         blocks_keys = a_job.blocks_keys
@@ -154,9 +154,9 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        a_job = Job({EXPOSURE: os.path.join(test.SCHEMA_EXAMPLES_DIR,
+        a_job = Job({EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
                                             EXPOSURE_TEST_FILE),
-                 INPUT_REGION: test.do_test_file(REGION_EXPOSURE_TEST_FILE)})
+                 INPUT_REGION: helpers.get_data_path(REGION_EXPOSURE_TEST_FILE)})
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
         blocks_keys = a_job.blocks_keys
@@ -168,13 +168,13 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(1, len(blocks_keys))
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
 
-    @test.skipit
+    @helpers.skipit
     def test_prepares_blocks_using_the_input_region(self):
         """ This test might be currently catastrophically retarded. If it is
         blame Lars.
         """
 
-        block_path = test.do_test_file(BLOCK_SPLIT_TEST_FILE)
+        block_path = helpers.get_data_path(BLOCK_SPLIT_TEST_FILE)
 
         print "In open job"
         a_job = Job.from_file(block_path)
@@ -204,7 +204,7 @@ class JobTestCase(unittest.TestCase):
 
         # test exposure has 6 assets
         a_job = Job({EXPOSURE: os.path.join(
-                test.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
+                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
 
         self.generated_files.append(a_job.super_config_path)
 
