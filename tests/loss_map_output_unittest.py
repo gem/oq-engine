@@ -77,7 +77,7 @@ class LossMapOutputTestCase(unittest.TestCase):
             xml.validates_against_xml_schema(self.single_loss_map_path,
             NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
-            self.loss_map_path)
+            self.single_loss_map_path)
 
     def test_loss_map_xml_is_correct(self):
         """Assert that content of serialized loss map data 
