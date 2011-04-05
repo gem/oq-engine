@@ -71,7 +71,7 @@ def compute_mean_loss(vuln_function, ground_motion_field_set,
         **IMLs** - tuple of ground motion fields (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:method:`epsilon` method
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios and losses.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
@@ -98,7 +98,7 @@ def compute_stddev_loss(vuln_function, ground_motion_field_set,
         **IMLs** - tuple of ground motion fields (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
-    :type epsilon_provider: object that defines an :py:method:`epsilon` method
+    :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios and losses.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
@@ -112,7 +112,7 @@ def compute_stddev_loss(vuln_function, ground_motion_field_set,
 
 class SumPerGroundMotionField(object):
     """This class computes the mean and the standard deviation of
-    the sum of the losses per ground motion field."""
+    the sum of the losses per ground motion field set."""
 
     def __init__(self, vuln_model, epsilon_provider, lr_calculator=None):
         """Initialize an instance of this class.
