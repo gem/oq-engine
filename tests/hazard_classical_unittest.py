@@ -372,13 +372,7 @@ class NumberOfTasksTestCase(unittest.TestCase):
         `ValueError` will be raised.
         """
         self.mixin.params = dict(HAZARD_TASKS="this-is-not-a-number")
-        try:
-            self.mixin.number_of_tasks()
-        except ValueError:
-            # This is what we expect.
-            pass
-        else:
-            raise Exception("ValueError not thrown!")
+        self.assertRaises(ValueError, self.mixin.number_of_tasks)
 
     def test_number_of_tasks_with_param_set_but_all_whitespace(self):
         """
@@ -386,10 +380,4 @@ class NumberOfTasksTestCase(unittest.TestCase):
         `ValueError` will be raised.
         """
         self.mixin.params = dict(HAZARD_TASKS=" 	")
-        try:
-            self.mixin.number_of_tasks()
-        except ValueError:
-            # This is what we expect.
-            pass
-        else:
-            raise Exception("ValueError not thrown!")
+        self.assertRaises(ValueError, self.mixin.number_of_tasks)
