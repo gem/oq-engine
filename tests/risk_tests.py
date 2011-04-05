@@ -1038,13 +1038,13 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         asset = {"assetValue": 10, "vulnerabilityFunctionReference": "ID"}
 
         def loss_ratios_calculator(
-            vuln_function, ground_motion_field_set, e_provider, a):
+            vuln_function, ground_motion_field_set, epsilon_provider, asset):
 
-            self.assertTrue(a == asset)
-            self.assertTrue(epsilon_provider == e_provider)
+            self.assertTrue(asset == asset)
+            self.assertTrue(epsilon_provider == epsilon_provider)
             self.assertTrue(ground_motion_field_set == gmfs)
             self.assertTrue(vuln_function == self.vuln_function)
-            
+
             return numpy.array([])
 
         calculator = det.SumPerGroundMotionField(
@@ -1060,12 +1060,12 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         def loss_ratios_calculator(
             vuln_function, ground_motion_field_set, e_provider, a):
-            
+
             return loss_ratios.pop(0)
 
         vuln_model = {"ID": self.vuln_function}
         asset = {"assetValue": 100, "vulnerabilityFunctionReference": "ID"}
-        
+
         calculator = det.SumPerGroundMotionField(
             vuln_model, None, lr_calculator=loss_ratios_calculator)
 
@@ -1077,7 +1077,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         asset = {"assetValue": 200, "vulnerabilityFunctionReference": "ID"}
         calculator.add(None, asset)
 
-        expected_sum = [62.63191284, 98.16576808, 
+        expected_sum = [62.63191284, 98.16576808,
                         166.2920523, 84.25372286, 23.10280904]
 
         self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
@@ -1087,11 +1087,11 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         sum_of_losses = numpy.array(
             [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
-        
+
         calculator.losses = sum_of_losses
 
         self.assertTrue(numpy.allclose([86.88925302], calculator.mean))
-    
+
     def test_computes_the_stddev_from_the_current_sum(self):
         calculator = det.SumPerGroundMotionField(None, None)
 
@@ -1103,6 +1103,12 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue([52.66886967], calculator.stddev)
 
     def test_skips_the_distribution_with_unknown_vuln_function(self):
+        """The asset refers to an unknown vulnerability function.
+
+        In case the asset defines an unknown vulnerability function
+        (key 'vulnerabilityFunctionReference') the given ground
+        motion field set is ignored.
+        """
         vuln_model = {"ID": self.vuln_function}
         asset = {"assetValue": 100, "assetID": "ID",
                  "vulnerabilityFunctionReference": "XX"}
@@ -1110,7 +1116,8 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         calculator = det.SumPerGroundMotionField(vuln_model, None)
 
         self.assertEqual(None, calculator.losses)
-        
+
         calculator.add(None, asset)
-        
+
+        # still None, no losses are added
         self.assertEqual(None, calculator.losses)
