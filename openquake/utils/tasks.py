@@ -100,7 +100,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
 
     # Wait for all subtasks to complete.
     while not result.ready():
-        time.sleep(1)
+        time.sleep(0.5)
     try:
         the_results = result.join()
     except TypeError, exc:
@@ -115,3 +115,20 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
                 the_results = list(itertools.chain(*the_results))
 
     return the_results
+
+
+def parallelize(cardinality, the_task, kwargs, flatten_results=False):
+    """Runs `the_task` in a task set with the given `cardinality`.
+
+    Alls subtasks receive the parameters passed via `kwargs`. The results
+    returned by the subtasks are returned in a list e.g.:
+        [result1, result2, ..]
+    If each subtask returns a list that will result in list of lists.
+
+    :param int cardinality: The size of the task set.
+    :param the_task: A `celery` task callable.
+    :param dict kwargs: The (keyword) parameters that are to be passed
+        to *all* subtasks.
+    :param bool flatten_results: If set, the results will be returned as a
+        single list (as opposed to [[results1], [results2], ..]).
+    """

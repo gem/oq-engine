@@ -51,7 +51,7 @@ def actual_kwargs(kwargs):
 
 
 class DistributeTestCase(unittest.TestCase):
-    """Tests the behaviour of tasks.distribute()."""
+    """Tests the behaviour of utils.tasks.distribute()."""
 
     def __init__(self, *args, **kwargs):
         super(DistributeTestCase, self).__init__(*args, **kwargs)
@@ -188,5 +188,77 @@ class DistributeTestCase(unittest.TestCase):
         expected = range(7)
         result = tasks.distribute(
             3, reflect_data_to_be_processed, ("data", range(7)),
+            flatten_results=True)
+        self.assertEqual(expected, result)
+
+
+class ParallelizeTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.tasks.parallelize()."""
+
+    def __init__(self, *args, **kwargs):
+        super(ParallelizeTestCase, self).__init__(*args, **kwargs)
+        self.maxDiff = None
+
+    def test_parallelize_uses_the_specified_number_of_subtasks(self):
+        """The specified number of subtasks is actually spawned."""
+        expected = ["hello"] * 5
+        result = tasks.parallelize(5, just_say_hello, dict())
+        self.assertEqual(expected, result)
+
+    def test_parallelize_with_params(self):
+        """All subtasks are invoked with the same parameters."""
+        # The keyword arguments below will be passed to the celery subtasks.
+        args = {"1+1": 2, "2/1": 1}
+
+        # We expect the subtasks to see the following positional and keyword
+        # arguments respectively.
+        expected = [
+            ((), {"1+1": 2, "2/1": 1}), ((), {"1+1": 2, "2/1": 1})]
+
+        # Two subtasks will be spawned and just return the arguments they
+        # received.
+        result = tasks.parallelize(2, reflect_args, args)
+        # Remove celery-injected keyword arguments.
+        actual = []
+        for args, kwargs in result:
+            actual.append((args, actual_kwargs(kwargs)))
+        self.assertEqual(expected, actual)
+
+    def test_parallelize_with_argument_not_expected_by_task(self):
+        """
+        An unexpected argument is passed to the subtask triggering a
+        `TypeError` exception.
+        """
+        try:
+            tasks.parallelize(2, single_arg_called_a, dict(data=range(5)))
+        except tasks.WrongTaskParameters, exc:
+            self.assertEqual(
+                "single_arg_called_a() got an unexpected keyword argument "
+                "'data'",
+                exc.args[0])
+        else:
+            self.assertTrue(False, "Exception not raised")
+
+    def test_parallelize_with_failing_subtask(self):
+        """At least one subtask failed, a `TaskFailed` exception is raised."""
+        try:
+            tasks.parallelize(1, failing_task, dict(data=range(5)))
+        except tasks.TaskFailed, exc:
+            self.assertEqual(range(5), exc.args[0])
+        else:
+            self.assertTrue(False, "Exception not raised")
+
+    def test_parallelize_returns_correct_results(self):
+        """Correct results are returned."""
+        expected = [range(3)] * 3
+        result = tasks.parallelize(
+            3, reflect_data_to_be_processed, dict(data=range(3)))
+        self.assertEqual(expected, result)
+
+    def test_parallelize_returns_flattened_and_correct_results(self):
+        """Flattened and correct results are returned."""
+        expected = range(3) * 3
+        result = tasks.parallelize(
+            3, reflect_data_to_be_processed, dict(data=range(3)),
             flatten_results=True)
         self.assertEqual(expected, result)
