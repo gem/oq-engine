@@ -31,6 +31,7 @@ from openquake import logs
 from openquake import shapes
 from openquake import xml
 from tests.utils import helpers
+import itertools
 
 from openquake.output import risk as risk_output
 
@@ -40,9 +41,6 @@ SINGLE_LOSS_MAP_XML_OUTPUT_FILE = 'loss-map-single-event.xml'
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR,
                                  xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR,
-                                    xml.NRML_SCHEMA_FILE_OLD)
-
 
 class LossMapOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
@@ -61,12 +59,15 @@ class LossMapOutputTestCase(unittest.TestCase):
                                 'unit': 'EUR'}
         self.second_asset_a = {"assetID": "a1712", "endBranchLabel": "A"}
         self.second_asset_b = {"assetID": "a1713", "endBranchLabel": "B"}
+        self.loss_a = {'mean_loss': 0, 'stddev': 100}
+        self.loss_b = {'mean_loss': 5, 'stddev': 2000.0}
+        self.loss_c = {'mean_loss': 120000.0, 'stddev': 2000.0}
         self.loss_map_data = [
-            (self.first_site, ({'mean_loss': 0, 'stddev': 100},
+            (self.first_site, (self.loss_a,
                         self.first_asset_a)),
-            (self.first_site, ({'mean_loss': 5, 'stddev': 2000.0},
+            (self.first_site, (self.loss_b,
                         self.second_asset_a)),
-            (self.second_site, ({'mean_loss': 120000.0, 'stddev': 2000.0},
+            (self.second_site, (self.loss_c,
                         self.second_asset_b))]
 
     def test_loss_map_output_writes_and_validates(self):
@@ -100,6 +101,8 @@ class LossMapOutputTestCase(unittest.TestCase):
             site_tag = lmnode.findall(".//%s" % xml.RISK_SITE_TAG)
             self.assertEqual(len(site_tag), 1)
             for site in site_tag:
+                # checks if the point is 2 or 3 dimensions, probably
+                # in the future # we will have also 3d points
                 self.assertTrue(
                     len(site.findtext('.//%s' % xml.GML_POS_TAG).split()) >= 2)
                 self.assertTrue(
@@ -110,11 +113,24 @@ class LossMapOutputTestCase(unittest.TestCase):
 
             self.assertEqual(len(loss_container_tag), 1)
             for loss in loss_container_tag:
-                self.assertTrue(isinstance(
-                    loss.findtext('.//%s' %
-                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG),
-                        str))
-                self.assertTrue(isinstance(
-                    loss.findtext('.//%s' %
-                        xml.RISK_LOSS_MAP_MEAN_LOSS_TAG),
-                        str))
+                stdev = loss.findtext('.//%s' %
+                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+
+                self.assertTrue(isinstance(stdev, str))
+
+                mean_loss = loss.findtext('.//%s' %
+                        xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+
+                self.assertTrue(isinstance(mean_loss, str))
+
+                # chains all losses (mean_loss, stdev)
+                loss_vals = list(itertools.chain(self.loss_a.values(),
+                                self.loss_b.values(),
+                                self.loss_c.values()))
+
+                # checks if the current stdev value is in loss_vals
+                self.assertEqual(loss_vals.pop(loss_vals.index(float(stdev))),
+                                 float(stdev))
+                # checks if the current mean_loss value is in loss_vals
+                self.assertEqual(loss_vals.pop(loss_vals.index(float(mean_loss))), 
+                                float(mean_loss))
