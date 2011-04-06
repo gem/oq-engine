@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+      
+    <!-- riskResult is a gml:Feature -->
+    <riskResult gml:id="rr1">
+        <config/>
+        
+        <!-- lossMap is a gml:Feature -->
+        <!-- Note: this is a loss map for a single event (deterministic scenario) -->
+        <!-- attributes endBranchLabel, lossCategory, and unit are optional -->
+        <lossMap gml:id="lm_1" endBranchLabel="vf1" lossCategory="economic_loss" 
+                 unit="EUR">
+            
+            <!-- LMNode is a gml:Feature -->
+            <LMNode gml:id="s_1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-116.0 41.0</gml:pos>
+                    </gml:Point>
+                </site>
+                <loss assetRef="asset_1">
+                    <mean>100000.0</mean>
+                    <stdDev>1000.0</stdDev>
+                </loss>
+                <loss assetRef="asset_2">
+                    <mean>200000.0</mean>
+                    <stdDev>2000.0</stdDev>
+                </loss>
+            </LMNode>
+            
+            <LMNode gml:id="s_2">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-118.0 41.0</gml:pos>
+                    </gml:Point>
+                </site>
+                <loss assetRef="asset_3">
+                    <mean>120000.0</mean>
+                    <stdDev>1200.0</stdDev>
+                </loss>
+                <loss assetRef="asset_4">
+                    <mean>220000.0</mean>
+                    <stdDev>2200.0</stdDev>
+                </loss>
+            </LMNode>
+            
+        </lossMap>
+        
+    </riskResult>
+</nrml>
