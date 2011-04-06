@@ -96,24 +96,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     # At this point we have created all the subtasks and each one got a
     # portion of the data that is to be processed. Now we will create and run
     # the task set.
-    result = TaskSet(tasks=subtasks).apply_async()
-
-    # Wait for all subtasks to complete.
-    while not result.ready():
-        time.sleep(0.5)
-    try:
-        the_results = result.join()
-    except TypeError, exc:
-        raise WrongTaskParameters(exc.args[0])
-    except Exception, exc:
-        # At least one subtask failed.
-        raise TaskFailed(exc.args[0])
-
-    if flatten_results:
-        if the_results:
-            if isinstance(the_results, list) or isinstance(the_results, tuple):
-                the_results = list(itertools.chain(*the_results))
-
+    the_results = _handle_subtasks(subtasks, flatten_results)
     return the_results
 
 
@@ -138,6 +121,22 @@ def parallelize(cardinality, the_task, kwargs, flatten_results=False):
         subtasks.append(subtask)
 
     # At this point we have created all the subtasks.
+    the_results = _handle_subtasks(subtasks, flatten_results)
+    return the_results
+
+
+def _handle_subtasks(subtasks, flatten_results):
+    """Start a `TaskSet` with the given `subtasks` and wait for it to finish.
+
+    :param subtasks: The subtasks to run
+    :type subtasks: [celery_subtask]
+    :param bool flatten_results: If set, the results will be returned as a
+        single list (as opposed to [[results1], [results2], ..]).
+    :returns: Whatever the subtasks return.
+    :raises WrongTaskParameters: When a task receives a parameter it does not
+        know.
+    :raises TaskFailed: When at least one subtask fails (raises an exception).
+    """
     result = TaskSet(tasks=subtasks).apply_async()
 
     # Wait for all subtasks to complete.
