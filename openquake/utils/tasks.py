@@ -132,3 +132,28 @@ def parallelize(cardinality, the_task, kwargs, flatten_results=False):
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
     """
+    subtasks = []
+    for _ in xrange(cardinality):
+        subtask = the_task.subtask(**kwargs)
+        subtasks.append(subtask)
+
+    # At this point we have created all the subtasks.
+    result = TaskSet(tasks=subtasks).apply_async()
+
+    # Wait for all subtasks to complete.
+    while not result.ready():
+        time.sleep(0.5)
+    try:
+        the_results = result.join()
+    except TypeError, exc:
+        raise WrongTaskParameters(exc.args[0])
+    except Exception, exc:
+        # At least one subtask failed.
+        raise TaskFailed(exc.args[0])
+
+    if flatten_results:
+        if the_results:
+            if isinstance(the_results, list) or isinstance(the_results, tuple):
+                the_results = list(itertools.chain(*the_results))
+
+    return the_results
