@@ -207,7 +207,7 @@ class ParallelizeTestCase(unittest.TestCase):
 
     def test_parallelize_with_params(self):
         """All subtasks are invoked with the same parameters."""
-        # The keyword arguments below will be passed to the celery subtasks.
+        # The keyword arguments below will be passed to *all* celery subtasks.
         args = {"1+1": 2, "2/1": 1}
 
         # We expect the subtasks to see the following positional and keyword
