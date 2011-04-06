@@ -24,6 +24,7 @@ event based approach.
 import os
 import math
 import jpype
+import json
 
 from openquake import java
 from openquake import kvs
@@ -45,6 +46,10 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
         random_generator = java.jclass(
             "Random")(int(self.params["GMF_RANDOM_SEED"]))
 
+        encoder = json.JSONEncoder()
+        kvs_client = kvs.get_client(binary=False)
+        key_set_key = kvs.tokens.ground_motion_fields_keys(self.job_id)
+
         for i in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
 
@@ -53,9 +58,11 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
 
-                kvs.set_value_json_encoded(
-                    kvs.tokens.ground_motion_value_key(
-                    self.job_id, site.hash(), i + 1), gmv)
+                key = kvs.tokens.ground_motion_value_key(
+                    self.job_id, site.hash())
+
+                kvs_client.sadd(key_set_key, key)
+                kvs_client.rpush(key, encoder.encode(gmv))
 
         return [True]
 

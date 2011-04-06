@@ -25,6 +25,7 @@ event based calculation.
 import math
 import numpy
 import unittest
+import json
 
 from utils import test
 
@@ -73,6 +74,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
             det.DeterministicEventBasedMixin.compute_ground_motion_field
 
         kvs.flush()
+        self.kvs_client = kvs.get_client(binary=False)
 
     def tearDown(self):
         # restoring the default java implementation
@@ -106,12 +108,16 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
             compute_ground_motion_field
 
         self.engine.launch()
+        decoder = json.JSONDecoder()
 
         for site in self.engine.sites_for_region():
             key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash(), 1)
+                self.engine.id, site.hash())
 
-            gmv = kvs.get_value_json_decoded(key)
+            # just one calculation is triggered in this test case
+            self.assertEqual(1, self.kvs_client.llen(key))
+            gmv = decoder.decode(self.kvs_client.lpop(key))
+            self.assertEqual(0, self.kvs_client.llen(key))
 
             self.assertTrue(
                 numpy.allclose(site.latitude, gmv["site_lat"]))
@@ -135,24 +141,45 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.engine.params[NUMBER_OF_CALC_KEY] = "3"
 
         self.engine.launch()
+        decoder = json.JSONDecoder()
 
-        for i in xrange(3):
-            for site in self.engine.sites_for_region():
-                key = kvs.tokens.ground_motion_value_key(
-                    self.engine.id, site.hash(), i + 1)
+        for site in self.engine.sites_for_region():
+            key = kvs.tokens.ground_motion_value_key(
+                self.engine.id, site.hash())
 
-                gmv = kvs.get_value_json_decoded(key)
+            self.assertEqual(3, self.kvs_client.llen(key))
+            gmv = decoder.decode(self.kvs_client.lpop(key))
+            self.assertEqual(0.5, gmv["mag"])
 
-                self.assertEqual(0.5, gmv["mag"])
+            # since the org.opensha.commons.geo.Location object
+            # stores lat/lon in radians, values are not
+            # exactly the same
+            self.assertTrue(
+                numpy.allclose(site.latitude, gmv["site_lat"]))
 
-                # since the org.opensha.commons.geo.Location object
-                # stores lat/lon in radians, values are not
-                # exactly the same
-                self.assertTrue(
-                    numpy.allclose(site.latitude, gmv["site_lat"]))
+            self.assertTrue(
+                numpy.allclose(site.longitude, gmv["site_lon"]))
 
-                self.assertTrue(
-                    numpy.allclose(site.longitude, gmv["site_lon"]))
+    def test_stores_the_list_of_keys_in_kvs(self):
+        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+            compute_ground_motion_field
+
+        self.engine.params["INTENSITY_MEASURE_TYPE"] = "MMI"
+        self.engine.params[NUMBER_OF_CALC_KEY] = "3"
+
+        self.engine.launch()
+        key_set_key = kvs.tokens.ground_motion_fields_keys(self.engine.id)
+        key_set = self.kvs_client.smembers(key_set_key)
+
+        # there are six sites in the test region, so
+        # six keys are produced
+        self.assertEqual(6, len(key_set))
+
+        for site in self.engine.sites_for_region():
+            key = kvs.tokens.ground_motion_value_key(
+                self.engine.id, site.hash())
+
+            self.assertTrue(key in key_set)
 
     def test_transforms_a_java_gmf_to_dict(self):
         location1 = java.jclass("Location")(1.0, 2.0)
@@ -188,9 +215,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         for site in self.engine.sites_for_region():
             key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash(), 1)
+                self.engine.id, site.hash())
 
-            self.assertTrue(kvs.get_value_json_decoded(key))
+            self.assertTrue(kvs.get_keys(key))
 
     def test_when_measure_type_is_not_mmi_exp_is_stored(self):
         location = java.jclass("Location")(1.0, 2.0)
