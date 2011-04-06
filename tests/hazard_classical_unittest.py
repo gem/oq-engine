@@ -342,3 +342,42 @@ class DoQuantilesTestCase(unittest.TestCase):
             AssertionError, self.mixin.do_quantiles, self.sites,
             curve_serializer=lambda _: True, curve_task=test_data_reflector,
             map_serializer=lambda _: True, map_func=None)
+
+
+class NumberOfTasksTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
+
+    def setUp(self):
+        self.mixin = opensha.ClassicalMixin(
+            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+
+    def test_number_of_tasks_with_param_not_set(self):
+        """
+        A value of 1 is expected when the `HAZARD_TASKS` parameter is not set.
+        """
+        self.mixin.params = dict()
+        self.assertEqual(1, self.mixin.number_of_tasks())
+
+    def test_number_of_tasks_with_param_set_and_valid(self):
+        """
+        When the `HAZARD_TASKS` parameter *is* set and a valid integer its
+        value will be returned.
+        """
+        self.mixin.params = dict(HAZARD_TASKS="5")
+        self.assertEqual(5, self.mixin.number_of_tasks())
+
+    def test_number_of_tasks_with_param_set_but_invalid(self):
+        """
+        When the `HAZARD_TASKS` parameter is set but not a valid integer a
+        `ValueError` will be raised.
+        """
+        self.mixin.params = dict(HAZARD_TASKS="this-is-not-a-number")
+        self.assertRaises(ValueError, self.mixin.number_of_tasks)
+
+    def test_number_of_tasks_with_param_set_but_all_whitespace(self):
+        """
+        When the `HAZARD_TASKS` parameter is set to whitespace a
+        `ValueError` will be raised.
+        """
+        self.mixin.params = dict(HAZARD_TASKS=" 	")
+        self.assertRaises(ValueError, self.mixin.number_of_tasks)
