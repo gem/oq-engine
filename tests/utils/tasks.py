@@ -43,7 +43,7 @@ def test_data_reflector(job_id, *args, **kwargs):
 
 
 @task
-def test_compute_hazard_curve(job_id, _, realization):
+def test_compute_hazard_curve(job_id, site_list, realization):
     """This task will be used to test :py:class`ClassicalMixin` code.
 
     The test setup code will prepare a result set for each `realization`.
