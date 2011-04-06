@@ -27,6 +27,7 @@ from job_unittest import *
 from kvs_unittest import *
 from logs_unittest import *
 from loss_output_unittest import *
+from loss_map_output_unittest import *
 from output_unittest import *
 from parser_exposure_portfolio_unittest import *
 from parser_hazard_curve_unittest import *
