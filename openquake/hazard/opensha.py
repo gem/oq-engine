@@ -38,6 +38,7 @@ from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
 from openquake.output import geotiff, cpt
 from openquake.output import hazard as hazard_output
+from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
 
@@ -169,6 +170,12 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
+    def number_of_tasks(self):
+        """How many `celery` tasks should be used for the calculations?"""
+        value = self.params.get("HAZARD_TASKS")
+        value = value.strip() if value else None
+        return 1 if value is None else int(value)
+
     def do_curves(self, sites, serializer=None,
                   the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
@@ -208,18 +215,13 @@ class ClassicalMixin(BasePSHAMixin):
         for realization in xrange(0, realizations):
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
-            pending_tasks = []
-            results_per_realization = []
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            pending_tasks.append(the_task.delay(self.id, sites, realization))
-
-            for task in pending_tasks:
-                task.wait()
-                if task.status != "SUCCESS":
-                    raise Exception(task.result)
-                results_per_realization.extend(task.result)
+            results_per_realization = utils_tasks.distribute(
+                self.number_of_tasks(), the_task, ("site_list", sites),
+                dict(job_id=self.id, realization=realization),
+                flatten_results=True)
 
             if serializer:
                 serializer(results_per_realization)
@@ -229,7 +231,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def param_set(self, name):
         """Is the parameter with the given `name` set and non-empty?
-        
+
         :param name: The name of the parameter that should be set and
             non-empty.
         :return: `True` if the parameter in question set and non-empty, `False`
@@ -271,16 +273,11 @@ class ClassicalMixin(BasePSHAMixin):
             return
 
         # Compute and serialize the mean curves.
-        pending_tasks = []
-        results = []
         LOG.info("Computing mean hazard curves")
 
-        pending_tasks.append(curve_task.delay(self.id, sites))
-        for task in pending_tasks:
-            task.wait()
-            if task.status != "SUCCESS":
-                raise Exception(task.result)
-            results.extend(task.result)
+        results = utils_tasks.distribute(
+            self.number_of_tasks(), curve_task, ("sites", sites),
+            dict(job_id=self.id), flatten_results=True)
 
         if curve_serializer:
             LOG.info("Serializing mean hazard curves")
@@ -326,17 +323,11 @@ class ClassicalMixin(BasePSHAMixin):
         :returns: `None`
         """
         # compute and serialize quantile hazard curves
-        pending_tasks = []
-        results = []
-
         LOG.info("Computing quantile hazard curves")
-        pending_tasks.append(curve_task.delay(self.id, sites))
 
-        for task in pending_tasks:
-            task.wait()
-            if task.status != "SUCCESS":
-                raise Exception(task.result)
-            results.extend(task.result)
+        results = utils_tasks.distribute(
+            self.number_of_tasks(), curve_task, ("sites", sites),
+            dict(job_id=self.id), flatten_results=True)
 
         # collect hazard curve keys per quantile value
         quantiles = _collect_curve_keys_per_quantile(results)
