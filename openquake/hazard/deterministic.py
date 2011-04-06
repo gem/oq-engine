@@ -50,7 +50,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
         kvs_client = kvs.get_client(binary=False)
         key_set_key = kvs.tokens.ground_motion_fields_keys(self.job_id)
 
-        for i in xrange(self._number_of_calculations()):
+        for _ in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
 
             for gmv in gmf_to_dict(

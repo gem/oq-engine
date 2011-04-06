@@ -32,7 +32,7 @@ QUANTILE_HAZARD_CURVE_KEY_TOKEN = 'quantile_hazard_curve'
 STOCHASTIC_SET_TOKEN = 'ses'
 MEAN_HAZARD_MAP_KEY_TOKEN = 'mean_hazard_map'
 QUANTILE_HAZARD_MAP_KEY_TOKEN = 'quantile_hazard_map'
-GMV_KEY_TOKEN = 'GMV'
+GMFS_KEY_TOKEN = 'GMFS'
 GMFS_KEYS_TOKEN = 'GMFS_KEYS'
 
 # risk tokens
@@ -183,20 +183,31 @@ def gmfs_key(job_id, column, row):
 
 
 def ground_motion_value_key(job_id, site_hash):
-    """Return the key used to store a single ground motion value
-    for a single site.
+    """Return the key used to store ground motion fields for
+    a single site.
 
     :param job_id: the id of the job.
     :type job_id: integer
     :param site_hash: the hash of the site to which the ground
         motion value is related.
     :type site_hash: integer
+    :returns: the key.
+    :rtype: string
     """
 
     return openquake.kvs.generate_product_key(
-        job_id, GMV_KEY_TOKEN, site_hash)
+        job_id, GMFS_KEY_TOKEN, site_hash)
 
 
 def ground_motion_fields_keys(job_id):
+    """Return the key used to store the keys of the produced
+    ground motion fields in the deterministic calculator.
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :returns: the key.
+    :rtype: string
+    """
+
     return openquake.kvs.generate_product_key(
         job_id, GMFS_KEYS_TOKEN)
