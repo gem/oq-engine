@@ -95,18 +95,21 @@ class LossMapOutputTestCase(unittest.TestCase):
 
         lmnodes = loaded_xml.findall(".//%s" % xml.RISK_LMNODE_TAG)
 
-        self.assertTrue(len(lmnodes))
+        self.assertEqual(len(lmnodes), 3)
         for lmnode in lmnodes:
             self.assertTrue(isinstance(lmnode, etree._Element))
             site_tag = lmnode.findall(".//%s" % xml.RISK_SITE_TAG)
-            self.assertTrue(len(site_tag))
+            self.assertEqual(len(site_tag), 1)
             for site in site_tag:
-                self.assertAlmostEqual(
-                    len(site.findtext('.//%s' % xml.GML_POS_TAG).split()), 2)
+                self.assertTrue(
+                    len(site.findtext('.//%s' % xml.GML_POS_TAG).split()) >= 2)
+                self.assertTrue(
+                    len(site.findtext('.//%s' % xml.GML_POS_TAG).split()) <= 3)
+
             loss_container_tag = lmnode.findall('.//%s' % 
                                         xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
-            self.assertTrue(len(loss_container_tag))
+            self.assertEqual(len(loss_container_tag), 1)
             for loss in loss_container_tag:
                 self.assertTrue(isinstance(
                     loss.findtext('.//%s' % 
