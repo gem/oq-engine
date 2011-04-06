@@ -18,7 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Tests for the serialization of loss maps to NRML format.
 """
@@ -41,14 +40,14 @@ SINGLE_LOSS_MAP_XML_OUTPUT_FILE = 'loss-map-single-event.xml'
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR,
                                  xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, 
+NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR,
                                     xml.NRML_SCHEMA_FILE_OLD)
 
 
 class LossMapOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
     as well as correct given the inputs."""
-    
+
     def setUp(self):
         self.single_loss_map_path = helpers.get_output_path(
             SINGLE_LOSS_MAP_XML_OUTPUT_FILE)
@@ -57,17 +56,17 @@ class LossMapOutputTestCase(unittest.TestCase):
         self.first_site = shapes.Site(-117.0, 38.0)
         self.second_site = shapes.Site(-118.0, 39.0)
 
-        self.first_asset_a = {"assetID" : "a1711", "endBranchLabel" : "A",
-                                'lossCategory' : 'economic_loss',
-                                'unit' : 'EUR'}
-        self.second_asset_a = {"assetID" : "a1712", "endBranchLabel": "A"}
-        self.second_asset_b = {"assetID" : "a1713", "endBranchLabel": "B"}
+        self.first_asset_a = {"assetID": "a1711", "endBranchLabel": "A",
+                                'lossCategory': 'economic_loss',
+                                'unit': 'EUR'}
+        self.second_asset_a = {"assetID": "a1712", "endBranchLabel": "A"}
+        self.second_asset_b = {"assetID": "a1713", "endBranchLabel": "B"}
         self.loss_map_data = [
-            (self.first_site, ({'mean_loss' : 0, 'stddev' : 100},
+            (self.first_site, ({'mean_loss': 0, 'stddev': 100},
                         self.first_asset_a)),
-            (self.first_site, ({'mean_loss' : 5, 'stddev' : 2000.0},
+            (self.first_site, ({'mean_loss': 5, 'stddev': 2000.0},
                         self.second_asset_a)),
-            (self.second_site, ({'mean_loss' : 120000.0, 'stddev' : 2000.0},
+            (self.second_site, ({'mean_loss': 120000.0, 'stddev': 2000.0},
                         self.second_asset_b))]
 
     def test_loss_map_output_writes_and_validates(self):
@@ -80,7 +79,7 @@ class LossMapOutputTestCase(unittest.TestCase):
             self.single_loss_map_path)
 
     def test_loss_map_xml_is_correct(self):
-        """Assert that content of serialized loss map data 
+        """Assert that content of serialized loss map data
         is correct."""
 
         # serialize curves
@@ -106,16 +105,16 @@ class LossMapOutputTestCase(unittest.TestCase):
                 self.assertTrue(
                     len(site.findtext('.//%s' % xml.GML_POS_TAG).split()) <= 3)
 
-            loss_container_tag = lmnode.findall('.//%s' % 
+            loss_container_tag = lmnode.findall('.//%s' %
                                         xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
             self.assertEqual(len(loss_container_tag), 1)
             for loss in loss_container_tag:
                 self.assertTrue(isinstance(
-                    loss.findtext('.//%s' % 
+                    loss.findtext('.//%s' %
                         xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG),
                         str))
                 self.assertTrue(isinstance(
-                    loss.findtext('.//%s' % 
+                    loss.findtext('.//%s' %
                         xml.RISK_LOSS_MAP_MEAN_LOSS_TAG),
                         str))
