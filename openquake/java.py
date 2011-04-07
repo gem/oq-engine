@@ -57,6 +57,13 @@ JAVA_CLASSES = {
     "DiscretizedFuncAPI" : 
         "org.opensha.commons.data.function.DiscretizedFuncAPI",
     "ProbabilityMassFunctionCalc" : "org.gem.calc.ProbabilityMassFunctionCalc",
+    "Location" : "org.opensha.commons.geo.Location",
+    "Site" : "org.opensha.commons.data.Site",
+    "HashMap" : "java.util.HashMap",
+    "RuptureReader" : "org.gem.engine.hazard.parsers.RuptureReader",
+    "GMPEDeserializer" : "org.gem.ScalarIntensityMeasureRelationshipApiDeserializer",
+    "JsonPrimitive" : "com.google.gson.JsonPrimitive",
+    "GMFCalculator" : "org.gem.calc.GroundMotionFieldCalculator",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)

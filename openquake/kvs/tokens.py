@@ -16,7 +16,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """Tokens for KVS keys."""
 
 import openquake.kvs
@@ -33,6 +32,8 @@ QUANTILE_HAZARD_CURVE_KEY_TOKEN = 'quantile_hazard_curve'
 STOCHASTIC_SET_TOKEN = 'ses'
 MEAN_HAZARD_MAP_KEY_TOKEN = 'mean_hazard_map'
 QUANTILE_HAZARD_MAP_KEY_TOKEN = 'quantile_hazard_map'
+GMFS_KEY_TOKEN = 'GMFS'
+GMFS_KEYS_TOKEN = 'GMFS_KEYS'
 
 # risk tokens
 CONDITIONAL_LOSS_KEY_TOKEN = 'LOSS_AT_'
@@ -179,3 +180,34 @@ def gmfs_key(job_id, column, row):
     for a single site."""
     return openquake.kvs.generate_product_key(job_id,
             GMF_KEY_TOKEN, column, row)
+
+
+def ground_motion_value_key(job_id, site_hash):
+    """Return the key used to store ground motion fields for
+    a single site.
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :param site_hash: the hash of the site to which the ground
+        motion value is related.
+    :type site_hash: integer
+    :returns: the key.
+    :rtype: string
+    """
+
+    return openquake.kvs.generate_product_key(
+        job_id, GMFS_KEY_TOKEN, site_hash)
+
+
+def ground_motion_fields_keys(job_id):
+    """Return the key used to store the keys of the produced
+    ground motion fields in the deterministic calculator.
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :returns: the key.
+    :rtype: string
+    """
+
+    return openquake.kvs.generate_product_key(
+        job_id, GMFS_KEYS_TOKEN)
