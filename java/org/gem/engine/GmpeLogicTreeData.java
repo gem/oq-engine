@@ -50,9 +50,9 @@ public class GmpeLogicTreeData {
 
     private final ParameterChangeWarningListener warningListener = null;
 
-    private final BufferedReader bufferedReader;
+    private BufferedReader bufferedReader;
 
-    private final HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap;
+    private HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTreeHashMap;
 
     private static final String packageName =
             "org.opensha.sha.imr.attenRelImpl.";
@@ -85,6 +85,11 @@ public class GmpeLogicTreeData {
                 new HashMap<TectonicRegionType, LogicTree<ScalarIntensityMeasureRelationshipAPI>>();
     }
 
+    public GmpeLogicTreeData ()
+    {
+        
+    }
+    
     /**
      * Reads logic tree data and instantiates {@link LogicTree} objects for each
      * {@link TectonicRegionType}. Each {@link LogicTree} contains
