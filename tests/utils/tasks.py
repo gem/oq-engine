@@ -90,7 +90,7 @@ def reflect_data_to_be_processed(data):
 
 
 @task
-def reflect_data_to_be_parallelized(data, task_index):
-    """Merely returns the data received."""
+def reflect_data_with_task_index(data, task_index):
+    """Returns the data received with the `task_index` appended."""
     data.append(task_index)
     return data

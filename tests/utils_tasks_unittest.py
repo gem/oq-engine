@@ -28,7 +28,7 @@ from openquake.utils import tasks
 
 from tests.utils.tasks import (
     failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
-    single_arg_called_a, reflect_data_to_be_parallelized)
+    single_arg_called_a, reflect_data_with_task_index)
 
 # The keyword args below are injected by the celery framework.
 celery_injected_kwargs = set((
@@ -294,13 +294,13 @@ class ParallelizeTestCase(unittest.TestCase):
         """Results are returned in the right order."""
         expected = [[5, 6, 0], [5, 6, 1], [5, 6, 2]]
         result = tasks.parallelize(
-            3, reflect_data_to_be_parallelized, dict(data=range(5, 7)))
+            3, reflect_data_with_task_index, dict(data=range(5, 7)))
         self.assertEqual(expected, result)
 
     def test_parallelize_with_params_not_passed_in_dict(self):
         """The task parameters must be passed in a dictionary."""
         try:
-            tasks.parallelize(3, reflect_data_to_be_parallelized, range(5, 7))
+            tasks.parallelize(3, reflect_data_with_task_index, range(5, 7))
         except AssertionError, exc:
             self.assertEqual(
                 "Parameters must be passed in a dict.", exc.args[0])
