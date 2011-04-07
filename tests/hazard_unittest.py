@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Unit tests for hazard computations with the hazard engine.
 Includes:
@@ -27,15 +26,14 @@ Includes:
 """
 
 import json
+import numpy
 import os
 import unittest
-import numpy
 
 from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from utils import test
 from openquake import xml
 
 from openquake.job import mixins
@@ -45,6 +43,7 @@ from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 import openquake.hazard.job
 
+from tests.utils import helpers
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
@@ -56,20 +55,21 @@ MEAN_GROUND_INTENSITY = (
     '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
 TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
-TEST_JOB_FILE = test.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
 with open(
-    test.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+    helpers.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
 with open(
-    test.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+    helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
-NRML_SCHEMA_PATH = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(test.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
+NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH_OLD = \
+    os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 
 def generate_job():
@@ -399,13 +399,13 @@ class HazardEngineTestCase(unittest.TestCase):
             # Spawn our tasks.
             results.append(tasks.generate_erf.apply_async(args=[job_id]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         result_values = self.kvs_client.get_multi(result_keys)
 
         self.assertEqual(result_values, expected_values)
 
-    @test.skipit
+    @helpers.skipit
     def test_compute_hazard_curve_all_sites(self):
         results = []
         block_id = 8801
@@ -414,7 +414,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_hazard_curve.apply_async(
                 args=[job_id, block_id]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         for result in results:
             for res in result.get():
@@ -435,7 +435,7 @@ class HazardEngineTestCase(unittest.TestCase):
             results.append(tasks.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
-        test.wait_for_celery_tasks(results)
+        helpers.wait_for_celery_tasks(results)
 
         for result in results:
             self.assertEqual(mgm_intensity, result.get())

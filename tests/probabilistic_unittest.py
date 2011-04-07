@@ -18,16 +18,12 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import os
 import unittest
 
-from openquake import shapes
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.risk import probabilistic_event_based as prob
 from openquake.parser import exposure
-from utils import test
+from tests.utils import helpers
 
 
 TEST_FILE = "exposure-portfolio.xml"
@@ -39,7 +35,7 @@ class EpsilonTestCase(unittest.TestCase):
 
     def setUp(self):
         self.exposure_parser = exposure.ExposurePortfolioFile(
-            os.path.join(test.SCHEMA_EXAMPLES_DIR, TEST_FILE))
+            os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
         self.mixin = ProbabilisticEventMixin()
 
     def test_uncorrelated(self):
@@ -78,7 +74,7 @@ class EpsilonTestCase(unittest.TestCase):
                 samples[category] = sample
             else:
                 self.assertTrue(sample == samples[category])
-        # Make sure we used at least two structure categories in this test.
+        # Make sure we used at least two structure categories in this helpers.
         self.assertTrue(len(samples.keys()) > 1)
         # Are all samples valid values?
         for category, sample in samples.iteritems():

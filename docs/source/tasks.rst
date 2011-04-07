@@ -2,15 +2,23 @@
       License Header goes here
 
 Tasks
-====================
+=====
 
 Generic Tasks for testing celery
 
 
-The :mod:`tasks` Module
-------------------------
+The hazard :mod:`tasks` Module
+------------------------------
 
-.. automodule:: openquake.tasks
+.. automodule:: openquake.hazard.tasks
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+The risk :mod:`tasks` Module
+----------------------------
+
+.. automodule:: openquake.risk.tasks
     :members:
     :undoc-members:
     :show-inheritance:

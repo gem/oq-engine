@@ -25,7 +25,7 @@ import os
 import unittest
 
 from lxml import etree
-from utils import test
+from tests.utils import helpers
 from openquake import logs
 
 log = logs.LOG
@@ -35,11 +35,11 @@ SCHEMA_FILE = 'nrml.xsd'
 
 class SchemaValidationTestCase(unittest.TestCase):
     """Confirm that all XML examples in docs/schema/examples match schema."""
-    
+
     def setUp(self):
-        self.example_dir = os.path.join(test.SCHEMA_DIR, XML_TEST_DIRECTORY)
-        self.schema_path = os.path.join(test.SCHEMA_DIR, SCHEMA_FILE)
-        
+        self.example_dir = os.path.join(helpers.SCHEMA_DIR, XML_TEST_DIRECTORY)
+        self.schema_path = os.path.join(helpers.SCHEMA_DIR, SCHEMA_FILE)
+
     def test_xml_is_valid(self):
         """Assert that the instance documents in the example directory
         validate against the schema."""
@@ -49,10 +49,10 @@ class SchemaValidationTestCase(unittest.TestCase):
 
             # only validate files with .xml extension, and ignore those
             # that start with a dot character
-            if ((not xml_example.endswith(".xml")) or 
+            if ((not xml_example.endswith(".xml")) or
                 xml_example.startswith(".")):
                 continue
-            
+
             example_path = os.path.join(self.example_dir, xml_example)
             if os.path.isdir(example_path):
                 continue

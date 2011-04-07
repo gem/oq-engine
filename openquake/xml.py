@@ -68,6 +68,7 @@ GML_SRS_EPSG_4326 = 'epsg:4326'
 RISK_RESULT_TAG = "%sriskResult" % NRML
 RISK_ASSET_TAG = "%sasset" % NRML
 RISK_SITE_TAG = "%ssite" % NRML
+RISK_LMNODE_TAG = "%sLMNode" % NRML
 RISK_POE_TAG = "%spoE" % NRML
 RISK_END_BRANCH_ATTR_NAME = 'endBranchLabel'
 
@@ -84,6 +85,14 @@ RISK_LOSS_RATIO_CURVES_TAG = "%slossRatioCurves" % NRML
 RISK_LOSS_RATIO_CURVE_TAG = "%slossRatioCurve" % NRML
 RISK_LOSS_RATIO_ABSCISSA_TAG = "%slossRatio" % NRML
 RISK_LOSS_RATIO_ABSCISSA_PROPERTY = 'Loss Ratio'
+
+RISK_LOSS_MAP_CONTAINER_TAG = "%slossMap" % NRML
+RISK_LOSS_MAP_LOSS_CONTAINER_TAG = "%sloss" % NRML
+RISK_LOSS_MAP_MEAN_LOSS_TAG = "%smean" % NRML
+RISK_LOSS_MAP_STANDARD_DEVIATION_TAG = "%sstdDev" % NRML
+RISK_LOSS_MAP_LOSS_CATEGORY_ATTR = "lossCategory"
+RISK_LOSS_MAP_UNIT_ATTR = "unit"
+RISK_LOSS_MAP_ASSET_REF_TAG = "%sassetRef" % NRML
 
 def validates_against_xml_schema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)

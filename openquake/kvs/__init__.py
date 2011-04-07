@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 This module contains generic functions to access
 the underlying kvs systems.
@@ -170,4 +169,4 @@ BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
 
 def generate_block_id():
     """Generate a unique id for a block."""
-    return BLOCK_ID_GENERATOR.next()  # pylint: disable=E1101
+    return BLOCK_ID_GENERATOR.next()
