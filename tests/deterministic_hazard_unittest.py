@@ -27,7 +27,7 @@ import numpy
 import unittest
 import json
 
-from utils import test
+from utils import helpers
 
 from openquake import java
 from openquake import kvs
@@ -37,7 +37,7 @@ from openquake import shapes
 
 from openquake.hazard import deterministic as det
 
-DETERMINISTIC_SMOKE_TEST = test.smoketest_file("deterministic/config.gem")
+DETERMINISTIC_SMOKE_TEST = helpers.smoketest_file("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
 
 
