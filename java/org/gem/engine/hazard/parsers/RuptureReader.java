@@ -75,28 +75,13 @@ public class RuptureReader
         public void update(EqkRupture rupture)
         {
             rupture.setHypocenterLocation(location());
-            rupture.setAveRake(averageRake());
+            rupture.setAveRake(asDouble("//qml:rake/qml:value"));
 
             PointSurface surface = new PointSurface(location());
-            surface.setAveStrike(strike());
-            surface.setAveDip(dip());
+            surface.setAveStrike(asDouble("//qml:strike/qml:value"));
+            surface.setAveDip(asDouble("//qml:dip/qml:value"));
 
             rupture.setRuptureSurface(surface);
-        }
-
-        private double dip()
-        {
-            return Double.parseDouble(xpath("//qml:dip/qml:value").selectSingleNode(document).getText());
-        }
-
-        private double strike()
-        {
-            return Double.parseDouble(xpath("//qml:strike/qml:value").selectSingleNode(document).getText());
-        }
-
-        private double averageRake()
-        {
-            return Double.parseDouble(xpath("//qml:rake/qml:value").selectSingleNode(document).getText());
         }
 
         private Location location()
@@ -121,8 +106,13 @@ public class RuptureReader
         @Override
         public void update(EqkRupture rupture)
         {
-            rupture.setAveRake(averageRake());
-            StirlingGriddedSurface surface = new StirlingGriddedSurface(trace(), dip(), usd(), lsd(), gridSpacing);
+            rupture.setAveRake(asDouble("//nrml:rake"));
+
+            double dip = asDouble("//nrml:dip");
+            double usd = asDouble("//nrml:upperSeismogenicDepth");
+            double lsd = asDouble("//nrml:lowerSeismogenicDepth");
+
+            StirlingGriddedSurface surface = new StirlingGriddedSurface(trace(), dip, usd, lsd, gridSpacing);
             rupture.setRuptureSurface(surface);
         }
 
@@ -140,26 +130,6 @@ public class RuptureReader
             return trace;
         }
 
-        private double usd()
-        {
-            return Double.parseDouble(xpath("//nrml:upperSeismogenicDepth").selectSingleNode(document).getText());
-        }
-
-        private double lsd()
-        {
-            return Double.parseDouble(xpath("//nrml:lowerSeismogenicDepth").selectSingleNode(document).getText());
-        }
-
-        private double dip()
-        {
-            return Double.parseDouble(xpath("//nrml:dip").selectSingleNode(document).getText());
-        }
-
-        private double averageRake()
-        {
-            return Double.parseDouble(xpath("//nrml:rake").selectSingleNode(document).getText());
-        }
-
     }
 
     class ComplexFaultRuptureParser implements RuptureParser
@@ -175,7 +145,7 @@ public class RuptureReader
         @Override
         public void update(EqkRupture rupture)
         {
-            rupture.setAveRake(averageRake());
+            rupture.setAveRake(asDouble("//nrml:rake"));
 
             String topFaultXPath = "//nrml:faultTopEdge/gml:LineString/gml:posList";
             String bottomFaultXPath = "//nrml:faultBottomEdge/gml:LineString/gml:posList";
@@ -199,11 +169,6 @@ public class RuptureReader
             }
 
             return trace;
-        }
-
-        private double averageRake()
-        {
-            return Double.parseDouble(xpath("//nrml:rake").selectSingleNode(document).getText());
         }
 
     }
@@ -244,7 +209,7 @@ public class RuptureReader
 
         EqkRupture rupture = new EqkRupture();
 
-        rupture.setMag(magnitude());
+        rupture.setMag(asDouble("//nrml:magnitude"));
         rupture.setTectRegType(tectonicRegionType());
 
         if (xpath("//nrml:pointRupture").matches(document))
@@ -277,9 +242,9 @@ public class RuptureReader
         return TectonicRegionType.getTypeForName(name);
     }
 
-    private double magnitude()
+    private double asDouble(String pattern)
     {
-        return Double.parseDouble(xpath("//nrml:magnitude").selectSingleNode(document).getText());
+        return Double.parseDouble(xpath(pattern).selectSingleNode(document).getText());
     }
 
     private Location nextLocation(StringTokenizer splitter)
