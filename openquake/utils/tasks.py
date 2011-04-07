@@ -57,6 +57,11 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
+    :raises WrongTaskParameters: When a task receives a parameter it does not
+        know.
+    :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
     # Too many local variables (18/15)
     # pylint: disable=R0914
@@ -96,11 +101,63 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     # At this point we have created all the subtasks and each one got a
     # portion of the data that is to be processed. Now we will create and run
     # the task set.
+    the_results = _handle_subtasks(subtasks, flatten_results)
+    return the_results
+
+
+def parallelize(
+    cardinality, the_task, kwargs, flatten_results=False, index_tasks=True):
+    """Runs `the_task` in a task set with the given `cardinality`.
+
+    All subtasks receive the *same* parameters i.e. whatever was passed via
+    `kwargs`.
+
+    :param int cardinality: The size of the task set.
+    :param the_task: A `celery` task callable.
+    :param dict kwargs: The (keyword) parameters that are to be passed
+        to *all* subtasks.
+    :param bool flatten_results: If set, the results will be returned as a
+        single list (as opposed to [[results1], [results2], ..]).
+    :param bool index_tasks: If set, each subtask will receive an additional
+        `task_index` parameter it can use for the purpose of diversification.
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
+    :raises WrongTaskParameters: When a task receives a parameter it does not
+        know.
+    :raises TaskFailed: When at least one subtask fails (raises an exception).
+    """
+    assert isinstance(kwargs, dict), "Parameters must be passed in a dict."
+    subtasks = []
+    for tidx in xrange(cardinality):
+        task_args = kwargs
+        if index_tasks:
+            task_args["task_index"] = tidx
+        subtask = the_task.subtask(**task_args)
+        subtasks.append(subtask)
+
+    # At this point we have created all the subtasks.
+    the_results = _handle_subtasks(subtasks, flatten_results)
+    return the_results
+
+
+def _handle_subtasks(subtasks, flatten_results):
+    """Start a `TaskSet` with the given `subtasks` and wait for it to finish.
+
+    :param subtasks: The subtasks to run
+    :type subtasks: [celery_subtask]
+    :param bool flatten_results: If set, the results will be returned as a
+        single list (as opposed to [[results1], [results2], ..]).
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
+    :raises WrongTaskParameters: When a task receives a parameter it does not
+        know.
+    :raises TaskFailed: When at least one subtask fails (raises an exception).
+    """
     result = TaskSet(tasks=subtasks).apply_async()
 
     # Wait for all subtasks to complete.
     while not result.ready():
-        time.sleep(1)
+        time.sleep(0.5)
     try:
         the_results = result.join()
     except TypeError, exc:
