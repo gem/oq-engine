@@ -109,7 +109,7 @@ def parallelize(
     cardinality, the_task, kwargs, flatten_results=False, index_tasks=True):
     """Runs `the_task` in a task set with the given `cardinality`.
 
-    Alls subtasks receive the *same* parameters i.e. whatever was passed via
+    All subtasks receive the *same* parameters i.e. whatever was passed via
     `kwargs`.
 
     :param int cardinality: The size of the task set.
