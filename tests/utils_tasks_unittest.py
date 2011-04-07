@@ -202,7 +202,8 @@ class ParallelizeTestCase(unittest.TestCase):
     def test_parallelize_uses_the_specified_number_of_subtasks(self):
         """The specified number of subtasks is actually spawned."""
         expected = ["hello"] * 5
-        result = tasks.parallelize(5, just_say_hello, dict())
+        result = tasks.parallelize(
+            5, just_say_hello, dict(), index_tasks=False)
         self.assertEqual(expected, result)
 
     def test_parallelize_with_params(self):
@@ -217,7 +218,7 @@ class ParallelizeTestCase(unittest.TestCase):
 
         # Two subtasks will be spawned and just return the arguments they
         # received.
-        result = tasks.parallelize(2, reflect_args, args)
+        result = tasks.parallelize(2, reflect_args, args, index_tasks=False)
         # Remove celery-injected keyword arguments.
         actual = []
         for args, kwargs in result:
@@ -230,7 +231,8 @@ class ParallelizeTestCase(unittest.TestCase):
         `TypeError` exception.
         """
         try:
-            tasks.parallelize(2, single_arg_called_a, dict(data=range(5)))
+            tasks.parallelize(2, single_arg_called_a, dict(data=range(5)),
+            index_tasks=False)
         except tasks.WrongTaskParameters, exc:
             self.assertEqual(
                 "single_arg_called_a() got an unexpected keyword argument "
@@ -242,7 +244,8 @@ class ParallelizeTestCase(unittest.TestCase):
     def test_parallelize_with_failing_subtask(self):
         """At least one subtask failed, a `TaskFailed` exception is raised."""
         try:
-            tasks.parallelize(1, failing_task, dict(data=range(5)))
+            tasks.parallelize(1, failing_task, dict(data=range(5)),
+            index_tasks=False)
         except tasks.TaskFailed, exc:
             self.assertEqual(range(5), exc.args[0])
         else:
@@ -252,7 +255,8 @@ class ParallelizeTestCase(unittest.TestCase):
         """Correct results are returned."""
         expected = [range(3)] * 3
         result = tasks.parallelize(
-            3, reflect_data_to_be_processed, dict(data=range(3)))
+            3, reflect_data_to_be_processed, dict(data=range(3)),
+            index_tasks=False)
         self.assertEqual(expected, result)
 
     def test_parallelize_returns_flattened_and_correct_results(self):
@@ -260,5 +264,29 @@ class ParallelizeTestCase(unittest.TestCase):
         expected = range(3) * 3
         result = tasks.parallelize(
             3, reflect_data_to_be_processed, dict(data=range(3)),
-            flatten_results=True)
+            flatten_results=True, index_tasks=False)
         self.assertEqual(expected, result)
+
+    def test_parallelize_with_params_and_task_index(self):
+        """
+        All subtasks are invoked with the same parameters but will receive a
+        task index parameter.
+        """
+        # The keyword arguments below will be passed to *all* celery subtasks.
+        args = {"1+1": 2, "2/1": 1}
+
+        # We expect the subtasks to see the following positional and keyword
+        # arguments respectively.
+        expected = [
+            ((), {"1+1": 2, "2/1": 1, "task_index": 0}),
+            ((), {"1+1": 2, "2/1": 1, "task_index": 1})]
+
+        # Two subtasks will be spawned and just return the arguments they
+        # received.
+        result = tasks.parallelize(2, reflect_args, args)
+        # Remove celery-injected keyword arguments.
+        actual = []
+        for args, kwargs in result:
+            actual.append((args, actual_kwargs(kwargs)))
+        self.assertEqual(expected, actual)
+

@@ -100,7 +100,8 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     return the_results
 
 
-def parallelize(cardinality, the_task, kwargs, flatten_results=False):
+def parallelize(
+    cardinality, the_task, kwargs, flatten_results=False, index_tasks=True):
     """Runs `the_task` in a task set with the given `cardinality`.
 
     Alls subtasks receive the parameters passed via `kwargs`. The results
@@ -114,10 +115,15 @@ def parallelize(cardinality, the_task, kwargs, flatten_results=False):
         to *all* subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :param bool index_tasks: If set, each subtask will receive a `task_index`
+        parameter.
     """
     subtasks = []
-    for _ in xrange(cardinality):
-        subtask = the_task.subtask(**kwargs)
+    for tidx in xrange(cardinality):
+        task_args = kwargs
+        if index_tasks:
+            task_args["task_index"] = tidx
+        subtask = the_task.subtask(**task_args)
         subtasks.append(subtask)
 
     # At this point we have created all the subtasks.
