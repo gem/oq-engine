@@ -28,7 +28,7 @@ from openquake.utils import tasks
 
 from tests.utils.tasks import (
     failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
-    single_arg_called_a)
+    single_arg_called_a, reflect_data_to_be_parallelized)
 
 # The keyword args below are injected by the celery framework.
 celery_injected_kwargs = set((
@@ -156,7 +156,7 @@ class DistributeTestCase(unittest.TestCase):
                 "'data'",
                 exc.args[0])
         else:
-            self.assertTrue(False, "Exception not raised")
+            raise Exception("Exception not raised.")
 
     def test_distribute_with_failing_subtask(self):
         """At least one subtask failed, a `TaskFailed` exception is raised."""
@@ -165,7 +165,7 @@ class DistributeTestCase(unittest.TestCase):
         except tasks.TaskFailed, exc:
             self.assertEqual(range(5), exc.args[0])
         else:
-            self.assertTrue(False, "Exception not raised")
+            raise Exception("Exception not raised.")
 
     def test_distribute_with_too_little_data(self):
         """
@@ -239,7 +239,7 @@ class ParallelizeTestCase(unittest.TestCase):
                 "'data'",
                 exc.args[0])
         else:
-            self.assertTrue(False, "Exception not raised")
+            raise Exception("Exception not raised.")
 
     def test_parallelize_with_failing_subtask(self):
         """At least one subtask failed, a `TaskFailed` exception is raised."""
@@ -249,7 +249,7 @@ class ParallelizeTestCase(unittest.TestCase):
         except tasks.TaskFailed, exc:
             self.assertEqual(range(5), exc.args[0])
         else:
-            self.assertTrue(False, "Exception not raised")
+            raise Exception("Exception not raised.")
 
     def test_parallelize_returns_correct_results(self):
         """Correct results are returned."""
@@ -290,3 +290,19 @@ class ParallelizeTestCase(unittest.TestCase):
             actual.append((args, actual_kwargs(kwargs)))
         self.assertEqual(expected, actual)
 
+    def test_parallelize_returns_results_in_the_right_order(self):
+        """Results are returned in the right order."""
+        expected = [[5, 6, 0], [5, 6, 1], [5, 6, 2]]
+        result = tasks.parallelize(
+            3, reflect_data_to_be_parallelized, dict(data=range(5, 7)))
+        self.assertEqual(expected, result)
+
+    def test_parallelize_with_params_not_passed_in_dict(self):
+        """The task parameters must be passed in a dictionary."""
+        try:
+            tasks.parallelize(3, reflect_data_to_be_parallelized, range(5, 7))
+        except AssertionError, exc:
+            self.assertEqual(
+                "Parameters must be passed in a dict.", exc.args[0])
+        else:
+            raise Exception("Exception not raised.")

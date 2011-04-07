@@ -57,6 +57,11 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
+    :raises WrongTaskParameters: When a task receives a parameter it does not
+        know.
+    :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
     # Too many local variables (18/15)
     # pylint: disable=R0914
@@ -104,10 +109,8 @@ def parallelize(
     cardinality, the_task, kwargs, flatten_results=False, index_tasks=True):
     """Runs `the_task` in a task set with the given `cardinality`.
 
-    Alls subtasks receive the parameters passed via `kwargs`. The results
-    returned by the subtasks are returned in a list e.g.:
-        [result1, result2, ..]
-    If each subtask returns a list that will result in list of lists.
+    Alls subtasks receive the *same* parameters i.e. whatever was passed via
+    `kwargs`.
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
@@ -115,9 +118,15 @@ def parallelize(
         to *all* subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :param bool index_tasks: If set, each subtask will receive a `task_index`
-        parameter.
+    :param bool index_tasks: If set, each subtask will receive an additional
+        `task_index` parameter it can use for the purpose of diversification.
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
+    :raises WrongTaskParameters: When a task receives a parameter it does not
+        know.
+    :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
+    assert isinstance(kwargs, dict), "Parameters must be passed in a dict."
     subtasks = []
     for tidx in xrange(cardinality):
         task_args = kwargs
@@ -138,7 +147,8 @@ def _handle_subtasks(subtasks, flatten_results):
     :type subtasks: [celery_subtask]
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :returns: Whatever the subtasks return.
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
     :raises WrongTaskParameters: When a task receives a parameter it does not
         know.
     :raises TaskFailed: When at least one subtask fails (raises an exception).
