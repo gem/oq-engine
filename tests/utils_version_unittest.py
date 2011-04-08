@@ -60,3 +60,15 @@ class VersionInfoTestCase(unittest.TestCase):
         """The version information is malformed."""
         self.assertEqual(
             "The OpenQuake version is not available.", version.info((-1,)))
+
+    def test_info_with_data_not_integer(self):
+        """The version information is malformed (non-integers)."""
+        self.assertEqual(
+            "The OpenQuake version is not available.",
+            version.info(("2", "-1", "-1", "-1")))
+
+    def test_info_with_data_not_a_tuple(self):
+        """The version information is malformed (not in a tuple)."""
+        self.assertEqual(
+            "The OpenQuake version is not available.",
+            version.info([2, -1, -1, -1]))
