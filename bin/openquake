@@ -35,7 +35,7 @@ from multiprocessing import Process
 
 from openquake import flags
 from openquake import logs
-from openquake import version as openquake_version
+from openquake import __version__
 
 from openquake import job
 from openquake.job import Job
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     args = FLAGS(sys.argv)
 
     if FLAGS.version:
-        print utils_version.info(openquake_version)
+        print utils_version.info(__version__)
         sys.exit(0)
 
     logs.init_logs()
