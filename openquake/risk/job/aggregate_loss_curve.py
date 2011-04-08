@@ -72,7 +72,6 @@ def compute_aggregate_curve(job):
         return
 
     epsilon_provider = risk_job.EpsilonProvider(job.params)
-    print "type(epsilon_provider)", type(epsilon_provider) 
     aggregate_loss_curve = prob.AggregateLossCurve.from_kvs(job.id, epsilon_provider)
 
     path = os.path.join(job.params["BASE_PATH"],
