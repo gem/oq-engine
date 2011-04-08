@@ -2,7 +2,7 @@
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 38.0, -122.2, 38.0, -121.7, 37.5, -121.7, 37.5, -122.2
+REGION_VERTEX = 34.0, -120.0, 34.0, -118.0, 33.0, -118.0, 33.0, -120.0
 # degrees
 REGION_GRID_SPACING = 0.1
 
