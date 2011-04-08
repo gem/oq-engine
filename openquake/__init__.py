@@ -15,7 +15,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 OpenQuake is an open-source platform for the calculation of hazard, risk, 
 and socio-economic impact. It is a project of the Global Earthquake Model, 
@@ -46,3 +45,5 @@ Copyright (c) 2010, GEM Foundation.
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+#          major, minor, sprint#, release date (seconds since the "Epoch")
+version = (0,     3,     1,       -1)
