@@ -26,6 +26,7 @@ import os
 
 from openquake.logs import LOG
 from openquake.output import curve
+from openquake.risk import job as risk_job
 from openquake.risk import probabilistic_event_based as prob
 
 
@@ -63,14 +64,16 @@ def compute_aggregate_curve(job):
     :param job: the job the engine is currently processing.
     :type job: openquake.risk.job.probabilistic.ProbabilisticEventMixin
     """
-
+    print "compute_aggregate_curve"
     if not job.has("AGGREGATE_LOSS_CURVE"):
         LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
                 "skipping aggregate loss curve computation...")
 
         return
 
-    aggregate_loss_curve = prob.AggregateLossCurve.from_kvs(job.id, job)
+    epsilon_provider = risk_job.EpsilonProvider(job.params)
+    print "type(epsilon_provider)", type(epsilon_provider) 
+    aggregate_loss_curve = prob.AggregateLossCurve.from_kvs(job.id, epsilon_provider)
 
     path = os.path.join(job.params["BASE_PATH"],
             job.params["OUTPUT_DIR"], _filename(job.id))
