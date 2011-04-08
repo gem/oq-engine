@@ -23,6 +23,8 @@ Unit tests for the utils.version module.
 """
 
 
+from datetime import datetime
+from datetime import timedelta
 import unittest
 
 from openquake.utils import version
@@ -78,3 +80,11 @@ class VersionInfoTestCase(unittest.TestCase):
         self.assertEqual(
             "The OpenQuake version is not available.",
             version.info([2, -1, -1, -2]))
+
+    def test_info_with_release_date_more_than_a_month_in_future(self):
+        """The release date is ignored since it is too far in the future."""
+        today_plus_60_days = int(
+            (datetime.today() + timedelta(days=60)).strftime("%s"))
+        self.assertEqual(
+            "OpenQuake version 0.3.2",
+            version.info((0, 3, 2, today_plus_60_days)))

@@ -32,6 +32,7 @@ def info(version_data):
 
     Version info data set to -1 will be ignored and assumed to have value
     zero.
+    Release dates that lie more than 30 days in the future are ignored.
 
     :param version_data: A 4-tuple of integers that are the major, minor and
         sprint number respectively. The last datum is the number of seconds

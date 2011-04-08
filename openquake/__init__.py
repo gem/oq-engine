@@ -16,18 +16,21 @@
 
 
 """
-OpenQuake is an open-source platform for the calculation of hazard, risk, 
-and socio-economic impact. It is a project of the Global Earthquake Model, 
-nd may be extended by other organizations to address additional classes 
+OpenQuake is an open-source platform for the calculation of hazard, risk,
+and socio-economic impact. It is a project of the Global Earthquake Model,
+nd may be extended by other organizations to address additional classes
 of peril.
 
 For more information, please see the website at http://www.globalquakemodel.org
 This software may be downloaded at http://github.com/gem/openquake
 
-The continuous integration server is at http://openquake.globalquakemodel.org
-Up-to-date sphinx documentation is at http://openquake.globalquakemodel.org/docs
+The continuous integration server is at
+    http://openquake.globalquakemodel.org
 
-This software is licensed under the LGPL license, for more details 
+Up-to-date sphinx documentation is at
+    http://openquake.globalquakemodel.org/docs
+
+This software is licensed under the LGPL license, for more details
 please see the LICENSE file.
 
 Copyright (c) 2010, GEM Foundation.
@@ -49,5 +52,8 @@ Copyright (c) 2010, GEM Foundation.
 # following command in the shell:
 #   $ date +"%s"
 #   1302246568
-#          major, minor, sprint#, release date (seconds since the "Epoch")
-version = (0,     3,     1,       -1)
+version = (
+    0,              # major
+    3,              # minor
+    1,              # sprint number
+    1302516000)     # release date (seconds since the "Epoch")
