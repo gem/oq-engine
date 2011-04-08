@@ -38,12 +38,12 @@ class VersionInfoTestCase(unittest.TestCase):
     def test_info_with_major_number_only(self):
         """Only the major version number is set."""
         self.assertEqual(
-            "OpenQuake version 2", version.info((2, -1, -1, -1)))
+            "OpenQuake version 2.0.0", version.info((2, -1, -1, -1)))
 
     def test_info_with_minor_number_only(self):
         """Only the minor version number is set."""
         self.assertEqual(
-            "OpenQuake version 0.2", version.info((-1, 2, -1, -1)))
+            "OpenQuake version 0.2.0", version.info((-1, 2, -1, -1)))
 
     def test_info_with_sprint_number_only(self):
         """Only the sprint number is set."""
@@ -72,3 +72,9 @@ class VersionInfoTestCase(unittest.TestCase):
         self.assertEqual(
             "The OpenQuake version is not available.",
             version.info([2, -1, -1, -1]))
+
+    def test_info_with_datum_less_than_minus_one(self):
+        """The version information is malformed (datum less than -1)."""
+        self.assertEqual(
+            "The OpenQuake version is not available.",
+            version.info([2, -1, -1, -2]))

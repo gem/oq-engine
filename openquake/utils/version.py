@@ -29,6 +29,9 @@ import time
 def info(version_data):
     """Return a string with the OpenQuake version infomation.
 
+    Version info data set to -1 will be ignored and assumed to have value
+    zero.
+
     :param version_data: A 4-tuple of integers that are the major, minor and
         sprint number respectively. The last datum is the number of seconds
         since epoch and represents the release date.
@@ -41,6 +44,14 @@ def info(version_data):
     if len(version_data) != 4:
         return error
 
+    data = []
     for datum in version_data:
         if not isinstance(datum, int):
             return error
+        if datum < -1:
+            return error
+        data.append(str(datum if datum > 0 else 0))
+
+    result = "OpenQuake version %s" % ".".join(data[:3])
+
+    return result
