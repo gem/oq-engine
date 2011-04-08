@@ -106,7 +106,7 @@ def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin, key="risk") as mixed:
-        mixed.compute_risk(block_id, **kwargs)
+        return mixed.compute_risk(block_id, **kwargs)
 
 
 class RiskJobMixin(mixins.Mixin):

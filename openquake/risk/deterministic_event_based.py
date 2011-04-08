@@ -140,6 +140,7 @@ class SumPerGroundMotionField(object):
         if lr_calculator is None:
             self.lr_calculator = prob.compute_loss_ratios
 
+
     def add(self, ground_motion_field_set, asset):
         """Compute the losses for the given ground motion field set, and
         sum those to the current sum of the losses.
@@ -159,7 +160,6 @@ class SumPerGroundMotionField(object):
         """
 
         if asset["vulnerabilityFunctionReference"] not in self.vuln_model:
-
             LOG.debug("Unknown vulnerability function %s, asset %s will " \
                       "not be included in the aggregate computation"
                       % (asset["vulnerabilityFunctionReference"],
