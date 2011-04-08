@@ -49,10 +49,10 @@ Copyright (c) 2010, GEM Foundation.
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 # Please note: the release date should always have a value of 0 (zero) in the
-# master branch. It will only be set to a meaninful value in *packaged* and
+# master branch. It will only be set to a meaningful value in *packaged* and
 # released OpenQuake code.
 version = (
     0,  # major
     3,  # minor
-    3,  # sprint number
+    8,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!

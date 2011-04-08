@@ -41,9 +41,7 @@ def info(version_data):
     :returns: A string with human readable OpenQuake version information.
     """
     error = "The OpenQuake version is not available."
-    if not isinstance(version_data, tuple):
-        return error
-    if len(version_data) != 4:
+    if not isinstance(version_data, tuple) or len(version_data) != 4:
         return error
 
     data = []
