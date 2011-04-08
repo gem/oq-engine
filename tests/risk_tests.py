@@ -1109,7 +1109,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         asset = {"assetValue": 10}
         epsilon_provider = EpsilonProvider(asset, self.epsilons)
 
-        self.assertTrue(numpy.allclose([2.4887999999999999],
+        self.assertTrue(numpy.allclose(2.4887999999999999,
                         det.compute_mean_loss(self.vuln_function, self.gmfs,
                         epsilon_provider, asset), atol=0.0001))
 
@@ -1125,7 +1125,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         asset = {"assetValue": 10}
         epsilon_provider = EpsilonProvider(asset, self.epsilons)
 
-        self.assertTrue(numpy.allclose([1.631],
+        self.assertTrue(numpy.allclose(1.631,
                         det.compute_stddev_loss(self.vuln_function, self.gmfs,
                         epsilon_provider, asset), atol=0.002))
 
@@ -1188,7 +1188,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         calculator.losses = sum_of_losses
 
-        self.assertTrue(numpy.allclose([86.88925302], calculator.mean))
+        self.assertTrue(numpy.allclose(86.88925302, calculator.mean))
 
     def test_computes_the_stddev_from_the_current_sum(self):
         calculator = det.SumPerGroundMotionField(None, None)
@@ -1198,7 +1198,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         calculator.losses = sum_of_losses
 
-        self.assertTrue([52.66886967], calculator.stddev)
+        self.assertTrue(numpy.allclose(52.66886967, calculator.stddev))
 
     def test_skips_the_distribution_with_unknown_vuln_function(self):
         """The asset refers to an unknown vulnerability function.
