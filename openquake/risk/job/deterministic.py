@@ -21,12 +21,21 @@ This module performs risk calculations using the deterministic
 event based approach.
 """
 
+
+import json
+import numpy
+
+from openquake import job
 from openquake import kvs
+from openquake import logs
 
 from openquake.parser import vulnerability
 from openquake.risk import deterministic_event_based as det
 from openquake.risk import job as risk_job
 from openquake.risk.job import preload, RiskJobMixin
+
+LOGGER = logs.LOG
+
 
 class DeterministicEventBasedMixin:
     """Deterministic Event Based method for performing risk calculations.
@@ -38,67 +47,74 @@ class DeterministicEventBasedMixin:
     @preload
     def execute(self):
         """Entry point for triggering the computation."""
-        results = []
-        tasks = []
 
-        return [True]
-        # print "self", self
-        # print "dir(self)", dir(self)
-        # print "type(self.calculator)", type(self.calculator)
-        # print "self.sites_for_region: ", self.sites_for_region()
-        self.vuln_curves = \
-            vulnerability.load_vuln_model_from_kvs(self.job_id)
+        def load_gmf_mags():
+            # this key will get us a set of keys for the gmf values
+            gmf_keyset_key = kvs.tokens.ground_motion_fields_keys(self.job_id)
+            gmfs_keys = kvs.get_client().smembers(gmf_keyset_key)
 
-        epsilon_provider = risk_job.EpsilonProvider(self.params)
-        # This object will be passed to each task.
-        # Each task will update the state of the object.
-        # TODO: does this actually work with Celery??
-        sum_per_gmf = det.SumPerGroundMotionField(self.vuln_curves, epsilon_provider)
-       
-        def load_gmf_mags(): 
-            gmfs_keys = kvs.tokens.ground_motion_fields_keys(self.job_id)
-            gmf_mags = {'IMLs': []}  # will contain all GMF magnitude values for the region
+            # gmf_mags will contain all GMF magnitude values for the region
+            gmf_mags = {'IMLs': []}
             for gmf_key in gmfs_keys:
                 # get a list of the gmf values for a single site
                 gmfs_for_site = kvs.get_client().lrange(gmf_key, 0, -1)
-                gmf_values = [float(json.JSONDecoder().decode(x)['mag']) for x in gmfs_for_site]
+                gmf_values = [
+                    float(json.JSONDecoder().decode(x)['mag'])
+                    for x in gmfs_for_site]
                 gmf_mags['IMLs'].extend(gmf_values)
 
             gmf_mags['IMLs'] = tuple(gmf_mags['IMLs'])
             return gmf_mags
 
+
+        loss_results = []
+        tasks = []
+
+        self.vuln_curves = \
+            vulnerability.load_vuln_model_from_kvs(self.job_id)
+
+        epsilon_provider = risk_job.EpsilonProvider(self.params)
+        # A copy of this object will be passed to each task.
+        # Note: Each task needs to return the loss values tracked by this
+        # object; then we need to combine the results for our final
+        # calculation.
+        sum_per_gmf = det.SumPerGroundMotionField(
+            self.vuln_curves, epsilon_provider)
+
         gmf_mags = load_gmf_mags()
 
-        print "self.blocks_keys", self.blocks_keys
         for block_id in self.blocks_keys:
-            # TODO: log message like prob. mixin?
-            print "MAKING TASKS"
-            print "eps provider",type(sum_per_gmf.epsilon_provider)
-            print "self.params", self.params
-            print "self", self
-            print "dir(self)", dir(self)
-            print "self.mixins", self.mixins
-            for m in self.mixins: print "dir(m)", dir(m)
+            LOGGER.debug("Dispatching task for block %s of %s"
+                % (block_id, len(self.blocks_keys)))
             a_task = risk_job.compute_risk.delay(
                 self.id, block_id, sum_per_gmf=sum_per_gmf, gmf_mags=gmf_mags)
             tasks.append(a_task)
 
         for task in tasks:
             task.wait()
-            print "task.status:", task.status
-            if not task.sucessful():
-                raise "Task failed"  # TODO: better error
+            if not task.successful():
+                raise Exception(task.result)
+            # our result is a 1-dimensional numpy.array of loss values
+            loss_results.append(task.result)
 
-        print "sum_per_gmf", sum_per_gmf
-        print "sum_per_gmf.losses: %s" % sum_per_gmf.losses
+        # reduce the task results to a single result
+        # Note: object state needs to updated with the task results
+        sum_per_gmf.losses = numpy.array([])
+        for result in loss_results:
+            sum_per_gmf.losses = \
+                numpy.concatenate((sum_per_gmf.losses, result))
+            
+        # For now, just print these values.
+        # These are not debug statements; please don't remove them!
         print "Mean loss value", sum_per_gmf.mean
-        # print "Standard deviation loss value: %s" % sum_per_gmf.stddev
+        print "Standard deviation loss value: %s" % sum_per_gmf.stddev
         return [True]
 
     def compute_risk(self, block_id, **kwargs):
         """
+        
+        :returns: the losses for this block (as a 1d numpy.array)
         """
-        print "compute_risk"
         # need to pass this the SumPerGMF obj
         sum_per_gmf = kwargs['sum_per_gmf']
         gmf_mags = kwargs['gmf_mags']
@@ -106,15 +122,15 @@ class DeterministicEventBasedMixin:
         assert isinstance(sum_per_gmf, det.SumPerGroundMotionField)
         assert isinstance(gmf_mags, dict) 
 
-        print "sum_per_gmf.losses: %s" % sum_per_gmf.losses
         block = job.Block.from_kvs(block_id)
 
         for point in block.grid(self.region):
-            # TODO: get assets for point
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
                 sum_per_gmf.add(gmf_mags, asset)
-            
+
+        return sum_per_gmf.losses
+
 
 RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
