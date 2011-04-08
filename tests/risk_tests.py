@@ -715,6 +715,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 os.path.join(helpers.OUTPUT_DIR,
                 aggregate._filename(self.job_id))))
 
+
 class ClassicalPSHABasedTestCase(unittest.TestCase):
 
     def _store_asset(self, asset, row, column):
@@ -876,11 +877,14 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # at the moment the hazard part doesn't do exp on the 'x'
         # so it's done on the risk part. To adapt the calculation
         # we do the reverse of the exp, i.e. log(x)
-        self.hazard_curve = {'curve' : [
-              {'x' :  str(log(0.001)), 'y' : '0.99'}, {'x' : str(log(0.08)), 'y' : '0.96'},
-              {'x' : str(log(0.17)), 'y' : '0.89'}, {'x' : str(log(0.26)), 'y' : '0.82'},
-              {'x' : str(log(0.36)), 'y' : '0.70'}, {'x' : str(log(0.55)), 'y' : '0.40'},
-              {'x' : str(log(0.70)), 'y' : '0.01'}]}
+        self.hazard_curve = {'curve': [
+            {'x': str(log(0.001)), 'y': '0.99'},
+            {'x': str(log(0.080)), 'y': '0.96'},
+            {'x': str(log(0.170)), 'y': '0.89'},
+            {'x': str(log(0.260)), 'y': '0.82'},
+            {'x': str(log(0.360)), 'y': '0.70'},
+            {'x': str(log(0.550)), 'y': '0.40'},
+            {'x': str(log(0.700)), 'y': '0.01'}]}
 
         # Vitor provided this Vulnerability Function
         self.vuln_function = shapes.VulnerabilityFunction([
@@ -893,8 +897,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.37, (0.405, 0.00)),
                 (0.52, (0.700, 0.00))])
 
-        self.vuln_function_2 = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        self.vuln_function_2 = shapes.VulnerabilityFunction(
+            [(0.1, (0.05, 0.5)), (0.2, (0.08, 0.3)),
+            (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
 
         self.job_id = 1234
 
@@ -910,17 +915,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 (0.0, 0.0), (2.0, 2.0))
 
         self.block_id = kvs.generate_block_id()
-        block = Block((SITE,SITE), self.block_id)
+        block = Block((SITE, SITE), self.block_id)
         block.to_kvs()
 
-        self.haz_curve_key = kvs.tokens.mean_hazard_curve_key(self.job_id, SITE)
+        self.haz_curve_key = kvs.tokens.mean_hazard_curve_key(
+            self.job_id, SITE)
 
         kvs.set_value_json_encoded(self.haz_curve_key, self.hazard_curve)
 
         kvs.set_value_json_encoded(
                 kvs.tokens.vuln_key(self.job_id),
                 {"ID": self.vuln_function.to_json()})
-
 
     def test_compute_risk_in_the_classical_psha_mixin(self):
         """
@@ -938,8 +943,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 
         block = job.Block.from_kvs(self.block_id)
 
-        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 22.61,
-        "assetValue" : 1}
+        asset = {"vulnerabilityFunctionReference": "ID",
+                 "assetID": 22.61, "assetValue": 1}
+
         self._store_asset(asset, 10, 10)
 
         # computes the loss curves and puts them in kvs
