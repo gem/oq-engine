@@ -55,7 +55,7 @@ def compute_ground_motion_field(self, random_generator):
     return hashmap
 
 
-class DeterministicEventBasedTestCase(unittest.TestCase):
+class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
     def setUp(self):
         flags.FLAGS.include_defaults = False
