@@ -23,7 +23,8 @@ Utility functions related to OpenQuake version information.
 """
 
 
-import time
+from datetime import datetime
+from datetime import timedelta
 
 
 def info(version_data):
@@ -53,5 +54,16 @@ def info(version_data):
         data.append(str(datum if datum > 0 else 0))
 
     result = "OpenQuake version %s" % ".".join(data[:3])
+
+    seconds_since_epoch = version_data[-1]
+
+    # Our versioning start on the date below.
+    start = int(datetime(year=2011, month=4, day=8).strftime("%s"))
+    # The release date should not be more than 30 days in the future.
+    end = int((datetime.today() + timedelta(days=30)).strftime("%s"))
+
+    if end > seconds_since_epoch > start:
+        release_date = datetime.fromtimestamp(seconds_since_epoch).isoformat()
+        result += ", released %s" % release_date
 
     return result

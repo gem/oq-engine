@@ -45,5 +45,9 @@ Copyright (c) 2010, GEM Foundation.
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+# Please note: you can get the seconds since epoch value by running the
+# following command in the shell:
+#   $ date +"%s"
+#   1302246568
 #          major, minor, sprint#, release date (seconds since the "Epoch")
 version = (0,     3,     1,       -1)
