@@ -51,7 +51,7 @@ Copyright (c) 2010, GEM Foundation.
 # Please note: the release date should always have a value of 0 (zero) in the
 # master branch. It will only be set to a meaningful value in *packaged* and
 # released OpenQuake code.
-version = (
+Version = (
     0,  # major
     3,  # minor
     8,  # sprint number
