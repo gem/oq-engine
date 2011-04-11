@@ -2,7 +2,7 @@
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 34.0, -120.0, 34.0, -118.0, 33.0, -118.0, 33.0, -120.0
+REGION_VERTEX = 34.07, -118.25, 34.07, -118.22, 34.04, -118.22, 34.04, -118.25
 # degrees
 REGION_GRID_SPACING = 0.1
 
@@ -58,7 +58,7 @@ SINGLE_RUPTURE_MODEL = simple-fault-rupture.xml
 RISK_CALCULATION_MODE = Deterministic
 
 # file containing the exposure in nrml format
-EXPOSURE = small_exposure.xml
+EXPOSURE = LA_small_portfolio.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
