@@ -76,6 +76,8 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         kvs.flush()
         self.kvs_client = kvs.get_client(binary=False)
 
+        self.grid = self.engine.region.grid
+
     def tearDown(self):
         # restoring the default java implementation
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
@@ -111,8 +113,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         decoder = json.JSONDecoder()
 
         for site in self.engine.sites_for_region():
+            point = self.grid.point_at(site)
             key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+                self.engine.id, point)
 
             # just one calculation is triggered in this test case
             self.assertEqual(1, self.kvs_client.llen(key))
@@ -144,8 +147,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         decoder = json.JSONDecoder()
 
         for site in self.engine.sites_for_region():
+            point = self.grid.point_at(site)
             key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+                self.engine.id, point)
 
             self.assertEqual(3, self.kvs_client.llen(key))
             gmv = decoder.decode(self.kvs_client.lpop(key))
@@ -176,8 +180,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.assertEqual(6, len(key_set))
 
         for site in self.engine.sites_for_region():
+            point = self.grid.point_at(site)
             key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+                self.engine.id, point)
 
             self.assertTrue(key in key_set)
 
@@ -214,8 +219,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.engine.launch()
 
         for site in self.engine.sites_for_region():
+            point = self.grid.point_at(site)
             key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+                self.engine.id, point)
 
             self.assertTrue(kvs.get_keys(key))
 

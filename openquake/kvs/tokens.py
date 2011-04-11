@@ -182,21 +182,20 @@ def gmfs_key(job_id, column, row):
             GMF_KEY_TOKEN, column, row)
 
 
-def ground_motion_value_key(job_id, site_hash):
+def ground_motion_value_key(job_id, point):
     """Return the key used to store ground motion fields for
     a single site.
 
     :param job_id: the id of the job.
     :type job_id: integer
-    :param site_hash: the hash of the site to which the ground
-        motion value is related.
-    :type site_hash: integer
+    :param point: grid location of the GMF data
+    :type point: :py:class:`shapes.GridPoint` object
     :returns: the key.
     :rtype: string
     """
 
-    return openquake.kvs.generate_product_key(
-        job_id, GMFS_KEY_TOKEN, site_hash)
+    return openquake.kvs.generate_key(
+        [job_id, GMFS_KEY_TOKEN, point.column, point.row])
 
 
 def ground_motion_fields_keys(job_id):
