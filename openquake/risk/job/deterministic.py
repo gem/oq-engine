@@ -48,25 +48,6 @@ class DeterministicEventBasedMixin:
     def execute(self):
         """Entry point for triggering the computation."""
 
-        def load_gmf_mags():
-            # this key will get us a set of keys for the gmf values
-            gmf_keyset_key = kvs.tokens.ground_motion_fields_keys(self.job_id)
-            gmfs_keys = kvs.get_client().smembers(gmf_keyset_key)
-
-            # gmf_mags will contain all GMF magnitude values for the region
-            gmf_mags = {'IMLs': []}
-            for gmf_key in gmfs_keys:
-                # get a list of the gmf values for a single site
-                gmfs_for_site = kvs.get_client().lrange(gmf_key, 0, -1)
-                gmf_values = [
-                    float(json.JSONDecoder().decode(x)['mag'])
-                    for x in gmfs_for_site]
-                gmf_mags['IMLs'].extend(gmf_values)
-
-            gmf_mags['IMLs'] = tuple(gmf_mags['IMLs'])
-            return gmf_mags
-
-
         loss_results = []
         tasks = []
 
@@ -81,13 +62,11 @@ class DeterministicEventBasedMixin:
         sum_per_gmf = det.SumPerGroundMotionField(
             self.vuln_curves, epsilon_provider)
 
-        gmf_mags = load_gmf_mags()
-
         for block_id in self.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
                 % (block_id, len(self.blocks_keys)))
             a_task = risk_job.compute_risk.delay(
-                self.id, block_id, sum_per_gmf=sum_per_gmf, gmf_mags=gmf_mags)
+                self.id, block_id, sum_per_gmf=sum_per_gmf)
             tasks.append(a_task)
 
         for task in tasks:
@@ -115,16 +94,19 @@ class DeterministicEventBasedMixin:
         
         :returns: the losses for this block (as a 1d numpy.array)
         """
-        # need to pass this the SumPerGMF obj
         sum_per_gmf = kwargs['sum_per_gmf']
-        gmf_mags = kwargs['gmf_mags']
-        # TODO: test these assertions
         assert isinstance(sum_per_gmf, det.SumPerGroundMotionField)
-        assert isinstance(gmf_mags, dict) 
 
         block = job.Block.from_kvs(block_id)
 
         for point in block.grid(self.region):
+            # load the gmf data for this site
+            gmfs_key = kvs.tokens.ground_motion_value_key(self.id, point)
+            gmf_mags = {'IMLs': None}
+            # load raw json gmf values
+            gmf_raw = kvs.get_client().lrange(gmfs_key, 0, -1)
+            gmf_mags['IMLs'] = \
+                [float(json.JSONDecoder().decode(x)['mag']) for x in gmf_raw]
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
