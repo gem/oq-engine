@@ -63,10 +63,12 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
         self.engine.job_id = 1234
 
+        """
         self.engine.params["REGION_VERTEX"] = \
             "33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30"
 
         self.engine.params["RUPTURE_SURFACE_DISCRETIZATION"] = "0.1"
+        """
         self.engine.params[NUMBER_OF_CALC_KEY] = "1"
 
         # saving the default java implementation
@@ -77,6 +79,8 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.kvs_client = kvs.get_client(binary=False)
 
         self.grid = self.engine.region.grid
+
+        self.engine.to_kvs()
 
     def tearDown(self):
         # restoring the default java implementation
@@ -175,9 +179,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         key_set_key = kvs.tokens.ground_motion_fields_keys(self.engine.id)
         key_set = self.kvs_client.smembers(key_set_key)
 
-        # there are six sites in the test region, so
-        # six keys are produced
-        self.assertEqual(6, len(key_set))
+        # there is only one site in the test region
+        # so only one key is produced
+        self.assertEqual(1, len(key_set))
 
         for site in self.engine.sites_for_region():
             point = self.grid.point_at(site)
