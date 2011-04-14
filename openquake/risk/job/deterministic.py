@@ -67,6 +67,9 @@ class DeterministicEventBasedMixin:
                 % (block_id, len(self.blocks_keys)))
             a_task = risk_job.compute_risk.delay(
                 self.id, block_id, sum_per_gmf=sum_per_gmf)
+            a_task = risk_job.computE_risk.delay(
+                self.id, block_id, vuln_model=self.vuln_model,
+                epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
         for task in tasks:
@@ -89,10 +92,53 @@ class DeterministicEventBasedMixin:
         print "Standard deviation loss value: %s" % sum_per_gmf.stddev
         return [True]
 
+
     def compute_risk(self, block_id, **kwargs):
         """
+        """
+        vuln_model = kwargs['vuln_model']
+        epsilon_provider = kwargs['epsilon_provider']
+
+        block = job.Block.from_kvs(block_id)
+        horizontal = self._compute_loss_per_realization(
+            block, vuln_model, epsilon_provider)
+        # for point in block.grid(self.region):
+        #     # each 'point' is a GridPoint object
+
         
-        :returns: the losses for this block (as a 1d numpy.array)
+    def _compute_loss_per_realization(block, vuln_model, epsilon_provider):
+        # HORIZONTAL
+        pass
+        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        """
+ 
+        realization_loss_sums = []
+        for each realization:
+            realization_loss_sum = 0
+            for each point in block:
+                for each asset at point:
+                    vuln_function = vuln_model[asset['vulnFunctionReference']]
+                    location_iml = *get it*
+                    loss_ratio = vuln_function.get loss ratio(location_iml)
+                    loss = loss_ration * asset['value']
+                    realization_loss_sum += loss
+            realization_loss_sums.append(loss)
+        
+        """
+
+
+    def compute_risk_old(self, block_id, **kwargs):
+        """
+       
+        :param block_id: ID for retrieving a the site block from the kvs for this task
+        :type block_id: str
+        :keyword vuln_model:
+        :keyword epsilon_provider:
+
+        :returns:
+            * the losses for this block (as a 1d numpy.array)
+            * a list of loss map node data (which can be serialized to various
+              kinds of output)
         """
         sum_per_gmf = kwargs['sum_per_gmf']
         assert isinstance(sum_per_gmf, det.SumPerGroundMotionField)
@@ -113,6 +159,10 @@ class DeterministicEventBasedMixin:
                 sum_per_gmf.add(gmf_mags, asset)
 
         return sum_per_gmf.losses
+
+    def _compute_loss_per_asset(self):
+        # VERTICAL
+        pass
 
 
 RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
