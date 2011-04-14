@@ -51,7 +51,7 @@ class DeterministicEventBasedMixin:
         loss_results = []
         tasks = []
 
-        self.vuln_curves = \
+        self.vuln_model = \
             vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         epsilon_provider = risk_job.EpsilonProvider(self.params)
@@ -60,7 +60,7 @@ class DeterministicEventBasedMixin:
         # object; then we need to combine the results for our final
         # calculation.
         sum_per_gmf = det.SumPerGroundMotionField(
-            self.vuln_curves, epsilon_provider)
+            self.vuln_model, epsilon_provider)
 
         for block_id in self.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
@@ -88,6 +88,7 @@ class DeterministicEventBasedMixin:
             
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
+        print "Loss Map XML file: %s" % xml_output_path
         print "Mean loss value", sum_per_gmf.mean
         print "Standard deviation loss value: %s" % sum_per_gmf.stddev
         return [True]
@@ -124,6 +125,14 @@ class DeterministicEventBasedMixin:
                     realization_loss_sum += loss
             realization_loss_sums.append(loss)
         
+       
+        :param block_id: ID for retrieving a the site block from the kvs for this task
+        :type block_id: str
+
+        :returns:
+            * the losses for this block (as a 1d numpy.array)
+            * a list of loss map node data (which can be serialized to various
+              kinds of output)
         """
 
 
@@ -156,6 +165,9 @@ class DeterministicEventBasedMixin:
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
+                # this stores mean & stddev loss values for each asset
+                loss = {'mean_loss': float(), 'stddev': float()}
+
                 sum_per_gmf.add(gmf_mags, asset)
 
         return sum_per_gmf.losses
@@ -163,6 +175,18 @@ class DeterministicEventBasedMixin:
     def _compute_loss_per_asset(self):
         # VERTICAL
         pass
+                asset_dict = dict()
+                asset_dict['assetID'] = asset['assetID']
+                if asset.has_key('assetValueUnit'):
+                    asset_dict['unit'] = asset['assetValueUnit']
+
+                site = self.region.grid.site_at(point)
+                loss['mean_loss'] = sum_per_gmf.mean
+                loss['stddev'] = sum_per_gmf.stddev
+
+                loss_map_node_data.append((site, (loss, asset_dict)))
+
+        return sum_per_gmf.losses, loss_map_node_data
 
 
 RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)

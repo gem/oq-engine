@@ -4,7 +4,7 @@
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 REGION_VERTEX = 34.07, -118.25, 34.07, -118.22, 34.04, -118.22, 34.04, -118.25
 # degrees
-REGION_GRID_SPACING = 0.1
+REGION_GRID_SPACING = 0.01
 
 [HAZARD]
 
