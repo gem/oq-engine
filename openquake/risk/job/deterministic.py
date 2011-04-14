@@ -48,27 +48,23 @@ class DeterministicEventBasedMixin:
     def execute(self):
         """Entry point for triggering the computation."""
 
-        loss_results = []
+        LOGGER.debug("Executing deterministic risk computation.")
+        LOGGER.debug("This will calculate mean and standard deviation loss"
+            "values for the region defined in the job config.")
+
+        block_losses = []
         tasks = []
 
-        self.vuln_model = \
+        vuln_model = \
             vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         epsilon_provider = risk_job.EpsilonProvider(self.params)
-        # A copy of this object will be passed to each task.
-        # Note: Each task needs to return the loss values tracked by this
-        # object; then we need to combine the results for our final
-        # calculation.
-        sum_per_gmf = det.SumPerGroundMotionField(
-            self.vuln_model, epsilon_provider)
 
         for block_id in self.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
                 % (block_id, len(self.blocks_keys)))
             a_task = risk_job.compute_risk.delay(
-                self.id, block_id, sum_per_gmf=sum_per_gmf)
-            a_task = risk_job.computE_risk.delay(
-                self.id, block_id, vuln_model=self.vuln_model,
+                self.id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -76,117 +72,108 @@ class DeterministicEventBasedMixin:
             task.wait()
             if not task.successful():
                 raise Exception(task.result)
-            # our result is a 1-dimensional numpy.array of loss values
-            loss_results.append(task.result)
 
-        # reduce the task results to a single result
-        # Note: object state needs to updated with the task results
-        sum_per_gmf.losses = numpy.array([])
-        for result in loss_results:
-            sum_per_gmf.losses = \
-                numpy.concatenate((sum_per_gmf.losses, result))
-            
+            block_loss = task.result
+
+            # do some basic validation on our results
+            assert block_loss is not None, "Expected a result != None"
+            assert isinstance(block_loss, numpy.ndarray), \
+                "Expected a numpy array"
+
+            # our result should be a 1-dimensional numpy.array of loss values
+            block_losses.append(task.result)
+
+        # combine the block losses to get losses for the whole region
+        region_losses = sum(block_losses)
+
+        mean_region_loss = numpy.mean(region_losses)
+        stddev_region_loss = numpy.std(region_losses)
+
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
-        print "Loss Map XML file: %s" % xml_output_path
-        print "Mean loss value", sum_per_gmf.mean
-        print "Standard deviation loss value: %s" % sum_per_gmf.stddev
+        print "Mean region loss value: %s" % mean_region_loss
+        print "Standard deviation region loss value: %s" % stddev_region_loss
         return [True]
-
 
     def compute_risk(self, block_id, **kwargs):
         """
+        For a given block of sites, compute loss values for all assets in the
+        block. This computation will yield a single loss value per realization
+        for the region block.
+
+        The GMF data for each realization is stored in the KVS by the preceding
+        deterministic hazard calculation.
+
+        :param block_id: id of the region block data we need to pull from the
+            KVS
+        :type block_id: str
+        :keyword vuln_model:
+            dict of :py:class:`openquake.shapes.VulnerabilityFunction` objects,
+            keyed by the vulnerability function name as a string
+        :keyword epsilon_provider:
+            :py:class:`openquake.risk.job.EpsilonProvider` object
+
+        :returns: 1-dimensional :py:class:`numpy.array` of loss values for this
+            region block (again, 1 value per realization)
         """
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
 
         block = job.Block.from_kvs(block_id)
-        horizontal = self._compute_loss_per_realization(
+
+        # this a numpy.array
+        # 1 value to represent block losses for each realization
+        block_losses = self._compute_loss_for_block(
             block, vuln_model, epsilon_provider)
-        # for point in block.grid(self.region):
-        #     # each 'point' is a GridPoint object
 
-        
-    def _compute_loss_per_realization(block, vuln_model, epsilon_provider):
-        # HORIZONTAL
-        pass
+        return block_losses
+
+    def _compute_loss_for_block(self, block, vuln_model, epsilon_provider):
+        """
+        Compute the sum of losses for a block of a region. The result is a
+        :py:class:`numpy.array` of loss values (floats), 1 per realization of
+        the calculation.
+
+        :param block: a block of sites represented by a
+            :py:class:`openquake.job.Block` object
+        :param vuln_model:
+            dict of :py:class:`openquake.shapes.VulnerabilityFunction` objects,
+            keyed by the vulnerability function name as a string
+        :param epsilon_provider:
+            :py:class:`openquake.risk.job.EpsilonProvider` object
+
+        """
         sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
-        """
- 
-        realization_loss_sums = []
-        for each realization:
-            realization_loss_sum = 0
-            for each point in block:
-                for each asset at point:
-                    vuln_function = vuln_model[asset['vulnFunctionReference']]
-                    location_iml = *get it*
-                    loss_ratio = vuln_function.get loss ratio(location_iml)
-                    loss = loss_ration * asset['value']
-                    realization_loss_sum += loss
-            realization_loss_sums.append(loss)
-        
-       
-        :param block_id: ID for retrieving a the site block from the kvs for this task
-        :type block_id: str
-
-        :returns:
-            * the losses for this block (as a 1d numpy.array)
-            * a list of loss map node data (which can be serialized to various
-              kinds of output)
-        """
-
-
-    def compute_risk_old(self, block_id, **kwargs):
-        """
-       
-        :param block_id: ID for retrieving a the site block from the kvs for this task
-        :type block_id: str
-        :keyword vuln_model:
-        :keyword epsilon_provider:
-
-        :returns:
-            * the losses for this block (as a 1d numpy.array)
-            * a list of loss map node data (which can be serialized to various
-              kinds of output)
-        """
-        sum_per_gmf = kwargs['sum_per_gmf']
-        assert isinstance(sum_per_gmf, det.SumPerGroundMotionField)
-
-        block = job.Block.from_kvs(block_id)
-
         for point in block.grid(self.region):
-            # load the gmf data for this site
-            gmfs_key = kvs.tokens.ground_motion_value_key(self.id, point)
-            gmf_mags = {'IMLs': None}
-            # load raw json gmf values
-            gmf_raw = kvs.get_client().lrange(gmfs_key, 0, -1)
-            gmf_mags['IMLs'] = \
-                [float(json.JSONDecoder().decode(x)['mag']) for x in gmf_raw]
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
-                # this stores mean & stddev loss values for each asset
-                loss = {'mean_loss': float(), 'stddev': float()}
-
-                sum_per_gmf.add(gmf_mags, asset)
-
+            gmvs = load_gmvs_for_point(self.id, point)
+            assets_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            asset_list = [json.JSONDecoder().decode(x) for x in \
+                kvs.get_client().lrange(assets_key, 0, -1)]
+            for asset in asset_list:
+                # the SumPerGroundMotionField add() method expects a dict
+                # with a single key ('IMLs') and value set to the sequence of
+                # GMVs
+                sum_per_gmf.add({'IMLs': gmvs}, asset)
         return sum_per_gmf.losses
 
-    def _compute_loss_per_asset(self):
-        # VERTICAL
-        pass
-                asset_dict = dict()
-                asset_dict['assetID'] = asset['assetID']
-                if asset.has_key('assetValueUnit'):
-                    asset_dict['unit'] = asset['assetValueUnit']
 
-                site = self.region.grid.site_at(point)
-                loss['mean_loss'] = sum_per_gmf.mean
-                loss['stddev'] = sum_per_gmf.stddev
+def load_gmvs_for_point(job_id, point):
+    """
+    From the KVS, load all the ground motion values for the given point. We
+    expect one ground motion value per realization of the calculation.
+    Since there can be tens of thousands of realizations, this could return a
+    large list.
 
-                loss_map_node_data.append((site, (loss, asset_dict)))
+    Note(LB): In the future, we may want to refactor this (and the code which
+    uses the values) to use a generator instead.
 
-        return sum_per_gmf.losses, loss_map_node_data
+    :param point: :py:class:`openquake.shapes.GridPoint` object
+    :returns: List of ground motion values (as floats). Each value represents a
+        realization of the calculation for a single point.
+    """
+    gmfs_key = kvs.tokens.ground_motion_value_key(job_id, point)
+    gmfs = kvs.get_client().lrange(gmfs_key, 0, -1)
+    return [float(json.JSONDecoder().decode(x)['mag']) for x in gmfs]
 
 
 RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)

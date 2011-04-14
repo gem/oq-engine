@@ -140,7 +140,6 @@ class SumPerGroundMotionField(object):
         if lr_calculator is None:
             self.lr_calculator = prob.compute_loss_ratios
 
-
     def add(self, ground_motion_field_set, asset):
         """Compute the losses for the given ground motion field set, and
         sum those to the current sum of the losses.
@@ -174,11 +173,6 @@ class SumPerGroundMotionField(object):
             vuln_function, ground_motion_field_set,
             self.epsilon_provider, asset)
 
-        print "gmf_set", ground_motion_field_set
-        print "self.losses", self.losses
-        print "len(gmf_set)", len(ground_motion_field_set)
-        if self.losses is not None:
-            print "len(self.losses)", len(self.losses)
         losses = numpy.array(loss_ratios) * asset["assetValue"]
 
         if self.losses is None:
