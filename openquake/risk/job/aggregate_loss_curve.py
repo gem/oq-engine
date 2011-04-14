@@ -64,7 +64,6 @@ def compute_aggregate_curve(job):
     :param job: the job the engine is currently processing.
     :type job: openquake.risk.job.probabilistic.ProbabilisticEventMixin
     """
-    print "compute_aggregate_curve"
     if not job.has("AGGREGATE_LOSS_CURVE"):
         LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
                 "skipping aggregate loss curve computation...")
