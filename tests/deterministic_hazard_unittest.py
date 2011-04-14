@@ -179,9 +179,10 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         key_set_key = kvs.tokens.ground_motion_fields_keys(self.engine.id)
         key_set = self.kvs_client.smembers(key_set_key)
 
-        # there is only one site in the test region
-        # so only one key is produced
-        self.assertEqual(1, len(key_set))
+        # there are 16 sites in the test region
+        # (taking into account the test grid resolution)
+        # so 16 keys are produced
+        self.assertEqual(16, len(key_set))
 
         for site in self.engine.sites_for_region():
             point = self.grid.point_at(site)
