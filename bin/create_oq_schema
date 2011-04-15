@@ -1,21 +1,91 @@
 #!/bin/bash
 
-TSPATH="/var/lib/postgresql/8.4/main/ts/pshai"
-psql -U postgres -c "DROP DATABASE openquake"
-psql -U postgres -c "DROP TABLESPACE pshai_ts"
+help() {
+cat <<HSD
+`basename $0` initialises the given database with the OpenQuake schema.
+Also, table space paths are created as needed.
 
-sudo test -d "$TSPATH"
-if [ $? -ne 0 ]; then
-    echo "Creating $TSPATH .."
-    sudo mkdir -p $TSPATH
-    sudo chown -R $TSPATH
+The command line arguments are as follows:
+
+    --schema-path=path  Absolute path to directory with the schema files.
+    --db-name=name      The name of the database to set up.
+HSD
+exit 0
+}
+
+if [ $# -eq 0 ]; then
+    help
 fi
 
-psql -U postgres -c "CREATE DATABASE openquake"
+schema_path=""
+db_name=""
 
-createlang plpgsql openquake -U postgres
-psql -d openquake -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
-psql -d openquake -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
-psql -d openquake -U postgres -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
+for i in $*
+do
+    case $i in
+    --schema-path=*)
+        schema_path=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        test \( -d "$schema_path" -a -r "$schema_path" \)
+        if [ $? -ne 0 ]; then
+            echo "!! Schema path $schema_path does not exist or is not readable."
+            exit 1
+        fi
+        ;;
+    --db-name=*)
+        db_name=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    -h|--help)
+        help
+        ;;
+    *)
+        echo "!! Uknown option: " $i
+        exit 2
+        ;;
+    esac
+done
 
-psql -d openquake -U postgres -f ~/Documents/oq/schema.sql
+schema_file="$schema_path/openquake.sql"
+if [ ! -r $schema_file ]; then
+    echo "!! Could not find/read schema file: $schema_file"
+    exit 3
+fi
+
+if [ -z "$db_name" ]; then
+    echo "!! Please specify a database name."
+    exit 4
+fi
+
+# Drop database and table spaces..
+echo ".. Dropping database $db_name .."
+psql -U postgres -c "DROP DATABASE $db_name"
+for tspace in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print $3 }'`; do 
+    echo ".. Dropping table space $tspace .."
+    psql -U postgres -c "DROP TABLESPACE $tspace"
+done
+
+for tspace_path in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print substr($5,2,length($5)-3) }'`; do 
+    sudo test -d "$tspace_path"
+    if [ $? -ne 0 ]; then
+        echo ".. Creating table space path $tspace_path .."
+        sudo mkdir -p $tspace_path
+        sudo chown -R $tspace_path
+    fi
+done
+
+echo ".. Creating database $db_name .."
+psql -U postgres -c "CREATE DATABASE $db_name"
+createlang plpgsql $db_name -U postgres
+echo ".. Loading postgis functions/data into $db_name .."
+psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
+psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
+psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
+
+echo ".. Running schema definition file: $schema_file .."
+psql -d $db_name -U postgres -f $schema_file
+
+# Apply database schema/table comments if present.
+comments_file="$schema_path/comments.sql"
+if [ -r $comments_file ]; then
+    echo ".. Running comments file: $comments_file .."
+    psql -d $db_name -U postgres -f $comments_file
+fi
