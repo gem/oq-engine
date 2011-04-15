@@ -52,13 +52,14 @@ class DeterministicEventBasedMixin:
         LOGGER.debug("This will calculate mean and standard deviation loss"
             "values for the region defined in the job config.")
 
-        block_losses = []
         tasks = []
 
         vuln_model = \
             vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         epsilon_provider = risk_job.EpsilonProvider(self.params)
+
+        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
 
         for block_id in self.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
@@ -81,18 +82,12 @@ class DeterministicEventBasedMixin:
                 "Expected a numpy array"
 
             # our result should be a 1-dimensional numpy.array of loss values
-            block_losses.append(task.result)
-
-        # combine the block losses to get losses for the whole region
-        region_losses = sum(block_losses)
-
-        mean_region_loss = numpy.mean(region_losses)
-        stddev_region_loss = numpy.std(region_losses)
+            sum_per_gmf.sum_losses(block_loss)
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
-        print "Mean region loss value: %s" % mean_region_loss
-        print "Standard deviation region loss value: %s" % stddev_region_loss
+        print "Mean region loss value: %s" % sum_per_gmf.mean
+        print "Standard deviation region loss value: %s" % sum_per_gmf.stddev
         return [True]
 
     def compute_risk(self, block_id, **kwargs):
@@ -171,7 +166,7 @@ def load_gmvs_for_point(job_id, point):
     :returns: List of ground motion values (as floats). Each value represents a
         realization of the calculation for a single point.
     """
-    gmfs_key = kvs.tokens.ground_motion_value_key(job_id, point)
+    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
     gmfs = kvs.get_client().lrange(gmfs_key, 0, -1)
     return [float(json.JSONDecoder().decode(x)['mag']) for x in gmfs]
 

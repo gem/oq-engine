@@ -24,11 +24,17 @@ This module tests the risk side of the deterministic event based calculation.
 import json
 import unittest
 
+from openquake import flags
+from openquake import job
 from openquake import kvs
 from openquake import shapes
+from openquake.job import mixins
 from openquake.risk.job import deterministic as risk_job_det
 
+from tests.utils import helpers
+
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
+TEST_JOB_FILE = helpers.smoketest_file('deterministic/config.gem')
 
 
 class DeterministicRiskTestCase(unittest.TestCase):
@@ -37,16 +43,20 @@ class DeterministicRiskTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        kvs.flush()
+        flags.FLAGS.include_defaults = False
 
     def tearDown(self):
-        kvs.flush()
+        flags.FLAGS.include_defaults = True
 
     def test_load_gmvs_for_point(self):
         """
         Exercises the function
         :py:func:`openquake.risk.job.deterministic.load_gmvs_for_point`.
         """
+
+        # clear the kvs before running the test
+        kvs.flush()
+
         # values to place in the kvs
         test_gmvs = [
             {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.117},
@@ -62,7 +72,7 @@ class DeterministicRiskTestCase(unittest.TestCase):
         self.assertEqual(1, test_point.row)
         self.assertEqual(0, test_point.column)
 
-        gmvs_key = kvs.tokens.ground_motion_value_key(test_job_id, test_point)
+        gmvs_key = kvs.tokens.ground_motion_values_key(test_job_id, test_point)
 
         # place the test values in kvs
         for gmv in test_gmvs:
@@ -71,4 +81,18 @@ class DeterministicRiskTestCase(unittest.TestCase):
 
         actual_gmvs = risk_job_det.load_gmvs_for_point(test_job_id, test_point)
 
+        # clear the kvs again before the test concludes
+        kvs.flush()
+
         self.assertEqual(expected_gmvs, actual_gmvs)
+
+    def test_deterministic_job_completes(self):
+        """
+        Exercise the deterministic risk job and make sure it runs end-to-end.
+        """
+        risk_job = job.Job.from_file(TEST_JOB_FILE)
+        results = risk_job.launch()
+
+        # for results, we should a list of True values
+        # one for hazard, one for risk
+        self.assertEqual([True, True], results)
