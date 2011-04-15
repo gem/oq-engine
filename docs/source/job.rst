@@ -37,3 +37,7 @@ The :mod:`risk` job proxy and mixins
     :members:
     :undoc-members:
     :show-inheritance:
+.. automodule:: openquake.risk.job.deterministic
+    :members:
+    :undoc-members:
+    :show-inheritance:
