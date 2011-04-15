@@ -26,7 +26,6 @@ compute_risk task
 import json
 
 from celery.exceptions import TimeoutError
-from scipy.stats import norm
 
 from openquake import job
 from openquake import kvs
@@ -194,8 +193,9 @@ class ProbabilisticEventMixin:
 
             return None
 
+        epsilon_provider = risk_job.EpsilonProvider(self.params)
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
-                vuln_function, gmf_slice, self, asset,
+                vuln_function, gmf_slice, epsilon_provider, asset,
                 self._get_number_of_samples())
 
         # NOTE(JMC): Early exit if the loss ratio is all zeros
@@ -243,41 +243,6 @@ class ProbabilisticEventMixin:
         kvs.set(key, loss_curve.to_json())
         return loss_curve
 
-    def epsilon(self, asset):
-        """Sample from the standard normal distribution for the given asset.
-
-        For uncorrelated risk calculation jobs we sample the standard normal
-        distribution for each asset.
-        In the opposite case ("perfectly correlated" assets) we sample for each
-        building typology i.e. two assets with the same typology will "share"
-        the same standard normal distribution sample.
-
-        Two assets are considered to be of the same building typology if their
-        structure category is the same. The asset's `structureCategory` is
-        only needed for correlated jobs and unlikely to be available for
-        uncorrelated ones.
-        """
-        correlation = getattr(self, "ASSET_CORRELATION", None)
-        if not correlation:
-            # Sample per asset
-            return norm.rvs(loc=0, scale=1)
-        elif correlation != "perfect":
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
-        else:
-            # Sample per building typology
-            samples = getattr(self, "samples", None)
-            if samples is None:
-                # These are two references for the same dictionary.
-                samples = self.samples = dict()
-
-            category = asset.get("structureCategory")
-            if category is None:
-                raise ValueError(
-                    "Asset %s has no structure category" % asset["assetID"])
-
-            if category not in samples:
-                samples[category] = norm.rvs(loc=0, scale=1)
-            return samples[category]
-
+    
 
 RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)

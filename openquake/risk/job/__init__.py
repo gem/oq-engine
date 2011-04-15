@@ -24,6 +24,8 @@ Risk Job Mixin decorators """
 import json
 import os
 
+from scipy.stats import norm
+
 from openquake.output import geotiff
 from openquake import job
 from openquake.job import mixins
@@ -45,7 +47,6 @@ def preload(fn):
 
     def preloader(self, *args, **kwargs):
         """A decorator for preload steps that must run on the Jobber"""
-
         self.store_exposure_assets()
         self.store_vulnerability_model()
 
@@ -105,7 +106,7 @@ def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin, key="risk") as mixed:
-        mixed.compute_risk(block_id, **kwargs)
+        return mixed.compute_risk(block_id, **kwargs)
 
 
 class RiskJobMixin(mixins.Mixin):
@@ -227,6 +228,56 @@ class RiskJobMixin(mixins.Mixin):
                             (risk_point.row, risk_point.column), loss_ratio)
         output_generator.close()
         return [path]
+
+
+class EpsilonProvider(object):
+    """
+    Simple class for combining job configuration parameters and an `epsilon`
+    method. See :py:meth:`EpsilonProvider.epsilon` for more information.
+    """
+
+    def __init__(self, params):
+        """
+        :param params: configuration parameters from the job configuration
+        :type params: dict
+        """
+        self.__dict__.update(params)
+
+    def epsilon(self, asset):
+        """Sample from the standard normal distribution for the given asset.
+
+        For uncorrelated risk calculation jobs we sample the standard normal
+        distribution for each asset.
+        In the opposite case ("perfectly correlated" assets) we sample for each
+        building typology i.e. two assets with the same typology will "share"
+        the same standard normal distribution sample.
+
+        Two assets are considered to be of the same building typology if their
+        structure category is the same. The asset's `structureCategory` is
+        only needed for correlated jobs and unlikely to be available for
+        uncorrelated ones.
+        """
+        correlation = getattr(self, "ASSET_CORRELATION", None)
+        if not correlation:
+            # Sample per asset
+            return norm.rvs(loc=0, scale=1)
+        elif correlation != "perfect":
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
+        else:
+            # Sample per building typology
+            samples = getattr(self, "samples", None)
+            if samples is None:
+                # These are two references for the same dictionary.
+                samples = self.samples = dict()
+
+            category = asset.get("structureCategory")
+            if category is None:
+                raise ValueError(
+                    "Asset %s has no structure category" % asset["assetID"])
+
+            if category not in samples:
+                samples[category] = norm.rvs(loc=0, scale=1)
+            return samples[category]
 
 
 mixins.Mixin.register("Risk", RiskJobMixin, order=2)
