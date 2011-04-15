@@ -1,0 +1,21 @@
+#!/bin/bash
+
+TSPATH="/var/lib/postgresql/8.4/main/ts/pshai"
+psql -U postgres -c "DROP DATABASE openquake"
+psql -U postgres -c "DROP TABLESPACE pshai_ts"
+
+sudo test -d "$TSPATH"
+if [ $? -ne 0 ]; then
+    echo "Creating $TSPATH .."
+    sudo mkdir -p $TSPATH
+    sudo chown -R $TSPATH
+fi
+
+psql -U postgres -c "CREATE DATABASE openquake"
+
+createlang plpgsql openquake -U postgres
+psql -d openquake -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
+psql -d openquake -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
+psql -d openquake -U postgres -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
+
+psql -d openquake -U postgres -f ~/Documents/oq/schema.sql
