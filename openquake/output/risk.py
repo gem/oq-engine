@@ -31,8 +31,11 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.output import nrml
+from openquake.xml import NRML_NS, GML_NS
 
 LOG = logs.RISK_LOG
+
+NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
 class BaseXMLWriter(nrml.TreeNRMLWriter):
@@ -44,7 +47,6 @@ class BaseXMLWriter(nrml.TreeNRMLWriter):
     def __init__(self, path):
         super(BaseXMLWriter, self).__init__(path)
 
-        self.assets_per_id = {}
         self.result_el = None
 
     def write(self, point, values):
@@ -103,44 +105,68 @@ class LossMapXMLWriter(BaseXMLWriter):
                 ***lossCategory*** - for example, "economic_loss"
                 ***unit*** - for example EUR
         """
+
+        def new_loss_node(lmnode_el, loss_map_values, asset_dict):
+            loss_el = etree.SubElement(lmnode_el,
+                                    xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_TAG,
+                        str(asset_dict['assetID']))
+            mean_loss = etree.SubElement(
+                loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+            mean_loss.text = "%s" % loss_map_vals['mean_loss']
+            stddev = etree.SubElement(loss_el,
+                            xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+            stddev.text = "%s" % loss_map_vals['stddev']
+
+
         super(LossMapXMLWriter, self).write(point, values)
 
-        (loss_map_vals, asset_object) = values
+        (loss_map_vals, asset_dict) = values
 
         if not self.lmnode_counter:
             self.loss_map_el = etree.SubElement(self.result_el,
                 self.container_tag)
 
-        if 'list_id' in asset_object:
+        if 'list_id' in asset_dict:
             nrml.set_gml_id(self.loss_map_el, str(
-                asset_object['list_id']))
+                asset_dict['list_id']))
         else:
             nrml.set_gml_id(self.loss_map_el, self.LM_CONTAINER_DEFAULT_ID)
 
-        if 'endBranchLabel' in asset_object:
+        if 'endBranchLabel' in asset_dict:
             self.loss_map_el.set(xml.RISK_END_BRANCH_ATTR_NAME,
-                str(asset_object[xml.RISK_END_BRANCH_ATTR_NAME]))
+                str(asset_dict[xml.RISK_END_BRANCH_ATTR_NAME]))
 
-        if 'lossCategory' in asset_object:
+        if 'lossCategory' in asset_dict:
             self.loss_map_el.set(xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR,
-                asset_object[xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR])
+                asset_dict[xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR])
 
-        if 'unit' in asset_object:
+        if 'unit' in asset_dict:
             self.loss_map_el.set(xml.RISK_LOSS_MAP_UNIT_ATTR,
-                str(asset_object[xml.RISK_LOSS_MAP_UNIT_ATTR]))
+                str(asset_dict[xml.RISK_LOSS_MAP_UNIT_ATTR]))
 
-        self.lmnode_counter += 1
-        lmnode_id = "s_%i" % self.lmnode_counter
 
-        # nrml:asset, needs gml:id
-        lmnode_el = etree.SubElement(self.loss_map_el,
-            xml.RISK_LMNODE_TAG)
-        nrml.set_gml_id(lmnode_el, lmnode_id)
-        self.assets_per_id[lmnode_id] = lmnode_el
+        # search for a Site xml node matching the input `point`
+        # Note: The following function performs a linear search
+        # and could be expensive when dealing with large loss maps.
+        site_node = self._get_site_elem_for_site(point)
+        if site_node is not None:
+            # append a new loss element to an existing LMNode
+            lmnode_el = site_node.getparent()
+            new_loss_node(lmnode_el, loss_map_vals, asset_dict)
+        else:
+            # create a new LMNode as a SubElement of self.loss_map_el
+            self.lmnode_counter += 1
+            lmnode_id = "s_%i" % self.lmnode_counter
+            # append the loss data to the new LMNode
 
-        # check if nrml:site is already existing
-        site_el = lmnode_el.find(xml.RISK_SITE_TAG)
-        if site_el is None:
+            # nrml:asset, needs gml:id
+            lmnode_el = etree.SubElement(self.loss_map_el,
+                xml.RISK_LMNODE_TAG)
+            nrml.set_gml_id(lmnode_el, lmnode_id)
+
+            # we also need a Site node for the LMNode
             site_el = etree.SubElement(lmnode_el, xml.RISK_SITE_TAG)
 
             point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
@@ -149,21 +175,25 @@ class LossMapXMLWriter(BaseXMLWriter):
             pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
             pos_el.text = "%s %s" % (point.longitude, point.latitude)
 
-        elif not xml.element_equal_to_site(site_el, point):
-            error_msg = "asset %s cannot have two differing sites: %s, %s " \
-                % (lmnode_id, xml.lon_lat_from_site(site_el), point)
-            raise ValueError(error_msg)
+            # now add the loss node as a child of the LMNode
+            new_loss_node(lmnode_el, loss_map_vals, asset_dict)
 
-        loss_el = etree.SubElement(lmnode_el,
-                                    xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
-        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_TAG,
-                    str(asset_object['assetID']))
-        mean_loss = etree.SubElement(loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
-        mean_loss.text = "%s" % loss_map_vals['mean_loss']
-        stddev = etree.SubElement(loss_el,
-                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-        stddev.text = "%s" % loss_map_vals['stddev']
+    def _get_site_elem_for_site(self, site):
+        """
+        TODO: make me public!!11one!!
+        Searches the current xml document for a Site node matching the input Site object
+
+        :param site: Site object to match with Site node in the xml document (if possible
+        :type site: :py:class:`shapes.Site` object
+
+        :returns: matching Site node, or None if no match is found
+        """
+        site_nodes = self.loss_map_el.xpath('./nrml:LMNode/nrml:site', namespaces=NAMESPACES)
+        for node in site_nodes:
+            if xml.element_equal_to_site(node, site):
+                return node
+        return None
 
 
 class CurveXMLWriter(BaseXMLWriter):
