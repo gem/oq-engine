@@ -62,7 +62,7 @@ public class GemGmpe3 {
         // add to branching level
         braLev1gmpe.addBranch(bra1gmpe);
         // add branching level to logic tree
-        gmpeLT.addBranchingLevel(braLev1gmpe);
+        gmpeLT.appendBranchingLevel(braLev1gmpe);
         // add end branch mapping
         gmpeLT.addEBMapping("1", map1);
 
