@@ -48,7 +48,8 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
         encoder = json.JSONEncoder()
         kvs_client = kvs.get_client(binary=False)
-        key_set_key = kvs.tokens.ground_motion_fields_keys(self.job_id)
+
+        grid = self.region.grid
 
         for _ in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
@@ -57,11 +58,11 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
                 gmf, self.params["INTENSITY_MEASURE_TYPE"]):
 
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
+                point = grid.point_at(site)
 
-                key = kvs.tokens.ground_motion_value_key(
-                    self.job_id, site.hash())
+                key = kvs.tokens.ground_motion_values_key(
+                    self.job_id, point)
 
-                kvs_client.sadd(key_set_key, key)
                 kvs_client.rpush(key, encoder.encode(gmv))
 
         return [True]

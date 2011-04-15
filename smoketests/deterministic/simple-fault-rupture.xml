@@ -11,14 +11,16 @@
 			<faultTrace>
 				<gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
 					<gml:posList>
-						-121.82290 37.73010 8.0
-						-122.03880 37.87710 8.0
+						-118.23019  34.11920 0.0
+                        -118.31696  34.11040 0.0
+                        -118.37228  34.09908 0.0
+                        -118.40625  34.08399 0.0
 					</gml:posList>
 				</gml:LineString>
 			</faultTrace>
-			<dip>38.0</dip>
-			<upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-			<lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+			<dip>70.0</dip>
+			<upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+			<lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
 		</simpleFaultGeometry>
 	</simpleFaultRupture>
 </nrml>
