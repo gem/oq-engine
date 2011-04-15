@@ -19,11 +19,21 @@
 */
 
 
+------------------------------------------------------------------------
+-- Name space definitions go here
+------------------------------------------------------------------------
 CREATE SCHEMA pshai;
 
 
+------------------------------------------------------------------------
+-- Table space definitions go here
+------------------------------------------------------------------------
 CREATE TABLESPACE pshai_ts LOCATION '/var/lib/postgresql/8.4/main/ts/pshai';
 
+
+------------------------------------------------------------------------
+-- Table definitions go here
+------------------------------------------------------------------------
 
 -- Fault source
 CREATE TABLE pshai.source (
@@ -34,7 +44,7 @@ CREATE TABLE pshai.source (
     description VARCHAR,
     source_type VARCHAR NOT NULL DEFAULT 'simple'
         CONSTRAINT source_type CHECK
-        (source_type IN ('area', 'complex', 'point')),
+        (source_type IN ('area', 'complex', 'point', 'simple')),
     tectonic_region_id INTEGER NOT NULL,
     rake float NOT NULL
         CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
@@ -131,7 +141,6 @@ CREATE TABLE pshai.mfd_evd (
     bin_size float NOT NULL,
     values float[] NOT NULL
 ) INHERITS(pshai.mfd) TABLESPACE pshai_ts;
-
 
 
 -- Magnitude frequency distribution, Truncated Gutenberg Richter
