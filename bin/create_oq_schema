@@ -58,12 +58,12 @@ fi
 # Drop database and table spaces..
 echo ".. Dropping database $db_name .."
 psql -U postgres -c "DROP DATABASE $db_name"
-for tspace in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print $3 }'`; do 
+for tspace in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print $3 }'`; do
     echo ".. Dropping table space $tspace .."
     psql -U postgres -c "DROP TABLESPACE $tspace"
 done
 
-for tspace_path in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print substr($5,2,length($5)-3) }'`; do 
+for tspace_path in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print substr($5,2,length($5)-3) }'`; do
     sudo test -d "$tspace_path"
     if [ $? -ne 0 ]; then
         echo ".. Creating table space path $tspace_path .."
