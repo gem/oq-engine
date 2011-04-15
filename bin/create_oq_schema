@@ -68,7 +68,7 @@ for tspace_path in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schem
     if [ $? -ne 0 ]; then
         echo ".. Creating table space path $tspace_path .."
         sudo mkdir -p $tspace_path
-        sudo chown -R $tspace_path
+        sudo chown -R postgres.postgres $tspace_path
     fi
 done
 

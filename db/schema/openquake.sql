@@ -165,7 +165,7 @@ CREATE TABLE pshai.rdd (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL
+    magnitude_type_id INTEGER NOT NULL,
     magnitude float[] NOT NULL,
     depth float[] NOT NULL
 ) TABLESPACE pshai_ts;
@@ -207,4 +207,7 @@ ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.mfd ADD CONSTRAINT pshai_mfd_magnitude_type_fk
+FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rdd ADD CONSTRAINT pshai_rdd_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
