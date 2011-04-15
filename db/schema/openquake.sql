@@ -23,12 +23,14 @@
 -- Name space definitions go here
 ------------------------------------------------------------------------
 CREATE SCHEMA pshai;
+CREATE SCHEMA eqcat;
 
 
 ------------------------------------------------------------------------
 -- Table space definitions go here
 ------------------------------------------------------------------------
 CREATE TABLESPACE pshai_ts LOCATION '/var/lib/postgresql/8.4/main/ts/pshai';
+CREATE TABLESPACE eqcat_ts LOCATION '/var/lib/postgresql/8.4/main/ts/eqcat';
 
 
 ------------------------------------------------------------------------
@@ -109,12 +111,14 @@ SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 2 );
 SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 2 );
 
 
+-- Enumeration of tectonic region types
 CREATE TABLE pshai.tectonic_region (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL
 ) TABLESPACE pshai_ts;
 
 
+-- Enumeration of magnitude types
 CREATE TABLE pshai.magnitude_type (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL
@@ -137,9 +141,9 @@ CREATE TABLE pshai.mfd (
 CREATE TABLE pshai.mfd_evd (
     CONSTRAINT pshai_mfd_evd_pk PRIMARY KEY (id),
     CONSTRAINT pshai_mfd_evd_correct_type CHECK(mfd_type = 'evd'),
-    min float NOT NULL,
+    min_val float NOT NULL,
     bin_size float NOT NULL,
-    values float[] NOT NULL
+    mfd_values float[] NOT NULL
 ) INHERITS(pshai.mfd) TABLESPACE pshai_ts;
 
 
@@ -147,10 +151,10 @@ CREATE TABLE pshai.mfd_evd (
 CREATE TABLE pshai.mfd_tgr (
     CONSTRAINT pshai_mfd_tgr_pk PRIMARY KEY (id),
     CONSTRAINT pshai_mfd_tgr_correct_type CHECK(mfd_type = 'tgr'),
-    min float NOT NULL,
-    max float NOT NULL,
-    a_value float NOT NULL,
-    b_value float NOT NULL
+    min_val float NOT NULL,
+    max_val float NOT NULL,
+    a_val float NOT NULL,
+    b_val float NOT NULL
 ) INHERITS(pshai.mfd) TABLESPACE pshai_ts;
 
 
@@ -161,8 +165,9 @@ CREATE TABLE pshai.rdd (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude float,
-    depth float
+    magnitude_type_id INTEGER NOT NULL
+    magnitude float[] NOT NULL,
+    depth float[] NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -182,6 +187,10 @@ CREATE TABLE pshai.strike_dip_rake (
     date_created timestamp without time zone DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
+
+------------------------------------------------------------------------
+-- Constraints (foreign keys etc.) go here
+------------------------------------------------------------------------
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
 FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
 
