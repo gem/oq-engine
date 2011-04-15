@@ -3,15 +3,14 @@ package org.gem.engine.logictree;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.commons.logging.Log;
@@ -20,288 +19,263 @@ import org.gem.engine.LogicTreeProcessor;
 import org.gem.engine.hazard.GemComputeHazardLogicTree;
 
 /**
- * Class for logic tree definition. A logic tree is defined in terms of a list
- * of {@link LogicTreeBranchingLevel} objects (each containing one or more
- * {@link LogicTreeBranch} objects (each defining an uncertainty model)) plus a
- * map storing end-branch models (HashMap<String, Element>). A name can be also
- * provided.
+ * Class for logic tree definition.
+ * <p>
+ * A logic tree is defined in terms of a list of {@link LogicTreeBranchingLevel} objects (each containing one or more
+ * {@link LogicTreeBranch} objects (each defining an uncertainty model)) plus a map storing end-branch models
+ * (HashMap<String, Element>). A name can be also provided.
  */
-public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
+public class LogicTree<Element> implements Iterable<Element>, Serializable
+{
 
-    private static Log logger = LogFactory.getLog(LogicTreeProcessor.class);
+    private static final long serialVersionUID = -2656457282143245160L;
+    private static final Log logger = LogFactory.getLog(LogicTreeProcessor.class);
 
-    private final ArrayList<LogicTreeBranchingLevel> branLevLst;
-    protected HashMap<String, Element> ebMap;
-    private String modelName;
+    private String name;
+    private Map<String, Element> ebMap;
+    private final List<LogicTreeBranchingLevel> branchingLevels;
 
-    /**
-     * Creates and empty logic tree
-     */
-    public LogicTree() {
-        this.branLevLst = new ArrayList<LogicTreeBranchingLevel>();
+    public LogicTree()
+    {
+        this.name = "";
         this.ebMap = new HashMap<String, Element>();
-        this.modelName = "";
+        this.branchingLevels = new ArrayList<LogicTreeBranchingLevel>();
     }
 
-    /**
-     * Creates logic tree from file
-     */
-    public LogicTree(String fileName) throws IOException,
-            ClassNotFoundException {
+    public LogicTree(String name)
+    {
+        this.name = name;
+        this.ebMap = new HashMap<String, Element>();
+        this.branchingLevels = new ArrayList<LogicTreeBranchingLevel>();
+    }
 
+    @SuppressWarnings("unchecked")
+    public static LogicTree fromFile(String fileName)
+    {
         URL data = GemComputeHazardLogicTree.class.getResource(fileName);
+
+        FileInputStream inputStream = null;
         File file = new File(data.getFile());
-        FileInputStream f_in = null;
-        try {
-            // f_in = new FileInputStream(fileName);
-            f_in = new FileInputStream(file.getPath());
-        } catch (FileNotFoundException e) {
+
+        try
+        {
+            inputStream = new FileInputStream(file.getPath());
+        }
+        catch (FileNotFoundException e)
+        {
             String msg = file.getPath() + " not found!!";
-            logger.info(msg);
+
+            logger.error(msg);
             throw new RuntimeException(msg);
         }
 
-        // Read object using ObjectInputStream.
-        ObjectInputStream obj_in = new ObjectInputStream(f_in);
+        ObjectInputStream objectInputStream;
 
-        // Read an object.
-        Object obj = obj_in.readObject();
+        try
+        {
+            objectInputStream = new ObjectInputStream(inputStream);
+            Object obj = objectInputStream.readObject();
 
-        LogicTree<Element> gemLogicTree = (LogicTree<Element>) obj;
+            return (LogicTree) obj;
+        }
+        catch (Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
 
-        this.branLevLst = gemLogicTree.getBranchingLevelsList();
-        this.ebMap = gemLogicTree.getEBMap();
-        this.modelName = gemLogicTree.getModelName();
+    public void appendBranchingLevel(LogicTreeBranchingLevel branchingLevel)
+    {
+        this.branchingLevels.add(branchingLevel);
+    }
 
+    public void addEBMapping(String label, Element obj)
+    {
+        this.ebMap.put(label, obj);
+    }
+
+    public List<LogicTreeBranchingLevel> getBranchingLevels()
+    {
+        return this.branchingLevels;
+    }
+
+    public LogicTreeBranchingLevel getBranchingLevelAt(int index)
+    {
+        return this.branchingLevels.get(index);
+    }
+
+    public String getModelName()
+    {
+        return this.name;
     }
 
     /**
-     * Adds branching level
+     * Returns weight for end-branch model specified by string lab.
      */
-    @Override
-    public void addBranchingLevel(LogicTreeBranchingLevel branLev) {
-        this.branLevLst.add(branLev);
-    }
-
-    /**
-     * Adds end branch model
-     */
-    @Override
-    public void addEBMapping(String str, Element obj) {
-        this.ebMap.put(str, obj);
-    }
-
-    /**
-     * Gets list of branching levels
-     */
-    @Override
-    public ArrayList<LogicTreeBranchingLevel> getBranchingLevelsList() {
-        return this.branLevLst;
-    }
-
-    /**
-     * Gets branching level of index idx
-     */
-    @Override
-    public LogicTreeBranchingLevel getBranchingLevel(int idx) {
-        return this.branLevLst.get(idx);
-    }
-
-    /**
-     * Sets logic tree name
-     */
-    @Override
-    public void setModelName(String str) {
-        this.modelName = str;
-    }
-
-    /**
-     * Gets logic tree name
-     */
-    @Override
-    public String getModelName() {
-        return this.modelName;
-    }
-
-    /**
-     * Gets weight for end-branch model specified by string lab
-     */
-    @Override
-    public double getWeight(String lab) {
+    public double getWeight(String lab)
+    {
         String[] strarr = lab.split("_");
-        LogicTreeBranchingLevel brl = this.branLevLst.get(strarr.length - 1);
-        return brl.getBranch(
-                Integer.valueOf(strarr[strarr.length - 1]).intValue())
-                .getWeight();
+        LogicTreeBranchingLevel brl = this.branchingLevels.get(strarr.length - 1);
+        return brl.getBranch(Integer.valueOf(strarr[strarr.length - 1]).intValue()).getWeight();
     }
 
     /**
-     * Gets total weight (product of weights) for end-branch model specified by
-     * string lab
+     * Returns total weight (product of weights) for end-branch model specified by string lab.
      */
-    @Override
-    public double getTotWeight(String lab) {
+    public double getTotWeight(String lab)
+    {
         double weight = 1.0;
         String[] strarr = lab.split("_");
-        for (int i = 0; i < strarr.length; i++) {
-            LogicTreeBranchingLevel brl = this.branLevLst.get(i);
-            LogicTreeBranch br =
-                    brl.getBranch(Integer.valueOf(strarr[i]).intValue() - 1);
+
+        for (int i = 0; i < strarr.length; i++)
+        {
+            LogicTreeBranchingLevel brl = this.branchingLevels.get(i);
+            LogicTreeBranch br = brl.getBranch(Integer.valueOf(strarr[i]).intValue() - 1);
             weight = weight * br.getWeight();
         }
+
         return weight;
     }
 
     /**
-     * Returns end-branch models map
+     * Returns the end-branch models map.
      */
-    @Override
-    public HashMap<String, Element> getEBMap() {
+    public Map<String, Element> getEBMap()
+    {
         return ebMap;
     }
 
     /**
-     * Iterator over end-branch models
+     * Iterator over the end-branch models.
      */
     @Override
-    public Iterator<Element> iterator() {
+    public Iterator<Element> iterator()
+    {
         return ebMap.values().iterator();
     }
 
-    /**
-     * Serialize Logic Tree to file
-     */
     @Override
-    public void saveGemLogicTreeModel(String fileName) throws Exception {
+    public String toString()
+    {
+        StringBuilder asString = new StringBuilder();
 
-        // Use a FileOutputStream to send data to a file
-        FileOutputStream f_out = new FileOutputStream(fileName);
+        asString.append("Logic tree name: " + this.name + "\n");
+        asString.append("Total number of branching levels in the logic tree: " + this.branchingLevels.size() + "\n");
 
-        // Use an ObjectOutputStream to send object data to the
-        // FileOutputStream for writing to disk.
-        ObjectOutputStream obj_out = new ObjectOutputStream(f_out);
+        for (int i = 0; i < this.branchingLevels.size(); i++)
+        {
+            LogicTreeBranchingLevel branchingLevel = getBranchingLevelAt(i);
 
-        // Pass our object to the ObjectOutputStream's
-        // writeObject() method to cause it to be written out
-        // to disk.
-        obj_out.writeObject(this);
-    }
+            asString.append("> Branching level: " + branchingLevel.getLevel());
+            asString.append(", label: " + branchingLevel.getBranchingLabel());
+            asString.append(", appliesTo: " + branchingLevel.getAppliesTo() + "\n");
 
-    /**
-     * print logic tree structure on standard output
-     * 
-     */
-    public void printGemLogicTreeStructure() {
+            int numBranches = branchingLevel.getBranchList().size();
 
-        // total number of branching levels
-        int numBranchingLevels = this.branLevLst.size();
+            // TODO: We should call toString() on the logicTreeBranch
+            for (int j = 0; j < numBranches; j++)
+            {
+                LogicTreeBranch branch = branchingLevel.getBranch(j);
 
-        logger.info("Total number of branching levels in the logic tree: "
-                + numBranchingLevels + "\n");
-        // loop over branching levels
-        for (int i = 0; i < numBranchingLevels; i++) {
+                asString.append(">> Branch number: " + branch.getRelativeID());
+                asString.append(", label: " + branch.getBranchingValue());
+                asString.append(", weight: " + branch.getWeight() + "\n");
 
-            LogicTreeBranchingLevel braLev = this.branLevLst.get(i);
-            logger.info("Branching level: " + braLev.getLevel() + ", label: "
-                    + braLev.getBranchingLabel() + ", appliesTo: "
-                    + braLev.getAppliesTo());
-
-            // number of branches
-            int numBranches = braLev.getBranchList().size();
-            // loop over branches
-            for (int j = 0; j < numBranches; j++) {
-
-                LogicTreeBranch bra = braLev.getBranch(j);
-
-                logger.info("Branch number: " + bra.getRelativeID()
-                        + ", label: " + bra.getBranchingValue() + ", weight: "
-                        + bra.getWeight());
-                if (bra.getNameInputFile() != null)
-                    logger.info("Associated file: " + bra.getNameInputFile());
-                if (bra.getRule() != null) {
-                    logger.info("Associated rule: "
-                            + bra.getRule().getRuleName());
-                    logger.info("Associated uncertainty value: "
-                            + bra.getRule().getVal());
-                }
-
+                asString.append(">>> Associated file: " + branch.getNameInputFile() + "\n");
+                asString.append(">>> Associated rule: " + branch.getRule().getRuleName() + "\n");
+                asString.append(">>> Associated uncertainty value: " + branch.getRule().getVal() + "\n");
             }
-            logger.info("\n\n");
-
         }
+
+        return asString.toString();
     }
 
     /**
      * This method samples a branching level and return the index of a branch.
-     * The sampling is done using the inverse transform method. (For the
-     * algorithm description see "Computational Statistics Handbook with
-     * Matlab", Martinez & Martinez, Champman & all, pag.83)
+     * <p>
+     * The sampling is done using the inverse transform method. (For the algorithm description see
+     * "Computational Statistics Handbook with Matlab", Martinez & Martinez, Champman & all, pag.83).
      */
-    @Override
-    public int sampleBranchingLevel(int branchingLevelIndex, Random rn) {
+    public int sampleBranchingLevel(int branchingLevelIndex, Random rn)
+    {
 
         int sample = -Integer.MIN_VALUE;
 
         // get the corresponding branching level
-        LogicTreeBranchingLevel bl = this.branLevLst.get(branchingLevelIndex);
+        LogicTreeBranchingLevel bl = this.branchingLevels.get(branchingLevelIndex);
 
         // x values
         int[] x = new int[bl.getBranchList().size()];
         // p (probability values)
+
         double[] p = new double[bl.getBranchList().size()];
 
         // loop over branches
         int i = 0;
-        for (LogicTreeBranch b : bl.getBranchList()) {
 
+        for (LogicTreeBranch b : bl.getBranchList())
+        {
             x[i] = b.getRelativeID();
             p[i] = b.getWeight();
+
             logger.debug("label, prob: " + x[i] + " " + p[i]);
 
             i = i + 1;
-
         }
 
         // compute cumulative distribution
         double[] cdf = new double[p.length];
+
         // initialize to zero
         for (i = 0; i < cdf.length; i++)
+        {
             cdf[i] = 0.0;
-        for (i = 0; i < cdf.length; i++) {
-            for (int j = 0; j <= i; j++)
-                cdf[i] = cdf[i] + p[j];
         }
-        logger.debug("Cumulative distribution:");
+
         for (i = 0; i < cdf.length; i++)
+        {
+            for (int j = 0; j <= i; j++)
+            {
+                cdf[i] = cdf[i] + p[j];
+            }
+        }
+
+        logger.debug("Cumulative distribution:");
+
+        for (i = 0; i < cdf.length; i++)
+        {
             logger.debug(cdf[i]);
+        }
 
         // generate uniform random number between 0 and 1
         double rand = rn.nextDouble();
+
         logger.debug("Random number: " + rand);
 
         // loop over probabilities
-        for (int j = 0; j < p.length; j++) {
-
-            if (rand <= cdf[j]) {
+        for (int j = 0; j < p.length; j++)
+        {
+            if (rand <= cdf[j])
+            {
                 sample = x[j];
                 break;
             }
-
-        }// end loop over probabilities
+        }
 
         return sample;
     }
 
     @Override
-    public boolean equals(Object obj) {
-
-        if (!(obj instanceof LogicTree)) {
+    @SuppressWarnings("unchecked")
+    public boolean equals(Object obj)
+    {
+        if (!(obj instanceof LogicTree))
+        {
             return false;
         }
 
         LogicTree other = (LogicTree) obj;
-
-        return branLevLst.equals(other.branLevLst);
+        return branchingLevels.equals(other.branchingLevels);
     }
 
 }

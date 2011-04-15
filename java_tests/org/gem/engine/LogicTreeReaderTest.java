@@ -95,7 +95,7 @@ public class LogicTreeReaderTest {
                 .addBranch(new LogicTreeBranch(1, "BA_2008_AttenRel", 0.5));
         branchingLevel
                 .addBranch(new LogicTreeBranch(2, "CB_2008_AttenRel", 0.5));
-        gmpeLogicTreeActiveShallow.addBranchingLevel(branchingLevel);
+        gmpeLogicTreeActiveShallow.appendBranchingLevel(branchingLevel);
         gmpeLogicTreeHashMap.put(TectonicRegionType.ACTIVE_SHALLOW.toString(),
                 gmpeLogicTreeActiveShallow);
 
@@ -103,7 +103,7 @@ public class LogicTreeReaderTest {
         branchingLevel = new LogicTreeBranchingLevel(1, "", 0);
         branchingLevel.addBranch(new LogicTreeBranch(1,
                 "McVerryetal_2000_AttenRel", 1.0));
-        gmpeLogicTreeSubductionInterface.addBranchingLevel(branchingLevel);
+        gmpeLogicTreeSubductionInterface.appendBranchingLevel(branchingLevel);
         gmpeLogicTreeHashMap.put(TectonicRegionType.SUBDUCTION_INTERFACE
                 .toString(), gmpeLogicTreeSubductionInterface);
 
@@ -130,7 +130,7 @@ public class LogicTreeReaderTest {
         branch = new LogicTreeBranch(2, "source_model_2.xml", 0.5);
         branch.setNameInputFile("source_model_2.xml");
         branchingLevel.addBranch(branch);
-        sourceModelLogicTree.addBranchingLevel(branchingLevel);
+        sourceModelLogicTree.appendBranchingLevel(branchingLevel);
 
         branchingLevel = new LogicTreeBranchingLevel(2, "", 0);
         branch = new LogicTreeBranch(1, "0.2", 0.2);
@@ -145,7 +145,7 @@ public class LogicTreeReaderTest {
         branch.setRule(new LogicTreeRule(LogicTreeRuleParam.mMaxGRRelative,
                 -0.2));
         branchingLevel.addBranch(branch);
-        sourceModelLogicTree.addBranchingLevel(branchingLevel);
+        sourceModelLogicTree.appendBranchingLevel(branchingLevel);
 
         branchingLevel = new LogicTreeBranchingLevel(3, "", 0);
         branch = new LogicTreeBranch(1, "0.1", 0.2);
@@ -157,7 +157,7 @@ public class LogicTreeReaderTest {
         branch = new LogicTreeBranch(3, "-0.1", 0.2);
         branch.setRule(new LogicTreeRule(LogicTreeRuleParam.bGRRelative, -0.1));
         branchingLevel.addBranch(branch);
-        sourceModelLogicTree.addBranchingLevel(branchingLevel);
+        sourceModelLogicTree.appendBranchingLevel(branchingLevel);
 
         HashMap<String, LogicTree> sourceModelLogicTreeHashMap =
                 new HashMap<String, LogicTree>();
