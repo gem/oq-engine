@@ -232,7 +232,7 @@ class RiskJobMixin(mixins.Mixin):
 
 class EpsilonProvider(object):
     """
-    Simple class for combining job configuration parameters and an :py:meth: `epsilon`
+    Simple class for combining job configuration parameters and an `epsilon`
     method. See :py:meth:`EpsilonProvider.epsilon` for more information.
     """
 
