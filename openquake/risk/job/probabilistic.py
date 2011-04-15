@@ -147,8 +147,6 @@ class ProbabilisticEventMixin:
                 kvs.tokens.GMF_KEY_TOKEN, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
-            print "type(gmf_slice)", type(gmf_slice)
-            print "gmf_slice", gmf_slice
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
