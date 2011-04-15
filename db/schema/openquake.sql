@@ -34,7 +34,7 @@ CREATE TABLE pshai.source (
     description VARCHAR,
     source_type VARCHAR NOT NULL DEFAULT 'simple'
         CONSTRAINT source_type CHECK
-        (source_type IN ('area', 'complex', 'point', 'source')),
+        (source_type IN ('area', 'complex', 'point')),
     tectonic_region_id INTEGER NOT NULL,
     rake float NOT NULL
         CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
@@ -47,7 +47,7 @@ CREATE TABLE pshai.source (
 CREATE TABLE pshai.rupture (
     CONSTRAINT pshai_rupture_pk PRIMARY KEY (id),
     magnitude float NOT NULL,
-    magnitude_type VARCHAR NOT NULL
+    magnitude_type_id INTEGER NOT NULL
 ) INHERITS(pshai.source) TABLESPACE pshai_ts;
 
 
@@ -105,6 +105,12 @@ CREATE TABLE pshai.tectonic_region (
 ) TABLESPACE pshai_ts;
 
 
+CREATE TABLE pshai.magnitude_type (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL
+) TABLESPACE pshai_ts;
+
+
 -- Magnitude frequency distribution, base table.
 CREATE TABLE pshai.mfd (
     id SERIAL PRIMARY KEY,
@@ -113,7 +119,7 @@ CREATE TABLE pshai.mfd (
     name VARCHAR,
     description VARCHAR,
     mfd_type VARCHAR(3) NOT NULL,
-    magnitude_type VARCHAR(3) NOT NULL DEFAULT 'Mw'
+    magnitude_type_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -178,3 +184,9 @@ FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE CASCADE;
 
 ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_complex_geom_fk
 FOREIGN KEY (complex_geom_id) REFERENCES pshai.complex_geom(id) ON DELETE CASCADE;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
+FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.mfd ADD CONSTRAINT pshai_mfd_magnitude_type_fk
+FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;

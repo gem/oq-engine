@@ -26,6 +26,9 @@ COMMENT ON COLUMN pshai.complex_geom.gid IS 'An alpha-numeric identifier for thi
 -- Fault edge
 COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
 
+-- Magnitude type (enumeration)
+COMMENT ON TABLE pshai.magnitude_type IS 'Enumeration of magnitude types.';
+
 -- Magnitude frequency distribution
 COMMENT ON TABLE pshai.mfd IS 'Magnitude frequency distribution.';
 
@@ -51,5 +54,5 @@ COMMENT ON TABLE pshai.source IS 'A fault source, can be complex or simple.';
 COMMENT ON TABLE pshai.strike_dip_rake IS 'Holds strike, dip and rake values with the respective constraints.';
 
 -- Tectonic region (enumeration)
-COMMENT ON TABLE pshai.tectonic_region IS 'An enumeration of known tectonic region values';
+COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
 
