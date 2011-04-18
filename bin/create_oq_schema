@@ -93,6 +93,13 @@ psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/po
 psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
 psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
 
+# Apply database function definitions if present.
+functions_file="$schema_path/functions.sql"
+if [ -r $functions_file ]; then
+    echo ".. Running functions file: $functions_file .."
+    psql -d $db_name -U postgres -f $functions_file
+fi
+
 echo ".. Running schema definition file: $schema_file .."
 psql -d $db_name -U postgres -f $schema_file
 

@@ -205,8 +205,7 @@ CREATE TABLE pshai.r_rate_mdl (
     mfd_evd_id INTEGER,
     focal_mechanism_id INTEGER NOT NULL,
     CONSTRAINT one_mfd_must_be_set CHECK (
-        (mfd_tgr_id IS NULL AND mfd_evd_id IS NOT NULL) OR
-        (mfd_tgr_id IS NOT NULL AND mfd_evd_id IS NULL))
+        (null_count(ARRAY[mfd_evd_id, mfd_tgr_id]) = 1))
 ) TABLESPACE pshai_ts;
 
 
