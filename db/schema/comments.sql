@@ -36,19 +36,16 @@ COMMENT ON TABLE pshai.r_rate_mdl IS 'Rupture rate model.';
 
 COMMENT ON TABLE pshai.rupture IS 'A rupture, can be complex or simple.';
 
-COMMENT ON TABLE pshai.rupture_to_simple_fault IS 'Links ruptures to simple faults.';
-
-COMMENT ON TABLE pshai.rupture_to_complex_fault IS 'Links ruptures to complex faults.';
-
 COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
 
 COMMENT ON TABLE pshai.source IS 'A fault source, can be complex or simple.';
-
-COMMENT ON TABLE pshai.source_to_simple_fault IS 'Links sources to simple faults.';
-
-COMMENT ON TABLE pshai.source_to_complex_fault IS 'Links sources to complex faults.';
 
 COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
 
 COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
 
+COMMENT ON TABLE pshai.src_to_sfault IS 'Associates a seismic source with a simple fault';
+COMMENT ON TABLE pshai.src_to_cfault IS 'Associates a seismic source with a complex fault';
+
+COMMENT ON TABLE pshai.rup_to_sfault IS 'Associates a rupture with a simple fault';
+COMMENT ON TABLE pshai.rup_to_cfault IS 'Associates a rupture with a complex fault';
