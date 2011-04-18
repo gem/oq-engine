@@ -19,8 +19,8 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
-COMMENT ON TABLE pshai.complex_geom IS 'A complex (fault) geometry, in essence a sequence of fault edges.';
-COMMENT ON COLUMN pshai.complex_geom.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
+COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges.';
+COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
 
 COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
 
@@ -36,19 +36,19 @@ COMMENT ON TABLE pshai.rdd IS 'Rupture depth distribution.';
 
 COMMENT ON TABLE pshai.rupture IS 'A rupture, can be complex or simple.';
 
-COMMENT ON TABLE pshai.rupture_to_simple_geom IS 'Links ruptures to simple faults.';
+COMMENT ON TABLE pshai.rupture_to_simple_fault IS 'Links ruptures to simple faults.';
 
-COMMENT ON TABLE pshai.rupture_to_complex_geom IS 'Links ruptures to complex faults.';
+COMMENT ON TABLE pshai.rupture_to_complex_fault IS 'Links ruptures to complex faults.';
 
-COMMENT ON TABLE pshai.simple_geom IS 'A simple fault geometry.';
+COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
 
 COMMENT ON TABLE pshai.source IS 'A fault source, can be complex or simple.';
 
-COMMENT ON TABLE pshai.source_to_simple_geom IS 'Links sources to simple faults.';
+COMMENT ON TABLE pshai.source_to_simple_fault IS 'Links sources to simple faults.';
 
-COMMENT ON TABLE pshai.source_to_complex_geom IS 'Links sources to complex faults.';
+COMMENT ON TABLE pshai.source_to_complex_fault IS 'Links sources to complex faults.';
 
-COMMENT ON TABLE pshai.strike_dip_rake IS 'Holds strike, dip and rake values with the respective constraints.';
+COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
 
 COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
 

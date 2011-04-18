@@ -27,44 +27,20 @@ CREATE SCHEMA eqcat;
 
 
 ------------------------------------------------------------------------
--- Table space definitions go here
-------------------------------------------------------------------------
-CREATE TABLESPACE pshai_ts LOCATION '/var/lib/postgresql/8.4/main/ts/pshai';
-CREATE TABLESPACE eqcat_ts LOCATION '/var/lib/postgresql/8.4/main/ts/eqcat';
-
-
-------------------------------------------------------------------------
 -- Table definitions go here
 ------------------------------------------------------------------------
 
--- Fault source
-CREATE TABLE pshai.source (
-    id SERIAL PRIMARY KEY,
-    -- gml:id
-    gid VARCHAR NOT NULL,
-    name VARCHAR,
-    description VARCHAR,
-    source_type VARCHAR NOT NULL DEFAULT 'simple'
-        CONSTRAINT source_type CHECK
-        (source_type IN ('complex', 'simple')),
-    tectonic_region_id INTEGER NOT NULL,
-    rake float NOT NULL
-        CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
-    date_created timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
 
-
--- Fault rupture
+-- rupture
 CREATE TABLE pshai.rupture (
     id SERIAL PRIMARY KEY,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    source_type VARCHAR NOT NULL DEFAULT 'simple'
-        CONSTRAINT source_type CHECK
-        (source_type IN ('complex', 'simple')),
+    rupture_type VARCHAR NOT NULL DEFAULT 'simple'
+        CONSTRAINT rupture_type CHECK
+        (rupture_type IN ('complex', 'point', 'simple')),
     tectonic_region_id INTEGER NOT NULL,
     rake float NOT NULL
         CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
@@ -75,8 +51,26 @@ CREATE TABLE pshai.rupture (
 ) TABLESPACE pshai_ts;
 
 
+-- source
+CREATE TABLE pshai.source (
+    id SERIAL PRIMARY KEY,
+    -- gml:id
+    gid VARCHAR NOT NULL,
+    name VARCHAR,
+    description VARCHAR,
+    source_type VARCHAR NOT NULL DEFAULT 'simple'
+        CONSTRAINT source_type CHECK
+        (source_type IN ('area', 'point', 'complex', 'simple')),
+    tectonic_region_id INTEGER NOT NULL,
+    rake float NOT NULL
+        CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
+    date_created timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE pshai_ts;
+
+
 -- Simple fault geometry
-CREATE TABLE pshai.simple_geom (
+CREATE TABLE pshai.simple_fault (
     id SERIAL PRIMARY KEY,
     -- gml:id
     gid VARCHAR NOT NULL,
@@ -91,12 +85,12 @@ CREATE TABLE pshai.simple_geom (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_geom', 'geom', 4326, 'LINESTRING', 2 );
-ALTER TABLE pshai.simple_geom ALTER COLUMN geom SET NOT NULL;
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 2 );
+ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
 
 
 -- Complex fault geometry
-CREATE TABLE pshai.complex_geom (
+CREATE TABLE pshai.complex_fault (
     id SERIAL PRIMARY KEY,
     -- gml:id
     gid VARCHAR NOT NULL,
@@ -114,7 +108,7 @@ CREATE TABLE pshai.fault_edge (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    complex_geom_id INTEGER NOT NULL,
+    complex_fault_id INTEGER NOT NULL,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -184,7 +178,7 @@ CREATE TABLE pshai.rdd (
 ) TABLESPACE pshai_ts;
 
 
-CREATE TABLE pshai.strike_dip_rake (
+CREATE TABLE pshai.focal_mechanism (
     id SERIAL PRIMARY KEY,
     -- gml:id
     gid VARCHAR NOT NULL,
@@ -202,28 +196,28 @@ CREATE TABLE pshai.strike_dip_rake (
 
 
 -- Link sources and simple geometries
-CREATE TABLE pshai.source_to_simple_geom (
+CREATE TABLE pshai.source_to_simple_fault (
     source_id INTEGER NOT NULL,
     geom_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
 
 
 -- Link sources and complex geometries
-CREATE TABLE pshai.source_to_complex_geom (
+CREATE TABLE pshai.source_to_complex_fault (
     source_id INTEGER NOT NULL,
     geom_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
 
 
 -- Link ruptures and simple geometries
-CREATE TABLE pshai.rupture_to_simple_geom (
+CREATE TABLE pshai.rupture_to_simple_fault (
     rupture_id INTEGER NOT NULL,
     geom_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
 
 
 -- Link ruptures and complex geometries
-CREATE TABLE pshai.rupture_to_complex_geom (
+CREATE TABLE pshai.rupture_to_complex_fault (
     rupture_id INTEGER NOT NULL,
     geom_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
@@ -235,8 +229,8 @@ CREATE TABLE pshai.rupture_to_complex_geom (
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
 FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_complex_geom_fk
-FOREIGN KEY (complex_geom_id) REFERENCES pshai.complex_geom(id) ON DELETE CASCADE;
+ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_complex_fault_fk
+FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
@@ -247,22 +241,22 @@ FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RE
 ALTER TABLE pshai.rdd ADD CONSTRAINT pshai_rdd_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture_to_simple_geom ADD CONSTRAINT pshai_rupture_to_simple_geom_rupture_fk
+ALTER TABLE pshai.rupture_to_simple_fault ADD CONSTRAINT pshai_rupture_to_simple_fault_rupture_fk
 FOREIGN KEY (rupture_id) REFERENCES pshai.rupture(id) ON DELETE CASCADE;
-ALTER TABLE pshai.rupture_to_simple_geom ADD CONSTRAINT pshai_rupture_to_simple_geom_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.simple_geom(id) ON DELETE CASCADE;
+ALTER TABLE pshai.rupture_to_simple_fault ADD CONSTRAINT pshai_rupture_to_simple_fault_geom_fk
+FOREIGN KEY (geom_id) REFERENCES pshai.simple_fault(id) ON DELETE CASCADE;
 
-ALTER TABLE pshai.rupture_to_complex_geom ADD CONSTRAINT pshai_rupture_to_complex_geom_rupture_fk
+ALTER TABLE pshai.rupture_to_complex_fault ADD CONSTRAINT pshai_rupture_to_complex_fault_rupture_fk
 FOREIGN KEY (rupture_id) REFERENCES pshai.rupture(id) ON DELETE CASCADE;
-ALTER TABLE pshai.rupture_to_complex_geom ADD CONSTRAINT pshai_rupture_to_complex_geom_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.complex_geom(id) ON DELETE CASCADE;
+ALTER TABLE pshai.rupture_to_complex_fault ADD CONSTRAINT pshai_rupture_to_complex_fault_geom_fk
+FOREIGN KEY (geom_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
 
-ALTER TABLE pshai.source_to_simple_geom ADD CONSTRAINT pshai_source_to_simple_geom_source_fk
+ALTER TABLE pshai.source_to_simple_fault ADD CONSTRAINT pshai_source_to_simple_fault_source_fk
 FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE CASCADE;
-ALTER TABLE pshai.source_to_simple_geom ADD CONSTRAINT pshai_source_to_simple_geom_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.simple_geom(id) ON DELETE CASCADE;
+ALTER TABLE pshai.source_to_simple_fault ADD CONSTRAINT pshai_source_to_simple_fault_geom_fk
+FOREIGN KEY (geom_id) REFERENCES pshai.simple_fault(id) ON DELETE CASCADE;
 
-ALTER TABLE pshai.source_to_complex_geom ADD CONSTRAINT pshai_source_to_complex_geom_source_fk
+ALTER TABLE pshai.source_to_complex_fault ADD CONSTRAINT pshai_source_to_complex_fault_source_fk
 FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE CASCADE;
-ALTER TABLE pshai.source_to_complex_geom ADD CONSTRAINT pshai_source_to_complex_geom_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.complex_geom(id) ON DELETE CASCADE;
+ALTER TABLE pshai.source_to_complex_fault ADD CONSTRAINT pshai_source_to_complex_fault_geom_fk
+FOREIGN KEY (geom_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
