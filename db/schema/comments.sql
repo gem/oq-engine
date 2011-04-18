@@ -30,7 +30,9 @@ COMMENT ON TABLE pshai.mfd_evd IS 'Magnitude frequency distribution, evenly disc
 
 COMMENT ON TABLE pshai.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
 
-COMMENT ON TABLE pshai.rdd IS 'Rupture depth distribution.';
+COMMENT ON TABLE pshai.r_depth_distr IS 'Rupture depth distribution.';
+
+COMMENT ON TABLE pshai.r_rate_mdl IS 'Rupture rate model.';
 
 COMMENT ON TABLE pshai.rupture IS 'A rupture, can be complex or simple.';
 

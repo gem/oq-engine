@@ -194,7 +194,7 @@ CREATE TABLE pshai.mfd_tgr (
 
 
 -- Rupture depth distribution
-CREATE TABLE pshai.rdd (
+CREATE TABLE pshai.r_depth_distr (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -204,6 +204,23 @@ CREATE TABLE pshai.rdd (
     magnitude_type_id INTEGER NOT NULL,
     magnitude float[] NOT NULL,
     depth float[] NOT NULL
+) TABLESPACE pshai_ts;
+
+
+-- Rupture rate model
+CREATE TABLE pshai.r_rate_mdl (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- gml:id
+    gid VARCHAR NOT NULL,
+    name VARCHAR,
+    description VARCHAR,
+    mfd_tgr_id INTEGER,
+    mfd_evd_id INTEGER,
+    focal_mechanism_id INTEGER NOT NULL,
+    CONSTRAINT one_mfd_must_be_set CHECK (
+        (mfd_tgr_id IS NULL AND mfd_evd_id IS NOT NULL) OR
+        (mfd_tgr_id IS NOT NULL AND mfd_evd_id IS NULL))
 ) TABLESPACE pshai_ts;
 
 
@@ -286,7 +303,7 @@ FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rdd ADD CONSTRAINT pshai_rdd_owner_fk
+ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.focal_mechanism ADD CONSTRAINT pshai_focal_mechanism_owner_fk
@@ -307,7 +324,7 @@ FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RE
 ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rdd ADD CONSTRAINT pshai_rdd_magnitude_type_fk
+ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture_to_simple_fault ADD CONSTRAINT pshai_rupture_to_simple_fault_rupture_fk
@@ -329,3 +346,12 @@ ALTER TABLE pshai.source_to_complex_fault ADD CONSTRAINT pshai_source_to_complex
 FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE CASCADE;
 ALTER TABLE pshai.source_to_complex_fault ADD CONSTRAINT pshai_source_to_complex_fault_geom_fk
 FOREIGN KEY (geom_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
+
+ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_tgr_fk
+FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_evd_fk
+FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_focal_mechanism_fk
+FOREIGN KEY (focal_mechanism_id) REFERENCES pshai.focal_mechanism(id) ON DELETE RESTRICT;
