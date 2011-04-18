@@ -68,10 +68,12 @@ CREATE TABLE pshai.rupture (
     tectonic_region_id INTEGER NOT NULL,
     rake float NOT NULL
         CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
-    date_created timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
     magnitude float NOT NULL,
-    magnitude_type_id INTEGER NOT NULL
+    magnitude_type_id INTEGER NOT NULL,
+    simple_fault_id INTEGER,
+    complex_fault_id INTEGER,
+    date_created timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -91,6 +93,8 @@ CREATE TABLE pshai.source (
         CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
     hypoc_depth float,
     focal_mechanism_id INTEGER,
+    simple_fault_id INTEGER,
+    complex_fault_id INTEGER,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -110,6 +114,10 @@ CREATE TABLE pshai.simple_fault (
         CONSTRAINT upper_depth_val CHECK (upper_depth >= 0.0),
     lower_depth float NOT NULL
         CONSTRAINT lower_depth_val CHECK (lower_depth >= 0.0),
+    mfd_tgr_id INTEGER,
+    mfd_evd_id INTEGER,
+    CONSTRAINT one_mfd_must_be_set CHECK (
+        (null_count(ARRAY[mfd_evd_id, mfd_tgr_id]) = 1)),
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -125,6 +133,10 @@ CREATE TABLE pshai.complex_fault (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
+    mfd_tgr_id INTEGER,
+    mfd_evd_id INTEGER,
+    CONSTRAINT one_mfd_must_be_set CHECK (
+        (null_count(ARRAY[mfd_evd_id, mfd_tgr_id]) = 1)),
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -227,34 +239,6 @@ CREATE TABLE pshai.focal_mechanism (
 ) TABLESPACE pshai_ts;
 
 
--- Link sources and simple geometries
-CREATE TABLE pshai.src_to_sfault (
-    source_id INTEGER NOT NULL,
-    geom_id INTEGER NOT NULL
-) TABLESPACE pshai_ts;
-
-
--- Link sources and complex geometries
-CREATE TABLE pshai.src_to_cfault (
-    source_id INTEGER NOT NULL,
-    geom_id INTEGER NOT NULL
-) TABLESPACE pshai_ts;
-
-
--- Link ruptures and simple geometries
-CREATE TABLE pshai.rup_to_sfault (
-    rupture_id INTEGER NOT NULL,
-    geom_id INTEGER NOT NULL
-) TABLESPACE pshai_ts;
-
-
--- Link ruptures and complex geometries
-CREATE TABLE pshai.rup_to_cfault (
-    rupture_id INTEGER NOT NULL,
-    geom_id INTEGER NOT NULL
-) TABLESPACE pshai_ts;
-
-
 -- Enumeration of tectonic region types
 CREATE TABLE pshai.tectonic_region (
     id SERIAL PRIMARY KEY,
@@ -328,26 +312,6 @@ FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RE
 ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rup_to_sfault ADD CONSTRAINT pshai_rup_to_sfault_rupture_fk
-FOREIGN KEY (rupture_id) REFERENCES pshai.rupture(id) ON DELETE CASCADE;
-ALTER TABLE pshai.rup_to_sfault ADD CONSTRAINT pshai_rup_to_sfault_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.simple_fault(id) ON DELETE CASCADE;
-
-ALTER TABLE pshai.rup_to_cfault ADD CONSTRAINT pshai_rup_to_cfault_rupture_fk
-FOREIGN KEY (rupture_id) REFERENCES pshai.rupture(id) ON DELETE CASCADE;
-ALTER TABLE pshai.rup_to_cfault ADD CONSTRAINT pshai_rup_to_cfault_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
-
-ALTER TABLE pshai.src_to_sfault ADD CONSTRAINT pshai_src_to_sfault_source_fk
-FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE CASCADE;
-ALTER TABLE pshai.src_to_sfault ADD CONSTRAINT pshai_src_to_sfault_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.simple_fault(id) ON DELETE CASCADE;
-
-ALTER TABLE pshai.src_to_cfault ADD CONSTRAINT pshai_src_to_cfault_source_fk
-FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE CASCADE;
-ALTER TABLE pshai.src_to_cfault ADD CONSTRAINT pshai_src_to_cfault_geom_fk
-FOREIGN KEY (geom_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
-
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
 
@@ -359,3 +323,31 @@ FOREIGN KEY (focal_mechanism_id) REFERENCES pshai.focal_mechanism(id) ON DELETE 
 
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_focal_mechanism_fk
 FOREIGN KEY (focal_mechanism_id) REFERENCES pshai.focal_mechanism(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_mfd_tgr_fk
+FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_mfd_evd_fk
+FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_mfd_tgr_fk
+FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_mfd_evd_fk
+FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_pick_one_source CHECK ((null_count(ARRAY[simple_fault_id, complex_fault_id]) = 1));
+
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_pick_one_source CHECK ((null_count(ARRAY[simple_fault_id, complex_fault_id]) = 1));
+
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_simple_fault_fk
+FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_complex_fault_fk
+FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_simple_fault_fk
+FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
+FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;

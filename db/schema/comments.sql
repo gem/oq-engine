@@ -44,8 +44,3 @@ COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values wit
 
 COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
 
-COMMENT ON TABLE pshai.src_to_sfault IS 'Associates a seismic source with a simple fault';
-COMMENT ON TABLE pshai.src_to_cfault IS 'Associates a seismic source with a complex fault';
-
-COMMENT ON TABLE pshai.rup_to_sfault IS 'Associates a rupture with a simple fault';
-COMMENT ON TABLE pshai.rup_to_cfault IS 'Associates a rupture with a complex fault';
