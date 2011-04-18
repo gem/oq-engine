@@ -26,8 +26,6 @@ COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, descri
 
 COMMENT ON TABLE pshai.magnitude_type IS 'Enumeration of magnitude types.';
 
-COMMENT ON TABLE pshai.mfd IS 'Magnitude frequency distribution.';
-
 COMMENT ON TABLE pshai.mfd_evd IS 'Magnitude frequency distribution, evenly discretized.';
 
 COMMENT ON TABLE pshai.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';

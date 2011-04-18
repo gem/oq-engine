@@ -18,7 +18,7 @@ if [ $# -eq 0 ]; then
 fi
 
 tspace_path='/var/lib/postgresql/8.4/main/ts'
-tspace_list="pshai eqcat"
+tspace_list="admin pshai eqcat"
 
 schema_path=""
 db_name=""
@@ -61,25 +61,27 @@ fi
 # Drop database and table spaces..
 echo ".. Dropping database $db_name .."
 psql -U postgres -c "DROP DATABASE IF EXISTS $db_name"
-for tspace in `egrep -i 'create\s+tablespace\s+\S+\s+location\s+\S+' $schema_file | awk '{ print $3 }'`; do
-    echo ".. Dropping table space $tspace .."
-    psql -U postgres -c "DROP TABLESPACE IF EXISTS $tspace"
+for tspace in $tspace_list; do
+    full_ts_name="${tspace}_ts"
+    echo ".. Dropping table space $full_ts_name .."
+    psql -U postgres -c "DROP TABLESPACE IF EXISTS $full_ts_name"
 done
 
 echo -n ".. Current table spaces: "
 echo `psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] }'`
 
 for tspace in $tspace_list; do
-    full_tspace_path="$tspace_path/$tspace"
+    full_ts_name="${tspace}_ts"
+    full_tspace_path="$tspace_path/$full_ts_name"
     sudo test -d "$full_tspace_path"
     if [ $? -ne 0 ]; then
         echo ".. Creating table space path $full_tspace_path .."
         sudo mkdir -p $full_tspace_path
         sudo chown -R postgres.postgres $full_tspace_path
     fi
-    ts_found=`psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] }' | grep $tspace | wc -l`
+    ts_found=`psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] }' | grep $full_ts_name | wc -l`
     if [ $ts_found -eq 0 ]; then
-        psql -U postgres -c "CREATE TABLESPACE $tspace LOCATION '$full_tspace_path'"
+        psql -U postgres -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
     fi
 done
 
