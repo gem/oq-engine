@@ -18,12 +18,19 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
+BEGIN
+    RETURN operation || ': ' || error || ' (' || tab_name || ')';
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION check_rupture_sources() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
 DECLARE
     num_sources INTEGER := 0;
     violations TEXT := '';
+    exception_msg TEXT := '';
 BEGIN
     IF NEW.point IS NOT NULL THEN
         num_sources := num_sources + 1;
@@ -38,18 +45,12 @@ BEGIN
         violations = violations || ' complex_fault_id';
     END IF;
     IF num_sources = 0 THEN
-        IF TG_OP = 'INSERT' THEN
-            RAISE 'INSERT: no rupture source';
-        ELSE
-            RAISE 'UPDATE: no rupture source';
-        END IF;
+        exception_msg := format_exc(TG_OP, 'no seismic inputs', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     ELSE
         IF num_sources > 1 THEN
-            IF TG_OP = 'INSERT' THEN
-                RAISE 'INSERT: more than one rupture source (%)', violations;
-            ELSE
-                RAISE 'UPDATE: more than one rupture source (%)', violations;
-            END IF;
+            exception_msg := format_exc(TG_OP, 'more than one seismic input <' || violations || '>', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
         END IF;
     END IF;
 
@@ -66,6 +67,7 @@ $$
 DECLARE
     num_sources INTEGER := 0;
     violations TEXT := '';
+    exception_msg TEXT := '';
 BEGIN
     IF NEW.point IS NOT NULL THEN
         num_sources := num_sources + 1;
@@ -84,18 +86,12 @@ BEGIN
         violations = violations || ' complex_fault_id';
     END IF;
     IF num_sources = 0 THEN
-        IF TG_OP = 'INSERT' THEN
-            RAISE 'INSERT: no seismic source input';
-        ELSE
-            RAISE 'UPDATE: no seismic source input';
-        END IF;
+        exception_msg := format_exc(TG_OP, 'no seismic inputs', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     ELSE
         IF num_sources > 1 THEN
-            IF TG_OP = 'INSERT' THEN
-                RAISE 'INSERT: more than one seismic source input (%)', violations;
-            ELSE
-                RAISE 'UPDATE: more than one seismic source input (%)', violations;
-            END IF;
+            exception_msg := format_exc(TG_OP, 'more than one seismic input <' || violations || '>', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
         END IF;
     END IF;
 
@@ -111,6 +107,7 @@ LANGUAGE plpgsql AS
 $$
 DECLARE
     num_sources INTEGER := 0;
+    exception_msg TEXT := '';
 BEGIN
     IF NEW.mfd_tgr_id IS NOT NULL THEN
         -- truncated Gutenberg-Richter
@@ -121,18 +118,12 @@ BEGIN
         num_sources := num_sources + 1;
     END IF;
     IF num_sources = 0 THEN
-        IF TG_OP = 'INSERT' THEN
-            RAISE 'INSERT: no magnitude frequency distribution set (%)', TG_TABLE_NAME;
-        ELSE
-            RAISE 'UPDATE: no magnitude frequency distribution set (%)', TG_TABLE_NAME;
-        END IF;
+        exception_msg := format_exc(TG_OP, 'no magnitude frequency distribution', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     ELSE
         IF num_sources > 1 THEN
-            IF TG_OP = 'INSERT' THEN
-                RAISE 'INSERT: only one magnitude frequency distribution can be set (%)', TG_TABLE_NAME;
-            ELSE
-                RAISE 'UPDATE: only one magnitude frequency distribution can be set (%)', TG_TABLE_NAME;
-            END IF;
+            exception_msg := format_exc(TG_OP, 'more than one magnitude frequency distribution', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
         END IF;
     END IF;
 
