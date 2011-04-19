@@ -39,7 +39,6 @@ $$;
 COMMENT ON FUNCTION null_count(anyarray) IS
 'Return the number of NULLs in the first row of the given array.';
 
-
 CREATE OR REPLACE FUNCTION check_rupture_sources() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -73,3 +72,41 @@ $$;
 
 COMMENT ON FUNCTION check_rupture_sources() IS
 'Make sure a rupture only has one source (point, simple or complex fault).';
+
+CREATE OR REPLACE FUNCTION check_source_sources() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    num_sources INTEGER := 0;
+    violations TEXT := '';
+BEGIN
+    IF NEW.point IS NOT NULL THEN
+        num_sources := num_sources + 1;
+        violations = 'point';
+    END IF;
+    IF NEW.area IS NOT NULL THEN
+        num_sources := num_sources + 1;
+        violations = violations || ', area';
+    END IF;
+    IF NEW.simple_fault_id IS NOT NULL THEN
+        num_sources := num_sources + 1;
+        violations = violations || ', simple_fault_id';
+    END IF;
+    IF NEW.complex_fault_id IS NOT NULL THEN
+        num_sources := num_sources + 1;
+        violations = violations || ', complex_fault_id';
+    END IF;
+    IF num_sources > 1 THEN
+        IF TG_OP = 'INSERT' THEN
+            RAISE 'INSERT: more than one seismic source input (%)', violations;
+        ELSE
+            RAISE 'UPDATE: more than one seismic source input (%)', violations;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION check_source_sources() IS
+'Make sure a seismic source only has one source (area, point, simple or complex fault).';

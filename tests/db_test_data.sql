@@ -7,3 +7,7 @@ INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, ma
 INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id, point) VALUES(1, 'rupture/1', 1, 11.0, 7.6, 1, 3, ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)'));
 
 UPDATE pshai.rupture SET point=ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)') WHERE id=1;
+
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id) VALUES(1, 'rupture/1', 1, 11.0, 1);
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id, point) VALUES(1, 'rupture/1', 1, 11.0, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'));
+UPDATE pshai.source SET point=ST_GeomFromEWKT('SRID=4326;POINT(-80 28)') WHERE id=1;

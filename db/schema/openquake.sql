@@ -354,3 +354,7 @@ FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE REST
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
 FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
+
+CREATE TRIGGER pshai_source_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON pshai.source
+FOR EACH ROW EXECUTE PROCEDURE check_source_sources();
