@@ -5,17 +5,17 @@ INSERT INTO pshai.mfd_evd(owner_id, gid, magnitude_type_id, min_val, bin_size, m
 
 INSERT INTO pshai.mfd_tgr(owner_id, gid, magnitude_type_id, min_val, max_val, a_val, b_val) VALUES(1, 'mfd_tgr/1', 1, 2.0, 3.0, 4.0, 5.0);
 
-INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom, mfd_tgr_id) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28,-90 29)'), 1);
-
-INSERT INTO pshai.r_rate_mdl(owner_id, gid, mfd_tgr_id, focal_mechanism_id) VALUES(1, 'r_rate_mdl/1', 1, 1);
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom, mfd_tgr_id) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 11,-90 29 9)'), 1);
 
 INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id) VALUES(1, 'rupture/1', 1, 11.0, 7.6, 1, 1);
 
 INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id) VALUES(1, 'source/1', 1, 11.0, 1);
 
-INSERT INTO pshai.fault_edge(owner_id, gid, top, bottom) VALUES (1, 'fedge/1', ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28,-90 29)'), ST_GeomFromEWKT('SRID=4326;LINESTRING(-81 29,-91 30)'));
+INSERT INTO pshai.fault_edge(owner_id, gid, top, bottom) VALUES (1, 'fedge/1', ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 7,-90 29 8)'), ST_GeomFromEWKT('SRID=4326;LINESTRING(-81 29 5,-91 30 6)'));
 
 INSERT INTO pshai.complex_fault(owner_id, gid, mfd_evd_id, fault_edge_id) VALUES (1, 'cfault/1', 1, 1);
+
+INSERT INTO pshai.r_rate_mdl(owner_id, gid, mfd_tgr_id, focal_mechanism_id, source_id) VALUES(1, 'r_rate_mdl/1', 1, 1, 1);
 
 -- TEST
 -- Failure due to duplicate source (point)
@@ -39,7 +39,7 @@ INSERT INTO pshai.r_rate_mdl(owner_id, gid, mfd_tgr_id, focal_mechanism_id, mfd_
 UPDATE pshai.r_rate_mdl SET mfd_evd_id=1 WHERE id=1;
 
 -- Failure due to duplicate source (point)
-INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom, mfd_tgr_id, mfd_evd_id) VALUES (1, 'sfault/2', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28,-90 29)'), 1, 1);
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom, mfd_tgr_id, mfd_evd_id) VALUES (1, 'sfault/2', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 0,-90 29 1)'), 1, 1);
 
 -- Failure due to duplicate source (point)
 UPDATE pshai.simple_fault SET mfd_evd_id=1 WHERE id=1;
@@ -50,7 +50,7 @@ INSERT INTO pshai.complex_fault(owner_id, gid, mfd_evd_id, fault_edge_id, mfd_tg
 UPDATE pshai.complex_fault SET mfd_tgr_id=1 WHERE id=1;
 
 -- Failure due to missing magnitude frequency distribution
-INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28,-90 29)'));
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 13,-90 29 12)'));
 INSERT INTO pshai.complex_fault(owner_id, gid, fault_edge_id) VALUES (1, 'cfault/1', 1);
 UPDATE pshai.complex_fault SET mfd_evd_id=NULL WHERE id=1;
 

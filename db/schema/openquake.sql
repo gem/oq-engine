@@ -66,8 +66,9 @@ CREATE TABLE pshai.rupture (
         CONSTRAINT rupture_type CHECK
         (rupture_type IN ('complex', 'point', 'simple')),
     tectonic_region_id INTEGER NOT NULL,
-    rake float NOT NULL
-        CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
+    rake float,
+        CONSTRAINT rake_value CHECK (
+            rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     magnitude float NOT NULL,
     magnitude_type_id INTEGER NOT NULL,
     simple_fault_id INTEGER,
@@ -90,13 +91,14 @@ CREATE TABLE pshai.source (
         CONSTRAINT source_type CHECK
         (source_type IN ('area', 'point', 'complex', 'simple')),
     tectonic_region_id INTEGER NOT NULL,
-    rake float NOT NULL
-        CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
-    -- hypocentral Depth, only set for point/area sources
-    hypocentral_depth float,
-    focal_mechanism_id INTEGER,
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
+    rake float,
+        CONSTRAINT rake_value CHECK (
+            rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
+    -- hypocentral depth and the rupture depth distribution are only set for
+    -- point/area sources
+    hypocentral_depth float,
     r_depth_distr_id INTEGER,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -124,7 +126,7 @@ CREATE TABLE pshai.simple_fault (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 2);
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 3);
 ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
@@ -157,8 +159,8 @@ CREATE TABLE pshai.fault_edge (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 2);
-SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 2);
+SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 3);
+SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 3);
 ALTER TABLE pshai.fault_edge ALTER COLUMN top SET NOT NULL;
 ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
 
@@ -174,7 +176,9 @@ CREATE TABLE pshai.mfd_evd (
     magnitude_type_id INTEGER NOT NULL,
     min_val float NOT NULL,
     bin_size float NOT NULL,
-    mfd_values float[] NOT NULL
+    mfd_values float[] NOT NULL,
+    total_cumulative_rate float,
+    total_moment_rate float
 ) TABLESPACE pshai_ts;
 
 
@@ -190,7 +194,9 @@ CREATE TABLE pshai.mfd_tgr (
     min_val float NOT NULL,
     max_val float NOT NULL,
     a_val float NOT NULL,
-    b_val float NOT NULL
+    b_val float NOT NULL,
+    total_cumulative_rate float,
+    total_moment_rate float
 ) TABLESPACE pshai_ts;
 
 
@@ -218,7 +224,10 @@ CREATE TABLE pshai.r_rate_mdl (
     description VARCHAR,
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
-    focal_mechanism_id INTEGER NOT NULL
+    focal_mechanism_id INTEGER NOT NULL,
+    -- There can be 1+ rupture rate models associated with a seismic source
+    -- that's why the foreign key sits here.
+    source_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -229,13 +238,15 @@ CREATE TABLE pshai.focal_mechanism (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-
-    strike float NOT NULL
-        CONSTRAINT strike_value CHECK ((strike >= 0.0) AND (strike <= 360.0)),
-    dip float NOT NULL
-        CONSTRAINT dip_value CHECK ((dip >= 0.0) AND (dip <= 90.0)),
-    rake float NOT NULL
-        CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
+    strike float,
+        CONSTRAINT strike_value CHECK (
+            strike is NULL OR ((strike >= 0.0) AND (strike <= 360.0))),
+    dip float,
+        CONSTRAINT dip_value CHECK (
+            dip is NULL OR ((dip >= 0.0) AND (dip <= 90.0))),
+    rake float,
+        CONSTRAINT rake_value CHECK (
+            rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     date_created timestamp without time zone DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
@@ -322,8 +333,8 @@ FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_focal_mechanism_fk
 FOREIGN KEY (focal_mechanism_id) REFERENCES pshai.focal_mechanism(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_focal_mechanism_fk
-FOREIGN KEY (focal_mechanism_id) REFERENCES pshai.focal_mechanism(id) ON DELETE RESTRICT;
+ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_source_fk
+FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
