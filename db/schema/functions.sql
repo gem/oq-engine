@@ -45,18 +45,26 @@ LANGUAGE plpgsql AS
 $$
 DECLARE
     num_sources INTEGER := 0;
+    violations TEXT := '';
 BEGIN
     IF NEW.point IS NOT NULL THEN
         num_sources := num_sources + 1;
+        violations = 'point';
     END IF;
     IF NEW.simple_fault_id IS NOT NULL THEN
         num_sources := num_sources + 1;
+        violations = violations || ', simple_fault_id';
     END IF;
     IF NEW.complex_fault_id IS NOT NULL THEN
         num_sources := num_sources + 1;
+        violations = violations || ', complex_fault_id';
     END IF;
     IF num_sources > 1 THEN
-        RAISE '%: more than one source for rupture', TG_OP;
+        IF TG_OP = 'INSERT' THEN
+            RAISE 'INSERT: more than one rupture source (%)', violations;
+        ELSE
+            RAISE 'UPDATE: more than one rupture source (%)', violations;
+        END IF;
     END IF;
 
     RETURN NEW;
