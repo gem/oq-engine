@@ -24,8 +24,13 @@ COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQ
 
 COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges.';
 COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
+COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
+COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
+COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a fault edge.';
 
 COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
+COMMENT ON COLUMN pshai.fault_edge.bottom IS 'Bottom fault edge.';
+COMMENT ON COLUMN pshai.fault_edge.top IS 'Top fault edge.';
 
 COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
 

@@ -92,7 +92,8 @@ CREATE TABLE pshai.source (
     tectonic_region_id INTEGER NOT NULL,
     rake float NOT NULL
         CONSTRAINT rake_value CHECK ((rake >= -180.0) AND (rake <= 180.0)),
-    hypoc_depth float,
+    -- hypocentral Depth, only set for point/area sources
+    hypocentral_depth float,
     focal_mechanism_id INTEGER,
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
