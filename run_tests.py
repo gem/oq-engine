@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 """
 This is our basic test running framework.
 
@@ -47,7 +45,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")
 
 if __name__ == '__main__':
-    sys.argv = FLAGS(sys.argv)  
+    sys.argv = FLAGS(sys.argv)
     sys.path.append("%s/tests" % os.path.abspath(os.path.curdir))
     logs.init_logs()
     try:
@@ -71,4 +69,3 @@ if __name__ == '__main__':
     except ImportError, _e:
         print "Couldn't find nose, using something else"
         unittest.main()
-
