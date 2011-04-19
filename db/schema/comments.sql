@@ -27,6 +27,7 @@ COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for th
 COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
 COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
 COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a fault edge.';
+COMMENT ON COLUMN pshai.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
 
 COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
 COMMENT ON COLUMN pshai.fault_edge.bottom IS 'Bottom fault edge.';
@@ -47,6 +48,10 @@ COMMENT ON TABLE pshai.r_rate_mdl IS 'Rupture rate model.';
 COMMENT ON TABLE pshai.rupture IS 'A rupture, can be complex or simple.';
 
 COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
+COMMENT ON COLUMN pshai.simple_fault.dip IS 'The fault''s inclination angle with respect to the plane.';
+COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth.';
+COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
+COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
 COMMENT ON TABLE pshai.source IS 'A fault source, can be complex or simple.';
 
