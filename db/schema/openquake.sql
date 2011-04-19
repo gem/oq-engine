@@ -136,6 +136,7 @@ CREATE TABLE pshai.complex_fault (
     description VARCHAR,
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
+    fault_edge_id INTEGER NOT NULL,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -149,7 +150,6 @@ CREATE TABLE pshai.fault_edge (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    complex_fault_id INTEGER NOT NULL,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -294,8 +294,8 @@ FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
 FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_complex_fault_fk
-FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE CASCADE;
+ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_fault_edge_fk
+FOREIGN KEY (fault_edge_id) REFERENCES pshai.fault_edge(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
 FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
