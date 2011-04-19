@@ -19,7 +19,7 @@ INSERT INTO pshai.complex_fault(owner_id, gid, mfd_evd_id, fault_edge_id) VALUES
 
 -- TEST
 -- Failure due to duplicate source (point)
-INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id, point) VALUES(1, 'rupture/1', 1, 11.0, 7.6, 1, 3, ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)'));
+INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id, point) VALUES(1, 'rupture/2', 1, 11.0, 7.6, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)'));
 
 -- Failure due to duplicate source (point)
 UPDATE pshai.rupture SET point=ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)') WHERE id=1;
@@ -53,3 +53,9 @@ UPDATE pshai.complex_fault SET mfd_tgr_id=1 WHERE id=1;
 INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, geom) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28,-90 29)'));
 INSERT INTO pshai.complex_fault(owner_id, gid, fault_edge_id) VALUES (1, 'cfault/1', 1);
 UPDATE pshai.complex_fault SET mfd_evd_id=NULL WHERE id=1;
+
+-- Failure due to missing source/input
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake)  VALUES(1, 'source/2', 1, 11.0);
+INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id)  VALUES(1, 'rupture/3', 1, 11.0, 7.6, 1);
+UPDATE pshai.source SET simple_fault_id=NULL WHERE id=1;
+UPDATE pshai.rupture SET simple_fault_id=NULL WHERE id=1;

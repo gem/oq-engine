@@ -37,11 +37,19 @@ BEGIN
         num_sources := num_sources + 1;
         violations = violations || ' complex_fault_id';
     END IF;
-    IF num_sources > 1 THEN
+    IF num_sources = 0 THEN
         IF TG_OP = 'INSERT' THEN
-            RAISE 'INSERT: more than one rupture source (%)', violations;
+            RAISE 'INSERT: no rupture source';
         ELSE
-            RAISE 'UPDATE: more than one rupture source (%)', violations;
+            RAISE 'UPDATE: no rupture source';
+        END IF;
+    ELSE
+        IF num_sources > 1 THEN
+            IF TG_OP = 'INSERT' THEN
+                RAISE 'INSERT: more than one rupture source (%)', violations;
+            ELSE
+                RAISE 'UPDATE: more than one rupture source (%)', violations;
+            END IF;
         END IF;
     END IF;
 
@@ -75,11 +83,19 @@ BEGIN
         num_sources := num_sources + 1;
         violations = violations || ' complex_fault_id';
     END IF;
-    IF num_sources > 1 THEN
+    IF num_sources = 0 THEN
         IF TG_OP = 'INSERT' THEN
-            RAISE 'INSERT: more than one seismic source input (%)', violations;
+            RAISE 'INSERT: no seismic source input';
         ELSE
-            RAISE 'UPDATE: more than one seismic source input (%)', violations;
+            RAISE 'UPDATE: no seismic source input';
+        END IF;
+    ELSE
+        IF num_sources > 1 THEN
+            IF TG_OP = 'INSERT' THEN
+                RAISE 'INSERT: more than one seismic source input (%)', violations;
+            ELSE
+                RAISE 'UPDATE: more than one seismic source input (%)', violations;
+            END IF;
         END IF;
     END IF;
 
