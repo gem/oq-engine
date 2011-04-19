@@ -63,10 +63,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
         self.engine.job_id = 1234
 
-        self.engine.params["REGION_VERTEX"] = \
-            "33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30"
-
-        self.engine.params["RUPTURE_SURFACE_DISCRETIZATION"] = "0.1"
         self.engine.params[NUMBER_OF_CALC_KEY] = "1"
 
         # saving the default java implementation
@@ -75,6 +71,10 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         kvs.flush()
         self.kvs_client = kvs.get_client(binary=False)
+
+        self.grid = self.engine.region.grid
+
+        self.engine.to_kvs()
 
     def tearDown(self):
         # restoring the default java implementation
@@ -111,8 +111,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         decoder = json.JSONDecoder()
 
         for site in self.engine.sites_for_region():
-            key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+            point = self.grid.point_at(site)
+            key = kvs.tokens.ground_motion_values_key(
+                self.engine.id, point)
 
             # just one calculation is triggered in this test case
             self.assertEqual(1, self.kvs_client.llen(key))
@@ -144,8 +145,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         decoder = json.JSONDecoder()
 
         for site in self.engine.sites_for_region():
-            key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+            point = self.grid.point_at(site)
+            key = kvs.tokens.ground_motion_values_key(
+                self.engine.id, point)
 
             self.assertEqual(3, self.kvs_client.llen(key))
             gmv = decoder.decode(self.kvs_client.lpop(key))
@@ -159,27 +161,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
             self.assertTrue(
                 numpy.allclose(site.longitude, gmv["site_lon"]))
-
-    def test_stores_the_list_of_keys_in_kvs(self):
-        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
-            compute_ground_motion_field
-
-        self.engine.params["INTENSITY_MEASURE_TYPE"] = "MMI"
-        self.engine.params[NUMBER_OF_CALC_KEY] = "3"
-
-        self.engine.launch()
-        key_set_key = kvs.tokens.ground_motion_fields_keys(self.engine.id)
-        key_set = self.kvs_client.smembers(key_set_key)
-
-        # there are six sites in the test region, so
-        # six keys are produced
-        self.assertEqual(6, len(key_set))
-
-        for site in self.engine.sites_for_region():
-            key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
-
-            self.assertTrue(key in key_set)
 
     def test_transforms_a_java_gmf_to_dict(self):
         location1 = java.jclass("Location")(1.0, 2.0)
@@ -214,8 +195,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.engine.launch()
 
         for site in self.engine.sites_for_region():
-            key = kvs.tokens.ground_motion_value_key(
-                self.engine.id, site.hash())
+            point = self.grid.point_at(site)
+            key = kvs.tokens.ground_motion_values_key(
+                self.engine.id, point)
 
             self.assertTrue(kvs.get_keys(key))
 
