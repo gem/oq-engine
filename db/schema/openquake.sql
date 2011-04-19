@@ -75,6 +75,7 @@ CREATE TABLE pshai.rupture (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
+SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
 
 
 -- source
@@ -98,6 +99,8 @@ CREATE TABLE pshai.source (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
+SELECT AddGeometryColumn('pshai', 'source', 'point', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('pshai', 'source', 'area', 4326, 'POLYGON', 2);
 
 
 -- Simple fault geometry
@@ -121,7 +124,7 @@ CREATE TABLE pshai.simple_fault (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 2 );
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 2);
 ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
 
 
@@ -154,8 +157,8 @@ CREATE TABLE pshai.fault_edge (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 2 );
-SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 2 );
+SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 2);
+SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 2);
 ALTER TABLE pshai.fault_edge ALTER COLUMN top SET NOT NULL;
 ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
 
@@ -336,10 +339,6 @@ FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_mfd_evd_fk
 FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_pick_one_source CHECK ((null_count(ARRAY[simple_fault_id, complex_fault_id]) = 1));
-
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_pick_one_source CHECK ((null_count(ARRAY[simple_fault_id, complex_fault_id]) = 1));
-
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_simple_fault_fk
 FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
 
@@ -351,3 +350,7 @@ FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRI
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+
+CREATE TRIGGER pshai_rupture_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON pshai.rupture
+FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();

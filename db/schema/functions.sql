@@ -38,3 +38,30 @@ $$;
 
 COMMENT ON FUNCTION null_count(anyarray) IS
 'Return the number of NULLs in the first row of the given array.';
+
+
+CREATE OR REPLACE FUNCTION check_rupture_sources() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    num_sources INTEGER := 0;
+BEGIN
+    IF NEW.point IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF NEW.simple_fault_id IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF NEW.complex_fault_id IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF num_sources > 1 THEN
+        RAISE '%: more than one source for rupture', TG_OP;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION check_rupture_sources() IS
+'Make sure a rupture only has one source (point, simple or complex fault).';
