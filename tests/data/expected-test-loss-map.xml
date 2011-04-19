@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="test_nrml_id">
+    <riskResult gml:id="test_rr_id">
+        <lossMap gml:id="test_lm_id" endBranchLabel="test_ebl"
+            lossCategory="economic_loss" unit="EUR">
+            <LMNode gml:id="lmn_1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 38.0</gml:pos>
+                    </gml:Point>
+                </site>
+                <loss assetRef="a1711">
+                    <mean>0.0</mean>
+                    <stdDev>100.0</stdDev>
+                </loss>
+                <loss assetRef="a1712">
+                    <mean>5.0</mean>
+                    <stdDev>2000.0</stdDev>
+                </loss>
+            </LMNode>
+            <LMNode gml:id="lmn_2">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-118.0 39.0</gml:pos>
+                    </gml:Point>
+                </site>
+                <loss assetRef="a1713">
+                    <mean>120000.0</mean>
+                    <stdDev>2000.0</stdDev>
+                </loss>
+            </LMNode>
+        </lossMap>
+    </riskResult>
+</nrml>
