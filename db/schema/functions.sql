@@ -20,7 +20,7 @@
 
 CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
 BEGIN
-    RETURN operation || ': ' || error || ' (' || tab_name || ')';
+    RETURN operation || ': error: ' || error || ' (' || tab_name || ')';
 END;
 $$ LANGUAGE plpgsql;
 
@@ -91,6 +91,26 @@ BEGIN
     ELSE
         IF num_sources > 1 THEN
             exception_msg := format_exc(TG_OP, 'more than one seismic input <' || violations || '>', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
+        END IF;
+    END IF;
+
+    IF NEW.point IS NOT NULL OR NEW.area IS NOT NULL THEN
+        IF NEW.hypocentral_depth IS NULL THEN
+            exception_msg := format_exc(TG_OP, 'hypocentral_depth missing', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
+        END IF;
+        IF NEW.r_depth_distr_id IS NULL THEN
+            exception_msg := format_exc(TG_OP, 'r_depth_distr_id missing', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
+        END IF;
+    ELSE
+        IF NEW.hypocentral_depth IS NOT NULL THEN
+            exception_msg := format_exc(TG_OP, 'hypocentral_depth set', TG_TABLE_NAME);
+            RAISE '%', exception_msg;
+        END IF;
+        IF NEW.r_depth_distr_id IS NOT NULL THEN
+            exception_msg := format_exc(TG_OP, 'r_depth_distr_id set', TG_TABLE_NAME);
             RAISE '%', exception_msg;
         END IF;
     END IF;

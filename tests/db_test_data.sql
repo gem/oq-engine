@@ -17,6 +17,10 @@ INSERT INTO pshai.complex_fault(owner_id, gid, mfd_evd_id, fault_edge_id) VALUES
 
 INSERT INTO pshai.r_rate_mdl(owner_id, gid, mfd_tgr_id, focal_mechanism_id, source_id) VALUES(1, 'r_rate_mdl/1', 1, 1, 1);
 
+INSERT INTO pshai.r_depth_distr(owner_id, gid, magnitude, depth) VALUES(1, 'r_depth_distr/1', '{1.0, 2.0}', '{3.0, 4.0}');
+
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocentral_depth, r_depth_distr_id) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 79.0, 1);
+
 -- TEST
 -- Failure due to duplicate source (point)
 INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id, point) VALUES(1, 'rupture/2', 1, 11.0, 7.6, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)'));
@@ -55,7 +59,25 @@ INSERT INTO pshai.complex_fault(owner_id, gid, fault_edge_id) VALUES (1, 'cfault
 UPDATE pshai.complex_fault SET mfd_evd_id=NULL WHERE id=1;
 
 -- Failure due to missing source/input
-INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake)  VALUES(1, 'source/2', 1, 11.0);
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake)  VALUES(1, 'source/3', 1, 11.0);
 INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id)  VALUES(1, 'rupture/3', 1, 11.0, 7.6, 1);
 UPDATE pshai.source SET simple_fault_id=NULL WHERE id=1;
 UPDATE pshai.rupture SET simple_fault_id=NULL WHERE id=1;
+
+-- Failure due to superfluous hypocentral_depth/r_depth_distr_id
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id, hypocentral_depth) VALUES(1, 'source/4', 1, 11.0, 1, 99.0);
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id, r_depth_distr_id) VALUES(1, 'source/5', 1, 11.0, 1, 1);
+UPDATE pshai.source SET hypocentral_depth=1.1 WHERE id=1;
+UPDATE pshai.source SET r_depth_distr_id=1 WHERE id=1;
+
+-- Failure due to superfluous hypocentral_depth/r_depth_distr_id
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id, hypocentral_depth) VALUES(1, 'source/6', 1, 11.0, 1, 99.0);
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, simple_fault_id, r_depth_distr_id) VALUES(1, 'source/7', 1, 11.0, 1, 1);
+UPDATE pshai.source SET hypocentral_depth=1.1 WHERE id=1;
+UPDATE pshai.source SET r_depth_distr_id=1 WHERE id=1;
+
+-- Failure due to missing hypocentral_depth/r_depth_distr_id
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, r_depth_distr_id) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 1);
+INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocentral_depth) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 79.0);
+UPDATE pshai.source SET hypocentral_depth=NUll WHERE id=2;
+UPDATE pshai.source SET r_depth_distr_id=NULL WHERE id=2;

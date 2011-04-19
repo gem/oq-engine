@@ -70,7 +70,7 @@ CREATE TABLE pshai.rupture (
         CONSTRAINT rake_value CHECK (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     magnitude float NOT NULL,
-    magnitude_type_id INTEGER NOT NULL,
+    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
     date_created timestamp without time zone
@@ -173,7 +173,7 @@ CREATE TABLE pshai.mfd_evd (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL,
+    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
     min_val float NOT NULL,
     bin_size float NOT NULL,
     mfd_values float[] NOT NULL,
@@ -190,7 +190,7 @@ CREATE TABLE pshai.mfd_tgr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL,
+    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
     min_val float NOT NULL,
     max_val float NOT NULL,
     a_val float NOT NULL,
@@ -208,7 +208,7 @@ CREATE TABLE pshai.r_depth_distr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL,
+    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
     magnitude float[] NOT NULL,
     depth float[] NOT NULL
 ) TABLESPACE pshai_ts;
