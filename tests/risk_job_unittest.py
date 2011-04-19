@@ -27,6 +27,7 @@ from tests.utils import helpers
 
 TEST_FILE = "exposure-portfolio.xml"
 
+
 class EpsilonTestCase(unittest.TestCase):
     """Tests the `epsilon` method in class `ProbabilisticEventMixin`"""
 
@@ -95,7 +96,6 @@ class EpsilonTestCase(unittest.TestCase):
         self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
         for _, asset in self.exposure_parser:
             del asset["structureCategory"]
-            e = self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
+            e = self.assertRaises(
+                ValueError, self.epsilon_provider.epsilon, asset)
             break
-
-

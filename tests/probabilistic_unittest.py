@@ -29,7 +29,6 @@ from tests.utils import helpers
 NUMBER_OF_SAMPLES_FROM_CONFIG = "10"
 
 
-
 class SamplesFromConfigTestCase(unittest.TestCase):
     """Tests for the functionality that reads the number of samples
     for the probabilistic scenario from the configuration file."""
