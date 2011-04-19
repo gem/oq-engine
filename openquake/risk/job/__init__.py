@@ -242,6 +242,7 @@ class EpsilonProvider(object):
         :type params: dict
         """
         self.__dict__.update(params)
+        self.samples = None
 
     def epsilon(self, asset):
         """Sample from the standard normal distribution for the given asset.
