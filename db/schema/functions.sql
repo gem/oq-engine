@@ -54,6 +54,19 @@ BEGIN
         END IF;
     END IF;
 
+    IF NEW.point IS NOT NULL AND NEW.si_type != 'point' THEN
+        exception_msg := format_exc(TG_OP, 'type should be point <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+    IF NEW.simple_fault_id IS NOT NULL AND NEW.si_type != 'simple' THEN
+        exception_msg := format_exc(TG_OP, 'type should be simple <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+    IF NEW.complex_fault_id IS NOT NULL AND NEW.si_type != 'complex' THEN
+        exception_msg := format_exc(TG_OP, 'type should be complex <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -115,6 +128,22 @@ BEGIN
         END IF;
     END IF;
 
+    IF NEW.point IS NOT NULL AND NEW.si_type != 'point' THEN
+        exception_msg := format_exc(TG_OP, 'type should be point <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+    IF NEW.area IS NOT NULL AND NEW.si_type != 'area' THEN
+        exception_msg := format_exc(TG_OP, 'type should be area <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+    IF NEW.simple_fault_id IS NOT NULL AND NEW.si_type != 'simple' THEN
+        exception_msg := format_exc(TG_OP, 'type should be simple <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+    IF NEW.complex_fault_id IS NOT NULL AND NEW.si_type != 'complex' THEN
+        exception_msg := format_exc(TG_OP, 'type should be complex <' || NEW.si_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
     RETURN NEW;
 END;
 $$;

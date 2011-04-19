@@ -62,9 +62,9 @@ CREATE TABLE pshai.rupture (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    rupture_type VARCHAR NOT NULL DEFAULT 'simple'
-        CONSTRAINT rupture_type CHECK
-        (rupture_type IN ('complex', 'point', 'simple')),
+    -- seismic input type
+    si_type VARCHAR NOT NULL DEFAULT 'simple'
+        CONSTRAINT si_type CHECK (si_type IN ('complex', 'point', 'simple')),
     tectonic_region_id INTEGER NOT NULL,
     rake float,
         CONSTRAINT rake_value CHECK (
@@ -87,9 +87,10 @@ CREATE TABLE pshai.source (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    source_type VARCHAR NOT NULL DEFAULT 'simple'
-        CONSTRAINT source_type CHECK
-        (source_type IN ('area', 'point', 'complex', 'simple')),
+    -- seismic input type
+    si_type VARCHAR NOT NULL DEFAULT 'simple'
+        CONSTRAINT si_type CHECK
+        (si_type IN ('area', 'point', 'complex', 'simple')),
     tectonic_region_id INTEGER NOT NULL,
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
