@@ -44,7 +44,7 @@ CREATE TABLE admin.organization (
 
 
 -- OpenQuake system users
-CREATE TABLE admin.gem_user (
+CREATE TABLE admin.oq_user (
     id SERIAL PRIMARY KEY,
     user_name VARCHAR NOT NULL,
     full_name VARCHAR NOT NULL,
@@ -256,41 +256,41 @@ CREATE TABLE pshai.magnitude_type (
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
-ALTER TABLE admin.gem_user ADD CONSTRAINT admin_gem_user_organization_fk
+ALTER TABLE admin.oq_user ADD CONSTRAINT admin_oq_user_organization_fk
 FOREIGN KEY (organization_id) REFERENCES admin.organization(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.tectonic_region ADD CONSTRAINT pshai_tectonic_region_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.magnitude_type ADD CONSTRAINT pshai_magnitude_type_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.focal_mechanism ADD CONSTRAINT pshai_focal_mechanism_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.gem_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
 FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;

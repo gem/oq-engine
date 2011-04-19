@@ -19,10 +19,15 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
+COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQuake database';
+
 COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges.';
 COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
 
 COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
+
+COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
 
 COMMENT ON TABLE pshai.magnitude_type IS 'Enumeration of magnitude types.';
 
@@ -40,7 +45,4 @@ COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
 
 COMMENT ON TABLE pshai.source IS 'A fault source, can be complex or simple.';
 
-COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
-
 COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
-
