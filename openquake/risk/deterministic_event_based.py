@@ -159,7 +159,6 @@ class SumPerGroundMotionField(object):
         """
 
         if asset["vulnerabilityFunctionReference"] not in self.vuln_model:
-
             LOG.debug("Unknown vulnerability function %s, asset %s will " \
                       "not be included in the aggregate computation"
                       % (asset["vulnerabilityFunctionReference"],
@@ -176,6 +175,15 @@ class SumPerGroundMotionField(object):
 
         losses = numpy.array(loss_ratios) * asset["assetValue"]
 
+        self.sum_losses(losses)
+
+    def sum_losses(self, losses):
+        """
+        Accumulate losses into a single sum.
+
+        :param losses: an array of loss values (1 per realization)
+        :type losses: 1-dimensional :py:class:`numpy.ndarray`
+        """
         if self.losses is None:
             self.losses = losses
         else:

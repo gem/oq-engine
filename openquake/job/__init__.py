@@ -17,8 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 """ A single hazard/risk job """
 
 import hashlib
@@ -263,8 +261,10 @@ class Job(object):
             block.to_kvs()
 
     def _read_sites_from_exposure(self):
-        """Read the set of sites to compute from the exposure file specified
-        in the job definition."""
+        """
+        Read the set of sites to compute from the exposure file specified
+        in the job definition.
+        """
 
         sites = []
         path = os.path.join(self.base_path, self[EXPOSURE])
@@ -275,6 +275,7 @@ class Job(object):
         else:
             LOG.debug("Constraining exposure parsing to %s" %
                 constraint.polygon)
+
         for asset_data in reader.filter(constraint):
             sites.append(asset_data[0])
 
