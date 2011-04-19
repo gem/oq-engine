@@ -96,6 +96,7 @@ CREATE TABLE pshai.source (
     focal_mechanism_id INTEGER,
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
+    r_depth_distr_id INTEGER,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -338,6 +339,9 @@ FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRI
 
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_r_depth_distr_fk
+FOREIGN KEY (r_depth_distr_id) REFERENCES pshai.r_depth_distr(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_simple_fault_fk
 FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
