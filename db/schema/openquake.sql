@@ -126,6 +126,7 @@ CREATE TABLE pshai.simple_fault (
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 2);
 ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
 
 -- Complex fault geometry
@@ -142,6 +143,7 @@ CREATE TABLE pshai.complex_fault (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
+SELECT AddGeometryColumn('pshai', 'complex_fault', 'outline', 4326, 'POLYGON', 3);
 
 
 -- Fault edge
