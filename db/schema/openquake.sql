@@ -119,8 +119,6 @@ CREATE TABLE pshai.simple_fault (
         CONSTRAINT lower_depth_val CHECK (lower_depth >= 0.0),
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
-    CONSTRAINT one_mfd_must_be_set CHECK (
-        (null_count(ARRAY[mfd_evd_id, mfd_tgr_id]) = 1)),
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -138,8 +136,6 @@ CREATE TABLE pshai.complex_fault (
     description VARCHAR,
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
-    CONSTRAINT one_mfd_must_be_set CHECK (
-        (null_count(ARRAY[mfd_evd_id, mfd_tgr_id]) = 1)),
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
@@ -218,9 +214,7 @@ CREATE TABLE pshai.r_rate_mdl (
     description VARCHAR,
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
-    focal_mechanism_id INTEGER NOT NULL,
-    CONSTRAINT one_mfd_must_be_set CHECK (
-        (null_count(ARRAY[mfd_evd_id, mfd_tgr_id]) = 1))
+    focal_mechanism_id INTEGER NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -358,3 +352,15 @@ FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
 CREATE TRIGGER pshai_source_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.source
 FOR EACH ROW EXECUTE PROCEDURE check_source_sources();
+
+CREATE TRIGGER pshai_r_rate_mdl_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON pshai.r_rate_mdl
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER pshai_simple_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON pshai.simple_fault
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER pshai_complex_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON pshai.complex_fault
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();

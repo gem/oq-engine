@@ -18,27 +18,6 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
-
--- Copied from launchpad
-CREATE OR REPLACE FUNCTION null_count(p_values anyarray) RETURNS integer
-LANGUAGE plpgsql IMMUTABLE RETURNS NULL ON NULL INPUT AS
-$$
-DECLARE
-    v_index integer;
-    v_null_count integer := 0;
-BEGIN
-    FOR v_index IN array_lower(p_values,1)..array_upper(p_values,1) LOOP
-        IF p_values[v_index] IS NULL THEN
-            v_null_count := v_null_count + 1;
-        END IF;
-    END LOOP;
-    RETURN v_null_count;
-END;
-$$;
-
-COMMENT ON FUNCTION null_count(anyarray) IS
-'Return the number of NULLs in the first row of the given array.';
-
 CREATE OR REPLACE FUNCTION check_rupture_sources() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -52,11 +31,11 @@ BEGIN
     END IF;
     IF NEW.simple_fault_id IS NOT NULL THEN
         num_sources := num_sources + 1;
-        violations = violations || ', simple_fault_id';
+        violations = violations || ' simple_fault_id';
     END IF;
     IF NEW.complex_fault_id IS NOT NULL THEN
         num_sources := num_sources + 1;
-        violations = violations || ', complex_fault_id';
+        violations = violations || ' complex_fault_id';
     END IF;
     IF num_sources > 1 THEN
         IF TG_OP = 'INSERT' THEN
@@ -86,15 +65,15 @@ BEGIN
     END IF;
     IF NEW.area IS NOT NULL THEN
         num_sources := num_sources + 1;
-        violations = violations || ', area';
+        violations = violations || ' area';
     END IF;
     IF NEW.simple_fault_id IS NOT NULL THEN
         num_sources := num_sources + 1;
-        violations = violations || ', simple_fault_id';
+        violations = violations || ' simple_fault_id';
     END IF;
     IF NEW.complex_fault_id IS NOT NULL THEN
         num_sources := num_sources + 1;
-        violations = violations || ', complex_fault_id';
+        violations = violations || ' complex_fault_id';
     END IF;
     IF num_sources > 1 THEN
         IF TG_OP = 'INSERT' THEN
@@ -110,3 +89,40 @@ $$;
 
 COMMENT ON FUNCTION check_source_sources() IS
 'Make sure a seismic source only has one source (area, point, simple or complex fault).';
+
+CREATE OR REPLACE FUNCTION check_only_one_mfd_set() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    num_sources INTEGER := 0;
+BEGIN
+    IF NEW.mfd_tgr_id IS NOT NULL THEN
+        -- truncated Gutenberg-Richter
+        num_sources := num_sources + 1;
+    END IF;
+    IF NEW.mfd_evd_id IS NOT NULL THEN
+        -- evenly discretized
+        num_sources := num_sources + 1;
+    END IF;
+    IF num_sources = 0 THEN
+        IF TG_OP = 'INSERT' THEN
+            RAISE 'INSERT: no magnitude frequency distribution set (%)', TG_TABLE_NAME;
+        ELSE
+            RAISE 'UPDATE: no magnitude frequency distribution set (%)', TG_TABLE_NAME;
+        END IF;
+    ELSE
+        IF num_sources > 1 THEN
+            IF TG_OP = 'INSERT' THEN
+                RAISE 'INSERT: only one magnitude frequency distribution can be set (%)', TG_TABLE_NAME;
+            ELSE
+                RAISE 'UPDATE: only one magnitude frequency distribution can be set (%)', TG_TABLE_NAME;
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION check_only_one_mfd_set() IS
+'Make sure only one magnitude frequency distribution is set.';
