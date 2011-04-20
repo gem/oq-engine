@@ -1,14 +1,8 @@
 package org.gem.engine.logictree;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -17,7 +11,6 @@ import java.util.Random;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.gem.engine.LogicTreeProcessor;
-import org.gem.engine.hazard.GemComputeHazardLogicTree;
 
 /**
  * Class for logic tree definition. A logic tree is defined in terms of a list
@@ -41,38 +34,6 @@ public class LogicTree<Element> implements LogicTreeAPI<Element>, Serializable {
         this.branLevLst = new ArrayList<LogicTreeBranchingLevel>();
         this.ebMap = new HashMap<String, Element>();
         this.modelName = "";
-    }
-
-    /**
-     * Creates logic tree from file
-     */
-    public LogicTree(String fileName) throws IOException,
-            ClassNotFoundException {
-
-        URL data = GemComputeHazardLogicTree.class.getResource(fileName);
-        File file = new File(data.getFile());
-        FileInputStream f_in = null;
-        try {
-            // f_in = new FileInputStream(fileName);
-            f_in = new FileInputStream(file.getPath());
-        } catch (FileNotFoundException e) {
-            String msg = file.getPath() + " not found!!";
-            logger.info(msg);
-            throw new RuntimeException(msg);
-        }
-
-        // Read object using ObjectInputStream.
-        ObjectInputStream obj_in = new ObjectInputStream(f_in);
-
-        // Read an object.
-        Object obj = obj_in.readObject();
-
-        LogicTree<Element> gemLogicTree = (LogicTree<Element>) obj;
-
-        this.branLevLst = gemLogicTree.getBranchingLevelsList();
-        this.ebMap = gemLogicTree.getEBMap();
-        this.modelName = gemLogicTree.getModelName();
-
     }
 
     /**
