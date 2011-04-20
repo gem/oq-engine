@@ -5,6 +5,8 @@ cat <<HSD
 `basename $0` initialises the given database with the OpenQuake schema.
 Also, table space paths are created as needed.
 
+!! This will *destroy* all data in the OpenQuake database !!
+
 The command line arguments are as follows:
 
     --schema-path=path  Absolute path to directory with the schema files.
@@ -68,7 +70,7 @@ for tspace in $tspace_list; do
 done
 
 echo -n ".. Current table spaces: "
-echo `psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] }'`
+echo `psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
 
 for tspace in $tspace_list; do
     full_ts_name="${tspace}_ts"
@@ -79,7 +81,7 @@ for tspace in $tspace_list; do
         sudo mkdir -p $full_tspace_path
         sudo chown -R postgres.postgres $full_tspace_path
     fi
-    ts_found=`psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] }' | grep $full_ts_name | wc -l`
+    ts_found=`psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
     if [ $ts_found -eq 0 ]; then
         psql -U postgres -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
     fi
@@ -115,4 +117,24 @@ comments_file="$schema_path/comments.sql"
 if [ -r $comments_file ]; then
     echo ".. Running comments file: $comments_file .."
     psql -d $db_name -U postgres -f $comments_file
+fi
+
+oq_group_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep openquake | wc -l`
+if [ $oq_group_present -eq 0 ]; then
+    psql -U postgres -c "CREATE ROLE openquake"
+fi
+
+for role in oq_admin oq_pshai_etl oq_pshai_writer oq_eqcat_etl oq_eqcat_writer
+do
+    role_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
+    if [ $role_present -eq 0 ]; then
+        psql -U postgres -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake"
+    fi
+done
+
+# Apply database security settings if present.
+security_file="$schema_path/security.sql"
+if [ -r $security_file ]; then
+    echo ".. Running security settings file: $security_file .."
+    psql -d $db_name -U postgres -f $security_file
 fi

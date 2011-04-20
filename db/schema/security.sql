@@ -19,65 +19,65 @@
 */
 
 -- admin.oq_user
-GRANT SELECT PRIVILEGES ON admin.oq_user TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON admin.oq_user TO oq_admin;
+GRANT SELECT ON admin.oq_user TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
 
 -- admin.organization
-GRANT SELECT PRIVILEGES ON admin.organization TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON admin.organization TO oq_admin;
+GRANT SELECT ON admin.organization TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON admin.organization TO oq_admin;
 
 -- pshai.complex_fault
-GRANT SELECT PRIVILEGES ON pshai.complex_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.complex_fault TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.complex_fault TO oq_pshai_writer;
+GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.complex_fault TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.complex_fault TO oq_pshai_writer;
 
 -- pshai.fault_edge
-GRANT SELECT PRIVILEGES ON pshai.fault_edge TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.fault_edge TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.fault_edge TO oq_pshai_writer;
+GRANT SELECT ON pshai.fault_edge TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.fault_edge TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.fault_edge TO oq_pshai_writer;
 
 -- pshai.focal_mechanism
-GRANT SELECT PRIVILEGES ON pshai.focal_mechanism TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.focal_mechanism TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.focal_mechanism TO oq_pshai_writer;
+GRANT SELECT ON pshai.focal_mechanism TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.focal_mechanism TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.focal_mechanism TO oq_pshai_writer;
 
 -- pshai.magnitude_type
-GRANT SELECT PRIVILEGES ON pshai.magnitude_type TO GROUP openquake;
+GRANT SELECT ON pshai.magnitude_type TO GROUP openquake;
 
 -- pshai.mfd_evd
-GRANT SELECT PRIVILEGES ON pshai.mfd_evd TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.mfd_evd TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.mfd_evd TO oq_pshai_writer;
+GRANT SELECT ON pshai.mfd_evd TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.mfd_evd TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_evd TO oq_pshai_writer;
 
 -- pshai.mfd_tgr
-GRANT SELECT PRIVILEGES ON pshai.mfd_tgr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.mfd_tgr TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.mfd_tgr TO oq_pshai_writer;
+GRANT SELECT ON pshai.mfd_tgr TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.mfd_tgr TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_tgr TO oq_pshai_writer;
 
 -- pshai.r_depth_distr
-GRANT SELECT PRIVILEGES ON pshai.r_depth_distr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.r_depth_distr TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.r_depth_distr TO oq_pshai_writer;
+GRANT SELECT ON pshai.r_depth_distr TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.r_depth_distr TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_depth_distr TO oq_pshai_writer;
 
 -- pshai.r_rate_mdl
-GRANT SELECT PRIVILEGES ON pshai.r_rate_mdl TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.r_rate_mdl TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.r_rate_mdl TO oq_pshai_writer;
+GRANT SELECT ON pshai.r_rate_mdl TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.r_rate_mdl TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_rate_mdl TO oq_pshai_writer;
 
 -- pshai.rupture
-GRANT SELECT PRIVILEGES ON pshai.rupture TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.rupture TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.rupture TO oq_pshai_writer;
+GRANT SELECT ON pshai.rupture TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.rupture TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.rupture TO oq_pshai_writer;
 
 -- pshai.simple_fault
-GRANT SELECT PRIVILEGES ON pshai.simple_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.simple_fault TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.simple_fault TO oq_pshai_writer;
+GRANT SELECT ON pshai.simple_fault TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.simple_fault TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
 
 -- pshai.source
-GRANT SELECT PRIVILEGES ON pshai.source TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.source TO oq_pshai_etl;
-GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.source TO oq_pshai_writer;
+GRANT SELECT ON pshai.source TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON pshai.source TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_pshai_writer;
 
 -- pshai.tectonic_region
-GRANT SELECT PRIVILEGES ON pshai.tectonic_region TO GROUP openquake;
+GRANT SELECT ON pshai.tectonic_region TO GROUP openquake;
