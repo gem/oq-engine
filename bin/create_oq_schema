@@ -19,13 +19,17 @@ if [ $# -eq 0 ]; then
     help
 fi
 
+# Where do the table spaces live?
 tspace_path='/var/lib/postgresql/8.4/main/ts'
+# What table spaces should be created?
 tspace_list="admin pshai eqcat"
 
 schema_path=""
 db_name=""
 
+# What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
+# What OpenQuake db users should be created?
 db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer"
 
 for i in $*
@@ -63,6 +67,7 @@ if [ -z "$db_name" ]; then
     exit 4
 fi
 
+# Last chance to abort.
 echo '!! This will destroy *ALL* data in the OpenQuake database !!'
 echo 'Press <enter> to continue'
 read
@@ -79,24 +84,32 @@ done
 echo -n ".. Current table spaces: "
 echo `psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
 
+# Create table spaces if needed.
 for tspace in $tspace_list; do
     full_ts_name="${tspace}_ts"
     full_tspace_path="$tspace_path/$full_ts_name"
+
+    # Create table space path if needed.
     sudo test -d "$full_tspace_path"
     if [ $? -ne 0 ]; then
         echo ".. Creating table space path $full_tspace_path .."
         sudo mkdir -p $full_tspace_path
         sudo chown -R postgres.postgres $full_tspace_path
     fi
+
+    # Create the actual table space.
     ts_found=`psql -c '\db' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
     if [ $ts_found -eq 0 ]; then
         psql -U postgres -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
     fi
 done
 
+# Create the OpenQuake database
 echo ".. Creating database $db_name .."
 psql -U postgres -c "CREATE DATABASE $db_name"
 createlang plpgsql $db_name -U postgres
+
+# Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
 psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
 psql -d $db_name -U postgres -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
@@ -126,11 +139,13 @@ if [ -r $comments_file ]; then
     psql -d $db_name -U postgres -f $comments_file
 fi
 
+# Create OpenQuake database group if not present.
 oq_group_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
 if [ $oq_group_present -eq 0 ]; then
     psql -U postgres -c "CREATE ROLE $db_group_name"
 fi
 
+# Create OpenQuake database users/roles if/as needed.
 for role in $db_roles; do
     role_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
     if [ $role_present -eq 0 ]; then
