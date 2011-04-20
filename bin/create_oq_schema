@@ -25,6 +25,9 @@ tspace_list="admin pshai eqcat"
 schema_path=""
 db_name=""
 
+db_group_name="openquake"
+db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer"
+
 for i in $*
 do
     case $i in
@@ -123,13 +126,12 @@ if [ -r $comments_file ]; then
     psql -d $db_name -U postgres -f $comments_file
 fi
 
-oq_group_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep openquake | wc -l`
+oq_group_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
 if [ $oq_group_present -eq 0 ]; then
-    psql -U postgres -c "CREATE ROLE openquake"
+    psql -U postgres -c "CREATE ROLE $db_group_name"
 fi
 
-for role in oq_admin oq_pshai_etl oq_pshai_writer oq_eqcat_etl oq_eqcat_writer
-do
+for role in $db_roles; do
     role_present=`psql -c '\dg' -U postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
     if [ $role_present -eq 0 ]; then
         psql -U postgres -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake"
