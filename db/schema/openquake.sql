@@ -43,7 +43,7 @@ CREATE TABLE admin.organization (
 ) TABLESPACE admin_ts;
 
 
--- OpenQuake system users
+-- OpenQuake users
 CREATE TABLE admin.oq_user (
     id SERIAL PRIMARY KEY,
     user_name VARCHAR NOT NULL,
@@ -54,6 +54,60 @@ CREATE TABLE admin.oq_user (
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
+
+
+-- Earthquake catalog
+CREATE TABLE eqcat.catalog (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- This is *not* a foreign key.
+    eventid INTEGER NOT NULL,
+    agency VARCHAR NOT NULL,
+    identifier VARCHAR NOT NULL,
+    event_date timestamp without time zone NOT NULL,
+    -- error in seconds
+    event_date_eror INTEGER NOT NULL,
+    -- depth in km
+    depth float NOT NULL,
+    -- error in km
+    depth_error float NOT NULL,
+    magnitude_id INTEGER NOT NULL,
+    surface_id INTEGER NOT NULL,
+    date_created timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE eqcat_ts;
+SELECT AddGeometryColumn('eqcat', 'catalog', 'point', 4326, 'POINT', 2);
+ALTER TABLE eqcat.catalog ALTER COLUMN point SET NOT NULL;
+
+
+-- Earthquake event magnitudes
+CREATE TABLE eqcat.magnitude (
+    id SERIAL PRIMARY KEY,
+    mb_val float,
+    mb_val_error float,
+    ml_val float,
+    ml_val_error float,
+    ms_val float,
+    ms_val_error float,
+    mw_val float,
+    mw_val_error float,
+    date_created timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE eqcat_ts;
+
+
+-- Earthquake event surface (an ellipse with an angle)
+CREATE TABLE eqcat.surface (
+    id SERIAL PRIMARY KEY,
+    -- Semi-minor axis: The shortest radius of an ellipse.
+    semi_minor float NOT NULL,
+    -- Semi-major axis: The longest radius of an ellipse.
+    semi_major float NOT NULL,
+    strike float NOT NULL,
+        CONSTRAINT strike_value CHECK ((strike >= 0.0) AND (strike <= 360.0)),
+    date_created timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE eqcat_ts;
 
 
 -- rupture
@@ -391,3 +445,12 @@ FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 CREATE TRIGGER pshai_complex_fault_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_magnitude_fk
+FOREIGN KEY (magnitude_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
+FOREIGN KEY (surface_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
