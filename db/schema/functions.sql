@@ -1,5 +1,5 @@
 /*
-  OpenQuake database schema definitions.
+  Functions used in the OpenQuake database.
 
     Copyright (c) 2010-2011, GEM Foundation.
 
