@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Random;
 
 import org.gem.engine.hazard.GEM1ERF;
-import org.gem.engine.hazard.parsers.nshmp.NshmpFault2GemSourceData;
 import org.junit.Test;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
@@ -44,6 +43,33 @@ public class StochasticEventSetGeneratorTest {
                 rn);
     }
 
+    /**
+    * compute total moment rate as done by NSHMP code
+    * 
+    * @param minMag
+    *            : minimum magnitude (rounded to multiple of deltaMag and moved
+    *            to bin center)
+    * @param numMag
+    *            : number of magnitudes
+    * @param deltaMag
+    *            : magnitude bin width
+    * @param aVal
+    *            : incremental a value (defined with respect to deltaMag)
+    * @param bVal
+    *            : b value
+    * @return
+    */
+    private double totMoRate(double minMag, int numMag, double deltaMag,
+            double aVal, double bVal) {
+        double moRate = 0;
+        double mag;
+        for (int imag = 0; imag < numMag; imag++) {
+            mag = minMag + imag * deltaMag;
+            moRate += Math.pow(10, aVal - bVal * mag + 1.5 * mag + 9.05);
+        }
+        return moRate;
+    }
+    
     // @Test
     // This test needs a lot of memory resources that we don't currently have on
     // our CI VM...
@@ -109,9 +135,7 @@ public class StochasticEventSetGeneratorTest {
         mMin = mMin + dM / 2;
         mMax = mMax - dM / 2;
         int numMag = (int) ((mMax - mMin) / dM + 1);
-        double tmr =
-                NshmpFault2GemSourceData
-                        .totMoRate(mMin, numMag, dM, aVal, bVal);
+        double tmr = totMoRate(mMin, numMag, dM, aVal, bVal);
         GutenbergRichterMagFreqDist mfd =
                 new GutenbergRichterMagFreqDist(mMin, numMag, dM);
         mfd.setAllButTotCumRate(mMin, mMax, tmr, bVal);
