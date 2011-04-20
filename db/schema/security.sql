@@ -1,0 +1,83 @@
+/*
+  Roles and permissions for the OpenQuake database.
+
+    Copyright (c) 2010-2011, GEM Foundation.
+
+    OpenQuake is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License version 3
+    only, as published by the Free Software Foundation.
+
+    OpenQuake is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License version 3 for more details
+   a copy is included in the LICENSE file that accompanied this code).
+
+    You should have received a copy of the GNU Lesser General Public License
+    version 3 along with OpenQuake.  If not, see
+    <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+*/
+
+-- admin.oq_user
+GRANT SELECT PRIVILEGES ON admin.oq_user TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON admin.oq_user TO oq_admin;
+
+-- admin.organization
+GRANT SELECT PRIVILEGES ON admin.organization TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON admin.organization TO oq_admin;
+
+-- pshai.complex_fault
+GRANT SELECT PRIVILEGES ON pshai.complex_fault TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.complex_fault TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.complex_fault TO oq_pshai_writer;
+
+-- pshai.fault_edge
+GRANT SELECT PRIVILEGES ON pshai.fault_edge TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.fault_edge TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.fault_edge TO oq_pshai_writer;
+
+-- pshai.focal_mechanism
+GRANT SELECT PRIVILEGES ON pshai.focal_mechanism TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.focal_mechanism TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.focal_mechanism TO oq_pshai_writer;
+
+-- pshai.magnitude_type
+GRANT SELECT PRIVILEGES ON pshai.magnitude_type TO GROUP openquake;
+
+-- pshai.mfd_evd
+GRANT SELECT PRIVILEGES ON pshai.mfd_evd TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.mfd_evd TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.mfd_evd TO oq_pshai_writer;
+
+-- pshai.mfd_tgr
+GRANT SELECT PRIVILEGES ON pshai.mfd_tgr TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.mfd_tgr TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.mfd_tgr TO oq_pshai_writer;
+
+-- pshai.r_depth_distr
+GRANT SELECT PRIVILEGES ON pshai.r_depth_distr TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.r_depth_distr TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.r_depth_distr TO oq_pshai_writer;
+
+-- pshai.r_rate_mdl
+GRANT SELECT PRIVILEGES ON pshai.r_rate_mdl TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.r_rate_mdl TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.r_rate_mdl TO oq_pshai_writer;
+
+-- pshai.rupture
+GRANT SELECT PRIVILEGES ON pshai.rupture TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.rupture TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.rupture TO oq_pshai_writer;
+
+-- pshai.simple_fault
+GRANT SELECT PRIVILEGES ON pshai.simple_fault TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.simple_fault TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.simple_fault TO oq_pshai_writer;
+
+-- pshai.source
+GRANT SELECT PRIVILEGES ON pshai.source TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE PRIVILEGES ON pshai.source TO oq_pshai_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE PRIVILEGES ON pshai.source TO oq_pshai_writer;
+
+-- pshai.tectonic_region
+GRANT SELECT PRIVILEGES ON pshai.tectonic_region TO GROUP openquake;
