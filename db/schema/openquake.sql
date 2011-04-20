@@ -49,6 +49,8 @@ CREATE TABLE admin.oq_user (
     user_name VARCHAR NOT NULL,
     full_name VARCHAR NOT NULL,
     organization_id INTEGER NOT NULL,
+    -- Whether the data owned by the user is visible to the general public.
+    data_is_open boolean NOT NULL DEFAULT TRUE,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
