@@ -18,17 +18,19 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+-- admin.oq_user
+CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name);
 
--- fault_edge
+-- pshai.fault_edge
 CREATE INDEX pshai_fault_edge_bottom_idx ON pshai.fault_edge USING gist(bottom);
 CREATE INDEX pshai_fault_edge_top_idx ON pshai.fault_edge USING gist(top);
 
--- rupture
+-- pshai.rupture
 CREATE INDEX pshai_rupture_point_idx ON pshai.rupture USING gist(point);
 
--- simple_fault
+-- pshai.simple_fault
 CREATE INDEX pshai_simple_fault_geom_idx ON pshai.simple_fault USING gist(geom);
 
--- source
+-- pshai.source
 CREATE INDEX pshai_source_area_idx ON pshai.source USING gist(area);
 CREATE INDEX pshai_source_point_idx ON pshai.source USING gist(point);
