@@ -34,7 +34,6 @@ GRANT ALL ON SEQUENCE admin.organization_id_seq TO oq_admin;
 GRANT ALL ON SEQUENCE pshai.complex_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.fault_edge_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.focal_mechanism_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE pshai.magnitude_type_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.mfd_evd_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.mfd_tgr_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.r_depth_distr_id_seq to GROUP openquake;
@@ -42,7 +41,6 @@ GRANT ALL ON SEQUENCE pshai.r_rate_mdl_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE pshai.tectonic_region_id_seq to GROUP openquake;
 
 -- admin.oq_user
 GRANT SELECT ON admin.oq_user TO GROUP openquake;
