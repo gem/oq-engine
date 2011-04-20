@@ -19,6 +19,11 @@
 */
 
 
+-- Please note that all OpenQuake database roles are a member of the
+-- 'openquake' database group.
+-- Granting certain privileges to the 'openquake' group hence applies to all
+-- of our database users/roles.
+
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
 GRANT USAGE ON SCHEMA pshai TO GROUP openquake;
 GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
