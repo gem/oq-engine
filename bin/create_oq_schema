@@ -138,3 +138,10 @@ if [ -r $security_file ]; then
     echo ".. Running security settings file: $security_file .."
     psql -d $db_name -U postgres -f $security_file
 fi
+
+# Apply database table indexes if present.
+indexes_file="$schema_path/indexes.sql"
+if [ -r $indexes_file ]; then
+    echo ".. Applying index definitions: $indexes_file .."
+    psql -d $db_name -U postgres -f $indexes_file
+fi
