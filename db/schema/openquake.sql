@@ -454,3 +454,7 @@ FOREIGN KEY (magnitude_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
 FOREIGN KEY (surface_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON eqcat.magnitude
+FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
