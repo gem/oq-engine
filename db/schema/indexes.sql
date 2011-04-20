@@ -34,3 +34,17 @@ CREATE INDEX pshai_simple_fault_geom_idx ON pshai.simple_fault USING gist(geom);
 -- pshai.source
 CREATE INDEX pshai_source_area_idx ON pshai.source USING gist(area);
 CREATE INDEX pshai_source_point_idx ON pshai.source USING gist(point);
+
+-- index for the 'owner_id' foreign key
+CREATE INDEX pshai_complex_fault_owner_id_idx on pshai.complex_fault(owner_id);
+CREATE INDEX pshai_fault_edge_owner_id_idx on pshai.fault_edge(owner_id);
+CREATE INDEX pshai_focal_mechanism_owner_id_idx on pshai.focal_mechanism(owner_id);
+CREATE INDEX pshai_magnitude_type_owner_id_idx on pshai.magnitude_type(owner_id);
+CREATE INDEX pshai_mfd_evd_owner_id_idx on pshai.mfd_evd(owner_id);
+CREATE INDEX pshai_mfd_tgr_owner_id_idx on pshai.mfd_tgr(owner_id);
+CREATE INDEX pshai_r_depth_distr_owner_id_idx on pshai.r_depth_distr(owner_id);
+CREATE INDEX pshai_r_rate_mdl_owner_id_idx on pshai.r_rate_mdl(owner_id);
+CREATE INDEX pshai_rupture_owner_id_idx on pshai.rupture(owner_id);
+CREATE INDEX pshai_simple_fault_owner_id_idx on pshai.simple_fault(owner_id);
+CREATE INDEX pshai_source_owner_id_idx on pshai.source(owner_id);
+CREATE INDEX pshai_tectonic_region_owner_id_idx on pshai.tectonic_region(owner_id);
