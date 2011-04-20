@@ -64,7 +64,7 @@ CREATE TABLE eqcat.catalog (
     eventid INTEGER NOT NULL,
     agency VARCHAR NOT NULL,
     identifier VARCHAR NOT NULL,
-    event_date timestamp without time zone NOT NULL,
+    time timestamp without time zone NOT NULL,
     -- error in seconds
     event_date_eror INTEGER NOT NULL,
     -- depth in km
