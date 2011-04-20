@@ -66,7 +66,7 @@ CREATE TABLE eqcat.catalog (
     identifier VARCHAR NOT NULL,
     time timestamp without time zone NOT NULL,
     -- error in seconds
-    time_eror INTEGER NOT NULL,
+    time_eror float NOT NULL,
     -- depth in km
     depth float NOT NULL,
     -- error in km

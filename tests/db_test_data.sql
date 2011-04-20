@@ -21,6 +21,10 @@ INSERT INTO pshai.r_depth_distr(owner_id, gid, magnitude, depth) VALUES(1, 'r_de
 
 INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocentral_depth, r_depth_distr_id, si_type) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 79.0, 1, 'point');
 
+INSERT INTO eqcat.magnitude(mw_val) VALUES(7.6);
+INSERT INTO eqcat.surface(semi_minor, semi_major, strike) VALUES(1.01, 2.43, 298);
+INSERT INTO eqcat.catalog(owner_id, eventid, agency, identifier, time, time_eror, depth, depth_error, magnitude_id, surface_id, point) VALUES (1, 2, 'AAA', '20000105132157', now(), 11.23, 44.318, 0.77, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'));
+
 -- TEST
 -- Failure due to duplicate source (point)
 INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id, point) VALUES(1, 'rupture/2', 1, 11.0, 7.6, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)'));
@@ -81,3 +85,7 @@ INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, r_depth
 INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocentral_depth) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 79.0);
 UPDATE pshai.source SET hypocentral_depth=NUll WHERE id=2;
 UPDATE pshai.source SET r_depth_distr_id=NULL WHERE id=2;
+
+-- Failure because no magnitude value is set
+INSERT INTO eqcat.magnitude(id) VALUES(1023456789);
+UPDATE eqcat.magnitude SET mw_val=NULL WHERE id=1;
