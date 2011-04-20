@@ -23,7 +23,7 @@ INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocen
 
 INSERT INTO eqcat.magnitude(mw_val) VALUES(7.6);
 INSERT INTO eqcat.surface(semi_minor, semi_major, strike) VALUES(1.01, 2.43, 298);
-INSERT INTO eqcat.catalog(owner_id, eventid, agency, identifier, time, time_eror, depth, depth_error, magnitude_id, surface_id, point) VALUES (1, 2, 'AAA', '20000105132157', now(), 11.23, 44.318, 0.77, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'));
+INSERT INTO eqcat.catalog(owner_id, eventid, agency, identifier, time, time_error, depth, depth_error, magnitude_id, surface_id, point) VALUES (1, 2, 'AAA', '20000105132157', now(), 11.23, 44.318, 0.77, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'));
 
 -- TEST
 -- Failure due to duplicate source (point)
