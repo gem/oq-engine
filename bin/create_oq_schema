@@ -60,6 +60,10 @@ if [ -z "$db_name" ]; then
     exit 4
 fi
 
+echo '!! This will destroy *ALL* data in the OpenQuake database !!'
+echo 'Press <enter> to continue'
+read
+
 # Drop database and table spaces..
 echo ".. Dropping database $db_name .."
 psql -U postgres -c "DROP DATABASE IF EXISTS $db_name"
