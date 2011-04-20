@@ -364,6 +364,9 @@ FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRI
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
 
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_tectonic_region_fk
+FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
+
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
 FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
