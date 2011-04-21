@@ -160,7 +160,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             nrml.set_gml_id(
                 node, metadata.get(key, self.DEFAULT_METADATA[key]))
 
-        # set the rest of the <riskResult> attributes
+        # set the rest of the <lossMap> attributes
         for key in ('endBranchLabel', 'lossCategory', 'unit'):
             self.loss_map_node.set(
                 key, metadata.get(key, self.DEFAULT_METADATA[key]))
