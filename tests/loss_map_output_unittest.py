@@ -31,106 +31,186 @@ from openquake import logs
 from openquake import shapes
 from openquake import xml
 from tests.utils import helpers
-import itertools
 
 from openquake.output import risk as risk_output
 
 LOG = logs.RISK_LOG
 
-SINGLE_LOSS_MAP_XML_OUTPUT_FILE = 'loss-map-single-event.xml'
+TEST_LOSS_MAP_XML_OUTPUT_PATH = helpers.get_output_path('test-loss-map.xml')
+EXPECTED_TEST_LOSS_MAP = helpers.get_data_path('expected-test-loss-map.xml')
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR,
                                  xml.NRML_SCHEMA_FILE)
+
+LOSS_MAP_METADATA = {
+    'nrmlID': 'test_nrml_id',
+    'riskResultID': 'test_rr_id',
+    'lossMapID': 'test_lm_id',
+    'endBranchLabel': 'test_ebl',
+    'lossCategory': 'economic_loss',
+    'unit': 'EUR'}
+
+SITE_A = shapes.Site(-117.0, 38.0)
+SITE_A_ASSET_ONE = {'assetID': 'a1711'}
+SITE_A_LOSS_ONE = {'mean_loss': 0, 'stddev': 100}
+SITE_A_ASSET_TWO = {'assetID': 'a1712'}
+SITE_A_LOSS_TWO = {'mean_loss': 5, 'stddev': 2000.0}
+
+SITE_B = shapes.Site(-118.0, 39.0)
+SITE_B_ASSET_ONE = {'assetID': 'a1713'}
+SITE_B_LOSS_ONE = {'mean_loss': 120000.0, 'stddev': 2000.0}
+
+SAMPLE_LOSS_MAP_DATA = [
+    LOSS_MAP_METADATA,
+    (SITE_A, (SITE_A_LOSS_ONE, SITE_A_ASSET_ONE)),
+    (SITE_A, (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)),
+    (SITE_B, (SITE_B_LOSS_ONE, SITE_B_ASSET_ONE))]
+
+GML_ID_KEY = '{%s}id' % xml.GML_NS
+
+DEFAULT_METADATA = risk_output.LossMapXMLWriter.DEFAULT_METADATA
+
+LOSS_MAP_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit')
+
 
 class LossMapOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
     as well as correct given the inputs."""
 
     def setUp(self):
-        self.single_loss_map_path = helpers.get_output_path(
-            SINGLE_LOSS_MAP_XML_OUTPUT_FILE)
+        self.xml_writer = \
+            risk_output.LossMapXMLWriter(TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
-        # Build up some sample test data for loss maps
-        self.first_site = shapes.Site(-117.0, 38.0)
-        self.second_site = shapes.Site(-118.0, 39.0)
-
-        self.first_asset_a = {"assetID": "a1711", "endBranchLabel": "A",
-                                'lossCategory': 'economic_loss',
-                                'unit': 'EUR'}
-        self.second_asset_a = {"assetID": "a1712", "endBranchLabel": "A"}
-        self.second_asset_b = {"assetID": "a1713", "endBranchLabel": "B"}
-        self.loss_a = {'mean_loss': 0, 'stddev': 100}
-        self.loss_b = {'mean_loss': 5, 'stddev': 2000.0}
-        self.loss_c = {'mean_loss': 120000.0, 'stddev': 2000.0}
-        self.loss_map_data = [
-            (self.first_site, (self.loss_a,
-                        self.first_asset_a)),
-            (self.first_site, (self.loss_b,
-                        self.second_asset_a)),
-            (self.second_site, (self.loss_c,
-                        self.second_asset_b))]
+    def tearDown(self):
+        self.xml_writer = None
+        os.remove(TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
     def test_loss_map_output_writes_and_validates(self):
-        xml_writer = risk_output.LossMapXMLWriter(self.single_loss_map_path)
-        xml_writer.serialize(self.loss_map_data)
+        xml_writer = \
+            risk_output.LossMapXMLWriter(TEST_LOSS_MAP_XML_OUTPUT_PATH)
+        xml_writer.serialize(SAMPLE_LOSS_MAP_DATA)
         self.assertTrue(
-            xml.validates_against_xml_schema(self.single_loss_map_path,
+            xml.validates_against_xml_schema(TEST_LOSS_MAP_XML_OUTPUT_PATH,
             NRML_SCHEMA_PATH),
             "NRML instance file %s does not validate against schema" % \
-            self.single_loss_map_path)
+            TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
-    def test_loss_map_xml_is_correct(self):
-        """Assert that content of serialized loss map data
-        is correct."""
+    def test_write_metadata(self):
+        """
+        Tests the :py:meth:`risk_output.LossMapXMLWriter.write_metadata`
+        method using a normal use case.
+        """
+        self.xml_writer.write_metadata(LOSS_MAP_METADATA)
 
-        # serialize curves
-        xml_writer = risk_output.LossMapXMLWriter(
-            self.single_loss_map_path)
-        xml_writer.serialize(self.loss_map_data)
+        # Check the gml:ids first
+        for key, node in (
+            ('nrmlID', self.xml_writer.root_node),
+            ('riskResultID', self.xml_writer.risk_result_node),
+            ('lossMapID', self.xml_writer.loss_map_node)):
 
-        # parse curves DOM-style
-        xml_doc = etree.parse(self.single_loss_map_path)
+            self.assertEqual(
+                LOSS_MAP_METADATA[key],
+                node.attrib[GML_ID_KEY])
 
-        loaded_xml = xml_doc.getroot()
+        # Verify the <lossMap> attributes
+        for key in LOSS_MAP_NODE_ATTRS:
+            self.assertEqual(
+                LOSS_MAP_METADATA[key],
+                self.xml_writer.loss_map_node.attrib[key])
 
-        lmnodes = loaded_xml.findall(".//%s" % xml.RISK_LMNODE_TAG)
+    def test_write_metadata_with_some_defaults(self):
+        """
+        Tests the :py:meth:`risk_output.LossMapXMLWriter.write_metadata`
+        method using only partial metadata. For the metadata items not
+        specified, this test ensures that defaults are used.
+        """
+        partial_meta = {
+            'lossMapID': 'test_lm_id',
+            'endBranchLabel': 'test_ebl',
+            'lossCategory': 'economic_loss'}
 
-        self.assertEqual(len(lmnodes), 3)
-        for lmnode in lmnodes:
-            self.assertTrue(isinstance(lmnode, etree._Element))
-            site_tag = lmnode.findall(".//%s" % xml.RISK_SITE_TAG)
-            self.assertEqual(len(site_tag), 1)
-            for site in site_tag:
-                # checks if the point is 2 or 3 dimensions, probably
-                # in the future # we will have also 3d points
-                self.assertTrue(
-                    len(site.findtext('.//%s' % xml.GML_POS_TAG).split()) >= 2)
-                self.assertTrue(
-                    len(site.findtext('.//%s' % xml.GML_POS_TAG).split()) <= 3)
+        self.xml_writer.write_metadata(partial_meta)
 
-            loss_container_tag = lmnode.findall('.//%s' %
-                                        xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+        self.assertEqual(
+            DEFAULT_METADATA['nrmlID'],
+            self.xml_writer.root_node.attrib[GML_ID_KEY])
 
-            self.assertEqual(len(loss_container_tag), 1)
-            for loss in loss_container_tag:
-                stdev = loss.findtext('.//%s' %
-                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+        self.assertEqual(
+            DEFAULT_METADATA['riskResultID'],
+            self.xml_writer.risk_result_node.attrib[GML_ID_KEY])
 
-                self.assertTrue(isinstance(stdev, str))
+        self.assertEqual(
+            DEFAULT_METADATA['unit'],
+            self.xml_writer.loss_map_node.attrib['unit'])
 
-                mean_loss = loss.findtext('.//%s' %
-                        xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+    def test_serialize_with_no_meta(self):
+        """
+        This test serializes some sample data to an XML file. The sample data
+        does not include metadata. This test will verify that defaults are used
+        for all metadata.
+        """
+        test_data = SAMPLE_LOSS_MAP_DATA[1:]  # everything but the metadata
 
-                self.assertTrue(isinstance(mean_loss, str))
+        self.xml_writer.serialize(test_data)
 
-                # chains all losses (mean_loss, stdev)
-                loss_vals = list(itertools.chain(self.loss_a.values(),
-                                self.loss_b.values(),
-                                self.loss_c.values()))
+        for key, node, in (
+            ('nrmlID', self.xml_writer.root_node),
+            ('riskResultID', self.xml_writer.risk_result_node),
+            ('lossMapID', self.xml_writer.loss_map_node)):
+            self.assertEqual(
+                DEFAULT_METADATA[key],
+                node.attrib[GML_ID_KEY])
 
-                # checks if the current stdev value is in loss_vals
-                self.assertEqual(loss_vals.pop(loss_vals.index(float(stdev))),
-                                 float(stdev))
-                # checks if the current mean_loss value is in loss_vals
-                self.assertEqual(loss_vals.pop(loss_vals.index(float(mean_loss))), 
-                                float(mean_loss))
+        for key in LOSS_MAP_NODE_ATTRS:
+            self.assertEqual(
+                DEFAULT_METADATA[key],
+                self.xml_writer.loss_map_node.attrib[key])
+
+    def test_loss_map_xml_content_is_correct(self):
+        """
+        This tests writes some sample data to an xml file, then verifies the
+        contents.
+
+        In particular, we want to make sure the site and loss data is correct.
+        """
+        def get_xml_elems_list(path, events=('start', 'end')):
+            """
+            Use :py:function:`lxml.etree.iterparse` to build a list of the
+            elements in the given xml file.
+
+            Note: This function will hold element data in a single list. This
+            should work fine for small files, but may not perform well for
+            large files.
+
+            :param path: Path to an xml file, including file name
+            :param events: Specify open tags ('start',), close tags ('end',),
+                or both ('start', 'end'). Default is both.
+
+            :returns: A list of 2-tuples.
+                The first tuple item will be 'start' or 'end'.
+                The second will be a :py:class:`lxml.etree._Element` object
+            """
+            elems = []
+
+            for event, elem in etree.iterparse(path, events=events):
+                elems.append((event, elem))
+
+            return elems
+
+        self.xml_writer.serialize(SAMPLE_LOSS_MAP_DATA)
+
+        expected_elems = get_xml_elems_list(EXPECTED_TEST_LOSS_MAP)
+        actual_elems = get_xml_elems_list(TEST_LOSS_MAP_XML_OUTPUT_PATH)
+
+        # first, make sure out elem list from the expected data
+        # is _not_ empty (otherwise, this would be an epic test fail)
+        self.assertTrue(len(expected_elems) > 0)
+
+        # then verify the lengths of the elem lists are same
+        self.assertEqual(len(expected_elems), len(actual_elems))
+
+        # and finally, verify the actual contents are correct
+        for i, (event, elem) in enumerate(expected_elems):
+            actual_event, actual_elem = actual_elems[i]
+            self.assertEqual(event, actual_event)
+            self.assertEqual(elem.items(), actual_elem.items())

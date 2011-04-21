@@ -31,8 +31,11 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.output import nrml
+from openquake.xml import NRML_NS, GML_NS
 
 LOG = logs.RISK_LOG
+
+NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
 class BaseXMLWriter(nrml.TreeNRMLWriter):
@@ -44,7 +47,6 @@ class BaseXMLWriter(nrml.TreeNRMLWriter):
     def __init__(self, path):
         super(BaseXMLWriter, self).__init__(path)
 
-        self.assets_per_id = {}
         self.result_el = None
 
     def write(self, point, values):
@@ -72,75 +74,151 @@ class BaseXMLWriter(nrml.TreeNRMLWriter):
             self.result_el = result_el
 
 
-class LossMapXMLWriter(BaseXMLWriter):
+class LossMapXMLWriter(nrml.TreeNRMLWriter):
     """ This class serializes loss maps to NRML.
         in particular Mean Loss and Standard Deviation
     """
 
-    LM_CONTAINER_DEFAULT_ID = 'lm_1'
-    container_tag = xml.RISK_LOSS_MAP_CONTAINER_TAG
+    DEFAULT_METADATA = {
+        'nrmlID': 'undefined', 'riskResultID': 'undefined',
+        'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
+        'lossCategory': 'undefined', 'unit': 'undefined'}
 
     def __init__(self, path):
         super(LossMapXMLWriter, self).__init__(path)
         self.lmnode_counter = 0
-        self.loss_map_el = None
+
+        # Root <nrml> element:
+        self._create_root_element()
+
+        # <riskResult>
+        self.risk_result_node = \
+            etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
+
+        # <lossMap>
+        self.loss_map_node = \
+            etree.SubElement(
+                self.risk_result_node, xml.RISK_LOSS_MAP_CONTAINER_TAG)
+
+    def serialize(self, data):
+        """
+        Overrides the base `serialize` method to handle writing metadata for
+        the `nrml`, `riskResult`, and `lossMap` elements (in addition to the
+        site/asset/loss data).
+
+        :param data: List of data to serialize to the output file.
+
+            Each element should consist of a tuple of (site, (loss, asset))
+            information.
+            See :py:meth:`write` for details.
+
+            Optionally, the first element may be a dict containing metadata
+            about the loss map.
+            For example:
+            [{'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
+              'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
+              'unit': 'EUR'},
+             ...
+             <remaining data>]
+
+            If no metadata is specified, defaults will be used.
+        """
+        if isinstance(data[0], dict):
+            self.write_metadata(data[0])
+            data = data[1:]
+        else:
+            self.write_metadata(self.DEFAULT_METADATA)
+
+        super(LossMapXMLWriter, self).serialize(data)
+
+    def write_metadata(self, metadata):
+        """
+        Write gml:ids and other meta data for `nrml`, `riskResult`, and
+        `lossMap` XML elements.
+
+        :param metadata: A dict containing metadata about the loss map.
+            For example:
+            {'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
+             'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
+             'unit': 'EUR'}
+
+            If any of these items are not defined in the dict, default values
+            will be used.
+
+        :type metadata: dict
+        """
+        # set gml:id attributes:
+        for node, key in (
+            (self.root_node, 'nrmlID'),
+            (self.risk_result_node, 'riskResultID'),
+            (self.loss_map_node, 'lossMapID')):
+            nrml.set_gml_id(
+                node, metadata.get(key, self.DEFAULT_METADATA[key]))
+
+        # set the rest of the <lossMap> attributes
+        for key in ('endBranchLabel', 'lossCategory', 'unit'):
+            self.loss_map_node.set(
+                key, metadata.get(key, self.DEFAULT_METADATA[key]))
 
     def write(self, point, values):
         """Writes an asset element with loss map ratio information.
+        This method assumes that `riskResult` and `lossMap` element
+        data has already been written.
 
-        :param point: the point of the grid we want to compute
+        :param point: the region location of the data being written
         :type point: :py:class:`openquake.shapes.Site`
 
-        :param values: is a pair of (loss map values, asset_object)
-        :type values: with the following members
-            :py:class:`dict` (loss_map_vals) with the following keys:
+        :param values: is a pair of (loss dict, asset dict)
+        :type values: tuple with the following members
+            :py:class:`dict` (loss dict) with the following keys:
                 ***mean_loss*** - the Mean Loss for a certain Node/Site
                 ***stdev*** - the Standard Deviation for a certain Node/Site
 
-            :py:class:`dict` (asset_object)
+            :py:class:`dict` (asset dict)
                 ***assetID*** - the assetID
-                ***endBranchLabel*** - endBranchLabel
-                ***lossCategory*** - for example, "economic_loss"
-                ***unit*** - for example EUR
         """
-        super(LossMapXMLWriter, self).write(point, values)
+        def new_loss_node(lmnode_el, loss_dict, asset_dict):
+            """
+            Create a new asset loss node under a pre-existing parent LMNode.
+            """
+            loss_el = etree.SubElement(lmnode_el,
+                                    xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
-        (loss_map_vals, asset_object) = values
+            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_TAG,
+                        str(asset_dict['assetID']))
+            mean_loss = etree.SubElement(
+                loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+            mean_loss.text = "%s" % loss_dict['mean_loss']
+            stddev = etree.SubElement(loss_el,
+                            xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+            stddev.text = "%s" % loss_dict['stddev']
 
-        if not self.lmnode_counter:
-            self.loss_map_el = etree.SubElement(self.result_el,
-                self.container_tag)
+        loss_dict, asset_dict = values
 
-        if 'list_id' in asset_object:
-            nrml.set_gml_id(self.loss_map_el, str(
-                asset_object['list_id']))
+        # search for a Site xml node matching the input `point`
+        # Note: The following function performs a linear search
+        # and could be expensive when dealing with large loss maps.
+        site_node = self._get_site_elem_for_site(point)
+        if site_node is not None:
+            # append a new loss element to an existing LMNode
+            lmnode_el = site_node.getparent()
+            new_loss_node(lmnode_el, loss_dict, asset_dict)
         else:
-            nrml.set_gml_id(self.loss_map_el, self.LM_CONTAINER_DEFAULT_ID)
+            # Generate an id for the new LMNode
+            # Note: ids are created start at '1'
+            self.lmnode_counter += 1
+            lmnode_id = "lmn_%i" % self.lmnode_counter
 
-        if 'endBranchLabel' in asset_object:
-            self.loss_map_el.set(xml.RISK_END_BRANCH_ATTR_NAME,
-                str(asset_object[xml.RISK_END_BRANCH_ATTR_NAME]))
+            # Create the new LMNode
+            lmnode_el = etree.SubElement(self.loss_map_node,
+                xml.RISK_LMNODE_TAG)
 
-        if 'lossCategory' in asset_object:
-            self.loss_map_el.set(xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR,
-                asset_object[xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR])
+            # Set the gml:id
+            nrml.set_gml_id(lmnode_el, lmnode_id)
 
-        if 'unit' in asset_object:
-            self.loss_map_el.set(xml.RISK_LOSS_MAP_UNIT_ATTR,
-                str(asset_object[xml.RISK_LOSS_MAP_UNIT_ATTR]))
-
-        self.lmnode_counter += 1
-        lmnode_id = "s_%i" % self.lmnode_counter
-
-        # nrml:asset, needs gml:id
-        lmnode_el = etree.SubElement(self.loss_map_el,
-            xml.RISK_LMNODE_TAG)
-        nrml.set_gml_id(lmnode_el, lmnode_id)
-        self.assets_per_id[lmnode_id] = lmnode_el
-
-        # check if nrml:site is already existing
-        site_el = lmnode_el.find(xml.RISK_SITE_TAG)
-        if site_el is None:
+            # We also need Site, gml:Point, and gml:pos nodes
+            # for the new LMNode.
+            # Each one (site, point, pos) is the parent of the next.
             site_el = etree.SubElement(lmnode_el, xml.RISK_SITE_TAG)
 
             point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
@@ -149,21 +227,26 @@ class LossMapXMLWriter(BaseXMLWriter):
             pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
             pos_el.text = "%s %s" % (point.longitude, point.latitude)
 
-        elif not xml.element_equal_to_site(site_el, point):
-            error_msg = "asset %s cannot have two differing sites: %s, %s " \
-                % (lmnode_id, xml.lon_lat_from_site(site_el), point)
-            raise ValueError(error_msg)
+            # now add the loss node as a child of the LMNode
+            new_loss_node(lmnode_el, loss_dict, asset_dict)
 
-        loss_el = etree.SubElement(lmnode_el,
-                                    xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+    def _get_site_elem_for_site(self, site):
+        """
+        Searches the current xml document for a Site node matching the input
+        Site object.
 
-        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_TAG,
-                    str(asset_object['assetID']))
-        mean_loss = etree.SubElement(loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
-        mean_loss.text = "%s" % loss_map_vals['mean_loss']
-        stddev = etree.SubElement(loss_el,
-                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-        stddev.text = "%s" % loss_map_vals['stddev']
+        :param site: Site object to match with Site node in the xml document
+        :type site: :py:class:`shapes.Site` object
+
+        :returns: matching Site node (of type :py:class:`lxml.etree._Element`,
+            or None if no match is found
+        """
+        site_nodes = self.loss_map_node.xpath(
+            './nrml:LMNode/nrml:site', namespaces=NAMESPACES)
+        for node in site_nodes:
+            if xml.element_equal_to_site(node, site):
+                return node
+        return None
 
 
 class CurveXMLWriter(BaseXMLWriter):
