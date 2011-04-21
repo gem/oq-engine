@@ -75,7 +75,7 @@ class BaseXMLWriter(nrml.TreeNRMLWriter):
             self.result_el = result_el
 
 
-class LossMapXMLWriter(BaseXMLWriter):
+class LossMapXMLWriter(nrml.TreeNRMLWriter):
     """
     This class serializes loss maps to NRML. The primary contents of a loss map
     include the mean and standard deviation loss values for each asset in a
