@@ -254,23 +254,25 @@ class DeterministicEventBasedMixin:
         loss_data = []
 
         for point in block.grid(self.region):
-            gmvs = load_gmvs_for_point(self.id, point)
+            # the mean and stddev calculation functions used below
+            # require the gmvs to be wrapped in a dict with a single key:
+            # 'IMLs'
+            gmvs = {'IMLs': load_gmvs_for_point(self.id, point)}
             assets = load_assets_for_point(self.id, point)
             for asset in assets:
-                # We'll use a new SumPerGroundMotionField object
-                # to calculate the losses for each asset.
-                loss_per_asset_calc = \
-                    det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+                vuln_function = \
+                    vuln_model[asset['vulnerabilityFunctionReference']]
 
-                # the SumPerGroundMotionField add() method expects a dict
-                # with a single key ('IMLs') and value set to the sequence of
-                # GMVs
-                loss_per_asset_calc.add({'IMLs': gmvs}, asset)
+                asset_mean_loss = det.compute_mean_loss(
+                    vuln_function, gmvs, epsilon_provider, asset)
+
+                asset_stddev_loss = det.compute_stddev_loss(
+                    vuln_function, gmvs, epsilon_provider, asset)
 
                 asset_site = shapes.Site(asset['lon'], asset['lat'])
 
-                loss = ({'mean_loss': loss_per_asset_calc.mean,
-                         'stddev_loss': loss_per_asset_calc.stddev},
+                loss = ({'mean_loss': asset_mean_loss,
+                         'stddev_loss': asset_stddev_loss},
                         {'assetID': asset['assetID']})
 
                 loss_data.append((asset_site, loss))
