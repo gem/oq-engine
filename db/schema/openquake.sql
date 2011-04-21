@@ -49,6 +49,8 @@ CREATE TABLE admin.oq_user (
     user_name VARCHAR NOT NULL,
     full_name VARCHAR NOT NULL,
     organization_id INTEGER NOT NULL,
+    -- Whether the data owned by the user is visible to the general public.
+    data_is_open boolean NOT NULL DEFAULT TRUE,
     date_created timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
@@ -307,6 +309,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.focal_mechanism ADD CONSTRAINT pshai_focal_mechanism_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
 FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
 
@@ -363,6 +368,9 @@ FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRI
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_tectonic_region_fk
+FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
