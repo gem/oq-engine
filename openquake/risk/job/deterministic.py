@@ -144,7 +144,7 @@ class DeterministicEventBasedMixin:
             :py:class:`openquake.risk.job.EpsilonProvider` object
 
         :returns: 2-tuple of the following data:
-            * 1-dimensional :py:class:`numpy.array` of loss values for this
+            * 1-dimensional :py:class:`numpy.ndarray` of loss values for this
                 region block (again, 1 value per realization)
 
             * list of 2-tuples containing Site, Loss, and Asset
