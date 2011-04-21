@@ -122,7 +122,8 @@ class DeterministicRiskTestCase(unittest.TestCase):
 
         encoder = json.JSONEncoder()
 
-        assets_key = kvs.tokens.asset_key(TEST_JOB_ID, test_point.row, test_point.column)
+        assets_key = kvs.tokens.asset_key(
+            TEST_JOB_ID, test_point.row, test_point.column)
 
         # Throw the test data into the KVS.
         for asset in test_assets:
@@ -131,7 +132,8 @@ class DeterministicRiskTestCase(unittest.TestCase):
         # The data should now be in the KVS.
         # Now verify that the load_assets_for_point function returns
         # the appropriate data.
-        actual_assets = risk_job_det.load_assets_for_point(TEST_JOB_ID, test_point)
+        actual_assets = \
+            risk_job_det.load_assets_for_point(TEST_JOB_ID, test_point)
 
         kvs.flush()
 
