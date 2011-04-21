@@ -79,7 +79,7 @@ class DeterministicEventBasedMixin:
             if not task.successful():
                 raise Exception(task.result)
 
-            block_loss, block_loss_map_data  = task.result
+            block_loss, block_loss_map_data = task.result
 
             # do some basic validation on our results
             assert block_loss is not None, "Expected a result != None"
@@ -297,6 +297,7 @@ def load_gmvs_for_point(job_id, point):
     gmfs = kvs.get_client().lrange(gmfs_key, 0, -1)
     decoder = json.JSONDecoder()
     return [float(decoder.decode(x)['mag']) for x in gmfs]
+
 
 def load_assets_for_point(job_id, point):
     """
