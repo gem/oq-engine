@@ -71,6 +71,8 @@ CREATE TABLE eqcat.catalog (
     depth float NOT NULL,
     -- error in km
     depth_error float NOT NULL,
+    -- One of unknown, aftershock or foreshock
+    event_class VARCHAR,
     magnitude_id INTEGER NOT NULL,
     surface_id INTEGER NOT NULL,
     date_created timestamp without time zone
