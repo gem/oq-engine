@@ -30,7 +30,7 @@ db_name=""
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
 # What OpenQuake db users should be created?
-db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer"
+db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer opengeo_reader opengeo_writer"
 
 for i in $*
 do

@@ -42,6 +42,8 @@ GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 
+GRANT SELECT ON geometry_columns TO GROUP openquake;
+
 -- admin.oq_user
 GRANT SELECT ON admin.oq_user TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
