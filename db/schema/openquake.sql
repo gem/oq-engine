@@ -450,10 +450,10 @@ ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_magnitude_fk
-FOREIGN KEY (magnitude_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
-FOREIGN KEY (surface_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
