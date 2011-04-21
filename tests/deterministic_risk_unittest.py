@@ -28,7 +28,6 @@ from openquake import flags
 from openquake import job
 from openquake import kvs
 from openquake import shapes
-from openquake.job import mixins
 from openquake.risk.job import deterministic as risk_job_det
 
 from tests.utils import helpers
