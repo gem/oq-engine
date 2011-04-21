@@ -31,7 +31,6 @@ from openquake import logs
 from openquake import shapes
 from openquake import xml
 from tests.utils import helpers
-import itertools
 
 from openquake.output import risk as risk_output
 
