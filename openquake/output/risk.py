@@ -177,7 +177,8 @@ class LossMapXMLWriter(BaseXMLWriter):
         :type values: tuple with the following members
             :py:class:`dict` (loss dict) with the following keys:
                 ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stdev*** - the Standard Deviation for a certain Node/Site
+                ***stddev_loss*** - the Standard Deviation for a certain
+                    Node/Site
 
             :py:class:`dict` (asset dict)
                 ***assetID*** - the assetID
@@ -196,7 +197,7 @@ class LossMapXMLWriter(BaseXMLWriter):
             mean_loss.text = "%s" % loss_dict['mean_loss']
             stddev = etree.SubElement(loss_el,
                             xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-            stddev.text = "%s" % loss_dict['stddev']
+            stddev.text = "%s" % loss_dict['stddev_loss']
 
         loss_dict, asset_dict = values
 
