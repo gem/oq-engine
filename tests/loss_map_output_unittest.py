@@ -53,13 +53,13 @@ LOSS_MAP_METADATA = {
 
 SITE_A = shapes.Site(-117.0, 38.0)
 SITE_A_ASSET_ONE = {'assetID': 'a1711'}
-SITE_A_LOSS_ONE = {'mean_loss': 0, 'stddev': 100}
+SITE_A_LOSS_ONE = {'mean_loss': 0, 'stddev_loss': 100}
 SITE_A_ASSET_TWO = {'assetID': 'a1712'}
-SITE_A_LOSS_TWO = {'mean_loss': 5, 'stddev': 2000.0}
+SITE_A_LOSS_TWO = {'mean_loss': 5, 'stddev_loss': 2000.0}
 
 SITE_B = shapes.Site(-118.0, 39.0)
 SITE_B_ASSET_ONE = {'assetID': 'a1713'}
-SITE_B_LOSS_ONE = {'mean_loss': 120000.0, 'stddev': 2000.0}
+SITE_B_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
 
 SAMPLE_LOSS_MAP_DATA = [
     LOSS_MAP_METADATA,
