@@ -1,5 +1,6 @@
 -- SETUP
-INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/1', 359.0, 89.0, 179.0);
+INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/1', 351.0, 81.0, 171.0);
+INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/2', 359.0, 89.0, 179.0);
 
 INSERT INTO pshai.mfd_evd(owner_id, gid, magnitude_type_id, min_val, bin_size, mfd_values) VALUES(1, 'mfd_evd/1', 1, 1.0, 2.0, ARRAY[3.0, 4.0, 5.0]);
 
@@ -20,6 +21,10 @@ INSERT INTO pshai.r_rate_mdl(owner_id, gid, mfd_tgr_id, focal_mechanism_id, sour
 INSERT INTO pshai.r_depth_distr(owner_id, gid, magnitude, depth) VALUES(1, 'r_depth_distr/1', '{1.0, 2.0}', '{3.0, 4.0}');
 
 INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocentral_depth, r_depth_distr_id, si_type) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 79.0, 1, 'point');
+
+INSERT INTO eqcat.magnitude(mw_val) VALUES(7.6);
+INSERT INTO eqcat.surface(semi_minor, semi_major, strike) VALUES(1.01, 2.43, 298);
+INSERT INTO eqcat.catalog(owner_id, eventid, agency, identifier, time, time_error, depth, depth_error, magnitude_id, surface_id, point) VALUES (1, 2, 'AAA', '20000105132157', now(), 11.23, 44.318, 0.77, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'));
 
 -- TEST
 -- Failure due to duplicate source (point)
@@ -81,3 +86,12 @@ INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, r_depth
 INSERT INTO pshai.source(owner_id, gid, tectonic_region_id, rake, point, hypocentral_depth) VALUES(1, 'source/8', 1, 11.0, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'), 79.0);
 UPDATE pshai.source SET hypocentral_depth=NUll WHERE id=2;
 UPDATE pshai.source SET r_depth_distr_id=NULL WHERE id=2;
+
+-- Failure because no magnitude value is set
+INSERT INTO eqcat.magnitude(id) VALUES(1023456789);
+UPDATE eqcat.magnitude SET mw_val=NULL WHERE id=1;
+
+-- Is the 'last_update' time stamp refreshed on UPDATE?
+SELECT gid, last_update FROM pshai.focal_mechanism ORDER BY gid;
+UPDATE pshai.focal_mechanism SET gid='focal_mechanism/1/u' WHERE id=1;
+SELECT gid, last_update FROM pshai.focal_mechanism ORDER BY gid;

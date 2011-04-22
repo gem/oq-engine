@@ -42,6 +42,8 @@ GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 
+GRANT SELECT ON geometry_columns TO GROUP openquake;
+
 -- admin.oq_user
 GRANT SELECT ON admin.oq_user TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
@@ -49,6 +51,21 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
 -- admin.organization
 GRANT SELECT ON admin.organization TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON admin.organization TO oq_admin;
+
+-- eqcat.catalog
+GRANT SELECT ON eqcat.catalog TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON eqcat.catalog TO oq_eqcat_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.catalog TO oq_eqcat_writer;
+
+-- eqcat.magnitude
+GRANT SELECT ON eqcat.magnitude TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON eqcat.magnitude TO oq_eqcat_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.magnitude TO oq_eqcat_writer;
+
+-- eqcat.surface
+GRANT SELECT ON eqcat.surface TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON eqcat.surface TO oq_eqcat_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
 
 -- pshai.complex_fault
 GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
