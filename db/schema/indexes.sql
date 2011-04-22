@@ -21,6 +21,11 @@
 -- admin.oq_user
 CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name);
 
+-- eqcat.catalog
+CREATE INDEX eqcat_catalog_agency_idx on eqcat.catalog(agency);
+CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
+CREATE INDEX eqcat_catalog_depth_idx on eqcat.catalog(depth);
+
 -- pshai.fault_edge
 CREATE INDEX pshai_fault_edge_bottom_idx ON pshai.fault_edge USING gist(bottom);
 CREATE INDEX pshai_fault_edge_top_idx ON pshai.fault_edge USING gist(top);
@@ -36,6 +41,7 @@ CREATE INDEX pshai_source_area_idx ON pshai.source USING gist(area);
 CREATE INDEX pshai_source_point_idx ON pshai.source USING gist(point);
 
 -- index for the 'owner_id' foreign key
+CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
 CREATE INDEX pshai_complex_fault_owner_id_idx on pshai.complex_fault(owner_id);
 CREATE INDEX pshai_fault_edge_owner_id_idx on pshai.fault_edge(owner_id);
 CREATE INDEX pshai_focal_mechanism_owner_id_idx on pshai.focal_mechanism(owner_id);

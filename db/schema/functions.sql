@@ -67,6 +67,9 @@ BEGIN
         RAISE '%', exception_msg;
     END IF;
 
+    IF TG_OP = 'UPDATE' THEN
+        NEW.last_update := now();
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -144,6 +147,10 @@ BEGIN
         exception_msg := format_exc(TG_OP, 'type should be complex <' || NEW.si_type || '>', TG_TABLE_NAME);
         RAISE '%', exception_msg;
     END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        NEW.last_update := now();
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -176,9 +183,59 @@ BEGIN
         END IF;
     END IF;
 
+    IF TG_OP = 'UPDATE' THEN
+        NEW.last_update := now();
+    END IF;
     RETURN NEW;
 END;
 $$;
 
 COMMENT ON FUNCTION check_only_one_mfd_set() IS
 'Make sure only one magnitude frequency distribution is set.';
+
+CREATE OR REPLACE FUNCTION check_magnitude_data() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    num_sources INTEGER := 0;
+    exception_msg TEXT := '';
+BEGIN
+    IF NEW.mb_val IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF NEW.ml_val IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF NEW.ms_val IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF NEW.mw_val IS NOT NULL THEN
+        num_sources := num_sources + 1;
+    END IF;
+    IF num_sources = 0 THEN
+        exception_msg := format_exc(TG_OP, 'no magnitude value set', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        NEW.last_update := now();
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION check_magnitude_data() IS
+'Make sure that at least one magnitude value is set.';
+
+CREATE OR REPLACE FUNCTION refresh_last_update() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+BEGIN
+    NEW.last_update := now();
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION refresh_last_update() IS
+'Refresh the ''last_update'' time stamp whenever a row is updated.';
