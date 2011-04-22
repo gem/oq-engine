@@ -126,12 +126,27 @@ CREATE TABLE pshai.rupture (
     -- seismic input type
     si_type VARCHAR NOT NULL DEFAULT 'simple'
         CONSTRAINT si_type CHECK (si_type IN ('complex', 'point', 'simple')),
-    tectonic_region_id INTEGER NOT NULL,
+    -- Tectonic region type, one of:
+    --      Active Shallow Crust (active)
+    --      Stable Shallow Crust (stable)
+    --      Subduction Interface (interface)
+    --      Subduction IntraSlab (intraslab)
+    --      Volcanic             (volcanic)
+    tectonic_region VARCHAR NOT NULL CONSTRAINT tect_region_val
+        CHECK(tectonic_region IN (
+            'active', 'stable', 'interface', 'intraslab', 'volcanic')),
     rake float,
         CONSTRAINT rake_value CHECK (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     magnitude float NOT NULL,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
     last_update timestamp without time zone
@@ -152,7 +167,15 @@ CREATE TABLE pshai.source (
     si_type VARCHAR NOT NULL DEFAULT 'simple'
         CONSTRAINT si_type CHECK
         (si_type IN ('area', 'point', 'complex', 'simple')),
-    tectonic_region_id INTEGER NOT NULL,
+    -- Tectonic region type, one of:
+    --      Active Shallow Crust (active)
+    --      Stable Shallow Crust (stable)
+    --      Subduction Interface (interface)
+    --      Subduction IntraSlab (intraslab)
+    --      Volcanic             (volcanic)
+    tectonic_region VARCHAR NOT NULL CONSTRAINT tect_region_val
+        CHECK(tectonic_region IN (
+            'active', 'stable', 'interface', 'intraslab', 'volcanic')),
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
     rake float,
@@ -235,7 +258,14 @@ CREATE TABLE pshai.mfd_evd (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
     bin_size float NOT NULL,
     mfd_values float[] NOT NULL,
@@ -254,7 +284,14 @@ CREATE TABLE pshai.mfd_tgr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
     max_val float NOT NULL,
     a_val float NOT NULL,
@@ -274,7 +311,14 @@ CREATE TABLE pshai.r_depth_distr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     magnitude float[] NOT NULL,
     depth float[] NOT NULL,
     last_update timestamp without time zone
@@ -322,22 +366,6 @@ CREATE TABLE pshai.focal_mechanism (
 ) TABLESPACE pshai_ts;
 
 
--- Enumeration of tectonic region types
-CREATE TABLE pshai.tectonic_region (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    name VARCHAR NOT NULL
-) TABLESPACE pshai_ts;
-
-
--- Enumeration of magnitude types
-CREATE TABLE pshai.magnitude_type (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    name VARCHAR NOT NULL
-) TABLESPACE pshai_ts;
-
-
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
@@ -359,12 +387,6 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.tectonic_region ADD CONSTRAINT pshai_tectonic_region_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.magnitude_type ADD CONSTRAINT pshai_magnitude_type_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -380,23 +402,8 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
-FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
-
 ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_fault_edge_fk
 FOREIGN KEY (fault_edge_id) REFERENCES pshai.fault_edge(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
@@ -436,9 +443,6 @@ FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRI
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_tectonic_region_fk
-FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
