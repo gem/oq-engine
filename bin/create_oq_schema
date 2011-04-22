@@ -113,7 +113,7 @@ done
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
 psql -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name"
-createlang plpgsql $db_name
+createlang plpgsql -d $db_name -U $db_admin_user
 
 # Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
