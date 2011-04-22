@@ -19,6 +19,12 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+COMMENT ON DATABASE my_database IS 'OpenQuake database (http://openquake.org/)';
+
+COMMENT ON SCHEMA admin IS 'Administrative data';
+COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
+COMMENT ON SCHEMA pshai IS 'PSHA input model';
+
 COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
 COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQuake database';
 COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the user is visible to the general public.';
@@ -49,18 +55,46 @@ COMMENT ON COLUMN pshai.fault_edge.top IS 'Top fault edge.';
 
 COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
 
-COMMENT ON TABLE pshai.magnitude_type IS 'Enumeration of magnitude types.';
-
 COMMENT ON TABLE pshai.mfd_evd IS 'Magnitude frequency distribution, evenly discretized.';
+COMMENT ON COLUMN pshai.mfd_evd.magnitude_type IS 'Magnitude type i.e. one of:
+    - body wave magnitude (Mb)
+    - duration magnitude (Md)
+    - local magnitude (Ml)
+    - surface wave magnitude (Ms)
+    - moment magnitude (Mw)';
 
 COMMENT ON TABLE pshai.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
+COMMENT ON COLUMN pshai.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
+    - body wave magnitude (Mb)
+    - duration magnitude (Md)
+    - local magnitude (Ml)
+    - surface wave magnitude (Ms)
+    - moment magnitude (Mw)';
 
 COMMENT ON TABLE pshai.r_depth_distr IS 'Rupture depth distribution.';
+COMMENT ON COLUMN pshai.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
+    - body wave magnitude (Mb)
+    - duration magnitude (Md)
+    - local magnitude (Ml)
+    - surface wave magnitude (Ms)
+    - moment magnitude (Mw)';
 
 COMMENT ON TABLE pshai.r_rate_mdl IS 'Rupture rate model.';
 
 COMMENT ON TABLE pshai.rupture IS 'A rupture, can be based on a point or a complex or simple fault.';
 COMMENT ON COLUMN pshai.rupture.si_type IS 'The rupture''s seismic input type: can be one of: point, complex or simple.';
+COMMENT ON COLUMN pshai.rupture.magnitude_type IS 'Magnitude type i.e. one of:
+    - body wave magnitude (Mb)
+    - duration magnitude (Md)
+    - local magnitude (Ml)
+    - surface wave magnitude (Ms)
+    - moment magnitude (Mw)';
+COMMENT ON COLUMN pshai.rupture.tectonic_region IS 'Tectonic region type i.e. one of:
+    - Active Shallow Crust (active)
+    - Stable Shallow Crust (stable)
+    - Subduction Interface (interface)
+    - Subduction IntraSlab (intraslab)
+    - Volcanic             (volcanic)';
 
 COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
 COMMENT ON COLUMN pshai.simple_fault.dip IS 'The fault''s inclination angle with respect to the plane.';
@@ -70,5 +104,9 @@ COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surfac
 
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
 COMMENT ON COLUMN pshai.source.si_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-
-COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
+COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one of:
+    - Active Shallow Crust (active)
+    - Stable Shallow Crust (stable)
+    - Subduction Interface (interface)
+    - Subduction IntraSlab (intraslab)
+    - Volcanic             (volcanic)';

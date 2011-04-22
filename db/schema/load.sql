@@ -21,12 +21,3 @@
 
 INSERT INTO admin.organization(name) VALUES('GEM Foundation');
 INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Active Shallow Crust', 1);
-INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Stable Shallow Crust', 1);
-INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Subduction Interface', 1);
-INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Subduction IntraSlab', 1);
-INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Volcanic', 1);
-
-INSERT INTO pshai.magnitude_type(name, owner_id) VALUES('Mw', 1);
-INSERT INTO pshai.magnitude_type(name, owner_id) VALUES('ML', 1);
