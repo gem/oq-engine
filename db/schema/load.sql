@@ -27,6 +27,3 @@ INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Stable Shallow Crust',
 INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Subduction Interface', 1);
 INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Subduction IntraSlab', 1);
 INSERT INTO pshai.tectonic_region(name, owner_id) VALUES('Volcanic', 1);
-
-INSERT INTO pshai.magnitude_type(name, owner_id) VALUES('Mw', 1);
-INSERT INTO pshai.magnitude_type(name, owner_id) VALUES('ML', 1);

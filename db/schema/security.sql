@@ -82,9 +82,6 @@ GRANT SELECT ON pshai.focal_mechanism TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.focal_mechanism TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.focal_mechanism TO oq_pshai_writer;
 
--- pshai.magnitude_type
-GRANT SELECT ON pshai.magnitude_type TO GROUP openquake;
-
 -- pshai.mfd_evd
 GRANT SELECT ON pshai.mfd_evd TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.mfd_evd TO oq_pshai_etl;

@@ -131,7 +131,14 @@ CREATE TABLE pshai.rupture (
         CONSTRAINT rake_value CHECK (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     magnitude float NOT NULL,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
     last_update timestamp without time zone
@@ -235,7 +242,14 @@ CREATE TABLE pshai.mfd_evd (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
     bin_size float NOT NULL,
     mfd_values float[] NOT NULL,
@@ -254,7 +268,14 @@ CREATE TABLE pshai.mfd_tgr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
     max_val float NOT NULL,
     a_val float NOT NULL,
@@ -274,7 +295,14 @@ CREATE TABLE pshai.r_depth_distr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     magnitude float[] NOT NULL,
     depth float[] NOT NULL,
     last_update timestamp without time zone
@@ -330,14 +358,6 @@ CREATE TABLE pshai.tectonic_region (
 ) TABLESPACE pshai_ts;
 
 
--- Enumeration of magnitude types
-CREATE TABLE pshai.magnitude_type (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    name VARCHAR NOT NULL
-) TABLESPACE pshai_ts;
-
-
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
@@ -362,9 +382,6 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.tectonic_region ADD CONSTRAINT pshai_tectonic_region_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.magnitude_type ADD CONSTRAINT pshai_magnitude_type_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -385,18 +402,6 @@ FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE 
 
 ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_fault_edge_fk
 FOREIGN KEY (fault_edge_id) REFERENCES pshai.fault_edge(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
