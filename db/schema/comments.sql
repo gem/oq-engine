@@ -25,9 +25,10 @@ COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the u
 
 COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the surface is kept in separate tables.';
 COMMENT ON COLUMN eqcat.catalog.depth IS 'Earthquake (in km)';
-COMMENT ON COLUMN eqcat.catalog.time IS 'Earthquake time';
+COMMENT ON COLUMN eqcat.catalog.event_class IS 'Either unknown (NULL) or one of: ''aftershock'', ''foreshock''.';
 COMMENT ON COLUMN eqcat.catalog.magnitude_id IS 'Foreign key to the row with the magnitude data.';
 COMMENT ON COLUMN eqcat.catalog.surface_id IS 'Foreign key to the row with the earthquake surface data.';
+COMMENT ON COLUMN eqcat.catalog.time IS 'Earthquake time';
 
 COMMENT ON TABLE eqcat.magnitude IS 'Table with earthquake magnitudes in different units of measurement. At least one magnitude value must be set.';
 

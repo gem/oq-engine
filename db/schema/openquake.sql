@@ -73,6 +73,9 @@ CREATE TABLE eqcat.catalog (
     depth_error float NOT NULL,
     -- One of unknown, aftershock or foreshock
     event_class VARCHAR,
+        CONSTRAINT event_class_value CHECK (
+            event_class is NULL
+            OR (event_class IN ('aftershock', 'foreshock'))),
     magnitude_id INTEGER NOT NULL,
     surface_id INTEGER NOT NULL,
     date_created timestamp without time zone
