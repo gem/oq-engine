@@ -38,7 +38,7 @@ CREATE TABLE admin.organization (
     name VARCHAR NOT NULL,
     address VARCHAR,
     url VARCHAR,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
 
@@ -51,7 +51,7 @@ CREATE TABLE admin.oq_user (
     organization_id INTEGER NOT NULL,
     -- Whether the data owned by the user is visible to the general public.
     data_is_open boolean NOT NULL DEFAULT TRUE,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
 
@@ -78,7 +78,7 @@ CREATE TABLE eqcat.catalog (
             OR (event_class IN ('aftershock', 'foreshock'))),
     magnitude_id INTEGER NOT NULL,
     surface_id INTEGER NOT NULL,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE eqcat_ts;
 SELECT AddGeometryColumn('eqcat', 'catalog', 'point', 4326, 'POINT', 2);
@@ -96,7 +96,7 @@ CREATE TABLE eqcat.magnitude (
     ms_val_error float,
     mw_val float,
     mw_val_error float,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE eqcat_ts;
 
@@ -110,7 +110,7 @@ CREATE TABLE eqcat.surface (
     semi_major float NOT NULL,
     strike float NOT NULL,
         CONSTRAINT strike_value CHECK ((strike >= 0.0) AND (strike <= 360.0)),
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE eqcat_ts;
 
@@ -134,7 +134,7 @@ CREATE TABLE pshai.rupture (
     magnitude_type_id INTEGER NOT NULL DEFAULT 1,
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
@@ -162,7 +162,7 @@ CREATE TABLE pshai.source (
     -- point/area sources
     hypocentral_depth float,
     r_depth_distr_id INTEGER,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'source', 'point', 4326, 'POINT', 2);
@@ -185,7 +185,7 @@ CREATE TABLE pshai.simple_fault (
         CONSTRAINT lower_depth_val CHECK (lower_depth >= 0.0),
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 3);
@@ -204,7 +204,7 @@ CREATE TABLE pshai.complex_fault (
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
     fault_edge_id INTEGER NOT NULL,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'complex_fault', 'outline', 4326, 'POLYGON', 3);
@@ -218,7 +218,7 @@ CREATE TABLE pshai.fault_edge (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 3);
@@ -240,7 +240,9 @@ CREATE TABLE pshai.mfd_evd (
     bin_size float NOT NULL,
     mfd_values float[] NOT NULL,
     total_cumulative_rate float,
-    total_moment_rate float
+    total_moment_rate float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -258,7 +260,9 @@ CREATE TABLE pshai.mfd_tgr (
     a_val float NOT NULL,
     b_val float NOT NULL,
     total_cumulative_rate float,
-    total_moment_rate float
+    total_moment_rate float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -272,7 +276,9 @@ CREATE TABLE pshai.r_depth_distr (
     description VARCHAR,
     magnitude_type_id INTEGER NOT NULL DEFAULT 1,
     magnitude float[] NOT NULL,
-    depth float[] NOT NULL
+    depth float[] NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -289,7 +295,9 @@ CREATE TABLE pshai.r_rate_mdl (
     focal_mechanism_id INTEGER NOT NULL,
     -- There can be 1+ rupture rate models associated with a seismic source
     -- that's why the foreign key sits here.
-    source_id INTEGER NOT NULL
+    source_id INTEGER NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -309,7 +317,8 @@ CREATE TABLE pshai.focal_mechanism (
     rake float,
         CONSTRAINT rake_value CHECK (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
-    date_created timestamp without time zone DEFAULT timezone('UTC'::text, now()) NOT NULL
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -463,3 +472,21 @@ FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
 FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
+
+CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_user FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_fault_edge_refresh_last_update_trig BEFORE UPDATE ON pshai.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON pshai.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON pshai.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();

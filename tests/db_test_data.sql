@@ -1,5 +1,6 @@
 -- SETUP
-INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/1', 359.0, 89.0, 179.0);
+INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/1', 351.0, 81.0, 171.0);
+INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/2', 359.0, 89.0, 179.0);
 
 INSERT INTO pshai.mfd_evd(owner_id, gid, magnitude_type_id, min_val, bin_size, mfd_values) VALUES(1, 'mfd_evd/1', 1, 1.0, 2.0, ARRAY[3.0, 4.0, 5.0]);
 
@@ -89,3 +90,8 @@ UPDATE pshai.source SET r_depth_distr_id=NULL WHERE id=2;
 -- Failure because no magnitude value is set
 INSERT INTO eqcat.magnitude(id) VALUES(1023456789);
 UPDATE eqcat.magnitude SET mw_val=NULL WHERE id=1;
+
+-- Is the 'last_update' time stamp refreshed on UPDATE?
+SELECT gid, last_update FROM pshai.focal_mechanism ORDER BY gid;
+UPDATE pshai.focal_mechanism SET gid='focal_mechanism/1/u' WHERE id=1;
+SELECT gid, last_update FROM pshai.focal_mechanism ORDER BY gid;
