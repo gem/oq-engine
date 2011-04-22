@@ -89,6 +89,12 @@ COMMENT ON COLUMN pshai.rupture.magnitude_type IS 'Magnitude type i.e. one of:
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
+COMMENT ON COLUMN pshai.rupture.tectonic_region IS 'Tectonic region type i.e. one of:
+    - Active Shallow Crust (active)
+    - Stable Shallow Crust (stable)
+    - Subduction Interface (interface)
+    - Subduction IntraSlab (intraslab)
+    - Volcanic             (volcanic)';
 
 COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
 COMMENT ON COLUMN pshai.simple_fault.dip IS 'The fault''s inclination angle with respect to the plane.';
@@ -98,5 +104,9 @@ COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surfac
 
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
 COMMENT ON COLUMN pshai.source.si_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-
-COMMENT ON TABLE pshai.tectonic_region IS 'Enumeration of tectonic region types';
+COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one of:
+    - Active Shallow Crust (active)
+    - Stable Shallow Crust (stable)
+    - Subduction Interface (interface)
+    - Subduction IntraSlab (intraslab)
+    - Volcanic             (volcanic)';

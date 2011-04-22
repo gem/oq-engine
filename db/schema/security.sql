@@ -116,6 +116,3 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
 GRANT SELECT ON pshai.source TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.source TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_pshai_writer;
-
--- pshai.tectonic_region
-GRANT SELECT ON pshai.tectonic_region TO GROUP openquake;

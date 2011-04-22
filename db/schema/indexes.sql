@@ -52,4 +52,3 @@ CREATE INDEX pshai_r_rate_mdl_owner_id_idx on pshai.r_rate_mdl(owner_id);
 CREATE INDEX pshai_rupture_owner_id_idx on pshai.rupture(owner_id);
 CREATE INDEX pshai_simple_fault_owner_id_idx on pshai.simple_fault(owner_id);
 CREATE INDEX pshai_source_owner_id_idx on pshai.source(owner_id);
-CREATE INDEX pshai_tectonic_region_owner_id_idx on pshai.tectonic_region(owner_id);
