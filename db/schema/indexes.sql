@@ -25,6 +25,7 @@ CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name)
 CREATE INDEX eqcat_catalog_agency_idx on eqcat.catalog(agency);
 CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
 CREATE INDEX eqcat_catalog_depth_idx on eqcat.catalog(depth);
+CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
 
 -- pshai.fault_edge
 CREATE INDEX pshai_fault_edge_bottom_idx ON pshai.fault_edge USING gist(bottom);
