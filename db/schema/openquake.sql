@@ -56,6 +56,16 @@ CREATE TABLE admin.oq_user (
 ) TABLESPACE admin_ts;
 
 
+-- Revision information
+CREATE TABLE admin.revision_info (
+    id SERIAL PRIMARY KEY,
+    artefact VARCHAR NOT NULL,
+    revision VARCHAR NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE admin_ts;
+
+
 -- Earthquake catalog
 CREATE TABLE eqcat.catalog (
     id SERIAL PRIMARY KEY,
