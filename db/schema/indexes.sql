@@ -21,6 +21,9 @@
 -- admin.oq_user
 CREATE UNIQUE INDEX admin_oq_user_user_name_uniq_idx ON admin.oq_user(user_name);
 
+-- admin.revision_info
+CREATE UNIQUE INDEX admin_revision_info_artefact_uniq_idx ON admin.revision_info(artefact);
+
 -- eqcat.catalog
 CREATE INDEX eqcat_catalog_agency_idx on eqcat.catalog(agency);
 CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
