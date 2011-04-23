@@ -28,6 +28,9 @@ COMMENT ON SCHEMA pshai IS 'PSHA input model';
 COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
 COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQuake database';
 COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the user is visible to the general public.';
+COMMENT ON TABLE admin.revision_info IS 'Facilitates the keeping of revision information for the OpenQuake database and/or its artefacts (schemas, tables etc.)';
+COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database artefact for which we wish to store revision information.';
+COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
 
 COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the event surface is kept in separate tables.';
 COMMENT ON COLUMN eqcat.catalog.depth IS 'Earthquake depth (in km)';
