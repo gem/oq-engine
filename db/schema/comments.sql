@@ -31,6 +31,7 @@ COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the u
 COMMENT ON TABLE admin.revision_info IS 'Facilitates the keeping of revision information for the OpenQuake database and/or its artefacts (schemas, tables etc.)';
 COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database artefact for which we wish to store revision information.';
 COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
+COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the revision information was last updated. Please note: this time stamp is not refreshed automatically. It is expected that schema/data migration scripts will modify this as appropriate.';
 
 COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the event surface is kept in separate tables.';
 COMMENT ON COLUMN eqcat.catalog.depth IS 'Earthquake depth (in km)';
