@@ -21,3 +21,7 @@
 
 INSERT INTO admin.organization(name) VALUES('GEM Foundation');
 INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+
+INSERT INTO admin.revision_info(artefact, revision) VALUES('database:openquake', '0.3.8-2');
+INSERT INTO admin.revision_info(artefact, revision) VALUES('schema:openquake.eqcat', '0.3.8-2');
+INSERT INTO admin.revision_info(artefact, revision) VALUES('schema:openquake.pshai', '0.3.8-2');
