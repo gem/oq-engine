@@ -30,6 +30,15 @@ db_name=""
 
 db_admin_user="postgres"
 
+this_is_linux=0
+# Are we running on linux?
+if [ -f "`which uname`" ]; then
+    os_name=`uname | tr '[:upper:]' '[:lower:]' | cut -f1`
+    if [ "$os_name" = "linux" ]; then
+        this_is_linux=1
+    fi
+fi
+
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
 # What OpenQuake db users should be created?
@@ -100,7 +109,11 @@ for tspace in $tspace_list; do
     if [ $? -ne 0 ]; then
         echo ".. Creating table space path $full_tspace_path .."
         sudo mkdir -p $full_tspace_path
-        sudo chown -R postgres.postgres $full_tspace_path
+        if [ $this_is_linux ]; then
+            sudo chown -R postgres.postgres $full_tspace_path
+        else
+            sudo chown -R postgres $full_tspace_path
+        fi
     fi
 
     # Create the actual table space.
