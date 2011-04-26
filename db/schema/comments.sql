@@ -53,6 +53,7 @@ COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude 
 COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a fault edge.';
 COMMENT ON COLUMN pshai.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
 
+COMMENT ON VIEW pshai.complex_rupture IS 'A complex rupture view, needed for opengeo server integration.';
 COMMENT ON VIEW pshai.complex_source IS 'A complex source view, needed for opengeo server integration.';
 
 COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
@@ -108,6 +109,7 @@ COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth
 COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
 COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
+COMMENT ON VIEW pshai.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
 COMMENT ON VIEW pshai.simple_source IS 'A simple source view, needed for opengeo server integration.';
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
 COMMENT ON COLUMN pshai.source.si_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
