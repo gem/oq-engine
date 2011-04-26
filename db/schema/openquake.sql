@@ -240,6 +240,21 @@ WHERE
     AND src.simple_fault_id = sfault.id;
 
 
+-- simple rupture view, needed for Opengeo server integration
+CREATE VIEW pshai.simple_rupture (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    simple_fault) AS
+SELECT
+    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
+    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
+    sfault.geom
+FROM
+    pshai.rupture rup, pshai.simple_fault sfault
+WHERE
+    rup.si_type = 'simple'
+    AND rup.simple_fault_id = sfault.id;
+
+
 -- Complex fault geometry
 CREATE TABLE pshai.complex_fault (
     id SERIAL PRIMARY KEY,
@@ -286,6 +301,21 @@ FROM
 WHERE
     src.si_type = 'complex'
     AND src.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
+
+
+-- complex rupture view, needed for Opengeo server integration
+CREATE VIEW pshai.complex_rupture (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    top_edge, bottom_edge) AS
+SELECT
+    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
+    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
+    fedge.top, fedge.bottom
+FROM
+    pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
+WHERE
+    rup.si_type = 'complex'
+    AND rup.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
 
 
 -- Magnitude frequency distribution, Evenly discretized
