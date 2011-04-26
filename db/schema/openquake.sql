@@ -226,6 +226,20 @@ ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
 
+-- simple source view, needed for Opengeo server integration
+CREATE VIEW pshai.simple_source (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    simple_fault) AS
+SELECT
+    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
+    src.tectonic_region, src.rake, sfault.geom
+FROM
+    pshai.source src, pshai.simple_fault sfault
+WHERE
+    src.si_type = 'simple'
+    AND src.simple_fault_id = sfault.id;
+
+
 -- Complex fault geometry
 CREATE TABLE pshai.complex_fault (
     id SERIAL PRIMARY KEY,
