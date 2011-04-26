@@ -221,8 +221,8 @@ CREATE TABLE pshai.simple_fault (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 3);
-ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'edge', 4326, 'LINESTRING', 3);
+ALTER TABLE pshai.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
 
@@ -232,7 +232,7 @@ CREATE VIEW pshai.simple_source (
     simple_fault) AS
 SELECT
     src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, sfault.geom
+    src.tectonic_region, src.rake, sfault.edge
 FROM
     pshai.source src, pshai.simple_fault sfault
 WHERE
@@ -247,7 +247,7 @@ CREATE VIEW pshai.simple_rupture (
 SELECT
     rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
     rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    sfault.geom
+    sfault.edge
 FROM
     pshai.rupture rup, pshai.simple_fault sfault
 WHERE
