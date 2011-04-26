@@ -257,6 +257,20 @@ CREATE TABLE pshai.complex_fault (
 SELECT AddGeometryColumn('pshai', 'complex_fault', 'outline', 4326, 'POLYGON', 3);
 
 
+-- complex source view, needed for Opengeo server integration
+CREATE VIEW pshai.complex_source (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    top_edge, bottom_edge) AS
+SELECT
+    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
+    src.tectonic_region, src.rake, fedge.top, fedge.bottom
+FROM
+    pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
+WHERE
+    src.si_type = 'complex'
+    AND src.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
+
+
 -- Fault edge
 CREATE TABLE pshai.fault_edge (
     id SERIAL PRIMARY KEY,
