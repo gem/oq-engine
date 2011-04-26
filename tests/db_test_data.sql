@@ -26,6 +26,12 @@ INSERT INTO eqcat.magnitude(mw_val) VALUES(7.6);
 INSERT INTO eqcat.surface(semi_minor, semi_major, strike) VALUES(1.01, 2.43, 298);
 INSERT INTO eqcat.catalog(owner_id, eventid, agency, identifier, time, time_error, depth, depth_error, magnitude_id, surface_id, point) VALUES (1, 2, 'AAA', '20000105132157', now(), 11.23, 44.318, 0.77, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28)'));
 
+INSERT INTO pshai.source(owner_id, gid, si_type, tectonic_region, hypocentral_depth, r_depth_distr_id, area) VALUES (1, 'area-source/1', 'area', 'active', 1.1, 1, ST_GeomFromEWKT('SRID=4326;POLYGON((-120.416267395 35.8784446716, -120.419479370 35.8811035156, -120.422492981 35.8836975098, -120.425315857 35.8864784241, -120.427146912 35.8882675171, -120.416267395 35.8784446716))'));
+
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, mfd_tgr_id, geom) VALUES (1, 'sfault/sa/ca/1', 22.0, 77.0, 55.0, 1, ST_GeomFromEWKT('SRID=4326;LINESTRING(-120.427154541 35.8882789612 0.0, -120.427444458 35.8886375427 0.0, -120.427772522 35.8890228271 0.0, -120.428138733 35.8895149231 0.0, -120.428367615 35.8898086548 0.0, -120.428634644 35.8900680542 0.0, -120.429069519 35.8903884888 0.0, -120.429527283 35.8906517029 0.0, -120.430030823 35.8909835815 0.0, -120.430473328 35.8912582397 0.0, -120.431053162 35.8917007446 0.0, -120.431449890 35.8920516968 0.0, -120.431922913 35.8925056458 0.0, -120.432495117 35.8929824829 0.0, -120.433471680 35.8938980103 0.0, -120.433784485 35.8942146301 0.0)'));
+
+INSERT INTO pshai.source(owner_id, gid, si_type, tectonic_region, simple_fault_id) VALUES (1, 'simple-source/sa/ca/10', 'simple', 'active', 10);
+
 -- TEST
 -- Failure due to duplicate source (point)
 INSERT INTO pshai.rupture(owner_id, gid, tectonic_region_id, rake, magnitude, magnitude_type_id, simple_fault_id, point) VALUES(1, 'rupture/2', 1, 11.0, 7.6, 1, 1, ST_GeomFromEWKT('SRID=4326;POINT(-80 28 0)'));
