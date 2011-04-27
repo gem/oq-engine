@@ -64,6 +64,7 @@ JAVA_CLASSES = {
     "GMPEDeserializer" : "org.gem.ScalarIntensityMeasureRelationshipApiDeserializer",
     "JsonPrimitive" : "com.google.gson.JsonPrimitive",
     "GMFCalculator" : "org.gem.calc.GroundMotionFieldCalculator",
+    "SourceModelReader": "org.gem.engine.hazard.parsers.SourceModelReader",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
