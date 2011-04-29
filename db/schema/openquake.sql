@@ -221,9 +221,38 @@ CREATE TABLE pshai.simple_fault (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 3);
-ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'edge', 4326, 'LINESTRING', 3);
+ALTER TABLE pshai.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
+
+
+-- simple source view, needed for Opengeo server integration
+CREATE VIEW pshai.simple_source (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    simple_fault) AS
+SELECT
+    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
+    src.tectonic_region, src.rake, sfault.edge
+FROM
+    pshai.source src, pshai.simple_fault sfault
+WHERE
+    src.si_type = 'simple'
+    AND src.simple_fault_id = sfault.id;
+
+
+-- simple rupture view, needed for Opengeo server integration
+CREATE VIEW pshai.simple_rupture (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    simple_fault) AS
+SELECT
+    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
+    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
+    sfault.edge
+FROM
+    pshai.rupture rup, pshai.simple_fault sfault
+WHERE
+    rup.si_type = 'simple'
+    AND rup.simple_fault_id = sfault.id;
 
 
 -- Complex fault geometry
@@ -258,6 +287,35 @@ SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 3);
 SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 3);
 ALTER TABLE pshai.fault_edge ALTER COLUMN top SET NOT NULL;
 ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
+
+
+-- complex source view, needed for Opengeo server integration
+CREATE VIEW pshai.complex_source (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    top_edge, bottom_edge) AS
+SELECT
+    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
+    src.tectonic_region, src.rake, fedge.top, fedge.bottom
+FROM
+    pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
+WHERE
+    src.si_type = 'complex'
+    AND src.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
+
+
+-- complex rupture view, needed for Opengeo server integration
+CREATE VIEW pshai.complex_rupture (
+    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
+    top_edge, bottom_edge) AS
+SELECT
+    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
+    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
+    fedge.top, fedge.bottom
+FROM
+    pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
+WHERE
+    rup.si_type = 'complex'
+    AND rup.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
 
 
 -- Magnitude frequency distribution, Evenly discretized

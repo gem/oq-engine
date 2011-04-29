@@ -38,7 +38,7 @@ CREATE INDEX pshai_fault_edge_top_idx ON pshai.fault_edge USING gist(top);
 CREATE INDEX pshai_rupture_point_idx ON pshai.rupture USING gist(point);
 
 -- pshai.simple_fault
-CREATE INDEX pshai_simple_fault_geom_idx ON pshai.simple_fault USING gist(geom);
+CREATE INDEX pshai_simple_fault_edge_idx ON pshai.simple_fault USING gist(edge);
 
 -- pshai.source
 CREATE INDEX pshai_source_area_idx ON pshai.source USING gist(area);
