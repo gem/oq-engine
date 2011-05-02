@@ -322,10 +322,6 @@ WHERE
 CREATE TABLE pshai.mfd_evd (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    -- gml:id
-    gid VARCHAR NOT NULL,
-    name VARCHAR,
-    description VARCHAR,
     -- One of:
     --      body wave magnitude (Mb)
     --      duration magnitude (Md)
@@ -348,10 +344,6 @@ CREATE TABLE pshai.mfd_evd (
 CREATE TABLE pshai.mfd_tgr (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    -- gml:id
-    gid VARCHAR NOT NULL,
-    name VARCHAR,
-    description VARCHAR,
     -- One of:
     --      body wave magnitude (Mb)
     --      duration magnitude (Md)
