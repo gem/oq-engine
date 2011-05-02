@@ -2,9 +2,9 @@
 INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/1', 351.0, 81.0, 171.0);
 INSERT INTO pshai.focal_mechanism(owner_id, gid, strike, dip, rake) VALUES(1, 'focal_mechanism/2', 359.0, 89.0, 179.0);
 
-INSERT INTO pshai.mfd_evd(owner_id, gid, min_val, bin_size, mfd_values) VALUES(1, 'mfd_evd/1', 1.0, 2.0, ARRAY[3.0, 4.0, 5.0]);
+INSERT INTO pshai.mfd_evd(owner_id, min_val, bin_size, mfd_values) VALUES(1, 1.0, 2.0, ARRAY[3.0, 4.0, 5.0]);
 
-INSERT INTO pshai.mfd_tgr(owner_id, gid, min_val, max_val, a_val, b_val) VALUES(1, 'mfd_tgr/1', 2.0, 3.0, 4.0, 5.0);
+INSERT INTO pshai.mfd_tgr(owner_id, min_val, max_val, a_val, b_val) VALUES(1, 2.0, 3.0, 4.0, 5.0);
 
 INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, edge, mfd_tgr_id) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 11,-90 29 9)'), 1);
 
