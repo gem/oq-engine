@@ -61,6 +61,8 @@ CREATE TABLE admin.revision_info (
     id SERIAL PRIMARY KEY,
     artefact VARCHAR NOT NULL,
     revision VARCHAR NOT NULL,
+    -- The step will be used for schema upgrades and data migrations.
+    step INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
