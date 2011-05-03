@@ -24,6 +24,7 @@ COMMENT ON DATABASE my_database IS 'OpenQuake database (http://openquake.org/)';
 COMMENT ON SCHEMA admin IS 'Administrative data';
 COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA pshai IS 'PSHA input model';
+COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
 
 COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
 COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQuake database';
@@ -124,3 +125,9 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction Interface (interface)
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
+
+COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
+COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, probabilistic or deterministic.';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: created, in progress, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
