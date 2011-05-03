@@ -54,5 +54,5 @@ Copyright (c) 2010, GEM Foundation.
 __version__ = (
     0,  # major
     3,  # minor
-    8,  # sprint number
+    9,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!
