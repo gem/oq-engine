@@ -25,8 +25,9 @@
 -- of our database users/roles.
 
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
-GRANT USAGE ON SCHEMA pshai TO GROUP openquake;
 GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
+GRANT USAGE ON SCHEMA pshai TO GROUP openquake;
+GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
 GRANT ALL ON SEQUENCE admin.oq_user_id_seq TO oq_admin;
 GRANT ALL ON SEQUENCE admin.organization_id_seq TO oq_admin;
@@ -41,6 +42,8 @@ GRANT ALL ON SEQUENCE pshai.r_rate_mdl_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
+
+GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 
 GRANT SELECT ON geometry_columns TO GROUP openquake;
 GRANT SELECT ON pshai.complex_source TO GROUP openquake;
@@ -120,3 +123,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
 GRANT SELECT ON pshai.source TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.source TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_pshai_writer;
+
+-- uiapi.oq_job
+GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
