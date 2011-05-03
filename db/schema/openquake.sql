@@ -22,9 +22,10 @@
 ------------------------------------------------------------------------
 -- Name space definitions go here
 ------------------------------------------------------------------------
-CREATE SCHEMA pshai;
-CREATE SCHEMA eqcat;
 CREATE SCHEMA admin;
+CREATE SCHEMA eqcat;
+CREATE SCHEMA pshai;
+CREATE SCHEMA uiapi;
 
 
 ------------------------------------------------------------------------
@@ -430,6 +431,25 @@ CREATE TABLE pshai.focal_mechanism (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
+
+
+CREATE TABLE uiapi.oq_job (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    description VARCHAR NOT NULL,
+    -- One of:
+    --      classical (Classical PSHA)
+    --      probabilistic (Probabilistic event based)
+    --      deterministic (Deterministic)
+    job_type VARCHAR NOT NULL CONSTRAINT job_type_value
+        CHECK(status IN ('classical', 'probabilistic', 'deterministic')),
+    -- One of: created, in progress, failed, succeeded
+    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT status_value
+        CHECK(status IN ('created', 'in progress', 'failed', 'succeeded')),
+    duration INTEGER NOT NULL DEFAULT -1,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
 
 
 ------------------------------------------------------------------------
