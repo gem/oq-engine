@@ -61,6 +61,8 @@ CREATE TABLE admin.revision_info (
     id SERIAL PRIMARY KEY,
     artefact VARCHAR NOT NULL,
     revision VARCHAR NOT NULL,
+    -- The step will be used for schema upgrades and data migrations.
+    step INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
@@ -331,6 +333,10 @@ CREATE TABLE pshai.mfd_evd (
     magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
         CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
+    -- The maximum magnitude value will be derived/calculated for evenly
+    -- discretized magnitude frequency distributions.
+    -- It is initialized with a value that should never occur in practice.
+    max_val float NOT NULL DEFAULT -1.0,
     bin_size float NOT NULL,
     mfd_values float[] NOT NULL,
     total_cumulative_rate float,
