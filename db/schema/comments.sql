@@ -133,5 +133,13 @@ COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: created, in progress, failed o
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
+COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
+COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
+COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
+    - peak ground acceleration (pga)
+    - spectral acceleration (sa)
+    - peak ground velocity (pgv)
+    - peak ground displacement (pgd)';
+COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.upload IS 'Information related to OpenQuake input files uploaded by the user.';
