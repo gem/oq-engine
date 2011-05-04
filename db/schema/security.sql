@@ -43,7 +43,10 @@ GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 
+GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
 
 GRANT SELECT ON geometry_columns TO GROUP openquake;
 GRANT SELECT ON pshai.complex_source TO GROUP openquake;
