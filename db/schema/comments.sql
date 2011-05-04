@@ -131,3 +131,7 @@ COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake jo
 COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, probabilistic or deterministic.';
 COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: created, in progress, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
+
+COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
+
+COMMENT ON TABLE uiapi.upload IS 'Information related to OpenQuake input files uploaded by the user.';
