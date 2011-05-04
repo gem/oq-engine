@@ -232,10 +232,10 @@ SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3)
 -- simple source view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_source (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    simple_fault) AS
+    simple_fault, fault_outline) AS
 SELECT
     src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, sfault.edge
+    src.tectonic_region, src.rake, sfault.edge, sfault.outline
 FROM
     pshai.source src, pshai.simple_fault sfault
 WHERE
@@ -295,10 +295,10 @@ ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
 -- complex source view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_source (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    top_edge, bottom_edge) AS
+    top_edge, bottom_edge, fault_outline) AS
 SELECT
     src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, fedge.top, fedge.bottom
+    src.tectonic_region, src.rake, fedge.top, fedge.bottom, cfault.outline
 FROM
     pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
 WHERE
