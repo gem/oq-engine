@@ -484,7 +484,11 @@ CREATE TABLE uiapi.oq_params (
     --      gmroti50 (Average horizontal (GMRotI50))
     component VARCHAR NOT NULL CONSTRAINT component_value
         CHECK(component IN ('average', 'gmroti50')),
-    -- Intensity measure type
+    -- Intensity measure type, one of:
+    --      peak ground acceleration (pga)
+    --      spectral acceleration (pga)
+    --      peak ground velocity (pgv)
+    --      peak ground displacement (pgv)
     imt VARCHAR NOT NULL CONSTRAINT imt_value
         CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
     period float CONSTRAINT period_is_set
@@ -505,7 +509,10 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical') AND (poes IS NOT NULL))
             OR ((job_type != 'classical') AND (poes IS NULL))),
     -- Number of logic tree samples
-    realizations integer,
+    realizations integer CONSTRAINT realizations_is_set
+        CHECK(
+            ((job_type = 'deterministic') AND (realizations IS NULL))
+            OR ((job_type != 'deterministic') AND (realizations IS NOT NULL))),
     -- Number of seismicity histories
     histories integer CONSTRAINT histories_is_set
         CHECK(
