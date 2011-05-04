@@ -127,3 +127,11 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_pshai_writer;
 -- uiapi.oq_job
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
+
+-- uiapi.oq_params
+GRANT SELECT ON uiapi.oq_params TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_params TO oq_uiapi_writer;
+
+-- uiapi.upload
+GRANT SELECT ON uiapi.upload TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_uiapi_writer;
