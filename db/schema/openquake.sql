@@ -486,9 +486,9 @@ CREATE TABLE uiapi.oq_params (
         CHECK(component IN ('average', 'gmroti50')),
     -- Intensity measure type, one of:
     --      peak ground acceleration (pga)
-    --      spectral acceleration (pga)
+    --      spectral acceleration (sa)
     --      peak ground velocity (pgv)
-    --      peak ground displacement (pgv)
+    --      peak ground displacement (pgd)
     imt VARCHAR NOT NULL CONSTRAINT imt_value
         CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
     period float CONSTRAINT period_is_set
