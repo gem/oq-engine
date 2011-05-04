@@ -31,6 +31,7 @@ COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the u
 COMMENT ON TABLE admin.revision_info IS 'Facilitates the keeping of revision information for the OpenQuake database and/or its artefacts (schemas, tables etc.)';
 COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database artefact for which we wish to store revision information.';
 COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
+COMMENT ON COLUMN admin.revision_info.step IS 'A simple counter that will be used to facilitate schema upgrades and/or data migration.';
 COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the revision information was last updated. Please note: this time stamp is not refreshed automatically. It is expected that schema/data migration scripts will modify this as appropriate.';
 
 COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the event surface is kept in separate tables.';
@@ -48,9 +49,9 @@ COMMENT ON COLUMN eqcat.surface.semi_major IS 'Semi-major axis: The longest radi
 
 COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
 COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
-COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
+COMMENT ON COLUMN pshai.complex_fault.mfd_tgr_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
 COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
-COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a fault edge.';
+COMMENT ON COLUMN pshai.complex_fault.fault_edge_id IS 'Foreign key to a fault edge.';
 COMMENT ON COLUMN pshai.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
 
 COMMENT ON VIEW pshai.complex_rupture IS 'A complex rupture view, needed for opengeo server integration.';
@@ -69,6 +70,8 @@ COMMENT ON COLUMN pshai.mfd_evd.magnitude_type IS 'Magnitude type i.e. one of:
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
+COMMENT ON COLUMN pshai.mfd_evd.min_val IS 'Minimum magnitude value.';
+COMMENT ON COLUMN pshai.mfd_evd.max_val IS 'Maximum magnitude value (will be derived/calculated for evenly discretized magnitude frequency distributions).';
 
 COMMENT ON TABLE pshai.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
 COMMENT ON COLUMN pshai.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
@@ -77,6 +80,8 @@ COMMENT ON COLUMN pshai.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
+COMMENT ON COLUMN pshai.mfd_tgr.min_val IS 'Minimum magnitude value.';
+COMMENT ON COLUMN pshai.mfd_tgr.max_val IS 'Maximum magnitude value.';
 
 COMMENT ON TABLE pshai.r_depth_distr IS 'Rupture depth distribution.';
 COMMENT ON COLUMN pshai.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
