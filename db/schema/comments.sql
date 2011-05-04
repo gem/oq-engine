@@ -126,6 +126,15 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
+COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
+COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
+    - source model file (source)
+    - source logic tree (lt-source)
+    - GMPE logic tree (lt-gmpe)
+    - exposure file (exposure)
+    - vulnerability file (vulnerability)';
+COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
+COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, probabilistic or deterministic.';
@@ -142,4 +151,5 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground displacement (pgd)';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 
-COMMENT ON TABLE uiapi.upload IS 'Information related to OpenQuake input files uploaded by the user.';
+COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
+COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
