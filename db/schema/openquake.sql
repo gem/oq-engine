@@ -433,6 +433,17 @@ CREATE TABLE pshai.focal_mechanism (
 ) TABLESPACE pshai_ts;
 
 
+-- OpenQuake input files uploaded by the user
+CREATE TABLE uiapi.upload (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    path VARCHAR NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -442,14 +453,62 @@ CREATE TABLE uiapi.oq_job (
     --      probabilistic (Probabilistic event based)
     --      deterministic (Deterministic)
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(status IN ('classical', 'probabilistic', 'deterministic')),
-    -- One of: created, in progress, failed, succeeded
+        CHECK(job_type IN ('classical', 'probabilistic', 'deterministic')),
+    -- One of: created, in-progress, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT status_value
-        CHECK(status IN ('created', 'in progress', 'failed', 'succeeded')),
+        CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
     duration INTEGER NOT NULL DEFAULT -1,
+    oq_params_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
+
+
+-- The parameters needed for an OpenQuake engine run
+CREATE TABLE uiapi.oq_params (
+    id SERIAL PRIMARY KEY,
+    job_type VARCHAR NOT NULL CONSTRAINT job_type_value
+        CHECK(job_type IN ('classical', 'probabilistic', 'deterministic')),
+    upload_id INTEGER NOT NULL,
+    region_grid_spacing float NOT NULL,
+    min_magnitude float CONSTRAINT min_magnitude_set
+        CHECK(
+            ((job_type = 'deterministic') AND (min_magnitude IS NULL))
+            OR ((job_type != 'deterministic') AND (min_magnitude IS NOT NULL))),
+    investigation_time float CONSTRAINT investigation_time_set
+        CHECK(
+            ((job_type = 'deterministic') AND (investigation_time IS NULL))
+            OR ((job_type != 'deterministic') AND (investigation_time IS NOT NULL))),
+    -- One of:
+    --      average (Average horizontal)
+    --      gmroti50 (Average horizontal (GMRotI50))
+    component VARCHAR NOT NULL CONSTRAINT component_value
+        CHECK(component IN ('average', 'gmroti50')),
+    -- Intensity measure type
+    imt VARCHAR NOT NULL CONSTRAINT imt_value
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+    period float CONSTRAINT period_is_set
+        CHECK(((imt = 'sa') AND (period IS NOT NULL))
+              OR ((imt != 'sa') AND (period IS NULL))),
+    truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
+        CHECK(imt IN ('none', '1-sided', '2-sided')),
+    truncation_level float NOT NULL,
+    reference_vs30_value float NOT NULL,
+    -- Intensity measure levels
+    imls float[],
+    -- Probabilities of exceedence
+    poes float[],
+    -- Number of logic tree samples
+    realizations integer,
+    -- Number of seismicity histories
+    histories integer,
+    -- ground motion correlation flag
+    gm_correlated boolean,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'oq_params', 'region', 4326, 'POLYGON', 2);
+ALTER TABLE uiapi.oq_params ALTER COLUMN region SET NOT NULL;
 
 
 ------------------------------------------------------------------------
@@ -558,6 +617,18 @@ FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
 FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_oq_params_fk
+FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
