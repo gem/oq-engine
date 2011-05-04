@@ -495,15 +495,27 @@ CREATE TABLE uiapi.oq_params (
     truncation_level float NOT NULL,
     reference_vs30_value float NOT NULL,
     -- Intensity measure levels
-    imls float[],
+    imls float[] CONSTRAINT imls_are_set
+        CHECK(
+            ((job_type = 'classical') AND (imls IS NOT NULL))
+            OR ((job_type != 'classical') AND (imls IS NULL))),
     -- Probabilities of exceedence
-    poes float[],
+    poes float[] CONSTRAINT poes_are_set
+        CHECK(
+            ((job_type = 'classical') AND (poes IS NOT NULL))
+            OR ((job_type != 'classical') AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer,
     -- Number of seismicity histories
-    histories integer,
+    histories integer CONSTRAINT histories_is_set
+        CHECK(
+            ((job_type = 'probabilistic') AND (histories IS NOT NULL))
+            OR ((job_type != 'probabilistic') AND (histories IS NULL))),
     -- ground motion correlation flag
-    gm_correlated boolean,
+    gm_correlated boolean CONSTRAINT gm_correlated_is_set
+        CHECK(
+            ((job_type = 'classical') AND (gm_correlated IS NULL))
+            OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
