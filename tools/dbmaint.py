@@ -31,8 +31,6 @@ migration.
   -U | --user U   : database user to use [default: postgres]
 """
 
-from datetime import datetime
-from datetime import timedelta
 import getopt
 import subprocess
 import sys
@@ -60,38 +58,32 @@ def psql(config, script=None, cmd=None):
         cmds.extend(["-f", "%s/%s" % (config['path'], script)])
 
     if config['dryrun']:
-        print " ".join(cmds)
         return (-1, "", "")
     else:
         p = subprocess.Popen(
             cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
+        if p.returncode != 0:
+            # An error occurred.
+            print "psql terminated with exit code: %s" % p.returncode
+            print err
+            sys.exit(1)
         return (p.returncode, out, err)
-        
+
 
 def main(cargs):
     """Perform database maintenance.
 
     This includes running SQL scripts that upgrade the database and/or migrate
     data.
-
-    Version info data set to -1 will be ignored and assumed to have value
-    zero.
-    Release dates that lie more than 30 days in the future are ignored.
-
-    :param version_data: A 4-tuple of integers that are the major, minor and
-        sprint number respectively. The last datum is the number of seconds
-        since epoch and represents the release date.
-
-    :returns: A string with human readable OpenQuake version information.
     """
     def strip_dashes(arg):
         return arg.split('-')[-1]
 
-    config=dict(
-        db="openquake", user="postgres", path="db/schema/upgrades",
-        host="localhost", dryrun=False)
-    longopts = ["%s=" % k for k in config] + ["help"]
+    config=dict(db="openquake", user="postgres", path="db/schema/upgrades",
+                host="localhost", dryrun=False)
+    longopts = ["%s" % k if isinstance(v, bool) else "%s=" % k
+                for k, v in config.iteritems()] + ["help"]
     s2l = dict(d="db", p="path", n="dryrun", U="user")
 
     try:
@@ -101,8 +93,6 @@ def main(cargs):
         print __doc__
         sys.exit(1)
 
-    print opts
-    print config
     for opt, arg in opts:
         if opt in ("-h", "--help"):
             print __doc__
@@ -110,15 +100,12 @@ def main(cargs):
         opt = strip_dashes(opt)
         if opt not in config:
             opt = s2l[opt]
-        config[opt] = arg if arg else True
-    print config
-    code, out, err = psql(config, cmd="SELECT artefact, id, revision, step FROM admin.revision_info")
-    print "code:\n"
-    print code
-    print "stdout:\n"
-    print out
-    print "stderr:\n"
-    print err
+        config[opt] = arg if arg else not config[opt]
+
+    # Get the revision information from the database.
+    cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
+    code, out, err = psql(config, cmd=cmd)
+    # Throw away the psql header and footer.
     rev_data = out.split('\n')[2:-3]
 
     rev_info = dict()
