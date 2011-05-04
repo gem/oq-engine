@@ -39,8 +39,9 @@ NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
 class BaseXMLWriter(nrml.TreeNRMLWriter):
-    """ This is the base class which prepares the XML document (for risk)
-        to be customized in another class
+    """
+    This is the base class which prepares the XML document (for risk) to be
+    customized in another class.
     """
     container_tag = None
 
@@ -75,8 +76,10 @@ class BaseXMLWriter(nrml.TreeNRMLWriter):
 
 
 class LossMapXMLWriter(nrml.TreeNRMLWriter):
-    """ This class serializes loss maps to NRML.
-        in particular Mean Loss and Standard Deviation
+    """
+    This class serializes loss maps to NRML. The primary contents of a loss map
+    include the mean and standard deviation loss values for each asset in a
+    defined region over many computed realizations.
     """
 
     DEFAULT_METADATA = {
@@ -114,12 +117,13 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
 
             Optionally, the first element may be a dict containing metadata
             about the loss map.
-            For example:
-            [{'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
-              'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
-              'unit': 'EUR'},
-             ...
-             <remaining data>]
+            For example::
+
+                [{'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
+                  'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
+                  'unit': 'EUR'},
+                  ...
+                  <remaining data>]
 
             If no metadata is specified, defaults will be used.
         """
@@ -137,10 +141,11 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         `lossMap` XML elements.
 
         :param metadata: A dict containing metadata about the loss map.
-            For example:
-            {'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
-             'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
-             'unit': 'EUR'}
+            For example::
+
+                {'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
+                 'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
+                 'unit': 'EUR'}
 
             If any of these items are not defined in the dict, default values
             will be used.
@@ -172,7 +177,8 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         :type values: tuple with the following members
             :py:class:`dict` (loss dict) with the following keys:
                 ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stdev*** - the Standard Deviation for a certain Node/Site
+                ***stddev_loss*** - the Standard Deviation for a certain
+                    Node/Site
 
             :py:class:`dict` (asset dict)
                 ***assetID*** - the assetID
@@ -191,7 +197,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             mean_loss.text = "%s" % loss_dict['mean_loss']
             stddev = etree.SubElement(loss_el,
                             xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-            stddev.text = "%s" % loss_dict['stddev']
+            stddev.text = "%s" % loss_dict['stddev_loss']
 
         loss_dict, asset_dict = values
 
