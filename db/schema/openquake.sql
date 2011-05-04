@@ -246,11 +246,11 @@ WHERE
 -- simple rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_rupture (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    simple_fault) AS
+    simple_fault, fault_outline) AS
 SELECT
     rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
     rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    sfault.edge
+    sfault.edge, sfault.outline
 FROM
     pshai.rupture rup, pshai.simple_fault sfault
 WHERE
@@ -309,11 +309,11 @@ WHERE
 -- complex rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_rupture (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    top_edge, bottom_edge) AS
+    top_edge, bottom_edge, fault_outline) AS
 SELECT
     rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
     rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    fedge.top, fedge.bottom
+    fedge.top, fedge.bottom, cfault.outline
 FROM
     pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
 WHERE
