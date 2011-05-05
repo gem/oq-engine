@@ -34,6 +34,7 @@ migration.
 import getopt
 import logging
 import subprocess
+import re
 import sys
 
 
@@ -102,6 +103,9 @@ def scripts_to_run(artefact, rev_info, config):
     :param string artefact: name of the revision controlled database artefact
     :param dict rev_info: current revision info: revision and step
     :param dict config: the configuration to use: database, host, user, path.
+
+    :return: a sorted list of SQL script paths (relative to the path in
+        `config`)
     """
     result = []
     path = "%s/%s/%s" % (config['path'], artefact, rev_info['revision'])
@@ -112,6 +116,52 @@ def scripts_to_run(artefact, rev_info, config):
         if (int(spath) > step):
             result.append(script)
     return list(sorted(result))
+
+
+def error_occurred(output):
+    """Detect psql errors in `output`."""
+    regex = re.compile('sql:\d+:\s+ERROR:\s+')
+    return regex.search(output) is not None
+
+
+def run_scripts(artefact, rev_info, scripts, config):
+    """Run the SQL `scripts` for the given `artefact`.
+
+    Once all scripts complete the step of the `artefact` at hand will be
+    updated to the highest step encountered.
+
+    :param string artefact: name of the revision controlled database artefact
+    :param dict rev_info: current revision info: revision and step
+    :param list scripts: a sorted list of SQL script paths (relative to the
+        path in `config`)
+    :param dict config: the configuration to use: database, host, user, path.
+    """
+    max_step = 0
+    for script in scripts:
+        step, _ = script.split('/')
+        step = int(step)
+        if step > max_step:
+            max_step = step
+        code, out, err = psql(
+            config,
+            script="%s/%s/%s" % (artefact, rev_info['revision'], script))
+        logging.info("%s (exit code: %s)" % (script, code))
+        out = out.strip()
+        if out:
+            logging.info(out)
+        err = err.strip()
+        if err:
+            logging.info(err)
+            if error_occurred(err):
+                logging.error("Aborting..")
+                max_step = -1
+                break
+
+    if max_step != 0:
+        cmd=("UPDATE admin.revision_info SET step=%s WHERE artefact='%s'"
+             "  AND revision = '%s'")
+        cmd %= (max_step, artefact, rev_info['revision'])
+        code, out, err = psql(config, cmd=cmd)
 
 
 def main(cargs):
@@ -159,7 +209,9 @@ def main(cargs):
     logging.debug(rev_data)
     for artefact, rev_info in rev_data.iteritems():
         scripts = scripts_to_run(artefact, rev_info, config)
-        logging.debug("%s: %s" % (artefact, scripts))
+        if scripts:
+            logging.debug("%s: %s" % (artefact, scripts))
+            run_scripts(artefact, rev_info, scripts, config)
 
 
 if __name__ == '__main__':
