@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 Implementation of the black box tests suite.
 """
@@ -34,32 +33,45 @@ from utils import helpers
 class HazardMapTestCase(unittest.TestCase):
     
     def setUp(self):
-        expected_results_file = open(helpers.smoketest_file(
-            "HazardMapTest/expected_results/meanHazardMap0.1.dat"))
-
-        self.expected_results = []
-        
-        for expected_result in expected_results_file:
-            self.expected_results.append(expected_result.split())
-
+        self.expected_results = self._load_expected_results()
         kvs.flush()
 
         self.engine = job.Job.from_file(
             helpers.smoketest_file("HazardMapTest/config.gem"))
 
+    @helpers.skipit
+    def test_we_compute_the_same_sites_in_the_region(self):
+        pass
+
+    @helpers.skipit
     def test_hazard_map_values_are_correctly_stored_in_kvs(self):
         self.engine.launch()
         
-        pattern = "%s*%s*%s*" % (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN, self.engine.id, 0.1)
+        pattern = "%s*%s*%s*" % (
+            kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN, self.engine.id, 0.1)
+
         map_values = kvs.mget_decoded(pattern)
         
         self.assertEqual(len(self.expected_results), len(map_values))
         
         for expected_result in self.expected_results:
-            lon, lat, value = expected_result
-            site = shapes.Site(float(lon), float(lat))
+            key = kvs.tokens.mean_hazard_map_key(
+                self.engine.id, expected_result[0], 0.1)
 
-            key = kvs.tokens.mean_hazard_map_key(self.engine.id, site, 0.1)
             computed_value = float(kvs.get_value_json_decoded(key)["IML"])
 
-            self.assertTrue(numpy.allclose(computed_value, float(value), atol=0.15))
+            self.assertTrue(
+                numpy.allclose(computed_value, expected_result[1], atol=0.15))
+
+    def _load_expected_results(self):
+        results = []
+
+        file = open(helpers.smoketest_file(
+            "HazardMapTest/expected_results/meanHazardMap0.1.dat"))
+
+        for result in file:
+            lon, lat, value = result.split()
+            site = shapes.Site(float(lon), float(lat))
+            results.append((site, float(value)))
+
+        return results
