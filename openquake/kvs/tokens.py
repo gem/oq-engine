@@ -99,8 +99,7 @@ def mean_hazard_map_key(job_id, site, poe):
     """Return the key used to store the IML used in mean hazard
     maps for a single site."""
     return openquake.kvs.generate_key([MEAN_HAZARD_MAP_KEY_TOKEN,
-            job_id, site.longitude, site.latitude,
-            str(poe)])
+            job_id, site.hash(), str(poe)])
 
 
 def quantile_hazard_map_key(job_id, site, poe, quantile):
@@ -140,9 +139,9 @@ def poe_value_from_hazard_map_key(kvs_key):
     if extract_product_type_from_kvs_key(kvs_key) in (
         MEAN_HAZARD_MAP_KEY_TOKEN, QUANTILE_HAZARD_MAP_KEY_TOKEN):
 
-        # the PoE is the fifth component of the key, after product
-        # token, job ID, site longitude, site latitude
-        return float(kvs_key.split(openquake.kvs.KVS_KEY_SEPARATOR)[4])
+        # the PoE is the fourth component of the key, after product
+        # token, job ID, site hash
+        return float(kvs_key.split(openquake.kvs.KVS_KEY_SEPARATOR)[3])
     else:
         return None
 
