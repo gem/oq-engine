@@ -109,7 +109,7 @@ for tspace in $tspace_list; do
     if [ $? -ne 0 ]; then
         echo ".. Creating table space path $full_tspace_path .."
         sudo mkdir -p $full_tspace_path
-        if [ $this_is_linux ]; then
+        if [ $this_is_linux -eq 1 ]; then
             sudo chown -R postgres.postgres $full_tspace_path
         else
             sudo chown -R postgres $full_tspace_path
