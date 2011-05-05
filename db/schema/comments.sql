@@ -24,6 +24,7 @@ COMMENT ON DATABASE my_database IS 'OpenQuake database (http://openquake.org/)';
 COMMENT ON SCHEMA admin IS 'Administrative data';
 COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA pshai IS 'PSHA input model';
+COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
 
 COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
 COMMENT ON TABLE admin.oq_user IS 'An OpenQuake user that is utilising the OpenQuake database';
@@ -31,6 +32,7 @@ COMMENT ON COLUMN admin.oq_user.data_is_open IS 'Whether the data owned by the u
 COMMENT ON TABLE admin.revision_info IS 'Facilitates the keeping of revision information for the OpenQuake database and/or its artefacts (schemas, tables etc.)';
 COMMENT ON COLUMN admin.revision_info.artefact IS 'The name of the database artefact for which we wish to store revision information.';
 COMMENT ON COLUMN admin.revision_info.revision IS 'The revision information for the associated database artefact.';
+COMMENT ON COLUMN admin.revision_info.step IS 'A simple counter that will be used to facilitate schema upgrades and/or data migration.';
 COMMENT ON COLUMN admin.revision_info.last_update IS 'The date/time when the revision information was last updated. Please note: this time stamp is not refreshed automatically. It is expected that schema/data migration scripts will modify this as appropriate.';
 
 COMMENT ON TABLE eqcat.catalog IS 'Table with earthquake catalog data, the magnitude(s) and the event surface is kept in separate tables.';
@@ -48,9 +50,9 @@ COMMENT ON COLUMN eqcat.surface.semi_major IS 'Semi-major axis: The longest radi
 
 COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
 COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
-COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
+COMMENT ON COLUMN pshai.complex_fault.mfd_tgr_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
 COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
-COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a fault edge.';
+COMMENT ON COLUMN pshai.complex_fault.fault_edge_id IS 'Foreign key to a fault edge.';
 COMMENT ON COLUMN pshai.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
 
 COMMENT ON VIEW pshai.complex_rupture IS 'A complex rupture view, needed for opengeo server integration.';
@@ -69,6 +71,8 @@ COMMENT ON COLUMN pshai.mfd_evd.magnitude_type IS 'Magnitude type i.e. one of:
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
+COMMENT ON COLUMN pshai.mfd_evd.min_val IS 'Minimum magnitude value.';
+COMMENT ON COLUMN pshai.mfd_evd.max_val IS 'Maximum magnitude value (will be derived/calculated for evenly discretized magnitude frequency distributions).';
 
 COMMENT ON TABLE pshai.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
 COMMENT ON COLUMN pshai.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
@@ -77,6 +81,8 @@ COMMENT ON COLUMN pshai.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
+COMMENT ON COLUMN pshai.mfd_tgr.min_val IS 'Minimum magnitude value.';
+COMMENT ON COLUMN pshai.mfd_tgr.max_val IS 'Maximum magnitude value.';
 
 COMMENT ON TABLE pshai.r_depth_distr IS 'Rupture depth distribution.';
 COMMENT ON COLUMN pshai.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
@@ -119,3 +125,31 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction Interface (interface)
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
+
+COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
+COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
+    - source model file (source)
+    - source logic tree (lt-source)
+    - GMPE logic tree (lt-gmpe)
+    - exposure file (exposure)
+    - vulnerability file (vulnerability)';
+COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
+COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
+COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
+COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, probabilistic or deterministic.';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: created, in progress, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
+
+COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
+COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
+COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
+COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
+    - peak ground acceleration (pga)
+    - spectral acceleration (sa)
+    - peak ground velocity (pgv)
+    - peak ground displacement (pgd)';
+COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
+
+COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
+COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
