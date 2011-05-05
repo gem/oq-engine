@@ -65,6 +65,8 @@ JAVA_CLASSES = {
     "JsonPrimitive" : "com.google.gson.JsonPrimitive",
     "GMFCalculator" : "org.gem.calc.GroundMotionFieldCalculator",
     "SourceModelReader": "org.gem.engine.hazard.parsers.SourceModelReader",
+    "StirlingGriddedSurface": "org.opensha.sha.faultSurface.StirlingGriddedSurface",
+    "ApproxEvenlyGriddedSurface": "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
