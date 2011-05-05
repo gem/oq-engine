@@ -37,3 +37,4 @@ from schema_unittest import *
 from probabilistic_unittest import *
 from deterministic_hazard_unittest import *
 from deterministic_risk_unittest import *
+from black_box_tests import *
