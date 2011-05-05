@@ -32,13 +32,19 @@ migration.
 """
 
 import getopt
+import logging
 import subprocess
 import sys
+
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 def psql(config, script=None, cmd=None):
     """Runs the `psql` tool either with a command or SQL script.
 
+    If the `dryrun` configuration flag is set the command will not be run but
+    merely printed.
     Please note that `file` and `cmd` are mutually exclusive.
 
     :param dict config: the configuration to use: database, host, user, path.
@@ -58,17 +64,54 @@ def psql(config, script=None, cmd=None):
         cmds.extend(["-f", "%s/%s" % (config['path'], script)])
 
     if config['dryrun']:
+        cmds[-1] = '"%s"' % cmds[-1]
+        logging.info(" ".join(cmds))
         return (-1, "", "")
     else:
         p = subprocess.Popen(
             cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out, err = p.communicate()
         if p.returncode != 0:
-            # An error occurred.
-            print "psql terminated with exit code: %s" % p.returncode
-            print err
-            sys.exit(1)
+            # An error occurred. Abort maintenance run.
+            error = (
+                "psql terminated with exit code: %s\n%s" % (p.returncode, err))
+            logging.error(error)
+            raise Exception(error)
         return (p.returncode, out, err)
+
+
+def find_scripts(path):
+    """Find all SQL scripts at level 2 of the given `path`."""
+    result = []
+    cmd = "find %s -maxdepth 2 -type f -name *.sql" % path
+    p = subprocess.Popen(
+        cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.returncode != 0:
+        logging.warn(err)
+    else:
+        prefix_length = len(path) + 1
+        for file in out.split('\n'):
+            result.append(file[prefix_length:])
+    return [r for r in result if r]
+
+
+def scripts_to_run(artefact, rev_info, config):
+    """The SQL scripts that need to run given the `artefact` and `rev_info`.
+
+    :param string artefact: name of the revision controlled database artefact
+    :param dict rev_info: current revision info: revision and step
+    :param dict config: the configuration to use: database, host, user, path.
+    """
+    result = []
+    path = "%s/%s/%s" % (config['path'], artefact, rev_info['revision'])
+    files = find_scripts(path)
+    step = int(rev_info['step'])
+    for script in files:
+        spath, sfile = script.split('/')
+        if (int(spath) > step):
+            result.append(script)
+    return list(sorted(result))
 
 
 def main(cargs):
@@ -91,7 +134,7 @@ def main(cargs):
     except getopt.GetoptError, e:
         print e
         print __doc__
-        sys.exit(1)
+        sys.exit(101)
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
@@ -106,14 +149,17 @@ def main(cargs):
     cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
     code, out, err = psql(config, cmd=cmd)
     # Throw away the psql header and footer.
-    rev_data = out.split('\n')[2:-3]
+    db_rev_data = out.split('\n')[2:-3]
 
-    rev_info = dict()
+    rev_data = dict()
     columns = ("id", "revision", "step")
-    for info in rev_data:
+    for info in db_rev_data:
         info = [d.strip() for d in info.split('|')]
-        rev_info[info[0]] = dict(zip(columns, info[1:]))
-    print rev_info
+        rev_data[info[0]] = dict(zip(columns, info[1:]))
+    logging.debug(rev_data)
+    for artefact, rev_info in rev_data.iteritems():
+        scripts = scripts_to_run(artefact, rev_info, config)
+        logging.debug("%s: %s" % (artefact, scripts))
 
 
 if __name__ == '__main__':
