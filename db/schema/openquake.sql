@@ -232,7 +232,7 @@ SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3)
 -- simple source view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_source (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    simple_fault, fault_outline) AS
+    edge, fault_outline) AS
 SELECT
     src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
     src.tectonic_region, src.rake, sfault.edge, sfault.outline
@@ -246,7 +246,7 @@ WHERE
 -- simple rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_rupture (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    simple_fault, fault_outline) AS
+    magnitude, magnitude_type, edge, fault_outline) AS
 SELECT
     rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
     rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
@@ -309,7 +309,7 @@ WHERE
 -- complex rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_rupture (
     id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    top_edge, bottom_edge, fault_outline) AS
+    magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
 SELECT
     rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
     rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
