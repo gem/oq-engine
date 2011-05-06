@@ -42,12 +42,32 @@ class PsqlTestCase(unittest.TestCase):
         Does not specify the `-h` flag in the `psql` command when the host in
         the configuration is `localhost`.
         """
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.args = cmds
+        fake_runner.args = []
+
+        config = {"dryrun": False, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        psql(config, cmd="SELECT * from admin.revision_info",
+             runner=fake_runner)
+        self.assertTrue("-h" not in fake_runner.args)
 
     def test_psql_with_local_host_ip(self):
         """
         Does not specify the `-h` flag in the `psql` command when the host in
         the configuration is `127.0.0.1`.
         """
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.args = cmds
+        fake_runner.args = []
+
+        config = {"dryrun": False, "path": "/tmp", "host": "127.0.0.1",
+                  "db": "openquake", "user": "postgres"}
+        psql(config, cmd="SELECT * from admin.revision_info",
+             runner=fake_runner)
+        self.assertTrue("-h" not in fake_runner.args)
 
     def test_psql_with_dry_run_flag(self):
         """
@@ -70,16 +90,44 @@ class PsqlTestCase(unittest.TestCase):
         Calls the psql command if the `dryrun` flag is set in the configuration
         but the 'ignore_dryrun' parameter is set to `True`.
         """
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.number_of_calls += 1
+        fake_runner.number_of_calls = 0
+
+        config = {"dryrun": True, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        psql(config, cmd="SELECT * from admin.revision_info",
+             ignore_dryrun=True, runner=fake_runner)
+        self.assertEqual(1, fake_runner.number_of_calls)
 
     def test_psql_with_both_script_and_command(self):
         """
         Raises an `Exception` if both a command and a script are passed.
         """
+        config = {"dryrun": True, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        try:
+            psql(config, cmd="SELECT * from admin.revision_info", script="xxx")
+        except Exception, e:
+            self.assertEqual(
+                "Please specify either an SQL script or a command.", e.args[0])
+        else:
+            raise Exception("exception not raised")
 
     def test_psql_with_neither_script_nor_command(self):
         """
         Raises an `Exception` if neither a command nor a script are passed.
         """
+        config = {"dryrun": True, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        try:
+            psql(config)
+        except Exception, e:
+            self.assertEqual(
+                "Neither SQL script nor command specified.", e.args[0])
+        else:
+            raise Exception("exception not raised")
 
 
 class FindScriptsTestCase(unittest.TestCase):
