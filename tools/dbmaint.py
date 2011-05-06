@@ -43,7 +43,7 @@ import sys
 logging.basicConfig(level=logging.DEBUG)
 
 
-def psql(config, script=None, cmd=None):
+def psql(config, script=None, cmd=None, ignore_dryrun=False):
     """Runs the `psql` tool either with a command or SQL script.
 
     If the `dryrun` configuration flag is set the command will not be run but
@@ -53,7 +53,8 @@ def psql(config, script=None, cmd=None):
     :param dict config: the configuration to use: database, host, user, path.
     :param string script: the script to run, relative to the path in `config`.
     :param string cmd: the command to run.
-
+    :param string ignore_dryrun: if `True` the `dryrun` flag in the
+        configuration will be disregarded.
     :returns: a triple (exit code, stdout, stderr) with psql execution outcome
     """
     if script and cmd:
@@ -66,7 +67,7 @@ def psql(config, script=None, cmd=None):
     else:
         cmds.extend(["-f", "%s/%s" % (config['path'], script)])
 
-    if config['dryrun']:
+    if config['dryrun'] and not ignore_dryrun:
         cmds[-1] = '"%s"' % cmds[-1]
         logging.info(" ".join(cmds))
         return (-1, "", "")
@@ -200,7 +201,7 @@ def main(cargs):
 
     # Get the revision information from the database.
     cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
-    code, out, err = psql(config, cmd=cmd)
+    code, out, err = psql(config, cmd=cmd, ignore_dryrun=True)
     # Throw away the psql header and footer.
     db_rev_data = out.split('\n')[2:-3]
 
