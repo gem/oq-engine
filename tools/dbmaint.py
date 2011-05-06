@@ -212,6 +212,13 @@ def perform_upgrade(config):
     columns = ("id", "revision", "step")
 
     # Extract the revision info from the psql input.
+    #     artefact     | id | revision | step 
+    # -----------------+----+----------+------
+    #  openquake/admin |  1 | 0.3.9-1  |    0
+    #  openquake/eqcat |  2 | 0.3.9-1  |    0
+    #  openquake/uiapi |  4 | 0.3.9-1  |    0
+    #  openquake/pshai |  3 | 0.3.9-1  |    0
+    # (4 rows)
     for info in db_rev_data:
         info = [d.strip() for d in info.split('|')]
         rev_data[info[0]] = dict(zip(columns, info[1:]))
