@@ -108,9 +108,7 @@ def find_scripts(path):
     cmd = "find %s -mindepth 2 -maxdepth 2 -type f -name *.sql" % path
     code, out, err = run_cmd(cmd.split(), ignore_exit_code=True)
 
-    if code != 0:
-        logging.warn(err)
-    else:
+    if code == 0:
         prefix_length = len(path) + 1
         for file in out.split('\n'):
             result.append(file[prefix_length:])
@@ -158,24 +156,18 @@ def run_scripts(artefact, rev_info, scripts, config):
     """
     max_step = 0
     for script in scripts:
+        # Keep track of the max. step applied.
         step, _ = script.split('/')
         step = int(step)
         if step > max_step:
             max_step = step
-        code, out, err = psql(
-            config,
-            script="%s/%s/%s" % (artefact, rev_info['revision'], script))
-        logging.info("%s (exit code: %s)" % (script, code))
-        out = out.strip()
-        if out:
-            logging.info(out)
-        err = err.strip()
-        if err:
-            logging.info(err)
-            if error_occurred(err):
-                logging.error("Aborting..")
-                max_step = -1
-                break
+
+        # Run the SQL script.
+        rev = rev_info['revision']
+        results = psql(config, script="%s/%s/%s" % (artefact, rev, script))
+        if script_failed(results, script, config):
+            max_step = -1
+            break
 
     if max_step != 0:
         cmd=("UPDATE admin.revision_info SET step=%s, "
@@ -185,12 +177,22 @@ def run_scripts(artefact, rev_info, scripts, config):
         code, out, err = psql(config, cmd=cmd)
 
 
-def main(cargs):
-    """Perform database maintenance.
+def script_failed((code, out, err), script, config):
+    """Log SQL script output and return `True` in case of errors."""
+    if not config['dryrun']:
+        logging.info("%s (exit code: %s)" % (script, code))
+        out = out.strip()
+        if out:
+            logging.info(out)
+        err = err.strip()
+        if err:
+            logging.info(err)
+            if error_occurred(err):
+                return True
+    return False
 
-    This includes running SQL scripts that upgrade the database and/or migrate
-    data.
-    """
+def main(cargs):
+    """Run SQL scripts that upgrade the database and/or migrate data."""
     def strip_dashes(arg):
         return arg.split('-')[-1]
 
