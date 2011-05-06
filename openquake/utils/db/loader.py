@@ -25,8 +25,6 @@
 """
 
 
-from openquake import java
-
 import csv
 from sqlalchemy.ext.sqlsoup import SqlSoup
 import datetime
@@ -86,34 +84,41 @@ class SourceModelLoader(object):
 class CsvModelLoader(SourceModelLoader):
     def __init__(self, src_model_path, engine, schema):
         super(CsvModelLoader, self).__init__(src_model_path, engine)
-        self.db = self._sql_soup_init(schema)
+        self.soup = self._sql_soup_init(schema)
+        self.csv_reader = None
+        self.csv_fd = open(self.src_model_path, 'r')
 
     def read_model(self):
-        return csv.DictReader(open(self.src_model_path, 'r'), delimiter=',')
+        self.csv_reader = csv.DictReader(self.csv_fd, delimiter=',')
 
     def serialize(self):
-        super(CsvModelLoader, self).serialize()
+        self.read_model()
+        self.write_to_db(self.csv_reader)
+
+
+    def date_to_timestamp(self, year, month, day, hour, minute, sec):
+        """
+            Quick helper function to have a timestamp for the
+            openquake postgres database
+        """
+        catalog_date = datetime.datetime(year, month, day, hour, minute, sec)
+        return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
 
     def write_to_db(self, insert_data):
-        def date_to_timestamp(year, month, day, hour, minute, sec):
-            """
-                Quick helper function to have a timestamp for the
-                openquake postgres database
-            """
-            catalog_date = datetime.datetime(year, month, day, hour, minute, sec)
-            return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
 
         for row in insert_data:
 
-            timestamp = date_to_timestamp(int(row['year']),
+            timestamp = self.date_to_timestamp(int(row['year']),
                 int(row['month']), int(row['day']), int(row['hour']),
                 int(row['minute']), int(row['second']))
 
             # TODO: find a better way to relate catalog/surface, without passing
             # the id to catalog
-            surface = self.db.surface.insert(semi_minor=row['semi_minor'],
+            surface = self.soup.surface.insert(semi_minor=row['semi_minor'],
                 semi_major=row['semi_major'],
                 strike=row['strike'])
+
+            self.soup.flush()
 
             mags = ['mb_val', 'mb_val_error',
                 'ml_val', 'ml_val_error',
@@ -130,7 +135,7 @@ class CsvModelLoader(SourceModelLoader):
 
             # TODO: find a better way to relate catalog/magnitude, without passing
             # the id to catalog
-            magnitude = self.db.magnitude.insert(mb_val=row['mb_val'],
+            magnitude = self.soup.magnitude.insert(mb_val=row['mb_val'],
                                 mb_val_error=row['mb_val_error'],
                                 ml_val=row['ml_val'],
                                 ml_val_error=row['ml_val_error'],
@@ -140,15 +145,18 @@ class CsvModelLoader(SourceModelLoader):
                                 mw_val_error=row['mw_val_error'])
 
             # creates the record inside the transaction, no commit yet
-            self.db.flush()
+            self.soup.flush()
 
             wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
-            self.db.catalog.insert(owner_id=1, time=timestamp, 
+            self.soup.catalog.insert(owner_id=1, time=timestamp, 
                 surface_id=surface.id, eventid=row['eventid'], 
                 agency=row['agency'], identifier=row['identifier'], 
                 time_error=row['time_error'], depth=row['depth'],
                 depth_error=row['depth_error'], magnitude_id=magnitude.id,
-                point=geoalchemy.WKTSpatialElement(wkt))
+                point=geoalchemy.WKTSpatialElement(wkt, 4326))
+
+        # commit results
+        self.soup.commit()    
 
     def _sql_soup_init(self, schema):
         """
@@ -159,5 +167,5 @@ class CsvModelLoader(SourceModelLoader):
             :type schema: str
         """
         db = SqlSoup(self.engine)
-        db.schema = self.schema
+        db.schema = schema
         return db

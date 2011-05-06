@@ -23,8 +23,8 @@
 
 
 import unittest
-from openquake.utils.db.loader import sql_soup_init
-from openquake.utils.db.loader import eq_catalog_db_import
+import openquake.utils.db as db
+from openquake.utils.db import loader
 from tests.utils import helpers
 
 class DbLoaderTestCase(unittest.TestCase):
@@ -32,21 +32,60 @@ class DbLoaderTestCase(unittest.TestCase):
         Main class to execute tests about NRML/CSV
     """
     def test_csv_to_db_loader_end_to_end(self):
+        def pop_date_fields(csv):
+            date_fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
+            res = [csv.pop(csv.index(field)) for field in date_fields]
+            return res
+                
+        def prepare_date(csv_r, date_fields):
+            return [int(csv_r[field]) for field in date_fields]
+        def pop_geometry_fields(csv):
+            unused_fields = ['longitude', 'latitude']
+            return [csv.pop(csv.index(field)) for field in unused_fields]
+
+        user = 'kpanic'
+        password = 'openquake'
+        dbname = 'openquake'
+
+        engine = db.create_engine(dbname=dbname ,user=user ,password=password)
+
         csv_file = "ISC_sampledata1.csv"
         csv_path = helpers.get_tests_path(csv_file)
-        db = sql_soup_init('kpanic', 'openquake', 'localhost', '5432',
-            'openquake', 'eqcat')
-        eq_catalog_db_import(db, csv_path)
-        db.commit()
-        surf_join = db.join(db.catalog, db.surface,
-            db.catalog.surface_id==db.surface.id,isouter=False)
-        mag_join = db.join(surf_join, db.magnitude,
-            db.catalog.magnitude_id==db.magnitude.id, isouter=False)
-        #print mag_join.all()
-        print dir(mag_join)
-        res = mag_join.all()
-        for row in res:
-            print row.agency, row.strike
+        csv_loader = loader.CsvModelLoader(csv_path, engine, 'eqcat')
+        csv_loader.serialize()
+        soup_db = csv_loader.soup
 
-        print len(res)
-        self.assertTrue(False)
+        surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
+            soup_db.catalog.surface_id==soup_db.surface.id,isouter=False)
+        mag_join = soup_db.join(surf_join, soup_db.magnitude,
+            soup_db.catalog.magnitude_id==soup_db.magnitude.id, isouter=False)
+        #print mag_join.all()
+        res = mag_join.order_by(soup_db.catalog.eventid).all()
+        # rewind the file
+        csv_loader.csv_fd.seek(0)
+
+        # skip the header
+        csv_loader.csv_reader.next()
+        csv_els = list(csv_loader.csv_reader)
+        for csv_row, db_row in zip(csv_els, res):
+            csv_keys = csv_row.keys()
+            # pops 'longitude', 'latitude' which are used to populate
+            # geometry_columns
+            pop_geometry_fields(csv_keys)
+
+            timestamp = prepare_date(csv_row, pop_date_fields(csv_keys))
+            csv_time = csv_loader.date_to_timestamp(*timestamp)
+            # first we compare the timestamps
+            self.assertEqual(str(db_row.time), csv_time)
+            
+            # then, we cycle through the csv keys and consider some special
+            # cases
+            for csv_key in csv_keys:
+                db_val = getattr(db_row, csv_key)
+                csv_val = csv_row[csv_key]
+                if not len(csv_val.strip()):
+                    csv_val = '-999.0'
+                if csv_key == 'agency':
+                    self.assertEqual(str(db_val), str(csv_val))
+                else:
+                    self.assertEqual(float(db_val), float(csv_val))
