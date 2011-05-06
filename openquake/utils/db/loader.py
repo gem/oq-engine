@@ -17,6 +17,11 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+"""
+This module contains functions and classes for reading source data from NRML
+XML files and serializing the data to the OpenQuake pshai database.
+"""
+
 
 import geoalchemy
 import math
@@ -312,27 +317,27 @@ def parse_simple_fault_src(fault):
     return mfd_insert, simple_fault_insert, source_insert
 
 
-def parse_complex_fault_src(source_data):
+def parse_complex_fault_src(_source_data):
     """
-    :param source_data:
-    :type source_data: jpype-wrapped java object of type
+    :param _source_data:
+    :type _source_data: jpype-wrapped java object of type
         `GEMSubductionFaultSourceData`
     """
     raise NotImplementedError
 
 
-def parse_area_src(source_data):
+def parse_area_src(_source_data):
     """
-    :param source_data:
-    :type source_data: jpype-wrapped java object of type `GEMAreaSourceData`
+    :param _source_data:
+    :type _source_data: jpype-wrapped java object of type `GEMAreaSourceData`
     """
     raise NotImplementedError
 
 
-def parse_point_src(source_data):
+def parse_point_src(_source_data):
     """
-    :param source_data:
-    :type source_data: jpype-wrapped java object of type `GEMPointSourceData`
+    :param _source_data:
+    :type _source_data: jpype-wrapped java object of type `GEMPointSourceData`
     """
     raise NotImplementedError
 
