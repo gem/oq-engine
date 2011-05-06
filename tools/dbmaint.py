@@ -76,7 +76,7 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
     :param string cmd: the command to run.
     :param bool ignore_dryrun: if `True` the `dryrun` flag in the
         configuration will be disregarded.
-    :param runner: function to use for running `psql`
+    :param runner: function to use for running the `psql` tool.
     :returns: a triple (exit code, stdout, stderr) with psql execution outcome
     """
     if script and cmd:

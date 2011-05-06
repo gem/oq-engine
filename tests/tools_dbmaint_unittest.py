@@ -37,6 +37,51 @@ def touch(path):
 class PsqlTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.psql()."""
 
+    def test_psql_cmd_with_script(self):
+        """Tests the psql command params with an SQL script file."""
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.args = cmds
+        fake_runner.args = []
+
+        config = {"dryrun": False, "path": "/tmp", "host": "localhost",
+                  "db": "0penquark", "user": "postgres"}
+        psql(config, script="xxx", runner=fake_runner)
+        self.assertEqual(
+            ["psql", "-d", "0penquark", "-U", "postgres", "-f", "/tmp/xxx"],
+            fake_runner.args)
+
+    def test_psql_cmd_with_command(self):
+        """Tests the psql command params with an SQL command."""
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.args = cmds
+        fake_runner.args = []
+
+        config = {"dryrun": False, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "chuckn"}
+        psql(config, cmd="SELECT * from admin.revision_info",
+             runner=fake_runner)
+        self.assertEqual(
+            ["psql", "-d", "openquake", "-U", "chuckn", "-c",
+             "SELECT * from admin.revision_info"], fake_runner.args)
+
+    def test_psql_with_non_local_host(self):
+        """
+        The `-h` flag *is* specified in the `psql` command when the host in
+        the configuration is not `localhost`.
+        """
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.args = cmds
+        fake_runner.args = []
+
+        config = {"dryrun": False, "path": "/tmp", "host": "gozilla",
+                  "db": "openquake", "user": "postgres"}
+        psql(config, cmd="SELECT * from admin.revision_info",
+             runner=fake_runner)
+        self.assertTrue("-h" in fake_runner.args)
+
     def test_psql_with_local_host(self):
         """
         Does not specify the `-h` flag in the `psql` command when the host in
