@@ -40,7 +40,7 @@ import re
 import sys
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 def psql(config, script=None, cmd=None, ignore_dryrun=False):
