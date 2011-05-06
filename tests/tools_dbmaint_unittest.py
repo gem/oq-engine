@@ -26,7 +26,7 @@ import os
 import shutil
 import tempfile
 import unittest
-from tools.dbmaint import error_occurred, find_scripts, scripts_to_run
+from tools.dbmaint import error_occurred, find_scripts, psql, scripts_to_run
 
 
 def touch(path):
@@ -37,8 +37,49 @@ def touch(path):
 class PsqlTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.psql()."""
 
-    def __init__(self, *args, **kwargs):
-        super(PsqlTestCase, self).__init__(*args, **kwargs)
+    def test_psql_with_local_host(self):
+        """
+        Does not specify the `-h` flag in the `psql` command when the host in
+        the configuration is `localhost`.
+        """
+
+    def test_psql_with_local_host_ip(self):
+        """
+        Does not specify the `-h` flag in the `psql` command when the host in
+        the configuration is `127.0.0.1`.
+        """
+
+    def test_psql_with_dry_run_flag(self):
+        """
+        Does not call the psql command if the `dryrun` flag is set in
+        the configuration.
+        """
+        def fake_runner(cmds):
+            """Fake serialization function to be used in this test."""
+            fake_runner.number_of_calls += 1
+        fake_runner.number_of_calls = 0
+
+        config = {"dryrun": True, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        psql(config, cmd="SELECT * from admin.revision_info",
+             runner=fake_runner)
+        self.assertEqual(0, fake_runner.number_of_calls)
+
+    def test_psql_with_ignored_dry_run_flag(self):
+        """
+        Calls the psql command if the `dryrun` flag is set in the configuration
+        but the 'ignore_dryrun' parameter is set to `True`.
+        """
+
+    def test_psql_with_both_script_and_command(self):
+        """
+        Raises an `Exception` if both a command and a script are passed.
+        """
+
+    def test_psql_with_neither_script_nor_command(self):
+        """
+        Raises an `Exception` if neither a command nor a script are passed.
+        """
 
 
 class FindScriptsTestCase(unittest.TestCase):

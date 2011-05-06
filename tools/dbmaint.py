@@ -80,7 +80,10 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
     :returns: a triple (exit code, stdout, stderr) with psql execution outcome
     """
     if script and cmd:
-        raise Exception("Please specify either an SQL script or command.")
+        raise Exception("Please specify either an SQL script or a command.")
+
+    if not script and not cmd:
+        raise Exception("Neither SQL script nor command specified.")
 
     if config['host'] in ["localhost", "127.0.0.1"]:
         psql_cmd = "psql -d %(db)s -U %(user)s" % config
