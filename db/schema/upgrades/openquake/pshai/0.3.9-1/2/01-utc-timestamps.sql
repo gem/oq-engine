@@ -1,6 +1,4 @@
 /*
-  Functions used in the OpenQuake database.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -18,11 +16,8 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
-CREATE OR REPLACE FUNCTION format_exc(operation TEXT, error TEXT, tab_name TEXT) RETURNS TEXT AS $$
-BEGIN
-    RETURN operation || ': error: ' || error || ' (' || tab_name || ')';
-END;
-$$ LANGUAGE plpgsql;
+-- All triggers that refresh the 'last_update' time stamps shall stick to the
+-- UTC time zone.
 
 CREATE OR REPLACE FUNCTION check_rupture_sources() RETURNS TRIGGER
 LANGUAGE plpgsql AS
@@ -73,9 +68,6 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
-COMMENT ON FUNCTION check_rupture_sources() IS
-'Make sure a rupture only has one source (point, simple or complex fault).';
 
 CREATE OR REPLACE FUNCTION check_source_sources() RETURNS TRIGGER
 LANGUAGE plpgsql AS
@@ -155,9 +147,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION check_source_sources() IS
-'Make sure a seismic source only has one source (area, point, simple or complex fault).';
-
 CREATE OR REPLACE FUNCTION check_only_one_mfd_set() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -190,9 +179,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION check_only_one_mfd_set() IS
-'Make sure only one magnitude frequency distribution is set.';
-
 CREATE OR REPLACE FUNCTION check_magnitude_data() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -224,9 +210,6 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION check_magnitude_data() IS
-'Make sure that at least one magnitude value is set.';
-
 CREATE OR REPLACE FUNCTION refresh_last_update() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -236,6 +219,3 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-
-COMMENT ON FUNCTION refresh_last_update() IS
-'Refresh the ''last_update'' time stamp whenever a row is updated.';
