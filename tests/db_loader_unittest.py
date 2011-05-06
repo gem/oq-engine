@@ -262,10 +262,11 @@ SIMPLE_FAULT_OUTLINE_WKT = \
  -121.897848684 37.9777013304 12.9252918026,
  -121.906476269 37.9835651322 12.9252918026,
  -121.915105226 37.9894283028 12.9252918026,
- -121.746720468 37.7997646327 8.0))'''.replace('\n', '') 
+ -121.746720468 37.7997646327 8.0))'''.replace('\n', '')
 
 SIMPLE_FAULT_EDGE_WKT = \
     'SRID=4326;LINESTRING(-121.8229 37.7301 0.0, -122.0388 37.8771 0.0)'
+
 
 class NrmlModelLoaderTestCase(unittest.TestCase):
 
@@ -313,7 +314,6 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         self.assertRaises(ValueError, db_loader.get_fault_surface, self.area)
         self.assertRaises(ValueError, db_loader.get_fault_surface, self.point)
 
-
     def test_parse_mfd_simple_fault(self):
 
         expected = {
@@ -345,7 +345,6 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         mfd_insert = db_loader.parse_mfd(self.simple, mfd)
 
         self.assertEqual(expected, mfd_insert)
-
 
     def test_parse_mfd_complex_fault(self):
         expected = {
