@@ -9,5 +9,3 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
-
-
