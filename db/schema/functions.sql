@@ -149,7 +149,7 @@ BEGIN
     END IF;
 
     IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := now();
+        NEW.last_update := timezone('UTC'::text, now());
     END IF;
     RETURN NEW;
 END;
@@ -184,7 +184,7 @@ BEGIN
     END IF;
 
     IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := now();
+        NEW.last_update := timezone('UTC'::text, now());
     END IF;
     RETURN NEW;
 END;
@@ -218,7 +218,7 @@ BEGIN
     END IF;
 
     IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := now();
+        NEW.last_update := timezone('UTC'::text, now());
     END IF;
     RETURN NEW;
 END;
@@ -232,7 +232,7 @@ LANGUAGE plpgsql AS
 $$
 DECLARE
 BEGIN
-    NEW.last_update := now();
+    NEW.last_update := timezone('UTC'::text, now());
     RETURN NEW;
 END;
 $$;
