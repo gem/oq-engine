@@ -160,8 +160,9 @@ def run_scripts(artefact, rev_info, scripts, config):
                 break
 
     if max_step != 0:
-        cmd=("UPDATE admin.revision_info SET step=%s WHERE artefact='%s'"
-             "  AND revision = '%s'")
+        cmd=("UPDATE admin.revision_info SET step=%s, "
+             "last_update=timezone('UTC'::text, now()) "
+             "WHERE artefact='%s' AND revision = '%s'")
         cmd %= (max_step, artefact, rev_info['revision'])
         code, out, err = psql(config, cmd=cmd)
 
