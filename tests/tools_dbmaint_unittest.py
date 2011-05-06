@@ -26,11 +26,13 @@ import os
 import shutil
 import tempfile
 import unittest
-from tools.dbmaint import error_occurred, find_scripts
+from tools.dbmaint import error_occurred, find_scripts, scripts_to_run
+
 
 def touch(path):
     """Create an empty file with the given `path`."""
     open(path, "w+").close()
+
 
 class PsqlTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.psql()."""
@@ -86,8 +88,44 @@ class FindScriptsTestCase(unittest.TestCase):
 class ScriptsToRunTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.scripts_to_run()."""
 
-    def __init__(self, *args, **kwargs):
-        super(ScriptsToRunTestCase, self).__init__(*args, **kwargs)
+    def setUp(self):
+        self.tdir = tempfile.mkdtemp()
+        self.path =  "%s/schema/upgrades" % self.tdir
+        self.top = "%s/openquake/pshai/0.3.9-1" % self.path
+        self.path1 = "%s/1" % self.top
+        os.makedirs(self.path1)
+        self.path1d = "%s/1/too_deep" % self.top
+        os.makedirs(self.path1d)
+        self.path2 = "%s/2" % self.top
+        os.makedirs(self.path2)
+        self.path3 = "%s/3" % self.top
+        os.makedirs(self.path3)
+
+    def tearDown(self):
+        shutil.rmtree(self.tdir)
+
+    def test_scripts_to_run_with_no_upgrades(self):
+        """No upgrades are available."""
+        artefact = "openquake/pshai"
+        rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
+        config = {"dryrun": True, "path": self.path, "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        touch("%s/01-a.sql" % self.path1)
+        touch("%s/01-a.sql" % self.path2)
+        self.assertEqual([], scripts_to_run(artefact, rev_info, config))
+
+    def test_scripts_to_run_with_available_upgrades(self):
+        """Upgrades are available."""
+        artefact = "openquake/pshai"
+        rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
+        config = {"dryrun": True, "path": self.path, "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        touch("%s/01-a.sql" % self.path1)
+        touch("%s/01-b.sql" % self.path2)
+        touch("%s/01-c.sql" % self.path3)
+        touch("%s/02-d.sql" % self.path3)
+        self.assertEqual(["3/01-c.sql", "3/02-d.sql"],
+                         scripts_to_run(artefact, rev_info, config))
 
 
 class ErrorOccuredTestCase(unittest.TestCase):
