@@ -61,12 +61,15 @@ JAVA_CLASSES = {
     "Site" : "org.opensha.commons.data.Site",
     "HashMap" : "java.util.HashMap",
     "RuptureReader" : "org.gem.engine.hazard.parsers.RuptureReader",
-    "GMPEDeserializer" : "org.gem.ScalarIntensityMeasureRelationshipApiDeserializer",
+    "GMPEDeserializer" :
+        "org.gem.ScalarIntensityMeasureRelationshipApiDeserializer",
     "JsonPrimitive" : "com.google.gson.JsonPrimitive",
     "GMFCalculator" : "org.gem.calc.GroundMotionFieldCalculator",
     "SourceModelReader": "org.gem.engine.hazard.parsers.SourceModelReader",
-    "StirlingGriddedSurface": "org.opensha.sha.faultSurface.StirlingGriddedSurface",
-    "ApproxEvenlyGriddedSurface": "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
+    "StirlingGriddedSurface":
+        "org.opensha.sha.faultSurface.StirlingGriddedSurface",
+    "ApproxEvenlyGriddedSurface":
+        "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)

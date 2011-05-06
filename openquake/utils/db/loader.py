@@ -40,6 +40,15 @@ TECTONIC_REGION_MAP = {
 def get_fault_surface(fault):
     """
     Simple and complex faults have different types of surfaces.
+
+    The function builds the appropriate jpype java object for a given fault.
+
+    :type fault: jpype java object of type `GEMFaultSourceData` or
+        `GEMSubductionFaultSourceData` ('simple' or 'complex' faults,
+        respectively)
+
+    :returns: jpype java object of type `StirlingGriddedSurface` (for simple
+        faults) or `ApproxEvenlyGriddedSurface` (for complex faults)
     """
     fault_type = fault.__javaclass__.getName()
 
@@ -164,10 +173,65 @@ def parse_mfd(fault, mfd_java_obj):
 
 def parse_simple_fault_src(fault):
     """
-    :param fault:
-    :type fault: jpype-wrapped java object of type `GEMFaultSourceData`
+    Given a jpype java `GEMFaultSourceData` object, parse out the necessary
+    information to insert a 'simple fault' into the database.
+
+    :param fault: simple fault object, from which we derive 3 pieces of data to
+        insert into the database:
+            * Magnitude Frequency Distribution
+            * Simple Fault
+            * Source
+    :type fault: jpype java object of type `GEMFaultSourceData`
+
+    :returns: 3-tuple of (mfd, simple_fault, source). Each item will be a dict
+        with the following keys:
+            * table
+                name of the table to which the data should be inserted;
+                includes the tablespace
+            * data
+                dict containing keys corresponding to column names; values are
+                set to the data which is to be inserted
+
+        Example return value::
+            ({'table': 'pshai.mfd_evd', 'data': {
+                'max_val': 6.9500000000000002,
+                'total_cumulative_rate': 1.8988435199999998e-05,
+                'min_val': 6.5499999999999998,
+                'bin_size': 0.10000000000000009,
+                'mfd_values': [
+                    0.0010614989, 0.00088291626999999998,
+                    0.00073437776999999999, 0.00061082879999999995,
+                    0.00050806530000000003],
+                'total_moment_rate': 281889786038447.25,
+                'owner_id': None}},
+            {'table': 'pshai.simple_fault', 'data': {
+                'name': u'Mount Diablo Thrust',
+                'upper_depth': 8.0,
+                'mgf_evd_id': None,
+                'mfd_tgr_id': None,
+                'edge': <WKTSpatialElement at 0x107228a50; ... >,
+                'lower_depth': 13.0,
+                'gid': u'src01',
+                'owner_id': None,
+                'dip': 38.0,
+                'description': None}},
+            {'table': 'pshai.source', 'data': {
+                'r_depth_distr_id': None,
+                'name': u'Mount Diablo Thrust',
+                'tectonic_region': 'active',
+                'rake': 90.0,
+                'si_type': 'simple',
+                'gid': u'src01',
+                'simple_fault_id': None,
+                'owner_id': None,
+                'hypocentral_depth': None,
+                'description': None}})
     """
     def build_simple_fault_insert(fault):
+        """
+        Build up the simple fault dict. See the documentation for
+        :py:function:`parse_simple_fault_src` for more information.
+        """
         simple_fault = db.SIMPLE_FAULT.copy()
         simple_fault['name'] = fault.getName()
         simple_fault['gid'] = fault.getID()
@@ -177,30 +241,24 @@ def parse_simple_fault_src(fault):
 
         trace = fault.getTrace()
 
-        # coords need to be ordered: lon/lat
-        point_str_2d = lambda pt: \
-            ' '.join([
-                str(pt.getLongitude()),
-                str(pt.getLatitude())])
-
-        # lon/lat/depth
+        # coords are ordered as lon/lat/depth
         point_str_3d = lambda pt: \
             ' '.join([
                 str(pt.getLongitude()),
                 str(pt.getLatitude()),
                 str(pt.getDepth())])
 
-        coord_list = lambda point_list, point_xform: \
-            ', '.join([point_xform(point) for point in point_list])
+        coord_list = lambda point_list: \
+            ', '.join([point_str_3d(point) for point in point_list])
 
         # polygon coordinates need to form a closed loop
         # the first point should also be the last point
         # we need to ignore the depth coord (stick with lat/lon only)
-        poly_coords = lambda point_list, point_xform: \
-            coord_list(list(point_list) + [point_list[0]], point_xform)
+        poly_coords = lambda point_list: \
+            coord_list(list(point_list) + [point_list[0]])
 
 
-        trace_coords = coord_list(trace, point_str_3d)
+        trace_coords = coord_list(trace)
         
         simple_fault['edge'] = \
             geoalchemy.WKTSpatialElement(
@@ -209,13 +267,11 @@ def parse_simple_fault_src(fault):
         surface = get_fault_surface(fault)
 
         outline_coords = \
-            poly_coords(surface.getLocationList(), point_str_2d)
+            poly_coords(surface.getLocationList())
 
         simple_fault['outline'] = \
             geoalchemy.WKTSpatialElement(
                 'SRID=4326;POLYGON((%s))' % outline_coords)
-
-        simple_fault.pop('outline')
 
         simple_fault_insert = {
             'table': '%s.simple_fault' % db.PSHAI_TS,
@@ -225,9 +281,13 @@ def parse_simple_fault_src(fault):
 
 
     def build_source_insert(fault):
+        """
+        Build up the source dict. See the documentation for
+        :py:function:`parse_simple_fault_src` for more information.
+        """
         source = db.SOURCE.copy()
 
-        # TODO: this gid will be the same as the simple_fault.gid
+        # NOTE(LB): this gid will be the same as the simple_fault.gid
         # This could be horribly wrong.
         source['gid'] = fault.getID()
         source['name'] = fault.getName()
@@ -242,7 +302,7 @@ def parse_simple_fault_src(fault):
 
         return source_insert
 
-    
+
     mfd_java_obj = fault.getMfd()
 
     mfd_insert = parse_mfd(fault, mfd_java_obj)
@@ -279,23 +339,40 @@ def parse_point_src(source_data):
 
 def write_simple_fault(engine_meta, simple_data, owner_id):
     """
+    Perform an insert of the given data.
 
-    :param engine_meta:
+    :param engine_meta: Database metadata object which we need to gain access
+        to the appropriate table objects, which can then be used to perform
+        insert operations.
     :type engine_meta: :py:class:`sqlalchemy.schema.MetaData`
 
-    :returns: List of dicts of table/record id pairs.
-        For example::
+    :param simple_data: 3-tuple of insert data (mfd, simple_fault, source). See
+        the documentation for :py:function:`parse_simple_fault_src` for more
+        information on the structure of this input.
+
+    :param owner_id: Per the OpenQuake database standards, the tables in the
+        database associated with a simple fault all have an 'owner_id' column.
+        An 'owner_id' must be supplied for all new entries. (Note: The
+        'owner_id' corresponds to the 'id' field of the 'admin.oq_user' table.
+        We do this so we can know who created what, and also to enforce access
+        restrictions on data, if necessary.
+    :type owner_id: int
+
+    :returns: List of dicts of table/record id pairs, indicating the tables and
+        the primary keys of the new records. For example::
             [{'pshai.mfd_evd': 1},
              {'pshai.simple_fault': 7},
              {'pshai.source': 3}]
     """
-
     def do_insert(insert):
         """
         Set the owner_id for the record, insert the data, and return the id of
         the new record.
 
         This assumes one only record insertion.
+
+        :param insert: 
+        :type insert: dict
         """
         assert owner_id is not None, "owner_id should not be None"
         assert isinstance(owner_id, int), "owner_id should be an integer"
@@ -313,6 +390,7 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
 
     assert len(simple_data) == 3, \
         "Expected a 3-tuple: (mfd, simple_fault, source)"
+
     mfd, simple_fault, source = simple_data
 
     mfd_id = do_insert(mfd)
