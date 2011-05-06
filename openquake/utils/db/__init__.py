@@ -18,6 +18,11 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""
+This module contains constants and some basic utilities and scaffolding to
+assist with database interactions.
+"""
+
 import sqlalchemy
 import geoalchemy
 
@@ -50,7 +55,8 @@ SOURCE = dict.fromkeys([
     'name', 'description', 'rake', 'hypocentral_depth', 'r_depth_distr_id'])
 MFD_EVD = dict.fromkeys([
     # required:
-    'owner_id', 'magnitude_type', 'min_val', 'max_val', 'bin_size', 'mfd_values',
+    'owner_id', 'magnitude_type', 'min_val', 'max_val', 'bin_size',
+    'mfd_values',
     # optional:
     'total_cumulative_rate', 'total_moment_rate'])
 MFD_TGR = dict.fromkeys([
