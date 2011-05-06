@@ -172,9 +172,9 @@ def run_scripts(artefact, rev_info, scripts, config):
             break
 
     if max_step != 0:
-        cmd=("UPDATE admin.revision_info SET step=%s, "
-             "last_update=timezone('UTC'::text, now()) "
-             "WHERE artefact='%s' AND revision = '%s'")
+        cmd = ("UPDATE admin.revision_info SET step=%s, "
+               "last_update=timezone('UTC'::text, now()) "
+               "WHERE artefact='%s' AND revision = '%s'")
         cmd %= (max_step, artefact, rev_info['revision'])
         code, out, err = psql(config, cmd=cmd)
 
@@ -227,8 +227,8 @@ def main(cargs):
     def strip_dashes(arg):
         return arg.split('-')[-1]
 
-    config=dict(db="openquake", user="postgres", path="db/schema/upgrades",
-                host="localhost", dryrun=False)
+    config = dict(db="openquake", user="postgres", path="db/schema/upgrades",
+                  host="localhost", dryrun=False)
     longopts = ["%s" % k if isinstance(v, bool) else "%s=" % k
                 for k, v in config.iteritems()] + ["help"]
     s2l = dict(d="db", p="path", n="dryrun", U="user")
