@@ -43,7 +43,28 @@ import sys
 logging.basicConfig(level=logging.INFO)
 
 
-def psql(config, script=None, cmd=None, ignore_dryrun=False):
+def run_cmd(cmds, ignore_exit_code=False):
+    """Run the given command and return the exit code, stdout and stderr.
+
+    :param list cmds: the strings that comprise the command to run
+    :param bool ignore_exit_code: if `True` no `Exception` will be raised for
+        non-zero command exit code.
+    :returns: an `(exit code, stdout, stderr)` triple
+    :raises Exception: when the command terminates with a non-zero command
+        exit code.
+    """
+    p = subprocess.Popen(
+        cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.returncode != 0 and not ignore_exit_code:
+        error = ("%s terminated with exit code: %s\n%s"
+                 % (cmds[0], p.returncode, err))
+        logging.error(error)
+        raise Exception(error)
+    return (p.returncode, out, err)
+
+
+def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
     """Runs the `psql` tool either with a command or SQL script.
 
     If the `dryrun` configuration flag is set the command will not be run but
@@ -55,6 +76,7 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False):
     :param string cmd: the command to run.
     :param bool ignore_dryrun: if `True` the `dryrun` flag in the
         configuration will be disregarded.
+    :param runner: function to use for running `psql`
     :returns: a triple (exit code, stdout, stderr) with psql execution outcome
     """
     if script and cmd:
@@ -78,28 +100,7 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False):
         print " ".join(cmds)
         return (-1, "", "")
     else:
-        return run_cmd(cmds)
-
-
-def run_cmd(cmds, ignore_exit_code=False):
-    """Run the given command and return the exit code, stdout and stderr.
-
-    :param list cmds: the strings that comprise the command to run
-    :param bool ignore_exit_code: if `True` no `Exception` will be raised for
-        non-zero command exit code.
-    :returns: an `(exit code, stdout, stderr)` triple
-    :raises Exception: when the command terminates with a non-zero command
-        exit code.
-    """
-    p = subprocess.Popen(
-        cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    if p.returncode != 0 and not ignore_exit_code:
-        error = ("%s terminated with exit code: %s\n%s"
-                 % (cmds[0], p.returncode, err))
-        logging.error(error)
-        raise Exception(error)
-    return (p.returncode, out, err)
+        return runner(cmds)
 
 
 def find_scripts(path):
