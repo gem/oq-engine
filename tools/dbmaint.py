@@ -166,6 +166,7 @@ def run_scripts(artefact, rev_info, scripts, config):
         rev = rev_info['revision']
         results = psql(config, script="%s/%s/%s" % (artefact, rev, script))
         if script_failed(results, script, config):
+            # A step of '-1' indicates a broken upgrade.
             max_step = -1
             break
 
@@ -180,7 +181,7 @@ def run_scripts(artefact, rev_info, scripts, config):
 def script_failed((code, out, err), script, config):
     """Log SQL script output and return `True` in case of errors."""
     if not config['dryrun']:
-        logging.info("%s (exit code: %s)" % (script, code))
+        logging.info("%s (%s)" % (script, code))
         out = out.strip()
         if out:
             logging.info(out)
@@ -190,6 +191,35 @@ def script_failed((code, out, err), script, config):
             if error_occurred(err):
                 return True
     return False
+
+
+def perform_upgrade(config):
+    """Perform the upgrades for all artefacts in the database.
+
+    :param dict config: the configuration to use: database, host, user, path.
+    """
+    # Get the revision information from the database.
+    cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
+    code, out, err = psql(config, cmd=cmd, ignore_dryrun=True)
+    # Throw away the psql header and footer.
+    db_rev_data = out.split('\n')[2:-3]
+
+    rev_data = dict()
+    columns = ("id", "revision", "step")
+
+    # Extract the revision info from the psql input.
+    for info in db_rev_data:
+        info = [d.strip() for d in info.split('|')]
+        rev_data[info[0]] = dict(zip(columns, info[1:]))
+    logging.debug(rev_data)
+
+    # Run upgrade scripts (if any) for all rtefacts.
+    for artefact, rev_info in rev_data.iteritems():
+        scripts = scripts_to_run(artefact, rev_info, config)
+        if scripts:
+            logging.debug("%s: %s" % (artefact, scripts))
+            run_scripts(artefact, rev_info, scripts, config)
+
 
 def main(cargs):
     """Run SQL scripts that upgrade the database and/or migrate data."""
@@ -217,24 +247,7 @@ def main(cargs):
         if opt not in config:
             opt = s2l[opt]
         config[opt] = arg if arg else not config[opt]
-
-    # Get the revision information from the database.
-    cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
-    code, out, err = psql(config, cmd=cmd, ignore_dryrun=True)
-    # Throw away the psql header and footer.
-    db_rev_data = out.split('\n')[2:-3]
-
-    rev_data = dict()
-    columns = ("id", "revision", "step")
-    for info in db_rev_data:
-        info = [d.strip() for d in info.split('|')]
-        rev_data[info[0]] = dict(zip(columns, info[1:]))
-    logging.debug(rev_data)
-    for artefact, rev_info in rev_data.iteritems():
-        scripts = scripts_to_run(artefact, rev_info, config)
-        if scripts:
-            logging.debug("%s: %s" % (artefact, scripts))
-            run_scripts(artefact, rev_info, scripts, config)
+    perform_upgrade(config)
 
 
 if __name__ == '__main__':
