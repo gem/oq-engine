@@ -22,8 +22,8 @@
 Unit tests for the tools/dbmaint.py tool.
 """
 
-
 import unittest
+from tools.dbmaint import error_occurred
 
 
 class PsqlTestCase(unittest.TestCase):
@@ -31,7 +31,6 @@ class PsqlTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(PsqlTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
 
 
 class FindScriptsTestCase(unittest.TestCase):
@@ -39,7 +38,6 @@ class FindScriptsTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(FindScriptsTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
 
 
 class ScriptsToRunTestCase(unittest.TestCase):
@@ -47,7 +45,6 @@ class ScriptsToRunTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(ScriptsToRunTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
 
 
 class ErrorOccuredTestCase(unittest.TestCase):
@@ -57,10 +54,25 @@ class ErrorOccuredTestCase(unittest.TestCase):
         super(ErrorOccuredTestCase, self).__init__(*args, **kwargs)
         self.maxDiff = None
 
+    def test_error_occured_with_error(self):
+        """A psql error is detected correctly."""
+        output = '''
+            psql:/tmp/openquake/pshai/0.3.9-1/5/55-eee.sql:1: ERROR:  relation
+            "admin.dbm_test" does not exist
+            LINE 1: INSERT INTO admin.dbm_test(name) VALUES('5/55-eee.sql');
+        '''
+        self.assertTrue(error_occurred(output))
+
+    def test_error_occured_with_no_error(self):
+        """A psql error is not detected (which is correct)."""
+        output = '''
+            LINE 1: INSERT INTO admin.dbm_test(name) VALUES('5/55-eee.sql');
+        '''
+        self.assertFalse(error_occurred(output))
+
 
 class RunScriptsTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.run_scripts()."""
 
     def __init__(self, *args, **kwargs):
         super(RunScriptsTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
