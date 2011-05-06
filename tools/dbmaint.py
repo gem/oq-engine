@@ -60,8 +60,13 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False):
     if script and cmd:
         raise Exception("Please specify either an SQL script or command.")
 
-    psql_cmd = "psql -d %(db)s -U %(user)s -h %(host)s" % config
+    if config['host'] in ["localhost", "127.0.0.1"]:
+        psql_cmd = "psql -d %(db)s -U %(user)s" % config
+    else:
+        psql_cmd = "psql -d %(db)s -U %(user)s -h %(host)s" % config
+
     cmds = psql_cmd.split()
+
     if cmd:
         cmds.extend(['-c', "%s" % cmd])
     else:
