@@ -26,12 +26,44 @@ import os
 import shutil
 import tempfile
 import unittest
-from tools.dbmaint import error_occurred, find_scripts, psql, scripts_to_run
+from tools.dbmaint import (
+    error_occurred, find_scripts, psql, run_cmd, scripts_to_run)
 
 
 def touch(path):
     """Create an empty file with the given `path`."""
     open(path, "w+").close()
+
+
+class RunCmdTestCase(unittest.TestCase):
+    """Tests the behaviour of dbmaint.run_cmd()."""
+
+    def test_run_cmd_with_success(self):
+        """Invoke a command without errors."""
+        code, out, err = run_cmd(["echo", "-n", "Hello world!"])
+        self.assertEqual(0, code)
+        self.assertEqual("Hello world!", out)
+        self.assertEqual("", err)
+
+    def test_run_cmd_with_errors(self):
+        """Invoke a command with errors."""
+        try:
+            code, out, err = run_cmd(["ls", "-AF", "/this/does/not/exist"])
+        except Exception, e:
+            self.assertEqual(
+                "ls terminated with exit code: 2\nls: cannot access "
+                "/this/does/not/exist: No such file or directory\n", e.args[0])
+        else:
+            raise Exception("exception not raised")
+
+    def test_run_cmd_with_errors_and_ignore_exit_code(self):
+        """Invoke a command with errors but ignore the exit code."""
+        code, out, err = run_cmd(
+            ["ls", "-AF", "/this/does/not/exist"], ignore_exit_code=True)
+        self.assertEqual(2, code)
+        self.assertEqual("", out)
+        self.assertEqual("ls: cannot access /this/does/not/exist: No such "
+                         "file or directory\n", err)
 
 
 class PsqlTestCase(unittest.TestCase):
