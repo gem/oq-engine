@@ -53,7 +53,7 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False):
     :param dict config: the configuration to use: database, host, user, path.
     :param string script: the script to run, relative to the path in `config`.
     :param string cmd: the command to run.
-    :param string ignore_dryrun: if `True` the `dryrun` flag in the
+    :param bool ignore_dryrun: if `True` the `dryrun` flag in the
         configuration will be disregarded.
     :returns: a triple (exit code, stdout, stderr) with psql execution outcome
     """
@@ -73,30 +73,42 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False):
         cmds.extend(["-f", "%s/%s" % (config['path'], script)])
 
     if config['dryrun'] and not ignore_dryrun:
-        cmds[-1] = '"%s"' % cmds[-1]
-        logging.info(" ".join(cmds))
+        if cmd:
+            cmds[-1] = '"%s"' % cmds[-1]
+        print " ".join(cmds)
         return (-1, "", "")
     else:
-        p = subprocess.Popen(
-            cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = p.communicate()
-        if p.returncode != 0:
-            # An error occurred. Abort maintenance run.
-            error = (
-                "psql terminated with exit code: %s\n%s" % (p.returncode, err))
-            logging.error(error)
-            raise Exception(error)
-        return (p.returncode, out, err)
+        return run_cmd(cmds)
+
+
+def run_cmd(cmds, ignore_exit_code=False):
+    """Run the given command and return the exit code, stdout and stderr.
+
+    :param list cmds: the strings that comprise the command to run
+    :param bool ignore_exit_code: if `True` no `Exception` will be raised for
+        non-zero command exit code.
+    :returns: an `(exit code, stdout, stderr)` triple
+    :raises Exception: when the command terminates with a non-zero command
+        exit code.
+    """
+    p = subprocess.Popen(
+        cmds, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate()
+    if p.returncode != 0 and not ignore_exit_code:
+        error = ("%s terminated with exit code: %s\n%s"
+                 % (cmds[0], p.returncode, err))
+        logging.error(error)
+        raise Exception(error)
+    return (p.returncode, out, err)
 
 
 def find_scripts(path):
     """Find all SQL scripts at level 2 of the given `path`."""
     result = []
     cmd = "find %s -mindepth 2 -maxdepth 2 -type f -name *.sql" % path
-    p = subprocess.Popen(
-        cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    if p.returncode != 0:
+    code, out, err = run_cmd(cmd.split(), ignore_exit_code=True)
+
+    if code != 0:
         logging.warn(err)
     else:
         prefix_length = len(path) + 1
