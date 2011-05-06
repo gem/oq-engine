@@ -72,7 +72,7 @@ class PsqlTestCase(unittest.TestCase):
     def test_psql_cmd_with_script(self):
         """Tests the psql command params with an SQL script file."""
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.args = cmds
         fake_runner.args = []
 
@@ -86,7 +86,7 @@ class PsqlTestCase(unittest.TestCase):
     def test_psql_cmd_with_command(self):
         """Tests the psql command params with an SQL command."""
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.args = cmds
         fake_runner.args = []
 
@@ -104,7 +104,7 @@ class PsqlTestCase(unittest.TestCase):
         the configuration is not `localhost`.
         """
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.args = cmds
         fake_runner.args = []
 
@@ -120,7 +120,7 @@ class PsqlTestCase(unittest.TestCase):
         the configuration is `localhost`.
         """
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.args = cmds
         fake_runner.args = []
 
@@ -136,7 +136,7 @@ class PsqlTestCase(unittest.TestCase):
         the configuration is `127.0.0.1`.
         """
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.args = cmds
         fake_runner.args = []
 
@@ -152,7 +152,7 @@ class PsqlTestCase(unittest.TestCase):
         the configuration.
         """
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.number_of_calls += 1
         fake_runner.number_of_calls = 0
 
@@ -168,7 +168,7 @@ class PsqlTestCase(unittest.TestCase):
         but the 'ignore_dryrun' parameter is set to `True`.
         """
         def fake_runner(cmds):
-            """Fake serialization function to be used in this test."""
+            """Fake command runner function to be used in this test."""
             fake_runner.number_of_calls += 1
         fake_runner.number_of_calls = 0
 
