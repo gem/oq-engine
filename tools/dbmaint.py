@@ -87,7 +87,7 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False):
 def find_scripts(path):
     """Find all SQL scripts at level 2 of the given `path`."""
     result = []
-    cmd = "find %s -maxdepth 2 -type f -name *.sql" % path
+    cmd = "find %s -mindepth 2 -maxdepth 2 -type f -name *.sql" % path
     p = subprocess.Popen(
         cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     out, err = p.communicate()
