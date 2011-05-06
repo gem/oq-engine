@@ -42,6 +42,7 @@ TECTONIC_REGION_MAP = {
     'Active Shallow Crust': 'active',
     'Subduction Interface': 'interface'}
 
+
 def get_fault_surface(fault):
     """
     Simple and complex faults have different types of surfaces.
@@ -70,7 +71,7 @@ def get_fault_surface(fault):
     else:
         raise ValueError("Unexpected fault type: %s" % fault_type)
 
-    return surface 
+    return surface
 
 
 def parse_mfd(fault, mfd_java_obj):
@@ -87,9 +88,9 @@ def parse_mfd(fault, mfd_java_obj):
     :type fault: jpype java object of type `GEMFaultSourceData` or
         `GEMSubductionFaultSourceData` (simple or complex fault source,
         respectively)
-    
+
     :param mfd_java_obj: magnitude frequency distribution function
-    :type mfd_java_obj: jpype java object of type 
+    :type mfd_java_obj: jpype java object of type
         `org.opensha.sha.magdist.IncrementalMagFreqDist` or
         `org.opensha.sha.magdist.GutenbergRichterMagFreqDist`
 
@@ -139,7 +140,7 @@ def parse_mfd(fault, mfd_java_obj):
             mfd_java_obj.getTotalMomentRate() / surface_area
 
         # wrap the insert data in dict keyed by table name
-        mfd_insert = {'table': '%s.mfd_evd' % db.PSHAI_TS, 'data': mfd} 
+        mfd_insert = {'table': '%s.mfd_evd' % db.PSHAI_TS, 'data': mfd}
 
     elif mfd_type == '%s.GutenbergRichterMagFreqDist' % MFD_PACKAGE:
         # 'truncated Gutenberg-Richter' MFD
@@ -262,9 +263,8 @@ def parse_simple_fault_src(fault):
         poly_coords = lambda point_list: \
             coord_list(list(point_list) + [point_list[0]])
 
-
         trace_coords = coord_list(trace)
-        
+
         simple_fault['edge'] = \
             geoalchemy.WKTSpatialElement(
                 'SRID=4326;LINESTRING(%s)' % trace_coords)
@@ -283,7 +283,6 @@ def parse_simple_fault_src(fault):
             'data': simple_fault}
 
         return simple_fault_insert
-
 
     def build_source_insert(fault):
         """
@@ -306,7 +305,6 @@ def parse_simple_fault_src(fault):
             'data': source}
 
         return source_insert
-
 
     mfd_java_obj = fault.getMfd()
 
@@ -376,7 +374,7 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
 
         This assumes one only record insertion.
 
-        :param insert: 
+        :param insert: the data to be inserted (a dict keyed by column names)
         :type insert: dict
         """
         assert owner_id is not None, "owner_id should not be None"
@@ -391,7 +389,6 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
         result = table.insert().execute(data)
 
         return result.inserted_primary_key[0]
-        
 
     assert len(simple_data) == 3, \
         "Expected a 3-tuple: (mfd, simple_fault, source)"
@@ -401,7 +398,7 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
     mfd_id = do_insert(mfd)
 
     if mfd['table'] == '%s.mfd_evd' % db.PSHAI_TS:
-        simple_fault['data']['mfd_evd_id'] = mfd_id 
+        simple_fault['data']['mfd_evd_id'] = mfd_id
     elif mfd['table'] == '%s.mfd_tgr' % db.PSHAI_TS:
         simple_fault['data']['mfd_tgr_id'] = mfd_id
 
@@ -434,7 +431,7 @@ class SourceModelLoader(object):
         '%s.GEMAreaSourceData' % SRC_DATA_PKG: {
             'fn': parse_area_src},
         '%s.GEMPointSourceData' % SRC_DATA_PKG: {
-            'fn': parse_point_src},}
+            'fn': parse_point_src}}
 
     # Functions for writing sources to the db.
     SRC_DATA_WRITE_FN_MAP = {
@@ -445,8 +442,7 @@ class SourceModelLoader(object):
         '%s.GEMAreaSourceData' % SRC_DATA_PKG: {
             'fn': None},
         '%s.GEMPointSourceData' % SRC_DATA_PKG: {
-            'fn': None},}
-
+            'fn': None}}
 
     def __init__(self, src_model_path, engine,
         mfd_bin_width=DEFAULT_MFD_BIN_WIDTH, owner_id=1):
@@ -516,4 +512,3 @@ class SourceModelLoader(object):
             results.extend(write(self.meta, read(src), owner_id=self.owner_id))
 
         return results
-
