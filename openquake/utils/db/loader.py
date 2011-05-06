@@ -133,8 +133,8 @@ class CsvModelLoader(SourceModelLoader):
 
                 row[mag] = float(row[mag])
 
-            # TODO: find a better way to relate catalog/magnitude, without passing
-            # the id to catalog
+            # TODO: find a better way to relate catalog/magnitude, 
+            # without passing the id to catalog
             magnitude = self.soup.magnitude.insert(mb_val=row['mb_val'],
                                 mb_val_error=row['mb_val_error'],
                                 ml_val=row['ml_val'],
