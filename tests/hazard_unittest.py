@@ -129,8 +129,7 @@ class HazardEngineTestCase(unittest.TestCase):
             for realization in xrange(0, realizations):
                 for site in hazengine.sites_for_region():
                     key = tokens.hazard_curve_key(
-                        hazengine.id, realization, site.longitude,
-                        site.latitude)
+                        hazengine.id, realization, site)
                     expected_keys.append(key)
             self.assertEqual(expected_keys, result_keys,
                 "computation didn't yield hazard curve keys in "\
@@ -637,10 +636,8 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         for values in result["curve"]:
             x_values.append(values["x"])
 
-        print x_values
-
-        self.assertTrue(numpy.allclose(numpy.array(19 * [0.5]),
-        numpy.array(x_values)))
+        self.assertTrue(
+            numpy.allclose(numpy.array(19 * [0.5]), numpy.array(x_values)))
 
     def _run(self, sites):
         classical_psha.compute_mean_hazard_curves(
@@ -649,7 +646,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
     def _store_hazard_curve_at(self, site, curve, realization=1):
         kvs.set_value_json_encoded(
                 kvs.tokens.hazard_curve_key(self.job_id, realization,
-                site.longitude, site.latitude), curve)
+                site), curve)
 
     def _has_computed_mean_curve_for_site(self, site):
         self.assertTrue(kvs.get(kvs.tokens.mean_hazard_curve_key(
@@ -901,7 +898,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
     def _store_hazard_curve_at(self, site, curve, realization=1):
         kvs.set_value_json_encoded(
                 kvs.tokens.hazard_curve_key(self.job_id, realization,
-                site.longitude, site.latitude), curve)
+                site), curve)
 
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.mget(pattern))
@@ -912,10 +909,9 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 self.job_id, str(value)))
 
     def _has_computed_quantile_for_site(self, site, value):
-        self.assertTrue(kvs.mget("%s*%s*%s*%s*%s" %
+        self.assertTrue(kvs.mget("%s*%s*%s*%s" %
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                self.job_id, site.longitude, site.latitude,
-                str(value))))
+                self.job_id, site.hash(), str(value))))
 
 
 class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
@@ -1102,10 +1098,9 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.75)))
 
     def _get_iml_at(self, site, poe):
-        return kvs.mget_decoded("%s*%s*%s*%s*%s" %
+        return kvs.mget_decoded("%s*%s*%s*%s" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
-                self.job_id, site.longitude, site.latitude,
-                str(poe)))[0]
+                self.job_id, site.hash(), str(poe)))[0]
 
     def _run(self):
         classical_psha.compute_mean_hazard_maps(self.engine)
@@ -1119,7 +1114,6 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 self.job_id, site), mean_curve)
 
     def _has_computed_IML_for_site(self, site, poe):
-        self.assertTrue(kvs.mget("%s*%s*%s*%s*%s" %
+        self.assertTrue(kvs.mget("%s*%s*%s*%s" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
-                self.job_id, site.longitude, site.latitude,
-                str(poe))))
+                self.job_id, site.hash(), str(poe))))
