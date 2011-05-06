@@ -29,6 +29,8 @@ migration.
   -n | --dryrun   : don't do anything just show what needs done
   -p | --path P   : path to schema upgrade files [default: db/schema/upgrades]
   -U | --user U   : database user to use [default: postgres]
+
+TODO: extend the tool to perform upgrades across versions.
 """
 
 import getopt
