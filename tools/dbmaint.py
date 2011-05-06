@@ -212,7 +212,7 @@ def perform_upgrade(config):
     columns = ("id", "revision", "step")
 
     # Extract the revision info from the psql input.
-    #     artefact     | id | revision | step 
+    #     artefact     | id | revision | step
     # -----------------+----+----------+------
     #  openquake/admin |  1 | 0.3.9-1  |    0
     #  openquake/eqcat |  2 | 0.3.9-1  |    0
