@@ -90,7 +90,7 @@ class ScriptsToRunTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
-        self.path =  "%s/schema/upgrades" % self.tdir
+        self.path = "%s/schema/upgrades" % self.tdir
         self.top = "%s/openquake/pshai/0.3.9-1" % self.path
         self.path1 = "%s/1" % self.top
         os.makedirs(self.path1)
