@@ -29,49 +29,69 @@ from openquake import job
 from openquake import shapes
 from utils import helpers
 
+# the Probability of Exceedance used to build the mean hazard map
+POE = 0.1
+
 
 class HazardMapTestCase(unittest.TestCase):
-    
+
     def setUp(self):
-        self.expected_results = self._load_expected_results()
+        self.expected_results = _load_expected_results()
         kvs.flush()
 
         self.engine = job.Job.from_file(
             helpers.smoketest_file("HazardMapTest/config.gem"))
 
-    @helpers.skipit
-    def test_we_compute_the_same_sites_in_the_region(self):
-        pass
+    def bb_we_compute_the_same_sites_in_the_region(self):
+        """We compute results on the correct sites.
 
-    @helpers.skipit
-    def test_hazard_map_values_are_correctly_stored_in_kvs(self):
+        This test verifies that we split the region and compute
+        the results on the sites we expect.
+        """
+
+        computed_sites = set(self.engine.region.sites)
+        expected_sites = set([result[0] for result in self.expected_results])
+
+        self.assertEqual(len(computed_sites), len(expected_sites))
+        self.assertTrue(expected_sites == computed_sites)
+
+    def bb_hazard_map_values_are_correctly_stored_in_kvs(self):
+        """Hazard map values are correct and stored in kvs.
+
+        This test verifies that the hazard map values we are going
+        to store in .tiff and .xml formats are correct.
+        """
+
         self.engine.launch()
-        
+
         pattern = "%s*%s*%s*" % (
-            kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN, self.engine.id, 0.1)
+            kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN, self.engine.id, POE)
 
         map_values = kvs.mget_decoded(pattern)
-        
+
         self.assertEqual(len(self.expected_results), len(map_values))
-        
+
         for expected_result in self.expected_results:
             key = kvs.tokens.mean_hazard_map_key(
-                self.engine.id, expected_result[0], 0.1)
+                self.engine.id, expected_result[0], POE)
 
             computed_value = float(kvs.get_value_json_decoded(key)["IML"])
 
-            self.assertTrue(
-                numpy.allclose(computed_value, expected_result[1], atol=0.15))
+            self.assertTrue(numpy.allclose(computed_value,
+                    expected_result[1], atol=0.001))
 
-    def _load_expected_results(self):
-        results = []
 
-        file = open(helpers.smoketest_file(
-            "HazardMapTest/expected_results/meanHazardMap0.1.dat"))
+def _load_expected_results():
+    """Return a list of tuples in the form (shapes.Site, value)."""
 
-        for result in file:
+    results = []
+
+    with open(helpers.smoketest_file(
+        "HazardMapTest/expected_results/meanHazardMap0.1.dat")) as f:
+
+        for result in f:
             lon, lat, value = result.split()
             site = shapes.Site(float(lon), float(lat))
             results.append((site, float(value)))
 
-        return results
+    return results
