@@ -41,7 +41,7 @@ class DbLoaderTestCase(unittest.TestCase):
             return [int(csv_r[field]) for field in date_fields]
         def _pop_geometry_fields(csv):
             unused_fields = ['longitude', 'latitude']
-            return [csv.pop(csv.index(field)) for field in unused_fields]
+            [csv.pop(csv.index(field)) for field in unused_fields]
 
         user = 'kpanic'
         password = 'openquake'
@@ -90,5 +90,5 @@ class DbLoaderTestCase(unittest.TestCase):
                 else:
                     self.assertEqual(float(db_val), float(csv_val))
         for db_row in db_rows:
-           soup_db.delete(db_row) 
+            soup_db.delete(db_row) 
         soup_db.commit()
