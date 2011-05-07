@@ -446,7 +446,7 @@ CREATE TABLE uiapi.upload (
     owner_id INTEGER NOT NULL,
     -- The directory where the input files belonging to a batch live on the
     -- server
-    path VARCHAR NOT NULL,
+    path VARCHAR NOT NULL UNIQUE,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -458,7 +458,7 @@ CREATE TABLE uiapi.input (
     owner_id INTEGER NOT NULL,
     upload_id INTEGER NOT NULL,
     -- The full path of the input file on the server
-    path VARCHAR NOT NULL,
+    path VARCHAR NOT NULL UNIQUE,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt-source)
