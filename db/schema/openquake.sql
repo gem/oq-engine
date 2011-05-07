@@ -132,6 +132,9 @@ CREATE TABLE eqcat.surface (
 CREATE TABLE pshai.rupture (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the rupture with a source model input file (uploaded by a GUI
+    -- user).
+    input_id INTEGER,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
@@ -172,6 +175,9 @@ SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
 CREATE TABLE pshai.source (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the source with a source model input file (uploaded by a GUI
+    -- user).
+    input_id INTEGER,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
@@ -231,11 +237,11 @@ SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3)
 
 -- simple source view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_source (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, simple_fault, fault_outline) AS
 SELECT
-    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, sfault.edge, sfault.outline
+    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
+    src.si_type, src.tectonic_region, src.rake, sfault.edge, sfault.outline
 FROM
     pshai.source src, pshai.simple_fault sfault
 WHERE
@@ -245,12 +251,12 @@ WHERE
 
 -- simple rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_rupture (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    magnitude, magnitude_type, edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, magnitude, magnitude_type, edge, fault_outline) AS
 SELECT
-    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
-    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    sfault.edge, sfault.outline
+    rup.id, rup.owner_id, rup.input_id, rup.gid, rup.name, rup.description,
+    rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
+    rup.magnitude_type, sfault.edge, sfault.outline
 FROM
     pshai.rupture rup, pshai.simple_fault sfault
 WHERE
@@ -294,11 +300,12 @@ ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
 
 -- complex source view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_source (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    top_edge, bottom_edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, top_edge, bottom_edge, fault_outline) AS
 SELECT
-    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, fedge.top, fedge.bottom, cfault.outline
+    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
+    src.si_type, src.tectonic_region, src.rake, fedge.top, fedge.bottom,
+    cfault.outline
 FROM
     pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
 WHERE
@@ -308,12 +315,12 @@ WHERE
 
 -- complex rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_rupture (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
 SELECT
-    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
-    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    fedge.top, fedge.bottom, cfault.outline
+    rup.id, rup.owner_id, rup.input_id, rup.gid, rup.name, rup.description,
+    rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
+    rup.magnitude_type, fedge.top, fedge.bottom, cfault.outline
 FROM
     pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
 WHERE
@@ -627,11 +634,17 @@ FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE REST
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_r_depth_distr_fk
 FOREIGN KEY (r_depth_distr_id) REFERENCES pshai.r_depth_distr(id) ON DELETE RESTRICT;
 
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_simple_fault_fk
 FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
