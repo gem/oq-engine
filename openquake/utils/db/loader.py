@@ -31,18 +31,6 @@ import datetime
 
 import geoalchemy
 
-def _read_simple_fault_src():
-    pass
-
-def _read_complex_fault_src():
-    pass
-
-def _read_area_src():
-    pass
-
-def _read_point_src():
-    pass
-
 class SourceModelLoader(object):
 
     def __init__(self, src_model_path, engine):
@@ -118,6 +106,7 @@ class CsvModelLoader(SourceModelLoader):
                 semi_major=row['semi_major'],
                 strike=row['strike'])
 
+            # creates the record inside the transaction, no commit yet
             self.soup.flush()
 
             mags = ['mb_val', 'mb_val_error',
@@ -128,6 +117,9 @@ class CsvModelLoader(SourceModelLoader):
             for mag in mags:
                 row[mag] = row[mag].strip()
 
+                # if m*val* are empty or a series of blank spaces, we assume
+                # that the val is -999 for convention (ask Graeme if we want to
+                # change this)
                 if len(row[mag]) == 0:
                     row[mag] = -999
 
