@@ -24,5 +24,5 @@ INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openqua
 
 INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
 INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/eqcat', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/pshai', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/uiapi', '0.3.9-1');
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 3);
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 1);
