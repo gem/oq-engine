@@ -466,7 +466,7 @@ CREATE TABLE uiapi.input (
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('source', 'lt-source', 'lt-gmpe',  'exposure',
+        CHECK(input_type IN ('unknown', 'source', 'ltree', 'exposure',
                              'vulnerability')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
