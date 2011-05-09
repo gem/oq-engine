@@ -22,6 +22,7 @@
 """
 
 
+import sys
 import unittest
 import openquake.utils.db as db
 from openquake.utils.db import loader
@@ -60,20 +61,21 @@ class DbLoaderTestCase(unittest.TestCase):
         surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
             properties={
                     'id_surface' : [soup_db.surface.c.id]
-            }, exclude_properties=[soup_db.surface.c.id],
-            include_properties=['id_surface'],
+            }, exclude_properties=[soup_db.surface.c.id,
+                                    soup_db.surface.c.last_update],
             primary_key=[soup_db.surface.c.id])
 
         mag_join = soup_db.join(surf_join, soup_db.magnitude,
             properties={
-                    'id_magnitude' : [soup_db.magnitude.c.id]
-            }, exclude_properties=[soup_db.magnitude.c.id],
-            include_properties=['id_magnitude'],
-            primary_key=[soup_db.magnitude.c.id])
+                    'id_magnitude' : [soup_db.magnitude.c.id],
+                    'id_surface' : [soup_db.surface.c.id]
+            }, exclude_properties=[soup_db.magnitude.c.id,
+                soup_db.magnitude.c.last_update, soup_db.surface.c.last_update],
+            primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
 
         db_rows = mag_join.order_by(soup_db.catalog.eventid).all()
+
         # rewind the file
-        db_rows = []
         csv_loader.csv_fd.seek(0)
 
         # skip the header
@@ -88,12 +90,14 @@ class DbLoaderTestCase(unittest.TestCase):
             timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
             csv_time = csv_loader.date_to_timestamp(*timestamp)
             # first we compare the timestamps
+            print dir(db_row)
             self.assertEqual(str(db_row.time), csv_time)
             
             # then, we cycle through the csv keys and consider some special
             # cases
             for csv_key in csv_keys:
                 db_val = getattr(db_row, csv_key)
+                sys.stdout.write(str(db_val) + ' ')
                 csv_val = csv_row[csv_key]
                 if not len(csv_val.strip()):
                     csv_val = '-999.0'
@@ -101,6 +105,7 @@ class DbLoaderTestCase(unittest.TestCase):
                     self.assertEqual(str(db_val), str(csv_val))
                 else:
                     self.assertEqual(float(db_val), float(csv_val))
+            print
         for db_row in db_rows:
             soup_db.delete(db_row) 
         soup_db.commit()

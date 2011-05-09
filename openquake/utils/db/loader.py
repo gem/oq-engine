@@ -31,9 +31,8 @@ import datetime
 
 import geoalchemy
 
-class SourceModelLoader(object):
-
-    def __init__(self, src_model_path, engine):
+class CsvModelLoader(object):
+    def __init__(self, src_model_path, engine, schema):
         """
         :param src_model_path: path to a source model file
         :type src_model_path: str
@@ -46,32 +45,6 @@ class SourceModelLoader(object):
         """
         self.src_model_path = src_model_path
         self.engine = engine
-
-    def serialize(self):
-        """
-        Read the source model and inject it into the database.
-
-        :returns: number of rows inserted TODO: dict of insertions, keyed by
-            tablename?
-        """
-        insert_data = self.read_model()
-        self.write_to_db(insert_data)
-
-    def read_model(self):
-        """
-        Read the source model data.
-
-        Return a dict of stuff.
-        TODO: explain me better, fool
-        """
-        raise NotImplementedError
-
-    def write_to_db(self, insert_data):
-        raise NotImplementedError
-
-class CsvModelLoader(SourceModelLoader):
-    def __init__(self, src_model_path, engine, schema):
-        super(CsvModelLoader, self).__init__(src_model_path, engine)
         self.soup = self._sql_soup_init(schema)
         self.csv_reader = None
         self.csv_fd = open(self.src_model_path, 'r')
