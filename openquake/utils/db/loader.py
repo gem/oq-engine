@@ -100,9 +100,7 @@ class CsvModelLoader(SourceModelLoader):
                 int(row['month']), int(row['day']), int(row['hour']),
                 int(row['minute']), int(row['second']))
 
-            # TODO: find a better way to relate catalog/surface, without passing
-            # the id to catalog
-            surface = self.soup.surface.insert(semi_minor=row['semi_minor'],
+            surface = self.soup.surface(semi_minor=row['semi_minor'],
                 semi_major=row['semi_major'],
                 strike=row['strike'])
 
@@ -125,9 +123,7 @@ class CsvModelLoader(SourceModelLoader):
 
                 row[mag] = float(row[mag])
 
-            # TODO: find a better way to relate catalog/magnitude, 
-            # without passing the id to catalog
-            magnitude = self.soup.magnitude.insert(mb_val=row['mb_val'],
+            magnitude = self.soup.magnitude(mb_val=row['mb_val'],
                                 mb_val_error=row['mb_val_error'],
                                 ml_val=row['ml_val'],
                                 ml_val_error=row['ml_val_error'],
@@ -140,11 +136,11 @@ class CsvModelLoader(SourceModelLoader):
             self.soup.flush()
 
             wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
-            self.soup.catalog.insert(owner_id=1, time=timestamp, 
-                surface_id=surface.id, eventid=row['eventid'], 
+            self.soup.catalog(owner_id=1, time=timestamp, 
+                surface=surface, eventid=row['eventid'], 
                 agency=row['agency'], identifier=row['identifier'], 
                 time_error=row['time_error'], depth=row['depth'],
-                depth_error=row['depth_error'], magnitude_id=magnitude.id,
+                depth_error=row['depth_error'], magnitude=magnitude,
                 point=geoalchemy.WKTSpatialElement(wkt, 4326))
 
         # commit results
@@ -160,4 +156,6 @@ class CsvModelLoader(SourceModelLoader):
         """
         db = SqlSoup(self.engine)
         db.schema = schema
+        db.catalog.relate('surface', db.surface)
+        db.catalog.relate('magnitude', db.magnitude)
         return db
