@@ -446,7 +446,7 @@ CREATE TABLE uiapi.upload (
     owner_id INTEGER NOT NULL,
     -- The directory where the input files belonging to a batch live on the
     -- server
-    path VARCHAR NOT NULL,
+    path VARCHAR NOT NULL UNIQUE,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -458,7 +458,7 @@ CREATE TABLE uiapi.input (
     owner_id INTEGER NOT NULL,
     upload_id INTEGER NOT NULL,
     -- The full path of the input file on the server
-    path VARCHAR NOT NULL,
+    path VARCHAR NOT NULL UNIQUE,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt-source)
@@ -466,7 +466,7 @@ CREATE TABLE uiapi.input (
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('source', 'lt-source', 'lt-gmpe',  'exposure',
+        CHECK(input_type IN ('unknown', 'source', 'ltree', 'exposure',
                              'vulnerability')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
@@ -527,7 +527,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
-        CHECK(imt IN ('none', '1-sided', '2-sided')),
+        CHECK(truncation_type IN ('none', '1-sided', '2-sided')),
     truncation_level float NOT NULL,
     reference_vs30_value float NOT NULL,
     -- Intensity measure levels
