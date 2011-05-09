@@ -52,7 +52,8 @@ SOURCE = dict.fromkeys([
     # required:
     'owner_id', 'simple_fault_id', 'gid', 'si_type', 'tectonic_region',
     # optional:
-    'name', 'description', 'rake', 'hypocentral_depth', 'r_depth_distr_id'])
+    'name', 'description', 'rake', 'hypocentral_depth', 'r_depth_distr_id',
+    'input_id'])
 MFD_EVD = dict.fromkeys([
     # required:
     'owner_id', 'magnitude_type', 'min_val', 'max_val', 'bin_size',

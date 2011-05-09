@@ -340,7 +340,7 @@ def parse_point_src(_source_data):
     raise NotImplementedError
 
 
-def write_simple_fault(engine_meta, simple_data, owner_id):
+def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
     """
     Perform an insert of the given data.
 
@@ -361,6 +361,10 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
         restrictions on data, if necessary.
     :type owner_id: int
 
+    :param int input_id: The database key of the uploaded input file from which
+        this source was extracted. Only set (i.e. not `None`) when uploading
+        via the GUI.
+
     :returns: List of dicts of table/record id pairs, indicating the tables and
         the primary keys of the new records. For example::
             [{'pshai.mfd_evd': 1},
@@ -376,6 +380,8 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
 
         :param insert: the data to be inserted (a dict keyed by column names)
         :type insert: dict
+
+        :returns: primary key of the new record
         """
         assert owner_id is not None, "owner_id should not be None"
         assert isinstance(owner_id, int), "owner_id should be an integer"
@@ -405,6 +411,11 @@ def write_simple_fault(engine_meta, simple_data, owner_id):
     simple_id = do_insert(simple_fault)
 
     source['data']['simple_fault_id'] = simple_id
+
+    # if an input_id is supplied, let's specify it
+    # for the 'source' table entry
+    if input_id:
+        source['data']['input_id'] = input_id
 
     source_id = do_insert(source)
 
@@ -445,7 +456,7 @@ class SourceModelLoader(object):
             'fn': None}}
 
     def __init__(self, src_model_path, engine,
-        mfd_bin_width=DEFAULT_MFD_BIN_WIDTH, owner_id=1):
+        mfd_bin_width=DEFAULT_MFD_BIN_WIDTH, owner_id=1, input_id=None):
         """
         :param src_model_path: path to a source model file
         :type src_model_path: str
@@ -459,11 +470,17 @@ class SourceModelLoader(object):
         :param owner_id: ID of an admin.organization entity in the database. By
             default, the default 'GEM Foundation' group will be used.
             Note(LB): This is kind of ugly and needs to be revisited later.
+
+        :param int input_id: The database key of the uploaded input file from
+            which this source was extracted. Please note that the `input_id`
+            will only be supplied when uploading source model files via the
+            GUI.
         """
         self.src_model_path = src_model_path
         self.engine = engine
         self.mfd_bin_width = mfd_bin_width
         self.owner_id = owner_id
+        self.input_id = input_id
 
         # Java SourceModelReader object
         self.src_reader = java.jclass('SourceModelReader')(
@@ -509,6 +526,8 @@ class SourceModelLoader(object):
                 # for now, just skip this object
                 continue
 
-            results.extend(write(self.meta, read(src), owner_id=self.owner_id))
+            results.extend(
+                write(self.meta, read(src), owner_id=self.owner_id,
+                      input_id=self.input_id))
 
         return results
