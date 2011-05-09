@@ -37,6 +37,7 @@ LOG = logs.LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
+
 def _to_site(element):
     """Extract site information from an HCNode or GMFNode
     and return a Site object"""
@@ -72,7 +73,6 @@ def _to_gmf_site_data(element):
     return (_to_site(element), attributes)
 
 
-
 class NrmlFile(producer.FileProducer):
     """ This class parses a NRML hazard curve file. The contents of a NRML
     file is meant to be used as input for the risk engine. The class is
@@ -105,7 +105,8 @@ class NrmlFile(producer.FileProducer):
 
     """
 
-    PROCESSING_ATTRIBUTES = (('IDmodel', str), ('investigationTimeSpan', float),
+    PROCESSING_ATTRIBUTES = (('IDmodel', str),
+                             ('investigationTimeSpan', float),
                              ('saPeriod', float), ('saDamping', float))
 
     def __init__(self, path):
@@ -131,8 +132,8 @@ class NrmlFile(producer.FileProducer):
                 self._current_hazard_meta[required_attribute]\
                 = attrib_type(id_model_value)
             else:
-                error_str = "element Hazard Curve metadata: missing required " \
-                    "attribute %s" % required_attribute
+                error_str = "element Hazard Curve metadata: " \
+                    "missing required attribute %s" % required_attribute
                 raise ValueError(error_str)
 
     def _to_attributes(self, element):
@@ -148,7 +149,7 @@ class NrmlFile(producer.FileProducer):
 
         for (child_el, child_key, etl) in (
             ('./nrml:hazardCurve/nrml:poE', 'PoEValues', float_strip),
-            ('../nrml:IML','IMLValues', float_strip),
+            ('../nrml:IML', 'IMLValues', float_strip),
             ('../nrml:IML', 'IMT', get_imt),
             ('../../nrml:hazardCurveField', 'endBranchLabel', get_ebl)):
             child_node = element.xpath(child_el,
@@ -195,6 +196,7 @@ class HazardConstraint(object):
     as argument. Items in this dictionary have to match the corresponding ones
     in the checked attribute object.
     """
+
     def __init__(self, attribute):
         self.attribute = attribute
 
@@ -222,7 +224,7 @@ class HazardMapReader(producer.FileProducer):
     { "IMT": "PGA", "poE": 0.1, "IML": 0.5 }
 
     A sample file is provided under docs/schema/examples (hazard-map.xml).
-    
+
     This parser currently doesn't support:
         * the </config /> element
         * the "gml:id" and "endBranchLabel"
@@ -237,7 +239,7 @@ class HazardMapReader(producer.FileProducer):
 
     def _parse(self):
         """Parse iteratively the instance document.
-        
+
         :returns: a tuple for each <HMNode /> element found in the document.
         :rtype: tuple of two elements:
             * an instance of :py:class:`openquake.shapes.Site` as first element
@@ -258,7 +260,7 @@ class HazardMapReader(producer.FileProducer):
             elif event == "start" and element.tag == NRML + "HMNode":
                 site = self._extract_site()
                 self.data["IML"] = self._extract_iml()
-                
+
                 yield (site, dict(self.data))
 
     def _extract_iml(self):
@@ -275,7 +277,7 @@ class HazardMapReader(producer.FileProducer):
 
     def _extract_site(self):
         """Extract the site to which the current node is related.
-        
+
         :returns: the site to which the current node is related
         :rtype: :py:class:`openquake.shapes.Site`
         """
