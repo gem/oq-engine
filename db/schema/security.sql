@@ -81,51 +81,61 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
 GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.complex_fault TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.complex_fault TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.complex_fault TO oq_uiapi_writer;
 
 -- pshai.fault_edge
 GRANT SELECT ON pshai.fault_edge TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.fault_edge TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.fault_edge TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.fault_edge TO oq_uiapi_writer;
 
 -- pshai.focal_mechanism
 GRANT SELECT ON pshai.focal_mechanism TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.focal_mechanism TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.focal_mechanism TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.focal_mechanism TO oq_uiapi_writer;
 
 -- pshai.mfd_evd
 GRANT SELECT ON pshai.mfd_evd TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.mfd_evd TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_evd TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_evd TO oq_uiapi_writer;
 
 -- pshai.mfd_tgr
 GRANT SELECT ON pshai.mfd_tgr TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.mfd_tgr TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_tgr TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_tgr TO oq_uiapi_writer;
 
 -- pshai.r_depth_distr
 GRANT SELECT ON pshai.r_depth_distr TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.r_depth_distr TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_depth_distr TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_depth_distr TO oq_uiapi_writer;
 
 -- pshai.r_rate_mdl
 GRANT SELECT ON pshai.r_rate_mdl TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.r_rate_mdl TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_rate_mdl TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_rate_mdl TO oq_uiapi_writer;
 
 -- pshai.rupture
 GRANT SELECT ON pshai.rupture TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.rupture TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.rupture TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.rupture TO oq_uiapi_writer;
 
 -- pshai.simple_fault
 GRANT SELECT ON pshai.simple_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.simple_fault TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_uiapi_writer;
 
 -- pshai.source
 GRANT SELECT ON pshai.source TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.source TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_uiapi_writer;
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
