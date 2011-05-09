@@ -405,7 +405,8 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                 'simple_fault_id': None,
                 'owner_id': None,
                 'hypocentral_depth': None,
-                'description': None}})
+                'description': None,
+                'input_id': None}})
 
         simple_data = db_loader.parse_simple_fault_src(self.simple)
 
