@@ -22,9 +22,10 @@
 ------------------------------------------------------------------------
 -- Name space definitions go here
 ------------------------------------------------------------------------
-CREATE SCHEMA pshai;
-CREATE SCHEMA eqcat;
 CREATE SCHEMA admin;
+CREATE SCHEMA eqcat;
+CREATE SCHEMA pshai;
+CREATE SCHEMA uiapi;
 
 
 ------------------------------------------------------------------------
@@ -38,12 +39,12 @@ CREATE TABLE admin.organization (
     name VARCHAR NOT NULL,
     address VARCHAR,
     url VARCHAR,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
 
 
--- OpenQuake system users
+-- OpenQuake users
 CREATE TABLE admin.oq_user (
     id SERIAL PRIMARY KEY,
     user_name VARCHAR NOT NULL,
@@ -51,15 +52,89 @@ CREATE TABLE admin.oq_user (
     organization_id INTEGER NOT NULL,
     -- Whether the data owned by the user is visible to the general public.
     data_is_open boolean NOT NULL DEFAULT TRUE,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE admin_ts;
+
+
+-- Revision information
+CREATE TABLE admin.revision_info (
+    id SERIAL PRIMARY KEY,
+    artefact VARCHAR NOT NULL,
+    revision VARCHAR NOT NULL,
+    -- The step will be used for schema upgrades and data migrations.
+    step INTEGER NOT NULL DEFAULT 0,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE admin_ts;
+
+
+-- Earthquake catalog
+CREATE TABLE eqcat.catalog (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- This is *not* a foreign key.
+    eventid INTEGER NOT NULL,
+    agency VARCHAR NOT NULL,
+    identifier VARCHAR NOT NULL,
+    time timestamp without time zone NOT NULL,
+    -- error in seconds
+    time_error float NOT NULL,
+    -- depth in km
+    depth float NOT NULL,
+    -- error in km
+    depth_error float NOT NULL,
+    -- One of unknown, aftershock or foreshock
+    event_class VARCHAR,
+        CONSTRAINT event_class_value CHECK (
+            event_class is NULL
+            OR (event_class IN ('aftershock', 'foreshock'))),
+    magnitude_id INTEGER NOT NULL,
+    surface_id INTEGER NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE eqcat_ts;
+SELECT AddGeometryColumn('eqcat', 'catalog', 'point', 4326, 'POINT', 2);
+ALTER TABLE eqcat.catalog ALTER COLUMN point SET NOT NULL;
+
+
+-- Earthquake event magnitudes
+CREATE TABLE eqcat.magnitude (
+    id SERIAL PRIMARY KEY,
+    mb_val float,
+    mb_val_error float,
+    ml_val float,
+    ml_val_error float,
+    ms_val float,
+    ms_val_error float,
+    mw_val float,
+    mw_val_error float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE eqcat_ts;
+
+
+-- Earthquake event surface (an ellipse with an angle)
+CREATE TABLE eqcat.surface (
+    id SERIAL PRIMARY KEY,
+    -- Semi-minor axis: The shortest radius of an ellipse.
+    semi_minor float NOT NULL,
+    -- Semi-major axis: The longest radius of an ellipse.
+    semi_major float NOT NULL,
+    strike float NOT NULL,
+        CONSTRAINT strike_value CHECK ((strike >= 0.0) AND (strike <= 360.0)),
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE eqcat_ts;
 
 
 -- rupture
 CREATE TABLE pshai.rupture (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the rupture with a source model input file (uploaded by a GUI
+    -- user).
+    input_id INTEGER,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
@@ -67,15 +142,30 @@ CREATE TABLE pshai.rupture (
     -- seismic input type
     si_type VARCHAR NOT NULL DEFAULT 'simple'
         CONSTRAINT si_type CHECK (si_type IN ('complex', 'point', 'simple')),
-    tectonic_region_id INTEGER NOT NULL,
+    -- Tectonic region type, one of:
+    --      Active Shallow Crust (active)
+    --      Stable Shallow Crust (stable)
+    --      Subduction Interface (interface)
+    --      Subduction IntraSlab (intraslab)
+    --      Volcanic             (volcanic)
+    tectonic_region VARCHAR NOT NULL CONSTRAINT tect_region_val
+        CHECK(tectonic_region IN (
+            'active', 'stable', 'interface', 'intraslab', 'volcanic')),
     rake float,
         CONSTRAINT rake_value CHECK (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     magnitude float NOT NULL,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
@@ -85,6 +175,9 @@ SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
 CREATE TABLE pshai.source (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the source with a source model input file (uploaded by a GUI
+    -- user).
+    input_id INTEGER,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
@@ -93,7 +186,15 @@ CREATE TABLE pshai.source (
     si_type VARCHAR NOT NULL DEFAULT 'simple'
         CONSTRAINT si_type CHECK
         (si_type IN ('area', 'point', 'complex', 'simple')),
-    tectonic_region_id INTEGER NOT NULL,
+    -- Tectonic region type, one of:
+    --      Active Shallow Crust (active)
+    --      Stable Shallow Crust (stable)
+    --      Subduction Interface (interface)
+    --      Subduction IntraSlab (intraslab)
+    --      Volcanic             (volcanic)
+    tectonic_region VARCHAR NOT NULL CONSTRAINT tect_region_val
+        CHECK(tectonic_region IN (
+            'active', 'stable', 'interface', 'intraslab', 'volcanic')),
     simple_fault_id INTEGER,
     complex_fault_id INTEGER,
     rake float,
@@ -103,7 +204,7 @@ CREATE TABLE pshai.source (
     -- point/area sources
     hypocentral_depth float,
     r_depth_distr_id INTEGER,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'source', 'point', 4326, 'POINT', 2);
@@ -126,12 +227,41 @@ CREATE TABLE pshai.simple_fault (
         CONSTRAINT lower_depth_val CHECK (lower_depth >= 0.0),
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'geom', 4326, 'LINESTRING', 3);
-ALTER TABLE pshai.simple_fault ALTER COLUMN geom SET NOT NULL;
+SELECT AddGeometryColumn('pshai', 'simple_fault', 'edge', 4326, 'LINESTRING', 3);
+ALTER TABLE pshai.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
+
+
+-- simple source view, needed for Opengeo server integration
+CREATE VIEW pshai.simple_source (
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, simple_fault, fault_outline) AS
+SELECT
+    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
+    src.si_type, src.tectonic_region, src.rake, sfault.edge, sfault.outline
+FROM
+    pshai.source src, pshai.simple_fault sfault
+WHERE
+    src.si_type = 'simple'
+    AND src.simple_fault_id = sfault.id;
+
+
+-- simple rupture view, needed for Opengeo server integration
+CREATE VIEW pshai.simple_rupture (
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, magnitude, magnitude_type, edge, fault_outline) AS
+SELECT
+    rup.id, rup.owner_id, rup.input_id, rup.gid, rup.name, rup.description,
+    rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
+    rup.magnitude_type, sfault.edge, sfault.outline
+FROM
+    pshai.rupture rup, pshai.simple_fault sfault
+WHERE
+    rup.si_type = 'simple'
+    AND rup.simple_fault_id = sfault.id;
 
 
 -- Complex fault geometry
@@ -145,7 +275,7 @@ CREATE TABLE pshai.complex_fault (
     mfd_tgr_id INTEGER,
     mfd_evd_id INTEGER,
     fault_edge_id INTEGER NOT NULL,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'complex_fault', 'outline', 4326, 'POLYGON', 3);
@@ -159,7 +289,7 @@ CREATE TABLE pshai.fault_edge (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    date_created timestamp without time zone
+    last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 3);
@@ -168,20 +298,59 @@ ALTER TABLE pshai.fault_edge ALTER COLUMN top SET NOT NULL;
 ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
 
 
+-- complex source view, needed for Opengeo server integration
+CREATE VIEW pshai.complex_source (
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, top_edge, bottom_edge, fault_outline) AS
+SELECT
+    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
+    src.si_type, src.tectonic_region, src.rake, fedge.top, fedge.bottom,
+    cfault.outline
+FROM
+    pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
+WHERE
+    src.si_type = 'complex'
+    AND src.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
+
+
+-- complex rupture view, needed for Opengeo server integration
+CREATE VIEW pshai.complex_rupture (
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
+SELECT
+    rup.id, rup.owner_id, rup.input_id, rup.gid, rup.name, rup.description,
+    rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
+    rup.magnitude_type, fedge.top, fedge.bottom, cfault.outline
+FROM
+    pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
+WHERE
+    rup.si_type = 'complex'
+    AND rup.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
+
+
 -- Magnitude frequency distribution, Evenly discretized
 CREATE TABLE pshai.mfd_evd (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    -- gml:id
-    gid VARCHAR NOT NULL,
-    name VARCHAR,
-    description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
+    -- The maximum magnitude value will be derived/calculated for evenly
+    -- discretized magnitude frequency distributions.
+    -- It is initialized with a value that should never occur in practice.
+    max_val float NOT NULL DEFAULT -1.0,
     bin_size float NOT NULL,
     mfd_values float[] NOT NULL,
     total_cumulative_rate float,
-    total_moment_rate float
+    total_moment_rate float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -189,17 +358,22 @@ CREATE TABLE pshai.mfd_evd (
 CREATE TABLE pshai.mfd_tgr (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    -- gml:id
-    gid VARCHAR NOT NULL,
-    name VARCHAR,
-    description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     min_val float NOT NULL,
     max_val float NOT NULL,
     a_val float NOT NULL,
     b_val float NOT NULL,
     total_cumulative_rate float,
-    total_moment_rate float
+    total_moment_rate float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -211,9 +385,18 @@ CREATE TABLE pshai.r_depth_distr (
     gid VARCHAR NOT NULL,
     name VARCHAR,
     description VARCHAR,
-    magnitude_type_id INTEGER NOT NULL DEFAULT 1,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
     magnitude float[] NOT NULL,
-    depth float[] NOT NULL
+    depth float[] NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -230,7 +413,9 @@ CREATE TABLE pshai.r_rate_mdl (
     focal_mechanism_id INTEGER NOT NULL,
     -- There can be 1+ rupture rate models associated with a seismic source
     -- that's why the foreign key sits here.
-    source_id INTEGER NOT NULL
+    source_id INTEGER NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
@@ -250,24 +435,131 @@ CREATE TABLE pshai.focal_mechanism (
     rake float,
         CONSTRAINT rake_value CHECK (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
-    date_created timestamp without time zone DEFAULT timezone('UTC'::text, now()) NOT NULL
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE pshai_ts;
 
 
--- Enumeration of tectonic region types
-CREATE TABLE pshai.tectonic_region (
+-- A batch of OpenQuake input files uploaded by the user
+CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    name VARCHAR NOT NULL
-) TABLESPACE pshai_ts;
+    -- The directory where the input files belonging to a batch live on the
+    -- server
+    path VARCHAR NOT NULL UNIQUE,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
 
 
--- Enumeration of magnitude types
-CREATE TABLE pshai.magnitude_type (
+-- A single OpenQuake input file uploaded by the user
+CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    name VARCHAR NOT NULL
-) TABLESPACE pshai_ts;
+    upload_id INTEGER NOT NULL,
+    -- The full path of the input file on the server
+    path VARCHAR NOT NULL UNIQUE,
+    -- Input file type, one of:
+    --      source model file (source)
+    --      source logic tree (lt-source)
+    --      GMPE logic tree (lt-gmpe)
+    --      exposure file (exposure)
+    --      vulnerability file (vulnerability)
+    input_type VARCHAR NOT NULL CONSTRAINT input_type_value
+        CHECK(input_type IN ('unknown', 'source', 'ltree', 'exposure',
+                             'vulnerability')),
+    -- Number of bytes in file
+    size INTEGER NOT NULL DEFAULT 0,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- An OpenQuake engine run started by the user
+CREATE TABLE uiapi.oq_job (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    description VARCHAR NOT NULL,
+    -- One of:
+    --      classical (Classical PSHA)
+    --      probabilistic (Probabilistic event based)
+    --      deterministic (Deterministic)
+    job_type VARCHAR NOT NULL CONSTRAINT job_type_value
+        CHECK(job_type IN ('classical', 'probabilistic', 'deterministic')),
+    -- One of: created, in-progress, failed, succeeded
+    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT status_value
+        CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
+    duration INTEGER NOT NULL DEFAULT -1,
+    oq_params_id INTEGER NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- The parameters needed for an OpenQuake engine run
+CREATE TABLE uiapi.oq_params (
+    id SERIAL PRIMARY KEY,
+    job_type VARCHAR NOT NULL CONSTRAINT job_type_value
+        CHECK(job_type IN ('classical', 'probabilistic', 'deterministic')),
+    upload_id INTEGER NOT NULL,
+    region_grid_spacing float NOT NULL,
+    min_magnitude float CONSTRAINT min_magnitude_set
+        CHECK(
+            ((job_type = 'deterministic') AND (min_magnitude IS NULL))
+            OR ((job_type != 'deterministic') AND (min_magnitude IS NOT NULL))),
+    investigation_time float CONSTRAINT investigation_time_set
+        CHECK(
+            ((job_type = 'deterministic') AND (investigation_time IS NULL))
+            OR ((job_type != 'deterministic') AND (investigation_time IS NOT NULL))),
+    -- One of:
+    --      average (Average horizontal)
+    --      gmroti50 (Average horizontal (GMRotI50))
+    component VARCHAR NOT NULL CONSTRAINT component_value
+        CHECK(component IN ('average', 'gmroti50')),
+    -- Intensity measure type, one of:
+    --      peak ground acceleration (pga)
+    --      spectral acceleration (sa)
+    --      peak ground velocity (pgv)
+    --      peak ground displacement (pgd)
+    imt VARCHAR NOT NULL CONSTRAINT imt_value
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+    period float CONSTRAINT period_is_set
+        CHECK(((imt = 'sa') AND (period IS NOT NULL))
+              OR ((imt != 'sa') AND (period IS NULL))),
+    truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
+        CHECK(truncation_type IN ('none', '1-sided', '2-sided')),
+    truncation_level float NOT NULL,
+    reference_vs30_value float NOT NULL,
+    -- Intensity measure levels
+    imls float[] CONSTRAINT imls_are_set
+        CHECK(
+            ((job_type = 'classical') AND (imls IS NOT NULL))
+            OR ((job_type != 'classical') AND (imls IS NULL))),
+    -- Probabilities of exceedence
+    poes float[] CONSTRAINT poes_are_set
+        CHECK(
+            ((job_type = 'classical') AND (poes IS NOT NULL))
+            OR ((job_type != 'classical') AND (poes IS NULL))),
+    -- Number of logic tree samples
+    realizations integer CONSTRAINT realizations_is_set
+        CHECK(
+            ((job_type = 'deterministic') AND (realizations IS NULL))
+            OR ((job_type != 'deterministic') AND (realizations IS NOT NULL))),
+    -- Number of seismicity histories
+    histories integer CONSTRAINT histories_is_set
+        CHECK(
+            ((job_type = 'probabilistic') AND (histories IS NOT NULL))
+            OR ((job_type != 'probabilistic') AND (histories IS NULL))),
+    -- ground motion correlation flag
+    gm_correlated boolean CONSTRAINT gm_correlated_is_set
+        CHECK(
+            ((job_type = 'classical') AND (gm_correlated IS NULL))
+            OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'oq_params', 'region', 4326, 'POLYGON', 2);
+ALTER TABLE uiapi.oq_params ALTER COLUMN region SET NOT NULL;
 
 
 ------------------------------------------------------------------------
@@ -291,12 +583,6 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.tectonic_region ADD CONSTRAINT pshai_tectonic_region_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.magnitude_type ADD CONSTRAINT pshai_magnitude_type_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
 ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -312,23 +598,8 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_tectonic_region_fk
-FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
-
 ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_fault_edge_fk
 FOREIGN KEY (fault_edge_id) REFERENCES pshai.fault_edge(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
-
-ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_magnitude_type_fk
-FOREIGN KEY (magnitude_type_id) REFERENCES pshai.magnitude_type(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
@@ -363,14 +634,17 @@ FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE REST
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_r_depth_distr_fk
 FOREIGN KEY (r_depth_distr_id) REFERENCES pshai.r_depth_distr(id) ON DELETE RESTRICT;
 
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_simple_fault_fk
 FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_tectonic_region_fk
-FOREIGN KEY (tectonic_region_id) REFERENCES pshai.tectonic_region(id) ON DELETE RESTRICT;
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
@@ -391,3 +665,52 @@ FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 CREATE TRIGGER pshai_complex_fault_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_magnitude_fk
+FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
+
+ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
+FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_oq_params_fk
+FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON eqcat.magnitude
+FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
+
+CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_user FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_fault_edge_refresh_last_update_trig BEFORE UPDATE ON pshai.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON pshai.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER pshai_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON pshai.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
