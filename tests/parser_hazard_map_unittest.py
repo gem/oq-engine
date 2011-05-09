@@ -49,21 +49,15 @@ class HazardMapParserTestCase(unittest.TestCase):
     def test_reads_the_prob_of_exceedance(self):
         self.assertEqual(0.1, self.data[0][1]["poE"])
         self.assertEqual(0.1, self.data[1][1]["poE"])
-        
+
     def test_reads_the_intensity_measure_type(self):
         self.assertEqual("PGA", self.data[0][1]["IMT"])
         self.assertEqual("PGA", self.data[1][1]["IMT"])
-    
-    def test_an_invalid_document_raises_an_error(self):
-        pass
 
-    def test_filtering_is_not_supported(self):
-        pass
-    
     def _parse(self):
         results = []
-        
+
         for node in self.reader:
             results.append(node)
-        
+
         return results
