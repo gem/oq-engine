@@ -211,13 +211,41 @@ class HazardConstraint(object):
 
 
 class HazardMapReader(producer.FileProducer):
+    """This class parses a NRML hazard map file. This class is
+    implemented as a generator. For each "HMNode" element in the parsed
+    instance document, it yields a pair of objects, of which the
+    first one is a shapes object of type Site (representing a
+    geographical site as WGS84 lon/lat), and the second one
+    is a dictionary with hazard-related attribute values for this site.
+
+    The attribute dictionary looks like:
+    { "IMT": "PGA", "poE": 0.1, "IML": 0.5 }
+
+    A sample file is provided under docs/schema/examples (hazard-map.xml).
+    
+    This parser currently doesn't support:
+        * the </config /> element
+        * the "gml:id" and "endBranchLabel"
+          attributes of the <hazardMap /> element
+        * the "vs30" element
+    """
 
     def __init__(self, path):
         self.data = {}
         self.current_element = None
-        super(HazardMapReader, self).__init__(path)
+        producer.FileProducer.__init__(self, path)
 
     def _parse(self):
+        """Parse iteratively the instance document.
+        
+        :returns: a tuple for each <HMNode /> element found in the document.
+        :rtype: tuple of two elements:
+            * an instance of :py:class:`openquake.shapes.Site` as first element
+              (the site to which the current node is related)
+            * :py:class:`dict` containing the attributes related to the node
+              Example: { "IMT": "PGA", "poE": 0.1, "IML": 0.5 }
+        """
+
         for event, element in etree.iterparse(
             self.file, events=("start", "end")):
 
@@ -234,12 +262,24 @@ class HazardMapReader(producer.FileProducer):
                 yield (site, dict(self.data))
 
     def _extract_iml(self):
+        """Extract the IML (Intensity Measure Level) for the current node.
+
+        :returns: the IML value
+        :rtype: float
+        """
+
         iml_el = self.current_element.xpath(
             "./nrml:IML", namespaces=NAMESPACES)
 
         return float(iml_el[0].text.strip())
 
     def _extract_site(self):
+        """Extract the site to which the current node is related.
+        
+        :returns: the site to which the current node is related
+        :rtype: :py:class:`openquake.shapes.Site`
+        """
+
         pos_el = self.current_element.xpath(
             "./nrml:HMSite/gml:Point/gml:pos", namespaces=NAMESPACES)
 
