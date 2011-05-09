@@ -55,13 +55,25 @@ class DbLoaderTestCase(unittest.TestCase):
         csv_loader.serialize()
         soup_db = csv_loader.soup
 
+        # doing some "trickery" with *properties and primary_key, to avoid an
+        # sqlalchemy warning message
         surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
-            soup_db.catalog.surface_id==soup_db.surface.id,isouter=False)
+            properties={
+                    'id_surface' : [soup_db.surface.c.id]
+            }, exclude_properties=[soup_db.surface.c.id],
+            include_properties=['id_surface'],
+            primary_key=[soup_db.surface.c.id])
+
         mag_join = soup_db.join(surf_join, soup_db.magnitude,
-            soup_db.catalog.magnitude_id==soup_db.magnitude.id, isouter=False)
-        #print mag_join.all()
+            properties={
+                    'id_magnitude' : [soup_db.magnitude.c.id]
+            }, exclude_properties=[soup_db.magnitude.c.id],
+            include_properties=['id_magnitude'],
+            primary_key=[soup_db.magnitude.c.id])
+
         db_rows = mag_join.order_by(soup_db.catalog.eventid).all()
         # rewind the file
+        db_rows = []
         csv_loader.csv_fd.seek(0)
 
         # skip the header
