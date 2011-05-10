@@ -55,7 +55,7 @@ For example:
            FLAGS.db_name, FLAGS.user, password=FLAGS.password,
            host=FLAGS.host)
 
-        src_loader = db_loader.SourceModelLoader(FLAGS.source_model, None)
+        src_loader = db_loader.SourceModelLoader(FLAGS.source_model, engine)
 
         started_at = datetime.datetime.now()
 
