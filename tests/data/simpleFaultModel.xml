@@ -1,0 +1,2485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" gml:id="n1">
+  <sourceModel gml:id="sm1">
+    <config/>
+    <simpleFaultSource gml:id="ALCS001">
+      <gml:name>Southern Albania offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6786313049897035</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_0">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>19.5417 40.0925 1.0 19.4654 40.1496 1.0 19.3891 40.2067 1.0 19.297200000000004 40.2833 1.0 19.2052 40.3599 1.0 19.1299 40.4443 1.0 19.0545 40.5286 1.0 18.9921 40.629 1.0 18.9296 40.7293 1.0 18.884 40.8269 1.0 18.8385 40.9245 1.0 18.8033 41.0104 1.0 18.7681 41.09620000000001 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ALCS002">
+      <gml:name>Northern Albania offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.42728909351483</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_1">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>19.4962 40.8747 1.0 19.4683 40.9138 1.0 19.4404 40.9528 1.0 19.4125 40.9918 1.0 19.3766 41.0461 1.0 19.3408 41.1003 1.0 19.3049 41.15460000000001 1.0 19.2729 41.2092 1.0 19.2408 41.2638 1.0 19.2088 41.3184 1.0 19.1818 41.3703 1.0 19.1548 41.4222 1.0 19.1279 41.4741 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="CHCS001">
+      <gml:name>Eastern Valais</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7803713255077853</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_2">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>7.69515 46.2442 5.0 7.73138 46.2683 5.0 7.767610000000001 46.2924 5.0 7.803840000000001 46.3165 5.0 7.840060000000001 46.3406 5.0 7.88953 46.3615 5.0 7.939 46.3825 5.0 7.98847 46.4034 5.0 8.04096 46.4253 5.0 8.09345 46.4471 5.0 8.14594 46.469 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>65.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="CHCS002">
+      <gml:name>Western Valais</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.9607167223119144</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_3">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>6.87254 45.9063 5.0 6.90699 45.9549 5.0 6.94145 46.0035 5.0 6.9759 46.05210000000001 5.0 7.01035 46.1007 5.0 7.04481 46.1493 5.0 7.07926 46.1979 5.0 7.14547 46.2316 5.0 7.211670000000001 46.2654 5.0 7.277880000000001 46.2991 5.0 7.3440900000000005 46.3329 5.0 7.430279999999999 46.3439 5.0 7.51646 46.3548 5.0 7.602639999999999 46.3658 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>65.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="DZCS001">
+      <gml:name>Northern Africa offshore West</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>95.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.542927766247112</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_4">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>3.23922 36.7647 1.0 3.33963 36.829 1.0 3.44003 36.8933 1.0 3.57099 36.9674 1.0 3.7019399999999996 37.0415 1.0 3.7845000000000004 37.0753 1.0 3.8670600000000004 37.1091 1.0 3.9765099999999998 37.1447 1.0 4.08596 37.1804 1.0 4.23701 37.2198 1.0 4.38196 37.2497 1.0 4.52691 37.2795 1.0 4.65822 37.2958 1.0 4.78953 37.3121 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="DZCS002">
+      <gml:name>Northern Africa offshore East</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>95.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>5.057199196685674</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_5">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>5.18516 37.010600000000004 1.0 5.36252 37.0903 1.0 5.51828 37.136 1.0 5.674040000000001 37.1817 1.0 5.82984 37.2196 1.0 5.98565 37.2575 1.0 6.11029 37.2769 1.0 6.23494 37.2964 1.0 6.44384 37.3285 1.0 6.65273 37.3605 1.0 6.84664 37.365 1.0 7.05901 37.366 1.0 7.27138 37.367 1.0 7.419120000000001 37.368 1.0 7.56685 37.3691 1.0 7.760750000000001 37.3988 1.0 7.93695 37.4225 1.0 8.11314 37.4461 1.0 8.28934 37.4698 1.0 8.41166 37.5503 1.0 8.55129 37.6388 1.0 8.69091 37.7273 1.0 8.82937 37.8446 1.0 8.97937 37.9676 1.0 9.12937 38.0906 1.0 9.23785 38.1504 1.0 9.36248 38.2159 1.0 9.48711 38.2814 1.0 9.58289 38.332 1.0 9.67867 38.3825 1.0 9.84254 38.4515 1.0 10.0064 38.5204 1.0 10.1149 38.5664 1.0 10.2234 38.6123 1.0 10.3988 38.6594 1.0 10.5742 38.7064 1.0 10.757700000000002 38.7512 1.0 10.941200000000002 38.79590000000001 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="FRCS001">
+      <gml:name>Brianconnais</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.185751960665454</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_6">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>6.53322 44.9655 5.0 6.539430000000001 44.9134 5.0 6.54563 44.8613 5.0 6.55183 44.8092 5.0 6.55804 44.7571 5.0 6.56424 44.705 5.0 6.61077 44.666 5.0 6.6573 44.627 5.0 6.70383 44.588 5.0 6.75036 44.549 5.0 6.79689 44.51 5.0 6.84342 44.471 5.0 6.889950000000001 44.432 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>65.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="GRCS001">
+      <gml:name>Southern Greece offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>75.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>5.34729846430803</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>8.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_7">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>26.4171 34.2395 5.0 26.2194 34.2238 5.0 26.0216 34.2082 5.0 25.823800000000002 34.1925 5.0 25.626 34.1769 5.0 25.4282 34.1612 5.0 25.2304 34.1456 5.0 25.0207 34.1724 5.0 24.8111 34.1991 5.0 24.6014 34.2259 5.0 24.4164 34.3202 5.0 24.2313 34.4145 5.0 24.0462 34.5088 5.0 23.8611 34.603 5.0 23.7003 34.7236 5.0 23.5394 34.8441 5.0 23.3786 34.9646 5.0 23.2177 35.0851 5.0 23.0569 35.2056 5.0 22.896 35.3262 5.0 22.7352 35.4467 5.0 22.5743 35.5672 5.0 22.4135 35.6877 5.0 22.2526 35.8082 5.0 22.0918 35.9288 5.0 21.930900000000005 36.0493 5.0 21.7701 36.1698 5.0 21.6092 36.2903 5.0 21.448400000000003 36.4109 5.0 21.2875 36.5314 5.0 21.1267 36.6519 5.0 20.9658 36.7724 5.0 20.805 36.8929 5.0 20.6441 37.01350000000001 5.0 20.4833 37.134 5.0 20.3224 37.2545 5.0 20.1616 37.375 5.0 20.000700000000002 37.4955 5.0 19.8399 37.6161 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>70.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="GRCS002">
+      <gml:name>Northern Greece offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>85.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7341486328395344</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_8">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>20.4616 38.8934 1.0 20.3671 38.9724 1.0 20.2726 39.0514 1.0 20.1888 39.1274 1.0 20.105 39.2034 1.0 20.0093 39.2898 1.0 19.9136 39.3763 1.0 19.8213 39.4658 1.0 19.729 39.5554 1.0 19.6341 39.6583 1.0 19.5392 39.7612 1.0 19.4589 39.8541 1.0 19.3786 39.947 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="GRCS003">
+      <gml:name>Kephallonia-Lefkada</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>160.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>5.226136571067447</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.300000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_9">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>19.7946 37.6674 3.0 19.8804 37.7786 3.0 19.9661 37.8897 3.0 20.051800000000004 38.0009 3.0 20.1376 38.1121 3.0 20.2271 38.2405 3.0 20.3166 38.369 3.0 20.3864 38.4902 3.0 20.427400000000002 38.6044 3.0 20.4684 38.7186 3.0 20.5127 38.8734 3.0 20.557 39.0283 3.0 20.6014 39.1832 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>65.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS001">
+      <gml:name>Mljet</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7520334255346035</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_10">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>18.5477 42.2078 1.0 18.4797 42.2492 1.0 18.4118 42.2907 1.0 18.2943 42.3572 1.0 18.1929 42.4206 1.0 18.0833 42.4812 1.0 17.9971 42.5307 1.0 17.901900000000005 42.5914 1.0 17.8217 42.6298 1.0 17.7416 42.6681 1.0 17.6595 42.6927 1.0 17.5775 42.7173 1.0 17.4755 42.735200000000006 1.0 17.3736 42.753 1.0 17.2695 42.7716 1.0 17.1655 42.7901 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS002">
+      <gml:name>Hvar</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>45.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.882271233039567</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_11">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.3323 43.0799 2.0 17.2354 43.0858 2.0 17.1385 43.0918 2.0 17.0416 43.0978 2.0 16.9504 43.1036 2.0 16.8592 43.1094 2.0 16.7702 43.1169 2.0 16.6812 43.1244 2.0 16.619 43.1339 2.0 16.5568 43.14340000000001 2.0 16.4911 43.1562 2.0 16.4246 43.169700000000006 2.0 16.3581 43.1832 2.0 16.2468 43.2119 2.0 16.195100000000004 43.2403 2.0 16.1433 43.2687 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>55.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS003">
+      <gml:name>Imotski</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>112.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.975676410382333</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_12">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.806 43.0479 2.0 17.7135 43.1011 2.0 17.6289 43.1475 2.0 17.5649 43.1853 2.0 17.501 43.2232 2.0 17.4105 43.2786 2.0 17.306800000000003 43.3351 2.0 17.2063 43.3827 2.0 17.1352 43.4139 2.0 17.0641 43.4451 2.0 16.9572 43.4999 2.0 16.850400000000004 43.5548 2.0 16.7436 43.6097 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>60.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS004">
+      <gml:name>Eastern Adriatic offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>85.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.621554572419876</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_13">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.7218 42.3562 2.0 17.5605 42.3657 2.0 17.3992 42.3752 2.0 17.1604 42.4058 2.0 16.9693 42.4211 2.0 16.7677 42.4709 2.0 16.6205 42.5097 2.0 16.4572 42.5689 2.0 16.3272 42.6315 2.0 16.219600000000003 42.67710000000001 2.0 16.112 42.7226 2.0 15.9777 42.7851 2.0 15.834700000000002 42.8396 2.0 15.6871 42.9055 2.0 15.543300000000002 42.9682 2.0 15.401500000000002 43.009 2.0 15.292300000000001 43.0522 2.0 15.1755 43.0905 2.0 15.0322 43.1517 2.0 14.883599999999998 43.2128 2.0 14.7822 43.2549 2.0 14.634200000000002 43.3352 2.0 14.5121 43.4156 2.0 14.4113 43.4806 2.0 14.333999999999998 43.5587 2.0 14.2299 43.648 2.0 14.1407 43.7292 2.0 14.0557 43.8133 2.0 13.9903 43.8711 2.0 13.891200000000001 43.974 2.0 13.7601 44.0652 2.0 13.6842 44.1461 2.0 13.5993 44.2187 2.0 13.5303 44.306700000000006 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>47.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS005">
+      <gml:name>Velebit</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>110.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.019086357487022</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_14">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.0765 44.165 1.0 15.9715 44.1461 1.0 15.8515 44.1542 1.0 15.759500000000001 44.1746 1.0 15.664900000000001 44.1998 1.0 15.5441 44.2372 1.0 15.4192 44.2774 1.0 15.261299999999999 44.3517 1.0 15.149 44.4276 1.0 15.0652 44.5046 1.0 14.974599999999999 44.5734 1.0 14.904700000000002 44.6437 1.0 14.864800000000002 44.7221 1.0 14.836400000000001 44.8045 1.0 14.825899999999999 44.8812 1.0 14.813200000000002 44.94950000000001 1.0 14.7879 45.0153 1.0 14.7644 45.0804 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>57.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS006">
+      <gml:name>Vinodol-Rijeka</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>120.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6578255683322305</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_15">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.794500000000001 45.09810000000001 1.0 14.767 45.120200000000004 1.0 14.7395 45.1423 1.0 14.697700000000001 45.170500000000004 1.0 14.6559 45.1988 1.0 14.616400000000002 45.2241 1.0 14.576800000000002 45.2494 1.0 14.537199999999999 45.2748 1.0 14.4886 45.3054 1.0 14.439900000000002 45.3361 1.0 14.391200000000001 45.3667 1.0 14.342499999999998 45.3974 1.0 14.2938 45.428 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>52.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS007">
+      <gml:name>Vis-Korcula</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>45.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.9865137424788926</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_16">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.1651 42.8394 2.0 17.0761 42.8437 2.0 16.9871 42.848 2.0 16.8926 42.85980000000001 2.0 16.798 42.8716 2.0 16.6715 42.8927 2.0 16.547500000000003 42.9225 2.0 16.4496 42.949 2.0 16.3394 42.9744 2.0 16.2335 43.0063 2.0 16.1591 43.0325 2.0 16.0846 43.0588 2.0 16.0152 43.0803 2.0 15.9459 43.1018 2.0 15.8645 43.1422 2.0 15.783100000000001 43.1827 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>55.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS008">
+      <gml:name>Dugi Otok</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>105.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.17375545365724</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_17">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.1978 43.3732 2.0 16.1025 43.4012 2.0 15.982799999999997 43.4381 2.0 15.869200000000001 43.47890000000001 2.0 15.7749 43.5171 2.0 15.6806 43.5554 2.0 15.597900000000001 43.5945 2.0 15.5152 43.6336 2.0 15.3626 43.704 2.0 15.282299999999998 43.7453 2.0 15.202100000000002 43.7865 2.0 15.08 43.886 2.0 15.011 43.9357 2.0 14.942 43.9854 2.0 14.8681 44.0664 2.0 14.7942 44.1474 2.0 14.7203 44.2284 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>42.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS009">
+      <gml:name>Metkovic</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>107.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.009717546180215</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_18">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>18.4517 42.56 2.0 18.356 42.6033 2.0 18.2479 42.6555 2.0 18.1808 42.6893 2.0 18.1137 42.7231 2.0 18.01 42.7796 2.0 17.9095 42.8272 2.0 17.8384 42.8584 2.0 17.7672 42.8896 2.0 17.6606 42.9369 2.0 17.553900000000002 42.9842 2.0 17.4472 43.0314 2.0 17.3405 43.0787 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>55.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS010">
+      <gml:name>Palagruza</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>85.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.029303772831024</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_19">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.1365 41.9555 2.0 17.0355 41.9804 2.0 16.9346 42.0053 2.0 16.8767 42.0262 2.0 16.8189 42.0471 2.0 16.7664 42.07000000000001 2.0 16.7139 42.0929 2.0 16.6533 42.1227 2.0 16.5927 42.1526 2.0 16.5362 42.1815 2.0 16.4797 42.2103 2.0 16.4299 42.2362 2.0 16.3801 42.2621 2.0 16.2993 42.3019 2.0 16.2186 42.3418 2.0 16.154 42.3726 2.0 16.0894 42.4035 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>42.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS011">
+      <gml:name>Ravni Kotari</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>112.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.9896902216529226</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_20">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.7058 43.6323 2.0 16.6419 43.6741 2.0 16.5815 43.7193 2.0 16.5405 43.748900000000006 2.0 16.4994 43.7785 2.0 16.4596 43.8072 2.0 16.4198 43.8359 2.0 16.3811 43.8655 2.0 16.3425 43.8951 2.0 16.3057 43.9233 2.0 16.2689 43.9516 2.0 16.2297 43.986 2.0 16.1904 44.0203 2.0 16.1591 44.046 2.0 16.1277 44.0717 2.0 16.0921 44.0995 2.0 16.0565 44.1274 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>55.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS012">
+      <gml:name>Zadar</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>112.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.952490041243298</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_21">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.4341 43.5242 2.0 16.3387 43.5439 2.0 16.2434 43.56360000000001 2.0 16.1601 43.5919 2.0 16.0767 43.6201 2.0 15.9386 43.6734 2.0 15.8314 43.7267 2.0 15.750100000000002 43.773 2.0 15.6689 43.8193 2.0 15.578900000000003 43.8707 2.0 15.4607 43.9566 2.0 15.3639 44.0286 2.0 15.277999999999999 44.0907 2.0 15.1997 44.1414 2.0 15.1082 44.2405 2.0 15.016699999999998 44.3395 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>57.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS013">
+      <gml:name>Novigrad</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>112.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.727390569250018</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_22">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.6224 43.60450000000001 1.0 16.5322 43.6403 1.0 16.4529 43.6709 1.0 16.3555 43.7094 1.0 16.234 43.7574 1.0 16.1604 43.8091 1.0 16.1113 43.8668 1.0 16.0339 43.9144 1.0 15.9339 43.97280000000001 1.0 15.8339 44.0245 1.0 15.726300000000002 44.0775 1.0 15.622500000000002 44.130500000000005 1.0 15.5073 44.1835 1.0 15.4016 44.2301 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>57.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="HRCS014">
+      <gml:name>Jana-1</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>85.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.0667302707716475</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_23">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.884799999999998 42.563 2.0 15.8283 42.5531 2.0 15.7664 42.5471 2.0 15.704500000000001 42.5412 2.0 15.6129 42.5521 2.0 15.5214 42.563 2.0 15.415099999999999 42.6055 2.0 15.3088 42.648 2.0 15.2267 42.6896 2.0 15.144600000000002 42.7311 2.0 15.097499999999998 42.7736 2.0 15.0504 42.8161 2.0 15.010000000000002 42.8597 2.0 14.9696 42.9032 2.0 14.9064 42.9764 2.0 14.843099999999998 43.0495 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>42.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS001">
+      <gml:name>Castel San Pietro Terme-Meldola</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.419215857410142</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_24">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.5818 44.3814 2.0 11.6233 44.3642 2.0 11.6649 44.347 2.0 11.713800000000003 44.3337 2.0 11.762800000000002 44.3205 2.0 11.8193 44.30700000000001 2.0 11.8757 44.293400000000005 2.0 11.9147 44.2784 2.0 11.953600000000002 44.2633 2.0 11.9961 44.2329 2.0 12.0386 44.2024 2.0 12.0811 44.172 2.0 12.1237 44.1416 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS002">
+      <gml:name>Western S-Alps external thrust</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6841892053809597</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_25">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.5495 45.3262 2.0 10.4886 45.3147 2.0 10.4276 45.3033 2.0 10.3535 45.3034 2.0 10.2397 45.3049 2.0 10.1715 45.3062 2.0 10.117 45.304 2.0 10.0496 45.3018 2.0 9.96782 45.3025 2.0 9.90528 45.3075 2.0 9.82834 45.3115 2.0 9.75568 45.3155 2.0 9.69377 45.323 2.0 9.6175 45.3382 2.0 9.56575 45.3563 2.0 9.49738 45.3749 2.0 9.4616 45.3892 2.0 9.42315 45.4221 2.0 9.3793 45.464800000000004 2.0 9.34164 45.5173 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>32.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>9.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS003">
+      <gml:name>Ripabottoni-San Severo</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-160.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3644750274344086</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_26">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.5714 41.6963 6.0 15.497700000000002 41.6935 6.0 15.424099999999997 41.6907 6.0 15.3504 41.6879 6.0 15.276699999999998 41.6851 6.0 15.203000000000001 41.6823 6.0 15.129299999999999 41.6795 6.0 15.055600000000002 41.6768 6.0 14.9812 41.6701 6.0 14.9068 41.66340000000001 6.0 14.832399999999998 41.6567 6.0 14.758 41.65 6.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>85.0</dip>
+        <upperSeismogenicDepth>6.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS004">
+      <gml:name>Castelluccio dei Sauri-Trani</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>180.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.500876708376903</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.300000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_27">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.5239 41.2578 11.0 16.4223 41.2579 11.0 16.3207 41.2581 11.0 16.2192 41.2583 11.0 16.1176 41.2585 11.0 16.016 41.2586 11.0 15.9145 41.2588 11.0 15.8129 41.259 11.0 15.7113 41.2592 11.0 15.6098 41.2593 11.0 15.5082 41.2595 11.0 15.4066 41.2597 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>22.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS005">
+      <gml:name>Baragiano-Palagianello</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>180.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7646649928625355</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_28">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.577200000000001 40.6956 13.0 15.714999999999998 40.6893 13.0 15.852700000000002 40.6829 13.0 15.990499999999999 40.6765 13.0 16.1283 40.6702 13.0 16.266 40.6638 13.0 16.4038 40.657500000000006 13.0 16.5416 40.6511 13.0 16.6793 40.6447 13.0 16.8171 40.6384 13.0 16.9548 40.632 13.0 17.0926 40.62570000000001 13.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>85.0</dip>
+        <upperSeismogenicDepth>13.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>22.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS006">
+      <gml:name>Castelvetrano-Gela</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>100.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.160708551688556</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_29">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.2213 37.068 3.0 14.0683 37.0628 3.0 13.9154 37.0576 3.0 13.8122 37.0831 3.0 13.7089 37.1087 3.0 13.5815 37.1687 3.0 13.4541 37.2288 3.0 13.3796 37.2905 3.0 13.305 37.3521 3.0 13.1885 37.4336 3.0 13.0862 37.5019 3.0 12.9972 37.5489 3.0 12.8997 37.5854 3.0 12.7972 37.5863 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS007">
+      <gml:name>Thiene-Cornuda</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2740241246478603</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_30">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.0172 45.821 0.5 11.962 45.8007 0.5 11.9069 45.7803 0.5 11.8517 45.76 0.5 11.7965 45.7396 0.5 11.743500000000001 45.7426 0.5 11.6902 45.7241 0.5 11.636900000000002 45.7056 0.5 11.583600000000002 45.6872 0.5 11.5302 45.6687 0.5 11.4769 45.6502 0.5 11.4236 45.6317 0.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>0.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>6.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS008">
+      <gml:name>Conero onshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.083423755486949</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_31">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.4378 43.6926 3.0 13.4781 43.6672 3.0 13.5183 43.6419 3.0 13.558600000000002 43.61650000000001 3.0 13.5988 43.5911 3.0 13.6356 43.5627 3.0 13.6723 43.5343 3.0 13.709000000000001 43.5058 3.0 13.7432 43.4699 3.0 13.777300000000002 43.434 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>6.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS009">
+      <gml:name>Busseto-Cavriago</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>105.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.598397103457766</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_32">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.043 44.9953 2.0 10.0829 44.9733 2.0 10.1229 44.9514 2.0 10.1628 44.9294 2.0 10.2027 44.9074 2.0 10.2508 44.8797 2.0 10.2989 44.852 2.0 10.347 44.8243 2.0 10.3913 44.8027 2.0 10.4355 44.7811 2.0 10.479700000000001 44.7595 2.0 10.524 44.7379 2.0 10.5682 44.7163 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS010">
+      <gml:name>Western S-Alps internal thrust</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.699549625905148</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_33">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.3203 45.483 5.0 10.2728 45.4839 5.0 10.2015 45.4897 5.0 10.139800000000001 45.4976 5.0 10.0799 45.5042 5.0 10.019900000000002 45.5108 5.0 9.93791 45.5232 5.0 9.87496 45.5384 5.0 9.81202 45.553700000000006 5.0 9.7267 45.5772 5.0 9.64139 45.6008 5.0 9.605970000000001 45.6089 5.0 9.53581 45.6249 5.0 9.46565 45.641000000000005 5.0 9.40875 45.6509 5.0 9.35527 45.6626 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS011">
+      <gml:name>Mordano-Guarniera</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.315970345456918</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_34">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.8171 44.49100000000001 3.0 11.8564 44.4903 3.0 11.8912 44.4889 3.0 11.9453 44.4831 3.0 11.9987 44.46860000000001 3.0 12.0515 44.4474 3.0 12.0999 44.4267 3.0 12.1483 44.4029 3.0 12.1932 44.3786 3.0 12.2309 44.3513 3.0 12.2644 44.32030000000001 3.0 12.2957 44.2903 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS012">
+      <gml:name>Malalbergo-Ravenna</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>100.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7632073521037586</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_35">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.5226 44.7448 2.0 11.5807 44.7491 2.0 11.6388 44.75350000000001 2.0 11.719400000000002 44.7465 2.0 11.8 44.7395 2.0 11.882 44.726600000000005 2.0 11.963900000000002 44.7138 2.0 12.0266 44.6929 2.0 12.0892 44.6721 2.0 12.1257 44.646 2.0 12.1622 44.6198 2.0 12.201100000000002 44.5793 2.0 12.24 44.538700000000006 2.0 12.278900000000002 44.4982 2.0 12.3178 44.4576 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS013">
+      <gml:name>Borbona-L'Aquila-Aremogna</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.8850319204327675</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_36">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.1563 42.5542 2.0 13.2519 42.4918 2.0 13.3464 42.4306 2.0 13.4453 42.3707 2.0 13.5117 42.3278 2.0 13.5832 42.2734 2.0 13.6425 42.2265 2.0 13.7018 42.1795 2.0 13.7577 42.1346 2.0 13.8137 42.0896 2.0 13.9022 42.0165 2.0 13.98 41.9444 2.0 14.054900000000002 41.8693 2.0 14.114 41.7988 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>50.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS014">
+      <gml:name>Southern Tyrrhenian</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.722272846224204</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_37">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.8451 38.3448 2.0 14.654099999999998 38.3359 2.0 14.4632 38.3269 2.0 14.2723 38.3179 2.0 14.0636 38.3068 2.0 13.8549 38.2957 2.0 13.6583 38.2883 2.0 13.4617 38.281 2.0 13.2671 38.2603 2.0 13.0725 38.2396 2.0 12.878 38.2188 2.0 12.7027 38.186 2.0 12.5274 38.1532 2.0 12.3521 38.1204 2.0 12.1768 38.0876 2.0 12.034800000000002 38.0432 2.0 11.8929 37.9987 2.0 11.7509 37.95420000000001 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>42.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS015">
+      <gml:name>Crati Valley</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.4740241246478614</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_38">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.265 39.6044 1.0 16.271 39.5651 1.0 16.277 39.5257 1.0 16.283 39.4863 1.0 16.289 39.447 1.0 16.295 39.4076 1.0 16.2971 39.3727 1.0 16.2991 39.3377 1.0 16.3011 39.3028 1.0 16.306 39.2612 1.0 16.3109 39.2196 1.0 16.3115 39.1829 1.0 16.3121 39.1462 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>60.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS016">
+      <gml:name>Aspromonte Peloritani</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-95.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7960594330525734</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_39">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.3601 37.8821 2.0 15.378400000000001 37.9221 2.0 15.3966 37.9621 2.0 15.414900000000001 38.0022 2.0 15.433199999999998 38.0422 2.0 15.451400000000001 38.0822 2.0 15.469699999999998 38.1222 2.0 15.487900000000002 38.162200000000006 2.0 15.506199999999998 38.2022 2.0 15.524400000000002 38.2423 2.0 15.542699999999998 38.2823 2.0 15.5604 38.3175 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>32.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS017">
+      <gml:name>Scicli-Giarratana</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>180.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.460453017607085</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_40">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.6561 36.6774 1.0 14.667900000000001 36.7167 1.0 14.679600000000002 36.756 1.0 14.6914 36.7953 1.0 14.703099999999997 36.8346 1.0 14.714800000000002 36.8739 1.0 14.726600000000001 36.9132 1.0 14.749100000000002 36.9532 1.0 14.771600000000001 36.9932 1.0 14.794099999999998 37.0332 1.0 14.816700000000003 37.0732 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>23.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS018">
+      <gml:name>Rivanazzano-Stradella</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>75.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.385966892767841</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_41">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>8.98588 44.9209 2.0 9.01556 44.9429 2.0 9.04524 44.965 2.0 9.07492 44.987 2.0 9.10609 45.0197 2.0 9.13726 45.0523 2.0 9.16843 45.085 2.0 9.2048 45.1094 2.0 9.24117 45.1339 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>32.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS019">
+      <gml:name>Crotone-Rossano</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.9651481388154655</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_42">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.9878 39.8206 3.0 17.0505 39.7408 3.0 17.1131 39.66100000000001 3.0 17.1758 39.5812 3.0 17.2126 39.4879 3.0 17.2494 39.3946 3.0 17.2861 39.3012 3.0 17.2851 39.205 3.0 17.2841 39.1088 3.0 17.283 39.0126 3.0 17.2516 38.9311 3.0 17.2202 38.8496 3.0 17.1887 38.7681 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS020">
+      <gml:name>Southern Marche</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.707825568332231</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_43">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.5294 43.3643 3.0 13.554300000000001 43.2961 3.0 13.579200000000002 43.2279 3.0 13.6127 43.1626 3.0 13.6463 43.0973 3.0 13.6799 43.03210000000001 3.0 13.7172 42.97 3.0 13.7546 42.9079 3.0 13.7919 42.8458 3.0 13.8295 42.7746 3.0 13.8627 42.7022 3.0 13.8835 42.6365 3.0 13.8867 42.598 3.0 13.9021 42.5353 3.0 13.9207 42.4742 3.0 13.946200000000001 42.3968 3.0 13.9685 42.3291 3.0 13.9804 42.2833 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>9.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS021">
+      <gml:name>Marsala-Belice</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>110.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.5356062735983107</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_44">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.0674 37.7119 3.0 13.0153 37.7221 3.0 12.9631 37.7324 3.0 12.911 37.7427 3.0 12.8588 37.753 3.0 12.8114 37.7552 3.0 12.764 37.7574 3.0 12.7166 37.7597 3.0 12.6626 37.7503 3.0 12.6086 37.74100000000001 3.0 12.5546 37.73160000000001 3.0 12.5052 37.7206 3.0 12.4558 37.7096 3.0 12.4065 37.6987 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>50.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS022">
+      <gml:name>Imperia</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.760209075518604</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.300000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_45">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>8.2654 43.8487 3.0 8.17131 43.836200000000005 3.0 8.07722 43.8237 3.0 7.98313 43.8111 3.0 7.88904 43.7986 3.0 7.79495 43.7861 3.0 7.7108300000000005 43.782 3.0 7.6267 43.778 3.0 7.54257 43.773900000000005 3.0 7.458450000000001 43.7698 3.0 7.37432 43.7657 3.0 7.290190000000001 43.7616 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS023">
+      <gml:name>Western Piemonte</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>142.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3966651902615306</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_46">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>7.18133 44.8735 1.0 7.231789999999999 44.8892 1.0 7.28224 44.9049 1.0 7.332700000000001 44.9206 1.0 7.38316 44.9363 1.0 7.43361 44.952 1.0 7.48407 44.9677 1.0 7.534530000000001 44.9834 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>45.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS024">
+      <gml:name>Miranda-Apice</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6999928569201415</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_47">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.9375 41.1052 1.0 14.8668 41.1515 1.0 14.796100000000001 41.1978 1.0 14.7253 41.2441 1.0 14.6546 41.2904 1.0 14.5838 41.3367 1.0 14.562 41.3903 1.0 14.485999999999999 41.4314 1.0 14.4099 41.4725 1.0 14.3338 41.5136 1.0 14.2578 41.5548 1.0 14.181700000000001 41.5959 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>55.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS025">
+      <gml:name>Salto Lake-Ovindoli-Barrea</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.0326646971794045</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_48">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.034 42.4144 1.0 13.1397 42.3542 1.0 13.2453 42.294 1.0 13.351000000000003 42.2338 1.0 13.4567 42.1737 1.0 13.5623 42.1135 1.0 13.6349 42.0381 1.0 13.7075 41.9627 1.0 13.761400000000002 41.913 1.0 13.8198 41.8666 1.0 13.904100000000001 41.8083 1.0 13.9885 41.7501 1.0 14.0729 41.6918 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>52.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS026">
+      <gml:name>Lunigiana</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.774938967428574</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_49">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.031 44.1496 1.0 9.9906 44.184 1.0 9.95021 44.2184 1.0 9.91596 44.2481 1.0 9.88171 44.2778 1.0 9.84746 44.3076 1.0 9.8132 44.3373 1.0 9.77895 44.367 1.0 9.7447 44.3968 1.0 9.7067 44.4298 1.0 9.6687 44.4628 1.0 9.63553 44.492 1.0 9.60236 44.5213 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS027">
+      <gml:name>Bore-Montefeltro-Fabriano-Laga</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.58016834043107</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_50">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>9.82497 44.7846 12.0 9.96033 44.696 12.0 10.0957 44.6075 12.0 10.2472 44.5791 12.0 10.3395 44.5626 12.0 10.4595 44.5297 12.0 10.628800000000002 44.4643 12.0 10.8249 44.3916 12.0 11.0341 44.3839 12.0 11.179 44.3429 12.0 11.3238 44.3019 12.0 11.5163 44.2166 12.0 11.7088 44.1313 12.0 11.9013 44.0461 12.0 12.0938 43.960800000000006 12.0 12.247100000000001 43.8588 12.0 12.4005 43.7569 12.0 12.5538 43.6549 12.0 12.7071 43.55290000000001 12.0 12.8525 43.4948 12.0 12.9978 43.4367 12.0 13.0852 43.3567 12.0 13.184300000000002 43.2105 12.0 13.2833 43.0643 12.0 13.382400000000002 42.9181 12.0 13.4898 42.819 12.0 13.5973 42.72 12.0 13.7047 42.6209 12.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>12.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>22.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS028">
+      <gml:name>Colfiorito-Campotosto</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.849957708891059</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_51">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.736100000000002 43.2752 2.5 12.7535 43.2528 2.5 12.8087 43.1908 2.5 12.8638 43.1287 2.5 12.921300000000002 43.0624 2.5 12.9788 42.9962 2.5 13.0363 42.9299 2.5 13.0944 42.8586 2.5 13.1524 42.7874 2.5 13.2105 42.7161 2.5 13.2685 42.6449 2.5 13.3565 42.5754 2.5 13.4142 42.5299 2.5 13.4719 42.4844 2.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>45.0</dip>
+        <upperSeismogenicDepth>2.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS029">
+      <gml:name>Gela-Catania</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.731611782493149</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_52">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.1555 37.5281 3.0 15.0759 37.4998 3.0 14.996400000000001 37.4715 3.0 14.916900000000002 37.4432 3.0 14.845299999999998 37.4143 3.0 14.773800000000001 37.3855 3.0 14.702199999999998 37.3566 3.0 14.625800000000002 37.3144 3.0 14.549400000000002 37.2722 3.0 14.473000000000003 37.23 3.0 14.3933 37.1785 3.0 14.3136 37.127 3.0 14.2339 37.0756 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS030">
+      <gml:name>Riminese offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>2.8785217955012063</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_53">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.634 44.1619 3.0 12.6627 44.1428 3.0 12.6913 44.1237 3.0 12.7326 44.0988 3.0 12.7739 44.0739 3.0 12.8015 44.0536 3.0 12.8291 44.0333 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS031">
+      <gml:name>Conero offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.100370545117563</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_54">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.5797 43.7148 2.0 13.6157 43.6964 2.0 13.6517 43.678 2.0 13.6876 43.6596 2.0 13.7252 43.626 2.0 13.7628 43.5924 2.0 13.8003 43.5588 2.0 13.8379 43.5251 2.0 13.8754 43.4915 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS032">
+      <gml:name>Pesaro-Senigallia</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3463041139519225</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_55">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.766 43.9793 2.5 12.8246 43.9577 2.5 12.8831 43.936 2.5 12.9344 43.8986 2.5 12.9843 43.8648 2.5 13.0342 43.8311 2.5 13.0758 43.8133 2.5 13.1309 43.7898 2.5 13.1861 43.7664 2.5 13.2448 43.7231 2.5 13.2995 43.6787 2.5 13.3542 43.6342 2.5 13.3897 43.6131 2.5 13.4252 43.5919 2.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>32.5</dip>
+        <upperSeismogenicDepth>2.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS033">
+      <gml:name>Pollino</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>2.9705739312058497</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_56">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.2298 39.8922 1.0 16.249 39.8561 1.0 16.2682 39.8201 1.0 16.2874 39.7841 1.0 16.3066 39.7481 1.0 16.3258 39.7121 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>60.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS034">
+      <gml:name>Irpinia-Agri Valley</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.615673061205304</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_57">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.857699999999998 40.2317 1.0 15.786900000000001 40.2915 1.0 15.716 40.3513 1.0 15.645200000000003 40.4111 1.0 15.5862 40.4751 1.0 15.5403 40.5179 1.0 15.4945 40.5607 1.0 15.481299999999997 40.6256 1.0 15.4355 40.6544 1.0 15.389799999999997 40.6831 1.0 15.324300000000001 40.7262 1.0 15.2589 40.7692 1.0 15.193399999999999 40.8123 1.0 15.127999999999998 40.8553 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>60.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS035">
+      <gml:name>Ragusa-Palagonia</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-170.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.071634461053704</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_58">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.733300000000002 37.3304 1.0 14.731300000000001 37.2865 1.0 14.729299999999999 37.2426 1.0 14.727300000000001 37.1987 1.0 14.7253 37.1548 1.0 14.723299999999998 37.111 1.0 14.721300000000001 37.0671 1.0 14.7193 37.0232 1.0 14.717299999999998 36.9793 1.0 14.715300000000001 36.9354 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>75.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>23.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS036">
+      <gml:name>Monte Lauro</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>75.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3020528482481035</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_59">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.8398 37.1294 3.0 14.8828 37.151 3.0 14.925800000000002 37.1726 3.0 14.9687 37.1942 3.0 15.0117 37.2158 3.0 15.054700000000002 37.23740000000001 3.0 15.0976 37.259 3.0 15.1406 37.2806 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>45.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS037">
+      <gml:name>Mugello-Citta' di Castello-Leonessa</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.285493987198269</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_60">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.0453 42.4781 0.5 12.9347 42.5465 0.5 12.8464 42.61480000000001 0.5 12.7998 42.6662 0.5 12.7608 42.709 0.5 12.6614 42.83 0.5 12.5414 42.976 0.5 12.4214 43.1219 0.5 12.3015 43.2679 0.5 12.1815 43.4138 0.5 12.0874 43.4857 0.5 11.9933 43.5575 0.5 11.792 43.6167 0.5 11.6558 43.7486 0.5 11.5196 43.8804 0.5 11.373500000000002 43.9373 0.5 11.2275 43.9942 0.5 11.154 44.0209 0.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>32.5</dip>
+        <upperSeismogenicDepth>0.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS038">
+      <gml:name>Rimendiello-Mormanno</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.4336098146321055</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_61">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.0132 39.838 1.0 15.988799999999998 39.8787 1.0 15.9644 39.91930000000001 1.0 15.940000000000001 39.9599 1.0 15.9156 40.0006 1.0 15.8912 40.0412 1.0 15.866799999999998 40.0819 1.0 15.8424 40.1225 1.0 15.818000000000001 40.1631 1.0 15.7936 40.2038 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>60.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS039">
+      <gml:name>Riminese onshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1877814178095423</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_62">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.3941 44.1917 3.0 12.4387 44.1617 3.0 12.4833 44.1317 3.0 12.5279 44.1017 3.0 12.5725 44.0718 3.0 12.6171 44.0418 3.0 12.6617 44.0118 3.0 12.7063 43.9818 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS040">
+      <gml:name>Poggio Picenze-Sulmona</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6834872878487057</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_63">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.4365 42.4295 1.0 13.4947 42.3955 1.0 13.5529 42.3614 1.0 13.6111 42.3274 1.0 13.6693 42.2934 1.0 13.727500000000001 42.2594 1.0 13.77 42.2278 1.0 13.8124 42.1963 1.0 13.8549 42.1648 1.0 13.8974 42.1333 1.0 13.9398 42.1017 1.0 13.982300000000002 42.0702 1.0 14.024800000000003 42.0387 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>52.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS041">
+      <gml:name>Sansepolcro</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2168244936674872</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_64">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.1001 43.6264 1.0 12.1376 43.6014 1.0 12.1751 43.5764 1.0 12.2126 43.5514 1.0 12.2501 43.5265 1.0 12.287500000000001 43.5015 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>45.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>5.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS042">
+      <gml:name>Patti-Eolie</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-160.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7907562519182165</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_65">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.915100000000002 38.6351 1.0 14.9417 38.5827 1.0 14.9683 38.5303 1.0 14.994899999999998 38.4779 1.0 15.021600000000001 38.4255 1.0 15.0482 38.37310000000001 1.0 15.0653 38.3097 1.0 15.0825 38.2463 1.0 15.099699999999999 38.1829 1.0 15.135500000000002 38.1334 1.0 15.171300000000002 38.0839 1.0 15.2071 38.0344 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS043">
+      <gml:name>Pesaro-Senigallia offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.461738547352537</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_66">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.92 44.0726 2.5 12.9678 44.0536 2.5 13.0157 44.0345 2.5 13.063600000000001 44.0155 2.5 13.1165 43.9878 2.5 13.1694 43.96 2.5 13.2223 43.9322 2.5 13.2641 43.9045 2.5 13.3059 43.8767 2.5 13.3478 43.8489 2.5 13.3888 43.8136 2.5 13.4299 43.7783 2.5 13.471 43.7429 2.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>2.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>6.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS044">
+      <gml:name>Portalbera-Cremona</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6857214264815794</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_67">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>9.2491 45.1349 2.0 9.28955 45.1671 2.0 9.32999 45.1993 2.0 9.39028 45.2191 2.0 9.46215 45.219500000000004 2.0 9.50558 45.2175 2.0 9.54902 45.2155 2.0 9.60048 45.2101 2.0 9.65195 45.2047 2.0 9.70341 45.1993 2.0 9.7558 45.1827 2.0 9.8082 45.1661 2.0 9.86547 45.1474 2.0 9.92273 45.1286 2.0 9.98 45.10980000000001 2.0 10.0373 45.091 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS045">
+      <gml:name>San Giorgio Piacentino-Fornovo di Taro</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7385737338068545</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_68">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>9.72803 44.9788 2.0 9.77354 44.9627 2.0 9.81904 44.946600000000004 2.0 9.864550000000001 44.9305 2.0 9.91005 44.9144 2.0 9.94552 44.8849 2.0 9.981 44.8555 2.0 10.0165 44.8261 2.0 10.0519 44.7967 2.0 10.0765 44.7678 2.0 10.1011 44.73890000000001 2.0 10.1257 44.71 2.0 10.1503 44.6812 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS046">
+      <gml:name>Langhirano-Sassuolo</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.495821753385906</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_69">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.1901 44.6859 2.0 10.2453 44.6822 2.0 10.300500000000001 44.6785 2.0 10.3558 44.6748 2.0 10.4124 44.6583 2.0 10.469 44.6417 2.0 10.5256 44.6252 2.0 10.5822 44.6102 2.0 10.6387 44.5952 2.0 10.6953 44.5802 2.0 10.735800000000001 44.5651 2.0 10.7763 44.55 2.0 10.8297 44.5334 2.0 10.8831 44.5169 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS047">
+      <gml:name>Castelvetro di Modena-Castel San Pietro Terme</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6305817868291674</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_70">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.9145 44.5152 2.0 10.965700000000002 44.5148 2.0 11.0168 44.5144 2.0 11.068 44.5139 2.0 11.1192 44.5135 2.0 11.1764 44.5111 2.0 11.2337 44.5088 2.0 11.291 44.5064 2.0 11.3483 44.5041 2.0 11.4032 44.4858 2.0 11.4581 44.4674 2.0 11.496800000000002 44.446 2.0 11.5355 44.4245 2.0 11.574200000000001 44.403 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS048">
+      <gml:name>Giudicarie</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>85.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.675937971768603</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_71">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.0706 46.086 5.0 11.0475 46.0548 5.0 11.0118 46.0146 5.0 10.9559 45.95020000000001 5.0 10.9 45.8857 5.0 10.8773 45.85 5.0 10.8326 45.8002 5.0 10.7854 45.7451 5.0 10.7449 45.6945 5.0 10.6887 45.6386 5.0 10.6406 45.5992 5.0 10.5924 45.5597 5.0 10.5264 45.5215 5.0 10.4641 45.4939 5.0 10.427700000000002 45.4877 5.0 10.3803 45.4834 5.0 10.3217 45.4829 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS049">
+      <gml:name>Reggio Emilia-Rolo</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>75.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.4131191388114557</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_72">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.5495 44.7565 3.0 10.5894 44.784 3.0 10.6294 44.8114 3.0 10.6693 44.8389 3.0 10.7093 44.8664 3.0 10.7639 44.8891 3.0 10.8185 44.9118 3.0 10.8732 44.9345 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS050">
+      <gml:name>Poggio Rusco-Migliarino</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.7638369186645444</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_73">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.0866 45.0116 1.0 11.1627 44.9952 1.0 11.2388 44.9789 1.0 11.3149 44.9626 1.0 11.391 44.9463 1.0 11.4682 44.9506 1.0 11.5454 44.9549 1.0 11.616 44.9324 1.0 11.6865 44.9098 1.0 11.757 44.8873 1.0 11.8275 44.8647 1.0 11.898 44.8422 1.0 11.9685 44.8196 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS051">
+      <gml:name>Novi-Poggio Renatico</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.5616975326539935</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_74">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.8933 44.934900000000006 3.0 10.9397 44.9303 3.0 10.9861 44.92580000000001 3.0 11.026 44.9161 3.0 11.0658 44.9063 3.0 11.1192 44.8926 3.0 11.1727 44.8788 3.0 11.2017 44.8647 3.0 11.2308 44.8506 3.0 11.268200000000002 44.8345 3.0 11.305600000000002 44.8183 3.0 11.3619 44.8054 3.0 11.4183 44.7925 3.0 11.4747 44.7796 3.0 11.531 44.7667 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS052">
+      <gml:name>Western Mid-Adriatic offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.5486941902655404</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_75">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.786 43.0103 3.0 14.830100000000002 42.98310000000001 3.0 14.874200000000002 42.9558 3.0 14.908 42.9273 3.0 14.941800000000002 42.8987 3.0 14.9756 42.8701 3.0 15.0094 42.8415 3.0 15.0451 42.8066 3.0 15.0809 42.7718 3.0 15.1167 42.7369 3.0 15.152499999999998 42.702 3.0 15.193200000000001 42.6705 3.0 15.233900000000002 42.639 3.0 15.2634 42.6172 3.0 15.292900000000001 42.5954 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS053">
+      <gml:name>Serre</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.201937695364836</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_76">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.025 38.54540000000001 3.0 16.0427 38.5672 3.0 16.0604 38.5891 3.0 16.0761 38.61 3.0 16.0917 38.6309 3.0 16.1073 38.6517 3.0 16.123 38.67260000000001 3.0 16.1386 38.6935 3.0 16.1542 38.7144 3.0 16.1699 38.7352 3.0 16.1855 38.7561 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>11.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS054">
+      <gml:name>Southern Marche offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>95.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.652553063228925</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_77">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.8041 43.3931 3.0 13.8425 43.3524 3.0 13.8809 43.3117 3.0 13.9176 43.2615 3.0 13.9544 43.2114 3.0 13.9691 43.14500000000001 3.0 13.9838 43.0787 3.0 13.996900000000002 43.0118 3.0 14.0099 42.945 3.0 14.0209 42.8898 3.0 14.028300000000002 42.8363 3.0 14.0316 42.7808 3.0 14.034700000000003 42.7172 3.0 14.0322 42.6297 3.0 14.046300000000002 42.5325 3.0 14.0629 42.45290000000001 3.0 14.0681 42.3877 3.0 14.068 42.2965 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>6.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS055">
+      <gml:name>Bagnara-Bovalino</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-135.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.402553063228925</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_78">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.214 38.0627 3.0 16.1564 38.0878 3.0 16.0988 38.1129 3.0 16.0413 38.138 3.0 15.9837 38.1631 3.0 15.926200000000001 38.1882 3.0 15.8686 38.2133 3.0 15.811100000000001 38.2384 3.0 15.7535 38.2635 3.0 15.6959 38.2886 3.0 15.6384 38.3136 3.0 15.5808 38.33870000000001 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS056">
+      <gml:name>Gubbio Basin</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.473908971764593</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_79">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.4044 43.3889 2.0 12.4463 43.362 2.0 12.4882 43.3351 2.0 12.5301 43.3081 2.0 12.572000000000001 43.2812 2.0 12.6138 43.2543 2.0 12.6557 43.2274 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>20.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS057">
+      <gml:name>Pago Veiano-Montaguto</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-130.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.136613251955882</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_80">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.243000000000002 41.1951 11.0 15.191 41.2001 11.0 15.138900000000001 41.2051 11.0 15.0869 41.2102 11.0 15.0348 41.2152 11.0 14.9827 41.2203 11.0 14.930700000000002 41.2253 11.0 14.878600000000002 41.2303 11.0 14.826600000000001 41.2354 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS058">
+      <gml:name>San Marco in Lamis-Mattinata</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-145.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.770413079950161</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_81">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.0968 41.6867 0.0 16.0389 41.6874 0.0 15.9811 41.6882 0.0 15.9232 41.689 0.0 15.8653 41.6898 0.0 15.807399999999998 41.6905 0.0 15.7496 41.6913 0.0 15.691700000000003 41.6921 0.0 15.6338 41.6928 0.0 15.5759 41.6936 0.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>85.0</dip>
+        <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS059">
+      <gml:name>Tocco Casauria-Tremiti</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-160.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.008217178825712</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_82">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.8127 42.2347 11.0 13.9064 42.232 11.0 14.0 42.2292 11.0 14.1836 42.2222 11.0 14.2803 42.2175 11.0 14.3769 42.2129 11.0 14.557500000000001 42.2041 11.0 14.653 42.1989 11.0 14.7485 42.1938 11.0 14.9319 42.1859 11.0 15.0257 42.183 11.0 15.119499999999999 42.1802 11.0 15.2164 42.1763 11.0 15.3133 42.1724 11.0 15.4994 42.1651 11.0 15.6814 42.1591 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS060">
+      <gml:name>Montebelluna-Montereale</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>80.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.745628051517692</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_83">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.680700000000002 46.1492 1.0 12.6372 46.1086 1.0 12.5952 46.07190000000001 1.0 12.5533 46.0352 1.0 12.5057 45.9994 1.0 12.4582 45.9637 1.0 12.4106 45.9279 1.0 12.3631 45.8922 1.0 12.3155 45.8565 1.0 12.2494 45.8317 1.0 12.1833 45.807 1.0 12.1172 45.7823 1.0 12.051 45.7575 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>40.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>9.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS061">
+      <gml:name>Trasaghis-Taipana</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>100.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.0119258857090863</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_84">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.4003 46.208200000000005 6.0 13.349 46.2176 6.0 13.2977 46.227 6.0 13.2515 46.231 6.0 13.2053 46.2349 6.0 13.1561 46.2385 6.0 13.1068 46.2421 6.0 13.0576 46.2457 6.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>6.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>11.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS062">
+      <gml:name>Maniago-Sequals</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>2.598725181589493</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_85">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.9986 46.1948 1.0 12.9579 46.1825 1.0 12.9172 46.1702 1.0 12.8765 46.157900000000005 1.0 12.8327 46.1506 1.0 12.7889 46.1433 1.0 12.7457 46.1443 1.0 12.702600000000002 46.1453 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS063">
+      <gml:name>Andretta-Filano</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-120.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2803713255077858</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_86">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.7066 40.7598 2.0 15.655500000000002 40.7788 2.0 15.604500000000002 40.7978 2.0 15.5535 40.8168 2.0 15.5025 40.8359 2.0 15.4515 40.8549 2.0 15.4004 40.8739 2.0 15.3494 40.8929 2.0 15.298400000000003 40.9119 2.0 15.2474 40.9309 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS064">
+      <gml:name>Tramonti-Montemaggiore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3358278581649707</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_87">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.424 46.2781 1.0 13.3627 46.2785 1.0 13.3014 46.2789 1.0 13.2429 46.2857 1.0 13.184300000000002 46.2925 1.0 13.1315 46.2837 1.0 13.078600000000002 46.2749 1.0 13.011 46.2724 1.0 12.9434 46.2699 1.0 12.8758 46.2675 1.0 12.8082 46.265 1.0 12.7406 46.2625 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>5.5</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS065">
+      <gml:name>Medea</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>120.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.112058151823523</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_88">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.5868 45.915 0.5 13.5485 45.9086 0.5 13.5102 45.9021 0.5 13.461500000000001 45.9081 0.5 13.4128 45.914 0.5 13.3585 45.9248 0.5 13.304200000000002 45.9356 0.5 13.2498 45.9464 0.5 13.195500000000001 45.9571 0.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>45.0</dip>
+        <upperSeismogenicDepth>0.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS066">
+      <gml:name>Gemona-Tarcento</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>100.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.228273777167043</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_89">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.4421 46.1096 2.0 13.3841 46.1288 2.0 13.326100000000002 46.148 2.0 13.2719 46.1591 2.0 13.2176 46.1702 2.0 13.1633 46.1813 2.0 13.109 46.1924 2.0 13.0547 46.2035 2.0 13.0004 46.2146 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS067">
+      <gml:name>But-Chiarso</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>25.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1482975364946966</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_90">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.134500000000001 46.543400000000005 1.0 13.1169 46.501 1.0 13.0912 46.4832 1.0 13.042500000000002 46.4594 1.0 13.0367 46.4427 1.0 13.0078 46.4051 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>75.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>9.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS068">
+      <gml:name>Curinga-Squillace</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>170.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1354837468149124</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_91">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.916599999999999 38.9589 3.0 16.0081 38.9472 3.0 16.0996 38.9354 3.0 16.1911 38.9236 3.0 16.2826 38.9118 3.0 16.3741 38.9 3.0 16.4656 38.8882 3.0 16.5571 38.876400000000004 3.0 16.6486 38.8646 3.0 16.7401 38.8528 3.0 16.8316 38.841 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS069">
+      <gml:name>Southern Calabria</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.616788516552253</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_92">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.3906 39.0407 11.0 17.3555 38.8986 11.0 17.3204 38.7564 11.0 17.2523 38.5891 11.0 17.1842 38.4217 11.0 17.0899 38.2873 11.0 16.9956 38.1529 11.0 16.9014 38.0185 11.0 16.7833 37.9155 11.0 16.6653 37.8126 11.0 16.5472 37.7096 11.0 16.4228 37.6337 11.0 16.2983 37.5578 11.0 16.1739 37.4818 11.0 16.0226 37.4146 11.0 15.8714 37.34740000000001 11.0 15.7201 37.2801 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>50.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS070">
+      <gml:name>Gargano offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>175.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.070696457989249</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_93">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.2317 41.6874 0.0 16.2803 41.683 0.0 16.3288 41.6785 0.0 16.3926 41.6737 0.0 16.4578 41.6691 0.0 16.5252 41.666 0.0 16.5936 41.6633 0.0 16.6613 41.6615 0.0 16.7289 41.6606 0.0 16.788100000000004 41.6593 0.0 16.8474 41.6581 0.0 16.9068 41.658 0.0 16.9662 41.658 0.0 17.0256 41.657900000000005 0.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS071">
+      <gml:name>Andreis-Forgaria nel Friuli</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>2.694605198933569</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.9</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_94">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.9861 46.2139 0.5 12.9358 46.2097 0.5 12.8855 46.2054 0.5 12.8352 46.2012 0.5 12.7926 46.1964 0.5 12.7607 46.1864 0.5 12.7289 46.1764 0.5 12.6813 46.152 0.5</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>0.5</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>4.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS072">
+      <gml:name>Capriano-Castenedolo back-thrust</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1659963704950775</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_95">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>9.87199 45.4422 1.0 9.9196 45.45570000000001 1.0 9.95725 45.4627 1.0 9.9949 45.4697 1.0 10.0389 45.4724 1.0 10.0829 45.4751 1.0 10.1289 45.4754 1.0 10.1748 45.4756 1.0 10.2252 45.4772 1.0 10.2756 45.4787 1.0 10.331 45.4798 1.0 10.3864 45.4809 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS073">
+      <gml:name>Monte Baldo</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>85.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6661258704181985</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_96">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.0169 45.7997 3.0 10.9836 45.7571 3.0 10.9633 45.7329 3.0 10.943 45.7087 3.0 10.9168 45.675700000000006 3.0 10.8906 45.64260000000001 3.0 10.8584 45.6036 3.0 10.8262 45.5645 3.0 10.801100000000002 45.5329 3.0 10.7759 45.5013 3.0 10.745 45.45570000000001 3.0 10.7055 45.4148 3.0 10.6803 45.3933 3.0 10.6551 45.3717 3.0 10.6422 45.3628 3.0 10.6053 45.3451 3.0 10.5507 45.3265 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>35.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>9.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS075">
+      <gml:name>Pietracamela-Montesilvano</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-160.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.5587133719337434</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_97">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.4914 42.524300000000004 11.0 13.5783 42.5223 11.0 13.6652 42.5203 11.0 13.7521 42.5183 11.0 13.839 42.5163 11.0 13.9259 42.5143 11.0 14.0127 42.5123 11.0 14.056200000000002 42.511300000000006 11.0 14.099600000000002 42.5103 11.0 14.1431 42.5093 11.0 14.1865 42.5083 11.0 14.2299 42.5073 11.0 14.2734 42.5063 11.0 14.3168 42.5053 11.0 14.3603 42.5043 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>20.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS076">
+      <gml:name>Adige Plain</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1475285764597816</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_98">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>11.2629 45.3034 2.0 11.2293 45.2922 2.0 11.1957 45.2809 2.0 11.1411 45.2648 2.0 11.0865 45.2487 2.0 11.032 45.2326 2.0 10.9774 45.2165 2.0 10.9229 45.2004 2.0 10.8683 45.1844 2.0 10.834 45.1744 2.0 10.7817 45.1633 2.0 10.7295 45.1523 2.0 10.6773 45.1412 2.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>2.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS077">
+      <gml:name>Pescolanciano-Montagano</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-130.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1223288042224158</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_99">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.740200000000002 41.633900000000004 11.0 14.682799999999999 41.6335 11.0 14.6254 41.6331 11.0 14.568 41.6327 11.0 14.5106 41.6323 11.0 14.453200000000002 41.6319 11.0 14.3958 41.6314 11.0 14.338400000000002 41.631 11.0 14.281 41.6306 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>25.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS078">
+      <gml:name>Deep Abruzzo Citeriore Basal Thrust</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3542757671290926</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_100">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.9507 42.2464 8.0 13.992 42.2312 8.0 14.0333 42.2159 8.0 14.0707 42.1995 8.0 14.1081 42.1831 8.0 14.1402 42.1665 8.0 14.1723 42.1499 8.0 14.211 42.1251 8.0 14.2497 42.1003 8.0 14.2773 42.0797 8.0 14.305000000000001 42.0591 8.0 14.341 42.0245 8.0 14.3625 41.9991 8.0 14.384000000000002 41.9737 8.0 14.404 41.94700000000001 8.0 14.428600000000001 41.9176 8.0 14.453100000000001 41.8882 8.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>25.0</dip>
+        <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>18.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS079">
+      <gml:name>Shallow Abruzzo Citeriore Basal Thrust</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.3346914308175974</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_101">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.1485 42.2961 3.0 14.1811 42.290000000000006 3.0 14.2176 42.2789 3.0 14.2469 42.2682 3.0 14.2763 42.2574 3.0 14.3211 42.2383 3.0 14.3517 42.2214 3.0 14.387800000000002 42.1932 3.0 14.411600000000002 42.1675 3.0 14.436 42.1432 3.0 14.4645 42.1149 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>8.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS080">
+      <gml:name>Nicotera-Roccella Ionica</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-45.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2753103717110603</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_102">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.950899999999999 38.5675 3.0 16.0004 38.54540000000001 3.0 16.05 38.5233 3.0 16.0995 38.5012 3.0 16.149 38.4791 3.0 16.1986 38.457 3.0 16.2481 38.4349 3.0 16.2894 38.4157 3.0 16.3307 38.3964 3.0 16.3719 38.3771 3.0 16.4132 38.3579 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS081">
+      <gml:name>Venafro</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.4671558660821797</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_103">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.0329 41.5486 1.0 14.073800000000002 41.5263 1.0 14.1146 41.504 1.0 14.1555 41.4817 1.0 14.1963 41.4594 1.0 14.2372 41.4371 1.0 14.278 41.4148 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>65.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS082">
+      <gml:name>Gioia Tauro</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.168513939877886</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_104">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.8404 38.2901 3.0 15.865899999999998 38.3239 3.0 15.880600000000001 38.3443 3.0 15.895400000000002 38.3647 3.0 15.9101 38.38510000000001 3.0 15.9248 38.4056 3.0 15.939500000000002 38.426 3.0 15.9543 38.4464 3.0 15.968999999999998 38.4668 3.0 15.9837 38.4873 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>11.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS083">
+      <gml:name>Garfagnana</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.444605198933569</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_105">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.5668 43.97570000000001 1.0 10.5255 43.9961 1.0 10.4841 44.0166 1.0 10.4428 44.037 1.0 10.4014 44.0574 1.0 10.36 44.0778 1.0 10.3187 44.0982 1.0 10.2773 44.1187 1.0 10.236 44.1391 1.0 10.1946 44.1595 1.0 10.1532 44.1799 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS084">
+      <gml:name>Mirabella Eclano-Monteverde</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-120.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.5250541203118426</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_106">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.645700000000001 40.9729 1.0 15.5761 40.9816 1.0 15.506599999999999 40.9903 1.0 15.436999999999998 40.9991 1.0 15.367500000000001 41.0078 1.0 15.2979 41.0165 1.0 15.238600000000002 41.0204 1.0 15.179199999999998 41.0243 1.0 15.1199 41.0282 1.0 15.0605 41.0321 1.0 15.0012 41.036 1.0 14.941800000000002 41.0399 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>65.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>16.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS085">
+      <gml:name>Ischia</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>2.7685139398778875</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.4</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_107">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.9538 40.727 0.0 13.9023 40.70910000000001 0.0 13.8509 40.6912 0.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>85.0</dip>
+        <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>4.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS086">
+      <gml:name>Castelli Romani</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1668244936674865</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.6000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_108">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>12.8374 41.7283 5.0 12.8068 41.708 5.0 12.7762 41.6876 5.0 12.7328 41.6604 5.0 12.6895 41.6332 5.0 12.6462 41.606 5.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>5.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>11.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS087">
+      <gml:name>Conza della Campania-Tolve</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.146665190261531</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_109">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>15.2596 40.9262 1.0 15.303399999999998 40.9037 1.0 15.3473 40.8812 1.0 15.391099999999998 40.8587 1.0 15.434899999999999 40.8363 1.0 15.4787 40.8138 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>70.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS088">
+      <gml:name>Livorno Hills</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>-90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.1499928569201425</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.7</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_110">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>10.4748 43.434 1.0 10.464 43.4568 1.0 10.4422 43.4986 1.0 10.4204 43.5404 1.0 10.402 43.5761 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>50.0</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="ITCS089">
+      <gml:name>Rapolla-Spinazzola</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>180.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2349678884278115</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.300000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_111">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>16.2099 40.9448 12.0 16.1438 40.9448 12.0 16.0777 40.9447 12.0 16.0117 40.9446 12.0 15.9456 40.9446 12.0 15.8795 40.9445 12.0 15.813399999999998 40.9444 12.0 15.747400000000003 40.9443 12.0 15.681300000000002 40.9443 12.0 15.615200000000002 40.9442 12.0 15.5492 40.9441 12.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>80.0</dip>
+        <upperSeismogenicDepth>12.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>23.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="MECS001">
+      <gml:name>Montenegro offshore</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>80.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.826338820249766</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.2</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_112">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>19.6129 41.4435 3.0 19.5627 41.5072 3.0 19.5124 41.5709 3.0 19.4405 41.6571 3.0 19.3613 41.7014 3.0 19.282 41.7457 3.0 19.1893 41.7966 3.0 19.0965 41.8476 3.0 19.0124 41.8826 3.0 18.9282 41.9177 3.0 18.8653 41.9534 3.0 18.8023 41.9891 3.0 18.6916 42.0358 3.0 18.592900000000004 42.0963 3.0 18.5522 42.1341 3.0 18.5219 42.1774 3.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>25.0</dip>
+        <upperSeismogenicDepth>3.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="SICS001">
+      <gml:name>Bovec-Tolminka Springs</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>170.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2485196302411667</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_113">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.9631 46.086 1.0 13.9311 46.1078 1.0 13.8898 46.1348 1.0 13.865 46.1529 1.0 13.8347 46.1717 1.0 13.7998 46.1938 1.0 13.7616 46.2175 1.0 13.727900000000002 46.2376 1.0 13.7033 46.2524 1.0 13.6786 46.2672 1.0 13.6332 46.2957 1.0 13.6086 46.31040000000001 1.0 13.5839 46.3251 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>77.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="SICS002">
+      <gml:name>Tolmin-Idrija</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>170.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.2147829573726208</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.800000000000001</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_114">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.365 45.766 1.0 14.3138 45.7991 1.0 14.2626 45.8323 1.0 14.2114 45.8654 1.0 14.1466 45.9036 1.0 14.0918 45.9361 1.0 14.0447 45.96450000000001 1.0 13.9792 46.0029 1.0 13.9269 46.0337 1.0 13.8664 46.0706 1.0 13.8228 46.0967 1.0 13.7544 46.1415 1.0 13.6995 46.17250000000001 1.0 13.6368 46.2074 1.0 13.5944 46.233 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>77.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>14.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="SICS003">
+      <gml:name>Polovnik</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>132.5</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.075495340871018</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_115">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.594 46.2391 1.0 13.5714 46.2453 1.0 13.5362 46.2543 1.0 13.5011 46.2632 1.0 13.464900000000002 46.2702 1.0 13.4287 46.2771 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>57.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>7.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="SICS004">
+      <gml:name>Branik-Ilirska Bistrica</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>170.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6504800546060596</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_116">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>14.2945 45.5143 1.0 14.2711 45.5347 1.0 14.2457 45.5513 1.0 14.2132 45.5751 1.0 14.1633 45.60690000000001 1.0 14.1251 45.6282 1.0 14.087 45.6526 1.0 14.0505 45.6726 1.0 14.0186 45.6905 1.0 13.9868 45.7129 1.0 13.9513 45.7347 1.0 13.9176 45.7578 1.0 13.8967 45.7749 1.0 13.8592 45.7986 1.0 13.819000000000003 45.8237 1.0 13.7879 45.8422 1.0 13.762300000000002 45.8599 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>77.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="SICS005">
+      <gml:name>Cividale-Nova Gorica</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>150.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.338933940256923</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>5.5</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_117">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>13.755 45.86390000000001 1.0 13.7423 45.877 1.0 13.7234 45.8927 1.0 13.6995 45.9094 1.0 13.6798 45.9274 1.0 13.6602 45.9454 1.0 13.63 45.9698 1.0 13.5999 45.9941 1.0 13.5746 46.0114 1.0 13.5493 46.0286 1.0 13.5046 46.0595 1.0 13.4598 46.0903 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>62.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>9.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+  </sourceModel>
+</nrml>
