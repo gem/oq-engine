@@ -447,6 +447,9 @@ CREATE TABLE uiapi.upload (
     -- The directory where the input files belonging to a batch live on the
     -- server
     path VARCHAR NOT NULL UNIQUE,
+    -- One of: created, in-progress, failed, succeeded
+    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT upload_status_value
+        CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -487,7 +490,7 @@ CREATE TABLE uiapi.oq_job (
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'probabilistic', 'deterministic')),
     -- One of: created, in-progress, failed, succeeded
-    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT status_value
+    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT job_status_value
         CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
     duration INTEGER NOT NULL DEFAULT -1,
     oq_params_id INTEGER NOT NULL,
