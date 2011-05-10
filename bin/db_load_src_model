@@ -65,7 +65,7 @@ For example:
         print ">> Time spent %ss, %sms" % (
             str(elapsed_time.seconds), str(elapsed_time.microseconds / 1000))
 
-        # src_loader.close()
+        src_loader.close()
 
         print "Total sources inserted: %s" % len(results)
-        # print "Results: %s" % results
+        print "Results: %s" % results
