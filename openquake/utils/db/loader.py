@@ -271,8 +271,16 @@ def parse_simple_fault_src(fault):
 
         surface = get_fault_surface(fault)
 
-        outline_coords = \
-            poly_coords(surface.getLocationList())
+#        outline_coords = \
+#            poly_coords(surface.getLocationList())
+
+        location_list = surface.getLocationList()
+        # polygon
+        location_list.add(location_list.get(0))
+
+        formatter = java.jclass("LocationListFormatter")(location_list)
+        
+        outline_coords = formatter.format()
 
         simple_fault['outline'] = \
             geoalchemy.WKTSpatialElement(
@@ -486,8 +494,8 @@ class SourceModelLoader(object):
         self.src_reader = java.jclass('SourceModelReader')(
             self.src_model_path, self.mfd_bin_width)
 
-        self.meta = sqlalchemy.MetaData(engine)
-        self.meta.reflect(schema=db.PSHAI_TS)
+        # self.meta = sqlalchemy.MetaData(engine)
+        # self.meta.reflect(schema=db.PSHAI_TS)
 
     def close(self):
         """
@@ -526,8 +534,9 @@ class SourceModelLoader(object):
                 # for now, just skip this object
                 continue
 
-            results.extend(
-                write(self.meta, read(src), owner_id=self.owner_id,
-                      input_id=self.input_id))
+            data = read(src)
+
+            # not serializing on the database
+            results.extend(data)
 
         return results
