@@ -534,9 +534,8 @@ class SourceModelLoader(object):
                 # for now, just skip this object
                 continue
 
-            data = read(src)
-
-            # not serializing on the database
-            results.extend(data)
+            results.extend(
+                write(self.meta, read(src), owner_id=self.owner_id,
+                input_id=self.input_id))
 
         return results
