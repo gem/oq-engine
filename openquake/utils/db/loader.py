@@ -28,6 +28,7 @@
 import csv
 from sqlalchemy.ext.sqlsoup import SqlSoup
 import datetime
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 import geoalchemy
 
@@ -56,7 +57,6 @@ class CsvModelLoader(object):
         self.read_model()
         self.write_to_db(self.csv_reader)
 
-
     def date_to_timestamp(self, year, month, day, hour, minute, sec):
         """
             Quick helper function to have a timestamp for the
@@ -66,6 +66,11 @@ class CsvModelLoader(object):
         return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
 
     def write_to_db(self, insert_data):
+
+        mags = ['mb_val', 'mb_val_error',
+            'ml_val', 'ml_val_error',
+            'ms_val', 'ms_val_error',
+            'mw_val', 'mw_val_error']
 
         for row in insert_data:
 
@@ -77,13 +82,6 @@ class CsvModelLoader(object):
                 semi_major=row['semi_major'],
                 strike=row['strike'])
 
-            # creates the record inside the transaction, no commit yet
-            self.soup.flush()
-
-            mags = ['mb_val', 'mb_val_error',
-                'ml_val', 'ml_val_error',
-                'ms_val', 'ms_val_error',
-                'mw_val', 'mw_val_error']
 
             for mag in mags:
                 row[mag] = row[mag].strip()
@@ -105,9 +103,6 @@ class CsvModelLoader(object):
                                 mw_val=row['mw_val'],
                                 mw_val_error=row['mw_val_error'])
 
-            # creates the record inside the transaction, no commit yet
-            self.soup.flush()
-
             wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
             self.soup.catalog(owner_id=1, time=timestamp, 
                 surface=surface, eventid=row['eventid'], 
@@ -127,7 +122,10 @@ class CsvModelLoader(object):
             :param schema: database schema
             :type schema: str
         """
-        db = SqlSoup(self.engine)
+        # be sure that autoflushing/expire_on_commit/autocommit are false
+        db = SqlSoup(self.engine,
+            session=scoped_session(sessionmaker(autoflush=False,
+            expire_on_commit=False, autocommit=False)))
         db.schema = schema
         db.catalog.relate('surface', db.surface)
         db.catalog.relate('magnitude', db.magnitude)
