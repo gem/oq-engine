@@ -496,8 +496,8 @@ class CsvLoaderTestCase(unittest.TestCase):
         csv_loader.serialize()
         soup_db = csv_loader.soup
 
-        # doing some "trickery" with *properties and primary_key, to avoid an
-        # sqlalchemy warning message
+        # doing some "trickery" with *properties and primary_key, to adapt the
+        # code for sqlalchemy 0.7
 
         # surface join
         surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
