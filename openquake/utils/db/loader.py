@@ -34,8 +34,6 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 import geoalchemy
 
-
-
 import math
 import sqlalchemy
 
@@ -545,7 +543,12 @@ class SourceModelLoader(object):
 
         return results
 
+
 class CsvModelLoader(object):
+    """
+        Csv Model Loader which gets data from a particular CSV source and
+        "serializes" the data to the database
+    """
     def __init__(self, src_model_path, engine, schema):
         self.src_model_path = src_model_path
         self.engine = engine
@@ -585,7 +588,6 @@ class CsvModelLoader(object):
                 semi_major=row['semi_major'],
                 strike=row['strike'])
 
-
             for mag in mags:
                 row[mag] = row[mag].strip()
 
@@ -607,15 +609,15 @@ class CsvModelLoader(object):
                                 mw_val_error=row['mw_val_error'])
 
             wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
-            self.soup.catalog(owner_id=1, time=timestamp, 
-                surface=surface, eventid=row['eventid'], 
-                agency=row['agency'], identifier=row['identifier'], 
+            self.soup.catalog(owner_id=1, time=timestamp,
+                surface=surface, eventid=row['eventid'],
+                agency=row['agency'], identifier=row['identifier'],
                 time_error=row['time_error'], depth=row['depth'],
                 depth_error=row['depth_error'], magnitude=magnitude,
                 point=geoalchemy.WKTSpatialElement(wkt, 4326))
 
         # commit results
-        self.soup.commit()    
+        self.soup.commit()
 
     def _sql_soup_init(self, schema):
         """
@@ -626,10 +628,10 @@ class CsvModelLoader(object):
             :type schema: str
         """
         # be sure that autoflushing/expire_on_commit/autocommit are false
-        db = SqlSoup(self.engine,
+        soup_db = SqlSoup(self.engine,
             session=scoped_session(sessionmaker(autoflush=False,
             expire_on_commit=False, autocommit=False)))
-        db.schema = schema
-        db.catalog.relate('surface', db.surface)
-        db.catalog.relate('magnitude', db.magnitude)
-        return db
+        soup_db.schema = schema
+        soup_db.catalog.relate('surface', db.surface)
+        soup_db.catalog.relate('magnitude', db.magnitude)
+        return soup_db
