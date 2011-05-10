@@ -18,7 +18,16 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
 import sys
+import datetime
+
+# this is a hack so that it is easier to test these scripts,
+# it will add the proper directories to the path so that 
+# this script can be run from a checkout
+if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                  'openquake')):
+    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from openquake import flags
 from openquake.utils import db
@@ -50,15 +59,21 @@ For example:
         sys.exit(0)
 
     else:
-        engine = db.create_engine(
-            FLAGS.db_name, FLAGS.user, password=FLAGS.password,
-            host=FLAGS.host)
+        # engine = db.create_engine(
+        #    FLAGS.db_name, FLAGS.user, password=FLAGS.password,
+        #    host=FLAGS.host)
 
-        src_loader = db_loader.SourceModelLoader(FLAGS.source_model, engine)
+        src_loader = db_loader.SourceModelLoader(FLAGS.source_model, None)
+
+        started_at = datetime.datetime.now()
 
         results = src_loader.serialize()
 
-        src_loader.close()
+        elapsed_time = (datetime.datetime.now() - started_at)
+        print ">> Time spent %ss, %sms" % (
+            str(elapsed_time.seconds), str(elapsed_time.microseconds / 1000))
+
+        # src_loader.close()
 
         print "Total sources inserted: %s" % len(results)
-        print "Results: %s" % results
+        # print "Results: %s" % results
