@@ -21,18 +21,44 @@
     Unittests for NRML/CSV input files loaders to the database
 """
 
-
-import sys
 import unittest
 import openquake.utils.db as db
 from openquake.utils.db import loader
 from tests.utils import helpers
+import csv
 
 class DbLoaderTestCase(unittest.TestCase):
     """
         Main class to execute tests about NRML/CSV
     """
+
+    def setUp(self):
+        csv_file = "ISC_sampledata1.csv"
+        self.csv_path = helpers.get_tests_path(csv_file)
+
+    def test_csv_headers_are_correct(self):
+        headers = ['eventid','agency','identifier','year','month','day','hour',
+            'minute','second','time_error','longitude','latitude','semi_major',
+            'semi_minor','strike','depth','depth_error','mw_val','mw_val_error',
+            'ms_val','ms_val_error','mb_val','mb_val_error','ml_val',
+            'ml_val_error']
+        csv_fd = open(self.csv_path, 'r')
+        csv_reader = csv.DictReader(csv_fd, delimiter=',')
+
+        # it's not important that the headers of the csv are in the right or
+        # wrong order, by using the DictReader it is sufficient to compare the
+        # headers
+        headers = sorted(headers)
+        csv_headers = sorted(csv_reader.next().keys())
+        self.assertEqual(csv_headers, headers)
+
     def test_csv_to_db_loader_end_to_end(self):
+        """
+            * Serializes the csv into the database
+            * Queries the database for the data just inserted
+            * Verifies the data against the csv
+            * Deletes the inserted records from the database
+        """
         def _pop_date_fields(csv):
             date_fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
             res = [csv.pop(csv.index(field)) for field in date_fields]
@@ -50,9 +76,7 @@ class DbLoaderTestCase(unittest.TestCase):
 
         engine = db.create_engine(dbname=dbname ,user=user, password=password)
 
-        csv_file = "ISC_sampledata1.csv"
-        csv_path = helpers.get_tests_path(csv_file)
-        csv_loader = loader.CsvModelLoader(csv_path, engine, 'eqcat')
+        csv_loader = loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
         csv_loader.serialize()
         soup_db = csv_loader.soup
 
@@ -90,14 +114,12 @@ class DbLoaderTestCase(unittest.TestCase):
             timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
             csv_time = csv_loader.date_to_timestamp(*timestamp)
             # first we compare the timestamps
-            print dir(db_row)
             self.assertEqual(str(db_row.time), csv_time)
             
             # then, we cycle through the csv keys and consider some special
             # cases
             for csv_key in csv_keys:
                 db_val = getattr(db_row, csv_key)
-                sys.stdout.write(str(db_val) + ' ')
                 csv_val = csv_row[csv_key]
                 if not len(csv_val.strip()):
                     csv_val = '-999.0'
@@ -105,7 +127,6 @@ class DbLoaderTestCase(unittest.TestCase):
                     self.assertEqual(str(db_val), str(csv_val))
                 else:
                     self.assertEqual(float(db_val), float(csv_val))
-            print
         for db_row in db_rows:
             soup_db.delete(db_row) 
         soup_db.commit()
