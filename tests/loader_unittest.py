@@ -36,11 +36,21 @@ class DbLoaderTestCase(unittest.TestCase):
         csv_file = "ISC_sampledata1.csv"
         self.csv_path = helpers.get_tests_path(csv_file)
 
+    def test_input_csv_is_of_the_right_len(self):
+        # without the headers is 8892
+        expected_len = 8892
+
+        csv_fd = open(self.csv_path, 'r')
+        csv_reader = csv.DictReader(csv_fd, delimiter=',')
+
+        self.assertEqual(len(list(csv_reader)), expected_len)
+
     def test_csv_headers_are_correct(self):
-        headers = ['eventid','agency','identifier','year','month','day','hour',
-            'minute','second','time_error','longitude','latitude','semi_major',
-            'semi_minor','strike','depth','depth_error','mw_val','mw_val_error',
-            'ms_val','ms_val_error','mb_val','mb_val_error','ml_val',
+        expected_headers = ['eventid','agency','identifier','year',
+            'month','day','hour', 'minute','second','time_error','longitude',
+            'latitude','semi_major', 'semi_minor','strike','depth',
+            'depth_error','mw_val','mw_val_error', 'ms_val','ms_val_error',
+            'mb_val','mb_val_error','ml_val',
             'ml_val_error']
         csv_fd = open(self.csv_path, 'r')
         csv_reader = csv.DictReader(csv_fd, delimiter=',')
@@ -48,9 +58,9 @@ class DbLoaderTestCase(unittest.TestCase):
         # it's not important that the headers of the csv are in the right or
         # wrong order, by using the DictReader it is sufficient to compare the
         # headers
-        headers = sorted(headers)
+        expected_headers = sorted(expected_headers)
         csv_headers = sorted(csv_reader.next().keys())
-        self.assertEqual(csv_headers, headers)
+        self.assertEqual(csv_headers, expected_headers)
 
     def test_csv_to_db_loader_end_to_end(self):
         """
@@ -82,6 +92,8 @@ class DbLoaderTestCase(unittest.TestCase):
 
         # doing some "trickery" with *properties and primary_key, to avoid an
         # sqlalchemy warning message
+
+        # surface join
         surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
             properties={
                     'id_surface' : [soup_db.surface.c.id]
@@ -89,6 +101,7 @@ class DbLoaderTestCase(unittest.TestCase):
                                     soup_db.surface.c.last_update],
             primary_key=[soup_db.surface.c.id])
 
+        # magnitude join
         mag_join = soup_db.join(surf_join, soup_db.magnitude,
             properties={
                     'id_magnitude' : [soup_db.magnitude.c.id],
@@ -127,6 +140,8 @@ class DbLoaderTestCase(unittest.TestCase):
                     self.assertEqual(str(db_val), str(csv_val))
                 else:
                     self.assertEqual(float(db_val), float(csv_val))
+
+        # cleaning the db
         for db_row in db_rows:
             soup_db.delete(db_row) 
         soup_db.commit()
