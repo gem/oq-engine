@@ -449,6 +449,7 @@ CREATE TABLE uiapi.upload (
     path VARCHAR NOT NULL UNIQUE,
     -- One of: created, in-progress, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT upload_status_value
+        CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
