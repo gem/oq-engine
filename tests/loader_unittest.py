@@ -17,9 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-"""
-    Unittests for NRML/CSV input files loaders to the database
-"""
 
 import unittest
 import openquake.utils.db as db
@@ -27,7 +24,7 @@ from openquake.utils.db import loader
 from tests.utils import helpers
 import csv
 
-class DbLoaderTestCase(unittest.TestCase):
+class CsvLoaderTestCase(unittest.TestCase):
     """
         Main class to execute tests about NRML/CSV
     """
