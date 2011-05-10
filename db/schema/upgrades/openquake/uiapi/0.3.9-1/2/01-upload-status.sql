@@ -16,7 +16,7 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
--- Add a status to the uiapi.upload status table.
+-- Add a status to the uiapi.upload table.
 
 -- Rename the 'status_value' constraint in uiapi.oq_job first.
 ALTER TABLE uiapi.oq_job DROP CONSTRAINT status_value;
