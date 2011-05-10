@@ -121,6 +121,7 @@ public class SourceModelReader {
      */
     @SuppressWarnings("unchecked")
     public List<GEMSourceData> read() {
+        this.sourceList.clear();
 
         File xml = new File(path);
         SAXReader reader = new SAXReader();
