@@ -27,7 +27,7 @@ import sys
 
 
 # this is a hack so that it is easier to test these scripts,
-# it will add the proper directories to the path so that 
+# it will add the proper directories to the path so that
 # this script can be run from a checkout
 if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'openquake')):
@@ -55,6 +55,7 @@ flags.DEFINE_string('dbschema', 'eqcat', 'Openquake schema')
 
 flags.DEFINE_boolean('version', False, 'Show version information')
 
+
 def eq_help():
     """
         "Help me if you can I'm feeling down
@@ -74,7 +75,7 @@ HELP USAGE
 
 EXAMPLE:
     %(loader)s --dbuser=youruser \
---dbpassword=yourpassword""" % {'loader' : sys.argv[0]}
+--dbpassword=yourpassword""" % {'loader': sys.argv[0]}
 
 
 if __name__ == '__main__':
@@ -82,12 +83,12 @@ if __name__ == '__main__':
 
     if FLAGS.dbuser and FLAGS.dbpassword:
 
-        engine = db.create_engine(FLAGS.dbname,FLAGS.dbuser,
+        ENGINE = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
                                   password=FLAGS.dbpassword)
 
-        csv_path = "tests/ISC_sampledata1.csv"
-        csv_loader = db_loader.CsvModelLoader(csv_path, engine, 'eqcat')
-        csv_loader.serialize()
+        CSV_PATH = "tests/ISC_sampledata1.csv"
+        CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH, ENGINE, 'eqcat')
+        CSV_LOADER.serialize()
 
     elif FLAGS.version:
         print utils_version.info(__version__)
