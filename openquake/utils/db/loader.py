@@ -257,12 +257,6 @@ def parse_simple_fault_src(fault):
         coord_list = lambda point_list: \
             ', '.join([point_str_3d(point) for point in point_list])
 
-        # polygon coordinates need to form a closed loop
-        # the first point should also be the last point
-        # we need to ignore the depth coord (stick with lat/lon only)
-        poly_coords = lambda point_list: \
-            coord_list(list(point_list) + [point_list[0]])
-
         trace_coords = coord_list(trace)
 
         simple_fault['edge'] = \
@@ -271,11 +265,10 @@ def parse_simple_fault_src(fault):
 
         surface = get_fault_surface(fault)
 
-#        outline_coords = \
-#            poly_coords(surface.getLocationList())
-
         location_list = surface.getLocationList()
-        # polygon
+
+        # polygon coordinates need to form a closed loop
+        # the first point should also be the last point
         location_list.add(location_list.get(0))
 
         formatter = java.jclass("LocationListFormatter")(location_list)
@@ -494,8 +487,8 @@ class SourceModelLoader(object):
         self.src_reader = java.jclass('SourceModelReader')(
             self.src_model_path, self.mfd_bin_width)
 
-        # self.meta = sqlalchemy.MetaData(engine)
-        # self.meta.reflect(schema=db.PSHAI_TS)
+        self.meta = sqlalchemy.MetaData(engine)
+        self.meta.reflect(schema=db.PSHAI_TS)
 
     def close(self):
         """
