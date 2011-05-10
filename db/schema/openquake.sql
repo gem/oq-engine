@@ -132,6 +132,9 @@ CREATE TABLE eqcat.surface (
 CREATE TABLE pshai.rupture (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the rupture with a source model input file (uploaded by a GUI
+    -- user).
+    input_id INTEGER,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
@@ -172,6 +175,9 @@ SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
 CREATE TABLE pshai.source (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the source with a source model input file (uploaded by a GUI
+    -- user).
+    input_id INTEGER,
     -- gml:id
     gid VARCHAR NOT NULL,
     name VARCHAR,
@@ -231,11 +237,11 @@ SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3)
 
 -- simple source view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_source (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, simple_fault, fault_outline) AS
 SELECT
-    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, sfault.edge, sfault.outline
+    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
+    src.si_type, src.tectonic_region, src.rake, sfault.edge, sfault.outline
 FROM
     pshai.source src, pshai.simple_fault sfault
 WHERE
@@ -245,12 +251,12 @@ WHERE
 
 -- simple rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.simple_rupture (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    magnitude, magnitude_type, edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, magnitude, magnitude_type, edge, fault_outline) AS
 SELECT
-    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
-    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    sfault.edge, sfault.outline
+    rup.id, rup.owner_id, rup.input_id, rup.gid, rup.name, rup.description,
+    rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
+    rup.magnitude_type, sfault.edge, sfault.outline
 FROM
     pshai.rupture rup, pshai.simple_fault sfault
 WHERE
@@ -294,11 +300,12 @@ ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
 
 -- complex source view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_source (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    top_edge, bottom_edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, top_edge, bottom_edge, fault_outline) AS
 SELECT
-    src.id, src.owner_id, src.gid, src.name, src.description, src.si_type,
-    src.tectonic_region, src.rake, fedge.top, fedge.bottom, cfault.outline
+    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
+    src.si_type, src.tectonic_region, src.rake, fedge.top, fedge.bottom,
+    cfault.outline
 FROM
     pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
 WHERE
@@ -308,12 +315,12 @@ WHERE
 
 -- complex rupture view, needed for Opengeo server integration
 CREATE VIEW pshai.complex_rupture (
-    id, owner_id, gid, name, description, si_type, tectonic_region, rake,
-    magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
+    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
+    rake, magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
 SELECT
-    rup.id, rup.owner_id, rup.gid, rup.name, rup.description, rup.si_type,
-    rup.tectonic_region, rup.rake, rup.magnitude, rup.magnitude_type,
-    fedge.top, fedge.bottom, cfault.outline
+    rup.id, rup.owner_id, rup.input_id, rup.gid, rup.name, rup.description,
+    rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
+    rup.magnitude_type, fedge.top, fedge.bottom, cfault.outline
 FROM
     pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
 WHERE
@@ -439,7 +446,10 @@ CREATE TABLE uiapi.upload (
     owner_id INTEGER NOT NULL,
     -- The directory where the input files belonging to a batch live on the
     -- server
-    path VARCHAR NOT NULL,
+    path VARCHAR NOT NULL UNIQUE,
+    -- One of: created, in-progress, failed, succeeded
+    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT upload_status_value
+        CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -451,7 +461,7 @@ CREATE TABLE uiapi.input (
     owner_id INTEGER NOT NULL,
     upload_id INTEGER NOT NULL,
     -- The full path of the input file on the server
-    path VARCHAR NOT NULL,
+    path VARCHAR NOT NULL UNIQUE,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt-source)
@@ -459,7 +469,7 @@ CREATE TABLE uiapi.input (
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('source', 'lt-source', 'lt-gmpe',  'exposure',
+        CHECK(input_type IN ('unknown', 'source', 'ltree', 'exposure',
                              'vulnerability')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
@@ -480,7 +490,7 @@ CREATE TABLE uiapi.oq_job (
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'probabilistic', 'deterministic')),
     -- One of: created, in-progress, failed, succeeded
-    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT status_value
+    status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT job_status_value
         CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
     duration INTEGER NOT NULL DEFAULT -1,
     oq_params_id INTEGER NOT NULL,
@@ -520,7 +530,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
-        CHECK(imt IN ('none', '1-sided', '2-sided')),
+        CHECK(truncation_type IN ('none', '1-sided', '2-sided')),
     truncation_level float NOT NULL,
     reference_vs30_value float NOT NULL,
     -- Intensity measure levels
@@ -627,11 +637,17 @@ FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE REST
 ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_r_depth_distr_fk
 FOREIGN KEY (r_depth_distr_id) REFERENCES pshai.r_depth_distr(id) ON DELETE RESTRICT;
 
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_simple_fault_fk
 FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
 
 ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 CREATE TRIGGER pshai_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON pshai.rupture
