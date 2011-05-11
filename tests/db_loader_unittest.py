@@ -433,6 +433,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # Now we can test the rest of the data.
         self.assertEqual(expected, simple_data)
 
+
 class CsvLoaderTestCase(unittest.TestCase):
     """
         Main class to execute tests about CSV
@@ -448,15 +449,14 @@ class CsvLoaderTestCase(unittest.TestCase):
         # without the header line is 8892
         expected_len = 8892
 
-
         self.assertEqual(len(list(self.csv_reader)), expected_len)
 
     def test_csv_headers_are_correct(self):
-        expected_headers = ['eventid','agency','identifier','year',
-            'month','day','hour', 'minute','second','time_error','longitude',
-            'latitude','semi_major', 'semi_minor','strike','depth',
-            'depth_error','mw_val','mw_val_error', 'ms_val','ms_val_error',
-            'mb_val','mb_val_error','ml_val',
+        expected_headers = ['eventid', 'agency', 'identifier', 'year',
+            'month', 'day', 'hour', 'minute', 'second', 'time_error',
+            'longitude', 'latitude', 'semi_major', 'semi_minor', 'strike',
+            'depth', 'depth_error', 'mw_val', 'mw_val_error',
+            'ms_val', 'ms_val_error', 'mb_val', 'mb_val_error', 'ml_val',
             'ml_val_error']
 
         # it's not important that the headers of the csv are in the right or
@@ -480,7 +480,7 @@ class CsvLoaderTestCase(unittest.TestCase):
             date_fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
             res = [csv.pop(csv.index(field)) for field in date_fields]
             return res
-                
+
         def _prepare_date(csv_r, date_fields):
             return [int(csv_r[field]) for field in date_fields]
 
@@ -492,7 +492,7 @@ class CsvLoaderTestCase(unittest.TestCase):
         password = 'openquake'
         dbname = 'openquake'
 
-        engine = db.create_engine(dbname=dbname ,user=user, password=password)
+        engine = db.create_engine(dbname=dbname, user=user, password=password)
 
         csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
         csv_loader.serialize()
@@ -503,19 +503,18 @@ class CsvLoaderTestCase(unittest.TestCase):
 
         # surface join
         surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
-            properties={
-                    'id_surface' : [soup_db.surface.c.id]
-            }, exclude_properties=[soup_db.surface.c.id,
-                                    soup_db.surface.c.last_update],
+            properties={'id_surface': [soup_db.surface.c.id]},
+                        exclude_properties=[soup_db.surface.c.id,
+                            soup_db.surface.c.last_update],
             primary_key=[soup_db.surface.c.id])
 
         # magnitude join
         mag_join = soup_db.join(surf_join, soup_db.magnitude,
-            properties={
-                    'id_magnitude' : [soup_db.magnitude.c.id],
-                    'id_surface' : [soup_db.surface.c.id]
-            }, exclude_properties=[soup_db.magnitude.c.id,
-                soup_db.magnitude.c.last_update, soup_db.surface.c.last_update],
+            properties={'id_magnitude': [soup_db.magnitude.c.id],
+                    'id_surface': [soup_db.surface.c.id]},
+                        exclude_properties=[soup_db.magnitude.c.id,
+                            soup_db.magnitude.c.last_update,
+                            soup_db.surface.c.last_update],
             primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
 
         db_rows = mag_join.order_by(soup_db.catalog.eventid).all()
@@ -536,7 +535,7 @@ class CsvLoaderTestCase(unittest.TestCase):
             csv_time = csv_loader.date_to_timestamp(*timestamp)
             # first we compare the timestamps
             self.assertEqual(str(db_row.time), csv_time)
-            
+
             # then, we cycle through the csv keys and consider some special
             # cases
             for csv_key in csv_keys:
@@ -551,5 +550,5 @@ class CsvLoaderTestCase(unittest.TestCase):
 
         # cleaning the db
         for db_row in db_rows:
-            soup_db.delete(db_row) 
+            soup_db.delete(db_row)
         soup_db.commit()
