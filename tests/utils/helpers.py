@@ -162,7 +162,9 @@ def assertDictAlmostEqual(test_case, expected, actual):
     :type expected: dict
     :type actual: dict
     """
-    test_case.assertEqual(expected.keys(), actual.keys())
+
+    test_case.assertEqual(set(expected.keys()), set(actual.keys()))
+
     for key in expected.keys():
         exp_val = expected[key]
         act_val = actual[key]
@@ -173,7 +175,7 @@ def assertDictAlmostEqual(test_case, expected, actual):
             test_case.assertAlmostEqual(exp_val, act_val)
         elif isinstance(exp_val, dict):
             # make a recursive call in case there are nested dicts
-            assertDictAlmostEqual(test_case, exp_val, act_val):
+            assertDictAlmostEqual(test_case, exp_val, act_val)
         else:
             test_case.assertEqual(expected[key], actual[key])
 
