@@ -567,7 +567,7 @@ class CsvModelLoader(object):
         self.csv_reader = None
         self.csv_fd = open(self.src_model_path, 'r')
 
-    def read_model(self):
+    def _read_model(self):
         """
             Just initializes the csv DictReader
         """
@@ -578,11 +578,11 @@ class CsvModelLoader(object):
             Reads the model
             Writes to the db
         """
-        self.read_model()
-        self.write_to_db(self.csv_reader)
+        self._read_model()
+        self._write_to_db(self.csv_reader)
 
     # pylint: disable=R0201
-    def date_to_timestamp(self, *args):
+    def _date_to_timestamp(self, *args):
         """
             Quick helper function to have a timestamp for the
             openquake postgres database
@@ -591,7 +591,7 @@ class CsvModelLoader(object):
         catalog_date = datetime.datetime(*args)
         return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
 
-    def write_to_db(self, csv_reader):
+    def _write_to_db(self, csv_reader):
         """
             :param csv_reader: DictReader instance
             :type csv_reader: DictReader object `csv.DictReader`
@@ -604,7 +604,7 @@ class CsvModelLoader(object):
 
         for row in csv_reader:
 
-            timestamp = self.date_to_timestamp(int(row['year']),
+            timestamp = self._date_to_timestamp(int(row['year']),
                 int(row['month']), int(row['day']), int(row['hour']),
                 int(row['minute']), int(row['second']))
 
