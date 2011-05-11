@@ -435,7 +435,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
 class CsvLoaderTestCase(unittest.TestCase):
     """
-        Main class to execute tests about NRML/CSV
+        Main class to execute tests about CSV
     """
 
     def setUp(self):
@@ -443,7 +443,7 @@ class CsvLoaderTestCase(unittest.TestCase):
         self.csv_path = helpers.get_tests_path(csv_file)
 
     def test_input_csv_is_of_the_right_len(self):
-        # without the headers is 8892
+        # without the header line is 8892
         expected_len = 8892
 
         csv_fd = open(self.csv_path, 'r')
