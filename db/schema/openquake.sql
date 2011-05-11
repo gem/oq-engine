@@ -450,6 +450,7 @@ CREATE TABLE uiapi.upload (
     -- One of: created, in-progress, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT upload_status_value
         CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
+    job_pid INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -492,7 +493,8 @@ CREATE TABLE uiapi.oq_job (
     -- One of: created, in-progress, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'created' CONSTRAINT job_status_value
         CHECK(status IN ('created', 'in-progress', 'failed', 'succeeded')),
-    duration INTEGER NOT NULL DEFAULT -1,
+    duration INTEGER NOT NULL DEFAULT 0,
+    job_pid INTEGER NOT NULL DEFAULT 0,
     oq_params_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
