@@ -90,6 +90,7 @@ if __name__ == '__main__':
         CSV_PATH = "tests/data/ISC_sampledata1.csv"
         CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH, ENGINE, FLAGS.dbschema)
         CSV_LOADER.serialize()
+        print "Import of %s done." % CSV_PATH
 
     elif FLAGS.version:
         print utils_version.info(__version__)
