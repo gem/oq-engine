@@ -52,8 +52,8 @@ For example:
 
     else:
         engine = db.create_engine(
-           FLAGS.db_name, FLAGS.user, password=FLAGS.password,
-           host=FLAGS.host)
+            FLAGS.db_name, FLAGS.user, password=FLAGS.password,
+            host=FLAGS.host)
 
         src_loader = db_loader.SourceModelLoader(FLAGS.source_model, engine)
 
