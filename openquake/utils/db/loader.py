@@ -563,7 +563,8 @@ class CsvModelLoader(object):
 
         self.src_model_path = src_model_path
         self.engine = engine
-        self.soup = self._sql_soup_init(schema)
+        self.soup = None
+        self.schema = schema
         self.csv_reader = None
         self.csv_fd = open(self.src_model_path, 'r')
 
@@ -578,6 +579,7 @@ class CsvModelLoader(object):
             Reads the model
             Writes to the db
         """
+        self.soup = self._sql_soup_init(self.schema)
         self._read_model()
         self._write_to_db(self.csv_reader)
 

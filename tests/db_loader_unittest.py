@@ -442,8 +442,9 @@ class CsvLoaderTestCase(unittest.TestCase):
     def setUp(self):
         csv_file = "ISC_sampledata1.csv"
         self.csv_path = helpers.get_data_path(csv_file)
-        csv_fd = open(self.csv_path, 'r')
-        self.csv_reader = csv.DictReader(csv_fd, delimiter=',')
+        self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
+        self.db_loader._read_model()
+        self.csv_reader = self.db_loader.csv_reader
 
     def test_input_csv_is_of_the_right_len(self):
         # without the header line is 8892
