@@ -81,7 +81,7 @@ EXAMPLE:
 if __name__ == '__main__':
     FLAGS(sys.argv)
 
-    if FLAGS.dbuser and FLAGS.dbpassword:
+    if FLAGS.dbuser and FLAGS.dbpassword and FLAGS.dbname:
 
         ENGINE = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
                                   password=FLAGS.dbpassword)
