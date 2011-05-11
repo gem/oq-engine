@@ -441,7 +441,7 @@ class CsvLoaderTestCase(unittest.TestCase):
 
     def setUp(self):
         csv_file = "ISC_sampledata1.csv"
-        self.csv_path = helpers.get_tests_path(csv_file)
+        self.csv_path = helpers.get_data_path(csv_file)
         csv_fd = open(self.csv_path, 'r')
         self.csv_reader = csv.DictReader(csv_fd, delimiter=',')
 
