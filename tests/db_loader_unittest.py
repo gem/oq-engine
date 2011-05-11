@@ -345,7 +345,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # this is the dict we'll be passing to sqlalchemy to do the db insert
         mfd_insert = db_loader.parse_mfd(self.simple, mfd)
 
-        self.assertEqual(expected, mfd_insert)
+        helpers.assertDictAlmostEqual(self, expected, mfd_insert)
 
     def test_parse_mfd_complex_fault(self):
         expected = {
@@ -367,7 +367,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         mfd_insert = db_loader.parse_mfd(self.complex, mfd)
 
-        self.assertEqual(expected, mfd_insert)
+        helpers.assertDictAlmostEqual(self, expected, mfd_insert)
 
     def test_parse_simple_fault_src(self):
 
@@ -427,4 +427,5 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         self.assertEqual(exp_edge.geom_wkt, actual_edge.geom_wkt)
 
         # Now we can test the rest of the data.
-        self.assertEqual(expected, simple_data)
+        for idx, exp in enumerate(expected):
+            helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
