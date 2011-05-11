@@ -468,7 +468,7 @@ class CsvLoaderTestCase(unittest.TestCase):
         csv_headers = sorted(csv_reader.next().keys())
         self.assertEqual(csv_headers, expected_headers)
 
-    # Skip the end-to-end test for now, until database on CI is setup
+    # Skip the end-to-end test for now, until database on CI system is setup
     @helpers.skipit
     def test_csv_to_db_loader_end_to_end(self):
         """
