@@ -484,6 +484,7 @@ class CsvLoaderTestCase(unittest.TestCase):
                 
         def _prepare_date(csv_r, date_fields):
             return [int(csv_r[field]) for field in date_fields]
+
         def _pop_geometry_fields(csv):
             unused_fields = ['longitude', 'latitude']
             [csv.pop(csv.index(field)) for field in unused_fields]
