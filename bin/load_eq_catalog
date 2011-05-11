@@ -47,7 +47,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dbuser', 'postgres',
     'User of the database')
 
-flags.DEFINE_string('dbpassword', False, 'User password')
+flags.DEFINE_string('dbpassword', '', 'User password')
 flags.DEFINE_string('host', 'localhost', "Postgres' host")
 flags.DEFINE_string('port', '5432', "Postgres' port")
 flags.DEFINE_string('dbname', 'openquake', 'OpenQuake db')
@@ -83,13 +83,13 @@ if __name__ == '__main__':
 
     if FLAGS.dbuser and FLAGS.dbpassword and FLAGS.dbname:
 
-        ENGINE = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
+        engine = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
                                   password=FLAGS.dbpassword)
 
         # TODO: make CSV_PATH a parameter
         CSV_PATH = "tests/data/ISC_sampledata1.csv"
-        CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH, ENGINE, FLAGS.dbschema)
-        CSV_LOADER.serialize()
+        csv_loader = db_loader.CsvModelLoader(CSV_PATH, engine, FLAGS.dbschema)
+        csv_loader.serialize()
         print "Import of %s done." % CSV_PATH
 
     elif FLAGS.version:
