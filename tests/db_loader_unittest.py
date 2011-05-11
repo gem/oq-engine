@@ -441,15 +441,15 @@ class CsvLoaderTestCase(unittest.TestCase):
     def setUp(self):
         csv_file = "ISC_sampledata1.csv"
         self.csv_path = helpers.get_tests_path(csv_file)
+        csv_fd = open(self.csv_path, 'r')
+        self.csv_reader = csv.DictReader(csv_fd, delimiter=',')
 
     def test_input_csv_is_of_the_right_len(self):
         # without the header line is 8892
         expected_len = 8892
 
-        csv_fd = open(self.csv_path, 'r')
-        csv_reader = csv.DictReader(csv_fd, delimiter=',')
 
-        self.assertEqual(len(list(csv_reader)), expected_len)
+        self.assertEqual(len(list(self.csv_reader)), expected_len)
 
     def test_csv_headers_are_correct(self):
         expected_headers = ['eventid','agency','identifier','year',
@@ -458,14 +458,12 @@ class CsvLoaderTestCase(unittest.TestCase):
             'depth_error','mw_val','mw_val_error', 'ms_val','ms_val_error',
             'mb_val','mb_val_error','ml_val',
             'ml_val_error']
-        csv_fd = open(self.csv_path, 'r')
-        csv_reader = csv.DictReader(csv_fd, delimiter=',')
 
         # it's not important that the headers of the csv are in the right or
         # wrong order, by using the DictReader it is sufficient to compare the
         # headers
         expected_headers = sorted(expected_headers)
-        csv_headers = sorted(csv_reader.next().keys())
+        csv_headers = sorted(self.csv_reader.next().keys())
         self.assertEqual(csv_headers, expected_headers)
 
     # Skip the end-to-end test for now, until database on CI system is setup
