@@ -85,8 +85,6 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
 
 class CsvModelLoaderDBTestCase(unittest.TestCase):
 
-    # Skip the end-to-end test for now, until database on CI system is setup
-    @helpers.skipit
     def test_csv_to_db_loader_end_to_end(self):
         """
             * Serializes the csv into the database
