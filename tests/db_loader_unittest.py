@@ -532,7 +532,7 @@ class CsvLoaderTestCase(unittest.TestCase):
             _pop_geometry_fields(csv_keys)
 
             timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
-            csv_time = csv_loader.date_to_timestamp(*timestamp)
+            csv_time = csv_loader._date_to_timestamp(*timestamp)
             # first we compare the timestamps
             self.assertEqual(str(db_row.time), csv_time)
 
