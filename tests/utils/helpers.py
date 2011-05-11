@@ -147,6 +147,31 @@ def measureit(method):
     return _measured
 
 
+def assertDictAlmostEqual(test_case, expected, actual):
+    """
+    Assert that two dicts are equal. For dict values which are numbers,
+    we use :py:meth:`unittest.TestCase.assertAlmostEqual` for number
+    comparisons with a reasonable precision tolerance.
+
+    :param test_case: TestCase object on which we can call all of the basic
+        'assert' methods.
+    :type test_case: :py:class:`unittest.TestCase` object
+    :type expected: dict
+    :type actual: dict
+    """
+    test_case.assertEqual(expected.keys(), actual.keys())
+    for key in expected.keys():
+        exp_val = expected[key]
+        act_val = actual[key]
+
+        # If it's a number, use assertAlmostEqual to compare
+        # the values with a reasonable tolerance.
+        if isinstance(exp_val, (int, float, long, complex)):
+            test_case.assertAlmostEqual(exp_val, act_val)
+        else:
+            test_case.assertEqual(expected[key], actual[key])
+
+
 def wait_for_celery_tasks(celery_results,
                           max_wait_loops=MAX_WAIT_LOOPS,
                           wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
