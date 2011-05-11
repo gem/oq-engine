@@ -240,9 +240,6 @@ public class CrisisSourceData extends GemFileParser {
 
                     // MFD for focal mechanism
                     FocalMechanism fm = new FocalMechanism();
-                    fm.setStrike(0.0);
-                    fm.setDip(90.0);
-                    fm.setRake(0.0);
                     IncrementalMagFreqDist[] arrMfd =
                             new IncrementalMagFreqDist[1];
                     arrMfd[0] = mfd;
@@ -360,7 +357,7 @@ public class CrisisSourceData extends GemFileParser {
                                             TectonicRegionType.SUBDUCTION_INTERFACE,
                                             upperTrace, lowerTrace, rake, mfd,
                                             true);
-                            //srcList.add(src);
+                            srcList.add(src);
 
                             if (INFO)
                                 System.out
