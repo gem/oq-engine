@@ -550,6 +550,17 @@ class CsvModelLoader(object):
         "serializes" the data to the database
     """
     def __init__(self, src_model_path, engine, schema):
+        """
+            :param src_model_path: path to a source model file
+            :type src_model_path: str
+
+            :param engine: db engine to provide connectivity and reflection
+            :type engine: :py:class:`sqlalchemy.engine.base.Engine`
+
+            :param schema: the schema needed to access the database
+            :type schema: str
+        """
+
         self.src_model_path = src_model_path
         self.engine = engine
         self.soup = self._sql_soup_init(schema)
@@ -557,28 +568,41 @@ class CsvModelLoader(object):
         self.csv_fd = open(self.src_model_path, 'r')
 
     def read_model(self):
+        """
+            Just initializes the csv DictReader
+        """
         self.csv_reader = csv.DictReader(self.csv_fd, delimiter=',')
 
     def serialize(self):
+        """
+            Reads the model
+            Writes to the db
+        """
         self.read_model()
         self.write_to_db(self.csv_reader)
 
-    def date_to_timestamp(self, year, month, day, hour, minute, sec):
+    # pylint: disable=R0201
+    def date_to_timestamp(self, *args):
         """
             Quick helper function to have a timestamp for the
             openquake postgres database
         """
-        catalog_date = datetime.datetime(year, month, day, hour, minute, sec)
+
+        catalog_date = datetime.datetime(*args)
         return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
 
-    def write_to_db(self, insert_data):
+    def write_to_db(self, csv_reader):
+        """
+            :param csv_reader: DictReader instance
+            :type csv_reader: DictReader object `csv.DictReader`
+        """
 
         mags = ['mb_val', 'mb_val_error',
             'ml_val', 'ml_val_error',
             'ms_val', 'ms_val_error',
             'mw_val', 'mw_val_error']
 
-        for row in insert_data:
+        for row in csv_reader:
 
             timestamp = self.date_to_timestamp(int(row['year']),
                 int(row['month']), int(row['day']), int(row['hour']),
@@ -632,6 +656,6 @@ class CsvModelLoader(object):
             session=scoped_session(sessionmaker(autoflush=False,
             expire_on_commit=False, autocommit=False)))
         soup_db.schema = schema
-        soup_db.catalog.relate('surface', db.surface)
-        soup_db.catalog.relate('magnitude', db.magnitude)
+        soup_db.catalog.relate('surface', soup_db.surface)
+        soup_db.catalog.relate('magnitude', soup_db.magnitude)
         return soup_db
