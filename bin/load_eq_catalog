@@ -86,7 +86,8 @@ if __name__ == '__main__':
         ENGINE = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
                                   password=FLAGS.dbpassword)
 
-        CSV_PATH = "tests/ISC_sampledata1.csv"
+        # TODO: make CSV_PATH a parameter
+        CSV_PATH = "tests/data/ISC_sampledata1.csv"
         CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH, ENGINE, FLAGS.dbschema)
         CSV_LOADER.serialize()
 
