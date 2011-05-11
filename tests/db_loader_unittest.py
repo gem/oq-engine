@@ -492,8 +492,8 @@ class CsvLoaderTestCase(unittest.TestCase):
 
         def _retrieve_db_data(soup_db):
 
-            # doing some "trickery" with *properties and primary_key, to adapt the
-            # code for sqlalchemy 0.7
+            # doing some "trickery" with *properties and primary_key,
+            # to adapt the # code for sqlalchemy 0.7
 
             # surface join
             surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
@@ -540,14 +540,12 @@ class CsvLoaderTestCase(unittest.TestCase):
                     else:
                         self.assertEqual(float(db_val), float(csv_val))
 
-
-        def _delete_db_data(soup_db,db_rows):
+        def _delete_db_data(soup_db, db_rows):
             # cleaning the db
             for db_row in db_rows:
                 soup_db.delete(db_row)
 
-
-        user = 'kpanic'
+        user = 'oq_eqcat_etl'
         password = 'openquake'
         dbname = 'openquake'
 
