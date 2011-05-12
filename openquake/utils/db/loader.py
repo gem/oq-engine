@@ -265,11 +265,11 @@ def parse_simple_fault_src(fault):
 
         surface = get_fault_surface(fault)
 
-        location_list = surface.getLocationList()
+        location_list = surface.getSurfacePerimeterLocsList()
 
         # polygon coordinates need to form a closed loop
         # the first point should also be the last point
-        location_list.add(location_list.get(0))
+        # location_list.add(location_list.get(0))
 
         formatter = java.jclass("LocationListFormatter")(location_list)
 
