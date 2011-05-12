@@ -137,8 +137,9 @@ COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the se
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
+COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
 COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, probabilistic or deterministic.';
-COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: created, in progress, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
@@ -152,4 +153,6 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
+COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
 COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
+COMMENT ON COLUMN uiapi.upload.status IS 'One of: pending, running, failed or succeeded.';
