@@ -254,21 +254,6 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         exp_outline = expected[1]['data'].pop('outline')
         actual_outline = simple_data[1]['data'].pop('outline')
 
-        print len(exp_outline.geom_wkt)
-        print len(actual_outline.geom_wkt)
-        for i in range(len(exp_outline.geom_wkt)):
-            l = exp_outline.geom_wkt[i]
-            r = actual_outline.geom_wkt[i]
-            # print '%s | %s' % (l, r)
-            if l != r:
-                print "characters at index %s do not match" % i
-                print "ord(l) %s" % ord(l)
-                print "ord(r) %s" % ord(r) 
-        # foo = lambda x: x.split(',')
-        # for i in foo(exp_outline.geom_wkt): print i
-        # print
-        # for i in foo(actual_outline.geom_wkt): print i
-
         self.assertEqual(exp_outline.geom_wkt, actual_outline.geom_wkt)
 
         exp_edge = expected[1]['data'].pop('edge')
