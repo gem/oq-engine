@@ -69,6 +69,7 @@ JAVA_CLASSES = {
         "org.opensha.sha.faultSurface.StirlingGriddedSurface",
     "ApproxEvenlyGriddedSurface":
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
+    "LocationListFormatter": "org.gem.LocationListFormatter",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)
