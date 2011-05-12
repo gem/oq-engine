@@ -19,6 +19,7 @@
 
 
 import sys
+import datetime
 
 from openquake import flags
 from openquake.utils import db
@@ -46,7 +47,6 @@ For example:
     $ python bin/db_load_src_model --user=some_user \
 --source_model=path/to/source.xml"""
         print error_msg
-        print FLAGS.user
         sys.exit(0)
 
     else:
@@ -56,7 +56,13 @@ For example:
 
         src_loader = db_loader.SourceModelLoader(FLAGS.source_model, engine)
 
+        started_at = datetime.datetime.now()
+
         results = src_loader.serialize()
+
+        elapsed_time = (datetime.datetime.now() - started_at)
+        print ">> Time spent %ss, %sms" % (
+            str(elapsed_time.seconds), str(elapsed_time.microseconds / 1000))
 
         src_loader.close()
 

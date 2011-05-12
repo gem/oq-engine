@@ -24,7 +24,7 @@ XML files and serializing the data to the OpenQuake pshai database.
 
 
 import geoalchemy
-import math
+import numpy
 import sqlalchemy
 
 from openquake import java
@@ -158,10 +158,10 @@ def parse_mfd(fault, mfd_java_obj):
         min_mag = mfd_java_obj.getMinX() - (delta / 2)
         max_mag = mfd_java_obj.getMaxX() + (delta / 2)
         total_cumul_rate = mfd_java_obj.getTotCumRate()
-        denominator = (math.pow(10, -(mfd['b_val'] * min_mag))
-            - math.pow(10, -(mfd['b_val'] * max_mag)))
+        denominator = (numpy.power(10, -(mfd['b_val'] * min_mag))
+            - numpy.power(10, -(mfd['b_val'] * max_mag)))
 
-        mfd['a_val'] = math.log10(total_cumul_rate / denominator)
+        mfd['a_val'] = numpy.log10(total_cumul_rate / denominator)
 
         mfd['total_cumulative_rate'] = \
             mfd_java_obj.getTotCumRate() / surface_area
@@ -257,12 +257,6 @@ def parse_simple_fault_src(fault):
         coord_list = lambda point_list: \
             ', '.join([point_str_3d(point) for point in point_list])
 
-        # polygon coordinates need to form a closed loop
-        # the first point should also be the last point
-        # we need to ignore the depth coord (stick with lat/lon only)
-        poly_coords = lambda point_list: \
-            coord_list(list(point_list) + [point_list[0]])
-
         trace_coords = coord_list(trace)
 
         simple_fault['edge'] = \
@@ -271,8 +265,15 @@ def parse_simple_fault_src(fault):
 
         surface = get_fault_surface(fault)
 
-        outline_coords = \
-            poly_coords(surface.getLocationList())
+        location_list = surface.getLocationList()
+
+        # polygon coordinates need to form a closed loop
+        # the first point should also be the last point
+        location_list.add(location_list.get(0))
+
+        formatter = java.jclass("LocationListFormatter")(location_list)
+
+        outline_coords = formatter.format()
 
         simple_fault['outline'] = \
             geoalchemy.WKTSpatialElement(
@@ -528,6 +529,6 @@ class SourceModelLoader(object):
 
             results.extend(
                 write(self.meta, read(src), owner_id=self.owner_id,
-                      input_id=self.input_id))
+                input_id=self.input_id))
 
         return results
