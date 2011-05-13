@@ -9,10 +9,10 @@ SELECT
     eqcat.magnitude.ml_val, eqcat.magnitude.ml_val_error,
     eqcat.magnitude.ms_val, eqcat.magnitude.ms_val_error,
     eqcat.magnitude.mw_val, eqcat.magnitude.mw_val_error
-FROM
-    eqcat.catalog
-JOIN eqcat.magnitude ON eqcat.catalog.magnitude_id = eqcat.magnitude.id
-JOIN eqcat.surface ON eqcat.catalog.surface_id = eqcat.surface.id;
+FROM eqcat.catalog, eqcat.magnitude, eqcat.surface
+WHERE
+    eqcat.catalog.magnitude_id = eqcat.magnitude.id
+    AND eqcat.catalog.surface_id = eqcat.surface.id;
 
 COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed       
 for geonode integration';
