@@ -20,7 +20,7 @@
 -- Basically, replace 'probabilistic' with 'event_based'
 
 ALTER TABLE uiapi.oq_job DROP CONSTRAINT job_type_value;
-ALTER TABLE uiapi.ob_job ADD CONSTRAINT job_type_value
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT job_type_value
         CHECK(job_type in ('classical', 'event_based', 'deterministic'));
 
 COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based or deterministic.';
