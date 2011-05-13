@@ -490,7 +490,7 @@ CREATE TABLE uiapi.oq_job (
     --      deterministic (Deterministic)
     -- Note: 'classical' and 'event-based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(job_type IN ('classical', 'event-based', 'deterministic')),
+        CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
@@ -506,7 +506,7 @@ CREATE TABLE uiapi.oq_job (
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(job_type IN ('classical', 'event-based', 'deterministic')),
+        CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
     upload_id INTEGER NOT NULL,
     region_grid_spacing float NOT NULL,
     min_magnitude float CONSTRAINT min_magnitude_set
