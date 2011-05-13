@@ -554,8 +554,8 @@ CREATE TABLE uiapi.oq_params (
     -- Number of seismicity histories
     histories integer CONSTRAINT histories_is_set
         CHECK(
-            ((job_type = 'event-based') AND (histories IS NOT NULL))
-            OR ((job_type != 'event-based') AND (histories IS NULL))),
+            ((job_type = 'event_based') AND (histories IS NOT NULL))
+            OR ((job_type != 'event_based') AND (histories IS NULL))),
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
