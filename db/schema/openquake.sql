@@ -486,9 +486,9 @@ CREATE TABLE uiapi.oq_job (
     description VARCHAR NOT NULL,
     -- One of:
     --      classical (Classical PSHA)
-    --      event-based (Probabilistic event based)
+    --      event_based (Probabilistic event based)
     --      deterministic (Deterministic)
-    -- Note: 'classical' and 'event-based' are both probabilistic methods
+    -- Note: 'classical' and 'event_based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
     -- One of: pending, running, failed, succeeded
