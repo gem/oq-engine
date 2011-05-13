@@ -153,13 +153,18 @@ def assertDictAlmostEqual(test_case, expected, actual):
     we use :py:meth:`unittest.TestCase.assertAlmostEqual` for number
     comparisons with a reasonable precision tolerance.
 
+    If the `expected` input value contains nested dictionaries, this function
+    will recurse through the dicts and check for equality.
+
     :param test_case: TestCase object on which we can call all of the basic
         'assert' methods.
     :type test_case: :py:class:`unittest.TestCase` object
     :type expected: dict
     :type actual: dict
     """
-    test_case.assertEqual(expected.keys(), actual.keys())
+
+    test_case.assertEqual(set(expected.keys()), set(actual.keys()))
+
     for key in expected.keys():
         exp_val = expected[key]
         act_val = actual[key]
@@ -168,6 +173,9 @@ def assertDictAlmostEqual(test_case, expected, actual):
         # the values with a reasonable tolerance.
         if isinstance(exp_val, (int, float, long, complex)):
             test_case.assertAlmostEqual(exp_val, act_val)
+        elif isinstance(exp_val, dict):
+            # make a recursive call in case there are nested dicts
+            assertDictAlmostEqual(test_case, exp_val, act_val)
         else:
             test_case.assertEqual(expected[key], actual[key])
 
