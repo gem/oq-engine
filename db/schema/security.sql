@@ -77,6 +77,9 @@ GRANT SELECT ON eqcat.surface TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON eqcat.surface TO oq_eqcat_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
 
+-- eqcat.catalog_allfields view
+GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
+
 -- pshai.complex_fault
 GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.complex_fault TO oq_pshai_etl;
