@@ -13,3 +13,6 @@ FROM
     eqcat.catalog
 JOIN eqcat.magnitude ON eqcat.catalog.magnitude_id = eqcat.magnitude.id
 JOIN eqcat.surface ON eqcat.catalog.surface_id = eqcat.surface.id;
+
+COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed       
+for geonode integration';
