@@ -16,14 +16,8 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
--- Replace the 'ltree' input type contraint with two options: 'lt_source' and 'lt_gmpe'
+-- make the 'truncation_type' values more python dict friendly.
 
-ALTER TABLE uiapi.input DROP CONSTRAINT input_type_value;
-ALTER TABLE uiapi.input ADD CONSTRAINT input_type_value CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe', 'exposure', 'vulnerability'));
-
-COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
-    - source model file (source)
-    - source logic tree (lt_source)
-    - GMPE logic tree (lt_gmpe)
-    - exposure file (exposure)
-    - vulnerability file (vulnerability)';
+ALTER TABLE uiapi.oq_params DROP CONSTRAINT truncation_type_value;
+ALTER TABLE uiapi.input ADD CONSTRAINT truncation_type_value
+        CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
