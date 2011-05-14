@@ -609,6 +609,10 @@ CREATE TABLE uiapi.output (
     shapefile_path VARCHAR,
     -- The geonode URL of the shapefile generated for a hazard or loss map.
     shapefile_url VARCHAR,
+    -- The min/max value is only needed for hazard/loss maps (for the
+    -- generation of the relative color scale)
+    min_value float,
+    max_value float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
