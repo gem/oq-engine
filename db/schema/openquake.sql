@@ -479,13 +479,13 @@ CREATE TABLE uiapi.input (
     path VARCHAR NOT NULL UNIQUE,
     -- Input file type, one of:
     --      source model file (source)
-    --      source logic tree (lt-source)
-    --      GMPE logic tree (lt-gmpe)
+    --      source logic tree (lt_source)
+    --      GMPE logic tree (lt_gmpe)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'ltree', 'exposure',
-                             'vulnerability')),
+        CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
+                             'exposure', 'vulnerability')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
