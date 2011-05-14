@@ -19,5 +19,5 @@
 -- make the 'truncation_type' values more python dict friendly.
 
 ALTER TABLE uiapi.oq_params DROP CONSTRAINT truncation_type_value;
-ALTER TABLE uiapi.input ADD CONSTRAINT truncation_type_value
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
