@@ -131,8 +131,8 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
-    - source logic tree (lt-source)
-    - GMPE logic tree (lt-gmpe)
+    - source logic tree (lt_source)
+    - GMPE logic tree (lt_gmpe)
     - exposure file (exposure)
     - vulnerability file (vulnerability)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
@@ -154,6 +154,17 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground velocity (pgv)
     - peak ground displacement (pgd)';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
+
+COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output file.';
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output file type, one of:
+    - unknown
+    - hazard_curve
+    - hazard_map
+    - loss_curve
+    - loss_map';
+COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map.';
+COMMENT ON COLUMN uiapi.output.shapefile_url IS 'The geonode URL of the shapefile generated for a hazard or loss map.';
+COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server.';
 
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';

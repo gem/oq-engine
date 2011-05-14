@@ -148,6 +148,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_uiapi_writer;
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
 
+-- uiapi.output
+GRANT SELECT ON uiapi.output TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.output TO oq_uiapi_writer;
+
 -- uiapi.oq_params
 GRANT SELECT ON uiapi.oq_params TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_params TO oq_uiapi_writer;
