@@ -131,8 +131,8 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
-    - source logic tree (lt-source)
-    - GMPE logic tree (lt-gmpe)
+    - source logic tree (lt_source)
+    - GMPE logic tree (lt_gmpe)
     - exposure file (exposure)
     - vulnerability file (vulnerability)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';

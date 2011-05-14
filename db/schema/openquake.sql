@@ -547,7 +547,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
-        CHECK(truncation_type IN ('none', '1-sided', '2-sided')),
+        CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL,
     reference_vs30_value float NOT NULL,
     -- Intensity measure levels
