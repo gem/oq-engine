@@ -19,8 +19,6 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
-COMMENT ON DATABASE my_database IS 'OpenQuake database (http://openquake.org/)';
-
 COMMENT ON SCHEMA admin IS 'Administrative data';
 COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA pshai IS 'PSHA input model';
