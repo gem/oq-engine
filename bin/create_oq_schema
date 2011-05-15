@@ -3,7 +3,8 @@
 help() {
 cat <<HSD
 `basename $0` initialises the given database with the OpenQuake schema.
-Also, table space paths are created as needed.
+Also, table space paths are created as needed (unless this is turned off
+by the user).
 
 !! This will *destroy* all data in the OpenQuake database !!
 
@@ -11,7 +12,7 @@ The command line arguments are as follows:
 
     --db-name=name      The name of the database to set up.
     --db-user=user      Run all commands as this database user [postgres].
-    --no-tab-spaces     Don't check/create table spaces
+    --no-tab-spaces     Don't check/create table spaces and their paths
     --schema-path=path  Absolute path to directory with the schema files.
     --yes               Don't pause for user input, assume yes on all questions
 HSD
