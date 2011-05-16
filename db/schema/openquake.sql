@@ -502,8 +502,9 @@ CREATE TABLE uiapi.oq_job (
     owner_id INTEGER NOT NULL,
     description VARCHAR NOT NULL,
     -- The full path of the location where the input files for the calculation
-    -- engine reside.
-    path VARCHAR NOT NULL UNIQUE,
+    -- engine reside. It is optional as long as the job has not been started.
+    path VARCHAR UNIQUE CONSTRAINT job_path_value CHECK(
+        status IN ('running', 'failed', 'succeeded') AND path IS NOT NULL),
     -- One of:
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
