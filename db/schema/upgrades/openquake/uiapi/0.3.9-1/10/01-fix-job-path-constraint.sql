@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -18,11 +16,10 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+-- The uiapi.oq_job.path column should be optional as long as the job has not
+-- been started. This patch allows 'path' to be NULL if 'status' is 'pending'.
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 4);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 10);
+ALTER TABLE uiapi.oq_job DROP CONSTRAINT job_path_value;
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT job_path_value
+    CHECK((status IN ('running', 'failed', 'succeeded') AND path IS NOT NULL)
+          OR (status = 'pending'));
