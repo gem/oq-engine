@@ -30,6 +30,7 @@ TEST_DB_HOST = 'localhost'
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
 TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
 
+
 class NrmlModelLoaderDBTestCase(unittest.TestCase):
     """
     This test case class is a counterpart to the
