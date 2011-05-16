@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -18,11 +16,14 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+-- pshai.source and pshai.rupture need to be associated with uiapi.input
+-- This patch adds the needed foreign keys.
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+ALTER TABLE pshai.rupture ADD COLUMN input_id INTEGER;
+ALTER TABLE pshai.source ADD COLUMN input_id INTEGER;
 
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 4);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 10);
+ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
