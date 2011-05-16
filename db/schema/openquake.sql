@@ -504,7 +504,8 @@ CREATE TABLE uiapi.oq_job (
     -- The full path of the location where the input files for the calculation
     -- engine reside. It is optional as long as the job has not been started.
     path VARCHAR UNIQUE CONSTRAINT job_path_value CHECK(
-        status IN ('running', 'failed', 'succeeded') AND path IS NOT NULL),
+        ((status IN ('running', 'failed', 'succeeded') AND (path IS NOT NULL))
+        OR (status = 'pending'))),
     -- One of:
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
