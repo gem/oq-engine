@@ -106,6 +106,6 @@ INSERT INTO eqcat.magnitude(id) VALUES(1023456789);
 UPDATE eqcat.magnitude SET mw_val=NULL WHERE id=1;
 
 -- Is the 'last_update' time stamp refreshed on UPDATE?
-SELECT gid, last_update FROM pshai.focal_mechanism ORDER BY gid;
+SELECT id, gid, last_update FROM pshai.focal_mechanism ORDER BY id;
 UPDATE pshai.focal_mechanism SET gid='focal_mechanism/1/u' WHERE id=1;
-SELECT gid, last_update FROM pshai.focal_mechanism ORDER BY gid;
+SELECT id, gid, last_update FROM pshai.focal_mechanism ORDER BY id;
