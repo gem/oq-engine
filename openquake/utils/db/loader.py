@@ -158,10 +158,10 @@ def parse_mfd(fault, mfd_java_obj):
         min_mag = mfd_java_obj.getMinX() - (delta / 2)
         max_mag = mfd_java_obj.getMaxX() + (delta / 2)
         total_cumul_rate = mfd_java_obj.getTotCumRate()
-        denominator = (numpy.power(10, -(mfd['b_val'] * min_mag))
+        denominator = float(numpy.power(10, -(mfd['b_val'] * min_mag))
             - numpy.power(10, -(mfd['b_val'] * max_mag)))
 
-        mfd['a_val'] = numpy.log10(total_cumul_rate / denominator)
+        mfd['a_val'] = float(numpy.log10(total_cumul_rate / denominator))
 
         mfd['total_cumulative_rate'] = \
             mfd_java_obj.getTotCumRate() / surface_area
