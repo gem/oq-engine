@@ -19,7 +19,7 @@
 -- The uiapi.oq_job.path column should be optional as long as the job has not
 -- been started. This patch allows 'path' to be NULL if 'status' is 'pending'.
 
-ALTER TABLE uiapi.oq_job ALTER COLUMN path DROP NOT NULL;
+ALTER TABLE uiapi.oq_job DROP CONSTRAINT job_path_value;
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT job_path_value
     CHECK((status IN ('running', 'failed', 'succeeded') AND path IS NOT NULL)
           OR (status = 'pending'));
