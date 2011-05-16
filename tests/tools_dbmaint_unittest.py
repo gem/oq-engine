@@ -54,7 +54,7 @@ class RunCmdTestCase(unittest.TestCase):
                 "ls terminated with exit code: 2\nls: cannot access "
                 "/this/does/not/exist: No such file or directory\n", e.args[0])
         else:
-            raise Exception("exception not raised")
+            self.fail("exception not raised")
 
     def test_run_cmd_with_errors_and_ignore_exit_code(self):
         """Invoke a command with errors but ignore the exit code."""
@@ -190,7 +190,7 @@ class PsqlTestCase(unittest.TestCase):
             self.assertEqual(
                 "Please specify either an SQL script or a command.", e.args[0])
         else:
-            raise Exception("exception not raised")
+            self.fail("exception not raised")
 
     def test_psql_with_neither_script_nor_command(self):
         """
@@ -204,7 +204,7 @@ class PsqlTestCase(unittest.TestCase):
             self.assertEqual(
                 "Neither SQL script nor command specified.", e.args[0])
         else:
-            raise Exception("exception not raised")
+            self.fail("exception not raised")
 
 
 class FindScriptsTestCase(unittest.TestCase):
