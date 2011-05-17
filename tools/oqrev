@@ -38,6 +38,7 @@ The command line arguments are as follows:
                         request. PRN is the pull request number e.g. 59
     -L|--local          Do not fetch any remotes
     -P|--skip-pylint    Skip the pylint check of the branch under review
+    -R|--repo N         Specify the repo name e.g. "openquake-server"
     -8|--skip-pep8      Skip the pep8 step of the branch under review
     -C|--colordiff      Pipe the branch diff through the "colordiff"
                         tool
@@ -74,6 +75,8 @@ use_colordiff=0
 skip_pylint=0
 skip_pep8=0
 branch_name=""
+repo="openquake"
+python_src="openquake"
 
 git diff --quiet HEAD
 if [ $? -ne 0 ]; then
@@ -101,6 +104,12 @@ do
         branch_reference=`basename $branch`
         branch_name="$branch"
         ;;
+    -R|--repo=*)
+        repo=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        if [ "$repo" == "openquake-server" ]; then
+            python_src="bin geonode oqrunner"
+        fi
+        ;;
     --pull=*)
         pull=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
         pullreq_file="/tmp/pull.$pull"
@@ -121,9 +130,9 @@ do
         if [ $do_fetch_pullrequest -ne 0 ]; then
             # Pull request file does not exist or has size zero, fetch it from
             # github.
-            curl -s https://github.com/gem/openquake/pull/$pull > $pullreq_file
+            curl -s https://github.com/gem/$repo/pull/$pull > $pullreq_file
             if [ $? -ne 0 ]; then
-                echo "curl failed to get https://github.com/gem/openquake/pull/$pull"
+                echo "curl failed to get https://github.com/gem/$repo/pull/$pull"
                 exit 3
             fi
         fi
@@ -131,7 +140,7 @@ do
         # Is the pull request still open?
         pr_state=`awk '/class="state / { split($0,F,/[<>]/); print F[3];}' $pullreq_file | head -1`
         if [ "$pr_state" != "Open" ]; then
-            echo "https://github.com/gem/openquake/pull/$pull is not open any more"
+            echo "https://github.com/gem/$repo/pull/$pull is not open any more"
             exit 4
         fi
 
@@ -255,11 +264,11 @@ num_of_py_files=`git diff ${other_branch}...${branch_branch} --name-only --diff-
 if [ $skip_pylint -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
     git checkout $other_branch
     echo "Running pylint on $other_branch.."
-    pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS openquake | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
+    pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS $python_src | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.a
 
     git checkout $branch_branch
     echo "Running pylint on $branch_name.."
-    pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS openquake | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
+    pylint -f parseable -dI -rn $DISABLE_PYLINT_FLAGS $python_src | sed -e 's/:[0-9][0-9]*//' -e 's/\([0-9][0-9]*\/[0-9][0-9]*\)//' > /tmp/pl.b
 
     echo ""
     diff -w -U 0 /tmp/pl.a /tmp/pl.b > /tmp/pl.diff
