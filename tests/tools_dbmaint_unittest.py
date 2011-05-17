@@ -22,12 +22,13 @@
 Unit tests for the tools/dbmaint.py tool.
 """
 
+import mock
 import os
 import shutil
 import tempfile
 import unittest
 from tools.dbmaint import (
-    error_occurred, find_scripts, psql, run_cmd, scripts_to_run)
+    error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run)
 
 
 def touch(path):
@@ -297,10 +298,6 @@ class ScriptsToRunTestCase(unittest.TestCase):
 class ErrorOccuredTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.error_occurred()."""
 
-    def __init__(self, *args, **kwargs):
-        super(ErrorOccuredTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
-
     def test_error_occured_with_error(self):
         """A psql error is detected correctly."""
         output = '''
@@ -321,5 +318,73 @@ class ErrorOccuredTestCase(unittest.TestCase):
 class RunScriptsTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.run_scripts()."""
 
-    def __init__(self, *args, **kwargs):
-        super(RunScriptsTestCase, self).__init__(*args, **kwargs)
+    def test_run_scripts_with_available_upgrades(self):
+        """
+        The `psql` function is called for every upgrade script and at the
+        very end to update the revision step.
+        """
+
+        artefact = "openquake/pshai"
+        rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
+        config = {"dryrun": True, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        scripts = ["3/01-c.sql", "3/02-d.sql"]
+        with mock.patch('tools.dbmaint.psql') as mock_psql:
+            # Make all the calls pass.
+            mock_psql.return_value = (0, "", "")
+
+            # Run the actual function that is to be tested.
+            run_scripts(artefact, rev_info, scripts, config)
+
+            # The mock was called thrice.
+            self.assertEqual(3, mock_psql.call_count)
+            # The first call executed an SQL script.
+            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
+                             mock_psql.call_args_list[0][1])
+            # The second call executed the second SQL script.
+            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/02-d.sql"},
+                             mock_psql.call_args_list[1][1])
+            # The last call executed the command to update the revision step.
+            self.assertEqual(
+                {"cmd": "UPDATE admin.revision_info SET step=3, "
+                        "last_update=timezone('UTC'::text, now()) WHERE "
+                        "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
+                mock_psql.call_args_list[2][1])
+
+    def test_run_scripts_with_failing_upgrades(self):
+        """Upgrades are available but the second one will fail."""
+        def fail_on_first_even_script(
+            config, script=None, cmd=None, ignore_dryrun=False, runner=None):
+            """Pretend that the second SQL script failed on execution."""
+            if script and script.find("02-d.sql") >= 0:
+                return(1, "", '02-d.sql:1: ERROR:  relation "admin.dbm_test" ')
+            else:
+                return(0, "All goood", "")
+
+        artefact = "openquake/pshai"
+        rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
+        config = {"dryrun": False, "path": "/tmp", "host": "localhost",
+                  "db": "openquake", "user": "postgres"}
+        scripts = ["3/01-c.sql", "3/02-d.sql"]
+        with mock.patch('tools.dbmaint.psql') as mock_psql:
+            # Make all the calls pass.
+            mock_psql.side_effect = fail_on_first_even_script
+
+            # Run the actual function that is to be tested.
+            run_scripts(artefact, rev_info, scripts, config)
+
+            # The mock was called thrice.
+            self.assertEqual(3, mock_psql.call_count)
+            # The first call executed an SQL script.
+            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
+                             mock_psql.call_args_list[0][1])
+            # The second call executed the second SQL script.
+            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/02-d.sql"},
+                             mock_psql.call_args_list[1][1])
+            # Please note how the step is assigned a -1 value which indicates
+            # a database upgrade failure.
+            self.assertEqual(
+                {"cmd": "UPDATE admin.revision_info SET step=-1, "
+                        "last_update=timezone('UTC'::text, now()) WHERE "
+                        "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
+                mock_psql.call_args_list[2][1])
