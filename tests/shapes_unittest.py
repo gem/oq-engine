@@ -54,10 +54,10 @@ class ShapesTestCase(unittest.TestCase):
         By default, the :py:module:`decimal` module uses the 'round-half-even'
         algorithm for rounding numbers.
 
-        Since the rounding method is set via a global context for the
+        Since the rounding method can be set in a global context for the
         :py:module:`decimal` module, we want to make sure the
-        :py:function:`openquake.shapes.geo_float` specifies the correct
-        rounding method.
+        :py:function:`openquake.shapes.geo_float` is unaffected context
+        changes.
         """
         decimal.getcontext().rounding = decimal.ROUND_FLOOR
 
