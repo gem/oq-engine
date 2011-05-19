@@ -20,6 +20,7 @@
 
 """Collection of base classes for processing spatially-related data."""
 
+import decimal
 import math
 
 import geohash
@@ -44,6 +45,14 @@ flags.DEFINE_integer('distance_precision', 12,
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
 
+
+# Max number of decimal places for floats associated with geographical location info
+FLOAT_DECIMAL_PLACES = 7
+QUANTIZE_STR = '0.' + '0'*FLOAT_DECIMAL_PLACES
+
+def safe_float(a_float):
+    return float(decimal.Decimal(str(a_float)).quantize(decimal.Decimal(QUANTIZE_STR)))
+    
 
 class Region(object):
     """A container of polygons, used for bounds checking"""
@@ -275,6 +284,8 @@ class Site(object):
     """Site is a dictionary-keyable point"""
 
     def __init__(self, longitude, latitude):
+        longitude = safe_float(longitude)
+        latitude = safe_float(latitude)
         self.point = geometry.Point(longitude, latitude)
 
     @property
