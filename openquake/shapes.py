@@ -45,14 +45,34 @@ flags.DEFINE_integer('distance_precision', 12,
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
 
-
-# Max number of decimal places for floats associated with geographical location info
+# Max number of decimal places for floats associated with geographical
+# coordinates.
 FLOAT_DECIMAL_PLACES = 7
-QUANTIZE_STR = '0.' + '0'*FLOAT_DECIMAL_PLACES
+QUANTIZE_STR = '0.' + '0' * FLOAT_DECIMAL_PLACES
 
-def safe_float(a_float):
-    return float(decimal.Decimal(str(a_float)).quantize(decimal.Decimal(QUANTIZE_STR)))
-    
+
+def geo_float(flt):
+    """
+    Takes a float and rounds it to a fixed number of decimal places.
+
+    This function makes uses of the built-in
+    :py:method:`decimal.Decimal.quantize` to limit the precision.
+
+    The 'round-half-even' algorithm is used for rounding.
+
+    This should give us what can be considered 'safe' float values for
+    geographical coordinates (to side-step precision and rounding errors).
+
+    :type flt: float
+
+    :returns: the input value rounded to a hard-coded fixed number of decimal
+        places
+    """
+    return float(
+        decimal.Decimal(str(flt)).quantize(
+            decimal.Decimal(QUANTIZE_STR),
+            rounding=decimal.ROUND_HALF_EVEN))
+
 
 class Region(object):
     """A container of polygons, used for bounds checking"""
@@ -72,11 +92,15 @@ class Region(object):
     @classmethod
     def from_simple(cls, top_left, bottom_right):
         """Build a region from two corners (top left, bottom right)"""
-        points = [top_left,
+        raw_points = [top_left,
                   (top_left[0], bottom_right[1]),
                   bottom_right,
                   (bottom_right[0], top_left[1])]
-        return cls.from_coordinates(points)
+
+        # Constrain the precision for the coordinates:
+        geo_points = \
+            [(geo_float(pt[0]), geo_float(pt[1])) for pt in raw_points]
+        return cls.from_coordinates(geo_points)
 
     @classmethod
     def from_file(cls, path):
@@ -284,8 +308,8 @@ class Site(object):
     """Site is a dictionary-keyable point"""
 
     def __init__(self, longitude, latitude):
-        longitude = safe_float(longitude)
-        latitude = safe_float(latitude)
+        longitude = geo_float(longitude)
+        latitude = geo_float(latitude)
         self.point = geometry.Point(longitude, latitude)
 
     @property
