@@ -115,6 +115,8 @@ COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth
 COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
 COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
+COMMENT ON VIEW pshai.simple_fault_allfields IS 'A global simple_fault view, needed for geonode integration, it includes mfd_evd and mfd_tgr tables';
+
 COMMENT ON VIEW pshai.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
 COMMENT ON VIEW pshai.simple_source IS 'A simple source view, needed for opengeo server integration.';
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
