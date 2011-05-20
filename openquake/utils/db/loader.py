@@ -617,9 +617,9 @@ class CsvModelLoader(object):
                 # that the val is -999 for convention (ask Graeme if we want to
                 # change this)
                 if len(row[mag]) == 0:
-                    row[mag] = -999
-
-                row[mag] = float(row[mag])
+                    row[mag] = None
+                else:
+                    row[mag] = float(row[mag])
 
             magnitude = self.soup.magnitude(mb_val=row['mb_val'],
                                 mb_val_error=row['mb_val_error'],
