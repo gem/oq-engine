@@ -47,7 +47,6 @@ For example:
     $ python bin/db_load_src_model --user=some_user \
 --source_model=path/to/source.xml"""
         print error_msg
-        print FLAGS.user
         sys.exit(0)
 
     else:

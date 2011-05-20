@@ -50,8 +50,7 @@ if [ $# -eq 0 ]; then
 fi
 
 git branch >/dev/null 2>&1
-if [ $? -ne 0 ]
-then
+if [ $? -ne 0 ]; then
     if [ -z "$OQ_ROOT" ]
     then
         echo "This is not a git repository. Please cd to your OpenQuake"
@@ -137,7 +136,7 @@ do
         fi
 
         # Find the branch author's github user name and the branch name.
-        branch=`awk '/merge [0-9]+ commits? into [a-z]+:[a-z]+/ {split($13, A, /[:"]/); printf("%s/%s", A[1], A[2]);}' $pullreq_file`
+        branch=`cat $pullreq_file | perl -wane 'if ($_ =~/pull-description.+class=.user.>([^<]+)<.span>:([^<]+)/) { printf("%s/%s", $1, $2); }'`
         branch_name="$branch"
         github_user=`dirname $branch`
 
