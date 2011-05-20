@@ -100,6 +100,7 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
             ['pshai.mfd_tgr', 'pshai.simple_fault', 'pshai.source']
         self._serialize_test_helper(TGR_MFD_TEST_FILE, expected_tables)
 
+
 class CsvModelLoaderDBTestCase(unittest.TestCase):
 
     def test_csv_to_db_loader_end_to_end(self):
