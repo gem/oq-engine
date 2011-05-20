@@ -29,6 +29,7 @@ TEST_DB_HOST = 'localhost'
 TEST_DB_PASSWORD = 'openquake'
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
+TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
 
 TEST_EQCAT_DB_USER = 'oq_eqcat_etl'
 
@@ -40,9 +41,9 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
     includes related tests that need to run against the OpenQuake database.
     """
 
-    def test_serialize(self):
+    def _serialize_test_helper(self, test_file, expected_tables):
         engine = db.create_engine(TEST_DB, TEST_DB_USER, host=TEST_DB_HOST)
-        src_loader = db_loader.SourceModelLoader(TEST_SRC_FILE, engine)
+        src_loader = db_loader.SourceModelLoader(test_file, engine)
 
         results = src_loader.serialize()
 
@@ -55,8 +56,6 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
         # the value is the id (as an int) of the new record.
 
         # First, check that the results includes the 3 tables we expect:
-        expected_tables = \
-            ['pshai.mfd_evd', 'pshai.simple_fault', 'pshai.source']
         result_tables = [x.keys()[0] for x in results]
 
         self.assertEqual(expected_tables, result_tables)
@@ -82,6 +81,24 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
         # clean up db resources
         src_loader.close()
 
+    def test_serialize(self):
+        """
+        Test serialization of a single simple fault source with an
+        Evenly-Discretized MFD.
+        """
+        expected_tables = \
+            ['pshai.mfd_evd', 'pshai.simple_fault', 'pshai.source']
+        self._serialize_test_helper(TEST_SRC_FILE, expected_tables)
+
+    def test_serialize_with_tgr_mfd(self):
+        """
+        Similar to test_serialize, except the test input data includes a
+        Truncated Gutenberg-Richter MFD (so we exercise all paths inside the
+        loader code).
+        """
+        expected_tables = \
+            ['pshai.mfd_tgr', 'pshai.simple_fault', 'pshai.source']
+        self._serialize_test_helper(TGR_MFD_TEST_FILE, expected_tables)
 
 class CsvModelLoaderDBTestCase(unittest.TestCase):
 
