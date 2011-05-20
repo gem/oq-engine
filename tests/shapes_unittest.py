@@ -25,6 +25,22 @@ import unittest
 from openquake import shapes
 
 
+def coord_list_from_wkt(wkt):
+    """
+    Given a Well Known Text string, extract the coordinate values and return
+    them as a list of float values.
+
+    Note: This is intended for use with 'primitve' WKT shapes (such as POINT,
+    LINESTRING, and POLYGON). Input POLYGON shapes should not have holes.
+
+    :param wkt: Well Known Text string for a POINT, LINESTRING, or POLYGON
+        shape
+
+    :returns: list of floats
+    """
+    return [float(x) for x in re.findall('[\d+?\.\d+]+', wkt)]
+
+
 class ShapesTestCase(unittest.TestCase):
 
     def test_geo_float(self):
@@ -68,10 +84,13 @@ class ShapesTestCase(unittest.TestCase):
         # reset the global context so we don't potentially screw up other tests
         decimal.getcontext().rounding = decimal.ROUND_HALF_EVEN
 
-    def test_region_uses_geo_floats(self):
+    def test_simple_region_uses_geo_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
         instances of :py:class:`openquake.shapes.Region`.
+
+        The region will be created using the
+        :py:method:`openquake.shapes.Region.from_simple` method.
         """
         up_left = (29.00000006, 40.90000003)
         low_right = (25.70000005, 46.00000009)
@@ -84,15 +103,41 @@ class ShapesTestCase(unittest.TestCase):
 
         # The easiest way to verify that the number precision of the region
         # is correct is to look at the WKT for the region polygon.
-        wkt = region.polygon.wkt
-
-        coords = [float(x) for x in re.findall('[\d+?\.\d+]+', wkt)]
+        coords = coord_list_from_wkt(region.polygon.wkt)
 
         actual_ul = tuple(coords[0:2])
         actual_lr = tuple(coords[4:6])
 
         self.assertEqual(exp_ul, actual_ul)
         self.assertEqual(exp_lr, actual_lr)
+
+    def test_complex_region_uses_geo_floats(self):
+        """
+        This test ensures the coordinate precision is properly limited for
+        instance of :py:class:`openquake.shapes.Region`.
+
+        The region will be created using the
+        :py:method:`openquake.shapes.Region.from_coordinates` method.
+        """
+        # triangle
+        input_coord_pairs = [
+            (29.00000006, 40.90000003),
+            (25.70000005, 46.00000009),
+            (26.0, 45.00000001)]
+
+        # we expect the first & last coord pair to be the same, since wkt
+        # POLYGON shapes must form a closed loop
+        expected_coord_list = [
+            29.0000001, 40.9,
+            25.7, 46.0000001,
+            26.0, 45.0,
+            29.0000001, 40.9]
+
+        region = shapes.Region.from_coordinates(input_coord_pairs)
+
+        actual_coord_list = coord_list_from_wkt(region.polygon.wkt)
+
+        self.assertEqual(expected_coord_list, actual_coord_list)
 
     def test_site_uses_geo_floats(self):
         """
