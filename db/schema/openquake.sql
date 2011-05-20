@@ -390,7 +390,7 @@ CREATE TABLE pshai.mfd_tgr (
 ) TABLESPACE pshai_ts;
 
 -- global simple_fault view, needed for Geonode integration
-CREATE VIEW pshai.simple_fault_allfields AS
+CREATE VIEW pshai.simple_fault_geo_view AS
 SELECT
     pshai.simple_fault.id AS fault_id,
     pshai.simple_fault.owner_id AS fault_owner_id,
@@ -398,7 +398,6 @@ SELECT
     pshai.simple_fault.name AS fault_name,
     pshai.simple_fault.description, pshai.simple_fault.dip,
     pshai.simple_fault.upper_depth, pshai.simple_fault.lower_depth,
-    pshai.simple_fault.mfd_tgr_id, pshai.simple_fault.mfd_evd_id,
     pshai.simple_fault.last_update AS fault_last_update,
     pshai.simple_fault.edge, pshai.simple_fault.outline,
     pshai.mfd_evd.id AS pshai_mfd_evd_id,
@@ -425,7 +424,6 @@ FROM
      pshai.simple_fault
 LEFT OUTER JOIN pshai.mfd_evd ON pshai.mfd_evd.id = pshai.simple_fault.mfd_evd_id
 LEFT OUTER JOIN pshai.mfd_tgr ON pshai.mfd_tgr.id  = pshai.simple_fault.mfd_tgr_id;
-
 
 -- Rupture depth distribution
 CREATE TABLE pshai.r_depth_distr (
