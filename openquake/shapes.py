@@ -30,7 +30,6 @@ from numpy import zeros
 from numpy import empty
 from numpy import allclose
 
-from shapely import wkt
 from shapely import geometry
 from scipy.interpolate import interp1d
 
@@ -443,7 +442,7 @@ class Field(object):
         assert grid.cell_size
         field = zeros((grid.rows, grid.columns))
 
-        for key, field_site in values.items():  # pylint: disable=W0612
+        for _key, field_site in values.items():
             point = grid.point_at(
                 Site(field_site['lon'], field_site['lat']))
             field[point.row][point.column] = transform(
