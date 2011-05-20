@@ -165,7 +165,7 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
                     db_val = getattr(db_row, csv_key)
                     csv_val = csv_row[csv_key]
                     if not len(csv_val.strip()):
-                        csv_val = '-999.0'
+                        csv_val = None
                     if csv_key == 'agency':
                         self.assertEqual(str(db_val), str(csv_val))
                     else:
