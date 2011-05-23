@@ -133,9 +133,10 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
             the "bug" is listed on https://bugs.launchpad.net/lxml/+bug/589805
         """
-        nrml_element = risk_parser.LossCurveXMLReader(LOSS_CURVE_BAD_TEST_FILE)
+        loss_curve_reader = risk_parser.LossCurveXMLReader(
+            LOSS_CURVE_BAD_TEST_FILE)
 
-        list(nrml_element._parse())
+        list(loss_curve_reader._parse())
 
     def test_loss_curve_has_correct_content(self):
         loss_element = risk_parser.LossCurveXMLReader(LOSS_CURVE_TEST_FILE)
