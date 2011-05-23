@@ -37,4 +37,6 @@ from schema_unittest import *
 from probabilistic_unittest import *
 from deterministic_hazard_unittest import *
 from deterministic_risk_unittest import *
+from parser_hazard_map_unittest import *
 from db_loader_unittest import *
+from shapes_unittest import *
