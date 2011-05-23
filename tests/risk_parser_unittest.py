@@ -17,8 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 Tests for the NRML parser of loss/loss ratio curves.
 """
@@ -164,10 +162,9 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1,
+        self.assertEqual(counter, len(expected_result) - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                counter+1, len(expected_result)))
-
+                counter + 1, len(expected_result)))
 
     def test_loss_ratio_curve_has_correct_content(self):
         loss_ratio_element = risk_parser.LossRatioCurveXMLReader(
@@ -195,6 +192,6 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1,
+        self.assertEqual(counter, len(expected_result) - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                counter+1, len(expected_result)))
+                counter + 1, len(expected_result)))
