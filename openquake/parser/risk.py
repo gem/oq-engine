@@ -17,9 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
-
 """
 This module contains a class that parses NRML instance document files
 for the output of risk computations. At the moment, loss and loss curve data
@@ -34,20 +31,20 @@ from openquake import xml
 
 
 class RiskXMLReader(producer.FileProducer):
-    """ This class parses a NRML loss/loss ratio curve file. 
-    The class is implemented as a generator. 
-    For each curve element in the parsed 
+    """ This class parses a NRML loss/loss ratio curve file.
+    The class is implemented as a generator.
+    For each curve element in the parsed
     instance document, it yields a pair of objects, of which the
     first one is a shapes object of type Site (representing a
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with risk-related attribute values for this site.
-    
+
     The attribute dictionary looks like
     {'nrml_id': 'nrml',
      'result_id': 'rr',
      'list_id': 'list_1',
      'assetID': 'a100',
-     'poE': [0.2, 0.02, ...], 
+     'poE': [0.2, 0.02, ...],
      'loss': [0.0, 1280.0, ...], # for loss
      'lossRatio': [0.0, 0.1, ...], # for loss ratio
      'endBranchLabel': '1_1',
@@ -55,7 +52,7 @@ class RiskXMLReader(producer.FileProducer):
     }
     """
 
-    # these tag names and properties have to be redefined in the 
+    # these tag names and properties have to be redefined in the
     # derived classes for loss and loss ratio
     container_tag = None
     curves_tag = None
@@ -86,16 +83,17 @@ class RiskXMLReader(producer.FileProducer):
             if event == 'start' and element.tag == xml.NRML_ROOT_TAG:
                 self._to_id_attributes(element)
 
-            elif event == 'start' and element.tag == xml.RISK_ASSET_TAG:
+            # IMPORTANT: we parse xml.RISK_ASSET_TAG at the 'end' event,
+            # because in the 'start' event children are not assumed to be
+            # *there*
+            elif event == 'end' and element.tag == xml.RISK_ASSET_TAG:
                 self._to_asset_attributes(element)
 
-            elif event == 'end' and element.tag == self.curve_tag:
+                curve_els = element.findall('.//%s' % self.curve_tag)
 
-                curr_attributes = self._to_curve_attributes(element)
-
-                # free memory of just parsed element
-                element.clear()
-                yield (self._current_site, curr_attributes)
+                for curve_el in curve_els:
+                    curr_attributes = self._to_curve_attributes(curve_el)
+                    yield (self._current_site, curr_attributes)
 
     def _to_id_attributes(self, element):
         """Collect id attributes from root element."""
@@ -130,10 +128,10 @@ class RiskXMLReader(producer.FileProducer):
     def _to_curve_attributes(self, element):
         """Build an attributes dict from NRML curve element (this can be
         'lossCurve' or 'lossRatioCurve'.
-        This element contains abscissae (loss/loss ratio) and ordinate 
+        This element contains abscissae (loss/loss ratio) and ordinate
         (PoE) values of a curve.
         """
-        
+
         attributes = {self.property_output_key: self.abscissa_property}
 
         abscissa_el_txt = element.findtext(self.abscissa_tag)
@@ -144,10 +142,10 @@ class RiskXMLReader(producer.FileProducer):
         attributes[self.ordinate_output_key] = [float(x) \
             for x in ordinate_el_txt.strip().split()]
 
-        if xml.RISK_END_BRANCH_ATTR_NAME in element.attrib: 
+        if xml.RISK_END_BRANCH_ATTR_NAME in element.attrib:
             attributes[xml.RISK_END_BRANCH_ATTR_NAME] = \
                 element.attrib[xml.RISK_END_BRANCH_ATTR_NAME]
- 
+
         attributes.update(self._current_id_meta)
         attributes.update(self._current_asset_meta)
         return attributes
@@ -160,6 +158,7 @@ class LossCurveXMLReader(RiskXMLReader):
     curve_tag = xml.RISK_LOSS_CURVE_TAG
     abscissa_tag = xml.RISK_LOSS_ABSCISSA_TAG
     abscissa_property = xml.RISK_LOSS_ABSCISSA_PROPERTY
+
 
 class LossRatioCurveXMLReader(RiskXMLReader):
     """NRML parser class for loss ratio curves"""
