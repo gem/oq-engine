@@ -193,7 +193,9 @@ class Job(object):
         """Compute valid region with appropriate cell size from config file."""
         if not self.has('REGION_VERTEX'):
             return None
+        # REGION_VERTEX coordinates are defined in the order (lat, lon)
         verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
+
         # Flips lon and lat, and builds a list of coord tuples
         coords = zip(verts[1::2], verts[::2])
         region = shapes.RegionConstraint.from_coordinates(coords)
