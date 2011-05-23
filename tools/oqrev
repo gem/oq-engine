@@ -38,7 +38,7 @@ The command line arguments are as follows:
                         request. PRN is the pull request number e.g. 59
     -L|--local          Do not fetch any remotes
     -P|--skip-pylint    Skip the pylint check of the branch under review
-    -R|--repo N         Specify the repo name e.g. "openquake-server"
+    -R|--repo=N         Specify the repo name e.g. "openquake-server"
     -8|--skip-pep8      Skip the pep8 step of the branch under review
     -C|--colordiff      Pipe the branch diff through the "colordiff"
                         tool
