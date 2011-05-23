@@ -20,6 +20,7 @@
 
 """Collection of base classes for processing spatially-related data."""
 
+import decimal
 import math
 
 import geohash
@@ -29,7 +30,6 @@ from numpy import zeros
 from numpy import empty
 from numpy import allclose
 
-from shapely import wkt
 from shapely import geometry
 from scipy.interpolate import interp1d
 
@@ -44,6 +44,34 @@ flags.DEFINE_integer('distance_precision', 12,
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
 
+# Max number of decimal places for floats associated with geographical
+# coordinates.
+FLOAT_DECIMAL_PLACES = 7
+QUANTIZE_STR = '0.' + '0' * FLOAT_DECIMAL_PLACES
+
+
+def geo_float(flt):
+    """
+    Takes a float and rounds it to a fixed number of decimal places.
+
+    This function makes uses of the built-in
+    :py:method:`decimal.Decimal.quantize` to limit the precision.
+
+    The 'round-half-even' algorithm is used for rounding.
+
+    This should give us what can be considered 'safe' float values for
+    geographical coordinates (to side-step precision and rounding errors).
+
+    :type flt: float
+
+    :returns: the input value rounded to a hard-coded fixed number of decimal
+        places
+    """
+    return float(
+        decimal.Decimal(str(flt)).quantize(
+            decimal.Decimal(QUANTIZE_STR),
+            rounding=decimal.ROUND_HALF_EVEN))
+
 
 class Region(object):
     """A container of polygons, used for bounds checking"""
@@ -56,25 +84,39 @@ class Region(object):
 
     @classmethod
     def from_coordinates(cls, coordinates):
-        """Build a region from a set of coordinates"""
+        """
+        Build a region from a list of polygon coordinates.
+
+        :param coordinates: List of 2-tuples (lon, lat). Example::
+            [(-118.25, 34.07), (-118.22, 34.07), (-118.22, 34.04),
+             (-118.25, 34.04)]
+
+        :returns: :py:class:`openquake.shapes.Region` instance
+        """
+
+        # Constrain the precision for the coordinates:
+        coordinates = \
+            [(geo_float(pt[0]), geo_float(pt[1])) for pt in coordinates]
         polygon = geometry.Polygon(coordinates)
         return cls(polygon)
 
     @classmethod
     def from_simple(cls, top_left, bottom_right):
-        """Build a region from two corners (top left, bottom right)"""
+        """
+        Build a rectangular region from two corner points (top left, bottom
+        right).
+
+        :param top_left: tuple of two floats (longitude, latitude)
+        :param top_right: tuple of two floats (longitude, latitude)
+
+        :returns: :py:class:`openquake.shapes.Region` instance
+        """
         points = [top_left,
                   (top_left[0], bottom_right[1]),
                   bottom_right,
                   (bottom_right[0], top_left[1])]
-        return cls.from_coordinates(points)
 
-    @classmethod
-    def from_file(cls, path):
-        """Load a region from a wkt file with a single polygon"""
-        with open(path) as wkt_file:
-            polygon = wkt.loads(wkt_file.read())
-            return cls(polygon=polygon)
+        return cls.from_coordinates(points)
 
     @property
     def bounds(self):
@@ -83,25 +125,45 @@ class Region(object):
 
     @property
     def lower_left_corner(self):
-        """Lower left corner of the containing bounding box"""
+        """
+        Lower left corner of the containing bounding box.
+
+        :returns: :py:class:`openquake.shapes.Site` instance representing the
+            lower left corner of this region.
+        """
         (minx, miny, _maxx, _maxy) = self.bounds
         return Site(minx, miny)
 
     @property
     def lower_right_corner(self):
-        """Lower right corner of the containing bounding box"""
+        """
+        Lower right corner of the containing bounding box.
+
+        :returns: :py:class:`openquake.shapes.Site` instance representing the
+            lower right corner of this region.
+        """
         (_minx, miny, maxx, _maxy) = self.bounds
         return Site(maxx, miny)
 
     @property
     def upper_left_corner(self):
-        """Upper left corner of the containing bounding box"""
+        """
+        Upper left corner of the containing bounding box.
+
+        :returns: :py:class:`openquake.shapes.Site` instance representing the
+            upper left corner of this region.
+        """
         (minx, _miny, _maxx, maxy) = self.bounds
         return Site(minx, maxy)
 
     @property
     def upper_right_corner(self):
-        """Upper right corner of the containing bounding box"""
+        """
+        Upper right corner of the containing bounding box.
+
+        :returns: :py:class:`openquake.shapes.Site` instance representing the
+            upper right corner of this region.
+        """
         (_minx, _miny, maxx, maxy) = self.bounds
         return Site(maxx, maxy)
 
@@ -275,6 +337,8 @@ class Site(object):
     """Site is a dictionary-keyable point"""
 
     def __init__(self, longitude, latitude):
+        longitude = geo_float(longitude)
+        latitude = geo_float(latitude)
         self.point = geometry.Point(longitude, latitude)
 
     @property
@@ -378,7 +442,7 @@ class Field(object):
         assert grid.cell_size
         field = zeros((grid.rows, grid.columns))
 
-        for key, field_site in values.items():  # pylint: disable=W0612
+        for _key, field_site in values.items():
             point = grid.point_at(
                 Site(field_site['lon'], field_site['lat']))
             field[point.row][point.column] = transform(
