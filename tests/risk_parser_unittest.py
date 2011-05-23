@@ -38,6 +38,8 @@ log = logs.RISK_LOG
 
 EXAMPLE_DIR = os.path.join(helpers.SCHEMA_DIR, 'examples')
 LOSS_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-curves.xml')
+LOSS_CURVE_BAD_TEST_FILE = os.path.join(helpers.DATA_DIR,
+    'simplecase-loss-block-BLOCK:2.bad.xml')
 LOSS_RATIO_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-ratio-curves.xml')
 
 
@@ -124,6 +126,18 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               'property': 'Loss Ratio',
                               self.loss_ratio_attr_name: [0.0, 0.0004, 0.0008],
                               self.poe_attr_name: [0.5, 0.2, 0.05]})]
+
+    def test_loss_curve_is_parsed_correcly(self):
+        """
+            This test is a bit "unusual", if _parse() will raise an exception
+            the test will fail, this is due to the previous not correct
+            behaviour described in https://github.com/gem/openquake/issues/130
+
+            the "bug" is listed on https://bugs.launchpad.net/lxml/+bug/589805
+        """
+        nrml_element = risk_parser.LossCurveXMLReader(LOSS_CURVE_BAD_TEST_FILE)
+
+        list(nrml_element._parse())
 
     def test_loss_curve_has_correct_content(self):
         loss_element = risk_parser.LossCurveXMLReader(LOSS_CURVE_TEST_FILE)
