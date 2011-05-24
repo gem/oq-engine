@@ -292,7 +292,7 @@ class ClassicalMixin(BasePSHAMixin):
         # Compute and serialize the mean curves.
         LOG.info("Computing/serializing mean hazard maps")
         results = map_func(self)
-        LOG.info("results = '%s'" % results)
+        LOG.debug("results = '%s'" % results)
         map_serializer(results)
 
     def do_quantiles(self, sites, curve_serializer=None, map_serializer=None,
@@ -642,12 +642,9 @@ class ClassicalMixin(BasePSHAMixin):
         for i in xrange(0, len(hazard_curves)):
             curve = hazard_curves[i]
             site = site_list[i]
-            lon = site.longitude
-            lat = site.latitude
-            curve_key = kvs.tokens.hazard_curve_key(self.id,
-                                                    realization,
-                                                    lon,
-                                                    lat)
+            curve_key = kvs.tokens.hazard_curve_key(
+                self.id, realization, site)
+
             kvs_client.set(curve_key, curve)
             curve_keys.append(curve_key)
         return curve_keys
