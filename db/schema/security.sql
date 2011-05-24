@@ -46,6 +46,7 @@ GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
 
 GRANT SELECT ON geometry_columns TO GROUP openquake;
@@ -76,6 +77,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.magnitude TO oq_eqcat_writer;
 GRANT SELECT ON eqcat.surface TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON eqcat.surface TO oq_eqcat_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
+
+-- eqcat.catalog_allfields view
+GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
 
 -- pshai.complex_fault
 GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
@@ -130,6 +134,7 @@ GRANT SELECT ON pshai.simple_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.simple_fault TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_uiapi_writer;
+GRANT SELECT ON pshai.simple_fault_geo_view TO GROUP openquake;
 
 -- pshai.source
 GRANT SELECT ON pshai.source TO GROUP openquake;
@@ -144,6 +149,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_uiapi_writer;
 -- uiapi.oq_job
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
+
+-- uiapi.output
+GRANT SELECT ON uiapi.output TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.output TO oq_uiapi_writer;
 
 -- uiapi.oq_params
 GRANT SELECT ON uiapi.oq_params TO GROUP openquake;

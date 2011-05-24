@@ -17,8 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 Tests for the NRML parser of loss/loss ratio curves.
 """
@@ -38,6 +36,8 @@ log = logs.RISK_LOG
 
 EXAMPLE_DIR = os.path.join(helpers.SCHEMA_DIR, 'examples')
 LOSS_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-curves.xml')
+LOSS_CURVE_BAD_TEST_FILE = os.path.join(helpers.DATA_DIR,
+    'simplecase-loss-block-BLOCK:2.bad.xml')
 LOSS_RATIO_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-ratio-curves.xml')
 
 
@@ -125,6 +125,19 @@ class RiskXMLReaderTestCase(unittest.TestCase):
                               self.loss_ratio_attr_name: [0.0, 0.0004, 0.0008],
                               self.poe_attr_name: [0.5, 0.2, 0.05]})]
 
+    def test_loss_curve_is_parsed_correcly(self):
+        """
+            This test is a bit "unusual", if _parse() will raise an exception
+            the test will fail, this is due to the previous not correct
+            behaviour described in https://github.com/gem/openquake/issues/130
+
+            the "bug" is listed on https://bugs.launchpad.net/lxml/+bug/589805
+        """
+        loss_curve_reader = risk_parser.LossCurveXMLReader(
+            LOSS_CURVE_BAD_TEST_FILE)
+
+        list(loss_curve_reader._parse())
+
     def test_loss_curve_has_correct_content(self):
         loss_element = risk_parser.LossCurveXMLReader(LOSS_CURVE_TEST_FILE)
         expected_result = self.LOSS_CURVE_REFERENCE_DATA
@@ -150,10 +163,9 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1,
+        self.assertEqual(counter, len(expected_result) - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                counter+1, len(expected_result)))
-
+                counter + 1, len(expected_result)))
 
     def test_loss_ratio_curve_has_correct_content(self):
         loss_ratio_element = risk_parser.LossRatioCurveXMLReader(
@@ -181,6 +193,6 @@ class RiskXMLReaderTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1,
+        self.assertEqual(counter, len(expected_result) - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                counter+1, len(expected_result)))
+                counter + 1, len(expected_result)))
