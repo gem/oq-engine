@@ -19,8 +19,6 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
-COMMENT ON DATABASE my_database IS 'OpenQuake database (http://openquake.org/)';
-
 COMMENT ON SCHEMA admin IS 'Administrative data';
 COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA pshai IS 'PSHA input model';
@@ -47,6 +45,8 @@ COMMENT ON TABLE eqcat.magnitude IS 'Table with earthquake magnitudes in differe
 COMMENT ON TABLE eqcat.surface IS 'Table with earthquake surface data, basically an ellipse and a strike angle.';
 COMMENT ON COLUMN eqcat.surface.semi_minor IS 'Semi-minor axis: The shortest radius of an ellipse.';
 COMMENT ON COLUMN eqcat.surface.semi_major IS 'Semi-major axis: The longest radius of an ellipse.';
+
+COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed for geonode integration';
 
 COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
 COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
@@ -115,6 +115,8 @@ COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth
 COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
 COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
+COMMENT ON VIEW pshai.simple_fault_geo_view IS 'A simple_fault view, needed for geonode integration, it includes mfd_evd and mfd_tgr tables';
+
 COMMENT ON VIEW pshai.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
 COMMENT ON VIEW pshai.simple_source IS 'A simple source view, needed for opengeo server integration.';
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
@@ -129,19 +131,21 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
-    - source logic tree (lt-source)
-    - GMPE logic tree (lt-gmpe)
+    - source logic tree (lt_source)
+    - GMPE logic tree (lt_gmpe)
     - exposure file (exposure)
     - vulnerability file (vulnerability)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
-COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, probabilistic or deterministic.';
-COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: created, in progress, failed or succeeded.';
+COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based or deterministic.';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
+COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based or deterministic.';
 COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
 COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
@@ -151,5 +155,18 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground displacement (pgd)';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 
+COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output file.';
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output file type, one of:
+    - unknown
+    - hazard_curve
+    - hazard_map
+    - loss_curve
+    - loss_map';
+COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map.';
+COMMENT ON COLUMN uiapi.output.shapefile_url IS 'The geonode URL of the shapefile generated for a hazard or loss map.';
+COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server.';
+
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
+COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
 COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
+COMMENT ON COLUMN uiapi.upload.status IS 'One of: pending, running, failed or succeeded.';
