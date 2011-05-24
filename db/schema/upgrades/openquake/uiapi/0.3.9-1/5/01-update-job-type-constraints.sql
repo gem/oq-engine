@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -18,11 +16,17 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+-- Update the job type constraints in uiapi.oq_job and uiapi.oq_params
+-- Basically, replace 'probabilistic' with 'event_based'
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+ALTER TABLE uiapi.oq_job DROP CONSTRAINT job_type_value;
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT job_type_value
+        CHECK(job_type in ('classical', 'event_based', 'deterministic'));
 
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 5);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 11);
+COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based or deterministic.';
+
+ALTER TABLE uiapi.oq_params DROP CONSTRAINT job_type_value;
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT job_type_value
+        CHECK(job_type in ('classical', 'event_based', 'deterministic'));
+
+COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based or deterministic.';
