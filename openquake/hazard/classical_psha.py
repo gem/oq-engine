@@ -16,8 +16,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 Collection of functions that compute stuff using
 as input data produced with the classical psha method.
@@ -102,9 +100,23 @@ def _acceptable(value):
 
 def curves_at(job_id, site):
     """Return all the json deserialized hazard curves for
-    a single site (different realizations)."""
-    pattern = "%s*%s*%s*%s" % (kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
-            job_id, site.longitude, site.latitude)
+    a single site (different realizations).
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :param site: site where the curves are computed.
+    :type site: :py:class:`shapes.Site` object
+    :returns: the hazard curves.
+    :rtype: list of :py:class:`dict` with the following keys:
+        ***site_lat***: latitude of the site
+        ***site_lon***: longitude of the site
+        ***curve***: list of :py:class:`dict` with the following keys:
+            ***x***: the x value (Intensity Measure Level) of the curve
+            ***y***: the y value (Probability of Exceedance) of the curve
+    """
+
+    pattern = "%s*%s*%s" % (
+        kvs.tokens.HAZARD_CURVE_KEY_TOKEN, job_id, site.hash())
 
     curves = []
     raw_curves = kvs.mget_decoded(pattern)
@@ -115,7 +127,7 @@ def curves_at(job_id, site):
     return curves
 
 
-def hazard_curve_keys_for_job(job_id, sites,
+def hazard_curve_keys_for(job_id, sites,
                               hc_token=kvs.tokens.HAZARD_CURVE_KEY_TOKEN):
     """Return the KVS keys of hazard curves for a given job_id
     and for a given list of sites.
@@ -123,8 +135,7 @@ def hazard_curve_keys_for_job(job_id, sites,
 
     kvs_keys = []
     for site in sites:
-        pattern = "%s*%s*%s*%s" % (hc_token, job_id, site.longitude,
-                                   site.latitude)
+        pattern = "%s*%s*%s" % (hc_token, job_id, site.hash())
         curr_keys = kvs.get_keys(pattern)
         if curr_keys is not None and len(curr_keys) > 0:
             kvs_keys.extend(curr_keys)
@@ -132,19 +143,19 @@ def hazard_curve_keys_for_job(job_id, sites,
     return kvs_keys
 
 
-def mean_hazard_curve_keys_for_job(job_id, sites):
+def mean_hazard_curve_keys_for(job_id, sites):
     """Return the KVS keys of mean hazard curves for a given job_id
     and for a given list of sites.
     """
-    return hazard_curve_keys_for_job(job_id, sites,
+    return hazard_curve_keys_for(job_id, sites,
         kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN)
 
 
-def quantile_hazard_curve_keys_for_job(job_id, sites):
+def quantile_hazard_curve_keys_for(job_id, sites):
     """Return the KVS keys of quantile hazard curves for a given job_id
     and for a given list of sites.
     """
-    return hazard_curve_keys_for_job(job_id, sites,
+    return hazard_curve_keys_for(job_id, sites,
         kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
 
