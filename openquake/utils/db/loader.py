@@ -158,10 +158,10 @@ def parse_mfd(fault, mfd_java_obj):
         min_mag = mfd_java_obj.getMinX() - (delta / 2)
         max_mag = mfd_java_obj.getMaxX() + (delta / 2)
         total_cumul_rate = mfd_java_obj.getTotCumRate()
-        denominator = (numpy.power(10, -(mfd['b_val'] * min_mag))
+        denominator = float(numpy.power(10, -(mfd['b_val'] * min_mag))
             - numpy.power(10, -(mfd['b_val'] * max_mag)))
 
-        mfd['a_val'] = numpy.log10(total_cumul_rate / denominator)
+        mfd['a_val'] = float(numpy.log10(total_cumul_rate / denominator))
 
         mfd['total_cumulative_rate'] = \
             mfd_java_obj.getTotCumRate() / surface_area
@@ -265,11 +265,7 @@ def parse_simple_fault_src(fault):
 
         surface = get_fault_surface(fault)
 
-        location_list = surface.getLocationList()
-
-        # polygon coordinates need to form a closed loop
-        # the first point should also be the last point
-        location_list.add(location_list.get(0))
+        location_list = surface.getSurfacePerimeterLocsList()
 
         formatter = java.jclass("LocationListFormatter")(location_list)
 
