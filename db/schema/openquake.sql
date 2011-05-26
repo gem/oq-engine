@@ -248,18 +248,102 @@ SELECT AddGeometryColumn('pshai', 'simple_fault', 'edge', 4326, 'LINESTRING', 3)
 ALTER TABLE pshai.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
+-- Magnitude frequency distribution, Evenly discretized
+CREATE TABLE pshai.mfd_evd (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
+    min_val float NOT NULL,
+    -- The maximum magnitude value will be derived/calculated for evenly
+    -- discretized magnitude frequency distributions.
+    -- It is initialized with a value that should never occur in practice.
+    max_val float NOT NULL DEFAULT -1.0,
+    bin_size float NOT NULL,
+    mfd_values float[] NOT NULL,
+    total_cumulative_rate float,
+    total_moment_rate float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE pshai_ts;
+
+
+-- Magnitude frequency distribution, Truncated Gutenberg Richter
+CREATE TABLE pshai.mfd_tgr (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- One of:
+    --      body wave magnitude (Mb)
+    --      duration magnitude (Md)
+    --      local magnitude (Ml)
+    --      surface wave magnitude (Ms)
+    --      moment magnitude (Mw)
+    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
+        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
+    min_val float NOT NULL,
+    max_val float NOT NULL,
+    a_val float NOT NULL,
+    b_val float NOT NULL,
+    total_cumulative_rate float,
+    total_moment_rate float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE pshai_ts;
+
+
 -- simple source view, needed for Opengeo server integration
-CREATE VIEW pshai.simple_source (
-    id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
-    rake, simple_fault, fault_outline) AS
+CREATE VIEW pshai.simple_source AS
 SELECT
-    src.id, src.owner_id, src.input_id, src.gid, src.name, src.description,
-    src.si_type, src.tectonic_region, src.rake, sfault.edge, sfault.outline
+    -- Columns specific to pshai.source
+    pshai.source.id,
+    pshai.source.owner_id,
+    pshai.source.input_id,
+    pshai.source.gid,
+    pshai.source.name,
+    pshai.source.description,
+    pshai.source.si_type,
+    pshai.source.tectonic_region,
+    pshai.source.rake,
+
+    -- Columns specific to pshai.simple_fault
+    pshai.simple_fault.dip,
+    pshai.simple_fault.upper_depth,
+    pshai.simple_fault.lower_depth,
+    pshai.simple_fault.edge,
+    pshai.simple_fault.outline,
+
+    CASE WHEN mfd_evd_id IS NOT NULL THEN 'evd' ELSE 'tgr' END AS mfd_type,
+
+    -- Common MFD columns, only one of each will be not NULL.
+    COALESCE(pshai.mfd_evd.magnitude_type, pshai.mfd_tgr.magnitude_type)
+        AS magnitude_type,
+    COALESCE(pshai.mfd_evd.min_val, pshai.mfd_tgr.min_val) AS min_val,
+    COALESCE(pshai.mfd_evd.max_val, pshai.mfd_tgr.max_val) AS max_val,
+    COALESCE(pshai.mfd_evd.total_cumulative_rate,
+             pshai.mfd_tgr.total_cumulative_rate) AS total_cumulative_rate,
+    COALESCE(pshai.mfd_evd.total_moment_rate,
+             pshai.mfd_tgr.total_moment_rate) AS total_moment_rate,
+
+    -- Columns specific to pshai.mfd_evd
+    pshai.mfd_evd.bin_size AS evd_bin_size,
+    pshai.mfd_evd.mfd_values AS evd_values,
+
+    -- Columns specific to pshai.mfd_tgr
+    pshai.mfd_tgr.a_val AS tgr_a_val,
+    pshai.mfd_tgr.b_val AS tgr_b_val
 FROM
-    pshai.source src, pshai.simple_fault sfault
-WHERE
-    src.si_type = 'simple'
-    AND src.simple_fault_id = sfault.id;
+    pshai.source
+JOIN pshai.simple_fault ON pshai.simple_fault.id = pshai.source.simple_fault_id
+LEFT OUTER JOIN pshai.mfd_evd ON
+    pshai.mfd_evd.id = pshai.simple_fault.mfd_evd_id
+LEFT OUTER JOIN pshai.mfd_tgr ON
+    pshai.mfd_tgr.id  = pshai.simple_fault.mfd_tgr_id;
 
 
 -- simple rupture view, needed for Opengeo server integration
@@ -340,87 +424,6 @@ WHERE
     rup.si_type = 'complex'
     AND rup.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
 
-
--- Magnitude frequency distribution, Evenly discretized
-CREATE TABLE pshai.mfd_evd (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- One of:
-    --      body wave magnitude (Mb)
-    --      duration magnitude (Md)
-    --      local magnitude (Ml)
-    --      surface wave magnitude (Ms)
-    --      moment magnitude (Mw)
-    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
-        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
-    min_val float NOT NULL,
-    -- The maximum magnitude value will be derived/calculated for evenly
-    -- discretized magnitude frequency distributions.
-    -- It is initialized with a value that should never occur in practice.
-    max_val float NOT NULL DEFAULT -1.0,
-    bin_size float NOT NULL,
-    mfd_values float[] NOT NULL,
-    total_cumulative_rate float,
-    total_moment_rate float,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-
-
--- Magnitude frequency distribution, Truncated Gutenberg Richter
-CREATE TABLE pshai.mfd_tgr (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    -- One of:
-    --      body wave magnitude (Mb)
-    --      duration magnitude (Md)
-    --      local magnitude (Ml)
-    --      surface wave magnitude (Ms)
-    --      moment magnitude (Mw)
-    magnitude_type VARCHAR(2) NOT NULL DEFAULT 'Mw' CONSTRAINT mage_type_val
-        CHECK(magnitude_type IN ('Mb', 'Md', 'Ml', 'Ms', 'Mw')),
-    min_val float NOT NULL,
-    max_val float NOT NULL,
-    a_val float NOT NULL,
-    b_val float NOT NULL,
-    total_cumulative_rate float,
-    total_moment_rate float,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-
--- global simple_fault view, needed for Geonode integration
-CREATE VIEW pshai.simple_fault_geo_view AS
-SELECT
-    pshai.simple_fault.id,
-    pshai.simple_fault.gid,
-    pshai.simple_fault.name,
-    pshai.simple_fault.description,
-    pshai.simple_fault.dip,
-    pshai.simple_fault.upper_depth,
-    pshai.simple_fault.lower_depth,
-    pshai.simple_fault.edge,
-    pshai.simple_fault.outline,
-    CASE WHEN mfd_evd_id IS NOT NULL THEN 'evd' ELSE 'tgr' END AS mfd_type,
-    -- Common columns, only one of each will be not NULL.
-    COALESCE(pshai.mfd_evd.magnitude_type, pshai.mfd_tgr.magnitude_type)
-        AS magnitude_type,
-    COALESCE(pshai.mfd_evd.min_val, pshai.mfd_tgr.min_val) AS min_val,
-    COALESCE(pshai.mfd_evd.max_val, pshai.mfd_tgr.max_val) AS max_val,
-    COALESCE(pshai.mfd_evd.total_cumulative_rate,
-             pshai.mfd_tgr.total_cumulative_rate) AS total_cumulative_rate,
-    COALESCE(pshai.mfd_evd.total_moment_rate,
-             pshai.mfd_tgr.total_moment_rate) AS total_moment_rate,
-    -- Columns specific to pshai.mfd_evd
-    pshai.mfd_evd.bin_size AS evd_bin_size,
-    pshai.mfd_evd.mfd_values AS evd_values,
-    -- Columns specific to pshai.mfd_tgr
-    pshai.mfd_tgr.a_val AS tgr_a_val,
-    pshai.mfd_tgr.b_val AS tgr_b_val
-FROM
-     pshai.simple_fault
-LEFT OUTER JOIN pshai.mfd_evd ON pshai.mfd_evd.id = pshai.simple_fault.mfd_evd_id
-LEFT OUTER JOIN pshai.mfd_tgr ON pshai.mfd_tgr.id  = pshai.simple_fault.mfd_tgr_id;
 
 -- Rupture depth distribution
 CREATE TABLE pshai.r_depth_distr (
