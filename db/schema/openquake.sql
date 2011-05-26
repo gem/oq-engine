@@ -587,7 +587,10 @@ CREATE TABLE uiapi.oq_params (
               OR ((imt != 'sa') AND (period IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
-    truncation_level float NOT NULL,
+    truncation_level float CONSTRAINT truncation_level_is_set
+        CHECK(((truncation_type = 'none') AND (truncation_level IS NULL))
+              OR ((truncation_type != 'none')
+                  AND (truncation_level IS NOT NULL))),
     reference_vs30_value float NOT NULL,
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
@@ -640,8 +643,6 @@ CREATE TABLE uiapi.output (
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map.
     shapefile_path VARCHAR,
-    -- The geonode URL of the shapefile generated for a hazard or loss map.
-    shapefile_url VARCHAR,
     -- The min/max value is only needed for hazard/loss maps (for the
     -- generation of the relative color scale)
     min_value float,
