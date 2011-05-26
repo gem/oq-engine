@@ -111,5 +111,5 @@ UPDATE pshai.focal_mechanism SET gid='focal_mechanism/1/u' WHERE id=1;
 SELECT id, gid, last_update FROM pshai.focal_mechanism ORDER BY id;
 
 -- insert a few more simple sources
-INSERT INTO pshai.source(owner_id, gid, tectonic_region, rake, simple_fault_id) SELECT 1, 'source/9', 'intraslab', 21.0, sfault.id from pshai.simple_fault AS sfault WHERE gid='sfault/sa/ca/1';
-INSERT INTO pshai.source(owner_id, gid, tectonic_region, rake, simple_fault_id) SELECT 1, 'source/10', 'intraslab', 33.0, sfault.id from pshai.simple_fault AS sfault WHERE gid='rup/sfault/sa/ca/3';
+INSERT INTO pshai.source(owner_id, gid, tectonic_region, rake, simple_fault_id) SELECT 1, 'source/9', 'volcanic', 21.0, sfault.id from pshai.simple_fault AS sfault WHERE gid='sfault/sa/ca/1';
+INSERT INTO pshai.source(owner_id, gid, tectonic_region, rake, simple_fault_id) SELECT 1, 'source/10', 'stable', 33.0, sfault.id from pshai.simple_fault AS sfault WHERE gid='rup/sfault/sa/ca/3';
