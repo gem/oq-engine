@@ -115,8 +115,6 @@ COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth
 COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
 COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
-COMMENT ON VIEW pshai.simple_fault_geo_view IS 'A simple_fault view, needed for geonode integration, it includes mfd_evd and mfd_tgr tables';
-
 COMMENT ON VIEW pshai.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
 COMMENT ON VIEW pshai.simple_source IS 'A simple source view, needed for opengeo server integration.';
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
@@ -163,7 +161,6 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output file type, one of:
     - loss_curve
     - loss_map';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map.';
-COMMENT ON COLUMN uiapi.output.shapefile_url IS 'The geonode URL of the shapefile generated for a hazard or loss map.';
 COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server.';
 
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
