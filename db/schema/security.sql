@@ -134,7 +134,6 @@ GRANT SELECT ON pshai.simple_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.simple_fault TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_uiapi_writer;
-GRANT SELECT ON pshai.simple_fault_geo_view TO GROUP openquake;
 
 -- pshai.source
 GRANT SELECT ON pshai.source TO GROUP openquake;

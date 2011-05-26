@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -18,11 +16,12 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
+-- Drop column not needed.
+ALTER TABLE uiapi.output DROP COLUMN shapefile_url;
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 6);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 12);
+-- Make the 'truncation_level' column optional.
+ALTER TABLE uiapi.oq_params ALTER COLUMN truncation_level DROP NOT NULL;
+-- Add a constraint to govern when the 'truncation_level' column may be NULL.
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT truncation_level_is_set
+CHECK(((truncation_type = 'none') AND (truncation_level IS NULL))
+      OR ((truncation_type != 'none') AND (truncation_level IS NOT NULL)));
