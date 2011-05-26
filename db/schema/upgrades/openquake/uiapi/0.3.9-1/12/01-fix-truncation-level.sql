@@ -16,7 +16,7 @@
     <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 */
 
--- Drop unneded column.
+-- Drop column not needed.
 ALTER TABLE uiapi.output DROP COLUMN shapefile_url;
 
 -- Make the 'truncation_level' column optional.
