@@ -64,7 +64,7 @@ class DeterministicEventBasedMixin:
 
         sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
 
-        region_loss_map_data = []
+        region_loss_map_data = {}
 
         for block_id in self.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
@@ -89,7 +89,11 @@ class DeterministicEventBasedMixin:
             # our result should be a 1-dimensional numpy.array of loss values
             sum_per_gmf.sum_losses(block_loss)
 
-            region_loss_map_data.extend(block_loss_map_data)
+            collect_region_data(
+                block_loss_map_data, region_loss_map_data)
+
+        loss_map_data = [(site, data)
+                for site, data in region_loss_map_data.iteritems()]
 
         # serialize the loss map data to XML
         loss_map_path = os.path.join(
@@ -98,12 +102,14 @@ class DeterministicEventBasedMixin:
             'loss-map-%s.xml' % self.id)
         loss_map_xml_writer = risk_output.LossMapXMLWriter(loss_map_path)
 
+        LOGGER.debug("Starting serialization of the loss map...")
+
         # Add a metadata dict in the first list position
         # TODO(LB): we need to define some meaningful values for the metadata
         # here. For now, I'm just going to leave it blank.
         loss_map_metadata = {}
-        region_loss_map_data.insert(0, loss_map_metadata)
-        loss_map_xml_writer.serialize(region_loss_map_data)
+        loss_map_data.insert(0, loss_map_metadata)
+        loss_map_xml_writer.serialize(loss_map_data)
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
@@ -154,15 +160,16 @@ class DeterministicEventBasedMixin:
                 :py:class:`openquake.shapes.Site` object, which represents the
                 geographical location of the asset loss.
 
-                The second element shall
-                be a 2-tuple of dicts representing the Loss and Asset data (in
-                that order).
+                The second element shall be a list of
+                2-tuples of dicts representing the Loss and Asset data (in that
+                order).
 
                 Example::
 
                     [(<Site(-117.0, 38.0)>,
-                     ({'mean_loss': 200.0, 'stddev_loss': 100},
-                      {'assetID': 'a171'})),
+                     [({'mean_loss': 200.0, 'stddev_loss': 100},
+                      {'assetID': 'a171'}), ({'mean_loss': 200.0,
+                      'stddev_loss': 100}, {'assetID': 'a187'})]),
                      (<Site(-117.0, 38.0)>,
                      ({'mean_loss': 200, 'stddev_loss': 100.0},
                       {'assetID': 'a172'})),
@@ -234,15 +241,16 @@ class DeterministicEventBasedMixin:
             :py:class:`openquake.shapes.Site` object, which represents the
             geographical location of the asset loss.
 
-            The second element shall
-            be a 2-tuple of dicts representing the Loss and Asset data (in that
+            The second element shall be a list of
+            2-tuples of dicts representing the Loss and Asset data (in that
             order).
 
             Example::
 
                 [(<Site(-117.0, 38.0)>,
-                 ({'mean_loss': 200.0, 'stddev_loss': 100},
-                  {'assetID': 'a171'})),
+                 [({'mean_loss': 200.0, 'stddev_loss': 100},
+                  {'assetID': 'a171'}), ({'mean_loss': 200.0,
+                  'stddev_loss': 100}, {'assetID': 'a187'})]),
                  (<Site(-117.0, 38.0)>,
                  ({'mean_loss': 200, 'stddev_loss': 100.0},
                   {'assetID': 'a172'})),
@@ -251,7 +259,7 @@ class DeterministicEventBasedMixin:
                  ({'mean_loss': 50, 'stddev_loss': 50.0},
                   {'assetID': 'a192'}))]
         """
-        loss_data = []
+        loss_data = {}
 
         for point in block.grid(self.region):
             # the mean and stddev calculation functions used below
@@ -275,7 +283,7 @@ class DeterministicEventBasedMixin:
                          'stddev_loss': asset_stddev_loss},
                         {'assetID': asset['assetID']})
 
-                loss_data.append((asset_site, loss))
+                collect_block_data(loss_data, asset_site, loss)
 
         return loss_data
 
@@ -315,6 +323,22 @@ def load_assets_for_point(job_id, point):
     assets = kvs.get_client().lrange(assets_key, 0, -1)
     decoder = json.JSONDecoder()
     return [decoder.decode(x) for x in assets]
+
+
+def collect_region_data(block_loss_map_data, region_loss_map_data):
+    """Collect the loss map data for all the region.""" 
+    for site, data in block_loss_map_data.iteritems():
+        if site in region_loss_map_data:
+            region_loss_map_data[site].extend(data)
+        else:
+            region_loss_map_data[site] = data
+
+
+def collect_block_data(loss_data, asset_site, asset_data):
+    """Collect the loss map map for a single block."""
+    data = loss_data.get(asset_site, [])
+    data.append(asset_data)
+    loss_data[asset_site] = data
 
 
 RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
