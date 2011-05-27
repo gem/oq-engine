@@ -67,3 +67,6 @@ LEFT OUTER JOIN pshai.mfd_evd ON
     pshai.mfd_evd.id = pshai.simple_fault.mfd_evd_id
 LEFT OUTER JOIN pshai.mfd_tgr ON
     pshai.mfd_tgr.id  = pshai.simple_fault.mfd_tgr_id;
+
+-- Grant permissions on the recreated view
+GRANT SELECT ON pshai.simple_source TO GROUP openquake;
