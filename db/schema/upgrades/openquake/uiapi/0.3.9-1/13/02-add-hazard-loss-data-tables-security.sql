@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -19,10 +17,12 @@
 */
 
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+-- uiapi.hazard_map_data
+GRANT ALL ON SEQUENCE uiapi.hazard_map_data_id_seq to GROUP openquake;
+GRANT SELECT ON uiapi.hazard_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_map_data TO oq_uiapi_writer;
 
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 6);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 13);
+-- uiapi.loss_map_data
+GRANT ALL ON SEQUENCE uiapi.loss_map_data_id_seq to GROUP openquake;
+GRANT SELECT ON uiapi.loss_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_map_data TO oq_uiapi_writer;
