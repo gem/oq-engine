@@ -126,6 +126,9 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
+COMMENT ON TABLE uiapi.hazard_map_data IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN uiapi.hazard_map_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard map.';
+
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
@@ -135,6 +138,10 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - vulnerability file (vulnerability)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
+
+COMMENT ON TABLE uiapi.loss_map_data IS 'Holds location/loss data for loss maps.';
+COMMENT ON COLUMN uiapi.loss_map_data.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
