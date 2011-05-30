@@ -662,7 +662,7 @@ CREATE TABLE uiapi.hazard_map_data (
     value float NOT NULL
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE uiapi.hazard_map_data ALTER COLUMN point SET NOT NULL;
+ALTER TABLE uiapi.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
@@ -672,7 +672,7 @@ CREATE TABLE uiapi.loss_map_data (
     value float NOT NULL
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_map_data ALTER COLUMN point SET NOT NULL;
+ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 ------------------------------------------------------------------------
