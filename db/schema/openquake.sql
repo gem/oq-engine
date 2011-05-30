@@ -665,7 +665,7 @@ SELECT AddGeometryColumn('uiapi', 'hazard_map_data', 'location', 4326, 'POINT', 
 ALTER TABLE uiapi.hazard_map_data ALTER COLUMN point SET NOT NULL;
 
 
--- Hazard map data.
+-- Loss map data.
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
