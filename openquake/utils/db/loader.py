@@ -17,11 +17,20 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+
 """
 This module contains functions and classes for reading source data from NRML
 XML files and serializing the data to the OpenQuake pshai database.
+
+This module contains functions and classes for reading source data from CSV
+and serializing the data to the OpenQuake eqcat database.
 """
 
+
+import csv
+from sqlalchemy.ext.sqlsoup import SqlSoup
+import datetime
+from sqlalchemy.orm import scoped_session, sessionmaker
 
 import geoalchemy
 import numpy
@@ -464,6 +473,7 @@ class SourceModelLoader(object):
         :param mfd_bin_width: Magnitude Frequency Distribution bin width
         :type mfd_bin_width: float
 
+
         :param owner_id: ID of an admin.organization entity in the database. By
             default, the default 'GEM Foundation' group will be used.
             Note(LB): This is kind of ugly and needs to be revisited later.
@@ -528,3 +538,122 @@ class SourceModelLoader(object):
                 input_id=self.input_id))
 
         return results
+
+
+class CsvModelLoader(object):
+    """
+        Csv Model Loader which gets data from a particular CSV source and
+        "serializes" the data to the database
+    """
+    def __init__(self, src_model_path, engine, schema):
+        """
+            :param src_model_path: path to a source model file
+            :type src_model_path: str
+
+            :param engine: db engine to provide connectivity and reflection
+            :type engine: :py:class:`sqlalchemy.engine.base.Engine`
+
+            :param schema: the schema needed to access the database
+            :type schema: str
+        """
+
+        self.src_model_path = src_model_path
+        self.engine = engine
+        self.soup = None
+        self.schema = schema
+        self.csv_reader = None
+        self.csv_fd = open(self.src_model_path, 'r')
+
+    def _read_model(self):
+        """
+            Just initializes the csv DictReader
+        """
+        self.csv_reader = csv.DictReader(self.csv_fd, delimiter=',')
+
+    def serialize(self):
+        """
+            Reads the model
+            Writes to the db
+        """
+        self.soup = self._sql_soup_init(self.schema)
+        self._read_model()
+        self._write_to_db(self.csv_reader)
+
+    # pylint: disable=R0201
+    def _date_to_timestamp(self, *args):
+        """
+            Quick helper function to have a timestamp for the
+            openquake postgres database
+        """
+
+        catalog_date = datetime.datetime(*args)
+        return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    def _write_to_db(self, csv_reader):
+        """
+            :param csv_reader: DictReader instance
+            :type csv_reader: DictReader object `csv.DictReader`
+        """
+
+        mags = ['mb_val', 'mb_val_error',
+            'ml_val', 'ml_val_error',
+            'ms_val', 'ms_val_error',
+            'mw_val', 'mw_val_error']
+
+        for row in csv_reader:
+
+            timestamp = self._date_to_timestamp(int(row['year']),
+                int(row['month']), int(row['day']), int(row['hour']),
+                int(row['minute']), int(row['second']))
+
+            surface = self.soup.surface(semi_minor=row['semi_minor'],
+                semi_major=row['semi_major'],
+                strike=row['strike'])
+
+            for mag in mags:
+                row[mag] = row[mag].strip()
+
+                # if m*val* are empty or a series of blank spaces, we assume
+                # that the val is -999 for convention (ask Graeme if we want to
+                # change this)
+                if len(row[mag]) == 0:
+                    row[mag] = None
+                else:
+                    row[mag] = float(row[mag])
+
+            magnitude = self.soup.magnitude(mb_val=row['mb_val'],
+                                mb_val_error=row['mb_val_error'],
+                                ml_val=row['ml_val'],
+                                ml_val_error=row['ml_val_error'],
+                                ms_val=row['ms_val'],
+                                ms_val_error=row['ms_val_error'],
+                                mw_val=row['mw_val'],
+                                mw_val_error=row['mw_val_error'])
+
+            wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
+            self.soup.catalog(owner_id=1, time=timestamp,
+                surface=surface, eventid=row['eventid'],
+                agency=row['agency'], identifier=row['identifier'],
+                time_error=row['time_error'], depth=row['depth'],
+                depth_error=row['depth_error'], magnitude=magnitude,
+                point=geoalchemy.WKTSpatialElement(wkt, 4326))
+
+        # commit results
+        self.soup.commit()
+
+    def _sql_soup_init(self, schema):
+        """
+            Gets the schema to connect
+            to the db, creates a SqlSoup instance, sets the schema
+
+            :param schema: database schema
+            :type schema: str
+        """
+        # be sure that autoflushing/expire_on_commit/autocommit are false
+        soup_db = SqlSoup(self.engine,
+            session=scoped_session(sessionmaker(autoflush=False,
+            expire_on_commit=False, autocommit=False)))
+        soup_db.schema = schema
+        soup_db.catalog.relate('surface', soup_db.surface)
+        soup_db.catalog.relate('magnitude', soup_db.magnitude)
+        return soup_db
