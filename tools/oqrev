@@ -145,7 +145,7 @@ do
         fi
 
         # Find the branch author's github user name and the branch name.
-        branch=`cat $pullreq_file | perl -wane 'if ($_ =~/pull-description.+class=.user.>([^<]+)<.span>:([^<]+)/) { printf("%s/%s", $1, $2); }'`
+        branch=`cat $pullreq_file | perl -wane 'if ($_ =~ /span.+class=.commit-ref from.>.+class=.user.>([^<]+)<.span>:([^<]+)/) { printf("%s/%s", $1, $2); }'`
         branch_name="$branch"
         github_user=`dirname $branch`
 
