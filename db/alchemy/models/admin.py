@@ -54,10 +54,10 @@ class OqUser(Base):
     full_name = sa.Column(sa.String, nullable=False)
     organization_id = sa.Column(
         sa.Integer, sa.ForeignKey("admin.organization.id"), nullable=False)
-    data_is_open = sa.Column(sa.Boolean, nullable=False)
+    data_is_open = sa.Column(sa.Boolean, nullable=False, default=True)
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, user_name):
+        self.user_name = user_name
 
     def __repr__(self):
         return(":oq_user: %s" % self.user_name)
