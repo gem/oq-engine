@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -19,10 +17,11 @@
 */
 
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+-- Drop the unneeded constraint.
+ALTER TABLE uiapi.oq_params DROP CONSTRAINT truncation_level_is_set;
 
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 6);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 14);
+-- Make sure we have a truncation_level value for all rows.
+UPDATE uiapi.oq_params SET truncation_level = 0.0 WHERE truncation_level IS NULL;
+
+ALTER TABLE uiapi.oq_params ALTER COLUMN truncation_level SET DEFAULT 0.0;
+ALTER TABLE uiapi.oq_params ALTER COLUMN truncation_level SET NOT NULL;
