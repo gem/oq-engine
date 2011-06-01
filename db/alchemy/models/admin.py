@@ -23,15 +23,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 
-metadata = sa.MetaData()
-
-
 Base = declarative_base()
 
 
 class Organization(Base):
-    __tablename__ = 'organization'
-    __table_args__ = {'schema':'admin'}
+    __tablename__ = "organization"
+    __table_args__ = {"schema": "admin"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(sa.String, nullable=False)
@@ -47,8 +44,8 @@ class Organization(Base):
 
 
 class OqUser(Base):
-    __tablename__ = 'oq_user'
-    __table_args__ = {'schema':'admin'}
+    __tablename__ = "oq_user"
+    __table_args__ = {"schema": "admin"}
     id = sa.Column('id', sa.Integer, primary_key=True)
     user_name = sa.Column(sa.String, nullable=False)
     full_name = sa.Column(sa.String, nullable=False)
