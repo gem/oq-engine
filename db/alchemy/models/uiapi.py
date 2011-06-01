@@ -19,32 +19,40 @@
 
 
 import sqlalchemy as sa
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 
-metadata = sa.MetaData()
+Base = declarative_base()
 
 
-upload = sa.Table('upload', metadata,
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('owner_id', sa.Integer, sa.ForeignKey("admin.owner.id"),
-              nullable=False),
-    sa.Column('description', sa.String, nullable=False, default=""),
-    sa.Column('path', sa.String, nullable=False, unique=True),
-    sa.Column(
-        "status",sa.Enum("pending", "running", "failed", "succeeded",
-                         native_enum=False),
-        nullable=False, default="pending"),
-    sa.Column('job_pid', sa.Integer, nullable=False, default=0),
-    schema='uiapi'
-)
+class Upload(Base):
+    __tablename__ = "upload"
+    __table_args__ = {"schema": "uiapi"}
 
-oq_params = sa.Table('oq_params', metadata,
-    sa.Column('id', sa.Integer, primary_key=True),
-    sa.Column('job_type', sa.String, nullable=False),
-    sa.Column('upload_id', sa.Integer, sa.ForeignKey("uiapi.upload.id"),
-              nullable=False),
-    sa.Column('region_grid_spacing', sa.Float, nullable=False),
-    sa.Column('min_magnitude', sa.Float, nullable=False),
+    id = sa.Column(sa.Integer, primary_key=True)
+    owner_id = sa.Column(sa.Integer, sa.ForeignKey("admin.owner.id"),
+                         nullable=False)
+    description = sa.Column(sa.String, nullable=False, default="")
+    path = sa.Column(sa.String, nullable=False, unique=True)
+    status = sa.Column(sa.Enum("pending", "running", "failed", "succeeded",
+                               native_enum=False),
+                       nullable=False, default="pending")
+    job_pid = sa.Column(sa.Integer, nullable=False, default=0)
+
+
+class OqParams(Base):
+    __tablename__ = "oq_params"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    job_type = sa.Column(sa.Enum("classical", "event_based", "deterministic",
+                                 native_enum=False),
+                         nullable=False, default="classical")
+    upload_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.upload.id"),
+                          nullable=False)
+    region_grid_spacing = sa.Column(sa.Float, nullable=False)
+    min_magnitude = sa.Column(sa.Float, nullable=False)
     sa.Column('component', sa.String, nullable=False),
     sa.Column('imt', sa.String, nullable=False),
     sa.Column('period', sa.Float),
