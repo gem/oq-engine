@@ -18,61 +18,43 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from sqlalchemy import *
-from sqlalchemy.dialects import postgresql
+import sqlalchemy as sa
 
 
-metadata = MetaData()
+metadata = sa.MetaData()
 
 
-organization = Table('organization', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('name', String, nullable = False),
-    Column('address', String),
-    Column('url', String),
-    schema='admin'
-)
-
-owner = Table('owner', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('user_name', String, nullable = False),
-    Column('full_name', String, nullable = False),
-    Column(
-        'organization_id', Integer, ForeignKey("admin.organization.id"),
-        nullable=False),
-    Column('data_is_open', Boolean, nullable=False),
-    schema='admin'
-)
-
-upload = Table('upload', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('owner_id', Integer, ForeignKey("admin.owner.id"), nullable=False),
-    Column('description', String, nullable = False, default=""),
-    Column('path', String, nullable = False, unique=True),
-    Column('status', String, nullable = False, default="pending"),
-    Column('job_pid', Integer, nullable = False, default=0),
+upload = sa.Table('upload', metadata,
+    sa.Column('id', sa.Integer, primary_key=True),
+    sa.Column('owner_id', sa.Integer, sa.ForeignKey("admin.owner.id"),
+              nullable=False),
+    sa.Column('description', sa.String, nullable=False, default=""),
+    sa.Column('path', sa.String, nullable=False, unique=True),
+    sa.Column(
+        "status",sa.Enum("pending", "running", "failed", "succeeded",
+                         native_enum=False),
+        nullable=False, default="pending"),
+    sa.Column('job_pid', sa.Integer, nullable=False, default=0),
     schema='uiapi'
 )
 
-oq_params = Table('oq_params', metadata,
-    Column('id', Integer, primary_key=True),
-    Column('job_type', String, nullable = False),
-    Column(
-        'upload_id', Integer, ForeignKey("uiapi.upload.id"), nullable=False),
-    Column('region_grid_spacing', Float, nullable = False),
-    Column('min_magnitude', Float, nullable = False),
-    Column('component', String, nullable = False),
-    Column('imt', String, nullable = False),
-    Column('period', Float),
-    Column('truncation_type', String, nullable = False),
-    Column('truncation_level', Float),
-    Column('reference_vs30_value', Float, nullable = False),
-    Column('imls', postgresql.ARRAY(float)),
-    Column('poes', postgresql.ARRAY(float)),
-    Column('realizations', Integer),
-    Column('histories', Integer),
-    Column('gm_correlated', Boolean),
+oq_params = sa.Table('oq_params', metadata,
+    sa.Column('id', sa.Integer, primary_key=True),
+    sa.Column('job_type', sa.String, nullable=False),
+    sa.Column('upload_id', sa.Integer, sa.ForeignKey("uiapi.upload.id"),
+              nullable=False),
+    sa.Column('region_grid_spacing', sa.Float, nullable=False),
+    sa.Column('min_magnitude', sa.Float, nullable=False),
+    sa.Column('component', sa.String, nullable=False),
+    sa.Column('imt', sa.String, nullable=False),
+    sa.Column('period', sa.Float),
+    sa.Column('truncation_type', sa.String, nullable=False),
+    sa.Column('truncation_level', sa.Float),
+    sa.Column('reference_vs30_value', sa.Float, nullable=False),
+    sa.Column('imls', sa.dialects.postgresql.ARRAY(float)),
+    sa.Column('poes', sa.dialects.postgresql.ARRAY(float)),
+    sa.Column('realizations', sa.Integer),
+    sa.Column('histories', sa.Integer),
+    sa.Column('gm_correlated', sa.Boolean),
     schema='uiapi'
 )
-
-
