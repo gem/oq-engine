@@ -18,6 +18,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import geoalchemy as ga
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.declarative import declarative_base
@@ -95,7 +96,8 @@ class OqParams(Base):
                           nullable=False)
     upload = relationship("Upload")
     region_grid_spacing = sa.Column(sa.Float, nullable=False)
-    min_magnitude = sa.Column(sa.Float, nullable=False)
+    min_magnitude = sa.Column(sa.Float)
+    investigation_time = sa.Column(sa.Float)
     component = sa.Column(sa.Enum("average", "gmroti50", native_enum=False),
                           nullable=False)
     imt = sa.Column(sa.Enum("pga", "sa", "pgv", "pgd", native_enum=False),
@@ -104,14 +106,18 @@ class OqParams(Base):
     truncation_type = sa.Column(sa.Enum("none", "onesided", "twosided",
                                         native_enum=False),
                                 nullable=False)
-    truncation_level = sa.Column(sa.Float, nullable=False)
+    truncation_level = sa.Column(sa.Float, nullable=False, default=0.0)
     reference_vs30_value = sa.Column(sa.Float, nullable=False)
-    imls = sa.Column(postgresql.ARRAY(float))
-    poes = sa.Column(postgresql.ARRAY(float))
+    imls = sa.Column(postgresql.ARRAY(sa.Float))
+    poes = sa.Column(postgresql.ARRAY(sa.Float))
     realizations = sa.Column(sa.Integer)
     histories = sa.Column(sa.Integer)
     gm_correlated = sa.Column(sa.Boolean)
+    region = ga.GeometryColumn(ga.Polygon(2))
     last_update = sa.Column(sa.DateTime, sa.FetchedValue())
 
     def __repr__(self):
         return(":params: %s (:upload: %s)" % (self.job_type, self.upload.id))
+
+
+ga.GeometryDDL(OqParams.__table__)
