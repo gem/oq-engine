@@ -17,8 +17,11 @@
 */
 
 
+-- Drop the unneeded constraint.
 ALTER TABLE uiapi.oq_params DROP CONSTRAINT truncation_level_is_set;
 
+-- Make sure we have a truncation_level value for all rows.
 UPDATE uiapi.oq_params SET truncation_level = 0.0 WHERE truncation_level IS NULL;
+
 ALTER TABLE uiapi.oq_params ALTER COLUMN truncation_level SET DEFAULT 0.0;
 ALTER TABLE uiapi.oq_params ALTER COLUMN truncation_level SET NOT NULL;
