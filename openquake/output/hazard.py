@@ -557,21 +557,45 @@ class HazardMapDBWriter(object):
     def serialize(self, iterable):
         """Writes hazard map data to the database.
 
+        :param iterable: will look something like this:
+               [(Site(-121.7, 37.6),
+                 {'IML': 1.9266716959669603,
+                  'IMT': 'PGA',
+                  'investigationTimeSpan': '50.0',
+                  'poE': 0.01,
+                  'statistics': 'mean',
+                  'vs30': 760.0}),
+                (Site(-121.8, 38.0),
+                 {'IML': 1.9252164637194078,
+                  'IMT': 'PGA',
+                  'investigationTimeSpan': '50.0',
+                  'poE': 0.01,
+                  'statistics': 'mean',
+                  'vs30': 760.0}),
+                (Site(-122.0, 37.9),
+                 {'IML': 1.925653989154411,
+                  'IMT': 'PGA',
+                  'investigationTimeSpan': '50.0',
+                  'poE': 0.01,
+                  'statistics': 'mean',
+                  'vs30': 760.0})]
+
         We first insert a `uiapi.output` record for the hazard map and then
-        a `uiapi.hazard_map_data` record for each datum in the `iterable`.
+        an `uiapi.hazard_map_data` record for each datum in the `iterable`.
         """
         logger.info("> serialize")
+
         self.init_session()
         self.insert_output()
-        if isinstance(iterable, dict):
-            iterable = iterable.items()
-        for key, val in iterable:
-            self.insert_map_datum(key, val)
+
+        for key, value in iterable:
+            self.insert_map_datum(key, value)
+
         logger.info("< serialize")
 
     def init_session(self):
-        logger.info("> init_session")
         """Initialize SQLAlchemy session."""
+        logger.info("> init_session")
         user = os.environ.get("OQ_ENGINE_DB_USER")
         assert user, "No db user set for the OpenQuake engine"
 
@@ -592,7 +616,7 @@ class HazardMapDBWriter(object):
         logger.info("< init_session")
 
     def insert_output(self):
-        """Insert a `uiapi.output` record for the hazard map at hand."""
+        """Insert an `uiapi.output` record for the hazard map at hand."""
         logger.info("> insert_output")
         job = self.session.query(OqJob).filter(OqJob.id==self.oq_job_id).one()
         self.output = Output(owner=job.owner, oq_job=job, path=self.nrml_path,
@@ -619,7 +643,7 @@ class HazardMapDBWriter(object):
             point = point.point
         datum = HazardMapData(
             output=self.output, location="POINT(%s %s)" % (point.x, point.y),
-            value=value)
+            value=value.get("IML"))
         self.session.add(datum)
         self.session.commit()
         logger.info("datum = [%s, %s], %s" % datum)
