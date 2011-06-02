@@ -102,11 +102,13 @@ class DbTestMixin(TestMixin):
         session.add(oqp)
         job = OqJob(oq_params=oqp, owner=upload.owner, job_type="classical")
         session.add(job)
+        session.commit()
         if create_job_path:
             job.path = os.path.join(upload.path, str(job.id))
+            session.add(job)
+            session.commit()
             os.mkdir(job.path)
             os.chmod(job.path, 0777)
-        session.commit()
         return job
 
     def teardown_job(self, job, filesystem_only=True):
@@ -130,17 +132,21 @@ class DbTestMixin(TestMixin):
         session.delete(oqp)
         session.commit()
 
-    def setup_output(self, job_to_use=None, output_type="hazard_map"):
+    def setup_output(self, job_to_use=None, output_type="hazard_map",
+                     db_backed=True):
         """Create an output object of the given type.
 
         :param job_to_use: if set use the passed
             :py:class:`db.alchemy.models.OqJob` instance as opposed to
             creating a new one.
         :param str output_type: map type, one of "hazard_map", "loss_map"
+        :param bool db_backed: initialize the property of the newly created
+            :py:class:`db.alchemy.models.Output` instance with this value.
         :returns: a :py:class:`db.alchemy.models.Output` instance
         """
         job = job_to_use if job_to_use else self.setup_classic_job()
-        output = Output(owner=job.owner, oq_job=job, output_type=output_type)
+        output = Output(owner=job.owner, oq_job=job, output_type=output_type,
+                        db_backed=db_backed)
         output.path = self.touch(
             dir=os.path.join(job.path, "computed_output"), suffix=".xml",
             prefix="hzrd." if output_type == "hazard_map" else "loss.")
