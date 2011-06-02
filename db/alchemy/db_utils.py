@@ -18,16 +18,15 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-"""
-SQLAlchemy utility functions.
-"""
+"""SQLAlchemy utility functions."""
 
 import os
 import sqlalchemy
 
 
 class Session(object):
+    """Provides the same alchemy session for everyone."""
+
     __session__ = None
 
     @classmethod
@@ -56,6 +55,6 @@ class Session(object):
         data = (user, password, db_host, db_name)
         engine = sqlalchemy.create_engine(
             "postgresql+psycopg2://%s:%s@%s/%s" % data)
-        Session = sqlalchemy.orm.sessionmaker(bind=engine)
-        cls.__session__ = Session()
+        session_class = sqlalchemy.orm.sessionmaker(bind=engine)
+        cls.__session__ = session_class()
         return cls.__session__
