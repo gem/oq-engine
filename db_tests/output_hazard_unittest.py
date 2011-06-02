@@ -124,3 +124,24 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual([point.x, point.y], hmd.location.coords(session))
         self.assertEqual(round_float(data[1].get("IML")),
                          round_float(hmd.value))
+
+    def test_serialize(self):
+        """serialize() inserts the output and the hazard_map_data records."""
+        self.job = self.setup_classic_job()
+        session = Session.get()
+        output_path = self.generate_output_path(self.job)
+        hmw = HazardMapDBWriter(session, output_path, self.job.id)
+
+        # This job has no outputs before calling the function under test.
+        self.assertEqual(0, len(self.job.output_set))
+
+        # Call the function under test.
+        hmw.serialize(HAZARD_MAP_DATA)
+
+        # After calling the function under test we see the expected output.
+        self.assertEqual(1, len(self.job.output_set))
+
+        # After calling the function under test we see the expected map data.
+        [output] = self.job.output_set
+        self.assertEqual(4, len(output.hazardmapdata_set))
+        self.assertEqual(0, len(output.lossmapdata_set))
