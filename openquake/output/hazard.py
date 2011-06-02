@@ -616,5 +616,5 @@ class HazardMapDBWriter(object):
             value=value.get("IML"))
         self.session.add(datum)
         self.session.commit()
-        logger.info("datum = [%s, %s], %s" % datum)
+        logger.info("datum = [%s, %s], %s" % (point.x, point.y, datum))
         logger.info("< insert_map_datum")
