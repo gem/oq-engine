@@ -43,7 +43,7 @@ class Organization(Base):
         self.name = name
 
     def __repr__(self):
-        return(":organization: %s" % self.name)
+        return(":organization: %s, %s" % (self.id, self.name))
 
 
 class OqUser(Base):
@@ -61,7 +61,7 @@ class OqUser(Base):
         self.user_name = user_name
 
     def __repr__(self):
-        return(":oq_user: %s" % self.user_name)
+        return(":oq_user: %s, %s" % (self.id, self.user_name))
 
 
 class Upload(Base):
@@ -81,7 +81,7 @@ class Upload(Base):
     last_update = sa.Column(sa.DateTime, sa.FetchedValue())
 
     def __repr__(self):
-        return(":upload: %s" % self.path)
+        return(":upload: %s, %s" % (self.id, self.path))
 
 
 class OqParams(Base):
@@ -106,18 +106,75 @@ class OqParams(Base):
     truncation_type = sa.Column(sa.Enum("none", "onesided", "twosided",
                                         native_enum=False),
                                 nullable=False)
-    truncation_level = sa.Column(sa.Float, nullable=False, default=0.0)
+    truncation_level = sa.Column(sa.Float, nullable=False, default=3.0)
     reference_vs30_value = sa.Column(sa.Float, nullable=False)
-    imls = sa.Column(postgresql.ARRAY(sa.Float))
-    poes = sa.Column(postgresql.ARRAY(sa.Float))
-    realizations = sa.Column(sa.Integer)
-    histories = sa.Column(sa.Integer)
-    gm_correlated = sa.Column(sa.Boolean)
+    imls = sa.Column(postgresql.ARRAY(sa.Float),
+                     doc="Intensity measure levels")
+    poes = sa.Column(postgresql.ARRAY(sa.Float),
+                     doc="Probabilities of exceedence")
+    realizations = sa.Column(sa.Integer, doc="Number of logic tree samples")
+    histories = sa.Column(sa.Integer, doc="Number of seismicity histories")
+    gm_correlated = sa.Column(sa.Boolean, doc="Ground motion correlation flag")
     region = ga.GeometryColumn(ga.Polygon(2))
     last_update = sa.Column(sa.DateTime, sa.FetchedValue())
 
     def __repr__(self):
-        return(":params: %s (:upload: %s)" % (self.job_type, self.upload.id))
+        return(":params: %s, %s (:upload: %s)" % (
+            self.id, self.job_type, self.upload.id))
 
 
 ga.GeometryDDL(OqParams.__table__)
+
+
+class OqJob(Base):
+    __tablename__ = "oq_job"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    owner_id = sa.Column(sa.Integer, sa.ForeignKey("admin.oq_user.id"),
+                          nullable=False)
+    owner = relationship("OqUser")
+    job_type = sa.Column(sa.Enum("classical", "event_based", "deterministic",
+                                 native_enum=False),
+                         nullable=False, default="classical")
+    description = sa.Column(sa.String, nullable=False, default="")
+    path = sa.Column(sa.String, nullable=False, unique=True)
+    status = sa.Column(sa.Enum("pending", "running", "failed", "succeeded",
+                               native_enum=False),
+                       nullable=False, default="pending")
+    duration = sa.Column(sa.Integer, nullable=False, default=0)
+    job_pid = sa.Column(sa.Integer, nullable=False, default=0)
+    oq_params_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.oq_params.id"),
+                             nullable=False)
+    oq_params = relationship("OqParams")
+    last_update = sa.Column(sa.DateTime, sa.FetchedValue())
+
+    def __repr__(self):
+        return(":job: %s, %s, %s (:params: %s)" % (
+            self.id, self.job_type, self.path, self.oq_params.id))
+
+
+class Output(Base):
+    __tablename__ = "output"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    owner_id = sa.Column(sa.Integer, sa.ForeignKey("admin.oq_user.id"),
+                          nullable=False)
+    owner = relationship("OqUser")
+    oq_job_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.oq_job.id"),
+                             nullable=False)
+    oq_job = relationship("OqJob")
+    path = sa.Column(sa.String, nullable=False, unique=True)
+    output_type = sa.Column(
+        sa.Enum("unknown", "hazard_curve", "hazard_map", "loss_curve",
+                "loss_map", native_enum=False), nullable=False)
+    size = sa.Column(sa.Integer, nullable=False, default=0)
+    shapefile_path = sa.Column(sa.String)
+    min_value = sa.Column(sa.Float)
+    max_value = sa.Column(sa.Float)
+    last_update = sa.Column(sa.DateTime, sa.FetchedValue())
+
+    def __repr__(self):
+        return(":output: %s, %s, %s, %s)" % (
+            self.id, self.output_type, self.path, self.size))
