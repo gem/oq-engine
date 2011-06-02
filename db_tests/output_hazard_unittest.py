@@ -143,5 +143,5 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
-        self.assertEqual(4, len(output.hazardmapdata_set))
+        self.assertEqual(len(HAZARD_MAP_DATA), len(output.hazardmapdata_set))
         self.assertEqual(0, len(output.lossmapdata_set))
