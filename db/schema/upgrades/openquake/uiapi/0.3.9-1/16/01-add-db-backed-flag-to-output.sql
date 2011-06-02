@@ -17,4 +17,7 @@
 */
 
 
-ALTER TABLE uiapi.output ALTER COLUMN path DROP NOT NULL;
+-- Whether the data for this OpenQuake artefact actually resides in the
+-- database or not.
+ALTER TABLE uiapi.output ADD COLUMN db_backed boolean NOT NULL DEFAULT FALSE;
+
