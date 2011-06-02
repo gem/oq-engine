@@ -42,12 +42,29 @@ in the base class.
 GMFs are serialized per object (=Site) as implemented in the base class.
 """
 
+import logging
 from lxml import etree
+import os
+import sqlalchemy
 
+from db.alchemy.models import HazardMapData, OqJob, Output
 from openquake import shapes
 from openquake import writer
 
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
+
+
+logger = logging.getLogger('hazard-map-serializer')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+# create formatter and add it to the handlers
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+# add the handlers to the logger
+logger.addHandler(ch)
+
 
 NRML_GML_ID = 'n1'
 HAZARDRESULT_GML_ID = 'hr1'
@@ -531,5 +548,79 @@ class HazardMapDBWriter(object):
     table.
     """
 
-    def __init__(self, nrml_path):
-        pass
+    def __init__(self, nrml_path, oq_job_id):
+        self.nrml_path = nrml_path
+        self.oq_job_id = oq_job_id
+        self.session = None
+        self.output = None
+
+    def serialize(self, iterable):
+        """Writes hazard map data to the database.
+
+        We first insert a `uiapi.output` record for the hazard map and then
+        a `uiapi.hazard_map_data` record for each datum in the `iterable`.
+        """
+        logger.info("> serialize")
+        self.init_session()
+        self.insert_output()
+        if isinstance(iterable, dict):
+            iterable = iterable.items()
+        for key, val in iterable:
+            self.insert_map_datum(key, val)
+        logger.info("< serialize")
+
+    def init_session(self):
+        logger.info("> init_session")
+        """Initialize SQLAlchemy session."""
+        user = os.environ.get("OQ_ENGINE_DB_USER")
+        assert user, "No db user set for the OpenQuake engine"
+
+        password = os.environ.get("OQ_ENGINE_DB_PASSWORD")
+        assert password, "No db password set for the OpenQuake engine"
+
+        db_name = os.environ.get("OQ_ENGINE_DB_NAME", "geonode")
+        assert db_name, "No db name set for the OpenQuake engine"
+
+        db_host = os.environ.get("OQ_ENGINE_DB_HOST", "localhost")
+        assert db_host, "No db host set for the OpenQuake engine"
+
+        data = (user, password, db_host, db_name)
+        engine = sqlalchemy.create_engine(
+            "postgresql+psycopg2://%s:%s@%s/%s" % data)
+        Session = sqlalchemy.orm.sessionmaker(bind=engine)
+        self.session = Session()
+        logger.info("< init_session")
+
+    def insert_output(self):
+        """Insert a `uiapi.output` record for the hazard map at hand."""
+        logger.info("> insert_output")
+        job = self.session.query(OqJob).filter(OqJob.id==self.oq_job_id).one()
+        self.output = Output(owner=job.owner, oq_job=job, path=self.nrml_path,
+                             output_type="hazard_map")
+        self.session.add(self.output)
+        self.session.commit()
+        logger.info("output = '%s'" % self.output)
+        logger.info("< insert_output")
+
+    def insert_map_datum(self, point, value):
+        """Inserts a single hazard map datum.
+
+        Please note that `point.x` and `point.y` store the longitude and the
+        latitude respectively.
+
+        :param point: The hazard map point/location.
+        :type point: :py:class:`shapes.GridPoint` or :py:class:`shapes.Site`
+        :param float value: the value for the given location
+        """
+        logger.info("> insert_map_datum")
+        if isinstance(point, shapes.GridPoint):
+            point = point.site.point
+        if isinstance(point, shapes.Site):
+            point = point.point
+        datum = HazardMapData(
+            output=self.output, location="POINT(%s %s)" % (point.x, point.y),
+            value=value)
+        self.session.add(datum)
+        self.session.commit()
+        logger.info("datum = [%s, %s], %s" % datum)
+        logger.info("< insert_map_datum")
