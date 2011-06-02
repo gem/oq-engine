@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 Tests for the serialization of loss maps to NRML format.
 """
@@ -62,9 +61,9 @@ SITE_B_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
 
 SAMPLE_LOSS_MAP_DATA = [
     LOSS_MAP_METADATA,
-    (SITE_A, (SITE_A_LOSS_ONE, SITE_A_ASSET_ONE)),
-    (SITE_A, (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)),
-    (SITE_B, (SITE_B_LOSS_ONE, SITE_B_ASSET_ONE))]
+    (SITE_A, [(SITE_A_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
 GML_ID_KEY = '{%s}id' % xml.GML_NS
 
@@ -173,6 +172,7 @@ class LossMapOutputTestCase(unittest.TestCase):
 
         In particular, we want to make sure the site and loss data is correct.
         """
+
         def get_xml_elems_list(path, events=('start', 'end')):
             """
             Use :py:function:`lxml.etree.iterparse` to build a list of the
