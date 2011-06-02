@@ -244,7 +244,7 @@ class Job(object):
         # otherwise we use the input region
         if self.has(EXPOSURE):
             sites = self._read_sites_from_exposure()
-            LOG.debug("Loaded %s sites from exposure portfolio." % len(sites))
+            LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
             sites = self.region.sites
         else:
