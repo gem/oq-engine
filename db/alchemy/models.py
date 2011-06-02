@@ -115,7 +115,7 @@ class OqParams(Base):
     realizations = sa.Column(sa.Integer, doc="Number of logic tree samples")
     histories = sa.Column(sa.Integer, doc="Number of seismicity histories")
     gm_correlated = sa.Column(sa.Boolean, doc="Ground motion correlation flag")
-    region = ga.GeometryColumn(ga.Polygon(2))
+    region = ga.GeometryColumn(ga.Polygon(2), nullable=False)
     last_update = sa.Column(sa.DateTime, sa.FetchedValue())
 
     def __repr__(self):
@@ -178,3 +178,35 @@ class Output(Base):
     def __repr__(self):
         return(":output: %s, %s, %s, %s)" % (
             self.id, self.output_type, self.path, self.size))
+
+
+class HazardMapData(Base):
+    __tablename__ = "hazard_map_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
+                          nullable=False)
+    output = relationship("Output", backref="hazardmapdata_set")
+    location = ga.GeometryColumn(ga.Point(2), nullable=False)
+    value = sa.Column(sa.Float, nullable=False)
+
+    def __repr__(self):
+        return(":hazard_map_data: %s, %s)" % (
+            self.id, self.value))
+
+
+class LossMapData(Base):
+    __tablename__ = "loss_map_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
+                          nullable=False)
+    output = relationship("Output", backref="lossmapdata_set")
+    location = ga.GeometryColumn(ga.Point(2), nullable=False)
+    value = sa.Column(sa.Float, nullable=False)
+
+    def __repr__(self):
+        return(":loss_map_data: %s, %s)" % (
+            self.id, self.value))
