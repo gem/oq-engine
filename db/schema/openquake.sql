@@ -630,7 +630,10 @@ CREATE TABLE uiapi.output (
     owner_id INTEGER NOT NULL,
     oq_job_id INTEGER NOT NULL,
     -- The full path of the output file on the server
-    path VARCHAR UNIQUE,
+    path VARCHAR NOT NULL UNIQUE,
+    -- Whether the data for this OpenQuake artefact actually resides in the
+    -- database or not.
+    db_backed boolean NOT NULL DEFAULT FALSE,
     -- Output file type, one of:
     --      hazard_curve
     --      hazard_map
