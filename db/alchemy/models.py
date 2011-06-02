@@ -165,7 +165,8 @@ class Output(Base):
     oq_job_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.oq_job.id"),
                              nullable=False)
     oq_job = relationship("OqJob")
-    path = sa.Column(sa.String, unique=True)
+    path = sa.Column(sa.String, nullable=False, unique=True)
+    db_backed = sa.Column(sa.Boolean, nullable=False, default=False)
     output_type = sa.Column(
         sa.Enum("unknown", "hazard_curve", "hazard_map", "loss_curve",
                 "loss_map", native_enum=False), nullable=False)
