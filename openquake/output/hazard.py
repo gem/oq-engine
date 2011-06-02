@@ -548,10 +548,10 @@ class HazardMapDBWriter(object):
     table.
     """
 
-    def __init__(self, nrml_path, oq_job_id):
+    def __init__(self, session, nrml_path, oq_job_id):
         self.nrml_path = nrml_path
         self.oq_job_id = oq_job_id
-        self.session = None
+        self.session = session
         self.output = None
 
     def serialize(self, iterable):
@@ -578,35 +578,12 @@ class HazardMapDBWriter(object):
         """
         logger.info("> serialize")
 
-        self.init_session()
         self.insert_output()
 
         for key, value in iterable:
             self.insert_map_datum(key, value)
 
         logger.info("< serialize")
-
-    def init_session(self):
-        """Initialize SQLAlchemy session."""
-        logger.info("> init_session")
-        user = os.environ.get("OQ_ENGINE_DB_USER")
-        assert user, "No db user set for the OpenQuake engine"
-
-        password = os.environ.get("OQ_ENGINE_DB_PASSWORD")
-        assert password, "No db password set for the OpenQuake engine"
-
-        db_name = os.environ.get("OQ_ENGINE_DB_NAME", "geonode")
-        assert db_name, "No db name set for the OpenQuake engine"
-
-        db_host = os.environ.get("OQ_ENGINE_DB_HOST", "localhost")
-        assert db_host, "No db host set for the OpenQuake engine"
-
-        data = (user, password, db_host, db_name)
-        engine = sqlalchemy.create_engine(
-            "postgresql+psycopg2://%s:%s@%s/%s" % data)
-        Session = sqlalchemy.orm.sessionmaker(bind=engine)
-        self.session = Session()
-        logger.info("< init_session")
 
     def insert_output(self):
         """Insert an `uiapi.output` record for the hazard map at hand."""

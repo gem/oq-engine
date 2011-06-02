@@ -75,3 +75,6 @@ class HazardMapDBWriterTestCase(unittest.TestCase):
         org = writer.session.query(models.Organization).filter(models.Organization.name.like("GEM%")).one()
         self.assertTrue(isinstance(org, models.Organization))
         self.assertEqual("GEM Foundation", org.name)
+
+    def test_insert_output(self):
+        """An `uiapi.output` record is inserted correctly."""
