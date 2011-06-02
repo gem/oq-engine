@@ -523,3 +523,13 @@ def _ensure_attributes_set(attr_list, node):
         if attr['name'] not in node.attrib and attr['required'] is True:
             return False
     return True
+
+
+class HazardMapDBWriter(object):
+    """
+    Serialize the location/IML data to the `uiapi.hazard_map_data` database
+    table.
+    """
+
+    def __init__(self, nrml_path):
+        pass
