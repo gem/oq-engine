@@ -21,9 +21,9 @@
 import unittest
 
 from db.alchemy.db_utils import Session
-from db.alchemy.models import Organization
 from openquake.output.hazard import HazardMapDBWriter
 from openquake.shapes import Site
+from openquake.utils import round_float
 
 from db_tests import helpers
 
@@ -81,9 +81,17 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         session = Session.get()
         output_path = self.generate_output_path(self.job)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
+
+        # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set))
+
+        # Call the function under test.
         hmw.insert_output()
+
+        # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
+
+        # Make sure the inserted output record has the right data.
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
         self.assertEqual(output_path, output.path)
@@ -97,8 +105,22 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         hmw = HazardMapDBWriter(
             session, self.output.path, self.output.oq_job.id)
         hmw.output = self.output
+
+        # This output has no map data before calling the function under test.
         self.assertEqual(0, len(self.output.hazardmapdata_set))
         self.assertEqual(0, len(self.output.lossmapdata_set))
-        hmw.insert_map_datum(*HAZARD_MAP_DATA[-1])
+
+        # Call the function under test.
+        data = HAZARD_MAP_DATA[-1]
+        hmw.insert_map_datum(*data)
+
+        # After calling the function under test we see the expected map data.
         self.assertEqual(1, len(self.output.hazardmapdata_set))
         self.assertEqual(0, len(self.output.lossmapdata_set))
+
+        # Make sure the inserted map data is correct.
+        [hmd] = self.output.hazardmapdata_set
+        point = data[0].point
+        self.assertEqual([point.x, point.y], hmd.location.coords(session))
+        self.assertEqual(round_float(data[1].get("IML")),
+                         round_float(hmd.value))
