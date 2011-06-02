@@ -18,12 +18,14 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import os
 import unittest
 
-from db.alchemy import models
+from db.alchemy.db_utils import Session
+from db.alchemy.models import Organization
 from openquake.output.hazard import HazardMapDBWriter
 from openquake.shapes import Site
+
+from db_tests import helpers
 
 # The data below was captured (and subsequently modified for testing purposes)
 # by running
@@ -62,19 +64,41 @@ HAZARD_MAP_DATA = [
       'vs30': 760.0})]
 
 
-class HazardMapDBWriterTestCase(unittest.TestCase):
+class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     Unit tests for the HazardMapDBWriter class, which serializes
     hazard maps to the database.
     """
-
-    def test_init_session(self):
-        """A valid SQLAlchemy session is initialized."""
-        writer = HazardMapDBWriter("/a/b/c", 11)
-        writer.init_session()
-        org = writer.session.query(models.Organization).filter(models.Organization.name.like("GEM%")).one()
-        self.assertTrue(isinstance(org, models.Organization))
-        self.assertEqual("GEM Foundation", org.name)
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
 
     def test_insert_output(self):
         """An `uiapi.output` record is inserted correctly."""
+        self.job = self.setup_classic_job()
+        session = Session.get()
+        output_path = self.generate_output_path(self.job)
+        hmw = HazardMapDBWriter(session, output_path, self.job.id)
+        self.assertEqual(0, len(self.job.output_set))
+        hmw.insert_output()
+        self.assertEqual(1, len(self.job.output_set))
+        [output] = self.job.output_set
+        self.assertTrue(output.db_backed)
+        self.assertEqual(output_path, output.path)
+        self.assertEqual("hazard_map", output.output_type)
+        self.assertIs(self.job, output.oq_job)
+
+    def test_insert_map_datum(self):
+        """An `uiapi.hazard_map_data` record is inserted correctly."""
+        self.output = self.setup_output()
+        session = Session.get()
+        hmw = HazardMapDBWriter(
+            session, self.output.path, self.output.oq_job.id)
+        hmw.output = self.output
+        self.assertEqual(0, len(self.output.hazardmapdata_set))
+        self.assertEqual(0, len(self.output.lossmapdata_set))
+        hmw.insert_map_datum(*HAZARD_MAP_DATA[-1])
+        self.assertEqual(1, len(self.output.hazardmapdata_set))
+        self.assertEqual(0, len(self.output.lossmapdata_set))

@@ -164,7 +164,7 @@ class Output(Base):
     owner = relationship("OqUser")
     oq_job_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.oq_job.id"),
                              nullable=False)
-    oq_job = relationship("OqJob")
+    oq_job = relationship("OqJob", backref="output_set")
     path = sa.Column(sa.String, nullable=False, unique=True)
     db_backed = sa.Column(sa.Boolean, nullable=False, default=False)
     output_type = sa.Column(
@@ -177,7 +177,7 @@ class Output(Base):
     last_update = sa.Column(sa.DateTime, sa.FetchedValue())
 
     def __repr__(self):
-        return(":output: %s, %s, %s, %s)" % (
+        return(":output: %s, %s, %s, %s" % (
             self.id, self.output_type, self.path, self.size))
 
 
@@ -193,7 +193,7 @@ class HazardMapData(Base):
     value = sa.Column(sa.Float, nullable=False)
 
     def __repr__(self):
-        return(":hazard_map_data: %s, %s)" % (
+        return(":hazard_map_data: %s, %s" % (
             self.id, self.value))
 
 
@@ -209,5 +209,5 @@ class LossMapData(Base):
     value = sa.Column(sa.Float, nullable=False)
 
     def __repr__(self):
-        return(":loss_map_data: %s, %s)" % (
+        return(":loss_map_data: %s, %s" % (
             self.id, self.value))

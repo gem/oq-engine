@@ -155,6 +155,13 @@ class DbTestMixin(TestMixin):
         session.commit()
         return output
 
+    def generate_output_path(self, job, output_type="hazard_map"):
+        """Return a random output path for the given job."""
+        path = self.touch(
+            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
+            prefix="hzrd." if output_type == "hazard_map" else "loss.")
+        return path
+
     def teardown_output(self, output, teardown_job=True, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
