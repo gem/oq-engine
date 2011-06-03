@@ -586,6 +586,7 @@ class HazardMapDBWriter(object):
         self.session.add(self.output)
         self.session.commit()
 
+        logger.info("serialized %s points" % len(iterable))
         logger.info("< serialize")
 
     def insert_output(self):
