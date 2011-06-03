@@ -145,3 +145,22 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertEqual(len(HAZARD_MAP_DATA), len(output.hazardmapdata_set))
         self.assertEqual(0, len(output.lossmapdata_set))
+
+    def test_serialize_sets_min_max_values(self):
+        """
+        serialize() sets the minimum and maximum values on the output record.
+        """
+        self.job = self.setup_classic_job()
+        session = Session.get()
+        output_path = self.generate_output_path(self.job)
+        hmw = HazardMapDBWriter(session, output_path, self.job.id)
+
+        # Call the function under test.
+        hmw.serialize(HAZARD_MAP_DATA)
+
+        minimum = min(data[1].get("IML") for data in HAZARD_MAP_DATA)
+        maximum = max(data[1].get("IML") for data in HAZARD_MAP_DATA)
+        # After calling the function under test we see the expected map data.
+        [output] = self.job.output_set
+        self.assertEqual(round_float(minimum), round_float(output.min_value))
+        self.assertEqual(round_float(maximum), round_float(output.max_value))
