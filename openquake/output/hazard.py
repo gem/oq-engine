@@ -581,6 +581,12 @@ class HazardMapDBWriter(object):
         for key, value in iterable:
             self.insert_map_datum(key, value)
 
+        # Update the output record with the minimum/maximum values.
+        self.output.min_value = min(data[1].get("IML") for data in iterable)
+        self.output.max_value = max(data[1].get("IML") for data in iterable)
+        self.session.add(self.output)
+        self.session.commit()
+
         logger.info("< serialize")
 
     def insert_output(self):
