@@ -21,6 +21,8 @@
 Database related unit tests for hazard computations with the hazard engine.
 """
 
+import unittest
+
 from openquake.hazard import opensha
 from openquake.output import hazard as hazard_output
 
