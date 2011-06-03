@@ -540,7 +540,7 @@ class ClassicalMixin(BasePSHAMixin):
                 "%s nodes in hazard map: %s" % (
                 poe, map_mode, len(map_keys), nrml_file))
 
-            xmlwriter = create_hazardmap_writer(self.params, nrml_path)
+            map_writer = create_hazardmap_writer(self.params, nrml_path)
             hm_data = []
 
             for hm_key in map_keys:
@@ -585,7 +585,7 @@ class ClassicalMixin(BasePSHAMixin):
             geotiff_path = os.path.join(output_path, hm_geotiff_name)
 
             self._write_hazard_map_geotiff(geotiff_path, hm_data)
-            xmlwriter.serialize(hm_data)
+            map_writer.serialize(hm_data)
 
             files.append(nrml_path)
             files.append(geotiff_path)

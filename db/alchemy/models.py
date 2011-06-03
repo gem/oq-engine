@@ -197,6 +197,9 @@ class HazardMapData(Base):
             self.id, self.value))
 
 
+ga.GeometryDDL(HazardMapData.__table__)
+
+
 class LossMapData(Base):
     __tablename__ = "loss_map_data"
     __table_args__ = {"schema": "uiapi"}
@@ -211,3 +214,6 @@ class LossMapData(Base):
     def __repr__(self):
         return(":loss_map_data: %s, %s" % (
             self.id, self.value))
+
+
+ga.GeometryDDL(LossMapData.__table__)
