@@ -41,14 +41,37 @@ class CreateHazardmapWriterTestCase(unittest.TestCase):
     def test_create_hazardmap_writer_with_xml2(self):
         """
         A `HazardMapXMLWriter` instance is returned when the
-        SERIALIZE_MAPS_TO_DB setting is set to 'False'.
+        SERIALIZE_MAPS_TO_DB parameter is set to 'False'.
         """
         writer = opensha.create_hazardmap_writer(
             dict(SERIALIZE_MAPS_TO_DB='False'), "/tmp/b.xml")
         self.assertTrue(isinstance(writer, hazard_output.HazardMapXMLWriter))
 
     def test_create_hazardmap_writer_with_db(self):
+        """
+        A `HazardMapDBWriter` instance is returned when the
+        SERIALIZE_MAPS_TO_DB parameter is set to 'True'.
+        """
         writer = opensha.create_hazardmap_writer(
             dict(SERIALIZE_MAPS_TO_DB='True', OPENQUAKE_JOB_ID='11'),
             "/tmp/c.xml")
         self.assertTrue(isinstance(writer, hazard_output.HazardMapDBWriter))
+
+    def test_create_hazardmap_writer_with_db_and_no_job_id(self):
+        """
+        An AssertionError is raised when the SERIALIZE_MAPS_TO_DB parameter is
+        set to 'True'. but the OPENQUAKE_JOB_ID parameter is absent.
+        """
+        config = dict(SERIALIZE_MAPS_TO_DB='True')
+        self.assertRaises(
+            AssertionError, opensha.create_hazardmap_writer, config, "/tmp")
+
+    def test_create_hazardmap_writer_with_db_and_invalid_job_id(self):
+        """
+        An exception is raised when the SERIALIZE_MAPS_TO_DB parameter is
+        set to 'True'. but the OPENQUAKE_JOB_ID parameter could not be
+        converted to an integer
+        """
+        config = dict(SERIALIZE_MAPS_TO_DB='True', OPENQUAKE_JOB_ID="number")
+        self.assertRaises(
+            ValueError, opensha.create_hazardmap_writer, config, "/tmp")
