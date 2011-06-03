@@ -45,9 +45,10 @@ import logging
 from lxml import etree
 
 from db.alchemy.models import HazardMapData, OqJob, Output
+
 from openquake import shapes
 from openquake import writer
-
+from openquake.utils import round_float
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
 
 
@@ -575,14 +576,17 @@ class HazardMapDBWriter(object):
         """
         logger.info("> serialize")
 
+        logger.info("serializing %s points" % len(iterable))
         self.insert_output()
 
         for key, value in iterable:
             self.insert_map_datum(key, value)
 
         # Update the output record with the minimum/maximum values.
-        self.output.min_value = min(data[1].get("IML") for data in iterable)
-        self.output.max_value = max(data[1].get("IML") for data in iterable)
+        self.output.min_value = round_float(min(
+            data[1].get("IML") for data in iterable))
+        self.output.max_value = round_float(max(
+            data[1].get("IML") for data in iterable))
         self.session.add(self.output)
         self.session.commit()
 
@@ -615,10 +619,15 @@ class HazardMapDBWriter(object):
             point = point.site.point
         if isinstance(point, shapes.Site):
             point = point.point
-        datum = HazardMapData(
-            output=self.output, location="POINT(%s %s)" % (point.x, point.y),
-            value=value.get("IML"))
-        self.session.add(datum)
-        self.session.commit()
-        logger.info("datum = [%s, %s], %s" % (point.x, point.y, datum))
+
+        value = value.get("IML")
+        if value is None:
+            logger.warn(
+                "No IML value for position: [%s, %s]" % (point.x, point.y))
+        else:
+            datum = HazardMapData(location="POINT(%s %s)" % (point.x, point.y),
+                                  output=self.output, value=round_float(value))
+            self.session.add(datum)
+            self.session.commit()
+            logger.info("datum = [%s, %s], %s" % (point.x, point.y, datum))
         logger.info("< insert_map_datum")
