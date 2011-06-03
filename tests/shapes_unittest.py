@@ -23,6 +23,7 @@ import re
 import unittest
 
 from openquake import shapes
+from openquake.utils import round_float
 
 
 def coord_list_from_wkt(wkt):
@@ -43,9 +44,9 @@ def coord_list_from_wkt(wkt):
 
 class ShapesTestCase(unittest.TestCase):
 
-    def test_geo_float(self):
+    def test_round_float(self):
         """
-        This test exercises the :py:function:`openquake.shapes.geo_float`
+        This test exercises the :py:function:`openquake.utils.round_float`
         function.
 
         Basically, the function should take any float number and round it to a
@@ -63,28 +64,28 @@ class ShapesTestCase(unittest.TestCase):
         out_values = (29.0, -121.0000001, -121.0, 121.0, 121.0000001)
 
         for i, val in enumerate(in_values):
-            self.assertEqual(out_values[i], shapes.geo_float(in_values[i]))
+            self.assertEqual(out_values[i], round_float(in_values[i]))
 
-    def test_geo_float_rounding(self):
+    def test_round_float_rounding(self):
         """
         By default, the :py:module:`decimal` module uses the 'round-half-even'
         algorithm for rounding numbers.
 
         Since the rounding method can be set in a global context for the
         :py:module:`decimal` module, we want to make sure the
-        :py:function:`openquake.shapes.geo_float` is unaffected context
+        :py:function:`openquake.utils.round_float` is unaffected context
         changes.
         """
         decimal.getcontext().rounding = decimal.ROUND_FLOOR
 
         # changing the decimal context rounding should not affect the behavior
-        # of geo_float
-        self.assertEqual(-121.0000001, shapes.geo_float(-121.00000009))
+        # of round_float
+        self.assertEqual(-121.0000001, round_float(-121.00000009))
 
         # reset the global context so we don't potentially screw up other tests
         decimal.getcontext().rounding = decimal.ROUND_HALF_EVEN
 
-    def test_simple_region_uses_geo_floats(self):
+    def test_simple_region_uses_round_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
         instances of :py:class:`openquake.shapes.Region`.
@@ -111,7 +112,7 @@ class ShapesTestCase(unittest.TestCase):
         self.assertEqual(exp_ul, actual_ul)
         self.assertEqual(exp_lr, actual_lr)
 
-    def test_complex_region_uses_geo_floats(self):
+    def test_complex_region_uses_round_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
         instance of :py:class:`openquake.shapes.Region`.
@@ -139,7 +140,7 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(expected_coord_list, actual_coord_list)
 
-    def test_site_uses_geo_floats(self):
+    def test_site_uses_round_floats(self):
         """
         This test ensures the coordinate precision is properly limited for
         instances of :py:class:`openquake.shapes.Site`.

@@ -25,6 +25,8 @@ import os
 import random
 import numpy
 
+from db.alchemy.db_utils import Session
+
 from openquake import java
 from openquake import kvs
 from openquake import logs
@@ -538,7 +540,7 @@ class ClassicalMixin(BasePSHAMixin):
                 "%s nodes in hazard map: %s" % (
                 poe, map_mode, len(map_keys), nrml_file))
 
-            xmlwriter = hazard_output.HazardMapXMLWriter(nrml_path)
+            map_writer = create_hazardmap_writer(self.params, nrml_path)
             hm_data = []
 
             for hm_key in map_keys:
@@ -583,7 +585,7 @@ class ClassicalMixin(BasePSHAMixin):
             geotiff_path = os.path.join(output_path, hm_geotiff_name)
 
             self._write_hazard_map_geotiff(geotiff_path, hm_data)
-            xmlwriter.serialize(hm_data)
+            map_writer.serialize(hm_data)
 
             files.append(nrml_path)
             files.append(geotiff_path)
@@ -855,6 +857,27 @@ def _collect_map_keys_per_quantile(keys):
             quantile_values[curr_qv] = []
         quantile_values[curr_qv].append(quantile_key)
     return quantile_values
+
+
+def create_hazardmap_writer(params, nrml_path):
+    """Create a hazard map writer observing the settings in the config file.
+
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard map.
+    :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
+        :py:class:`output.hazard.HazardMapDBWriter` instance.
+    """
+    db_flag = params.get("SERIALIZE_MAPS_TO_DB")
+    if not db_flag or db_flag.lower() == "false":
+        return hazard_output.HazardMapXMLWriter(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+        session = Session.get()
+        return hazard_output.HazardMapDBWriter(session, nrml_path, job_db_key)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
