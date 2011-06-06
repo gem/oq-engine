@@ -177,8 +177,7 @@ class KVSTestCase(unittest.TestCase):
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [6.1, 6.2, 6.3]}
-                }
+                    "Values": [6.1, 6.2, 6.3]}}
 
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
@@ -200,8 +199,7 @@ class KVSTestCase(unittest.TestCase):
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label2",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [1.5, 2.5, 3.5]}
-                }
+                    "Values": [1.5, 2.5, 3.5]}}
 
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
