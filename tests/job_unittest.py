@@ -17,8 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import math
 import os
 import unittest
@@ -56,8 +54,8 @@ class JobTestCase(unittest.TestCase):
     def setUp(self):
         self.generated_files = []
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE))
-        self.job_with_includes = Job.from_file(
-                                    helpers.get_data_path(CONFIG_WITH_INCLUDES))
+        self.job_with_includes = \
+            Job.from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
 
         self.generated_files.append(self.job.super_config_path)
         self.generated_files.append(self.job_with_includes.super_config_path)
@@ -96,7 +94,8 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
-        job_with_only_hazard = Job.from_file(helpers.get_data_path(HAZARD_ONLY))
+        job_with_only_hazard = \
+            Job.from_file(helpers.get_data_path(HAZARD_ONLY))
         self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
         FLAGS.include_defaults = True
 
@@ -154,9 +153,11 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        a_job = Job({EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                            EXPOSURE_TEST_FILE),
-                 INPUT_REGION: helpers.get_data_path(REGION_EXPOSURE_TEST_FILE)})
+        args = {
+            EXPOSURE: os.path.join(
+                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
+            INPUT_REGION: helpers.get_data_path(REGION_EXPOSURE_TEST_FILE)}
+        a_job = Job(args)
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
         blocks_keys = a_job.blocks_keys
@@ -167,37 +168,6 @@ class JobTestCase(unittest.TestCase):
 
         self.assertEqual(1, len(blocks_keys))
         self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    @helpers.skipit
-    def test_prepares_blocks_using_the_input_region(self):
-        """ This test might be currently catastrophically retarded. If it is
-        blame Lars.
-        """
-
-        block_path = helpers.get_data_path(BLOCK_SPLIT_TEST_FILE)
-
-        print "In open job"
-        a_job = Job.from_file(block_path)
-        self.generated_files.append(a_job.super_config_path)
-
-        verts = [float(x) for x in a_job.params['REGION_VERTEX'].split(",")]
-        # Flips lon and lat, and builds a list of coord tuples
-        coords = zip(verts[1::2], verts[::2])
-        expected = shapes.RegionConstraint.from_coordinates(coords)
-        expected.cell_size = float(a_job.params['REGION_GRID_SPACING'])
-
-        expected_sites = []
-        for site in expected:
-            print site
-            expected_sites.append(site)
-
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-        print blocks_keys
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(job.Block(expected_sites),
-                         job.Block.from_kvs(blocks_keys[0]))
 
     def test_with_no_partition_we_just_process_a_single_block(self):
         job.SITES_PER_BLOCK = 1

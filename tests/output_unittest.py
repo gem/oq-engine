@@ -18,7 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Tests of the supported GEM output formats.
 Goals of this test suite should be to test valid and invalid input,
@@ -139,8 +138,9 @@ class OutputTestCase(unittest.TestCase):
 
         iml_list = TEST_IML_LIST
 
-        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=iml_list, discrete=True, colormap=geotiff.COLORMAPS['matlab-polar'])
+        gwriter = geotiff.GMFGeoTiffFile(
+            path, asymmetric_region.grid, iml_list=iml_list, discrete=True,
+            colormap=geotiff.COLORMAPS['matlab-polar'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -156,8 +156,9 @@ class OutputTestCase(unittest.TestCase):
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
-        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, discrete=True, colormap=geotiff.COLORMAPS['gmt-seis'])
+        gwriter = geotiff.GMFGeoTiffFile(
+            path, asymmetric_region.grid, iml_list=None, discrete=True,
+            colormap=geotiff.COLORMAPS['gmt-seis'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -174,8 +175,9 @@ class OutputTestCase(unittest.TestCase):
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
-        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, discrete=False, colormap=geotiff.COLORMAPS['gmt-seis'])
+        gwriter = geotiff.GMFGeoTiffFile(
+            path, asymmetric_region.grid, iml_list=None, discrete=False,
+            colormap=geotiff.COLORMAPS['gmt-seis'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -191,8 +193,9 @@ class OutputTestCase(unittest.TestCase):
         asymmetric_region = shapes.Region.from_coordinates(
             TEST_REGION_LARGE_ASYMMETRIC)
 
-        gwriter = geotiff.GMFGeoTiffFile(path, asymmetric_region.grid,
-            iml_list=None, discrete=False, colormap=geotiff.COLORMAPS['gmt-green-red'])
+        gwriter = geotiff.GMFGeoTiffFile(
+            path, asymmetric_region.grid, iml_list=None, discrete=False,
+            colormap=geotiff.COLORMAPS['gmt-green-red'])
 
         reference_raster = numpy.zeros((asymmetric_region.grid.rows,
                                         asymmetric_region.grid.columns),
@@ -470,26 +473,6 @@ class OutputTestCase(unittest.TestCase):
         self._assert_geotiff_metadata_and_raster_is_correct(path,
             asymmetric_region, GEOTIFF_USED_CHANNEL_IDX, reference_raster)
 
-    @helpers.skipit
-    def test_geotiff_output(self):
-        """Generate a geotiff file with a smiley face."""
-        path = helpers.get_data_path("test.1.tiff")
-        switzerland = shapes.Region.from_coordinates(
-            [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
-        image_grid = switzerland.grid
-        gwriter = geotiff.GeoTiffFile(path, image_grid)
-        for xpoint in range(0, 320):
-            for ypoint in range(0, 320):
-                gwriter.write((xpoint, ypoint), int(xpoint * 254 / 320))
-        gwriter.close()
-
-        comp_path = os.path.join(helpers.DATA_DIR, "test.tiff")
-        retval = subprocess.call(["tiffcmp", "-t", path, comp_path],
-            stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        self.assertTrue(retval == 0)
-        # TODO(jmc): Figure out how to validate the geo coordinates as well
-        # TODO(jmc): Use validation that supports tiled geotiffs
-
     def _assert_geotiff_metadata_is_correct(self, path, region):
         """
         Verifies:
@@ -604,8 +587,9 @@ class OutputTestCase(unittest.TestCase):
             (2.13, 0.005))
         for bad in bad_test_data:
             self.assertRaises(
-                (ValueError, AssertionError), geotiff.HazardMapGeoTiffFile, test_file_path,
-                test_region.grid, TEST_COLORMAP, iml_min_max=bad)
+                (ValueError, AssertionError), geotiff.HazardMapGeoTiffFile,
+                test_file_path, test_region.grid, TEST_COLORMAP,
+                iml_min_max=bad)
 
     def test_hazard_map_geotiff_scaling(self):
         """
@@ -622,7 +606,8 @@ class OutputTestCase(unittest.TestCase):
         green_expected = numpy.array([255, 79, 161, 197, 245, 216, 215, 116])
         blue_expected = numpy.array([255, 77, 241, 247, 141, 251, 103, 74])
 
-        red, green, blue = geotiff.rgb_values_from_colormap(TEST_COLORMAP, indices)
+        red, green, blue = geotiff.rgb_values_from_colormap(
+            TEST_COLORMAP, indices)
 
         for expected, actual in (
             (red_expected, red),
@@ -685,7 +670,8 @@ class OutputTestCase(unittest.TestCase):
         expected_output = numpy.array([0.0, 0.0, 0.15625, 0.4375, 1.0])
         fixed_min_max = (0.8, 4.0)
 
-        actual_output = geotiff.condense_to_unity(test_input, min_max=fixed_min_max)
+        actual_output = geotiff.condense_to_unity(
+            test_input, min_max=fixed_min_max)
 
         self._assert_numpy_arrays_almost_equal(expected_output, actual_output)
 
@@ -722,27 +708,33 @@ class OutputTestCase(unittest.TestCase):
                 self.assertAlmostEqual(exp, actual[i], precision)
 
     def test_interpolate_color(self):
-        iml_fractions = numpy.array([[0.0, 0.22988505747126439], [0.55172413793103448, 1.0]])
+        iml_fractions = numpy.array(
+            [[0.0, 0.22988505747126439], [0.55172413793103448, 1.0]])
         colormap = TEST_CONTINUOUS_COLORMAP
 
         expected_red = numpy.array([[0.0, 58.62068966], [140.68965517, 255.0]])
-        expected_green = numpy.array([[255.0, 196.37931034], [114.31034483, 0.0]])
+        expected_green = \
+            numpy.array([[255.0, 196.37931034], [114.31034483, 0.0]])
         expected_blue = numpy.array([[0.0, 0.0], [0.0, 0.0]])
 
         actual_red = geotiff.interpolate_color(iml_fractions, colormap, 'red')
-        actual_green = geotiff.interpolate_color(iml_fractions, colormap, 'green')
-        actual_blue = geotiff.interpolate_color(iml_fractions, colormap, 'blue')
+        actual_green = \
+            geotiff.interpolate_color(iml_fractions, colormap, 'green')
+        actual_blue = \
+            geotiff.interpolate_color(iml_fractions, colormap, 'blue')
 
         self._assert_numpy_arrays_almost_equal(expected_red, actual_red)
         self._assert_numpy_arrays_almost_equal(expected_green, actual_green)
         self._assert_numpy_arrays_almost_equal(expected_blue, actual_blue)
 
     def test_rgb_for_continuous(self):
-        iml_fractions = numpy.array([[0.0, 0.22988505747126439], [0.55172413793103448, 1.0]])
+        iml_fractions = numpy.array(
+            [[0.0, 0.22988505747126439], [0.55172413793103448, 1.0]])
         colormap = TEST_CONTINUOUS_COLORMAP
 
         expected_red = numpy.array([[0.0, 58.62068966], [140.68965517, 255.0]])
-        expected_green = numpy.array([[255.0, 196.37931034], [114.31034483, 0.0]])
+        expected_green = \
+            numpy.array([[255.0, 196.37931034], [114.31034483, 0.0]])
         expected_blue = numpy.array([[0.0, 0.0], [0.0, 0.0]])
 
         actual_red, actual_green, actual_blue = \
@@ -777,7 +769,8 @@ class OutputTestCase(unittest.TestCase):
         iml_list = numpy.array([0.005, 0.007, 0.0098, 0.0137])
         colormap = TEST_CONTINUOUS_COLORMAP
         expected_output = [
-            ('#00ff00', '0.005'), ('#3ac400', '0.007'), ('#8c7200', '0.0098'), ('#ff0000', '0.0137')]
+            ('#00ff00', '0.005'), ('#3ac400', '0.007'), ('#8c7200', '0.0098'),
+            ('#ff0000', '0.0137')]
 
         actual_output = geotiff.continuous_colorscale(colormap, iml_list)
 
@@ -803,13 +796,9 @@ class OutputTestCase(unittest.TestCase):
         green_vals = dataset.GetRasterBand(2).ReadAsArray()
         blue_vals = dataset.GetRasterBand(3).ReadAsArray()
 
-        print "checking red"
         self._assert_numpy_arrays_almost_equal(expected_red, red_vals)
-        print "checking green"
         self._assert_numpy_arrays_almost_equal(expected_green, green_vals)
-        print "checking blue"
         self._assert_numpy_arrays_almost_equal(expected_blue, blue_vals)
-
 
     def test_write_hazard_map_geotiff(self):
         """
@@ -867,7 +856,6 @@ class OutputTestCase(unittest.TestCase):
             self._assert_image_rgb_is_correct(
                 path, exp_red_vals, exp_green_vals, exp_blue_vals)
 
-
         def _test_hazard_map_relative_scaling(region, hm_data):
             path = helpers.get_output_path(
                 'TEST_HAZARD_MAP_relative_scaling.tiff')
@@ -902,7 +890,6 @@ class OutputTestCase(unittest.TestCase):
 
             self._assert_image_rgb_is_correct(
                 path, exp_red_vals, exp_green_vals, exp_blue_vals)
-
 
         # 8x8 px
         small_region_coords = [(0.0, 0.0), (0.5, 0.0), (0.5, 0.5), (0.0, 0.5)]
