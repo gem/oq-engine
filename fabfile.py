@@ -141,7 +141,7 @@ def deploy(git_url="git@github.com:gem/openquake.git",
 
 
 def usage():
-    print "OpenGEM deployment."
+    print "OpenQuake deployment."
     print "To bootstrap run: fab [environment] bootstrap"
     print "To deploy run: fab [environment] deploy"
     print

@@ -51,7 +51,7 @@ from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenGEM configuration file')
+flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configuration file')
 
 flags.DEFINE_boolean('profile', False, 'Run profiler?')
 flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')

@@ -15,7 +15,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-# OpenGEM documentation build configuration file, created by
+# OpenQuake documentation build configuration file, created by
 # sphinx-quickstart on Mon Aug  2 14:01:11 2010.
 #
 # This file is execfile()d with the current directory set to its containing
@@ -184,7 +184,7 @@ html_static_path = ['.static']
 #html_file_suffix = ''
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'OpenGEMdoc'
+htmlhelp_basename = 'OpenQuakedoc'
 
 
 # -- Options for LaTeX output -------------------------------------------------
@@ -199,7 +199,7 @@ htmlhelp_basename = 'OpenGEMdoc'
 # (source start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-  ('index', 'OpenGEM.tex', u'OpenQuake Documentation',
+  ('index', 'OpenQuake.tex', u'OpenQuake Documentation',
    u'GEM Foundation', 'manual'),
 ]
 
