@@ -19,7 +19,7 @@
 
 
 """
-Config for all installed OpenGEM binaries and modules.
+Config for all installed OpenQuake binaries and modules.
 Should be installed by setup.py into /etc/openquake
 eventually.
 """
