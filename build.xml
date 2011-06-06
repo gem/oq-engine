@@ -29,7 +29,7 @@
 	</target>
 
 	<target name="javadoc" description="Build the documentation for the Java classes">
-		<javadoc classpathref="dependencies" packagenames="org.gem.engine.*" sourcepath="${src.dir}" destdir="${javadoc.report.dir}" author="true" version="true" use="true" windowtitle="OpenGEM Java Core API" />
+		<javadoc classpathref="dependencies" packagenames="org.gem.engine.*" sourcepath="${src.dir}" destdir="${javadoc.report.dir}" author="true" version="true" use="true" windowtitle="OpenQuake Java Core API" />
 	</target>
 
 	<target name="compile-sources" depends="clean" description="Compile the Java classes">
