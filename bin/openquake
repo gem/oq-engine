@@ -45,7 +45,7 @@ from openquake.parser import vulnerability
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import opensha
-from openquake.risk import job as riskjob
+from openquake.risk.job import general
 from openquake.risk.job import probabilistic
 from openquake.utils import version as utils_version
 
