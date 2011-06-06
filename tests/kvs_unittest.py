@@ -40,77 +40,15 @@ LOG = logs.LOG
 
 TEST_FILE = "nrml_test_result.xml"
 
-
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
 
-ONE_CURVE_MODEL = """
-{'endBranchLabels': ['label'],
- 'hcRepList': [{'gmLevels': [1.0, 2.0, 3.0],
-                'gridNode': [{'constraintNameMap': {},
-                              'location': {'depth': 0.0,
-                                           'lat': 0.017453292519943295,
-                                           'lon': 0.034906585039886591},
-                              'params': []}],
-                'intensityMeasureType': 'IMT',
-                'probExList': [[0.10000000000000001,
-                                0.20000000000000001,
-                                0.29999999999999999]],
-                'timeSpan': 50.0,
-                'unitsMeas': ''}],
- 'modelName': ''}
-"""
+read_one_line = lambda path: open(path, 'r').readline().strip('\n')
 
-MULTIPLE_CURVES_ONE_BRANCH = """
-{'endBranchLabels': ['label'],
- 'hcRepList': [{'gmLevels': [1.0, 2.0, 3.0],
-                'gridNode': [{'constraintNameMap': {},
-                              'location': {'depth': 0.0,
-                                           'lat': 0.017453292519943295,
-                                           'lon': 0.034906585039886591},
-                              'params': []},
-                             {'constraintNameMap': {},
-                              'location': {'depth': 0.0,
-                                           'lat': 0.069813170079773182,
-                                           'lon': 0.069813170079773182},
-                              'params': []}],
-                'intensityMeasureType': 'PGA',
-                'probExList': [[5.0999999999999996,
-                                5.2000000000000002,
-                                5.2999999999999998],
-                               [6.0999999999999996,
-                                6.2000000000000002,
-                                6.2999999999999998]],
-                'timeSpan': 50.0,
-                'unitsMeas': ''}],
- 'modelName': ''}
-"""
-
-MULTIPLE_CURVES_MULTIPLE_BRANCHES = """
-{'endBranchLabels': ['label1', 'label2'],
- 'hcRepList': [{'gmLevels': [1.0, 2.0, 3.0],
-                'gridNode': [{'constraintNameMap': {},
-                              'location': {'depth': 0.0,
-                                           'lat': 0.069813170079773182,
-                                           'lon': 0.069813170079773182},
-                              'params': []}],
-                'intensityMeasureType': 'PGA',
-                'probExList': [[1.8,
-                                2.7999999999999998,
-                                3.7999999999999998]],
-                'timeSpan': 50.0,
-                'unitsMeas': ''},
-               {'gmLevels': [1.0, 2.0, 3.0],
-                'gridNode': [{'constraintNameMap': {},
-                              'location': {'depth': 0.0,
-                                           'lat': 0.017453292519943295,
-                                           'lon': 0.069813170079773182},
-                              'params': []}],
-                'intensityMeasureType': 'PGA',
-                'probExList': [[1.5, 2.5, 3.5]],
-                'timeSpan': 50.0,
-                'unitsMeas': ''}],
- 'modelName': ''}
-"""
+ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
+MULTIPLE_CURVES_ONE_BRANCH = \
+    read_one_line(helpers.get_data_path('multi-curves-one-branch.json'))
+MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
+    read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
 
 
 class KVSTestCase(unittest.TestCase):

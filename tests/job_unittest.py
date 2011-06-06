@@ -37,10 +37,6 @@ CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
-TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
-TEST_JOB_FILE_CLASSICAL = helpers.smoketest_file(
-                            'classical_psha_simple/classical-psha-config.gem')
-
 SITE = shapes.Site(1.0, 1.0)
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
@@ -106,10 +102,6 @@ class JobTestCase(unittest.TestCase):
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
-    def test_classical_psha_based_job(self):
-        job = Job.from_file(TEST_JOB_FILE_CLASSICAL)
-        self.assertTrue(job.launch())
-
     def test_classical_psha_based_job_mixes_in_properly(self):
         with Mixin(self.job, RiskJobMixin, key="risk"):
             self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
@@ -127,10 +119,6 @@ class JobTestCase(unittest.TestCase):
         with Mixin(self.job, ProbabilisticEventMixin):
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
-
-    def test_job_runs_with_a_good_config(self):
-        job = Job.from_file(TEST_JOB_FILE)
-        self.assertTrue(job.launch())
 
     def test_a_job_has_an_identifier(self):
         self.assertEqual(1, Job({}, 1).id)
