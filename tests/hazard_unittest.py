@@ -404,21 +404,6 @@ class HazardEngineTestCase(unittest.TestCase):
 
         self.assertEqual(result_values, expected_values)
 
-    @helpers.skipit
-    def test_compute_hazard_curve_all_sites(self):
-        results = []
-        block_id = 8801
-        for job_id in TASK_JOBID_SIMPLE:
-            self._prepopulate_sites_for_block(job_id, block_id)
-            results.append(tasks.compute_hazard_curve.apply_async(
-                args=[job_id, block_id]))
-
-        helpers.wait_for_celery_tasks(results)
-
-        for result in results:
-            for res in result.get():
-                self.assertEqual(res, ONE_CURVE_MODEL)
-
     def test_compute_mgm_intensity(self):
         results = []
         block_id = 8801

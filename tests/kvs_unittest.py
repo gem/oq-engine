@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import os
 import time
 import unittest
@@ -42,11 +40,16 @@ LOG = logs.LOG
 
 TEST_FILE = "nrml_test_result.xml"
 
-
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
-ONE_CURVE_MODEL = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[0.1,0.2,0.3]],"unitsMeas":"","intensityMeasureType":"IMT","timeSpan":50.0}],"endBranchLabels":["label"]}'
-MULTIPLE_CURVES_ONE_BRANCH = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.03490658503988659,"depth":0.0},"params":[],"constraintNameMap":{}},{"location":{"lat":0.06981317007977318,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[5.1,5.2,5.3],[6.1,6.2,6.3]],"unitsMeas":"","intensityMeasureType":"PGA","timeSpan":50.0}],"endBranchLabels":["label"]}'
-MULTIPLE_CURVES_MULTIPLE_BRANCHES = '{"modelName":"","hcRepList":[{"gridNode":[{"location":{"lat":0.06981317007977318,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[1.8,2.8,3.8]],"unitsMeas":"","intensityMeasureType":"PGA","timeSpan":50.0},{"gridNode":[{"location":{"lat":0.017453292519943295,"lon":0.06981317007977318,"depth":0.0},"params":[],"constraintNameMap":{}}],"gmLevels":[1.0,2.0,3.0],"probExList":[[1.5,2.5,3.5]],"unitsMeas":"","intensityMeasureType":"PGA","timeSpan":50.0}],"endBranchLabels":["label1","label2"]}'
+
+read_one_line = lambda path: open(path, 'r').readline().strip('\n')
+
+ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
+MULTIPLE_CURVES_ONE_BRANCH = \
+    read_one_line(helpers.get_data_path('multi-curves-one-branch.json'))
+MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
+    read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
+
 
 class KVSTestCase(unittest.TestCase):
 
@@ -71,7 +74,7 @@ class KVSTestCase(unittest.TestCase):
         try:
             os.remove(os.path.join(helpers.DATA_DIR, TEST_FILE))
         except OSError:
-             pass
+            pass
 
     def test_can_wrap_the_java_client(self):
         self.java_client.set("KEY", "VALUE")
@@ -152,7 +155,7 @@ class KVSTestCase(unittest.TestCase):
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [0.1,0.2,0.3]}}
+                    "Values": [0.1, 0.2, 0.3]}}
 
         self.assertEqual(1, len(nrmls.items()))
         self.assertEquals(data, nrmls)
@@ -167,15 +170,14 @@ class KVSTestCase(unittest.TestCase):
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [5.1,5.2,5.3]},
+                    "Values": [5.1, 5.2, 5.3]},
                 shapes.Site(4.0, 4.0): {
                     "IMT": "PGA",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [6.1,6.2,6.3]}
-                }
+                    "Values": [6.1, 6.2, 6.3]}}
 
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
@@ -190,72 +192,24 @@ class KVSTestCase(unittest.TestCase):
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label1",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [1.8,2.8,3.8]},
+                    "Values": [1.8, 2.8, 3.8]},
                 shapes.Site(4.0, 1.0): {
                     "IMT": "PGA",
                     "IDmodel": "FIXED",
                     "timeSpanDuration": 50.0,
                     "endBranchLabel": "label2",
                     "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [1.5,2.5,3.5]}
-                }
-
-        print "data: %s" % data
-        print nrmls
+                    "Values": [1.5, 2.5, 3.5]}}
 
         self.assertEqual(2, len(nrmls.items()))
         self.assertEquals(data, nrmls)
-
-    @helpers.skipit
-    def test_end_to_end_from_kvs_to_nrml(self):
-        # storing in kvs from java side
-        self.java_client.set("KEY", ONE_CURVE_MODEL)
-
-        time.sleep(0.3)
-
-        # reading in python side
-        nrmls = self.reader.for_nrml("KEY")
-
-        LOG.debug("Nrmls are %s", nrmls)
-
-        # writing result
-        writer = hazard_output.HazardCurveXMLWriter(
-                os.path.join(helpers.DATA_DIR, TEST_FILE))
-
-        writer.serialize(nrmls)
-
-        # reading and checking
-        constraint = shapes.RegionConstraint.from_simple(
-                (1.5, 1.5), (2.5, 0.5))
-
-        reader = hazard_parser.NrmlFile(
-                os.path.join(helpers.DATA_DIR, TEST_FILE))
-
-        number_of_curves = 0
-
-        data = {shapes.Site(2.0, 1.0): {
-            "IMT": "PGA",
-            "IDmodel": "FIXED",
-            "timeSpanDuration": 50.0,
-            "endBranchLabel": "label",
-            "IMLValues": [1.0, 2.0, 3.0],
-            "Values": [0.1,0.2,0.3]}}
-
-        for nrml_point, nrml_values in reader.filter(constraint):
-            number_of_curves += 1
-
-            self.assertTrue(nrml_point in data.keys())
-            for key, val in nrml_values.items():
-                self.assertEqual(val, data.values()[0][key])
-
-        self.assertEqual(1, number_of_curves)
 
 
 class IdentifierTestCase(unittest.TestCase):
     def setUp(self):
         self.job_id = 123456
         self.product = "TestProduct"
-        self.block_id = 8801 # This is just an interesting number
+        self.block_id = 8801
         self.site = "Testville,TestLand"
 
     def test_generate_product_key_with_only_job_id_and_product(self):
@@ -265,21 +219,22 @@ class IdentifierTestCase(unittest.TestCase):
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_job_id_product_and_block_id(self):
-        key = kvs.generate_product_key(self.job_id, self.product, self.block_id)
+        key = kvs.generate_product_key(
+            self.job_id, self.product, self.block_id)
 
-        ev =  "%s!%s!%s!" % (self.job_id, self.product, self.block_id)
+        ev = "%s!%s!%s!" % (self.job_id, self.product, self.block_id)
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_job_id_product_and_site(self):
         key = kvs.generate_product_key(self.job_id, self.product,
             site=self.site)
 
-        ev =  "%s!%s!!%s" % (self.job_id, self.product, self.site)
+        ev = "%s!%s!!%s" % (self.job_id, self.product, self.site)
         self.assertEqual(key, ev)
 
     def test_generate_product_key_with_all_test_data(self):
-        key = kvs.generate_product_key(self.job_id, self.product, self.block_id,
-            self.site)
+        key = kvs.generate_product_key(
+            self.job_id, self.product, self.block_id, self.site)
 
         ev = "%s!%s!%s!%s" % (
                 self.job_id, self.product, self.block_id, self.site)
