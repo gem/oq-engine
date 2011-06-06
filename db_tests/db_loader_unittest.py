@@ -103,6 +103,13 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
 
 class CsvModelLoaderDBTestCase(unittest.TestCase):
 
+    def setUp(self):
+        csv_file = "ISC_sampledata1.csv"
+        self.csv_path = helpers.get_data_path(csv_file)
+        self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
+        self.db_loader._read_model()
+        self.csv_reader = self.db_loader.csv_reader
+
     def test_csv_to_db_loader_end_to_end(self):
         """
             * Serializes the csv into the database
