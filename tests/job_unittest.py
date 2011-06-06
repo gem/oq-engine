@@ -30,7 +30,7 @@ from openquake import job
 from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
 from openquake.job.mixins import Mixin
-from openquake.risk.job import RiskJobMixin
+from openquake.risk.job.general import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
