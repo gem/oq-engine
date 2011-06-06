@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import os
 import unittest
 
@@ -43,6 +41,7 @@ FAIL_EXAMPLE_DIR = os.path.join(EXAMPLE_DIR, 'failures')
 TEST_FILE = os.path.join(EXAMPLE_DIR,
                          'hazard-curves.xml')
 
+
 class NrmlFileTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -54,14 +53,6 @@ class NrmlFileTestCase(unittest.TestCase):
                 FAIL_EXAMPLE_DIR, testfile))
 
             self.assertRaises(ValueError, map, None, nrml_element)
-
-    @helpers.skipit
-    # Not yet implemented
-    def test_nrml_files_hazardmap_not_implemented(self):
-        nrml_element = hazard_parser.NrmlFile(os.path.join(EXAMPLE_DIR,
-            FILE_FLAVOUR_NOT_IMPLEMENTED))
-
-        self.assertRaises(NotImplementedError, map, None, nrml_element)
 
     def test_filter_region_constraint_known_to_fail(self):
         # set region in which no site is found in input file
@@ -86,15 +77,16 @@ class NrmlFileTestCase(unittest.TestCase):
         # (lon=16.35/lat=48.25)
         region_constraint = shapes.RegionConstraint.from_simple(
             (-123.0, 38.0), (-122.0, 37.0))
-        expected_result = [(shapes.Point(-122.5, 37.5),
-                           {'IMT': 'PGA',
-                            'IDmodel': 'PGA_1_1',
-                            'investigationTimeSpan': 50.0,
-                            'endBranchLabel': '1_1',
-                            'saDamping': 0.2,
-                            'saPeriod': 0.1,
-                            'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
-                            'PoEValues': [9.8728e-01, 9.8266e-01, 9.4957e-01]})]
+        expected_result = [
+            (shapes.Point(-122.5, 37.5),
+            {'IMT': 'PGA',
+             'IDmodel': 'PGA_1_1',
+             'investigationTimeSpan': 50.0,
+             'endBranchLabel': '1_1',
+             'saDamping': 0.2,
+             'saPeriod': 0.1,
+             'IMLValues': [5.0000e-03, 7.0000e-03, 1.3700e-02],
+             'PoEValues': [9.8728e-01, 9.8266e-01, 9.4957e-01]})]
 
         counter = None
         for counter, (nrml_point, nrml_attr) in enumerate(
@@ -117,9 +109,9 @@ class NrmlFileTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, len(expected_result)-1,
+        self.assertEqual(counter, len(expected_result) - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                counter+1, len(expected_result)))
+                counter + 1, len(expected_result)))
 
     def test_filter_region_constraint_all_sites(self):
 
@@ -142,12 +134,9 @@ class NrmlFileTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertEqual(counter, expected_result_counter-1,
+        self.assertEqual(counter, expected_result_counter - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                counter+1, expected_result_counter))
-
-    def test_reads_from_different_branch_labels(self):
-        pass
+                counter + 1, expected_result_counter))
 
     def test_filter_attribute_constraint(self):
         """ This test uses the attribute constraint filter to select items
@@ -207,11 +196,12 @@ class NrmlFileTestCase(unittest.TestCase):
                        'IMLValues': [0.0001, 0.0002, 0.0003],
                        'PoEValues': [9.2e-01, 9.15e-01, 9.05e-01]})]
 
-        expected_results = [ # one list of results for each test_filter
-                            nrml_data,
-                            [],
-                            [nrml_data[2], nrml_data[3]],
-                            [nrml_data[3]]]
+        # one list of results for each test_filter
+        expected_results = [
+            nrml_data,
+            [],
+            [nrml_data[2], nrml_data[3]],
+            [nrml_data[3]]]
 
         # set a region constraint that inlcudes all points
         region_constraint = shapes.RegionConstraint.from_simple(
@@ -289,5 +279,4 @@ class GMFReaderTestCase(unittest.TestCase):
             self.assertEqual(expected_gm, ground_motion)
 
         # verify that we have the correct number of results
-        self.assertEqual(len(expected_output), counter+1)
-
+        self.assertEqual(len(expected_output), counter + 1)
