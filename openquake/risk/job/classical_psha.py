@@ -25,12 +25,11 @@ from celery.exceptions import TimeoutError
 
 from openquake.parser import vulnerability
 from openquake.shapes import Curve
-from openquake.risk import job as risk_job
+from openquake.risk.job import general
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake.risk.common import  compute_loss_curve
 from openquake import kvs
 from openquake import logs
-from openquake.risk.job import preload, output, RiskJobMixin
 from math import exp
 LOGGER = logs.LOG
 
@@ -38,15 +37,15 @@ LOGGER = logs.LOG
 class ClassicalPSHABasedMixin:
     """Mixin for Classical PSHA Based Risk Job"""
 
-    @preload
-    @output
+    @general.preload
+    @general.output
     def execute(self):
         """ execute -- general mixin entry point """
         celery_tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            celery_tasks.append(risk_job.compute_risk.delay(self.id, block_id))
+            celery_tasks.append(general.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs).
@@ -100,7 +99,7 @@ class ClassicalPSHABasedMixin:
         Computes the loss ratio and store it in kvs to provide
         data to the @output decorator which does the serialization
         in the RiskJobMixin, more details inside
-        openquake.risk.job.RiskJobMixin -- for details see
+        openquake.risk.job.general.RiskJobMixin -- for details see
         RiskJobMixin._write_output_for_block and the output decorator
 
         :param point: the point of the grid we want to compute
@@ -156,4 +155,4 @@ class ClassicalPSHABasedMixin:
 
         return loss_ratio_curve
 
-RiskJobMixin.register("Classical PSHA", ClassicalPSHABasedMixin)
+general.RiskJobMixin.register("Classical PSHA", ClassicalPSHABasedMixin)
