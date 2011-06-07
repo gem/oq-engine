@@ -137,7 +137,7 @@ HAZARD_MAP_CPT = seminf-haxby.cpt
 
 [RISK]
 
-RISK_CALCULATION_MODE = Event Based
+RISK_CALCULATION_MODE = Classical
 
 # file containing the exposure in nrml format
 EXPOSURE = small_exposure.xml
