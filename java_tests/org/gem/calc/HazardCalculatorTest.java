@@ -2,12 +2,14 @@ package org.gem.calc;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
@@ -289,6 +291,25 @@ public class HazardCalculatorTest {
                 HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
                         groundMotionFields);
         assertNotNull("jsonString is expected to not to be null", jsonString);
+
+        Locale currentDefault = Locale.getDefault();
+
+        try {
+            // test all locales
+            for (Locale l : Locale.getAvailableLocales())
+            {
+                Locale.setDefault(l);
+
+                String jsonStringL =
+                        HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
+                            groundMotionFields);
+
+                assertEquals("gmfToJson is locale-independent for locale " + l.toString(), jsonString, jsonStringL);
+            }
+        }
+        finally {
+            Locale.setDefault(currentDefault);
+        }
     }
 
     @Test
