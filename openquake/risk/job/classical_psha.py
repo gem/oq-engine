@@ -155,4 +155,4 @@ class ClassicalPSHABasedMixin:
 
         return loss_ratio_curve
 
-general.RiskJobMixin.register("Classical PSHA", ClassicalPSHABasedMixin)
+general.RiskJobMixin.register("Classical", ClassicalPSHABasedMixin)

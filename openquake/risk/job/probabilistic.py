@@ -243,4 +243,4 @@ class ProbabilisticEventMixin:
         return loss_curve
 
 
-general.RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
+general.RiskJobMixin.register("Event Based", ProbabilisticEventMixin)
