@@ -2,7 +2,7 @@
 
 [RISK]
 
-RISK_CALCULATION_MODE = Probabilistic Event
+RISK_CALCULATION_MODE = Event Based
 
 # file containing the exposure in nrml format
 EXPOSURE = exposure.xml
