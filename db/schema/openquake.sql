@@ -624,17 +624,20 @@ SELECT AddGeometryColumn('uiapi', 'oq_params', 'region', 4326, 'POLYGON', 2);
 ALTER TABLE uiapi.oq_params ALTER COLUMN region SET NOT NULL;
 
 
--- A single OpenQuake calculation engine output file.
+-- A single OpenQuake calculation engine output. The data may reside in a file
+-- or in the database.
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     oq_job_id INTEGER NOT NULL,
-    -- The full path of the output file on the server
-    path VARCHAR NOT NULL UNIQUE,
-    -- Whether the data for this OpenQuake artefact actually resides in the
-    -- database or not.
+    -- The full path of the output file on the server, optional and only set
+    -- for outputs with NRML/XML files.
+    path VARCHAR UNIQUE,
+    -- The GUI display name to be used for this output.
+    display_name VARCHAR NOT NULL,
+    -- True if the output's data resides in the database and not in a file.
     db_backed boolean NOT NULL DEFAULT FALSE,
-    -- Output file type, one of:
+    -- Output type, one of:
     --      hazard_curve
     --      hazard_map
     --      loss_curve
@@ -644,7 +647,8 @@ CREATE TABLE uiapi.output (
             'loss_curve', 'loss_map')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
-    -- The full path of the shapefile generated for a hazard or loss map.
+    -- The full path of the shapefile generated for a hazard or loss map
+    -- (optional).
     shapefile_path VARCHAR,
     -- The min/max value is only needed for hazard/loss maps (for the
     -- generation of the relative color scale)
