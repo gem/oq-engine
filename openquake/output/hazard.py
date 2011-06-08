@@ -599,7 +599,7 @@ class HazardMapDBWriter(object):
         logger.info("> insert_output")
         job = self.session.query(OqJob).filter(
             OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job, path=self.nrml_path,
+        self.output = Output(owner=job.owner, oq_job=job,
                              display_name=basename(self.nrml_path),
                              output_type="hazard_map", db_backed=True)
         self.session.add(self.output)
