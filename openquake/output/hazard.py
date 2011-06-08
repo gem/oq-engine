@@ -43,6 +43,7 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 
 import logging
 from lxml import etree
+from os.path import basename
 
 from db.alchemy.models import HazardMapData, OqJob, Output
 
@@ -598,6 +599,7 @@ class HazardMapDBWriter(object):
         logger.info("> insert_output")
         job = self.session.query(OqJob).filter(OqJob.id==self.oq_job_id).one()
         self.output = Output(owner=job.owner, oq_job=job, path=self.nrml_path,
+                             display_name=basename(self.nrml_path),
                              output_type="hazard_map", db_backed=True)
         self.session.add(self.output)
         self.session.commit()
