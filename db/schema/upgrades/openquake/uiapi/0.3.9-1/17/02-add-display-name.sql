@@ -17,4 +17,6 @@
 */
 
 
-ALTER TABLE uiapi.output ADD COLUMN display_name VARCHAR NOT NULL;
+ALTER TABLE uiapi.output ADD COLUMN display_name VARCHAR;
+UPDATE uiapi.output SET display_name = substring(path, '[^/]*$');
+ALTER TABLE uiapi.output ALTER COLUMN display_name SET NOT NULL;
