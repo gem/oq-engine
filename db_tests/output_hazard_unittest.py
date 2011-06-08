@@ -20,6 +20,7 @@
 
 import unittest
 
+from os.path import basename
 from db.alchemy.db_utils import Session
 from openquake.output.hazard import HazardMapDBWriter
 from openquake.shapes import Site
@@ -80,6 +81,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.job = self.setup_classic_job()
         session = Session.get()
         output_path = self.generate_output_path(self.job)
+        display_name = basename(output_path)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
         # This job has no outputs before calling the function under test.
@@ -95,6 +97,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
         self.assertEqual(output_path, output.path)
+        self.assertEqual(display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
         self.assertIs(self.job, output.oq_job)
 
