@@ -182,8 +182,8 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
     def test_get_with_no_session_for_user(self):
         """
-        get() will call _init_session() if this is the first time a session is
-        requested for the given database user.
+        get() will call _init_session() if this is the first time a session
+        is requested for the given database user.
         """
         sc = SessionCache()
         expected_session = object()
@@ -217,6 +217,72 @@ class SessionCacheGetTestCase(unittest.TestCase):
         (user, passwd), kwargs = mock_method.call_args
         self.assertEqual("usr1", user)
         self.assertEqual("", passwd)
+
+        # Restore the original _init_session() method.
+        sc._init_session = original_method
+
+    def test_get_with_cached_session(self):
+        """
+        get() will not call _init_session() if the session for the
+        given database user is in the cache already.
+        """
+        sc = SessionCache()
+        expected_session = object()
+        sc.__sessions__["usr2"] = expected_session
+
+        # Prepare mock.
+        mock_method = mock.Mock()
+
+        # Save the original _init_session() method.
+        original_method = sc._init_session
+
+        # Replace the original mathod with the mock.
+        sc._init_session = mock_method
+
+        # We do have a session in the cache for the user at hand.
+        self.assertTrue(sc.__sessions__.get("usr2") is expected_session)
+
+        # The actual method under test is called.
+        self.assertTrue(sc.get("usr2", "") is expected_session)
+
+        # The method under test did *not* call the mock.
+        self.assertEqual(0, mock_method.call_count)
+
+        # Restore the original _init_session() method.
+        sc._init_session = original_method
+
+    def test_get_with_no_session_and_init_failure(self):
+        """
+        get() will call _init_session() if the session for the given
+        database user is not in the cache already.
+        When _init_session() fails to add a session to the cache an
+        `AssertionError` is raised.
+        """
+        sc = SessionCache()
+
+        # Prepare mock.
+        mock_method = mock.Mock()
+
+        # Save the original _init_session() method.
+        original_method = sc._init_session
+
+        # Replace the original mathod with the mock.
+        sc._init_session = mock_method
+
+        # We do not have a session in the cache for the user at hand.
+        self.assertTrue(sc.__sessions__.get("usr3") is None)
+
+        # The _init_session() mock will get called but fail to add a session to
+        # the cache,
+        self.assertRaises(AssertionError, sc.get, "usr3", "")
+
+        # The method under test did call the mock..
+        self.assertEqual(1, mock_method.call_count)
+        (user, passwd), kwargs = mock_method.call_args
+        self.assertEqual("usr3", user)
+        self.assertEqual("", passwd)
+        # ..but no session was added to the cache.
+        self.assertTrue(sc.__sessions__.get("usr3") is None)
 
         # Restore the original _init_session() method.
         sc._init_session = original_method
