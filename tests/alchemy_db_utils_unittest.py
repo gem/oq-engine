@@ -30,7 +30,7 @@ import unittest
 from db.alchemy.db_utils import SessionCache
 
 
-class InitSessionTestCase(unittest.TestCase):
+class SessionCacheInitSessionTestCase(unittest.TestCase):
     """Tests the behaviour of alchemy.db_utils.SessionCache.init_session()."""
 
     def tearDown(self):
@@ -65,9 +65,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr1", "")
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr1:@localhost/abc123',), args)
+                    'postgresql+psycopg2://usr1:@localhost/abc123', arg)
                 self.assertEqual({}, kwargs)
         del os.environ["OQ_ENGINE_DB_NAME"]
 
@@ -81,9 +81,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr2", "")
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr2:@localhost/geonode',), args)
+                    'postgresql+psycopg2://usr2:@localhost/geonode', arg)
                 self.assertEqual({}, kwargs)
 
     def test_init_session_with_oq_engine_db_host(self):
@@ -96,9 +96,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr3", "")
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr3:@bcd234/geonode',), args)
+                    'postgresql+psycopg2://usr3:@bcd234/geonode', arg)
                 self.assertEqual({}, kwargs)
         del os.environ["OQ_ENGINE_DB_HOST"]
 
@@ -112,9 +112,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr4", "")
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr4:@localhost/geonode',), args)
+                    'postgresql+psycopg2://usr4:@localhost/geonode', arg)
                 self.assertEqual({}, kwargs)
 
     def test_init_session_with_none_password(self):
@@ -126,9 +126,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr5", None)
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr5:@localhost/geonode',), args)
+                    'postgresql+psycopg2://usr5:@localhost/geonode', arg)
                 self.assertEqual({}, kwargs)
 
     def test_init_session_with_empty_password(self):
@@ -140,9 +140,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr6", "")
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr6:@localhost/geonode',), args)
+                    'postgresql+psycopg2://usr6:@localhost/geonode', arg)
                 self.assertEqual({}, kwargs)
 
     def test_init_session_with_non_empty_password(self):
@@ -154,10 +154,9 @@ class InitSessionTestCase(unittest.TestCase):
                 sm_mock.return_value = object
                 SessionCache()._init_session("usr7", "s3cr3t")
                 self.assertEqual(1, ce_mock.call_count)
-                args, kwargs = ce_mock.call_args
+                (arg,), kwargs = ce_mock.call_args
                 self.assertEqual(
-                    ('postgresql+psycopg2://usr7:s3cr3t@localhost/geonode',),
-                    args)
+                    'postgresql+psycopg2://usr7:s3cr3t@localhost/geonode', arg)
                 self.assertEqual({}, kwargs)
 
     def test_init_session_updates_internal_dict(self):
@@ -173,3 +172,37 @@ class InitSessionTestCase(unittest.TestCase):
                 self.assertTrue(sc.__sessions__.get("usr8") is None)
                 sc._init_session("usr8", "t0ps3cr3t")
                 self.assertEqual(session, sc.__sessions__.get("usr8"))
+
+
+class SessionCacheGetTestCase(unittest.TestCase):
+    """Tests the behaviour of alchemy.db_utils.SessionCache.get()."""
+
+    def tearDown(self):
+        SessionCache().__sessions__.clear()
+
+    def test_get_with_no_session_for_user(self):
+        """
+        get() will call _init_session() if this is the first time a session is
+        requested for the given database user.
+        """
+        sc = SessionCache()
+        expected_session = object()
+
+        def fake_init_session(user, password):
+            """
+            This will merely set the session for the given user to
+            `expected_session`.
+            """
+            sc.__sessions__[user] = expected_session
+
+        original_method = sc._init_session
+        mock_method = mock.Mock()
+        mock_method.side_effect = fake_init_session
+        sc._init_session = mock_method
+
+        self.assertEqual(expected_session, sc.get("usr1", ""))
+        self.assertEqual(1, mock_method.call_count)
+        (user, passwd), kwargs = mock_method.call_args
+        self.assertEqual("usr1", user)
+        self.assertEqual("", passwd)
+        sc._init_session = original_method
