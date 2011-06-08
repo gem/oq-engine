@@ -54,8 +54,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         sc = SessionCache()
         sc.__sessions__["oq_uiapi_writer"] = object()
-        self.assertRaises(
-            AssertionError, SessionCache()._init_session, "oq_uiapi_writer", "")
+        self.assertRaises(AssertionError, SessionCache()._init_session,
+                          "oq_uiapi_writer", "")
 
     def test_init_session_with_oq_engine_db_name(self):
         """
