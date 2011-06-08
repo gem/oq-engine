@@ -1,6 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
-
     Copyright (c) 2010-2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
@@ -19,10 +17,14 @@
 */
 
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 1);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 6);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 17);
+COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
+COMMENT ON COLUMN uiapi.output.db_backed IS 'True if the output''s data resides in the database and not in a file.';
+COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
+COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server (optional).';
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
+    - unknown
+    - hazard_curve
+    - hazard_map
+    - loss_curve
+    - loss_map';
+COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
