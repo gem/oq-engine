@@ -147,9 +147,7 @@ class DbTestMixin(TestMixin):
         job = job_to_use if job_to_use else self.setup_classic_job()
         output = Output(owner=job.owner, oq_job=job, output_type=output_type,
                         db_backed=db_backed)
-        output.path = self.touch(
-            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
-            prefix="hzrd." if output_type == "hazard_map" else "loss.")
+        output.path = self.generate_output_path(job, output_type)
         session = Session.get()
         session.add(output)
         session.commit()
