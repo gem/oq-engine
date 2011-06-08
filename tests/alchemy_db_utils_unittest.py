@@ -27,7 +27,9 @@ import mock
 import os
 import unittest
 
-from db.alchemy.db_utils import SessionCache
+from db.alchemy.db_utils import (
+    SessionCache, get_eqcat_writer_session, get_pshai_writer_session,
+    get_uiapi_writer_session)
 
 
 class SessionCacheInitSessionTestCase(unittest.TestCase):
@@ -177,8 +179,14 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
 class SessionCacheGetTestCase(unittest.TestCase):
     """Tests the behaviour of alchemy.db_utils.SessionCache.get()."""
 
+    def setUp(self):
+        # Save the original _init_session() method.
+        self.original_method = SessionCache()._init_session
+
     def tearDown(self):
         SessionCache().__sessions__.clear()
+        # Restore the original _init_session() method.
+        SessionCache()._init_session = self.original_method
 
     def test_get_with_no_session_for_user(self):
         """
@@ -199,9 +207,6 @@ class SessionCacheGetTestCase(unittest.TestCase):
         mock_method = mock.Mock()
         mock_method.side_effect = fake_init_session
 
-        # Save the original _init_session() method.
-        original_method = sc._init_session
-
         # Replace the original mathod with the mock.
         sc._init_session = mock_method
 
@@ -218,9 +223,6 @@ class SessionCacheGetTestCase(unittest.TestCase):
         self.assertEqual("usr1", user)
         self.assertEqual("", passwd)
 
-        # Restore the original _init_session() method.
-        sc._init_session = original_method
-
     def test_get_with_cached_session(self):
         """
         get() will not call _init_session() if the session for the
@@ -232,9 +234,6 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
         # Prepare mock.
         mock_method = mock.Mock()
-
-        # Save the original _init_session() method.
-        original_method = sc._init_session
 
         # Replace the original mathod with the mock.
         sc._init_session = mock_method
@@ -248,9 +247,6 @@ class SessionCacheGetTestCase(unittest.TestCase):
         # The method under test did *not* call the mock.
         self.assertEqual(0, mock_method.call_count)
 
-        # Restore the original _init_session() method.
-        sc._init_session = original_method
-
     def test_get_with_no_session_and_init_failure(self):
         """
         get() will call _init_session() if the session for the given
@@ -262,9 +258,6 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
         # Prepare mock.
         mock_method = mock.Mock()
-
-        # Save the original _init_session() method.
-        original_method = sc._init_session
 
         # Replace the original mathod with the mock.
         sc._init_session = mock_method
@@ -284,5 +277,173 @@ class SessionCacheGetTestCase(unittest.TestCase):
         # ..but no session was added to the cache.
         self.assertTrue(sc.__sessions__.get("usr3") is None)
 
-        # Restore the original _init_session() method.
-        sc._init_session = original_method
+
+class GetEqcatWriterSessionTestCase(unittest.TestCase):
+    """Tests the behaviour of alchemy.db_utils.get_eqcat_writer_session()."""
+
+    def setUp(self):
+        # Save the original get() method.
+        self.original_method = SessionCache().get
+        # Prepare mock.
+        self.expected_session = object()
+        self.mock_method = mock.Mock()
+        self.mock_method.return_value = self.expected_session
+        SessionCache().get = self.mock_method
+
+    def tearDown(self):
+        # Restore the original get() method.
+        SessionCache().get = self.original_method
+
+    def test_get_eqcat_writer_session_with_no_env(self):
+        """
+        An `AssertionError` is raised if the `OQ_DB_EQCAT_WRITER` environment
+        variable is not set.
+        """
+        if os.environ.get("OQ_DB_EQCAT_WRITER"):
+            del os.environ["OQ_DB_EQCAT_WRITER"]
+        self.assertRaises(AssertionError, get_eqcat_writer_session)
+
+    def test_get_eqcat_writer_session(self):
+        """
+        SessionCache.get() is called with the appropriate environment
+        variables.
+        """
+        self.assertRaises(AssertionError, get_eqcat_writer_session)
+        os.environ["OQ_DB_EQCAT_WRITER"] = "usr1"
+        os.environ["OQ_DB_EQCAT_WRITER_PWD"] = "pwd1"
+
+        session = get_eqcat_writer_session()
+        self.assertTrue(session is self.expected_session)
+        (user, passwd), _ = self.mock_method.call_args
+        self.assertEqual("usr1", user)
+        self.assertEqual("pwd1", passwd)
+
+    def test_get_eqcat_writer_session_with_none_passwd(self):
+        """
+        SessionCache.get() is called with the appropriate environment
+        variables.
+        """
+        self.assertRaises(AssertionError, get_eqcat_writer_session)
+        os.environ["OQ_DB_EQCAT_WRITER"] = "usr2"
+        if os.environ.get("OQ_DB_EQCAT_WRITER_PWD"):
+            del os.environ["OQ_DB_EQCAT_WRITER_PWD"]
+
+        session = get_eqcat_writer_session()
+        self.assertTrue(session is self.expected_session)
+        (user, passwd), _ = self.mock_method.call_args
+        self.assertEqual("usr2", user)
+        self.assertTrue(passwd is None)
+
+
+class GetPshaiWriterSessionTestCase(unittest.TestCase):
+    """Tests the behaviour of alchemy.db_utils.get_pshai_writer_session()."""
+
+    def setUp(self):
+        # Save the original get() method.
+        self.original_method = SessionCache().get
+        # Prepare mock.
+        self.expected_session = object()
+        self.mock_method = mock.Mock()
+        self.mock_method.return_value = self.expected_session
+        SessionCache().get = self.mock_method
+
+    def tearDown(self):
+        # Restore the original get() method.
+        SessionCache().get = self.original_method
+
+    def test_get_pshai_writer_session_with_no_env(self):
+        """
+        An `AssertionError` is raised if the `OQ_DB_PSHAI_WRITER` environment
+        variable is not set.
+        """
+        if os.environ.get("OQ_DB_PSHAI_WRITER"):
+            del os.environ["OQ_DB_PSHAI_WRITER"]
+        self.assertRaises(AssertionError, get_pshai_writer_session)
+
+    def test_get_pshai_writer_session(self):
+        """
+        SessionCache.get() is called with the appropriate environment
+        variables.
+        """
+        self.assertRaises(AssertionError, get_pshai_writer_session)
+        os.environ["OQ_DB_PSHAI_WRITER"] = "usr1"
+        os.environ["OQ_DB_PSHAI_WRITER_PWD"] = "pwd1"
+
+        session = get_pshai_writer_session()
+        self.assertTrue(session is self.expected_session)
+        (user, passwd), _ = self.mock_method.call_args
+        self.assertEqual("usr1", user)
+        self.assertEqual("pwd1", passwd)
+
+    def test_get_pshai_writer_session_with_none_passwd(self):
+        """
+        SessionCache.get() is called with the appropriate environment
+        variables.
+        """
+        self.assertRaises(AssertionError, get_pshai_writer_session)
+        os.environ["OQ_DB_PSHAI_WRITER"] = "usr2"
+        if os.environ.get("OQ_DB_PSHAI_WRITER_PWD"):
+            del os.environ["OQ_DB_PSHAI_WRITER_PWD"]
+
+        session = get_pshai_writer_session()
+        self.assertTrue(session is self.expected_session)
+        (user, passwd), _ = self.mock_method.call_args
+        self.assertEqual("usr2", user)
+        self.assertTrue(passwd is None)
+
+
+class GetUiapiWriterSessionTestCase(unittest.TestCase):
+    """Tests the behaviour of alchemy.db_utils.get_uiapi_writer_session()."""
+
+    def setUp(self):
+        # Save the original get() method.
+        self.original_method = SessionCache().get
+        # Prepare mock.
+        self.expected_session = object()
+        self.mock_method = mock.Mock()
+        self.mock_method.return_value = self.expected_session
+        SessionCache().get = self.mock_method
+
+    def tearDown(self):
+        # Restore the original get() method.
+        SessionCache().get = self.original_method
+
+    def test_get_uiapi_writer_session_with_no_env(self):
+        """
+        An `AssertionError` is raised if the `OQ_DB_UIAPI_WRITER` environment
+        variable is not set.
+        """
+        if os.environ.get("OQ_DB_UIAPI_WRITER"):
+            del os.environ["OQ_DB_UIAPI_WRITER"]
+        self.assertRaises(AssertionError, get_uiapi_writer_session)
+
+    def test_get_uiapi_writer_session(self):
+        """
+        SessionCache.get() is called with the appropriate environment
+        variables.
+        """
+        self.assertRaises(AssertionError, get_uiapi_writer_session)
+        os.environ["OQ_DB_UIAPI_WRITER"] = "usr1"
+        os.environ["OQ_DB_UIAPI_WRITER_PWD"] = "pwd1"
+
+        session = get_uiapi_writer_session()
+        self.assertTrue(session is self.expected_session)
+        (user, passwd), _ = self.mock_method.call_args
+        self.assertEqual("usr1", user)
+        self.assertEqual("pwd1", passwd)
+
+    def test_get_uiapi_writer_session_with_none_passwd(self):
+        """
+        SessionCache.get() is called with the appropriate environment
+        variables.
+        """
+        self.assertRaises(AssertionError, get_uiapi_writer_session)
+        os.environ["OQ_DB_UIAPI_WRITER"] = "usr2"
+        if os.environ.get("OQ_DB_UIAPI_WRITER_PWD"):
+            del os.environ["OQ_DB_UIAPI_WRITER_PWD"]
+
+        session = get_uiapi_writer_session()
+        self.assertTrue(session is self.expected_session)
+        (user, passwd), _ = self.mock_method.call_args
+        self.assertEqual("usr2", user)
+        self.assertTrue(passwd is None)
