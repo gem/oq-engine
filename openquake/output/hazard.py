@@ -597,7 +597,8 @@ class HazardMapDBWriter(object):
     def insert_output(self):
         """Insert an `uiapi.output` record for the hazard map at hand."""
         logger.info("> insert_output")
-        job = self.session.query(OqJob).filter(OqJob.id==self.oq_job_id).one()
+        job = self.session.query(OqJob).filter(
+            OqJob.id == self.oq_job_id).one()
         self.output = Output(owner=job.owner, oq_job=job, path=self.nrml_path,
                              display_name=basename(self.nrml_path),
                              output_type="hazard_map", db_backed=True)
