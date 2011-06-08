@@ -20,7 +20,7 @@
 
 import unittest
 
-from db.alchemy.db_utils import Session
+from db.alchemy.db_utils import get_uiapi_writer_session
 from openquake.output.hazard import HazardMapDBWriter
 from openquake.shapes import Site
 from openquake.utils import round_float
@@ -78,7 +78,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_insert_output(self):
         """An `uiapi.output` record is inserted correctly."""
         self.job = self.setup_classic_job()
-        session = Session.get()
+        session = get_uiapi_writer_session()
         output_path = self.generate_output_path(self.job)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
@@ -101,7 +101,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_insert_map_datum(self):
         """An `uiapi.hazard_map_data` record is inserted correctly."""
         self.output = self.setup_output()
-        session = Session.get()
+        session = get_uiapi_writer_session()
         hmw = HazardMapDBWriter(
             session, self.output.path, self.output.oq_job.id)
         hmw.output = self.output
@@ -128,7 +128,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
         self.job = self.setup_classic_job()
-        session = Session.get()
+        session = get_uiapi_writer_session()
         output_path = self.generate_output_path(self.job)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
@@ -151,7 +151,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         serialize() sets the minimum and maximum values on the output record.
         """
         self.job = self.setup_classic_job()
-        session = Session.get()
+        session = get_uiapi_writer_session()
         output_path = self.generate_output_path(self.job)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
