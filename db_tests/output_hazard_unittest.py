@@ -96,7 +96,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         # Make sure the inserted output record has the right data.
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
-        self.assertEqual(None, output.path)
+        self.assertTrue(output.path is None)
         self.assertEqual(display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
         self.assertTrue(self.job is output.oq_job)
