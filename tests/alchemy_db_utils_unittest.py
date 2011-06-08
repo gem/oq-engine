@@ -190,19 +190,33 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
         def fake_init_session(user, password):
             """
-            This will merely set the session for the given user to
-            `expected_session`.
+            When the mock method is called this will set the session for the
+            given user to `expected_session`.
             """
             sc.__sessions__[user] = expected_session
 
-        original_method = sc._init_session
+        # Prepare mock.
         mock_method = mock.Mock()
         mock_method.side_effect = fake_init_session
+
+        # Save the original _init_session() method.
+        original_method = sc._init_session
+
+        # Replace the original mathod with the mock.
         sc._init_session = mock_method
 
+        # We don't have a session in the cache for the user at hand.
+        self.assertTrue(sc.__sessions__.get("usr1") is None)
+
+        # The actual method under test is called.
         self.assertEqual(expected_session, sc.get("usr1", ""))
+
+        # The method under test called the mock once and with the parameters
+        # we passed.
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
         self.assertEqual("usr1", user)
         self.assertEqual("", passwd)
+
+        # Restore the original _init_session() method.
         sc._init_session = original_method
