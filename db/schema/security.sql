@@ -32,6 +32,10 @@ GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 GRANT ALL ON SEQUENCE admin.oq_user_id_seq TO oq_admin;
 GRANT ALL ON SEQUENCE admin.organization_id_seq TO oq_admin;
 
+GRANT ALL ON SEQUENCE eqcat.catalog_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE eqcat.magnitude_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE eqcat.surface_id_seq to GROUP openquake;
+
 GRANT ALL ON SEQUENCE pshai.complex_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.fault_edge_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.focal_mechanism_id_seq to GROUP openquake;
