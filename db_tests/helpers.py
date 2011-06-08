@@ -43,10 +43,11 @@ class DbTestMixin(TestMixin):
         """
         session = Session.get()
         if dbkey:
-            upload = session.query(Upload).filter(Upload.id==dbkey).one()
+            upload = session.query(Upload).filter(Upload.id == dbkey).one()
             return upload
 
-        user = session.query(OqUser).filter(OqUser.user_name=="openquake").one()
+        user = session.query(OqUser).filter(
+            OqUser.user_name == "openquake").one()
         upload = Upload(owner=user, path=tempfile.mkdtemp())
         session.add(upload)
         session.commit()
