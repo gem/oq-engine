@@ -96,10 +96,10 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         # Make sure the inserted output record has the right data.
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
-        self.assertIsNone(output.path)
+        self.assertEqual(None, output.path)
         self.assertEqual(display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
-        self.assertIs(self.job, output.oq_job)
+        self.assertTrue(self.job is output.oq_job)
 
     def test_insert_map_datum(self):
         """An `uiapi.hazard_map_data` record is inserted correctly."""
