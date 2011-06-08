@@ -31,21 +31,25 @@ from openquake.utils import general
 class SessionCache(object):
     """Share alchemy sessions per database user."""
 
-    __sessions__ = None
+    __sessions__ = dict()
 
     def get(self, user, password=None):
         """Return SQLAlchemy session if ready or initialize it otherwise."""
-        session = self._sessions__.get(user, None)
+        session = self.__sessions__.get(user, None)
 
         if not session:
-            self.init_session(user, password)
-            session = self._sessions__.get(user, None)
+            self._init_session(user, password)
+            session = self.__sessions__.get(user, None)
             assert session, "Internal error: db session not initialized"
 
         return session
 
-    def init_session(self, user, password):
-        """Initialize SQLAlchemy session."""
+    def _init_session(self, user, password):
+        """Initialize SQLAlchemy session.
+
+        :param str user: the database user
+        :param str password: the database user's password, may be `None`.
+        """
         assert user, "Empty database user name"
         assert user not in self.__sessions__, \
             "Internal error: repeated initialization for user '%s'" % user
