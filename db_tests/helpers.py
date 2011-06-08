@@ -148,6 +148,7 @@ class DbTestMixin(TestMixin):
         output = Output(owner=job.owner, oq_job=job, output_type=output_type,
                         db_backed=db_backed)
         output.path = self.generate_output_path(job, output_type)
+        output.display_name = os.path.basename(output.path)
         session = Session.get()
         session.add(output)
         session.commit()
