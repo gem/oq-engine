@@ -26,7 +26,11 @@ Utility functions of general interest.
 def singleton(cls):
     """This class decorator facilitates the definition of singletons."""
     instances = {}
+
     def getinstance():
+        """
+        Return an instance from the cache if present, create one otherwise.
+        """
         if cls not in instances:
             instances[cls] = cls()
         return instances[cls]
