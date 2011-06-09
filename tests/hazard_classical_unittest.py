@@ -362,7 +362,8 @@ class NumberOfTasksTestCase(unittest.TestCase):
 
     def test_number_of_tasks_with_param_not_set(self):
         """
-        A value of 1 is expected when the `HAZARD_TASKS` parameter is not set.
+        When the `HAZARD_TASKS` parameter is not set the expected value is
+        twice the number of CPUs/cores.
         """
         self.mixin.params = dict()
         self.assertEqual(
