@@ -49,8 +49,7 @@ class Mixin:
     syntax.
     """
     mixins = {}
-    def __init__(self, target, mixin, key=""):
-        self.key = key.upper() + "_CALCULATION_MODE"
+    def __init__(self, target, mixin):
         self.target = target
         self.mixin = mixin
 
@@ -77,12 +76,12 @@ class Mixin:
     def _load_proxied_mixin(self):
         """ Load the proxied mixin requested by the calculation mode """
 
-        calc_mode = self.target[self.key]
+        calc_mode = self.target["CALCULATION_MODE"]
         loader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     def _unload_proxied_mixin(self):
         """ Unload the proxied mixin requested by the calculation mode """
-        calc_mode = self.target[self.key]
+        calc_mode = self.target["CALCULATION_MODE"]
         unloader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     @classmethod
