@@ -21,7 +21,7 @@
 import os
 import unittest
 
-from openquake.risk import job as risk_job
+from openquake.risk.job import general
 from openquake.parser import exposure
 from tests.utils import helpers
 
@@ -34,7 +34,7 @@ class EpsilonTestCase(unittest.TestCase):
     def setUp(self):
         self.exposure_parser = exposure.ExposurePortfolioFile(
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
-        self.epsilon_provider = risk_job.EpsilonProvider(dict())
+        self.epsilon_provider = general.EpsilonProvider(dict())
 
     def test_uncorrelated(self):
         """For uncorrelated jobs we sample epsilon values per asset.

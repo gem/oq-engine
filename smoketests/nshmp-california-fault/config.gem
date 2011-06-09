@@ -126,7 +126,7 @@ HAZARD_MAP_CPT = seminf-haxby.cpt
 
 [RISK]
 
-RISK_CALCULATION_MODE = Probabilistic Event
+RISK_CALCULATION_MODE = Event Based
 
 # file containing the exposure in nrml format
 EXPOSURE = LA_county_exposure_portfolio_w_VF_code.xml

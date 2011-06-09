@@ -133,7 +133,7 @@ HAZARD_MAP_IML_MAX = 1.0
 
 [RISK]
 
-RISK_CALCULATION_MODE = Probabilistic Event
+RISK_CALCULATION_MODE = Event Based
 
 # file containing the exposure in nrml format
 EXPOSURE = small_exposure.xml

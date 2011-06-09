@@ -20,31 +20,39 @@
 
 """SQLAlchemy utility functions."""
 
+
 import os
 import sqlalchemy
 
+from openquake.utils import general
 
-class Session(object):
-    """Provides the same alchemy session for everyone."""
 
-    __session__ = None
+@general.singleton
+class SessionCache(object):
+    """Share alchemy sessions per database user."""
 
-    @classmethod
-    def get(cls):
-        """Return SQLAlchemy session if ready and initialize it otherwise."""
-        if cls.__session__:
-            return cls.__session__
-        else:
-            return cls.init_session()
+    __sessions__ = dict()
 
-    @classmethod
-    def init_session(cls):
-        """Initialize SQLAlchemy session."""
-        user = os.environ.get("OQ_ENGINE_DB_USER")
-        assert user, "No db user set for the OpenQuake engine"
+    def get(self, user, password=None):
+        """Return SQLAlchemy session if ready or initialize it otherwise."""
+        session = self.__sessions__.get(user, None)
 
-        password = os.environ.get("OQ_ENGINE_DB_PASSWORD")
-        assert password, "No db password set for the OpenQuake engine"
+        if not session:
+            self._init_session(user, password)
+            session = self.__sessions__.get(user, None)
+            assert session, "Internal error: db session not initialized"
+
+        return session
+
+    def _init_session(self, user, password):
+        """Initialize SQLAlchemy session.
+
+        :param str user: the database user
+        :param str password: the database user's password, may be `None`.
+        """
+        assert user, "Empty database user name"
+        assert user not in self.__sessions__, \
+            "Internal error: repeated initialization for user '%s'" % user
 
         db_name = os.environ.get("OQ_ENGINE_DB_NAME", "geonode")
         assert db_name, "No db name set for the OpenQuake engine"
@@ -52,9 +60,34 @@ class Session(object):
         db_host = os.environ.get("OQ_ENGINE_DB_HOST", "localhost")
         assert db_host, "No db host set for the OpenQuake engine"
 
+        password = "" if password is None else password
+
         data = (user, password, db_host, db_name)
         engine = sqlalchemy.create_engine(
             "postgresql+psycopg2://%s:%s@%s/%s" % data)
         session_class = sqlalchemy.orm.sessionmaker(bind=engine)
-        cls.__session__ = session_class()
-        return cls.__session__
+        self.__sessions__[user] = session_class()
+
+
+def get_eqcat_writer_session():
+    """Return a database session for the `oq_eqcat_writer` user."""
+    assert os.environ.get("OQ_DB_EQCAT_WRITER"), \
+        "OQ_DB_EQCAT_WRITER environment variable not set."
+    return SessionCache().get(os.environ.get("OQ_DB_EQCAT_WRITER"),
+                              os.environ.get("OQ_DB_EQCAT_WRITER_PWD"))
+
+
+def get_pshai_writer_session():
+    """Return a database session for the `oq_pshai_writer` user."""
+    assert os.environ.get("OQ_DB_PSHAI_WRITER"), \
+        "OQ_DB_PSHAI_WRITER environment variable not set."
+    return SessionCache().get(os.environ.get("OQ_DB_PSHAI_WRITER"),
+                              os.environ.get("OQ_DB_PSHAI_WRITER_PWD"))
+
+
+def get_uiapi_writer_session():
+    """Return a database session for the `oq_uiapi_writer` user."""
+    assert os.environ.get("OQ_DB_UIAPI_WRITER"), \
+        "OQ_DB_UIAPI_WRITER environment variable not set."
+    return SessionCache().get(os.environ.get("OQ_DB_UIAPI_WRITER"),
+                              os.environ.get("OQ_DB_UIAPI_WRITER_PWD"))
