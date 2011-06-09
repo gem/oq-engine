@@ -21,6 +21,7 @@
 Unit tests for classic PSHA hazard computations with the hazard engine.
 """
 
+import multiprocessing
 import unittest
 
 from openquake import job
@@ -50,10 +51,10 @@ class DoCurvesTestCase(unittest.TestCase):
         logic trees.
         """
         def sampleAndSaveERFTree(self, cache, key, seed):
-            "Do nothing."
+            """Do nothing."""
 
         def sampleAndSaveGMPETree(self, cache, key, seed):
-            "Do nothing."
+            """Do nothing."""
 
     mock_results = [
         [
@@ -91,10 +92,15 @@ class DoCurvesTestCase(unittest.TestCase):
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
-            # Check that the data returned is the one we expect for the current
-            # realization.
+            # The number of tasks will not exceed the number of data items
+            # that need to be processed.
+            tasks = min(self.mixin.number_of_tasks(), len(self.sites))
+
+            # Each task will return one copy of the fake data.
             self.assertEqual(
-                self.mock_results[fake_serializer.number_of_calls], kvs_keys)
+                self.mock_results[fake_serializer.number_of_calls] * tasks,
+                kvs_keys)
+
             fake_serializer.number_of_calls += 1
 
         # We will count the number of invocations using a property of the fake
@@ -356,7 +362,8 @@ class NumberOfTasksTestCase(unittest.TestCase):
         A value of 1 is expected when the `HAZARD_TASKS` parameter is not set.
         """
         self.mixin.params = dict()
-        self.assertEqual(1, self.mixin.number_of_tasks())
+        self.assertEqual(
+            2 * multiprocessing.cpu_count(), self.mixin.number_of_tasks())
 
     def test_number_of_tasks_with_param_set_and_valid(self):
         """
