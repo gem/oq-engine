@@ -98,8 +98,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin,
-            key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 
             source_model_key = kvs.generate_product_key(hazengine.id,
@@ -348,8 +347,7 @@ class HazardEngineTestCase(unittest.TestCase):
         test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
 
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin,
-            key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             result_keys = hazengine.execute()
 
             verify_order_of_haz_curve_keys(hazengine, result_keys)
