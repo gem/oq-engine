@@ -157,7 +157,7 @@ def _handle_subtasks(subtasks, flatten_results):
 
     # Wait for all subtasks to complete.
     while not result.ready():
-        time.sleep(0.5)
+        time.sleep(0.25)
     try:
         the_results = result.join()
     except TypeError, exc:
