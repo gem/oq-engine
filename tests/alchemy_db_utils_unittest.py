@@ -62,15 +62,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         _init_session() observes the `OQ_ENGINE_DB_NAME` environment variable.
         """
         os.environ["OQ_ENGINE_DB_NAME"] = "abc123"
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr1", "")
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr1:@localhost/abc123', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr1", "", ("postgresql+psycopg2://usr1:@localhost/abc123",))
         del os.environ["OQ_ENGINE_DB_NAME"]
 
     def test_init_session_without_oq_engine_db_name(self):
@@ -78,30 +71,16 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         In the absence of the `OQ_ENGINE_DB_NAME` environment variable
         the session will be established for the "geonode" database.
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr2", "")
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr2:@localhost/geonode', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr2", "", ("postgresql+psycopg2://usr2:@localhost/geonode",))
 
     def test_init_session_with_oq_engine_db_host(self):
         """
         _init_session() observes the `OQ_ENGINE_DB_HOST` environment variable.
         """
         os.environ["OQ_ENGINE_DB_HOST"] = "bcd234"
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr3", "")
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr3:@bcd234/geonode', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr3", "", ("postgresql+psycopg2://usr3:@bcd234/geonode",))
         del os.environ["OQ_ENGINE_DB_HOST"]
 
     def test_init_session_without_oq_engine_db_host(self):
@@ -109,57 +88,30 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         In the absence of the `OQ_ENGINE_DB_HOST` environment variable
         the session will be established for the `localhost`.
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr4", "")
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr4:@localhost/geonode', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr4", "", ("postgresql+psycopg2://usr4:@localhost/geonode",))
 
     def test_init_session_with_none_password(self):
         """
         _init_session() will use an empty string for `None` passwords.
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr5", None)
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr5:@localhost/geonode', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr5", None, ("postgresql+psycopg2://usr5:@localhost/geonode",))
 
     def test_init_session_with_empty_password(self):
         """
         _init_session() will use an empty password properly.
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr6", "")
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr6:@localhost/geonode', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr6", "", ("postgresql+psycopg2://usr6:@localhost/geonode",))
 
     def test_init_session_with_non_empty_password(self):
         """
         _init_session() will use a non-empty password correctly.
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
-                sm_mock.return_value = object
-                SessionCache()._init_session("usr7", "s3cr3t")
-                self.assertEqual(1, ce_mock.call_count)
-                (arg,), kwargs = ce_mock.call_args
-                self.assertEqual(
-                    'postgresql+psycopg2://usr7:s3cr3t@localhost/geonode', arg)
-                self.assertEqual({}, kwargs)
+        self._perform_test(
+            "usr7", "s3cr3t",
+            ("postgresql+psycopg2://usr7:s3cr3t@localhost/geonode",))
 
     def test_init_session_updates_internal_dict(self):
         """
@@ -174,6 +126,28 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
                 self.assertTrue(sc.__sessions__.get("usr8") is None)
                 sc._init_session("usr8", "t0ps3cr3t")
                 self.assertEqual(session, sc.__sessions__.get("usr8"))
+
+    def _perform_test(self, user, password, expected_args, expected_kwargs={}):
+        """
+        Mocks the alchemy functions and calls the method under test.
+
+        The method under test is `SessionCache._init_session()`.
+
+        :param str user: the user parameter for the method under test
+        :param str password: the password parameter for the method under test
+        :param tuple expected_args: a string tuple with parameters that we
+            expect will be passed to `sqlalchemy.create_engine()`
+        :param dict expected_kwargs: a dictionary with keyword parameters that
+            we expect will be passed to `sqlalchemy.create_engine()`
+        """
+        with mock.patch('sqlalchemy.create_engine') as ce_mock:
+            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
+                sm_mock.return_value = object
+                SessionCache()._init_session(user, password)
+                self.assertEqual(1, ce_mock.call_count)
+                args, kwargs = ce_mock.call_args
+                self.assertEqual(expected_args, args)
+                self.assertEqual(expected_kwargs, kwargs)
 
 
 class SessionCacheGetTestCase(unittest.TestCase):
