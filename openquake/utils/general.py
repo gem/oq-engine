@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010-2011, GEM Foundation.
 #
@@ -15,3 +16,22 @@
 # You should have received a copy of the GNU Lesser General Public License
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+"""
+Utility functions of general interest.
+"""
+
+
+def singleton(cls):
+    """This class decorator facilitates the definition of singletons."""
+    instances = {}
+
+    def getinstance():
+        """
+        Return an instance from the cache if present, create one otherwise.
+        """
+        if cls not in instances:
+            instances[cls] = cls()
+        return instances[cls]
+    return getinstance

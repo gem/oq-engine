@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010-2011, GEM Foundation.
 #
@@ -15,3 +16,33 @@
 # You should have received a copy of the GNU Lesser General Public License
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+"""
+Test related to code in openquake/utils/general.py
+"""
+
+
+import unittest
+
+from openquake.utils import general
+
+
+class SingletonTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.general.singleton()."""
+
+    def test_singleton(self):
+        """
+        A class decorated with @singleton will always return the same
+        instance upon creation.
+        """
+
+        @general.singleton
+        class MySingleton(object):
+            pass
+
+        instance1 = MySingleton()
+        instance2 = MySingleton()
+        self.assertTrue(instance2 is instance1)
+        instance3 = MySingleton()
+        self.assertTrue(instance3 is instance1)

@@ -2,12 +2,14 @@ package org.gem.calc;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
@@ -253,8 +255,8 @@ public class HazardCalculatorTest {
                 correlationFlag);
     }
 
-    @Test
-    public void gmfToJsonTest() {
+    private Map<EqkRupture, Map<Site, Double>> createGroundMotionFields()
+    {
         int maxTries = 111;
         Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
         while (maxTries > 0 && groundMotionFields == null
@@ -275,20 +277,75 @@ public class HazardCalculatorTest {
                     + maxTries + " runs." + groundMotionFields.toString());
 
         }
+
+        return groundMotionFields;
+    }
+
+    private String[] getRuptureIds(Map<EqkRupture, Map<Site, Double>> groundMotionFields)
+    {
         String[] eqkRuptureIds = new String[groundMotionFields.values().size()];
         for (int i = 0; i < eqkRuptureIds.length; ++i) {
             eqkRuptureIds[i] = "eqkRupture_id_" + i;
         }
+
+        return eqkRuptureIds;
+    }
+
+    private String[] getSiteIds(Map<EqkRupture, Map<Site, Double>> groundMotionFields)
+    {
         Map<Site, Double> firstGmf =
                 groundMotionFields.values().iterator().next();
         String[] siteIds = new String[firstGmf.size()];
         for (int i = 0; i < siteIds.length; ++i) {
             siteIds[i] = "site_id_" + i;
         }
+
+        return siteIds;
+    }
+
+    @Test
+    public void gmfToJsonTest() {
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields = createGroundMotionFields();
+        String[] eqkRuptureIds = getRuptureIds(groundMotionFields);
+        String[] siteIds = getSiteIds(groundMotionFields);
+
         String jsonString =
                 HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
                         groundMotionFields);
         assertNotNull("jsonString is expected to not to be null", jsonString);
+    }
+
+    /**
+     * Test that gmfToJson output is not locale-dependent
+     */
+    @Test
+    public void gmfToJsonLocale() {
+        Map<EqkRupture, Map<Site, Double>> groundMotionFields = createGroundMotionFields();
+        String[] eqkRuptureIds = getRuptureIds(groundMotionFields);
+        String[] siteIds = getSiteIds(groundMotionFields);
+
+        String jsonString =
+                HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
+                        groundMotionFields);
+
+        Locale currentDefault = Locale.getDefault();
+
+        try {
+            // test all locales
+            for (Locale l : Locale.getAvailableLocales())
+            {
+                Locale.setDefault(l);
+
+                String jsonStringL =
+                        HazardCalculator.gmfToJson("gmf_id", eqkRuptureIds, siteIds,
+                            groundMotionFields);
+
+                assertEquals("gmfToJson is locale-independent for locale " + l.toString(), jsonString, jsonStringL);
+            }
+        }
+        finally {
+            Locale.setDefault(currentDefault);
+        }
     }
 
     @Test
