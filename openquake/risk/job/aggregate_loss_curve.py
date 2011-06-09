@@ -25,7 +25,7 @@ import os
 
 from openquake.logs import LOG
 from openquake.output import curve
-from openquake.risk import job as risk_job
+from openquake.risk.job import general
 from openquake.risk import probabilistic_event_based as prob
 
 
@@ -69,7 +69,7 @@ def compute_aggregate_curve(job):
 
         return
 
-    epsilon_provider = risk_job.EpsilonProvider(job.params)
+    epsilon_provider = general.EpsilonProvider(job.params)
     aggregate_loss_curve = \
         prob.AggregateLossCurve.from_kvs(job.id, epsilon_provider)
 
