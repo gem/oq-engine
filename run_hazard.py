@@ -49,5 +49,5 @@ if __name__ == '__main__':
 
     engine = job.Job.from_file(FLAGS.config_file)
 
-    with mixins.Mixin(engine, openquake.hazard.job.HazJobMixin, key="hazard"):
+    with mixins.Mixin(engine, openquake.hazard.job.HazJobMixin):
         engine.execute()

@@ -103,7 +103,7 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin, key="risk"):
+        with Mixin(self.job, RiskJobMixin):
             self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
 
         with Mixin(self.job, ClassicalPSHABasedMixin):
@@ -111,7 +111,7 @@ class JobTestCase(unittest.TestCase):
                 ClassicalPSHABasedMixin in self.job.__class__.__bases__)
 
     def test_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin, key="risk"):
+        with Mixin(self.job, RiskJobMixin):
             self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
