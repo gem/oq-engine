@@ -34,8 +34,8 @@ from openquake import shapes
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.risk import deterministic_event_based as det
-from openquake.risk import job as risk_job
-from openquake.risk.job import preload, RiskJobMixin
+from openquake.risk.job import general
+
 
 LOGGER = logs.LOG
 
@@ -47,7 +47,7 @@ class DeterministicEventBasedMixin:
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the job configuration file."""
 
-    @preload
+    @general.preload
     def execute(self):
         """Entry point for triggering the computation."""
 
@@ -60,7 +60,7 @@ class DeterministicEventBasedMixin:
         vuln_model = \
             vulnerability.load_vuln_model_from_kvs(self.job_id)
 
-        epsilon_provider = risk_job.EpsilonProvider(self.params)
+        epsilon_provider = general.EpsilonProvider(self.params)
 
         sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
 
@@ -69,7 +69,7 @@ class DeterministicEventBasedMixin:
         for block_id in self.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
                 % (block_id, len(self.blocks_keys)))
-            a_task = risk_job.compute_risk.delay(
+            a_task = general.compute_risk.delay(
                 self.id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
@@ -341,4 +341,4 @@ def collect_block_data(loss_data, asset_site, asset_data):
     loss_data[asset_site] = data
 
 
-RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
+general.RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)

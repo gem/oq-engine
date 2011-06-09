@@ -38,15 +38,6 @@ from openquake import logs
 from openquake import __version__
 
 from openquake import job
-from openquake.job import Job
-from openquake.output import geotiff
-from openquake.parser import exposure
-from openquake.parser import vulnerability
-
-from openquake.hazard import job as hazjob
-from openquake.hazard import opensha
-from openquake.risk import job as riskjob
-from openquake.risk.job import probabilistic
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
@@ -131,6 +122,18 @@ def _is_running(proc_name):
     return is_running
 
 
+def register_mixins():
+    from openquake.job import Job
+    from openquake.output import geotiff
+    from openquake.parser import exposure
+    from openquake.parser import vulnerability
+
+    from openquake.hazard import job as hazjob
+    from openquake.hazard import opensha
+    from openquake.risk.job import general
+    from openquake.risk.job import probabilistic
+
+
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
 
@@ -167,4 +170,5 @@ if __name__ == '__main__':
         # launch celery
         _launch_worker_subprocs()
     else:
+        register_mixins()
         job.run_job(FLAGS.config_file)
