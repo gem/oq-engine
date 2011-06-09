@@ -222,7 +222,7 @@ class Job(object):
             if key.upper() not in self.sections:
                 continue
 
-            with Mixin(self, mixin, key=key):
+            with Mixin(self, mixin):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.

@@ -68,7 +68,7 @@ class DoCurvesTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
-            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+            job.Job(dict()), opensha.ClassicalMixin)
         # Store the canned result data in the KVS.
         key = self.mixin.id = helpers.TestStore.nextkey()
         self.keys.append(key)
@@ -128,7 +128,7 @@ class DoMeansTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
-            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+            job.Job(dict()), opensha.ClassicalMixin)
         # Store the canned result data in the KVS.
         key = self.mixin.id = helpers.TestStore.add(self.mock_results)
         self.keys.append(key)
@@ -252,7 +252,7 @@ class DoQuantilesTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
-            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+            job.Job(dict()), opensha.ClassicalMixin)
         # Store the canned result data in the KVS.
         key = self.mixin.id = helpers.TestStore.nextkey()
         helpers.TestStore.put(key, self.mock_results)
@@ -358,7 +358,7 @@ class NumberOfTasksTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
-            job.Job(dict()), opensha.ClassicalMixin, "hazard")
+            job.Job(dict()), opensha.ClassicalMixin)
 
     def test_number_of_tasks_with_param_not_set(self):
         """
