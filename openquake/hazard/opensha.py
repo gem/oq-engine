@@ -22,8 +22,9 @@ Wrapper around the OpenSHA-lite java library.
 
 import math
 import os
-import random
+import multiprocessing
 import numpy
+import random
 
 from db.alchemy.db_utils import Session
 
@@ -176,7 +177,7 @@ class ClassicalMixin(BasePSHAMixin):
         """How many `celery` tasks should be used for the calculations?"""
         value = self.params.get("HAZARD_TASKS")
         value = value.strip() if value else None
-        return 1 if value is None else int(value)
+        return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
     def do_curves(self, sites, serializer=None,
                   the_task=tasks.compute_hazard_curve):
