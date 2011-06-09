@@ -145,9 +145,12 @@ class DoMeansTestCase(unittest.TestCase):
 
         def fake_serializer(kvs_keys):
             """Fake serialization function to be used in this test."""
-            # Check that the data returned is the one we expect for the current
-            # realization.
-            self.assertEqual(self.mock_results, kvs_keys)
+            # The number of tasks will not exceed the number of data items
+            # that need to be processed.
+            tasks = min(self.mixin.number_of_tasks(), len(self.sites))
+
+            # Each task will return one copy of the fake data.
+            self.assertEqual(self.mock_results * tasks, kvs_keys)
             fake_serializer.number_of_calls += 1
 
         # Count the number of invocations using this property of the fake
