@@ -1,5 +1,5 @@
 
-OpenGEM NRML schema
+OpenQuake NRML schema
 ===================
 
 
