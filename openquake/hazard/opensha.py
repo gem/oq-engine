@@ -25,7 +25,7 @@ import os
 import random
 import numpy
 
-from db.alchemy.db_utils import Session
+from db.alchemy.db_utils import get_uiapi_writer_session
 
 from openquake import java
 from openquake import kvs
@@ -876,7 +876,7 @@ def create_hazardmap_writer(params, nrml_path):
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
-        session = Session.get()
+        session = get_uiapi_writer_session()
         return hazard_output.HazardMapDBWriter(session, nrml_path, job_db_key)
 
 
