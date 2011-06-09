@@ -35,7 +35,7 @@ from db.alchemy.db_utils import (
 class SessionCacheInitSessionTestCase(unittest.TestCase):
     """Tests the behaviour of alchemy.db_utils.SessionCache.init_session()."""
 
-    def tearDown(self):
+    def setUp(self):
         SessionCache().__sessions__.clear()
 
     def test_init_session_with_empty_user(self):
@@ -182,9 +182,9 @@ class SessionCacheGetTestCase(unittest.TestCase):
     def setUp(self):
         # Save the original _init_session() method.
         self.original_method = SessionCache()._init_session
+        SessionCache().__sessions__.clear()
 
     def tearDown(self):
-        SessionCache().__sessions__.clear()
         # Restore the original _init_session() method.
         SessionCache()._init_session = self.original_method
 
