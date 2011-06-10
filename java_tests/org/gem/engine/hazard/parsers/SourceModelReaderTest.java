@@ -6,6 +6,8 @@ import static org.gem.engine.hazard.parsers.SourceModelTestHelper.complexSourceD
 import static org.gem.engine.hazard.parsers.SourceModelTestHelper.pointSourceData;
 import static org.gem.engine.hazard.parsers.SourceModelTestHelper.simpleFaultSourceData;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,9 +17,13 @@ import org.junit.Test;
 import org.junit.Before;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
+import org.dom4j.DocumentException;
+
 public class SourceModelReaderTest {
 
     public static final String TEST_SOURCE_MODEL_FILE = "java_tests/data/source_model.xml";
+    public static final String INVALID_TEST_SOURCE_MODEL_FILE =
+            "tests/data/invalid/source_model1.xml";
     public static final double MFD_BIN_WIDTH = 0.1;
 
     @Before
@@ -68,4 +74,29 @@ public class SourceModelReaderTest {
         assertEquals(4, srcModelReader.read().size());
     }
 
+    void checkFailsValidation(String path) {
+        boolean threw = false;
+
+        try {
+            SourceModelReader reader = new SourceModelReader(path, MFD_BIN_WIDTH);
+
+            reader.read();
+        }
+        catch (RuntimeException e) {
+            threw = true;
+            assertTrue("Throws a DocumentException",
+                       e.getCause() instanceof DocumentException);
+            assertNull(e.getCause().getCause());
+        }
+
+        assertTrue("Parsing threw an exception", threw);
+    }
+
+    /**
+     * Checks schema validation for source model logic trees
+     */
+    @Test
+    public void sourceModelSchemaValidationTest() {
+        checkFailsValidation(INVALID_TEST_SOURCE_MODEL_FILE);
+    }
 }
