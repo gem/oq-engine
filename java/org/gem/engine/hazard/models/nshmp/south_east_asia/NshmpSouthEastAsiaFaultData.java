@@ -58,7 +58,8 @@ public class NshmpSouthEastAsiaFaultData extends GemFileParser {
             NshmpFault2GemSourceData fm =
                     new NshmpFault2GemSourceData(key,
                             TectonicRegionType.ACTIVE_SHALLOW,
-                            faultFile.get(key), latmin, latmax, lonmin, lonmax);
+                            faultFile.get(key), latmin, latmax, lonmin, lonmax,
+                            srcDataList.size());
             for (int i = 0; i < fm.getList().size(); i++)
                 srcDataList.add(fm.getList().get(i));
         }
