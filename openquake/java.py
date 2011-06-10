@@ -85,6 +85,16 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
+def _set_java_log_level(level):
+    """Sets the log level of the java logger."""
+
+    if level == 'CRITICAL':
+        level = 'FATAL'
+
+    root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
+    jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
+    root_logger.setLevel(jlevel)
+
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
@@ -99,12 +109,12 @@ def jvm(max_mem=None):
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
-        #"-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
-            # "-Dlog4j.debug",
+            #"-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
+            # "-Dlog4j.debug", # turn on log4j internal debugging
             "-Dlog4j.configuration=log4j.properties",
-            "-Dlog4j.rootLogger=%s, A1" % (FLAGS.debug.upper()),
-            # "-Dlog4j.rootLogger=DEBUG, A1",
             "-Xmx%sM" % max_mem)
+
+        _set_java_log_level(FLAGS.debug.upper())
 
         if FLAGS.capture_java_debug:
             mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
