@@ -2,6 +2,7 @@ package org.gem.engine;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertNull;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.gem.engine.logictree.LogicTreeRuleParam;
 import org.junit.Test;
 import org.junit.Before;
 import org.opensha.sha.util.TectonicRegionType;
+import org.dom4j.DocumentException;
 
 public class LogicTreeReaderTest {
 
@@ -28,10 +30,10 @@ public class LogicTreeReaderTest {
             "docs/schema/examples/logic-tree-gmpe.xml";
 
     public static final String LT_INVALID_SRC_MODEL_TEST_FILE =
-            "java_tests/data/invalid/source_model_logic_tree.xml";
+            "tests/data/invalid/source_model_logic_tree.xml";
 
     public static final String LT_INVALID_GMPE_TEST_FILE =
-            "java_tests/data/invalid/gmpe_logic_tree.xml";
+            "tests/data/invalid/gmpe_logic_tree.xml";
 
     @Before
     public void setUp() {
@@ -177,5 +179,39 @@ public class LogicTreeReaderTest {
                 new HashMap<String, LogicTree>();
         sourceModelLogicTreeHashMap.put("1", sourceModelLogicTree);
         return sourceModelLogicTreeHashMap;
+    }
+
+    void checkFailsValidation(String path) {
+        boolean threw = false;
+
+        try {
+            LogicTreeReader reader = new LogicTreeReader(path);
+
+            reader.read();
+        }
+        catch (RuntimeException e) {
+            threw = true;
+            assertTrue("Throws a DocumentException",
+                       e.getCause() instanceof DocumentException);
+            assertNull(e.getCause().getCause());
+        }
+
+        assertTrue("Parsing threw an exception", threw);
+    }
+
+    /**
+     * Checks schema validation for source model logic trees
+     */
+    @Test
+    public void sourceModelSchemaValidationTest() {
+        checkFailsValidation(LT_INVALID_SRC_MODEL_TEST_FILE);
+    }
+
+    /**
+     * Checks schema validation for GMPE logic trees
+     */
+    @Test
+    public void gmpeSchemaValidationTest() {
+        checkFailsValidation(LT_INVALID_GMPE_TEST_FILE);
     }
 }
