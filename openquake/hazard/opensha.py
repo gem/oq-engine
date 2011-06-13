@@ -75,14 +75,18 @@ def preload(fn):
     return preloader
 
 
-def unwrap_validation_error(jpype, runtime_exception):
+def unwrap_validation_error(jpype, runtime_exception, path=None):
     """Unwraps the nested exception of a runtime exception.  Throws
     either a XMLValidationError or the original Java exception"""
     ex = runtime_exception.__javaobject__
 
     if ex.getCause() and type(ex.getCause()) is \
             jpype.JPackage('org').dom4j.DocumentException:
-        raise xml.XMLValidationError(ex.getCause().getMessage())
+        if path:
+            msg = '%s: %s' % (path, ex.getCause().getMessage())
+        else:
+            msg = ex.getCause().getMessage()
+        raise xml.XMLValidationError(msg)
 
     raise runtime_exception
 
@@ -103,7 +107,9 @@ class BasePSHAMixin(Mixin):
         try:
             self.calc.sampleAndSaveERFTree(self.cache, key, seed)
         except jpype.JException(jpype.java.lang.RuntimeException), ex:
-            unwrap_validation_error(jpype, ex)
+            unwrap_validation_error(
+                jpype, ex,
+                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE_PATH"))
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
@@ -114,7 +120,8 @@ class BasePSHAMixin(Mixin):
         try:
             self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
         except jpype.JException(jpype.java.lang.RuntimeException), ex:
-            unwrap_validation_error(jpype, ex)
+            unwrap_validation_error(
+                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE_PATH"))
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
