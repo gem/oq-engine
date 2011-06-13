@@ -657,7 +657,8 @@ class ClassicalMixin(BasePSHAMixin):
         jsite_list = self.parameterize_sites(site_list)
         jpype = java.jvm()
         try:
-            hazard_curves = java.jclass("HazardCalculator").getHazardCurvesAsJson(
+            calc = java.jclass("HazardCalculator")
+            hazard_curves = calc.getHazardCurvesAsJson(
                 jsite_list,
                 self.generate_erf(),
                 self.generate_gmpe_map(),
