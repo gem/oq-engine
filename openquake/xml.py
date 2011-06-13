@@ -94,6 +94,13 @@ RISK_LOSS_MAP_LOSS_CATEGORY_ATTR = "lossCategory"
 RISK_LOSS_MAP_UNIT_ATTR = "unit"
 RISK_LOSS_MAP_ASSET_REF_TAG = "%sassetRef" % NRML
 
+def nrml_schema_file():
+    import os
+
+    # TODO needs to be adjusted for the packaged version
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..',
+                        'docs', 'schema', NRML_SCHEMA_FILE)
+
 def validates_against_xml_schema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
