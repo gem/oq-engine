@@ -34,16 +34,15 @@ INVALID_TEST_FILE = "tests/data/invalid/small_exposure.xml"
 class ExposurePortfolioFileTestCase(unittest.TestCase):
 
     def test_schema_validation(self):
-        ep = exposure.ExposurePortfolioFile(INVALID_TEST_FILE)
+        def _parse_exposure(path):
+            ep = exposure.ExposurePortfolioFile(path)
 
-        # force parsing the whole file
-        try:
+            # force parsing the whole file
             for e in ep:
                 pass
-        except xml.XMLValidationError:
-            pass
-        else:
-            raise Exception("Did not throw validation error")
+
+        self.assertRaises(xml.XMLValidationError,
+                          _parse_exposure, INVALID_TEST_FILE)
 
     def test_filter_region_constraint_known_to_fail(self):
 
