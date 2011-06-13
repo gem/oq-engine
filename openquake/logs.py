@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Set up some system-wide loggers
 TODO(jmc): init_logs should take filename, or sysout
@@ -25,6 +24,8 @@ TODO(jmc): support debug level per logger.
 
 """
 import logging
+
+from celery.log import redirect_stdouts_to_logger
 
 from openquake import flags
 FLAGS = flags.FLAGS
@@ -41,14 +42,16 @@ LEVELS = {'debug': logging.DEBUG,
           # critical than INFO.
           'validate': 25}
 
-# This parameter sets where bin/openquake and the likes will send their logging.
-# This parameter has not effect on the workers.  To have a similar effect on
-# the workers use the celeryd --logfile parameter.
-flags.DEFINE_string('logfile', '', 'Path to the log file. Leave empty to log to stderr.')
+# This parameter sets where bin/openquake and the likes will send their
+# logging.  This parameter has not effect on the workers.  To have a similar
+# effect on the workers use the celeryd --logfile parameter.
+flags.DEFINE_string('logfile', '',
+    'Path to the log file. Leave empty to log to stderr.')
 
 RISK_LOG = logging.getLogger("risk")
 HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
+
 
 def init_logs():
     """Load logging config, and set log levels based on flags"""
@@ -63,12 +66,12 @@ def init_logs():
 
     # capture java logging (this is what celeryd does with the workers, we use
     # exactly the same system for bin/openquakes and the likes)
-    from celery.log import redirect_stdouts_to_logger
     redirect_stdouts_to_logger(LOG)
 
     LOG.setLevel(level)
     RISK_LOG.setLevel(level)
     HAZARD_LOG.setLevel(level)
+
 
 def make_job_logger(job_id):
     """Make a special logger object to be used just for a specific job. Acts
@@ -77,11 +80,14 @@ def make_job_logger(job_id):
     automatically specified as 'validate'."""
     #
     def _validate(msg, *args, **kwargs):
-        """Basically a clone of the standard logger methods (like 'debug()')."""
+        """
+        Basically a clone of the standard logger methods (like 'debug()').
+        """
         # 'close' validate_logger instance inside this wrapper method
         # this is nice because now we can just call logger_obj.validate()
         # to make log entries at the 'validate' level.
-        return validate_logger.log(LEVELS.get('validate'), msg, *args, **kwargs)
+        return validate_logger.log(
+            LEVELS.get('validate'), msg, *args, **kwargs)
 
     validate_logger = logging.getLogger(job_id)
     # monkey patch _validate into the logger object

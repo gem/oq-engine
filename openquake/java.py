@@ -90,7 +90,8 @@ def jclass(class_key):
 def _set_java_log_level(level):
     """Sets the log level of the java logger.
 
-    :param level: a string, one of the logging levels defined in :file:`logs.py`
+    :param level: a string, one of the logging levels defined in
+    :file:`logs.py`
     """
 
     if level == 'CRITICAL':
@@ -100,6 +101,7 @@ def _set_java_log_level(level):
     jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
     root_logger.setLevel(jlevel)
 
+
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
@@ -107,7 +109,9 @@ def jvm(max_mem=None):
                     os.path.join(os.path.dirname(__file__), "../lib")),
                 os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")))
-    log4j_properties_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../log4j.properties"))
+    log4j_properties_path = os.path.abspath(
+                                os.path.join(os.path.dirname(__file__),
+                                "../log4j.properties"))
     # TODO(JMC): Make sure these directories exist
     # LOG.debug("Jarpath is %s", jarpaths)
     if not jpype.isJVMStarted():
@@ -115,7 +119,7 @@ def jvm(max_mem=None):
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
-            #"-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
+        #"-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
             # "-Dlog4j.debug", # turn on log4j internal debugging
             "-Dlog4j.configuration=file://%s" % log4j_properties_path,
             "-Xmx%sM" % max_mem)
