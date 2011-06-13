@@ -25,13 +25,27 @@ import unittest
 
 from openquake.parser import exposure
 from openquake import shapes
+from openquake import xml
 from tests.utils import helpers
 
 
 TEST_FILE = 'exposure-portfolio.xml'
+INVALID_TEST_FILE = "tests/data/invalid/small_exposure.xml"
 
 
 class ExposurePortfolioFileTestCase(unittest.TestCase):
+
+    def test_schema_validation(self):
+        ep = exposure.ExposurePortfolioFile(INVALID_TEST_FILE)
+
+        # force parsing the whole file
+        try:
+            for e in ep:
+                pass
+        except xml.XMLValidationError:
+            pass
+        else:
+            raise Exception("Did not throw validation error")
 
     def test_filter_region_constraint_known_to_fail(self):
 
