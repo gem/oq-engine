@@ -18,8 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 import os
 import unittest
 
@@ -110,9 +108,9 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(ctr == len(expected_result)-1,
+        self.assertTrue(ctr == len(expected_result) - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                ctr+1, len(expected_result)))
+                ctr + 1, len(expected_result)))
 
     def test_filter_region_constraint_all_sites(self):
 
@@ -138,6 +136,6 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
 
         # ensure that generator returns exactly the number of items of the
         # expected result list
-        self.assertTrue(ctr == expected_result_ctr-1,
+        self.assertTrue(ctr == expected_result_ctr - 1,
             "filter yielded wrong number of items (%s), expected were %s" % (
-                ctr+1, expected_result_ctr))
+                ctr + 1, expected_result_ctr))

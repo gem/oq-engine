@@ -18,7 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """Parsers to read exposure files, including exposure portfolios.
 These can include building, population, critical infrastructure,
 and other asset classes."""
@@ -36,9 +35,10 @@ RISKML_NS = ''
 def _to_site(element):
     """Convert current GML attributes to Site object
 
-    We want to extract the value of <gml:pos>. We expect the input element to be
-    an 'assetDefinition' and have a child element structured like this:
-    
+    We want to extract the value of <gml:pos>. We expect the input
+    element to be an 'assetDefinition' and have a child element
+    structured like this:
+
     <site>
         <gml:Point srsName="epsg:4326">
             <gml:pos>9.15000 45.16667</gml:pos>
@@ -48,7 +48,7 @@ def _to_site(element):
     # lon/lat are in XML attribute gml:pos
     # consider them as mandatory
 
-    try: 
+    try:
         site_elem = element.find('%ssite' % NRML)
         point_elem = site_elem.find('%sPoint' % GML)
         pos = point_elem.find('%spos' % GML).text
@@ -62,14 +62,14 @@ def _to_site(element):
 
 class ExposurePortfolioFile(producer.FileProducer):
     """ This class parses an ExposurePortfolio XML (part of riskML?) file.
-    The contents of such a file is meant to be used as input for the risk 
-    engine. The class is implemented as a generator. 
-    For each 'AssetInstance' element in the parsed 
+    The contents of such a file is meant to be used as input for the risk
+    engine. The class is implemented as a generator.
+    For each 'AssetInstance' element in the parsed
     instance document, it yields a pair of objects, of which the
     first one is a shapely.geometry object of type Point (representing a
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with exposure-related attribute values for this site.
-    
+
     The attribute dictionary looks like this:
     {'listID': 'PAV01',
      'listDescription': 'Collection of existing building in ' \
@@ -99,6 +99,7 @@ class ExposurePortfolioFile(producer.FileProducer):
             raise XMLValidationError('%s: %s' % (self.file.name, ex.message))
 
     def _do_parse(self):
+        """_parse implementation"""
         nrml_schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end'), schema=nrml_schema):
@@ -145,7 +146,7 @@ class ExposurePortfolioFile(producer.FileProducer):
             else:
                 error_str = "element assetDefinition: missing required " \
                     "attribute %s" % required_attr
-                raise ValueError(error_str) 
+                raise ValueError(error_str)
 
         site_attributes.update(self._current_meta)
 
