@@ -27,7 +27,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML, nrml_schema_file
+from openquake.xml import NRML, GML, nrml_schema_file, XMLValidationError
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -96,9 +96,7 @@ class ExposurePortfolioFile(producer.FileProducer):
         except etree.XMLSyntaxError as ex:
             # when using .iterparse, the error message does not
             # contain a file name
-            ex.msg = '%s: %s' % (self.file.name, ex.message)
-
-            raise
+            raise XMLValidationError('%s: %s' % (self.file.name, ex.message))
 
     def _do_parse(self):
         nrml_schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
