@@ -4,7 +4,7 @@
 <exposureList gml:id="LA01" assetCategory="buildings" lossCategory="economic_loss">
 <gml:description>Collection of exposure values for existing building in Los Angeles County, California, US
 </gml:description>
-	<assetDefinition gml:id="0">
+	<assetDefinition gml:id="src0">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.229726 34.050622</gml:pos>
@@ -15,7 +15,7 @@
 		<structureCategory>C2L_MC</structureCategory>
 		<assetValue unit="EUR">22.86</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="1">
+	<assetDefinition gml:id="src1">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.229726 34.050622</gml:pos>
@@ -26,7 +26,7 @@
 		<structureCategory>RM1L_LC</structureCategory>
 		<assetValue unit="EUR">41.51</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="2">
+	<assetDefinition gml:id="src2">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.229726 34.050622</gml:pos>
@@ -37,7 +37,7 @@
 		<structureCategory>C2L_HC</structureCategory>
 		<assetValue unit="EUR">23.55</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="104">
+	<assetDefinition gml:id="src104">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.241243 34.061557</gml:pos>
@@ -48,7 +48,7 @@
 		<structureCategory>S4L_MC</structureCategory>
 		<assetValue unit="EUR">2129.55</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="105">
+	<assetDefinition gml:id="src105">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.241243 34.061557</gml:pos>
@@ -59,7 +59,7 @@
 		<structureCategory>C2L_LC</structureCategory>
 		<assetValue unit="EUR">624.66</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="106">
+	<assetDefinition gml:id="src106">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.241243 34.061557</gml:pos>
@@ -70,7 +70,7 @@
 		<structureCategory>C2L_MC</structureCategory>
 		<assetValue unit="EUR">1874</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="219">
+	<assetDefinition gml:id="src219">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.245388 34.055984</gml:pos>
@@ -81,7 +81,7 @@
 		<structureCategory>RM2L_MC</structureCategory>
 		<assetValue unit="EUR">663.02</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="220">
+	<assetDefinition gml:id="src220">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.245388 34.055984</gml:pos>
@@ -92,7 +92,7 @@
 		<structureCategory>S1L_MC</structureCategory>
 		<assetValue unit="EUR">984.48</assetValue>
 	</assetDefinition>
-	<assetDefinition gml:id="221">
+	<assetDefinition gml:id="src221">
 		<site>
 			<gml:Point srsName="epsg:4326">
 			<gml:pos>-118.245388 34.055984</gml:pos>
