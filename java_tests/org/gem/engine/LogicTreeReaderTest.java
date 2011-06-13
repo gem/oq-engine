@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.io.File;
 
 import org.gem.engine.logictree.LogicTree;
 import org.gem.engine.logictree.LogicTreeBranch;
@@ -12,6 +13,7 @@ import org.gem.engine.logictree.LogicTreeBranchingLevel;
 import org.gem.engine.logictree.LogicTreeRule;
 import org.gem.engine.logictree.LogicTreeRuleParam;
 import org.junit.Test;
+import org.junit.Before;
 import org.opensha.sha.util.TectonicRegionType;
 
 public class LogicTreeReaderTest {
@@ -24,6 +26,18 @@ public class LogicTreeReaderTest {
 
     public static final String LT_GMPE_TEST_FILE =
             "docs/schema/examples/logic-tree-gmpe.xml";
+
+    public static final String LT_INVALID_SRC_MODEL_TEST_FILE =
+            "java_tests/data/invalid/source_model_logic_tree.xml";
+
+    public static final String LT_INVALID_GMPE_TEST_FILE =
+            "java_tests/data/invalid/gmpe_logic_tree.xml";
+
+    @Before
+    public void setUp() {
+        System.setProperty("openquake.nrml.schema",
+                           new File("docs/schema/nrml.xsd").getAbsolutePath());
+    }
 
     /**
      * Compares source model logic tree as derived by reading nrML file with

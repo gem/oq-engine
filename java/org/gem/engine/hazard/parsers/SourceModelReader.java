@@ -121,12 +121,18 @@ public class SourceModelReader {
      */
     @SuppressWarnings("unchecked")
     public List<GEMSourceData> read() {
+        if (System.getProperty("openquake.nrml.schema") == null)
+            throw new RuntimeException("Set openquake.nrml.schema property  to the NRML schema path");
+
         this.sourceList.clear();
 
         File xml = new File(path);
-        SAXReader reader = new SAXReader();
+        SAXReader reader = new SAXReader(true);
         Document doc = null;
         try {
+            reader.setFeature("http://apache.org/xml/features/validation/schema", true);
+            reader.setProperty("http://java.sun.com/xml/jaxp/properties/schemaLanguage", "http://www.w3.org/2001/XMLSchema");
+            reader.setProperty("http://java.sun.com/xml/jaxp/properties/schemaSource", "file://" + System.getProperty("openquake.nrml.schema"));
             doc = reader.read(xml);
         } catch (Exception e) {
             throw new RuntimeException(e);
