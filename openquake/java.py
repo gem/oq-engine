@@ -105,6 +105,7 @@ def jvm(max_mem=None):
                     os.path.join(os.path.dirname(__file__), "../lib")),
                 os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")))
+    log4j_properties_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../log4j.properties"))
     # TODO(JMC): Make sure these directories exist
     # LOG.debug("Jarpath is %s", jarpaths)
     if not jpype.isJVMStarted():
@@ -114,7 +115,7 @@ def jvm(max_mem=None):
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             #"-Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger",
             # "-Dlog4j.debug", # turn on log4j internal debugging
-            "-Dlog4j.configuration=log4j.properties",
+            "-Dlog4j.configuration=file://%s" % log4j_properties_path,
             "-Xmx%sM" % max_mem)
 
         # override the log level set in log4j configuration file this can't be
