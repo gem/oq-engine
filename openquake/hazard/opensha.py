@@ -33,6 +33,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import settings
 from openquake import shapes
+from openquake import xml
 
 from openquake.hazard import classical_psha
 from openquake.hazard import job
@@ -68,6 +69,8 @@ def preload(fn):
                 settings.KVS_PORT)
         self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
+        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
+                                                xml.nrml_schema_file())
         return fn(self, *args, **kwargs)
     return preloader
 
