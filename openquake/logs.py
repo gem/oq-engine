@@ -60,7 +60,12 @@ def init_logs():
     level = LEVELS.get(FLAGS.debug, logging.ERROR)
     logging.basicConfig(filename=filename, level=level)
     logging.getLogger("amqplib").setLevel(logging.ERROR)
-    
+
+    # capture java logging (this is what celeryd does with the workers, we use
+    # exactly the same system for bin/openquakes and the likes)
+    from celery.log import redirect_stdouts_to_logger
+    redirect_stdouts_to_logger(LOG)
+
     LOG.setLevel(level)
     RISK_LOG.setLevel(level)
     HAZARD_LOG.setLevel(level)   
