@@ -28,10 +28,12 @@ from openquake.logs import LOG
 from openquake import flags
 FLAGS = flags.FLAGS
 
-# This flag would have a noticeable effect only if running inside celery, where
-# sys.stdout and sys.stderr are redefined to be an instance of
-# celery.log.LoggingProxy.  Then every line printed by java to stdout will be
-# prefixed by a timestamp and some information about the worker.
+# Settings this flag to true pipes Java stderr and stdout to python stderr and
+# stdout and has a noticeable effect only when python stderr and stdout are
+# redefined.  This happens when running inside celery, where sys.stdout and
+# sys.stderr are redefined to be an instance of celery.log.LoggingProxy.  Then
+# every line printed by java to stdout will be prefixed by a timestamp and some
+# information about the worker.
 flags.DEFINE_boolean('capture_java_debug', True,
     "Pipe Java stderr and stdout to python stderr and stdout")
 
