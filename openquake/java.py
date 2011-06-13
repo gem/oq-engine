@@ -86,7 +86,10 @@ def jclass(class_key):
 
 
 def _set_java_log_level(level):
-    """Sets the log level of the java logger."""
+    """Sets the log level of the java logger.
+
+    :param level: a string, one of the logging levels defined in :file:`logs.py`
+    """
 
     if level == 'CRITICAL':
         level = 'FATAL'
@@ -114,6 +117,9 @@ def jvm(max_mem=None):
             "-Dlog4j.configuration=log4j.properties",
             "-Xmx%sM" % max_mem)
 
+        # override the log level set in log4j configuration file this can't be
+        # done on the JVM command line (i.e. -Dlog4j.rootLogger= is not
+        # supported by log4j)
         _set_java_log_level(FLAGS.debug.upper())
 
         if FLAGS.capture_java_debug:
