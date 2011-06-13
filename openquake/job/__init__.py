@@ -330,6 +330,7 @@ class Job(object):
                     data_file.seek(0)
                     kvs_client.set(sha1, data_file.read())
                     self.params[key] = sha1
+                    self.params[key + "_PATH"] = path
 
     def to_kvs(self, write_cfg=True):
         """Store this job into kvs."""
