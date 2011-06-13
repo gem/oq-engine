@@ -25,6 +25,7 @@ import geoalchemy
 import unittest
 
 from openquake import java
+from openquake import xml
 from openquake.utils import db
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
@@ -118,6 +119,8 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         self.src_reader = java.jclass('SourceModelReader')(
             TEST_SRC_FILE, db_loader.SourceModelLoader.DEFAULT_MFD_BIN_WIDTH)
+        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
+                                                xml.nrml_schema_file())
         self.sources = self.src_reader.read()
         self.simple, self.complex, self.area, self.point = self.sources
 

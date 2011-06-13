@@ -27,7 +27,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import shapes
-from openquake.xml import NRML, GML
+from openquake.xml import NRML, GML, nrml_schema_file
 
 # do not use namespace for now
 RISKML_NS = ''
@@ -90,8 +90,20 @@ class ExposurePortfolioFile(producer.FileProducer):
         super(ExposurePortfolioFile, self).__init__(path)
 
     def _parse(self):
+        try:
+            for i in self._do_parse():
+                yield i
+        except etree.XMLSyntaxError as ex:
+            # when using .iterparse, the error message does not
+            # contain a file name
+            ex.msg = '%s: %s' % (self.file.name, ex.message)
+
+            raise
+
+    def _do_parse(self):
+        nrml_schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
         for event, element in etree.iterparse(
-                self.file, events=('start', 'end')):
+                self.file, events=('start', 'end'), schema=nrml_schema):
 
             if event == 'start' and element.tag == \
                     '%sexposureList' % NRML:

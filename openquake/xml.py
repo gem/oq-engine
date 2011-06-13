@@ -94,6 +94,9 @@ RISK_LOSS_MAP_LOSS_CATEGORY_ATTR = "lossCategory"
 RISK_LOSS_MAP_UNIT_ATTR = "unit"
 RISK_LOSS_MAP_ASSET_REF_TAG = "%sassetRef" % NRML
 
+class XMLValidationError(Exception):
+    pass
+
 def nrml_schema_file():
     import os
 
