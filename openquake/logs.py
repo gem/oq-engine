@@ -41,15 +41,24 @@ LEVELS = {'debug': logging.DEBUG,
           # critical than INFO.
           'validate': 25}
 
+# This parameter sets where bin/openquake and the likes will send their logging.
+# This parameter has not effect on the workers.  To have a similar effect on
+# the workers use the celeryd --logfile parameter.
+flags.DEFINE_string('logfile', '', 'Path to the log file. Leave empty to log to stderr.')
+
 RISK_LOG = logging.getLogger("risk")
 HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
 
 def init_logs():
     """Load logging config, and set log levels based on flags"""
-    
+
+    filename = FLAGS.get('logfile', '')
+    if not filename:
+        filename = None
+
     level = LEVELS.get(FLAGS.debug, logging.ERROR)
-    logging.basicConfig(level=level)
+    logging.basicConfig(filename=filename, level=level)
     logging.getLogger("amqplib").setLevel(logging.ERROR)
     
     LOG.setLevel(level)
