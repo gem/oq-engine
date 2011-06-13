@@ -9,14 +9,22 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.io.File;
 
 import org.junit.Test;
+import org.junit.Before;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
 public class SourceModelReaderTest {
 
     public static final String TEST_SOURCE_MODEL_FILE = "java_tests/data/source_model.xml";
     public static final double MFD_BIN_WIDTH = 0.1;
+
+    @Before
+    public void setUp() {
+        System.setProperty("openquake.nrml.schema",
+                           new File("docs/schema/nrml.xsd").getAbsolutePath());
+    }
 
     /**
      * Compares source model as derived by reading nrML file with source model
