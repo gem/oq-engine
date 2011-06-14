@@ -476,7 +476,7 @@ public class SourceModelReader {
 
     /**
      * Defines truncated Gutenberg-Richter magnitude frequency distribution
-     * 
+     *
      * @param aVal
      *            : cumulative a value
      * @param bVal
