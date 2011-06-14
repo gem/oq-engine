@@ -68,7 +68,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
     // constructor
     public NshmpFault2GemSourceData(String inputfile, TectonicRegionType trt,
             double fileWeight, double latmin, double latmax, double lonmin,
-            double lonmax) throws FileNotFoundException {
+            double lonmax, int startId) throws FileNotFoundException {
 
         // inputfile MUST be an absolute path!!
         srcDataList = new ArrayList<GEMSourceData>();
@@ -259,7 +259,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
             double widthMchar = Double.valueOf(st.nextToken()).doubleValue();
 
             // source index
-            int sourceIndex = 0;
+            int sourceIndex = startId;
 
             // loop over fault sources
             while ((sRecord = oReader.readLine()) != null) {
@@ -1290,7 +1290,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
 
                     // create GEMFaultSourceData abject
                     GEMFaultSourceData fsd =
-                            new GEMFaultSourceData(Integer
+                            new GEMFaultSourceData("src" + Integer
                                     .toString(sourceIndex), FName, trt,
                                     finalMFD, faultT, dip, rake, seismDepthLow,
                                     depth0, floatRuptureFlag);
@@ -1374,7 +1374,7 @@ public class NshmpFault2GemSourceData extends GemFileParser {
         NshmpFault2GemSourceData model =
                 new NshmpFault2GemSourceData(inFile,
                         TectonicRegionType.STABLE_SHALLOW, 1.0, -90.0, 90.0,
-                        -180.0, 180.0);
+                        -180.0, 180.0, 0);
 
         model.writeFaultSources2KMLfile(new FileWriter(
                 "/Users/damianomonelli/Desktop/CaliforniaFaults.kml"));
