@@ -74,7 +74,7 @@ class LogsTestCase(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def _slurpFile(self):
+    def _slurp_file(self):
         # Flush all the logs into the logging file.  This is a little bit
         # tricky.  sys.stdout has been redefined by init_logs() to be a
         # celery.log.LoggingProxy. This proxy has a flush() method that does
@@ -91,7 +91,7 @@ class LogsTestCase(unittest.TestCase):
     def assertFileLastLineEqual(self, line):
         msg = None
 
-        log_lines = self._slurpFile()
+        log_lines = self._slurp_file()
 
         if not log_lines:
             msg = "Last file line <EMPTY> != %r" % line
@@ -104,7 +104,7 @@ class LogsTestCase(unittest.TestCase):
     def assertFileLastLineEndsWith(self, line):
         msg = None
 
-        log_lines = self._slurpFile()
+        log_lines = self._slurp_file()
 
         if not log_lines:
             msg = "Last file line <EMPTY> doesn't end with %r" % line
