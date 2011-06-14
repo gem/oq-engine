@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.dom4j.Document;
+import org.dom4j.DocumentException;
 import org.dom4j.Element;
 import org.dom4j.io.SAXReader;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
@@ -26,11 +27,12 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+import org.gem.engine.XMLValidationError;
 
 /**
  * Class for reading source model data in a nrML format file. The constructor of
  * this class takes the path of the file to read from.
- * 
+ *
  */
 public class SourceModelReader {
 
@@ -134,6 +136,8 @@ public class SourceModelReader {
             reader.setProperty("http://java.sun.com/xml/jaxp/properties/schemaLanguage", "http://www.w3.org/2001/XMLSchema");
             reader.setProperty("http://java.sun.com/xml/jaxp/properties/schemaSource", "file://" + System.getProperty("openquake.nrml.schema"));
             doc = reader.read(xml);
+        } catch (DocumentException e) {
+            throw new XMLValidationError(xml.getAbsolutePath(), e);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
