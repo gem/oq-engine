@@ -50,18 +50,39 @@ LOG = logging.getLogger()
 def init_logs():
     """Load logging config, and set log levels based on flags"""
 
-    filename = FLAGS.get('logfile', '')
-    if not filename:
-        filename = None
+    # Add the logging handler to the root logger.  This will be a file or
+    # stdout depending on the presence of the logfile parameter.
+    #
+    # Note that what we are doing here is just a simplified version of what the
+    # standard logging.basicConfig is doing.  An important difference is that
+    # we add our handler every time init_logs() is called, whereas basicConfig
+    # does nothing if there is at least one handler (any handler) present.
+    # This allows us to call init_logs multiple times during the unittest, to
+    # reinstall our handler after nose (actually its logcapture plugin) throws
+    # it away.
+    found = False
+    for hdlr in LOG.handlers:
+        if (isinstance(hdlr, logging.FileHandler)
+            or isinstance(hdlr, logging.StreamHandler)):
+            found = True
 
-    level = LEVELS.get(FLAGS.debug, logging.ERROR)
-    logging.basicConfig(filename=filename, level=level)
+    if not found:
+        filename = FLAGS.get('logfile', '')
+        if filename:
+            hdlr = logging.FileHandler(filename, 'a')
+        else:
+            hdlr = logging.StreamHandler()
+
+        hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
+        LOG.addHandler(hdlr)
+
+    level = LEVELS.get(FLAGS.debug, 'warn')
     logging.getLogger("amqplib").setLevel(logging.ERROR)
-
-    # capture java logging (this is what celeryd does with the workers, we use
-    # exactly the same system for bin/openquakes and the likes)
-    redirect_stdouts_to_logger(LOG)
 
     LOG.setLevel(level)
     RISK_LOG.setLevel(level)
     HAZARD_LOG.setLevel(level)
+
+    # capture java logging (this is what celeryd does with the workers, we use
+    # exactly the same system for bin/openquakes and the likes)
+    redirect_stdouts_to_logger(LOG)
