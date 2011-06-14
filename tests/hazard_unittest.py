@@ -86,7 +86,7 @@ class LogicTreeValidationTestCase(unittest.TestCase):
         ltr = jpype.JClass('org.gem.engine.LogicTreeReader')(path)
         try:
             ltr.read()
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             opensha.unwrap_validation_error(
                 jpype, ex, path)
 
