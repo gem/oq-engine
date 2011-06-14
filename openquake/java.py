@@ -101,6 +101,23 @@ def _set_java_log_level(level):
     jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
     root_logger.setLevel(jlevel)
 
+def _setup_java_capture(out, err):
+    """
+    Pipes the java System.out and System.error into python files.
+
+    :param out: python file-like object (must implement the write method)
+    :param err: python file-like objectt (must implement the write method)
+    """
+    mystream = jpype.JProxy("org.gem.IPythonPipe", inst=out)
+    errstream = jpype.JProxy("org.gem.IPythonPipe", inst=err)
+    outputstream = jpype.JClass("org.gem.PythonOutputStream")()
+    err_stream = jpype.JClass("org.gem.PythonOutputStream")()
+    outputstream.setPythonStdout(mystream)
+    err_stream.setPythonStdout(errstream)
+
+    ps = jpype.JClass("java.io.PrintStream")
+    jpype.java.lang.System.setOut(ps(outputstream))
+    jpype.java.lang.System.setErr(ps(err_stream))
 
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
@@ -130,16 +147,7 @@ def jvm(max_mem=None):
         _set_java_log_level(FLAGS.debug.upper())
 
         if FLAGS.capture_java_debug:
-            mystream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stdout)
-            errstream = jpype.JProxy("org.gem.IPythonPipe", inst=sys.stderr)
-            outputstream = jpype.JClass("org.gem.PythonOutputStream")()
-            err_stream = jpype.JClass("org.gem.PythonOutputStream")()
-            outputstream.setPythonStdout(mystream)
-            err_stream.setPythonStdout(errstream)
-
-            ps = jpype.JClass("java.io.PrintStream")
-            jpype.java.lang.System.setOut(ps(outputstream))
-            jpype.java.lang.System.setErr(ps(err_stream))
+            _setup_java_capture(sys.stdout, sys.stderr)
 
     return jpype
 
