@@ -127,6 +127,7 @@ class XMLMismatchError(Exception):
 
     @property
     def message(self):
+        """Exception message string"""
         return "XML mismatch error for file '%s': expected %s but got %s" % (
             self.file_name, self._HUMANIZE_FILE.get(self.expected_tag),
             self._HUMANIZE_FILE.get(self.actual_tag, 'unknown file type'))
