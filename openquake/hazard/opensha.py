@@ -102,7 +102,7 @@ class BasePSHAMixin(Mixin):
         jpype = java.jvm()
         try:
             self.calc.sampleAndSaveERFTree(self.cache, key, seed)
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             unwrap_validation_error(
                 jpype, ex,
                 self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE_PATH"))
@@ -115,7 +115,7 @@ class BasePSHAMixin(Mixin):
         jpype = java.jvm()
         try:
             self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             unwrap_validation_error(
                 jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE_PATH"))
 
@@ -667,7 +667,7 @@ class ClassicalMixin(BasePSHAMixin):
                 self.generate_gmpe_map(),
                 self.get_iml_list(),
                 float(self.params['MAXIMUM_DISTANCE']))
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
 
         # write the curves to the KVS and return a list of the keys
