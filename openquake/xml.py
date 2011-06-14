@@ -98,7 +98,13 @@ RISK_LOSS_MAP_ASSET_REF_TAG = "%sassetRef" % NRML
 
 class XMLValidationError(Exception):
     """XML schema validation error"""
-    pass
+
+    def __init__(self, message, file_name):
+        """Constructs a new validation exception for the given file name"""
+        Exception.__init__(self, "XML Validation error for file '%s': %s" %
+                                 (file_name, message))
+
+        self.file_name = file_name
 
 
 def nrml_schema_file():

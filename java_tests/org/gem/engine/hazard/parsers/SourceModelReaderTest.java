@@ -19,6 +19,8 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
 import org.dom4j.DocumentException;
 
+import org.gem.engine.XMLValidationError;
+
 public class SourceModelReaderTest {
 
     public static final String TEST_SOURCE_MODEL_FILE = "java_tests/data/source_model.xml";
@@ -82,14 +84,15 @@ public class SourceModelReaderTest {
 
             reader.read();
         }
-        catch (RuntimeException e) {
+        catch (XMLValidationError e) {
             threw = true;
+            assertEquals(new File(path).getAbsolutePath(), e.getFileName());
             assertTrue("Throws a DocumentException",
                        e.getCause() instanceof DocumentException);
             assertNull(e.getCause().getCause());
         }
 
-        assertTrue("Parsing threw an exception", threw);
+        assertTrue("Parsing threw a XMLValidationError", threw);
     }
 
     /**
