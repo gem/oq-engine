@@ -35,6 +35,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake import xml
+from openquake import java
 
 from openquake.job import mixins
 from openquake.kvs import tokens
@@ -75,6 +76,23 @@ NRML_SCHEMA_PATH_OLD = \
 def generate_job():
     jobobj = job.Job.from_file(TEST_JOB_FILE)
     return jobobj.id
+
+
+class LogicTreeValidationTestCase(unittest.TestCase):
+    """Test XML parsing error handling"""
+
+    def _parse_file(self, path):
+        jpype = java.jvm()
+        ltr = jpype.JClass('org.gem.engine.LogicTreeReader')(path)
+        try:
+            ltr.read()
+        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+            opensha.unwrap_validation_error(
+                jpype, ex, path)
+
+    def test_invalid_xml(self):
+        self.assertRaises(xml.XMLValidationError, self._parse_file,
+                          helpers.get_data_path('invalid/gmpe_logic_tree.xml'))
 
 
 class HazardEngineTestCase(unittest.TestCase):
