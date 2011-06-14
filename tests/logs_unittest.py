@@ -70,16 +70,30 @@ class LogsTestCase(unittest.TestCase):
         return [line.strip() for line in log_file.readlines()]
 
     def assertFileLastLineEqual(self, line):
+        msg = None
+
         log_lines = self._slurpFile()
 
-        if log_lines[-1] != line:
-            raise self.failureException("Last file line %r != %r" % (log_lines[-1], line))
+        if not log_lines:
+            msg = "Last file line <EMPTY> != %r" % line
+        elif log_lines[-1] != line:
+            msg = "Last file line %r != %r" % (log_lines[-1], line)
+
+        if msg:
+            raise self.failureException(msg)
 
     def assertFileLastLineEndsWith(self, line):
+        msg = None
+
         log_lines = self._slurpFile()
 
-        if not log_lines[-1].endswith(line):
-            raise self.failureException("Last file line %r doesn't end with %r" % (log_lines[-1], line))
+        if not log_lines:
+            msg = "Last file line <EMPTY> doesn't end with %r" % line
+        elif not log_lines[-1].endswith(line):
+            msg = "Last file line %r doesn't end with %r" % (log_lines[-1], line)
+
+        if msg:
+            raise self.failureException(msg)
 
     def test_python_printing(self):
         msg = 'This is a test print statement'
