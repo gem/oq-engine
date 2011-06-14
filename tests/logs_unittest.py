@@ -88,7 +88,7 @@ class LogsTestCase(unittest.TestCase):
 
         return [line.strip() for line in log_file.readlines()]
 
-    def assertFileLastLineEqual(self, line):
+    def assert_file_last_line_equal(self, line):
         msg = None
 
         log_lines = self._slurp_file()
@@ -101,7 +101,7 @@ class LogsTestCase(unittest.TestCase):
         if msg:
             raise self.failureException(msg)
 
-    def assertFileLastLineEndsWith(self, line):
+    def assert_file_last_line_ends_with(self, line):
         msg = None
 
         log_lines = self._slurp_file()
@@ -118,23 +118,23 @@ class LogsTestCase(unittest.TestCase):
     def test_python_printing(self):
         msg = 'This is a test print statement'
         print msg
-        self.assertFileLastLineEqual('WARNING:root:' + msg)
+        self.assert_file_last_line_equal('WARNING:root:' + msg)
 
     def test_python_logging(self):
         msg = 'This is a test log entry'
         logs.LOG.error(msg)
 
-        self.assertFileLastLineEqual('ERROR:root:' + msg)
+        self.assert_file_last_line_equal('ERROR:root:' + msg)
 
     def test_java_printing(self):
         msg = 'This is a test java print statement'
         jpype.java.lang.System.out.println(msg)
 
-        self.assertFileLastLineEndsWith(msg)
+        self.assert_file_last_line_ends_with(msg)
 
     def test_java_logging(self):
         msg = 'This is a test java log entry'
         root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
         root_logger.error(msg)
 
-        self.assertFileLastLineEndsWith(msg)
+        self.assert_file_last_line_ends_with(msg)
