@@ -15,7 +15,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 import os
 import re
 import sys
@@ -28,6 +27,7 @@ from openquake import java
 from openquake import logs
 
 LOG_FILE_PATH = os.path.join(os.getcwd(), 'test.log')
+
 
 class LogsTestCase(unittest.TestCase):
 
@@ -109,7 +109,8 @@ class LogsTestCase(unittest.TestCase):
         if not log_lines:
             msg = "Last file line <EMPTY> doesn't end with %r" % line
         elif not log_lines[-1].endswith(line):
-            msg = "Last file line %r doesn't end with %r" % (log_lines[-1], line)
+            msg = "Last file line %r doesn't end with %r"\
+                % (log_lines[-1], line)
 
         if msg:
             raise self.failureException(msg)
@@ -117,13 +118,13 @@ class LogsTestCase(unittest.TestCase):
     def test_python_printing(self):
         msg = 'This is a test print statement'
         print msg
-        self.assertFileLastLineEqual('WARNING:root:'+msg)
+        self.assertFileLastLineEqual('WARNING:root:' + msg)
 
     def test_python_logging(self):
         msg = 'This is a test log entry'
         logs.LOG.error(msg)
 
-        self.assertFileLastLineEqual('ERROR:root:'+msg)
+        self.assertFileLastLineEqual('ERROR:root:' + msg)
 
     def test_java_printing(self):
         msg = 'This is a test java print statement'
