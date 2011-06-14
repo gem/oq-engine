@@ -98,6 +98,11 @@ class LogicTreeValidationTestCase(unittest.TestCase):
         self.assertRaises(xml.XMLValidationError, self._parse_file,
                           helpers.get_data_path('invalid/gmpe_logic_tree.xml'))
 
+    def test_mismatched_xml(self):
+        self.assertRaises(xml.XMLMismatchError, self._parse_file,
+                          os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
+                                       'source-model.xml'))
+
 
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.

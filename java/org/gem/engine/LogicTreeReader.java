@@ -31,6 +31,7 @@ public class LogicTreeReader {
 
     private final Map<String, LogicTree> logicTreeHashMap;
 
+    private static final String LOGIC_TREE_SET = "logicTreeSet";
     private static final String BRANCHING_LEVEL = "branchingLevel";
     private static final String TECTONIC_REGION = "tectonicRegion";
     private static final String UNCERTAINTY_TYPE = "uncertaintyType";
@@ -120,6 +121,9 @@ public class LogicTreeReader {
         Iterator i = root.elements().iterator();
         while (i.hasNext()) {
             Element logicTreeSetElem = (Element) i.next();
+            String localName = logicTreeSetElem.getQName().getName();
+            if (localName != LOGIC_TREE_SET)
+                throw new XMLMismatchError(null, localName, LOGIC_TREE_SET);
 
             Map<String, LogicTree> logicTrees =
                     parseLogicTreeSet(logicTreeSetElem, indexLogicTree);

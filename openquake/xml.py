@@ -107,6 +107,34 @@ class XMLValidationError(Exception):
         self.file_name = file_name
 
 
+class XMLMismatchError(Exception):
+    """Wrong document type (eg. logic tree instead of source model)"""
+
+    def __init__(self, file_name, actual_tag, expected_tag):
+        """Constructs a new type mismatch exception for the given file name"""
+        Exception.__init__(self)
+
+        self.file_name = file_name
+        self.actual_tag = actual_tag
+        self.expected_tag = expected_tag
+
+    _HUMANIZE_FILE = {
+        'logicTreeSet': 'logic tree',
+        'sourceModel': 'source model',
+        'exposurePortfolio': 'exposure portfolio',
+        'vulnerabilityModel': 'vulnerability model',
+        }
+
+    @property
+    def message(self):
+        return "XML mismatch error for file '%s': expected %s but got %s" % (
+            self.file_name, self._HUMANIZE_FILE.get(self.expected_tag),
+            self._HUMANIZE_FILE.get(self.actual_tag, 'unknown file type'))
+
+    def __str__(self):
+        return self.message
+
+
 def nrml_schema_file():
     """Returns the absolute path to the NRML schema file"""
     # TODO needs to be adjusted for the packaged version
