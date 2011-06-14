@@ -71,9 +71,6 @@ class LogsTestCase(unittest.TestCase):
         java._set_java_log_level('WARN')
         java._setup_java_capture(sys.stdout, sys.stderr)
 
-    def tearDown(self):
-        pass
-
     def _slurp_file(self):
         # Flush all the logs into the logging file.  This is a little bit
         # tricky.  sys.stdout has been redefined by init_logs() to be a
