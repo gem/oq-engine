@@ -33,6 +33,18 @@ class LogsTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # This is safe to call even if the jvm was already running from a
+        # previous test.
+        # Even better would be to start with a fresh jvm but this is currently
+        # not possible (see
+        # http://jpype.sourceforge.net/doc/user-guide/userguide.html#limitation
+        # )
+        java.jvm()
+
+        # save the java stdout and stderr that will be trashed during this test
+        cls.old_java_out = jpype.java.lang.System.out
+        cls.old_java_err = jpype.java.lang.System.err
+
         try:
             os.remove(LOG_FILE_PATH)
         except OSError:
@@ -40,6 +52,10 @@ class LogsTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        # restore the java stdout and stderr that were trashed during this test
+        jpype.java.lang.System.setOut(cls.old_java_out)
+        jpype.java.lang.System.setErr(cls.old_java_err)
+
         try:
             os.remove(LOG_FILE_PATH)
         except OSError:
@@ -47,10 +63,13 @@ class LogsTestCase(unittest.TestCase):
 
     def setUp(self):
         # we init the logs before each test because nosetest redefines
-        # sys.stdout too.
+        # sys.stdout and removes all the handlers from the rootLogger
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
         logs.init_logs()
+
+        java._set_java_log_level('WARN')
+        java._setup_java_capture(sys.stdout, sys.stderr)
 
     def tearDown(self):
         pass
@@ -101,23 +120,18 @@ class LogsTestCase(unittest.TestCase):
         self.assertFileLastLineEqual('WARNING:root:'+msg)
 
     def test_python_logging(self):
-        # invoke nosetest with --nologcapture
         msg = 'This is a test log entry'
         logs.LOG.error(msg)
 
         self.assertFileLastLineEqual('ERROR:root:'+msg)
 
     def test_java_printing(self):
-        java.jvm()
-
         msg = 'This is a test java print statement'
         jpype.java.lang.System.out.println(msg)
 
         self.assertFileLastLineEndsWith(msg)
 
     def test_java_logging(self):
-        java.jvm()
-
         msg = 'This is a test java log entry'
         root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
         root_logger.error(msg)
