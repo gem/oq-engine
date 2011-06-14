@@ -35,6 +35,9 @@ public class LogicTreeReaderTest {
     public static final String LT_INVALID_GMPE_TEST_FILE =
             "tests/data/invalid/gmpe_logic_tree.xml";
 
+    public static final String LT_MISMATCHED_TEST_FILE =
+            "docs/schema/examples/source-model.xml";
+
     @Before
     public void setUp() {
         System.setProperty("openquake.nrml.schema",
@@ -213,5 +216,26 @@ public class LogicTreeReaderTest {
     @Test
     public void gmpeSchemaValidationTest() {
         checkFailsValidation(LT_INVALID_GMPE_TEST_FILE);
+    }
+
+    /**
+     * Test that a document mismatch throws a meaningful error
+     */
+    @Test
+    public void documentMismatchTest() {
+        boolean threw = false;
+
+        try {
+            LogicTreeReader reader = new LogicTreeReader(LT_MISMATCHED_TEST_FILE);
+
+            reader.read();
+        }
+        catch (XMLMismatchError e) {
+            threw = true;
+            assertEquals("sourceModel", e.getActualTag());
+            assertEquals("logicTreeSet", e.getExpectedTag());
+        }
+
+        assertTrue("Parsing threw a XMLMismatchError", threw);
     }
 }

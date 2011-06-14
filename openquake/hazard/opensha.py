@@ -80,6 +80,14 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     either a XMLValidationError or the original Java exception"""
     ex = runtime_exception.__javaobject__
 
+    if type(ex) is jpype.JPackage('org').gem.engine.XMLValidationError:
+        raise xml.XMLValidationError(ex.getCause().getMessage(),
+                                     path or ex.getFileName())
+
+    if type(ex) is jpype.JPackage('org').gem.engine.XMLMismatchError:
+        raise xml.XMLMismatchError(path or ex.getFileName(), ex.getActualTag(),
+                                   ex.getExpectedTag())
+
     if ex.getCause() and type(ex.getCause()) is \
             jpype.JPackage('org').dom4j.DocumentException:
         raise xml.XMLValidationError(ex.getCause().getMessage(), path)

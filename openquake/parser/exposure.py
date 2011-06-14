@@ -102,6 +102,7 @@ class ExposurePortfolioFile(producer.FileProducer):
     def _do_parse(self):
         """_parse implementation"""
         nrml_schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
+        level = 0
         for event, element in etree.iterparse(
                 self.file, events=('start', 'end'), schema=nrml_schema):
 
@@ -114,6 +115,16 @@ class ExposurePortfolioFile(producer.FileProducer):
                 desc = element.find('%sdescription' % GML)
                 if desc is not None:
                     self._current_meta['listDescription'] = str(desc.text)
+
+            elif event == 'start' and level < 2:
+                # check that the first child of the root element is an
+                # exposure portfolio
+                if level == 1 and element.tag != '%sexposurePortfolio' % NRML:
+                    raise xml.XMLMismatchError(
+                        self.file.name, str(element.tag)[len(NRML):],
+                        'exposurePortfolio')
+
+                level += 1
 
             elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
                 site_data = (_to_site(element),
