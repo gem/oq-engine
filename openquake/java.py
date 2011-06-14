@@ -101,6 +101,7 @@ def _set_java_log_level(level):
     jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
     root_logger.setLevel(jlevel)
 
+
 def _setup_java_capture(out, err):
     """
     Pipes the java System.out and System.error into python files.
@@ -118,6 +119,7 @@ def _setup_java_capture(out, err):
     ps = jpype.JClass("java.io.PrintStream")
     jpype.java.lang.System.setOut(ps(outputstream))
     jpype.java.lang.System.setErr(ps(err_stream))
+
 
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
