@@ -27,6 +27,7 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+import org.gem.engine.XMLMismatchError;
 import org.gem.engine.XMLValidationError;
 
 /**
@@ -143,6 +144,14 @@ public class SourceModelReader {
         }
 
         Element sourceModel = doc.getRootElement().element(SOURCE_MODEL);
+        if (sourceModel == null)
+        {
+            Element child = (Element) doc.getRootElement().elements().get(0);
+            String localName = child.getQName().getName();
+
+            throw new XMLMismatchError(null, localName, SOURCE_MODEL);
+        }
+
         Iterator i = sourceModel.elements().iterator();
 
         while (i.hasNext()) {
