@@ -82,11 +82,7 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 
     if ex.getCause() and type(ex.getCause()) is \
             jpype.JPackage('org').dom4j.DocumentException:
-        if path:
-            msg = '%s: %s' % (path, ex.getCause().getMessage())
-        else:
-            msg = ex.getCause().getMessage()
-        raise xml.XMLValidationError(msg)
+        raise xml.XMLValidationError(ex.getCause().getMessage(), path)
 
     raise runtime_exception
 
