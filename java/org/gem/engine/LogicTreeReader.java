@@ -90,10 +90,15 @@ public class LogicTreeReader {
      * (if defined in the file).
      */
     public Map<String, LogicTree> read() {
+        if (System.getProperty("openquake.nrml.schema") == null)
+            throw new RuntimeException("Set openquake.nrml.schema property to the NRML schema path");
 
-        SAXReader reader = new SAXReader();
+        SAXReader reader = new SAXReader(true);
         Document doc = null;
         try {
+            reader.setFeature("http://apache.org/xml/features/validation/schema", true);
+            reader.setProperty("http://java.sun.com/xml/jaxp/properties/schemaLanguage", "http://www.w3.org/2001/XMLSchema");
+            reader.setProperty("http://java.sun.com/xml/jaxp/properties/schemaSource", "file://" + System.getProperty("openquake.nrml.schema"));
             doc = reader.read(this.bufferedReader);
         } catch (Exception e) {
             throw new RuntimeException(e);

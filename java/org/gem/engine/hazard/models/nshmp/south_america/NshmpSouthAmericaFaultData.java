@@ -46,14 +46,14 @@ public class NshmpSouthAmericaFaultData extends GemFileParser {
                         new NshmpFault2GemSourceData(key,
                                 TectonicRegionType.ACTIVE_SHALLOW,
                                 faultFile.get(key), latmin, latmax, lonmin,
-                                lonmax);
+                                lonmax, srcDataList.size());
             } else if (key.equalsIgnoreCase(inDir + "sam.craton2.char")
                     || key.equalsIgnoreCase(inDir + "sam.craton2.gr")) {
                 fm =
                         new NshmpFault2GemSourceData(key,
                                 TectonicRegionType.STABLE_SHALLOW,
                                 faultFile.get(key), latmin, latmax, lonmin,
-                                lonmax);
+                                lonmax, srcDataList.size());
             }
             for (int i = 0; i < fm.getList().size(); i++)
                 srcDataList.add(fm.getList().get(i));
