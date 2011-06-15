@@ -37,7 +37,6 @@ import os
 import sys
 import unittest
 
-from openquake import logs
 from openquake import flags
 FLAGS = flags.FLAGS
 
@@ -47,18 +46,12 @@ flags.DEFINE_boolean('bb_suite', False, "Run black box tests suite?")
 if __name__ == '__main__':
     sys.argv = FLAGS(sys.argv)
     sys.path.append("%s/tests" % os.path.abspath(os.path.curdir))
-    logs.init_logs()
     try:
         import nose
 
         args = sys.argv
         args.remove('run_tests.py')
         args = ['nosetests', '-x', '-e', 'do_test.+'] + args
-
-        if (FLAGS.debug == "debug"):
-            pass
-        else:
-            args.append("--logging-clear-handlers")
 
         if FLAGS.speed_tests:
             print "Running speed tests with %s" % args
