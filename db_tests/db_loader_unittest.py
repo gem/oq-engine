@@ -141,7 +141,7 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
         def _retrieve_db_data(soup_db):
 
             # doing some "trickery" with *properties and primary_key,
-            # to adapt the # code for sqlalchemy 0.7
+            # to adapt the code for sqlalchemy 0.7
 
             # surface join
             surf_join = _join(soup_db, soup_db.catalog, soup_db.surface,
