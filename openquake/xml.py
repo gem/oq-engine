@@ -93,7 +93,7 @@ RISK_LOSS_MAP_MEAN_LOSS_TAG = "%smean" % NRML
 RISK_LOSS_MAP_STANDARD_DEVIATION_TAG = "%sstdDev" % NRML
 RISK_LOSS_MAP_LOSS_CATEGORY_ATTR = "lossCategory"
 RISK_LOSS_MAP_UNIT_ATTR = "unit"
-RISK_LOSS_MAP_ASSET_REF_TAG = "%sassetRef" % NRML
+RISK_LOSS_MAP_ASSET_REF_TAG = "assetRef"
 
 
 class XMLValidationError(Exception):
