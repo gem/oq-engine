@@ -181,12 +181,21 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
                 for csv_key in csv_keys:
                     db_val = getattr(db_row, csv_key)
                     csv_val = csv_row[csv_key]
-                    if not len(csv_val.strip()):
-                        csv_val = None
-                    if csv_key == 'agency':
-                        self.assertEqual(str(db_val), str(csv_val))
-                    else:
-                        self.assertEqual(float(db_val), float(csv_val))
+
+                    def convert_val(v):
+                        v = v.strip()
+
+                        if csv_key in ['agency', 'identifier']:
+                            coerce_to = str
+                        else:
+                            coerce_to = float
+
+                        if not len(v):
+                            return None
+                        else:
+                            return coerce_to(v)
+
+                    self.assertEqual(db_val, convert_val(csv_val))
 
         def _delete_db_data(soup_db, db_rows):
             # cleaning the db
