@@ -26,13 +26,6 @@ eventually.
 
 import sys
 
-from openquake import flags
-from openquake import java
-flags.FLAGS.capture_java_debug = True
-flags.FLAGS.debug = "warn"
-from openquake import logs
-logs.init_logs()
-
 sys.path.append('.')
 
 BROKER_HOST = "localhost"

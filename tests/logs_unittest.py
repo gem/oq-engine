@@ -15,115 +15,123 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 import os
+import re
+import sys
 import unittest
 
+import jpype
+
+from openquake import flags
+from openquake import java
 from openquake import logs
 
-FAKE_JOB_ID = "8675309"
-LOG_FILE_PATH = os.path.join(os.getcwd(), '%s.log' % FAKE_JOB_ID)
+LOG_FILE_PATH = os.path.join(os.getcwd(), 'test.log')
 
-
-def _remove_log_file(job_id):
-    """Remove a log file (in the CWD) by job_id."""
-    log_path = '%s.log' % job_id
-    if os.path.exists(log_path):
-        os.system('rm %s' % log_path)
 
 class LogsTestCase(unittest.TestCase):
-    
-    
+
+    @classmethod
+    def setUpClass(cls):
+        # This is safe to call even if the jvm was already running from a
+        # previous test.
+        # Even better would be to start with a fresh jvm but this is currently
+        # not possible (see
+        # http://jpype.sourceforge.net/doc/user-guide/userguide.html#limitation
+        # )
+        java.jvm()
+
+        # save the java stdout and stderr that will be trashed during this test
+        cls.old_java_out = jpype.java.lang.System.out
+        cls.old_java_err = jpype.java.lang.System.err
+
+        try:
+            os.remove(LOG_FILE_PATH)
+        except OSError:
+            pass
+
+    @classmethod
+    def tearDownClass(cls):
+        # restore the java stdout and stderr that were trashed during this test
+        jpype.java.lang.System.setOut(cls.old_java_out)
+        jpype.java.lang.System.setErr(cls.old_java_err)
+
+        try:
+            os.remove(LOG_FILE_PATH)
+        except OSError:
+            pass
+
     def setUp(self):
-        # clean up the default test log file
-        _remove_log_file(FAKE_JOB_ID)
+        # we init the logs before each test because nosetest redefines
+        # sys.stdout and removes all the handlers from the rootLogger
+        flags.FLAGS.debug = 'warn'
+        flags.FLAGS.logfile = LOG_FILE_PATH
+        logs.init_logs()
 
-    def tearDown(self):
-        pass
+        java._set_java_log_level('WARN')
+        java._setup_java_capture(sys.stdout, sys.stderr)
 
+    def _slurp_file(self):
+        # Flush all the logs into the logging file.  This is a little bit
+        # tricky.  sys.stdout has been redefined by init_logs() to be a
+        # celery.log.LoggingProxy. This proxy has a flush() method that does
+        # nothing, but its logger attribute is an instance of the standard
+        # logging.Logger python class.  From there we can reach the handler and
+        # finally flush it.
+        for handler in sys.stdout.logger.handlers:
+            handler.flush()
 
-    def test_validation_logger_write_single_line(self):
-        """Test procedure:
-        1) Make up some fake job ID
-        2) Call logs.make_job_logger(job_id) to make a logger obj
-        3) Write one line to the file (file can just be in the CWD) using the 
-        'validate' logger method
-        4) Verify the contents of the log file
-        """
-        logger = logs.make_job_logger(FAKE_JOB_ID)
-        expected_log_text = "This is a test log entry for job_id = %s." % \
-FAKE_JOB_ID
-        # write to the log using a monkey patched validate() logging method
-        logger.validate(expected_log_text)
-       
-        self.assertTrue(os.path.exists(LOG_FILE_PATH)) 
-        # open the log file
-        # read contents and compare
-        log_file = open(LOG_FILE_PATH, 'r')
-        
-        actual_log_text = log_file.readlines()
-        # should only be 1 line of text
-        self.assertEqual(1, len(actual_log_text))
-        self.assertEqual(actual_log_text[0], expected_log_text + '\n')
-
-
-    def test_validation_logger_write_many_lines(self):
-        """Test procedure:
-        Basically the same as the single line logger test, except we'll log 
-        multiple lines of text."""
-        logger = logs.make_job_logger(FAKE_JOB_ID)
-        # generate 100 fake log entries
-        expected_log_text = [ 'Log entry number %d' % \
-x for x in range(100)]
-        
-        # add the example log text to the log file
-        for entry in expected_log_text:
-            logger.validate(entry)
-
-        self.assertTrue(os.path.exists(LOG_FILE_PATH))
-        # open the log file
-        # read the contents and compare
         log_file = open(LOG_FILE_PATH, 'r')
 
-        actual_log_text = log_file.readlines()
-        # verify the log file contents
-        # append a '\n' to each item of the expected_log_text; this should make
-        # the expected and actual match
-        self.assertEqual([x + '\n' for x in expected_log_text],\
-actual_log_text)
+        return [line.strip() for line in log_file.readlines()]
 
+    def assert_file_last_line_equal(self, line):
+        msg = None
 
-    def test_multiple_loggers(self):
-        """Test procedure:
-        1) Create 2 loggers (with different job_ids)
-        2) Log multiple messages at the 'validate' level to each log file
-        3) Verify the contents"""
+        log_lines = self._slurp_file()
 
-        job_id_1 = "job314"
-        job_id_2 = "job315"
-        # first thing, remove logs (if existing) from previous test runs
-        _remove_log_file(job_id_1)
-        _remove_log_file(job_id_2)
+        if not log_lines:
+            msg = "Last file line <EMPTY> != %r" % line
+        elif log_lines[-1] != line:
+            msg = "Last file line %r != %r" % (log_lines[-1], line)
 
-        logger1 = logs.make_job_logger(job_id_1)
-        logger2 = logs.make_job_logger(job_id_2)
+        if msg:
+            raise self.failureException(msg)
 
-        # alternate loggers to make sure log entries reach the proper file
-        log_1_text = ["Log 1, entry 1", "Log 1, entry 2"]
-        log_2_text = ["Log 2, entry 1", "Log 2, entry 2"]
+    def assert_file_last_line_ends_with(self, line):
+        msg = None
 
-        logger1.validate(log_1_text[0])
-        logger2.validate(log_2_text[0])
-        logger1.validate(log_1_text[1])
-        logger2.validate(log_2_text[1])
+        log_lines = self._slurp_file()
 
-        # read the log files and verify the contents
-        log_file_1 = open('%s.log' % job_id_1, 'r')
-        log_file_2 = open('%s.log' % job_id_2, 'r')
+        if not log_lines:
+            msg = "Last file line <EMPTY> doesn't end with %r" % line
+        elif not log_lines[-1].endswith(line):
+            msg = "Last file line %r doesn't end with %r"\
+                % (log_lines[-1], line)
 
-        log_file_1_text = log_file_1.readlines()
-        self.assertEqual([x + '\n' for x in log_1_text], log_file_1_text)
-        log_file_2_text = log_file_2.readlines()
-        self.assertEqual([x + '\n' for x in log_2_text], log_file_2_text)
+        if msg:
+            raise self.failureException(msg)
 
-         
+    def test_python_printing(self):
+        msg = 'This is a test print statement'
+        print msg
+        self.assert_file_last_line_equal('WARNING:root:' + msg)
+
+    def test_python_logging(self):
+        msg = 'This is a test log entry'
+        logs.LOG.error(msg)
+
+        self.assert_file_last_line_equal('ERROR:root:' + msg)
+
+    def test_java_printing(self):
+        msg = 'This is a test java print statement'
+        jpype.java.lang.System.out.println(msg)
+
+        self.assert_file_last_line_ends_with(msg)
+
+    def test_java_logging(self):
+        msg = 'This is a test java log entry'
+        root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
+        root_logger.error(msg)
+
+        self.assert_file_last_line_ends_with(msg)
