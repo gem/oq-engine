@@ -129,20 +129,29 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
             unused_fields = ['longitude', 'latitude']
             [csv.pop(csv.index(field)) for field in unused_fields]
 
+        # compatible with SQLAlchemy 0.6.4; a bit of an hack because
+        # it knows how ".join" is implemented in SQLSoup; there does
+        # not seem a cleaner solution
+        def _join(soup_db, left, right, **kwargs):
+            from sqlalchemy import join
+
+            j = join(left, right)
+            return soup_db.map(j, **kwargs)
+
         def _retrieve_db_data(soup_db):
 
             # doing some "trickery" with *properties and primary_key,
             # to adapt the # code for sqlalchemy 0.7
 
             # surface join
-            surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
+            surf_join = _join(soup_db, soup_db.catalog, soup_db.surface,
                 properties={'id_surface': [soup_db.surface.c.id]},
                             exclude_properties=[soup_db.surface.c.id,
                                 soup_db.surface.c.last_update],
                 primary_key=[soup_db.surface.c.id])
 
             # magnitude join
-            mag_join = soup_db.join(surf_join, soup_db.magnitude,
+            mag_join = _join(soup_db, surf_join, soup_db.magnitude,
                 properties={'id_magnitude': [soup_db.magnitude.c.id],
                         'id_surface': [soup_db.surface.c.id]},
                             exclude_properties=[soup_db.magnitude.c.id,
