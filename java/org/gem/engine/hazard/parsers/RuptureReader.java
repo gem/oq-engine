@@ -220,10 +220,12 @@ public class RuptureReader
         {
             new SimpleFaultRuptureParser(document).update(rupture);
         }
-        else
+        else if (xpath("//nrml:complexFaultRupture").matches(document))
         {
             new ComplexFaultRuptureParser(document).update(rupture);
         }
+        else
+            throw new RuntimeException("'" + file + "' isn't a known rupture type");
 
         return rupture;
     }
