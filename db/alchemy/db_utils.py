@@ -91,3 +91,19 @@ def get_uiapi_writer_session():
         "OQ_DB_UIAPI_WRITER environment variable not set."
     return SessionCache().get(os.environ.get("OQ_DB_UIAPI_WRITER"),
                               os.environ.get("OQ_DB_UIAPI_WRITER_PWD"))
+
+
+def get_eqcat_etl_session():
+    """Return a database session for the `oq_eqcat_etl` user."""
+    assert os.environ.get("OQ_DB_EQCAT_ETL"), \
+        "OQ_DB_EQCAT_ETL environment variable not set."
+    return SessionCache().get(os.environ.get("OQ_DB_EQCAT_ETL"),
+                              os.environ.get("OQ_DB_EQCAT_ETL_PWD"))
+
+
+def get_pshai_etl_session():
+    """Return a database session for the `oq_pshai_etl` user."""
+    assert os.environ.get("OQ_DB_PSHAI_ETL"), \
+        "OQ_DB_PSHAI_ETL environment variable not set."
+    return SessionCache().get(os.environ.get("OQ_DB_PSHAI_ETL"),
+                              os.environ.get("OQ_DB_PSHAI_ETL_PWD"))
