@@ -19,6 +19,8 @@
 
 import unittest
 
+from openquake import xml
+from openquake import java
 from openquake.utils import db
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
@@ -43,6 +45,8 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
 
     def _serialize_test_helper(self, test_file, expected_tables):
         engine = db.create_engine(TEST_DB, TEST_DB_USER, host=TEST_DB_HOST)
+        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
+                                                xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file, engine)
 
         results = src_loader.serialize()
