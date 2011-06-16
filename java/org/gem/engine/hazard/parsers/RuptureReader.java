@@ -9,7 +9,6 @@ import org.dom4j.Document;
 import org.dom4j.XPath;
 import org.dom4j.io.SAXReader;
 import org.dom4j.xpath.DefaultXPath;
-import org.jaxen.SimpleNamespaceContext;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface;
@@ -233,7 +232,7 @@ public class RuptureReader
     private XPath xpath(String pattern)
     {
         XPath xpath = new DefaultXPath(pattern);
-        xpath.setNamespaceContext(new SimpleNamespaceContext(namespaces));
+        xpath.setNamespaceURIs(namespaces);
 
         return xpath;
     }
