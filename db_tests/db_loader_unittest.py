@@ -24,16 +24,11 @@ from openquake import java
 from openquake.utils import db
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
+from db.alchemy import db_utils
 
-TEST_DB = 'openquake'
-TEST_DB_USER = 'oq_pshai_etl'
-TEST_DB_HOST = 'localhost'
-TEST_DB_PASSWORD = 'openquake'
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
 TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
-
-TEST_EQCAT_DB_USER = 'oq_eqcat_etl'
 
 
 class NrmlModelLoaderDBTestCase(unittest.TestCase):
@@ -44,7 +39,7 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
     """
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        engine = db.create_engine(TEST_DB, TEST_DB_USER, host=TEST_DB_HOST)
+        engine = db_utils.get_pshai_etl_session().connection().engine
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
                                                 xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file, engine)
@@ -206,8 +201,7 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
             for db_row in db_rows:
                 soup_db.delete(db_row)
 
-        engine = db.create_engine(dbname=TEST_DB, user=TEST_EQCAT_DB_USER,
-                                  password=TEST_DB_PASSWORD)
+        engine = db_utils.get_eqcat_etl_session().connection().engine
 
         csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
         csv_loader.serialize()
