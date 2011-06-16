@@ -196,10 +196,23 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
 
                     self.assertEqual(db_val, convert_val(csv_val))
 
-        def _delete_db_data(soup_db, db_rows):
-            # cleaning the db
+        def _writer_soup():
+            engine = db_utils.get_eqcat_writer_session().connection().engine
+
+            csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
+            return csv_loader._sql_soup_init('eqcat')
+
+        def _clean_db_data():
+            soup_db = _writer_soup()
+            db_rows = _retrieve_db_data(soup_db)
+
             for db_row in db_rows:
                 soup_db.delete(db_row)
+
+            soup_db.commit()
+
+        # start from a clean state
+        _clean_db_data()
 
         engine = db_utils.get_eqcat_etl_session().connection().engine
 
@@ -212,6 +225,7 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
 
         _verify_db_data(csv_loader, db_rows)
 
-        _delete_db_data(csv_loader.soup, db_rows)
-
         csv_loader.soup.commit()
+
+        # clean up after the test
+        _clean_db_data()
