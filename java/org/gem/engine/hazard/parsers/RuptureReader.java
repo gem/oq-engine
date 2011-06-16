@@ -191,7 +191,7 @@ public class RuptureReader
 
     /**
      * Reads the document and returns the rupture object.
-     * 
+     *
      * @return the rupture defined in the document
      */
     public EqkRupture read()
@@ -212,15 +212,15 @@ public class RuptureReader
         rupture.setMag(asDouble("//nrml:magnitude"));
         rupture.setTectRegType(tectonicRegionType());
 
-        if (xpath("//nrml:pointRupture").matches(document))
+        if (xpath("//nrml:pointRupture").selectSingleNode(document) != null)
         {
             new PointRuptureParser(document).update(rupture);
         }
-        else if (xpath("//nrml:simpleFaultRupture").matches(document))
+        else if (xpath("//nrml:simpleFaultRupture").selectSingleNode(document) != null)
         {
             new SimpleFaultRuptureParser(document).update(rupture);
         }
-        else if (xpath("//nrml:complexFaultRupture").matches(document))
+        else if (xpath("//nrml:complexFaultRupture").selectSingleNode(document) != null)
         {
             new ComplexFaultRuptureParser(document).update(rupture);
         }
