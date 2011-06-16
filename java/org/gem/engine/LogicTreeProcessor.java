@@ -71,7 +71,7 @@ public class LogicTreeProcessor {
             throws ConfigurationException {
         config = new PropertiesConfiguration();
         ((PropertiesConfiguration) config).load(calcConfigFile);
-        System.out.println(config);
+        logger.info(config);
         hasPath = true;
     }
 
@@ -634,7 +634,7 @@ public class LogicTreeProcessor {
         mMax = Math.round(mMax / deltaM) * deltaM;
         // move back to bin center
         mMax = mMax - deltaM / 2;
-        // System.out.println("New mMax: "+mMax);
+        // logger.info("New mMax: "+mMax);
 
         if (mMax - mMin >= deltaM) {
 
@@ -658,10 +658,10 @@ public class LogicTreeProcessor {
                             + sourceName
                             + " give maximum magnitude smaller than minimum magnitude!\n"
                             + "Check your input. Execution stopped.");
-            // System.out.println("Uncertaintiy value: " + deltaMmax +
+            // logger.info("Uncertaintiy value: " + deltaMmax +
             // " on maximum magnitude for source: " + sourceName
             // + " give maximum magnitude smaller than minimum magnitude!");
-            // System.out.println("Check your input. Execution stopped.");
+            // logger.info("Check your input. Execution stopped.");
             return null;
         }
 
@@ -704,10 +704,10 @@ public class LogicTreeProcessor {
                             + " give b value smaller than 0!\n"
                             + "Check your input. Execution stopped!";
             logger.info(msg);
-            // System.out.println("Uncertaintiy value: " + deltaB +
+            // logger.info("Uncertaintiy value: " + deltaB +
             // " on b value for source: " + sourceName
             // + " give b value smaller than 0!");
-            // System.out.println("Check your input. Execution stopped!");
+            // logger.info("Check your input. Execution stopped!");
             throw new IllegalArgumentException(msg);
         }
     } // applybGrRelative()
