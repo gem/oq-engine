@@ -22,7 +22,7 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.hazard import HazardMapDBWriter
+from openquake.output.hazard import HazardMapDBWriter, HazardCurveDBWriter
 from openquake.shapes import Site
 from openquake.utils import round_float
 
@@ -210,3 +210,36 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertEqual(round_float(minimum), round_float(output.min_value))
         self.assertEqual(round_float(maximum), round_float(output.max_value))
+
+
+class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """
+    Unit tests for the HazardCurveDBWriter class, which serializes
+    hazard curvess to the database.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def test_serialize(self):
+        """serialize() inserts the output and the hazard_map_data records."""
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+
+        # This job has no outputs before calling the function under test.
+        self.assertEqual(0, len(self.job.output_set))
+
+        # Call the function under test.
+        hcw.serialize(HAZARD_CURVE_DATA)
+
+        # After calling the function under test we see the expected output.
+        self.assertEqual(1, len(self.job.output_set))
+
+        # After calling the function under test we see the expected map data.
+        [output] = self.job.output_set
+        self.assertEqual(4, len(output.hazardcurvedata_set))
+        self.assertEqual(0, len(output.lossmapdata_set))
