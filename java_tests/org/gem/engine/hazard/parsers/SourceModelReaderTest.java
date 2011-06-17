@@ -110,7 +110,8 @@ public class SourceModelReaderTest {
     /**
      * Test that a document mismatch throws a meaningful error
      */
-    void documentMismatchTest() {
+    @Test
+    public void documentMismatchTest() {
         boolean threw = false;
 
         try {
