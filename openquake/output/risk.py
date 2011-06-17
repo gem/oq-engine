@@ -192,7 +192,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             loss_el = etree.SubElement(lmnode_el,
                                     xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
-            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_TAG,
+            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
                         str(asset_dict['assetID']))
             mean_loss = etree.SubElement(
                 loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
