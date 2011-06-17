@@ -65,6 +65,49 @@ HAZARD_MAP_DATA = [
       'vs30': 760.0})]
 
 
+# same as the data above; the sites with statistics data were added by hand;
+# the IMLValues and PoEValues are trimmed to the last 4 values and 3 decimals
+HAZARD_CURVE_DATA = [
+    (Site(-122.2, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '1_1'}),
+    (Site(-122.1, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '1_2'}),
+    (Site(-122.0, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '1_1'}),
+    (Site(-122.0, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'quantileValue': 0.6,
+      'statistics': 'quantile'}),
+    (Site(-122.1, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'quantileValue': 0.6,
+      'statistics': 'quantile'}),
+    (Site(-121.9, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '2'})]
+
+
 class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     Unit tests for the HazardMapDBWriter class, which serializes
