@@ -8,11 +8,11 @@ import org.dom4j.DocumentException;
 public class XMLMismatchError extends RuntimeException {
     private String fileName, actualTag, expectedTag;
 
-    public XMLMismatchError(String file, String actual_tag,
-                            String expected_tag) {
-        fileName = file;
-        actualTag = actual_tag;
-        expectedTag = expected_tag;
+    public XMLMismatchError(String fileName, String actualTag,
+                            String expectedTag) {
+        this.fileName = fileName;
+        this.actualTag = actualTag;
+        this.expectedTag = expectedTag;
     }
 
     /** The full path of the invalid file */
