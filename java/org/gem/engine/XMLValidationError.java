@@ -9,10 +9,10 @@ import org.dom4j.DocumentException;
 public class XMLValidationError extends RuntimeException {
     private String fileName;
 
-    public XMLValidationError(String file, DocumentException cause) {
+    public XMLValidationError(String fileName, DocumentException cause) {
         super(cause);
 
-        fileName = file;
+        this.fileName = fileName;
     }
 
     /** The full path of the invalid file */
