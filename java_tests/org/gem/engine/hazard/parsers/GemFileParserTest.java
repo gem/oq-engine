@@ -28,6 +28,8 @@ public class GemFileParserTest
     {
         new File(FILENAME).delete();
         new File(OUTPUT_FILE).delete();
+        System.setProperty("openquake.nrml.schema",
+                           new File("docs/schema/nrml.xsd").getAbsolutePath());
     }
 
     @After

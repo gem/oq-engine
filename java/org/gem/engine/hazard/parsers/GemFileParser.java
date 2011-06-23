@@ -2353,7 +2353,7 @@ public class GemFileParser {
             Element focalMech =
                     rateModel.addElement(NRMLConstants.NRML_FOCAL_MECHANISM);
 
-            focalMech.addAttribute(NRMLConstants.NRML_PUBLIC_ID, "fc_" + i);
+            focalMech.addAttribute(NRMLConstants.NRML_PUBLIC_ID, "quakeml:fc_/" + i);
 
             Element plane1 =
                     focalMech.addElement(NRMLConstants.QML_NODAL_PLANES)

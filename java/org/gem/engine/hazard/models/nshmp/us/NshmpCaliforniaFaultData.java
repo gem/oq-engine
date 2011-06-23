@@ -82,7 +82,7 @@ public class NshmpCaliforniaFaultData extends GemFileParser {
 
                 NshmpFault2GemSourceData fm =
                         new NshmpFault2GemSourceData(file, tectRegion, weight,
-                                latMin, latMax, lonMin, lonMax);
+                                latMin, latMax, lonMin, lonMax, srcDataList.size());
 
                 srcDataList.addAll(fm.getList());
             } catch (FileNotFoundException e) {

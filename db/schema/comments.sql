@@ -115,8 +115,6 @@ COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth
 COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
 COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
-COMMENT ON VIEW pshai.simple_fault_geo_view IS 'A simple_fault view, needed for geonode integration, it includes mfd_evd and mfd_tgr tables';
-
 COMMENT ON VIEW pshai.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
 COMMENT ON VIEW pshai.simple_source IS 'A simple source view, needed for opengeo server integration.';
 COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
@@ -128,6 +126,9 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
+COMMENT ON TABLE uiapi.hazard_map_data IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN uiapi.hazard_map_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard map.';
+
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
@@ -137,6 +138,10 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - vulnerability file (vulnerability)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
+
+COMMENT ON TABLE uiapi.loss_map_data IS 'Holds location/loss data for loss maps.';
+COMMENT ON COLUMN uiapi.loss_map_data.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
@@ -155,16 +160,17 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground displacement (pgd)';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 
-COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output file.';
-COMMENT ON COLUMN uiapi.output.output_type IS 'Output file type, one of:
+COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
+COMMENT ON COLUMN uiapi.output.db_backed IS 'True if the output''s data resides in the database and not in a file.';
+COMMENT ON COLUMN uiapi.output.display_name IS 'The GUI display name to be used for this output.';
+COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server (optional).';
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - unknown
     - hazard_curve
     - hazard_map
     - loss_curve
     - loss_map';
-COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map.';
-COMMENT ON COLUMN uiapi.output.shapefile_url IS 'The geonode URL of the shapefile generated for a hazard or loss map.';
-COMMENT ON COLUMN uiapi.output.path IS 'The full path of the output file on the server.';
+COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';

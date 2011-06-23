@@ -20,7 +20,6 @@
 
 """Collection of base classes for processing spatially-related data."""
 
-import decimal
 import math
 
 import geohash
@@ -35,6 +34,7 @@ from scipy.interpolate import interp1d
 
 from openquake import flags
 from openquake import java
+from openquake.utils import round_float
 
 FLAGS = flags.FLAGS
 
@@ -43,34 +43,6 @@ flags.DEFINE_integer('distance_precision', 12,
 
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
-
-# Max number of decimal places for floats associated with geographical
-# coordinates.
-FLOAT_DECIMAL_PLACES = 7
-QUANTIZE_STR = '0.' + '0' * FLOAT_DECIMAL_PLACES
-
-
-def geo_float(flt):
-    """
-    Takes a float and rounds it to a fixed number of decimal places.
-
-    This function makes uses of the built-in
-    :py:method:`decimal.Decimal.quantize` to limit the precision.
-
-    The 'round-half-even' algorithm is used for rounding.
-
-    This should give us what can be considered 'safe' float values for
-    geographical coordinates (to side-step precision and rounding errors).
-
-    :type flt: float
-
-    :returns: the input value rounded to a hard-coded fixed number of decimal
-        places
-    """
-    return float(
-        decimal.Decimal(str(flt)).quantize(
-            decimal.Decimal(QUANTIZE_STR),
-            rounding=decimal.ROUND_HALF_EVEN))
 
 
 class Region(object):
@@ -96,7 +68,7 @@ class Region(object):
 
         # Constrain the precision for the coordinates:
         coordinates = \
-            [(geo_float(pt[0]), geo_float(pt[1])) for pt in coordinates]
+            [(round_float(pt[0]), round_float(pt[1])) for pt in coordinates]
         polygon = geometry.Polygon(coordinates)
         return cls(polygon)
 
@@ -337,8 +309,8 @@ class Site(object):
     """Site is a dictionary-keyable point"""
 
     def __init__(self, longitude, latitude):
-        longitude = geo_float(longitude)
-        latitude = geo_float(latitude)
+        longitude = round_float(longitude)
+        latitude = round_float(latitude)
         self.point = geometry.Point(longitude, latitude)
 
     @property
