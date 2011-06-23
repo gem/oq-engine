@@ -30,7 +30,7 @@ INSERT INTO eqcat.catalog(owner_id, eventid, agency, identifier, time, time_erro
 
 INSERT INTO pshai.source(owner_id, gid, si_type, tectonic_region, hypocentral_depth, r_depth_distr_id, area) VALUES (1, 'area-source/1', 'area', 'active', 1.1, 1, ST_GeomFromEWKT('SRID=4326;POLYGON((-120.416267395 35.8784446716, -120.419479370 35.8811035156, -120.422492981 35.8836975098, -120.425315857 35.8864784241, -120.427146912 35.8882675171, -120.416267395 35.8784446716))'));
 
-INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, mfd_evd_id, edge) VALUES (1, 'sfault/sa/ca/1', 22.0, 77.0, 55.0, 1, ST_GeomFromEWKT('SRID=4326;LINESTRING(-120.427154541 35.8882789612 0.0, -120.427444458 35.8886375427 0.0, -120.427772522 35.8890228271 0.0, -120.428138733 35.8895149231 0.0, -120.428367615 35.8898086548 0.0, -120.428634644 35.8900680542 0.0, -120.429069519 35.8903884888 0.0, -120.429527283 35.8906517029 0.0, -120.430030823 35.8909835815 0.0, -120.430473328 35.8912582397 0.0, -120.431053162 35.8917007446 0.0, -120.431449890 35.8920516968 0.0, -120.431922913 35.8925056458 0.0, -120.432495117 35.8929824829 0.0, -120.433471680 35.8938980103 0.0, -120.433784485 35.8942146301 0.0)'));
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, mfd_evd_id, edge) VALUES (1, 'sfault/sa/ca/1', 23.0, 77.0, 55.0, 1, ST_GeomFromEWKT('SRID=4326;LINESTRING(-120.427154541 35.8882789612 0.0, -120.427444458 35.8886375427 0.0, -120.427772522 35.8890228271 0.0, -120.428138733 35.8895149231 0.0, -120.428367615 35.8898086548 0.0, -120.428634644 35.8900680542 0.0, -120.429069519 35.8903884888 0.0, -120.429527283 35.8906517029 0.0, -120.430030823 35.8909835815 0.0, -120.430473328 35.8912582397 0.0, -120.431053162 35.8917007446 0.0, -120.431449890 35.8920516968 0.0, -120.431922913 35.8925056458 0.0, -120.432495117 35.8929824829 0.0, -120.433471680 35.8938980103 0.0, -120.433784485 35.8942146301 0.0)'));
 
 INSERT INTO pshai.fault_edge(owner_id, gid, top, bottom) VALUES (1, 'rup/fedge/sa/ca/2', ST_GeomFromEWKT('SRID=4326;LINESTRING(-120.533012390 35.9801101685 11.1, -120.532936096 35.9800186157 11.1, -120.532836914 35.9799118042 11.1, -120.532737732 35.9797973633 11.1, -120.532608032 35.9796714783 11.1, -120.532440186 35.9795684814 11.1, -120.532257080 35.9794425964 11.1, -120.532066345 35.9793128967 11.1, -120.531913757 35.9792175293 11.1, -120.532325745 35.9806556702 11.1, -120.532203674 35.9805870056 11.1, -120.532012939 35.9804573059 11.1, -120.531921387 35.9803733826 11.1, -120.531822205 35.9802703857 11.1, -120.531692505 35.9801216125 11.1, -120.531562805 35.9799537659 11.1, -120.531410217 35.9797401428 11.1, -120.531211853 35.9795036316 11.1)'), ST_GeomFromEWKT('SRID=4326;LINESTRING(-120.533020020 35.9801177979 8.8, -120.533187866 35.9803390503 8.8, -120.533332825 35.9805145264 8.8, -120.533477783 35.9806747437 8.8, -120.533653259 35.9808692932 8.8, -120.533843994 35.9810447693 8.8, -120.534034729 35.9812278748 8.8, -120.534332275 35.9814720154 8.8, -120.534759521 35.9817581177 8.8, -120.535194397 35.9820365906 8.8, -120.535430908 35.9821777344 8.8, -120.535446167 35.9821777344 8.8, -120.535598755 35.9822731018 8.8, -120.535728455 35.9823760986 8.8, -120.535804749 35.9824867249 8.8, -120.535804749 35.9824867249 8.8, -120.536201477 35.9831657410 8.8, -120.536636353 35.9838485718 8.8, -120.536903381 35.9842910767 8.8, -120.537048340 35.9846153259 8.8, -120.537155151 35.9849014282 8.8)'));
 INSERT INTO pshai.complex_fault(owner_id, gid, mfd_evd_id, fault_edge_id) SELECT 1, 'rup/cfault/sa/ca/2', 1, fedge.id FROM pshai.fault_edge AS fedge WHERE gid='rup/fedge/sa/ca/2';
@@ -62,7 +62,7 @@ INSERT INTO pshai.r_rate_mdl(owner_id, gid, mfd_tgr_id, focal_mechanism_id, mfd_
 UPDATE pshai.r_rate_mdl SET mfd_evd_id=1 WHERE id=1;
 
 -- Failure due to duplicate source (point)
-INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, edge, mfd_tgr_id, mfd_evd_id) VALUES (1, 'sfault/2', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 0,-90 29 1)'), 1, 1);
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, edge, mfd_tgr_id, mfd_evd_id) VALUES (1, 'sfault/2', 24.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 0,-90 29 1)'), 1, 1);
 
 -- Failure due to duplicate source (point)
 UPDATE pshai.simple_fault SET mfd_evd_id=1 WHERE id=1;
@@ -73,7 +73,7 @@ INSERT INTO pshai.complex_fault(owner_id, gid, mfd_evd_id, fault_edge_id, mfd_tg
 UPDATE pshai.complex_fault SET mfd_tgr_id=1 WHERE id=1;
 
 -- Failure due to missing magnitude frequency distribution
-INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, edge) VALUES (1, 'sfault/1', 22.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 13,-90 29 12)'));
+INSERT INTO pshai.simple_fault(owner_id, gid, dip, upper_depth, lower_depth, edge) VALUES (1, 'sfault/1', 25.0, 77.0, 55.0, ST_GeomFromEWKT('SRID=4326;LINESTRING(-80 28 13,-90 29 12)'));
 INSERT INTO pshai.complex_fault(owner_id, gid, fault_edge_id) VALUES (1, 'cfault/1', 1);
 UPDATE pshai.complex_fault SET mfd_evd_id=NULL WHERE id=1;
 
@@ -109,3 +109,7 @@ UPDATE eqcat.magnitude SET mw_val=NULL WHERE id=1;
 SELECT id, gid, last_update FROM pshai.focal_mechanism ORDER BY id;
 UPDATE pshai.focal_mechanism SET gid='focal_mechanism/1/u' WHERE id=1;
 SELECT id, gid, last_update FROM pshai.focal_mechanism ORDER BY id;
+
+-- insert a few more simple sources
+INSERT INTO pshai.source(owner_id, gid, tectonic_region, rake, simple_fault_id) SELECT 1, 'source/9', 'volcanic', 21.0, sfault.id from pshai.simple_fault AS sfault WHERE gid='sfault/sa/ca/1';
+INSERT INTO pshai.source(owner_id, gid, tectonic_region, rake, simple_fault_id) SELECT 1, 'source/10', 'stable', 33.0, sfault.id from pshai.simple_fault AS sfault WHERE gid='rup/sfault/sa/ca/3';

@@ -2,9 +2,11 @@ package org.gem.calc;
 
 import java.rmi.RemoteException;
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -283,7 +285,10 @@ public class HazardCalculator {
             int indexSite = 0;
             StringBuilder siteListString = new StringBuilder();
             siteListString.append("{");
-            DecimalFormat df = new DecimalFormat("0.########E0");
+            // must instantiate the DecimalFormat object with a locale
+            // that uses the dot as decimal separator (such as the US locale)
+            DecimalFormatSymbols dfs = new DecimalFormatSymbols(Locale.US);
+            DecimalFormat df = new DecimalFormat("0.########E0", dfs);
             for (Site s : groundMotionFieldKeys) {
                 if (indexSite > 0) {
                     siteListString.append(",");
