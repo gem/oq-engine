@@ -34,13 +34,12 @@ from openquake import shapes
 
 from openquake.risk import common
 from openquake.risk import probabilistic_event_based
-from openquake.risk import job as risk_job
-from openquake.parser import vulnerability
-from openquake.risk.job import preload, output, RiskJobMixin
 from openquake.risk.job import aggregate_loss_curve
+from openquake.risk.job import general
+from openquake.parser import vulnerability
+
 
 LOGGER = logs.LOG
-
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
 
@@ -52,8 +51,8 @@ class ProbabilisticEventMixin:
     # pylint: disable=W0232,W0201
     """Mixin for Probalistic Event Risk Job"""
 
-    @preload
-    @output
+    @general.preload
+    @general.output
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
 
@@ -62,7 +61,7 @@ class ProbabilisticEventMixin:
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            tasks.append(risk_job.compute_risk.delay(self.id, block_id))
+            tasks.append(general.compute_risk.delay(self.id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs)
@@ -193,7 +192,7 @@ class ProbabilisticEventMixin:
 
             return None
 
-        epsilon_provider = risk_job.EpsilonProvider(self.params)
+        epsilon_provider = general.EpsilonProvider(self.params)
         loss_ratio_curve = probabilistic_event_based.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self._get_number_of_samples())
@@ -244,4 +243,4 @@ class ProbabilisticEventMixin:
         return loss_curve
 
 
-RiskJobMixin.register("Probabilistic Event", ProbabilisticEventMixin)
+general.RiskJobMixin.register("Event Based", ProbabilisticEventMixin)

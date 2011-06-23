@@ -17,10 +17,15 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+"""
+    Unittests for NRML/CSV input files loaders to the database
+"""
+
 import geoalchemy
 import unittest
 
 from openquake import java
+from openquake import xml
 from openquake.utils import db
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
@@ -114,6 +119,8 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         self.src_reader = java.jclass('SourceModelReader')(
             TEST_SRC_FILE, db_loader.SourceModelLoader.DEFAULT_MFD_BIN_WIDTH)
+        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
+                                                xml.nrml_schema_file())
         self.sources = self.src_reader.read()
         self.simple, self.complex, self.area, self.point = self.sources
 
@@ -264,3 +271,37 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # Now we can test the rest of the data.
         for idx, exp in enumerate(expected):
             helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
+
+
+class CsvLoaderTestCase(unittest.TestCase):
+    """
+        Main class to execute tests about CSV
+    """
+
+    def setUp(self):
+        csv_file = "ISC_sampledata1.csv"
+        self.csv_path = helpers.get_data_path(csv_file)
+        self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
+        self.db_loader._read_model()
+        self.csv_reader = self.db_loader.csv_reader
+
+    def test_input_csv_is_of_the_right_len(self):
+        # without the header line is 8892
+        expected_len = 8892
+
+        self.assertEqual(len(list(self.csv_reader)), expected_len)
+
+    def test_csv_headers_are_correct(self):
+        expected_headers = ['eventid', 'agency', 'identifier', 'year',
+            'month', 'day', 'hour', 'minute', 'second', 'time_error',
+            'longitude', 'latitude', 'semi_major', 'semi_minor', 'strike',
+            'depth', 'depth_error', 'mw_val', 'mw_val_error',
+            'ms_val', 'ms_val_error', 'mb_val', 'mb_val_error', 'ml_val',
+            'ml_val_error']
+
+        # it's not important that the headers of the csv are in the right or
+        # wrong order, by using the DictReader it is sufficient to compare the
+        # headers
+        expected_headers = sorted(expected_headers)
+        csv_headers = sorted(self.csv_reader.next().keys())
+        self.assertEqual(csv_headers, expected_headers)

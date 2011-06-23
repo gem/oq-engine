@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Set up some system-wide loggers
 TODO(jmc): init_logs should take filename, or sysout
@@ -26,6 +25,8 @@ TODO(jmc): support debug level per logger.
 """
 import logging
 
+from celery.log import redirect_stdouts_to_logger
+
 from openquake import flags
 FLAGS = flags.FLAGS
 
@@ -33,51 +34,55 @@ LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
           'warn': logging.WARNING,
           'error': logging.ERROR,
-          'critical': logging.CRITICAL,
-          # The default logging levels are: CRITICAL=50, ERROR=40, WARNING=30,
-          # INFO=20, DEBUG=10, NOTSET=0
-          # The 'validate' log level is defined here as 25 because it is 
-          # considered to be less critical than a WARNING but slightly more
-          # critical than INFO.
-          'validate': 25}
+          'critical': logging.CRITICAL}
+
+# This parameter sets where bin/openquake and the likes will send their
+# logging.  This parameter has not effect on the workers.  To have a similar
+# effect on the workers use the celeryd --logfile parameter.
+flags.DEFINE_string('logfile', '',
+    'Path to the log file. Leave empty to log to stderr.')
 
 RISK_LOG = logging.getLogger("risk")
 HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
 
+
 def init_logs():
     """Load logging config, and set log levels based on flags"""
-    
-    level = LEVELS.get(FLAGS.debug, logging.ERROR)
-    logging.basicConfig(level=level)
+
+    # Add the logging handler to the root logger.  This will be a file or
+    # stdout depending on the presence of the logfile parameter.
+    #
+    # Note that what we are doing here is just a simplified version of what the
+    # standard logging.basicConfig is doing.  An important difference is that
+    # we add our handler every time init_logs() is called, whereas basicConfig
+    # does nothing if there is at least one handler (any handler) present.
+    # This allows us to call init_logs multiple times during the unittest, to
+    # reinstall our handler after nose (actually its logcapture plugin) throws
+    # it away.
+    found = False
+    for hdlr in LOG.handlers:
+        if (isinstance(hdlr, logging.FileHandler)
+            or isinstance(hdlr, logging.StreamHandler)):
+            found = True
+
+    if not found:
+        filename = FLAGS.get('logfile', '')
+        if filename:
+            hdlr = logging.FileHandler(filename, 'a')
+        else:
+            hdlr = logging.StreamHandler()
+
+        hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
+        LOG.addHandler(hdlr)
+
+    level = LEVELS.get(FLAGS.debug, 'warn')
     logging.getLogger("amqplib").setLevel(logging.ERROR)
-    
+
     LOG.setLevel(level)
     RISK_LOG.setLevel(level)
-    HAZARD_LOG.setLevel(level)   
+    HAZARD_LOG.setLevel(level)
 
-def make_job_logger(job_id):
-    """Make a special logger object to be used just for a specific job. Acts
-    like normal logging.Logger object, but has additional logging method called
-    validate which basically wraps a call to logger.log() with the level
-    automatically specified as 'validate'."""
-    # 
-    def _validate(msg, *args, **kwargs):
-        """Basically a clone of the standard logger methods (like 'debug()')."""
-        # 'close' validate_logger instance inside this wrapper method
-        # this is nice because now we can just call logger_obj.validate()
-        # to make log entries at the 'validate' level.
-        return validate_logger.log(LEVELS.get('validate'), msg, *args, **kwargs)
-    
-    validate_logger = logging.getLogger(job_id)
-    # monkey patch _validate into the logger object
-    validate_logger.validate = _validate
-    # now the 'validate' logging method can be called on this object
-
-    validate_logger.setLevel(LEVELS.get('validate'))
-
-    # log to file in the CWD
-    log_file_path = "%s.log" % job_id
-    handler = logging.FileHandler(log_file_path)
-    validate_logger.addHandler(handler)
-    return validate_logger
+    # capture java logging (this is what celeryd does with the workers, we use
+    # exactly the same system for bin/openquakes and the likes)
+    redirect_stdouts_to_logger(LOG)

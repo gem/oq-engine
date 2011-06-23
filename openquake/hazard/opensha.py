@@ -22,14 +22,18 @@ Wrapper around the OpenSHA-lite java library.
 
 import math
 import os
-import random
+import multiprocessing
 import numpy
+import random
+
+from db.alchemy.db_utils import get_uiapi_writer_session
 
 from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import settings
 from openquake import shapes
+from openquake import xml
 
 from openquake.hazard import classical_psha
 from openquake.hazard import job
@@ -65,8 +69,26 @@ def preload(fn):
                 settings.KVS_PORT)
         self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
+        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
+                                                xml.nrml_schema_file())
         return fn(self, *args, **kwargs)
     return preloader
+
+
+def unwrap_validation_error(jpype, runtime_exception, path=None):
+    """Unwraps the nested exception of a runtime exception.  Throws
+    either a XMLValidationError or the original Java exception"""
+    ex = runtime_exception.__javaobject__
+
+    if ex.getCause() and type(ex.getCause()) is \
+            jpype.JPackage('org').dom4j.DocumentException:
+        if path:
+            msg = '%s: %s' % (path, ex.getCause().getMessage())
+        else:
+            msg = ex.getCause().getMessage()
+        raise xml.XMLValidationError(msg)
+
+    raise runtime_exception
 
 
 class BasePSHAMixin(Mixin):
@@ -81,14 +103,25 @@ class BasePSHAMixin(Mixin):
         LOG.info("Storing source model from job config")
         key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
         print "source model key is", key
-        self.calc.sampleAndSaveERFTree(self.cache, key, seed)
+        jpype = java.jvm()
+        try:
+            self.calc.sampleAndSaveERFTree(self.cache, key, seed)
+        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+            unwrap_validation_error(
+                jpype, ex,
+                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE_PATH"))
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
         key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
         print "GMPE map key is", key
-        self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
+        jpype = java.jvm()
+        try:
+            self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
+        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+            unwrap_validation_error(
+                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE_PATH"))
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
@@ -174,7 +207,7 @@ class ClassicalMixin(BasePSHAMixin):
         """How many `celery` tasks should be used for the calculations?"""
         value = self.params.get("HAZARD_TASKS")
         value = value.strip() if value else None
-        return 1 if value is None else int(value)
+        return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
     def do_curves(self, sites, serializer=None,
                   the_task=tasks.compute_hazard_curve):
@@ -538,7 +571,7 @@ class ClassicalMixin(BasePSHAMixin):
                 "%s nodes in hazard map: %s" % (
                 poe, map_mode, len(map_keys), nrml_file))
 
-            xmlwriter = hazard_output.HazardMapXMLWriter(nrml_path)
+            map_writer = create_hazardmap_writer(self.params, nrml_path)
             hm_data = []
 
             for hm_key in map_keys:
@@ -583,7 +616,7 @@ class ClassicalMixin(BasePSHAMixin):
             geotiff_path = os.path.join(output_path, hm_geotiff_name)
 
             self._write_hazard_map_geotiff(geotiff_path, hm_data)
-            xmlwriter.serialize(hm_data)
+            map_writer.serialize(hm_data)
 
             files.append(nrml_path)
             files.append(geotiff_path)
@@ -629,12 +662,17 @@ class ClassicalMixin(BasePSHAMixin):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """
         jsite_list = self.parameterize_sites(site_list)
-        hazard_curves = java.jclass("HazardCalculator").getHazardCurvesAsJson(
-            jsite_list,
-            self.generate_erf(),
-            self.generate_gmpe_map(),
-            self.get_iml_list(),
-            float(self.params['MAXIMUM_DISTANCE']))
+        jpype = java.jvm()
+        try:
+            calc = java.jclass("HazardCalculator")
+            hazard_curves = calc.getHazardCurvesAsJson(
+                jsite_list,
+                self.generate_erf(),
+                self.generate_gmpe_map(),
+                self.get_iml_list(),
+                float(self.params['MAXIMUM_DISTANCE']))
+        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+            unwrap_validation_error(jpype, ex)
 
         # write the curves to the KVS and return a list of the keys
         kvs_client = kvs.get_client()
@@ -855,6 +893,27 @@ def _collect_map_keys_per_quantile(keys):
             quantile_values[curr_qv] = []
         quantile_values[curr_qv].append(quantile_key)
     return quantile_values
+
+
+def create_hazardmap_writer(params, nrml_path):
+    """Create a hazard map writer observing the settings in the config file.
+
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard map.
+    :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
+        :py:class:`output.hazard.HazardMapDBWriter` instance.
+    """
+    db_flag = params.get("SERIALIZE_MAPS_TO_DB")
+    if not db_flag or db_flag.lower() == "false":
+        return hazard_output.HazardMapXMLWriter(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+        session = get_uiapi_writer_session()
+        return hazard_output.HazardMapDBWriter(session, nrml_path, job_db_key)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)

@@ -98,8 +98,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
         hazengine = job.Job.from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin,
-            key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 
             source_model_key = kvs.generate_product_key(hazengine.id,
@@ -348,8 +347,7 @@ class HazardEngineTestCase(unittest.TestCase):
         test_file_path = "smoketests/classical_psha_simple/config.gem"
         hazengine = job.Job.from_file(test_file_path)
 
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin,
-            key="hazard"):
+        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             result_keys = hazengine.execute()
 
             verify_order_of_haz_curve_keys(hazengine, result_keys)
@@ -403,21 +401,6 @@ class HazardEngineTestCase(unittest.TestCase):
         result_values = self.kvs_client.get_multi(result_keys)
 
         self.assertEqual(result_values, expected_values)
-
-    @helpers.skipit
-    def test_compute_hazard_curve_all_sites(self):
-        results = []
-        block_id = 8801
-        for job_id in TASK_JOBID_SIMPLE:
-            self._prepopulate_sites_for_block(job_id, block_id)
-            results.append(tasks.compute_hazard_curve.apply_async(
-                args=[job_id, block_id]))
-
-        helpers.wait_for_celery_tasks(results)
-
-        for result in results:
-            for res in result.get():
-                self.assertEqual(res, ONE_CURVE_MODEL)
 
     def test_compute_mgm_intensity(self):
         results = []

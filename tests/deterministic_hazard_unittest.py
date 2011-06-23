@@ -86,8 +86,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     def test_triggered_with_deterministic_calculation_mode(self):
         """The deterministic calculator is triggered.
 
-        When HAZARD_CALCULATION_MODE and RISK_CALCULATION_MODE
-        are set to "Deterministic" the deterministic event
+        When CALCULATION_MODE is set to "Deterministic" the deterministic event
         based calculator is triggered.
         """
 

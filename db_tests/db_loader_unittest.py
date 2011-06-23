@@ -26,9 +26,12 @@ from tests.utils import helpers
 TEST_DB = 'openquake'
 TEST_DB_USER = 'oq_pshai_etl'
 TEST_DB_HOST = 'localhost'
+TEST_DB_PASSWORD = 'openquake'
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
 TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
+
+TEST_EQCAT_DB_USER = 'oq_eqcat_etl'
 
 
 class NrmlModelLoaderDBTestCase(unittest.TestCase):
@@ -96,3 +99,103 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
         expected_tables = \
             ['pshai.mfd_tgr', 'pshai.simple_fault', 'pshai.source']
         self._serialize_test_helper(TGR_MFD_TEST_FILE, expected_tables)
+
+
+class CsvModelLoaderDBTestCase(unittest.TestCase):
+
+    def setUp(self):
+        csv_file = "ISC_sampledata1.csv"
+        self.csv_path = helpers.get_data_path(csv_file)
+        self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
+        self.db_loader._read_model()
+        self.csv_reader = self.db_loader.csv_reader
+
+    def test_csv_to_db_loader_end_to_end(self):
+        """
+            * Serializes the csv into the database
+            * Queries the database for the data just inserted
+            * Verifies the data against the csv
+            * Deletes the inserted records from the database
+        """
+        def _pop_date_fields(csv):
+            date_fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
+            res = [csv.pop(csv.index(field)) for field in date_fields]
+            return res
+
+        def _prepare_date(csv_r, date_fields):
+            return [int(csv_r[field]) for field in date_fields]
+
+        def _pop_geometry_fields(csv):
+            unused_fields = ['longitude', 'latitude']
+            [csv.pop(csv.index(field)) for field in unused_fields]
+
+        def _retrieve_db_data(soup_db):
+
+            # doing some "trickery" with *properties and primary_key,
+            # to adapt the # code for sqlalchemy 0.7
+
+            # surface join
+            surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
+                properties={'id_surface': [soup_db.surface.c.id]},
+                            exclude_properties=[soup_db.surface.c.id,
+                                soup_db.surface.c.last_update],
+                primary_key=[soup_db.surface.c.id])
+
+            # magnitude join
+            mag_join = soup_db.join(surf_join, soup_db.magnitude,
+                properties={'id_magnitude': [soup_db.magnitude.c.id],
+                        'id_surface': [soup_db.surface.c.id]},
+                            exclude_properties=[soup_db.magnitude.c.id,
+                                soup_db.magnitude.c.last_update,
+                                soup_db.surface.c.last_update],
+                primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
+
+            return mag_join.order_by(soup_db.catalog.eventid).all()
+
+        def _verify_db_data(csv_loader, db_rows):
+            # skip the header
+            csv_loader.csv_reader.next()
+            csv_els = list(csv_loader.csv_reader)
+            for csv_row, db_row in zip(csv_els, db_rows):
+                csv_keys = csv_row.keys()
+                # pops 'longitude', 'latitude' which are used to populate
+                # geometry_columns
+                _pop_geometry_fields(csv_keys)
+
+                timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
+                csv_time = csv_loader._date_to_timestamp(*timestamp)
+                # first we compare the timestamps
+                self.assertEqual(str(db_row.time), csv_time)
+
+                # then, we cycle through the csv keys and consider some special
+                # cases
+                for csv_key in csv_keys:
+                    db_val = getattr(db_row, csv_key)
+                    csv_val = csv_row[csv_key]
+                    if not len(csv_val.strip()):
+                        csv_val = None
+                    if csv_key == 'agency':
+                        self.assertEqual(str(db_val), str(csv_val))
+                    else:
+                        self.assertEqual(float(db_val), float(csv_val))
+
+        def _delete_db_data(soup_db, db_rows):
+            # cleaning the db
+            for db_row in db_rows:
+                soup_db.delete(db_row)
+
+        engine = db.create_engine(dbname=TEST_DB, user=TEST_EQCAT_DB_USER,
+                                  password=TEST_DB_PASSWORD)
+
+        csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
+        csv_loader.serialize()
+        db_rows = _retrieve_db_data(csv_loader.soup)
+
+        # rewind the file
+        csv_loader.csv_fd.seek(0)
+
+        _verify_db_data(csv_loader, db_rows)
+
+        _delete_db_data(csv_loader.soup, db_rows)
+
+        csv_loader.soup.commit()
