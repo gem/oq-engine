@@ -24,16 +24,24 @@ NRML serialization of risk-related data sets.
 - loss map
 """
 
+import logging
+from os.path import basename
+
 from lxml import etree
 
-from openquake import logs
+import sqlalchemy
+
+from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.models import OqJob, Output
+from db.alchemy.models import LossAssetData, LossCurveData
+
 from openquake import shapes
 from openquake import xml
 
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
 
-LOG = logs.RISK_LOG
+logger = logging.getLogger('loss-output')
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
@@ -365,6 +373,88 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     curve_tag = xml.RISK_LOSS_RATIO_CURVE_TAG
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
+class OutputDBWriter(object):
+    def __init__(self, session, nrml_path, oq_job_id):
+        self.nrml_path = nrml_path
+        self.oq_job_id = oq_job_id
+        self.session = session
+        job = self.session.query(OqJob).filter(
+            OqJob.id == self.oq_job_id).one()
+        self.output = Output(owner=job.owner, oq_job=job,
+                             display_name=basename(self.nrml_path),
+                             output_type=self.get_output_type(), db_backed=True)
+
+    def get_output_type(self):
+        raise NotImplementedError()
+
+    def insert_datum(self, key, values):
+        raise NotImplementedError()
+
+    def serialize(self, iterable):
+        logger.info("> serialize")
+        logger.info("serializing %s points" % len(iterable))
+
+        self.session.add(self.output)
+        logger.info("output = '%s'" % self.output)
+
+        for key, values in iterable:
+            self.insert_datum(key, values)
+
+        self.session.commit()
+
+        logger.info("serialized %s points" % len(iterable))
+        logger.info("< serialize")
+
+class CurveDBWriter(OutputDBWriter):
+    def insert_datum(self, key, values):
+        point = key
+
+        if isinstance(point, shapes.GridPoint):
+            point = point.site
+
+        curve_object, asset_object = values
+
+        self._real_insert_datum(asset_object, point, curve_object)
+
+    def _real_insert_datum(self, asset_object, point, curve_object):
+        asset = self._get_or_create_loss_asset_data(asset_object, point)
+
+        curve = LossCurveData(
+            loss_asset=asset,
+            end_branch_label=asset_object.get('endBranchLabel'),
+            abscissae=map(float, curve_object.abscissae),
+            poes=map(float, curve_object.ordinates)
+        )
+        self.session.add(curve)
+
+    def _get_or_create_loss_asset_data(self, asset_object, point):
+        asset_id = asset_object['assetID']
+
+        try:
+            asset = self.session.query(LossAssetData)\
+                .filter(LossAssetData.output==self.output)\
+                .filter(LossAssetData.asset_id==asset_id).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            asset = LossAssetData(
+                output=self.output,
+                asset_id=asset_id,
+                pos="POINT(%s %s)" % (point.longitude, point.latitude)
+            )
+            self.session.add(asset)
+        else:
+            if not asset.pos == point:
+                error_msg = "asset %s has two different positions" % asset_id
+                raise ValueError(error_msg)
+
+        return asset
+
+class LossCurveDBWriter(CurveDBWriter):
+    def get_output_type(self):
+        return "loss_curve"
+
+class LossRatioCurveDBWriter(CurveDBWriter):
+    def get_output_type(self):
+        return "loss_ratio_curve"
 
 def _curve_vals_as_gmldoublelist(curve_object):
     """Return the list of loss/loss ratio values from a curve object.
