@@ -20,7 +20,8 @@
 CREATE TABLE uiapi.loss_asset_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    asset_id VARCHAR
+    asset_id VARCHAR,
+    UNIQUE (output_id, asset_id)
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_asset_data', 'pos', 4326, 'POINT', 2);
 ALTER TABLE uiapi.loss_asset_data ALTER COLUMN pos SET NOT NULL;
