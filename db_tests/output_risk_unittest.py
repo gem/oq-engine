@@ -22,6 +22,7 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.models import LossAssetData, LossCurveData
 from openquake.output.risk import LossCurveDBWriter
 from openquake.shapes import Site, Curve
 
@@ -71,8 +72,8 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
 
-    def test_insert_output(self):
-        """An `uiapi.output` record is inserted correctly."""
+    def test_insert(self):
+        """All the records are inserted correctly."""
         output = self.writer.output
 
         # Call the function under test.
@@ -90,16 +91,28 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual("loss_curve", output.output_type)
         self.assertTrue(self.job is output.oq_job)
 
-    def test_insert_asset(self):
-        """An `uiapi.loss_asset_data` record is inserted correctly."""
-        output = self.writer.output
-
-        # This output has no loss asset data before calling the function under test.
-        self.assertEqual(0, len(output.lossassetdata_set))
-
-        # Call the function under test.
-        data = RISK_LOSS_CURVE_DATA
-        self.writer.serialize(data)
-
         # After calling the function under test we see the expected loss asset data.
         self.assertEqual(4, len(output.lossassetdata_set))
+
+        inserted_data = []
+
+        for lad in output.lossassetdata_set:
+            pos = lad.pos.coords(self.session)
+
+            for curve in lad.losscurvedata_set:
+                data = (Site(pos[0], pos[1]),
+                        (Curve(zip(curve.abscissae, curve.poes)),
+                        { u'assetID': lad.asset_id }))
+
+                inserted_data.append(data)
+
+        def normalize(values):
+            result = []
+            for value in values:
+                result.append((value[0], (value[1][0], {
+                    'assetID': value[1][1]['assetID']
+                })))
+
+            return sorted(result, key=lambda v: v[1][1]['assetID'])
+
+        self.assertEquals(normalize(RISK_LOSS_CURVE_DATA), normalize(inserted_data))
