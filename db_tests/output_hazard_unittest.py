@@ -243,3 +243,39 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertEqual(4, len(output.hazardcurvedata_set))
         self.assertEqual(0, len(output.lossmapdata_set))
+
+        # read data from the DB and check that it's equal to the original data
+        inserted_data = []
+
+        for hcd in output.hazardcurvedata_set:
+            for hcdn in hcd.hazardcurvenodedata_set:
+                location = hcdn.location.coords(session)
+                node = (Site(location[0], location[1]),
+                        {'IMLValues': hcd.imls,
+                         'PoEValues': hcdn.poes})
+                if hcd.end_branch_label:
+                    node[1]['endBranchLabel'] = hcd.end_branch_label
+                else:
+                    node[1]['statistics'] = hcd.statistic_type
+                    if hcd.quantile is not None:
+                        node[1]['quantileValue'] = hcd.quantile
+
+                inserted_data.append(node)
+
+        def normalize(values):
+            def sort_key(v):
+                return v[0].longitude, v[0].latitude, v[1]
+
+            def norm(dic):
+                dic = dict(dic)
+
+                # remove keys not stored in the database
+                dic.pop('investigationTimeSpan', None)
+                dic.pop('IMT', None)
+
+                return dic
+
+            return sorted([(s, norm(v)) for s, v in values], key=sort_key)
+
+        self.assertEquals(normalize(HAZARD_CURVE_DATA),
+                          normalize(inserted_data))
