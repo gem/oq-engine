@@ -21,7 +21,6 @@ import unittest
 
 from openquake import xml
 from openquake import java
-from openquake.utils import db
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
 from db.alchemy import db_utils
