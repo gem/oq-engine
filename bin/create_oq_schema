@@ -23,6 +23,9 @@ if [ $# -eq 0 ]; then
     help
 fi
 
+# Stop at the first error in a batch to give a chance to see the error message
+psql_batch_options='--set ON_ERROR_STOP=1'
+
 # Where do the table spaces live?
 tspace_path='/var/lib/postgresql/8.4/main/ts'
 # What table spaces should be created?
@@ -148,32 +151,32 @@ createlang plpgsql -d $db_name -U $db_admin_user
 
 # Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
-psql -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
-psql -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
-psql -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
+psql $psql_batch_options -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
+psql $psql_batch_options -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
+psql $psql_batch_options -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
 
 # Apply database function definitions if present.
 functions_file="$schema_path/functions.sql"
 if [ -r $functions_file ]; then
     echo ".. Running functions file: $functions_file .."
-    psql -d $db_name -U $db_admin_user -f $functions_file
+    psql $psql_batch_options -d $db_name -U $db_admin_user -f $functions_file
 fi
 
 echo ".. Running schema definition file: $schema_file .."
-psql -d $db_name -U $db_admin_user -f $schema_file
+psql $psql_batch_options -d $db_name -U $db_admin_user -f $schema_file
 
 # Load static data if present.
 load_file="$schema_path/load.sql"
 if [ -r $load_file ]; then
     echo ".. Loading static data from: $load_file .."
-    psql -d $db_name -U $db_admin_user -f $load_file
+    psql $psql_batch_options -d $db_name -U $db_admin_user -f $load_file
 fi
 
 # Apply database schema/table comments if present.
 comments_file="$schema_path/comments.sql"
 if [ -r $comments_file ]; then
     echo ".. Running comments file: $comments_file .."
-    psql -d $db_name -U $db_admin_user -f $comments_file
+    psql $psql_batch_options -d $db_name -U $db_admin_user -f $comments_file
 fi
 
 # Create OpenQuake database group if not present.
@@ -194,12 +197,12 @@ done
 security_file="$schema_path/security.sql"
 if [ -r $security_file ]; then
     echo ".. Running security settings file: $security_file .."
-    psql -d $db_name -U $db_admin_user -f $security_file
+    psql $psql_batch_options -d $db_name -U $db_admin_user -f $security_file
 fi
 
 # Apply database table indexes if present.
 indexes_file="$schema_path/indexes.sql"
 if [ -r $indexes_file ]; then
     echo ".. Applying index definitions: $indexes_file .."
-    psql -d $db_name -U $db_admin_user -f $indexes_file
+    psql $psql_batch_options -d $db_name -U $db_admin_user -f $indexes_file
 fi
