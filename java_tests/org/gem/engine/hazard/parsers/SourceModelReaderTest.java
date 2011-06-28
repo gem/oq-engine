@@ -19,12 +19,18 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 
 import org.dom4j.DocumentException;
 
+import org.gem.engine.XMLValidationError;
+import org.gem.engine.XMLMismatchError;
+
 public class SourceModelReaderTest {
 
-    public static final String TEST_SOURCE_MODEL_FILE = "java_tests/data/source_model.xml";
+    public static final String TEST_SOURCE_MODEL_FILE =
+        "java_tests/data/source_model.xml";
     public static final String INVALID_TEST_SOURCE_MODEL_FILE =
             "tests/data/invalid/source_model1.xml";
     public static final double MFD_BIN_WIDTH = 0.1;
+    public static final String MISMATCHED_FILE =
+            "docs/schema/examples/logic-tree-gmpe.xml";
 
     @Before
     public void setUp() {
@@ -82,14 +88,15 @@ public class SourceModelReaderTest {
 
             reader.read();
         }
-        catch (RuntimeException e) {
+        catch (XMLValidationError e) {
             threw = true;
+            assertEquals(new File(path).getAbsolutePath(), e.getFileName());
             assertTrue("Throws a DocumentException",
                        e.getCause() instanceof DocumentException);
             assertNull(e.getCause().getCause());
         }
 
-        assertTrue("Parsing threw an exception", threw);
+        assertTrue("Parsing threw a XMLValidationError", threw);
     }
 
     /**
@@ -98,5 +105,26 @@ public class SourceModelReaderTest {
     @Test
     public void sourceModelSchemaValidationTest() {
         checkFailsValidation(INVALID_TEST_SOURCE_MODEL_FILE);
+    }
+
+    /**
+     * Test that a document mismatch throws a meaningful error
+     */
+    @Test
+    public void documentMismatchTest() {
+        boolean threw = false;
+
+        try {
+            SourceModelReader reader = new SourceModelReader(MISMATCHED_FILE, MFD_BIN_WIDTH);
+
+            reader.read();
+        }
+        catch (XMLMismatchError e) {
+            threw = true;
+            assertEquals("logicTreeSet", e.getActualTag());
+            assertEquals("sourceModel", e.getExpectedTag());
+        }
+
+        assertTrue("Parsing threw a XMLMismatchError", threw);
     }
 }
