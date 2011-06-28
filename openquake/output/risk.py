@@ -373,6 +373,7 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     curve_tag = xml.RISK_LOSS_RATIO_CURVE_TAG
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
+
 class OutputDBWriter(object):
     def __init__(self, session, nrml_path, oq_job_id):
         self.nrml_path = nrml_path
@@ -382,7 +383,8 @@ class OutputDBWriter(object):
             OqJob.id == self.oq_job_id).one()
         self.output = Output(owner=job.owner, oq_job=job,
                              display_name=basename(self.nrml_path),
-                             output_type=self.get_output_type(), db_backed=True)
+                             output_type=self.get_output_type(),
+                             db_backed=True)
 
     def get_output_type(self):
         raise NotImplementedError()
@@ -405,6 +407,7 @@ class OutputDBWriter(object):
         logger.info("serialized %s points" % len(iterable))
         logger.info("< serialize")
 
+
 class CurveDBWriter(OutputDBWriter):
     def insert_datum(self, key, values):
         point = key
@@ -423,8 +426,7 @@ class CurveDBWriter(OutputDBWriter):
             loss_asset=asset,
             end_branch_label=asset_object.get('endBranchLabel'),
             abscissae=map(float, curve_object.abscissae),
-            poes=map(float, curve_object.ordinates)
-        )
+            poes=map(float, curve_object.ordinates))
         self.session.add(curve)
 
     def _get_or_create_loss_asset_data(self, asset_object, point):
@@ -432,14 +434,13 @@ class CurveDBWriter(OutputDBWriter):
 
         try:
             asset = self.session.query(LossAssetData)\
-                .filter(LossAssetData.output==self.output)\
-                .filter(LossAssetData.asset_id==asset_id).one()
+                .filter(LossAssetData.output == self.output)\
+                .filter(LossAssetData.asset_id == asset_id).one()
         except sqlalchemy.orm.exc.NoResultFound:
             asset = LossAssetData(
                 output=self.output,
                 asset_id=asset_id,
-                pos="POINT(%s %s)" % (point.longitude, point.latitude)
-            )
+                pos="POINT(%s %s)" % (point.longitude, point.latitude))
             self.session.add(asset)
         else:
             if not asset.pos == point:
@@ -448,13 +449,16 @@ class CurveDBWriter(OutputDBWriter):
 
         return asset
 
+
 class LossCurveDBWriter(CurveDBWriter):
     def get_output_type(self):
         return "loss_curve"
 
+
 class LossRatioCurveDBWriter(CurveDBWriter):
     def get_output_type(self):
         return "loss_ratio_curve"
+
 
 def _curve_vals_as_gmldoublelist(curve_object):
     """Return the list of loss/loss ratio values from a curve object.
