@@ -31,7 +31,6 @@ from lxml import etree
 
 import sqlalchemy
 
-from db.alchemy.db_utils import get_uiapi_writer_session
 from db.alchemy.models import OqJob, Output
 from db.alchemy.models import LossAssetData, LossCurveData
 
@@ -41,7 +40,7 @@ from openquake import xml
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
 
-logger = logging.getLogger('loss-output')
+LOGGER = logging.getLogger('loss-output')
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
@@ -375,6 +374,12 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
 
 
 class OutputDBWriter(object):
+    """
+    Abstact class implementing the "serialize" interface to output an iterable
+    to the database.
+
+    Subclasses must implement get_output_type() and insert_datum().
+    """
     def __init__(self, session, nrml_path, oq_job_id):
         self.nrml_path = nrml_path
         self.oq_job_id = oq_job_id
@@ -387,29 +392,56 @@ class OutputDBWriter(object):
                              db_backed=True)
 
     def get_output_type(self):
+        """
+        The type of the output record as a string (e.g. 'loss_curve')
+        """
         raise NotImplementedError()
 
     def insert_datum(self, key, values):
+        """
+        Called for each item of the iterable during serialize.
+        """
         raise NotImplementedError()
 
     def serialize(self, iterable):
-        logger.info("> serialize")
-        logger.info("serializing %s points" % len(iterable))
+        """
+        Implementation of the "serialize" interface.
+
+        An Output record with type get_output_type() will be created, then
+        each item of the iterable will be serialized in turn to the database.
+        """
+        LOGGER.info("> serialize")
+        LOGGER.info("serializing %s points" % len(iterable))
 
         self.session.add(self.output)
-        logger.info("output = '%s'" % self.output)
+        LOGGER.info("output = '%s'" % self.output)
 
         for key, values in iterable:
             self.insert_datum(key, values)
 
         self.session.commit()
 
-        logger.info("serialized %s points" % len(iterable))
-        logger.info("< serialize")
+        LOGGER.info("serialized %s points" % len(iterable))
+        LOGGER.info("< serialize")
 
 
 class CurveDBWriter(OutputDBWriter):
+    """
+    Abstract class implementing a serializer to output loss curves to the
+    database.
+
+    Subclasses must implement get_output_type().
+    """
+
     def insert_datum(self, key, values):
+        """
+        Called for each item in the iterable beeing serialized.
+
+        Parameters will look something like:
+
+        key=Site(-118.077721, 33.852034)
+        values=(Curve([...]), {..., u'assetID': u'a5625', ...})
+        """
         point = key
 
         if isinstance(point, shapes.GridPoint):
@@ -420,6 +452,15 @@ class CurveDBWriter(OutputDBWriter):
         self._real_insert_datum(asset_object, point, curve_object)
 
     def _real_insert_datum(self, asset_object, point, curve_object):
+        """
+        Called for each item in the iterable beeing serialized.
+
+        Parameters will look something like:
+
+        asset_object={..., u'assetID': u'a5625', ...}
+        point=Site(-118.077721, 33.852034)
+        curve_object=Curve([...]),
+        """
         asset = self._get_or_create_loss_asset_data(asset_object, point)
 
         curve = LossCurveData(
@@ -430,6 +471,10 @@ class CurveDBWriter(OutputDBWriter):
         self.session.add(curve)
 
     def _get_or_create_loss_asset_data(self, asset_object, point):
+        """
+        Return the LossAssetData record for the given asset_object, creating it
+        if necessary.
+        """
         asset_id = asset_object['assetID']
 
         try:
@@ -451,11 +496,17 @@ class CurveDBWriter(OutputDBWriter):
 
 
 class LossCurveDBWriter(CurveDBWriter):
+    """
+    Serializer to the database for loss curves.
+    """
     def get_output_type(self):
         return "loss_curve"
 
 
 class LossRatioCurveDBWriter(CurveDBWriter):
+    """
+    Serializer to the database for loss ratio curves.
+    """
     def get_output_type(self):
         return "loss_ratio_curve"
 
