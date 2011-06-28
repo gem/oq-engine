@@ -98,7 +98,42 @@ RISK_LOSS_MAP_ASSET_REF_ATTR = "assetRef"
 
 class XMLValidationError(Exception):
     """XML schema validation error"""
-    pass
+
+    def __init__(self, message, file_name):
+        """Constructs a new validation exception for the given file name"""
+        Exception.__init__(self, "XML Validation error for file '%s': %s" %
+                                 (file_name, message))
+
+        self.file_name = file_name
+
+
+class XMLMismatchError(Exception):
+    """Wrong document type (eg. logic tree instead of source model)"""
+
+    def __init__(self, file_name, actual_tag, expected_tag):
+        """Constructs a new type mismatch exception for the given file name"""
+        Exception.__init__(self)
+
+        self.file_name = file_name
+        self.actual_tag = actual_tag
+        self.expected_tag = expected_tag
+
+    _HUMANIZE_FILE = {
+        'logicTreeSet': 'logic tree',
+        'sourceModel': 'source model',
+        'exposurePortfolio': 'exposure portfolio',
+        'vulnerabilityModel': 'vulnerability model',
+        }
+
+    @property
+    def message(self):
+        """Exception message string"""
+        return "XML mismatch error for file '%s': expected %s but got %s" % (
+            self.file_name, self._HUMANIZE_FILE.get(self.expected_tag),
+            self._HUMANIZE_FILE.get(self.actual_tag, 'unknown file type'))
+
+    def __str__(self):
+        return self.message
 
 
 def nrml_schema_file():
