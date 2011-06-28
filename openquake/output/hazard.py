@@ -542,17 +542,33 @@ def _ensure_attributes_set(attr_list, node):
     return True
 
 
-class HazardMapDBWriter(object):
-    """
-    Serialize the location/IML data to the `uiapi.hazard_map_data` database
-    table.
-    """
+class BaseDBWriter(object):
+    """Common code for hazard DB writers"""
 
     def __init__(self, session, nrml_path, oq_job_id):
         self.nrml_path = nrml_path
         self.oq_job_id = oq_job_id
         self.session = session
         self.output = None
+
+    def insert_output(self, output_type):
+        """Insert an `uiapi.output` record for the job at hand."""
+        logger.info("> insert_output")
+        job = self.session.query(OqJob).filter(
+            OqJob.id == self.oq_job_id).one()
+        self.output = Output(owner=job.owner, oq_job=job,
+                             display_name=basename(self.nrml_path),
+                             output_type=output_type, db_backed=True)
+        self.session.add(self.output)
+        logger.info("output = '%s'" % self.output)
+        logger.info("< insert_output")
+
+
+class HazardMapDBWriter(BaseDBWriter):
+    """
+    Serialize the location/IML data to the `uiapi.hazard_map_data` database
+    table.
+    """
 
     def serialize(self, iterable):
         """Writes hazard map data to the database.
@@ -579,7 +595,7 @@ class HazardMapDBWriter(object):
         logger.info("> serialize")
 
         logger.info("serializing %s points" % len(iterable))
-        self.insert_output()
+        self.insert_output("hazard_map")
 
         for key, value in iterable:
             self.insert_map_datum(key, value)
@@ -594,19 +610,6 @@ class HazardMapDBWriter(object):
 
         logger.info("serialized %s points" % len(iterable))
         logger.info("< serialize")
-
-    def insert_output(self):
-        """Insert an `uiapi.output` record for the hazard map at hand."""
-        logger.info("> insert_output")
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=basename(self.nrml_path),
-                             output_type="hazard_map", db_backed=True)
-        self.session.add(self.output)
-        self.session.commit()
-        logger.info("output = '%s'" % self.output)
-        logger.info("< insert_output")
 
     def insert_map_datum(self, point, value):
         """Inserts a single hazard map datum.
@@ -637,17 +640,15 @@ class HazardMapDBWriter(object):
         logger.info("< insert_map_datum")
 
 
-class HazardCurveDBWriter(object):
+class HazardCurveDBWriter(BaseDBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
     """
 
     def __init__(self, session, nrml_path, oq_job_id):
-        self.nrml_path = nrml_path
-        self.oq_job_id = oq_job_id
-        self.session = session
-        self.output = None
+        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+
         self.curves_per_branch_label = {}
 
     def serialize(self, iterable):
@@ -675,7 +676,7 @@ class HazardCurveDBWriter(object):
         logger.info("> serialize")
 
         logger.info("serializing %s points" % len(iterable))
-        self.insert_output()
+        self.insert_output("hazard_curve")
 
         for key, value in iterable:
             self.insert_curve_datum(key, value)
@@ -683,19 +684,6 @@ class HazardCurveDBWriter(object):
 
         logger.info("serialized %s points" % len(iterable))
         logger.info("< serialize")
-
-    # TODO remove duplicate code HazardMapDBWriter
-    def insert_output(self):
-        """Insert an `uiapi.output` record for the hazard curve at hand."""
-        logger.info("> insert_output")
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=basename(self.nrml_path),
-                             output_type="hazard_curve", db_backed=True)
-        self.session.add(self.output)
-        logger.info("output = '%s'" % self.output)
-        logger.info("< insert_output")
 
     def insert_curve_datum(self, point, values):
         """Insert a single hazard curve"""
