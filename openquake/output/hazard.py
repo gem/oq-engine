@@ -46,7 +46,7 @@ from lxml import etree
 from os.path import basename
 
 from db.alchemy.models import HazardMapData, HazardCurveData, \
-    HazardCurveNodeData, OqJob, Output
+    HazardCurveNodeData, GMFData, OqJob, Output
 
 from openquake import shapes
 from openquake import writer
@@ -725,4 +725,47 @@ class HazardCurveDBWriter(BaseDBWriter):
         # adds the node data to the session
         HazardCurveNodeData(
             hazard_curve_data=hazard_curve_item, poes=values['PoEValues'],
+            location="POINT(%s %s)" % (point.x, point.y))
+
+
+class GMFDBWriter(BaseDBWriter):
+    """
+    Serialize the location/IML data to the `uiapi.hazard_curve_data` database
+    table.
+    """
+
+    def __init__(self, session, nrml_path, oq_job_id):
+        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+
+        self.curves_per_branch_label = {}
+
+    def serialize(self, iterable):
+        """Writes hazard curve data to the database.
+
+        :param iterable: will look something like this:
+               {Site(-117, 40): {'groundMotion': 0.0},
+                Site(-116, 40): {'groundMotion': 0.1},
+                Site(-116, 41): {'groundMotion': 0.2},
+                Site(-117, 41): {'groundMotion': 0.3}}
+
+        We first insert a `uiapi.output` record for the GMF and then
+        an u1api.hazard_gmf_data for each site
+        """
+        logger.info("> serialize")
+
+        logger.info("serializing %s points" % len(iterable))
+        self.insert_output("gmf")
+
+        for key, value in iterable.items():
+            self.insert_gmf_datum(key, value)
+        self.session.commit()
+
+        logger.info("serialized %s points" % len(iterable))
+        logger.info("< serialize")
+
+    def insert_gmf_datum(self, point, values):
+        """Insert a single hazard curve"""
+        point = point.point
+        # adds the node data to the session
+        GMFData(output=self.output, ground_motion=values['groundMotion'],
             location="POINT(%s %s)" % (point.x, point.y))
