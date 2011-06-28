@@ -671,7 +671,9 @@ class HazardCurveDBWriter(BaseDBWriter):
                   'statistics': 'quantile'})]
 
         We first insert a `uiapi.output` record for the hazard curve and then
-        TODO write me...
+        an u1api.hazard_curve_data for each branch label/statistic type and
+        an uiapi.hazard_curve_node_data for each site with a given
+        branch label/statistic type
         """
         logger.info("> serialize")
 
