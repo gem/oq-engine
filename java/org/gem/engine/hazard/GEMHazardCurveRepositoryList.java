@@ -240,12 +240,12 @@ public class GEMHazardCurveRepositoryList {
 
             // GemLogicTreeInputToERF end branch label
             String erfLab = strarr[0];
-            for (int ii = 1; ii < ilTree.getBranchingLevelsList().size(); ii++)
+            for (int ii = 1; ii < ilTree.getBranchingLevels().size(); ii++)
                 erfLab = erfLab + "_" + strarr[ii];
 
             // GemLogicTreeGMPE end branch label
-            String gmpeLab = strarr[ilTree.getBranchingLevelsList().size()];
-            for (int ii = ilTree.getBranchingLevelsList().size() + 1; ii < strarr.length; ii++)
+            String gmpeLab = strarr[ilTree.getBranchingLevels().size()];
+            for (int ii = ilTree.getBranchingLevels().size() + 1; ii < strarr.length; ii++)
                 gmpeLab = gmpeLab + "_" + strarr[ii];
 
             // Find the weight
@@ -397,11 +397,11 @@ public class GEMHazardCurveRepositoryList {
             String[] strarr = lab.split("_");
             // GemLogicTreeInputToERF end branch label
             String erfLab = strarr[0];
-            for (int ii = 1; ii < ilTree.getBranchingLevelsList().size(); ii++)
+            for (int ii = 1; ii < ilTree.getBranchingLevels().size(); ii++)
                 erfLab = erfLab + "_" + strarr[ii];
             // GemLogicTreeGMPE end branch label
-            String gmpeLab = strarr[ilTree.getBranchingLevelsList().size()];
-            for (int ii = ilTree.getBranchingLevelsList().size() + 1; ii < strarr.length; ii++)
+            String gmpeLab = strarr[ilTree.getBranchingLevels().size()];
+            for (int ii = ilTree.getBranchingLevels().size() + 1; ii < strarr.length; ii++)
                 gmpeLab = gmpeLab + "_" + strarr[ii];
 
             // Find the weight

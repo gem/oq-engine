@@ -141,15 +141,15 @@ public class GmpeLogicTreeData {
         LogicTree logicTree = logicTreeMap.get(tectReg);
         String gmpeNames = "";
         String weights = "";
-        for (int i = 0; i < logicTree.getBranchingLevel(0).getBranchList()
+        for (int i = 0; i < logicTree.getBranchingLevelAt(0).getBranchList()
                 .size(); i++) {
             gmpeNames =
                     gmpeNames
-                            + logicTree.getBranchingLevel(0).getBranch(i)
+                            + logicTree.getBranchingLevelAt(0).getBranch(i)
                                     .getBranchingValue() + " ";
             weights =
                     weights
-                            + logicTree.getBranchingLevel(0).getBranch(i)
+                            + logicTree.getBranchingLevelAt(0).getBranch(i)
                                     .getWeight() + " ";
         }
         gmpeNames = gmpeNames.trim();
@@ -197,12 +197,12 @@ public class GmpeLogicTreeData {
             branch = new LogicTreeBranch((i + 1), gmpeName, gmpeWeight);
             branchingLevel.addBranch(branch);
         }
-        gmpeLogicTree.addBranchingLevel(branchingLevel);
+        gmpeLogicTree.appendBranchingLevel(branchingLevel);
 
         // instantiate GMPE for each branch through reflection
         for (int i = 0; i < numBranch; i++) {
             String gmpeName =
-                    gmpeLogicTree.getBranchingLevel(0).getBranch(i)
+                    gmpeLogicTree.getBranchingLevelAt(0).getBranch(i)
                             .getBranchingValue();
             Class cl = null;
             Constructor cstr = null;
@@ -221,7 +221,7 @@ public class GmpeLogicTreeData {
             setGmpeParams(component, intensityMeasureType, period, damping,
                     truncType, truncLevel, stdType, vs30, ar);
             gmpeLogicTree.getEBMap().put(
-                    Integer.toString(gmpeLogicTree.getBranchingLevel(0)
+                    Integer.toString(gmpeLogicTree.getBranchingLevelAt(0)
                             .getBranch(i).getRelativeID()), ar);
         }
         return gmpeLogicTree;
