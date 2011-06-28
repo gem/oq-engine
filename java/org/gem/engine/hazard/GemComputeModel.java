@@ -158,6 +158,7 @@ public class GemComputeModel {
      * @throws ClassNotFoundException
      * @throws IOException
      */
+    @SuppressWarnings("unchecked")
     public GemComputeModel(
             String gemLogicTreeFile,
             LogicTree<HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>> gmpeLogicTree,
@@ -167,8 +168,7 @@ public class GemComputeModel {
             throws IOException, ClassNotFoundException {
 
         // initialize logic tree for input model
-        LogicTree<ArrayList<GEMSourceData>> inputToErf =
-                new LogicTree<ArrayList<GEMSourceData>>(gemLogicTreeFile);
+        LogicTree<ArrayList<GEMSourceData>> inputToErf = LogicTree.fromFile(gemLogicTreeFile);
 
         // define array list of sites
         ArrayList<Site> hazSite =
@@ -208,7 +208,7 @@ public class GemComputeModel {
 
         // define logic tree for input model
         LogicTree<ArrayList<GEMSourceData>> modelLogicTree =
-                new LogicTree<ArrayList<GEMSourceData>>();
+                new LogicTree<ArrayList<GEMSourceData>>(modelName);
 
         // instantiate logic tree branches
         LogicTreeBranch bra1 = null;
@@ -224,11 +224,9 @@ public class GemComputeModel {
         braLev1.addBranch(bra1);
 
         // add branching levels to logic tree
-        modelLogicTree.addBranchingLevel(braLev1);
+        modelLogicTree.appendBranchingLevel(braLev1);
 
         modelLogicTree.addEBMapping("1", srcList);
-
-        modelLogicTree.setModelName(modelName);
 
         // define array list of sites
         ArrayList<Site> hazSite =
@@ -263,7 +261,7 @@ public class GemComputeModel {
 
         // define logic tree for input model
         LogicTree<ArrayList<GEMSourceData>> modelLogicTree =
-                new LogicTree<ArrayList<GEMSourceData>>();
+                new LogicTree<ArrayList<GEMSourceData>>(modelName);
 
         // instantiate logic tree branches
         LogicTreeBranch bra1 = null;
@@ -279,11 +277,9 @@ public class GemComputeModel {
         braLev1.addBranch(bra1);
 
         // add branching levels to logic tree
-        modelLogicTree.addBranchingLevel(braLev1);
+        modelLogicTree.appendBranchingLevel(braLev1);
 
         modelLogicTree.addEBMapping("1", srcList);
-
-        modelLogicTree.setModelName(modelName);
 
         // define array list of sites
         // ArrayList<Site> hazSite =
