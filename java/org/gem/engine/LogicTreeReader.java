@@ -215,7 +215,7 @@ public class LogicTreeReader {
 
             indexBranch++;
         }
-        logicTree.addBranchingLevel(branchingLevel);
+        logicTree.appendBranchingLevel(branchingLevel);
     }
 
     /**
