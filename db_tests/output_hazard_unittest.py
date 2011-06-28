@@ -131,7 +131,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hmw.insert_output()
+        hmw.insert_output("hazard_map")
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
