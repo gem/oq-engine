@@ -210,6 +210,7 @@ class LossMapData(Base):
         return(":loss_map_data: %s, %s" % (
             self.id, self.value))
 
+
 class LossAssetData(Base):
     __tablename__ = "loss_asset_data"
     __table_args__ = {"schema": "uiapi"}
@@ -225,12 +226,14 @@ class LossAssetData(Base):
         return(":loss_asset_data: %s, %s" % (
             self.id, self.pos))
 
+
 class LossCurveData(Base):
     __tablename__ = "loss_curve_data"
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
-    loss_asset_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.loss_asset_data.id"),
+    loss_asset_id = sa.Column(sa.Integer,
+                              sa.ForeignKey("uiapi.loss_asset_data.id"),
                               nullable=False)
     loss_asset = relationship("LossAssetData", backref="losscurvedata_set")
 
