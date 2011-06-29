@@ -143,6 +143,10 @@ COMMENT ON TABLE uiapi.hazard_curve_node_data IS 'Holds location/POE data for ha
 COMMENT ON COLUMN uiapi.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
 COMMENT ON COLUMN uiapi.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
 
+COMMENT ON TABLE uiapi.gmf_data IS 'Holds data for the ground motion field';
+COMMENT ON COLUMN uiapi.gmf_data.ground_motion IS 'Ground motion for a specific site';
+COMMENT ON COLUMN uiapi.gmf_data.location IS 'Site coordinates';
+
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
@@ -193,6 +197,7 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - unknown
     - hazard_curve
     - hazard_map
+    - gmf
     - loss_curve
     - loss_map';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
