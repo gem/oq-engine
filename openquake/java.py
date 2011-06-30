@@ -124,9 +124,9 @@ def _setup_java_capture(out, err):
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
-    jarpaths = ('/usr/share/java',
-                os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), "../dist")))
+    jarpaths = (os.path.abspath(
+                    os.path.join(os.path.dirname(__file__), "../dist")),
+                '/usr/share/java')
     log4j_properties_path = os.path.abspath(
                                 os.path.join(os.path.dirname(__file__),
                                 "../log4j.properties"))
