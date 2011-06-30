@@ -23,8 +23,8 @@ NRML serialization of risk-related data sets.
 - loss curves
 - loss map
 """
+import os
 
-import logging
 from os.path import basename
 
 from lxml import etree
@@ -32,15 +32,17 @@ from lxml import etree
 import sqlalchemy
 
 from db.alchemy.models import OqJob, Output
+from db.alchemy.models import LossMapData, LossMapNodeData, LossMapNodeAssetData
 from db.alchemy.models import LossAssetData, LossCurveData
 
+from openquake import logs
 from openquake import shapes
 from openquake import xml
 
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
 
-LOGGER = logging.getLogger('loss-output')
+LOGGER = logs.RISK_LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
@@ -191,7 +193,6 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             :py:class:`dict` (asset dict)
                 ***assetID*** - the assetID
         """
-
         def new_loss_node(lmnode_el, loss_dict, asset_dict):
             """
             Create a new asset loss node under a pre-existing parent LMNode.
@@ -254,6 +255,119 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
                 return node
         return None
 
+class OutputDBWriter(object):
+    """
+    Abstact class implementing the "serialize" interface to output an iterable
+    to the database.
+
+    Subclasses must implement get_output_type() and insert_datum().
+    """
+    def __init__(self, session, nrml_path, oq_job_id):
+        self.nrml_path = nrml_path
+        self.oq_job_id = oq_job_id
+        self.session = session
+        job = self.session.query(OqJob).filter(
+            OqJob.id == self.oq_job_id).one()
+        self.output = Output(owner=job.owner, oq_job=job,
+                             display_name=os.path.basename(self.nrml_path),
+                             output_type=self.get_output_type(),
+                             db_backed=True)
+
+    def get_output_type(self):
+        """
+        The type of the output record as a string (e.g. 'loss_curve')
+        """
+        raise NotImplementedError()
+
+    def insert_datum(self, key, values):
+        """
+        Called for each item of the iterable during serialize.
+        """
+        raise NotImplementedError()
+
+    def serialize(self, iterable):
+        """
+        Implementation of the "serialize" interface.
+
+        An Output record with type get_output_type() will be created, then
+        each item of the iterable will be serialized in turn to the database.
+        """
+        LOGGER.info("> serialize")
+        LOGGER.info("serializing %s points" % len(iterable))
+
+        self.session.add(self.output)
+        LOGGER.info("output = '%s'" % self.output)
+
+        for key, values in iterable:
+            self.insert_datum(key, values)
+
+        self.session.commit()
+
+        LOGGER.info("serialized %s points" % len(iterable))
+        LOGGER.info("< serialize")
+
+
+class LossMapDBWriter(OutputDBWriter):
+    def get_output_type(self):
+        """
+        The type of the output record as a string (e.g. 'loss_curve')
+        """
+        return 'loss_map'
+
+    def serialize(self, iterable):
+        if isinstance(iterable[0], dict):
+            self._insert_metadata(iterable[0])
+            iterable = iterable[1:]
+        else:
+            self._insert_metadata({})
+
+        super(LossMapDBWriter, self).serialize(iterable)
+
+    def insert_datum(self, site, values):
+        """
+        :param site: the region location of the data being written
+        :type site: :py:class:`openquake.shapes.Site`
+
+        :param values: contains a list of pairs in the form
+            (loss dict, asset dict) with all the data
+            to be written related to the given site
+        :type values: tuple with the following members
+            :py:class:`dict` (loss dict) with the following keys:
+                ***mean_loss*** - the Mean Loss for a certain Node/Site
+                ***stddev_loss*** - the Standard Deviation for a certain
+                    Node/Site
+
+            :py:class:`dict` (asset dict)
+                ***assetID*** - the assetID
+        """
+        node = self._insert_node(site)
+
+        for loss, asset in values:
+            node_asset = LossMapNodeAssetData(
+                loss_map_node_data=node,
+                asset_id=asset['assetID'],
+                mean=loss['mean_loss'],
+                std_dev=loss['stddev_loss'])
+            self.session.add(node_asset)
+
+    def _insert_node(self, site):
+        # FIXME insert at most once
+        node = LossMapNodeData(
+            loss_map_data=self.data,
+            site="POINT(%s %s)" % (site.longitude, site.latitude))
+        self.session.add(node)
+        return node
+
+    def _insert_metadata(self, metadata):
+        kwargs = {'output': self.output}
+
+        for key, metadata_key in (('end_branch_label', 'endBranchLabel'),
+                                  ('loss_category', 'lossCategory'),
+                                  ('unit', 'unit')):
+            kwargs[key] = metadata.get(metadata_key)
+
+        self.data = LossMapData(**kwargs)
+        self.session.add(self.data)
 
 class CurveXMLWriter(BaseXMLWriter):
     """This class serializes a set of loss or loss ratio curves to NRML.
