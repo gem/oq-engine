@@ -720,10 +720,25 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    value float NOT NULL
+    end_branch_label VARCHAR,
+    loss_category VARCHAR,
+    unit VARCHAR CONSTRAINT unit_value CHECK(unit IS NULL or unit IN ('EUR', 'USD')) -- NOT NULL?
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
+
+CREATE TABLE uiapi.loss_map_node_data (
+    id SERIAL PRIMARY KEY,
+    loss_map_data_id INTEGER NOT NULL
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'loss_map_node_data', 'site', 4326, 'POINT', 2);
+ALTER TABLE uiapi.loss_map_node_data ALTER COLUMN site SET NOT NULL;
+
+CREATE TABLE uiapi.loss_map_node_asset_data (
+    id SERIAL PRIMARY KEY,
+    loss_map_node_data_id INTEGER NOT NULL,
+    asset_id VARCHAR,
+    mean float NOT NULL,
+    std_dev float NOT NULL
+) TABLESPACE uiapi_ts;
 
 
 -- Loss asset data.
