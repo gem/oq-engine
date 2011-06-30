@@ -252,15 +252,55 @@ class LossMapData(Base):
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
+
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
                           nullable=False)
     output = relationship("Output", backref="lossmapdata_set")
-    location = ga.GeometryColumn(ga.Point(2), nullable=False)
-    value = sa.Column(sa.Float, nullable=False)
+
+    end_branch_label = sa.Column(sa.String)
+    loss_category = sa.Column(sa.String)
+    unit = sa.Column(sa.Enum("EUR", "USD", default=None, native_enum=False),
+                     nullable=True) # FIXME
 
     def __repr__(self):
-        return(":loss_map_data: %s, %s" % (
-            self.id, self.value))
+        return(":loss_map_data: %s, %s" % (self.id, self.value))
+
+
+class LossMapNodeData(Base):
+    __tablename__ = "loss_map_node_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    loss_map_data_id = sa.Column(sa.Integer,
+                          sa.ForeignKey("uiapi.loss_map_data.id"),
+                          nullable=False)
+    loss_map_data = relationship("LossMapData", backref="lossmapnodedata_set")
+
+    site = ga.GeometryColumn(ga.Point(2), nullable=False)
+
+    def __repr__(self):
+        return(":loss_map_node_data: %s" % (self.id))
+
+
+class LossMapNodeAssetData(Base):
+    __tablename__ = "loss_map_node_asset_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    loss_map_node_data_id = sa.Column(sa.Integer,
+                          sa.ForeignKey("uiapi.loss_map_node_data.id"),
+                          nullable=False)
+    loss_map_node_data = relationship("LossMapNodeData",
+                                      backref="lossmapnodeassetdata_set")
+
+    asset_id = sa.Column(sa.String)
+    mean = sa.Column(sa.Float)
+    std_dev= sa.Column(sa.Float)
+
+    def __repr__(self):
+        return(":loss_map_node_asset_data: %s" % (self.id))
 
 
 class LossAssetData(Base):
