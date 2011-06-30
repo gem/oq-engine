@@ -22,7 +22,7 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.risk import LossCurveDBWriter
+from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter
 from openquake.shapes import Site, Curve
 
 from db_tests import helpers
@@ -141,3 +141,97 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEquals(normalize(RISK_LOSS_CURVE_DATA),
                           normalize(inserted_data))
+
+LOSS_MAP_METADATA = {
+    'nrmlID': 'test_nrml_id',
+    'riskResultID': 'test_rr_id',
+    'lossMapID': 'test_lm_id',
+    'endBranchLabel': 'test_ebl',
+    'lossCategory': 'economic_loss',
+    'unit': 'EUR'}
+
+SITE_A = Site(-117.0, 38.0)
+SITE_A_ASSET_ONE = {'assetID': 'a1711'}
+SITE_A_LOSS_ONE = {'mean_loss': 0, 'stddev_loss': 100}
+SITE_A_ASSET_TWO = {'assetID': 'a1712'}
+SITE_A_LOSS_TWO = {'mean_loss': 5, 'stddev_loss': 2000.0}
+
+SITE_B = Site(-118.0, 39.0)
+SITE_B_ASSET_ONE = {'assetID': 'a1713'}
+SITE_B_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
+
+SAMPLE_LOSS_MAP_DATA = [
+    LOSS_MAP_METADATA,
+    (SITE_A, [(SITE_A_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_LOSS_ONE, SITE_B_ASSET_ONE)])]
+
+class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """
+    Unit tests for the LossMapDBWriter class, which serializes
+    loss maps to the database.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def setUp(self):
+        self.job = self.setup_classic_job()
+        self.session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        self.display_name = os.path.basename(output_path)
+
+        self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
+
+    def test_insert(self):
+        """All the records are inserted correctly."""
+
+        output = self.writer.output
+
+        # Call the function under test.
+        data = SAMPLE_LOSS_MAP_DATA
+        self.writer.serialize(data)
+
+        # After calling the function under test we see the expected output.
+        self.assertEqual(1, len(self.job.output_set))
+
+        # Make sure the inserted output record has the right data.
+        [output] = self.job.output_set
+        self.assertTrue(output.db_backed)
+        self.assertTrue(output.path is None)
+        self.assertEqual(self.display_name, output.display_name)
+        self.assertEqual("loss_map", output.output_type)
+        self.assertTrue(self.job is output.oq_job)
+
+        # LossMapData
+        self.assertEqual(1, len(output.lossmapdata_set))
+        [data] = output.lossmapdata_set
+        self.assertEqual(LOSS_MAP_METADATA['endBranchLabel'],
+                         data.end_branch_label)
+        self.assertEqual(LOSS_MAP_METADATA['lossCategory'],
+                         data.loss_category)
+        self.assertEqual(LOSS_MAP_METADATA['unit'], data.unit)
+
+        # LossMapNodeData
+        self.assertEqual(2, len(data.lossmapnodedata_set))
+        [node_a, node_b] = data.lossmapnodedata_set
+        self.assertEqual(SITE_A, Site(*node_a.site.coords(self.session)))
+        self.assertEqual(SITE_B, Site(*node_b.site.coords(self.session)))
+
+        # LossMapNodeAssetData
+        self.assertEqual(2, len(node_a.lossmapnodeassetdata_set))
+        [node_a_asset_1, node_a_asset_2] = node_a.lossmapnodeassetdata_set
+        self.assertEqual(SITE_A_ASSET_ONE['assetID'], node_a_asset_1.asset_id)
+        self.assertEqual(SITE_A_LOSS_ONE['mean_loss'], node_a_asset_1.mean)
+        self.assertEqual(SITE_A_LOSS_ONE['stddev_loss'], node_a_asset_1.std_dev)
+        self.assertEqual(SITE_A_ASSET_TWO['assetID'], node_a_asset_2.asset_id)
+        self.assertEqual(SITE_A_LOSS_TWO['mean_loss'], node_a_asset_2.mean)
+        self.assertEqual(SITE_A_LOSS_TWO['stddev_loss'], node_a_asset_2.std_dev)
+
+        self.assertEqual(1, len(node_b.lossmapnodeassetdata_set))
+        [node_b_asset_1] = node_b.lossmapnodeassetdata_set
+        self.assertEqual(SITE_B_ASSET_ONE['assetID'], node_b_asset_1.asset_id)
+        self.assertEqual(SITE_B_LOSS_ONE['mean_loss'], node_b_asset_1.mean)
+        self.assertEqual(SITE_B_LOSS_ONE['stddev_loss'], node_b_asset_1.std_dev)
