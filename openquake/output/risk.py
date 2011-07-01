@@ -433,6 +433,9 @@ class CurveDBWriter(OutputDBWriter):
     Subclasses must implement get_output_type().
     """
 
+    def get_output_type(self):
+        return super(CurveDBWriter, self).get_output_type()
+
     def insert_datum(self, key, values):
         """
         Called for each item in the iterable beeing serialized.
