@@ -71,3 +71,5 @@ CREATE INDEX uiapi_oq_params_upload_id_idx on uiapi.oq_params(upload_id);
 CREATE INDEX uiapi_loss_map_data_output_id_idx on uiapi.loss_map_data(output_id);
 CREATE INDEX uiapi_loss_asset_data_output_id_idx on uiapi.loss_asset_data(output_id);
 CREATE INDEX uiapi_loss_curve_data_loss_asset_id_idx on uiapi.loss_curve_data(loss_asset_id);
+CREATE INDEX uiapi_loss_map_node_data_loss_map_data_id_idx on uiapi.loss_map_node_data(loss_map_data_id);
+CREATE INDEX uiapi_loss_map_node_asset_data_loss_map_node_data_id_idx on uiapi.loss_map_node_asset_data(loss_map_node_data_id);
