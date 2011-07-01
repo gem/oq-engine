@@ -932,6 +932,9 @@ ALTER TABLE uiapi.loss_map_node_data
 ADD CONSTRAINT uiapi_loss_map_node_data_loss_map_data_fk
 FOREIGN KEY (loss_map_data_id) REFERENCES uiapi.loss_map_data(id) ON DELETE CASCADE;
 
+ALTER TABLE uiapi.loss_map_node_data
+ADD CONSTRAINT uiapi_loss_map_node_data_unique_site UNIQUE (loss_map_data_id, site);
+
 ALTER TABLE uiapi.loss_map_node_asset_data
 ADD CONSTRAINT uiapi_loss_map_node_asset_data_loss_map_node_data_fk
 FOREIGN KEY (loss_map_node_data_id) REFERENCES uiapi.loss_map_node_data(id) ON DELETE CASCADE;
