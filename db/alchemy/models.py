@@ -260,7 +260,7 @@ class LossMapData(Base):
     end_branch_label = sa.Column(sa.String)
     loss_category = sa.Column(sa.String)
     unit = sa.Column(sa.Enum("EUR", "USD", default=None, native_enum=False),
-                     nullable=True) # FIXME
+                     nullable=True)
 
     def __repr__(self):
         return(":loss_map_data: %s, %s" % (self.id, self.value))
