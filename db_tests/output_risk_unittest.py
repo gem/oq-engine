@@ -219,7 +219,9 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(2, len(data.lossmapnodedata_set))
         [node_a, node_b] = data.lossmapnodedata_set
         self.assertEqual(SITE_A, Site(*node_a.site.coords(self.session)))
+        self.assertEqual(node_a.value, None)
         self.assertEqual(SITE_B, Site(*node_b.site.coords(self.session)))
+        self.assertEqual(node_b.value, None)
 
         # LossMapNodeAssetData
         self.assertEqual(2, len(node_a.lossmapnodeassetdata_set))

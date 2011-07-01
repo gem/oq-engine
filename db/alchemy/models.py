@@ -278,6 +278,7 @@ class LossMapNodeData(Base):
     loss_map_data = relationship("LossMapData", backref="lossmapnodedata_set")
 
     site = ga.GeometryColumn(ga.Point(2), nullable=False)
+    value = sa.Column(sa.Float, nullable=True)
 
     def __repr__(self):
         return(":loss_map_node_data: %s" % (self.id))
