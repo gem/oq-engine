@@ -142,6 +142,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(normalize(RISK_LOSS_CURVE_DATA),
                           normalize(inserted_data))
 
+
 LOSS_MAP_METADATA = {
     'nrmlID': 'test_nrml_id',
     'riskResultID': 'test_rr_id',
