@@ -165,6 +165,7 @@ COMMENT ON COLUMN uiapi.loss_map_data.unit IS 'Monetary unit (one of EUR, USD). 
 COMMENT ON TABLE uiapi.loss_map_node_data IS 'Holds site for a loss map.';
 COMMENT ON COLUMN uiapi.loss_map_node_data.loss_map_data_id IS 'The foreign key to the loss map metadata';
 COMMENT ON COLUMN uiapi.loss_map_node_data.site IS 'The site for this loss map';
+COMMENT ON COLUMN uiapi.loss_map_node_data.value IS 'The aggregated loss value for this site';
 
 COMMENT ON TABLE uiapi.loss_map_node_asset_data IS 'Holds an asset and mean and standard deviation for its loss.';
 COMMENT ON COLUMN uiapi.loss_map_node_asset_data.loss_map_node_data_id IS 'The foreign key to the loss map site';

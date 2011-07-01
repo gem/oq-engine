@@ -727,7 +727,8 @@ CREATE TABLE uiapi.loss_map_data (
 
 CREATE TABLE uiapi.loss_map_node_data (
     id SERIAL PRIMARY KEY,
-    loss_map_data_id INTEGER NOT NULL
+    loss_map_data_id INTEGER NOT NULL,
+    value float -- aggregation of the loss values for this site
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_map_node_data', 'site', 4326, 'POINT', 2);
 ALTER TABLE uiapi.loss_map_node_data ALTER COLUMN site SET NOT NULL;
