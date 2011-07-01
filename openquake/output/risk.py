@@ -466,8 +466,8 @@ class CurveDBWriter(OutputDBWriter):
         curve = LossCurveData(
             loss_asset=asset,
             end_branch_label=asset_object.get('endBranchLabel'),
-            abscissae=map(float, curve_object.abscissae),
-            poes=map(float, curve_object.ordinates))
+            abscissae=[float(x) for x in curve_object.abscissae],
+            poes=[float(y) for y in curve_object.ordinates])
         self.session.add(curve)
 
     def _get_or_create_loss_asset_data(self, asset_object, point):
