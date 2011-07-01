@@ -722,7 +722,7 @@ CREATE TABLE uiapi.loss_map_data (
     output_id INTEGER NOT NULL,
     end_branch_label VARCHAR,
     loss_category VARCHAR,
-    unit VARCHAR CONSTRAINT unit_value CHECK(unit IS NULL or unit IN ('EUR', 'USD')) -- NOT NULL?
+    unit VARCHAR CONSTRAINT unit_value CHECK(unit IS NULL or unit IN ('EUR', 'USD'))
 ) TABLESPACE uiapi_ts;
 
 CREATE TABLE uiapi.loss_map_node_data (
@@ -926,6 +926,14 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.loss_curve_data
 ADD CONSTRAINT uiapi_loss_curve_data_loss_asset_fk
 FOREIGN KEY (loss_asset_id) REFERENCES uiapi.loss_asset_data(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.loss_map_node_data
+ADD CONSTRAINT uiapi_loss_map_node_data_loss_map_data_fk
+FOREIGN KEY (loss_map_data_id) REFERENCES uiapi.loss_map_data(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.loss_map_node_asset_data
+ADD CONSTRAINT uiapi_loss_map_node_asset_data_loss_map_node_data_fk
+FOREIGN KEY (loss_map_node_data_id) REFERENCES uiapi.loss_map_node_data(id) ON DELETE CASCADE;
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
