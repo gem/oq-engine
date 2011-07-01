@@ -209,3 +209,38 @@ class LossMapData(Base):
     def __repr__(self):
         return(":loss_map_data: %s, %s" % (
             self.id, self.value))
+
+
+class LossAssetData(Base):
+    __tablename__ = "loss_asset_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
+                          nullable=False)
+    output = relationship("Output", backref="lossassetdata_set")
+    asset_id = sa.Column(sa.String)
+    pos = ga.GeometryColumn(ga.Point(2), nullable=False)
+
+    def __repr__(self):
+        return(":loss_asset_data: %s, %s" % (
+            self.id, self.pos))
+
+
+class LossCurveData(Base):
+    __tablename__ = "loss_curve_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    loss_asset_id = sa.Column(sa.Integer,
+                              sa.ForeignKey("uiapi.loss_asset_data.id"),
+                              nullable=False)
+    loss_asset = relationship("LossAssetData", backref="losscurvedata_set")
+
+    end_branch_label = sa.Column(sa.String)
+    abscissae = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
+    poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
+                     doc="Probabilities of exceedence")
+
+    def __repr__(self):
+        return(":loss_curve_data: %s" % self.id)

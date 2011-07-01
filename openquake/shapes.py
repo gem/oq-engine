@@ -372,10 +372,10 @@ class Site(object):
         return self.hash() == other.hash()
 
     def __repr__(self):
-        return self.__str__()
+        return "Site(%s, %s)" % (self.longitude, self.latitude)
 
     def __str__(self):
-        return "<Site(%s, %s)>" % (self.longitude, self.latitude)
+        return self.__repr__()
 
 
 class Field(object):
