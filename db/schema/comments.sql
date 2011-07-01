@@ -142,6 +142,17 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 COMMENT ON TABLE uiapi.loss_map_data IS 'Holds location/loss data for loss maps.';
 COMMENT ON COLUMN uiapi.loss_map_data.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
 
+COMMENT ON TABLE uiapi.loss_asset_data IS 'Holds the asset id and its position for which loss curves were calculated.';
+COMMENT ON COLUMN uiapi.loss_asset_data.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN uiapi.loss_asset_data.asset_id IS 'The asset id';
+COMMENT ON COLUMN uiapi.loss_asset_data.pos IS 'The position of the asset';
+
+COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
+COMMENT ON COLUMN uiapi.loss_curve.data.loss_asset_id IS 'The foreign key to the asset record to which the loss curve belongs';
+COMMENT ON COLUMN uiapi.loss_curve.data.end_branch_label IS 'End branch label for this curve';
+COMMENT ON COLUMN uiapi.loss_curve.data.abscissae IS 'The abscissae of the curve';
+COMMENT ON COLUMN uiapi.loss_curve.data.poes IS 'Probabilities of exceedence';
+
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
