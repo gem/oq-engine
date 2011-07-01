@@ -22,7 +22,6 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from db.alchemy.models import LossAssetData, LossCurveData
 from openquake.output.risk import LossCurveDBWriter
 from openquake.shapes import Site, Curve
 
