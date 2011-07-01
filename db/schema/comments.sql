@@ -156,8 +156,21 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
-COMMENT ON TABLE uiapi.loss_map_data IS 'Holds location/loss data for loss maps.';
+COMMENT ON TABLE uiapi.loss_map_data IS 'Holds metadata for loss maps.';
 COMMENT ON COLUMN uiapi.loss_map_data.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN uiapi.loss_map_data.end_branch_label IS 'End branch label for this map.';
+COMMENT ON COLUMN uiapi.loss_map_data.loss_category IS 'Loss category (e.g. economic_loss).';
+COMMENT ON COLUMN uiapi.loss_map_data.unit IS 'Monetary unit (one of EUR, USD). Optional.';
+
+COMMENT ON TABLE uiapi.loss_map_node_data IS 'Holds site for a loss map.';
+COMMENT ON COLUMN uiapi.loss_map_node_data.loss_map_data_id IS 'The foreign key to the loss map metadata';
+COMMENT ON COLUMN uiapi.loss_map_node_data.site IS 'The site for this loss map';
+
+COMMENT ON TABLE uiapi.loss_map_node_asset_data IS 'Holds an asset and mean and standard deviation for its loss.';
+COMMENT ON COLUMN uiapi.loss_map_node_asset_data.loss_map_node_data_id IS 'The foreign key to the loss map site';
+COMMENT ON COLUMN uiapi.loss_map_node_asset_data.asset_id IS 'The asset reference';
+COMMENT ON COLUMN uiapi.loss_map_node_asset_data.mean IS 'The mean loss';
+COMMENT ON COLUMN uiapi.loss_map_node_asset_data.std_dev IS 'The standard deviation of the loss';
 
 COMMENT ON TABLE uiapi.loss_asset_data IS 'Holds the asset id and its position for which loss curves were calculated.';
 COMMENT ON COLUMN uiapi.loss_asset_data.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
