@@ -31,6 +31,7 @@ from tests.utils import helpers
 from openquake import settings
 
 from openquake.kvs import reader
+from openquake.kvs import tokens
 from openquake.parser import vulnerability
 
 from openquake.output import hazard as hazard_output
@@ -205,7 +206,7 @@ class KVSTestCase(unittest.TestCase):
         self.assertEquals(data, nrmls)
 
 
-class IdentifierTestCase(unittest.TestCase):
+class TokensTestCase(unittest.TestCase):
     def setUp(self):
         self.job_id = 123456
         self.product = "TestProduct"
@@ -242,15 +243,15 @@ class IdentifierTestCase(unittest.TestCase):
 
     def test_generate_product_key_with_tokens_from_kvs(self):
         products = [
-            kvs.tokens.ERF_KEY_TOKEN,
-            kvs.tokens.MGM_KEY_TOKEN,
-            kvs.tokens.HAZARD_CURVE_KEY_TOKEN,
-            kvs.tokens.EXPOSURE_KEY_TOKEN,
-            kvs.tokens.GMF_KEY_TOKEN,
-            kvs.tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
-            kvs.tokens.LOSS_CURVE_KEY_TOKEN,
-            kvs.tokens.loss_token(0.01),
-            kvs.tokens.VULNERABILITY_CURVE_KEY_TOKEN,
+            tokens.ERF_KEY_TOKEN,
+            tokens.MGM_KEY_TOKEN,
+            tokens.HAZARD_CURVE_KEY_TOKEN,
+            tokens.EXPOSURE_KEY_TOKEN,
+            tokens.GMF_KEY_TOKEN,
+            tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
+            tokens.LOSS_CURVE_KEY_TOKEN,
+            tokens.loss_token(0.01),
+            tokens.VULNERABILITY_CURVE_KEY_TOKEN,
         ]
 
         for product in products:
@@ -269,3 +270,20 @@ class IdentifierTestCase(unittest.TestCase):
 
         ev = "%s!ATestProduct!!Testville,TestLand" % self.job_id
         self.assertEqual(key, ev)
+
+    def test_next_job_key(self):
+        """
+        Test the generation of job keys using
+        :py:function:`openquake.kvs.tokens.next_job_key`.
+        """
+        kvs.get_client().delete(tokens.NEXT_JOB_ID)
+
+        # it should be empty to start with
+        self.assertTrue(kvs.get(tokens.NEXT_JOB_ID) is None)
+
+        job_key_fmt = '::JOB::%s::'
+
+        self.assertEqual(job_key_fmt % 1, tokens.next_job_key())
+
+        # verify that the IDs are incrementing properly
+        self.assertEqual(job_key_fmt % 2, tokens.next_job_key())
