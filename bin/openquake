@@ -15,7 +15,7 @@ through a configuration file.
 
 Expects to compute:
     A grid of loss-ratio curves and store the results in XML
-    A grid of loss curves and store the results in XML 
+    A grid of loss curves and store the results in XML
     A map of losses at each interval and store the results in GeoTIFF
 
 """
@@ -24,12 +24,12 @@ import os
 import sys
 
 # this is a hack so that it is easier to test these scripts,
-# it will add the proper directories to the path so that 
+# it will add the proper directories to the path so that
 # this script can be run from a checkout
 if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'openquake')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    
+
 from fabric.api import env, local, run
 from multiprocessing import Process
 
@@ -67,7 +67,7 @@ def _launch_worker_subprocs():
     """
     # set the host string (otherwise, the user will be prompted for one)
     env.host_string = 'localhost'
-    
+
     # launch celery if it's not already running
     if not _is_running('[c]elery'):
         print "Starting celery..."
@@ -77,7 +77,7 @@ def _launch_worker_subprocs():
 def _launch_server_subprocs():
     """Start redis-server and RabbitMQ as python subprocs.
 
-    There should only be one copy of RabbitMQ running  
+    There should only be one copy of RabbitMQ running
     and (for now) only one copy of redis-server.
 
     If a process is already running, don't kill it
@@ -89,13 +89,13 @@ def _launch_server_subprocs():
     # set the host string (otherwise, the user will be prompted for one)
     env.host_string = 'localhost'
 
-    
+
     # launch rabbitmq if it's not already running
     if not _is_running('[r]abbitmq'):
         print "Starting rabbitmq..."
         Process(target=local, args=('sudo rabbitmq-server',)).start()
 
- 
+
     # launch kvs if it's not already running
     if not _is_running('[r]edis-server'):
         print "Starting redis-server..."
@@ -142,18 +142,18 @@ if __name__ == '__main__':
         sys.exit(0)
 
     logs.init_logs()
-    
+
     # Collect inputs
     # Determine Processing type
     # Validate input data
-    
+
     # Prepare final configuration, save it
     # Hash final config, store that
-    
+
     # Kick off processing tasks, and wait...
     # Collate results
     # Generate output
-    
+
     if FLAGS.profile:
         import cProfile
         cProfile.run('tasks.main(FLAGS.vulnerability, \
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     elif FLAGS.load_profile:
         import pstats
         p = pstats.Stats(FLAGS.profile_log)
-        p.sort_stats('cumulative').print_stats(30)    
+        p.sort_stats('cumulative').print_stats(30)
     elif FLAGS.server:
         # launch redis and rabbitmq
         _launch_server_subprocs()
