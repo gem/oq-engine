@@ -42,6 +42,8 @@ SITES_PER_BLOCK = 100
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
+flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
+                  'Computation result output type')
 
 
 def run_job(job_file):
@@ -156,6 +158,10 @@ class Job(object):
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
+        if FLAGS.output_type == 'db':
+            params['SERIALIZE_RESULTS_TO_DB'] = 'True'
+        else:
+            params['SERIALIZE_RESULTS_TO_DB'] = 'False'
         job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file  # pylint: disable=W0201
         return job
