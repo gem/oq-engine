@@ -263,7 +263,7 @@ class LossMapData(Base):
                      nullable=True)
 
     def __repr__(self):
-        return(":loss_map_data: %s, %s" % (self.id, self.value))
+        return(":loss_map_data: %s" % self.id)
 
 
 class LossMapNodeData(Base):
@@ -281,7 +281,7 @@ class LossMapNodeData(Base):
     value = sa.Column(sa.Float, nullable=True)
 
     def __repr__(self):
-        return(":loss_map_node_data: %s" % (self.id))
+        return(":loss_map_node_data: %s" % self.id)
 
 
 class LossMapNodeAssetData(Base):
@@ -301,7 +301,7 @@ class LossMapNodeAssetData(Base):
     std_dev= sa.Column(sa.Float)
 
     def __repr__(self):
-        return(":loss_map_node_asset_data: %s" % (self.id))
+        return(":loss_map_node_asset_data: %s" % self.id)
 
 
 class LossAssetData(Base):
