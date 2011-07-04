@@ -669,6 +669,43 @@ SELECT AddGeometryColumn('uiapi', 'hazard_map_data', 'location', 4326, 'POINT', 
 ALTER TABLE uiapi.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
+-- Hazard curve data.
+CREATE TABLE uiapi.hazard_curve_data (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,
+    -- Realization reference string
+    end_branch_label VARCHAR CONSTRAINT end_branch_label_value
+        CHECK(
+            ((end_branch_label IS NULL) AND (statistic_type IS NOT NULL))
+            OR ((end_branch_label IS NOT NULL) AND (statistic_type IS NULL))),
+    -- Statistic type, one of:
+    --      mean
+    --      median
+    --      quantile
+    statistic_type VARCHAR CONSTRAINT statistic_type_value
+        CHECK(statistic_type IS NULL OR
+              statistic_type IN ('mean', 'median', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT quantile_value
+        CHECK(
+            ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistic_type <> 'quantile') AND (quantile IS NULL)))),
+    -- Intensity measure levels
+    imls float[] NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- Hazard curve node data.
+CREATE TABLE uiapi.hazard_curve_node_data (
+    id SERIAL PRIMARY KEY,
+    hazard_curve_data_id INTEGER NOT NULL,
+    -- Probabilities of exceedence
+    poes float[] NOT NULL
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE uiapi.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
+
+
 -- Loss map data.
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
@@ -840,6 +877,14 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.hazard_map_data
 ADD CONSTRAINT uiapi_hazard_map_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.hazard_curve_data
+ADD CONSTRAINT uiapi_hazard_curve_data_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.hazard_curve_node_data
+ADD CONSTRAINT uiapi_hazard_curve_node_data_output_fk
+FOREIGN KEY (hazard_curve_data_id) REFERENCES uiapi.hazard_curve_data(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_map_data
 ADD CONSTRAINT uiapi_loss_map_data_output_fk
