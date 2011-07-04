@@ -235,3 +235,55 @@ def ground_motion_values_key(job_id, point):
 
     return openquake.kvs.generate_key(
         [job_id, GMFS_KEY_TOKEN, point.column, point.row])
+
+
+NEXT_JOB_ID = 'NEXT_JOB_ID'
+CURRENT_JOBS = 'CURRENT_JOBS'
+
+
+def next_job_key():
+    """
+    The KVS used by the OpenQuake engine maintains a 'NEXT_JOB_ID' key whose
+    value is an integer.
+
+    When this function is called, the value of this key will be used to
+    generate a unique job id; the value will be subsequently incremented.
+
+    :returns: a (presumably) unique string in the follwing format:
+        ::JOB::<id>::, where <id> is the value of the 'NEXT_JOB_ID' key
+
+        This is not guaranteed to be free of collisions, but is safe as long as
+        developers reserve this string formatting pattern for this purpose
+        only.
+
+        NOTE(LB): I wanted to use UUIDs, but millions of keys at 36 bytes per
+        key consumes a lot more storage space in the KVS.
+    """
+    # If the key doesn't exist, create it and set the initial value to 1.
+    if not openquake.kvs.get(NEXT_JOB_ID):
+        openquake.kvs.set(NEXT_JOB_ID, 1)
+
+    job_key = '::JOB::%s::' % openquake.kvs.get(NEXT_JOB_ID)
+
+    client = openquake.kvs.get_client()
+
+    client.incr(NEXT_JOB_ID)
+
+    # Add this key to set of current jobs.
+    # This set can be queried to perform garbage collection.
+    not_dupe = client.sadd(CURRENT_JOBS, job_key)
+    # We need to make this returns True, otherwise there is a duplication;
+    # this is bad.
+    assert not_dupe
+
+    return job_key
+
+
+def current_jobs():
+    """
+    Get all current job keys.
+
+    :returns: list of job keys (as strings), or an empty list if there are no
+        current jobs
+    """
+    return list(openquake.kvs.get_client().smembers(CURRENT_JOBS))
