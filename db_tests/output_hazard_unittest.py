@@ -22,7 +22,7 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.hazard import HazardMapDBWriter
+from openquake.output.hazard import HazardMapDBWriter, HazardCurveDBWriter
 from openquake.shapes import Site
 from openquake.utils import round_float
 
@@ -65,6 +65,49 @@ HAZARD_MAP_DATA = [
       'vs30': 760.0})]
 
 
+# same as the data above; the sites with statistics data were added by hand;
+# the IMLValues and PoEValues are trimmed to the last 4 values and 3 decimals
+HAZARD_CURVE_DATA = [
+    (Site(-122.2, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '1_1'}),
+    (Site(-122.1, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '1_2'}),
+    (Site(-122.0, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '1_1'}),
+    (Site(-122.0, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'quantileValue': 0.6,
+      'statistics': 'quantile'}),
+    (Site(-122.1, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'quantileValue': 0.6,
+      'statistics': 'quantile'}),
+    (Site(-121.9, 37.5),
+     {'investigationTimeSpan': '50.0',
+      'IMLValues': [0.778, 1.09, 1.52, 2.13],
+      'PoEValues': [0.354, 0.114, 0.023, 0.002],
+      'IMT': 'PGA',
+      'endBranchLabel': '2'})]
+
+
 class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     Unit tests for the HazardMapDBWriter class, which serializes
@@ -88,7 +131,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hmw.insert_output()
+        hmw.insert_output("hazard_map")
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -167,3 +210,72 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertEqual(round_float(minimum), round_float(output.min_value))
         self.assertEqual(round_float(maximum), round_float(output.max_value))
+
+
+class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """
+    Unit tests for the HazardCurveDBWriter class, which serializes
+    hazard curvess to the database.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def test_serialize(self):
+        """serialize() inserts the output and the hazard_map_data records."""
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+
+        # This job has no outputs before calling the function under test.
+        self.assertEqual(0, len(self.job.output_set))
+
+        # Call the function under test.
+        hcw.serialize(HAZARD_CURVE_DATA)
+
+        # After calling the function under test we see the expected output.
+        self.assertEqual(1, len(self.job.output_set))
+
+        # After calling the function under test we see the expected map data.
+        [output] = self.job.output_set
+        self.assertEqual(4, len(output.hazardcurvedata_set))
+        self.assertEqual(0, len(output.lossmapdata_set))
+
+        # read data from the DB and check that it's equal to the original data
+        inserted_data = []
+
+        for hcd in output.hazardcurvedata_set:
+            for hcdn in hcd.hazardcurvenodedata_set:
+                location = hcdn.location.coords(session)
+                node = (Site(location[0], location[1]),
+                        {'IMLValues': hcd.imls,
+                         'PoEValues': hcdn.poes})
+                if hcd.end_branch_label:
+                    node[1]['endBranchLabel'] = hcd.end_branch_label
+                else:
+                    node[1]['statistics'] = hcd.statistic_type
+                    if hcd.quantile is not None:
+                        node[1]['quantileValue'] = hcd.quantile
+
+                inserted_data.append(node)
+
+        def normalize(values):
+            def sort_key(v):
+                return v[0].longitude, v[0].latitude, v[1]
+
+            def norm(dic):
+                dic = dict(dic)
+
+                # remove keys not stored in the database
+                dic.pop('investigationTimeSpan', None)
+                dic.pop('IMT', None)
+
+                return dic
+
+            return sorted([(s, norm(v)) for s, v in values], key=sort_key)
+
+        self.assertEquals(normalize(HAZARD_CURVE_DATA),
+                          normalize(inserted_data))

@@ -50,6 +50,8 @@ GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_asset_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_map_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.hazard_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.hazard_curve_node_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
@@ -152,6 +154,14 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_uiapi_writer;
 -- uiapi.hazard_map_data
 GRANT SELECT ON uiapi.hazard_map_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_map_data TO oq_uiapi_writer;
+
+-- uiapi.hazard_curve_data
+GRANT SELECT ON uiapi.hazard_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_curve_data TO oq_uiapi_writer;
+
+-- uiapi.hazard_curve_node_data
+GRANT SELECT ON uiapi.hazard_curve_node_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_curve_node_data TO oq_uiapi_writer;
 
 -- uiapi.loss_asset_data
 GRANT SELECT ON uiapi.loss_asset_data TO GROUP openquake;
