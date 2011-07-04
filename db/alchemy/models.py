@@ -212,7 +212,7 @@ class HazardCurveData(Base):
 
     def __repr__(self):
         return(":hazard_curve_data: %s, %s" % (
-            self.id, self.value))
+            self.id, self.statistic_type or self.end_branch_label))
 
 
 class HazardCurveNodeData(Base):
