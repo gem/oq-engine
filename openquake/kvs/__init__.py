@@ -170,3 +170,33 @@ BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
 def generate_block_id():
     """Generate a unique id for a block."""
     return BLOCK_ID_GENERATOR.next()
+
+
+def gc(job_key):
+    """
+    Garbage collection for the KVS. This works by simply removing all keys which contain
+    the input job key.
+
+    The job key must be a member of the 'CURRENT_JOBS' set. If it isn't, this function will
+    do nothing and simply return 0.
+
+    :param job_key: specially formatted job key; see :py:function:`openquake.kvs.tokens.next_job_key` for more info
+
+    :returns: the number of deleted keys (int)
+    """
+    client = get_client()
+
+    if client.sismember(tokens.CURRENT_JOBS, job_key):
+        # matches a current job
+        # do the garbage collection
+        keys = client.keys('*%s*' % job_key)
+
+        success = client.delete(*keys)
+        # delete should return True
+        assert success
+
+        return len(keys)
+    else:
+        # does not match a current job
+        # return 0
+        return 0
