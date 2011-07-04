@@ -30,13 +30,16 @@ data.
 
 import getopt
 import logging
+import re
 import sys
 
+from openquake import kvs
+from openquake.kvs import tokens
 
 SHORT_ARGS = 'hlj:'
 LONG_ARGS = ['help', 'job=', 'list']
 # map short args to long args
-S2L = dict(h='help', j='job=', l='list')
+S2L = dict(h='help', j='job', l='list')
 
 
 def main(cl_args):
@@ -44,6 +47,57 @@ def main(cl_args):
     :param cl_args: command line arguments
     :type cl_cargs: list of strings
     """
+    try:
+        opts, _  = getopt.getopt(cl_args, SHORT_ARGS, LONG_ARGS)
+    except getopt.GetoptError, e:
+        # Invalid arg specified; print the error and help, then exit
+        print e
+        show_help()
+
+    print opts
+
+    # strip dashes
+    opts = [(strip_dashes(opt), val) for opt, val in opts]
+
+    # convert everything to long args
+    opts = [(S2L.get(opt, opt), val) for opt, val in opts]
+
+    # process the args in the order they were given
+    # some arguments may be ignored
+    for opt, val in opts:
+        if opt == 'help':
+            show_help()
+        elif opt == 'list':
+            list_cached_jobs()
+        elif opt == 'job':
+            clear_job_data(val)
+        else:
+            print "Unknown option: %s" % opt
+            show_help()
+
+
+def strip_dashes(arg):
+    """
+    Remove leading dashes, return last portion of string remaining.
+    """
+    return arg.split('-')[-1]
+
+
+def _get_current_job_ids()
+    """
+    """
+    jobs = tokens.current_jobs()
+
+    # parse out the job IDs
+    job_ids = []
+
+    for job in jobs:
+        match = re.match(r'^::JOB::(\d+)::$', job)
+        if match:
+            job_ids.append(match.group(1))
+
+    return job_ids
+
 
 def list_cached_jobs():
     """
@@ -51,6 +105,19 @@ def list_cached_jobs():
 
     Invoked by the -l or --list command line arg.
     """
+    job_ids = _get_current_job_ids()
+
+    if len(job_ids) > 0:
+        # print the jobs
+        print 'Currently cached jobs:'
+        for job in jobs:
+            print job
+
+    else:
+        # there are no jobs
+        print 'There are currently no jobs cached.'
+
+    sys.exit()
 
 
 def clear_job_data(job_id):
@@ -61,16 +128,25 @@ def clear_job_data(job_id):
 
     Invoked by the -j or --job command line arg.
 
-    :param job_id: numerical job ID
-    :type job_id: int
+    :param job_id: job ID as an integer
     """
+    try:
+        job_id = int(job_id)
+    except ValueError:
+        print "Job ID should be an integer."
+        print "Use the --list option to show current jobs."
+        sys.exit()
+
+    print 'clearing job data for job %s' % job_id
+    sys.exit()
 
 
 def show_help():
     """
-    Display help documentation for this utility.
+    Display help documentation for this utility and exit.
     """
     print __doc__
+    sys.exit()
 
 
 if __name__ == '__main__':
