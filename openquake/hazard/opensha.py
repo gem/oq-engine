@@ -852,7 +852,7 @@ def create_hazardmap_writer(params, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    db_flag = params.get("SERIALIZE_MAPS_TO_DB")
+    db_flag = params.get("SERIALIZE_RESULTS_TO_DB")
     if not db_flag or db_flag.lower() == "false":
         return hazard_output.HazardMapXMLWriter(nrml_path)
     else:
