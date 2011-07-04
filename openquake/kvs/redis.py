@@ -54,7 +54,6 @@ class Redis(object):
                        port=settings.KVS_PORT,
                        **kwargs):
         if not self.__dict__:
-            print "Opening a new redis connection"
             args = {"host": host,
                     "port": port,
                     "db": kwargs.get('db', 0)}
