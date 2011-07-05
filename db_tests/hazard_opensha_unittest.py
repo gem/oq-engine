@@ -30,14 +30,6 @@ from openquake.output import hazard as hazard_output
 class CreateHazardmapWriterTestCase(unittest.TestCase):
     """Tests for hazard.opensha.create_hazardmap_writer()."""
 
-    def test_create_hazardmap_writer_with_xml(self):
-        """
-        A `HazardMapXMLWriter` instance is returned in the absence of a
-        SERIALIZE_RESULTS_TO_DB setting.
-        """
-        writer = opensha.create_hazardmap_writer(dict(), "/tmp/a.xml")
-        self.assertTrue(isinstance(writer, hazard_output.HazardMapXMLWriter))
-
     def test_create_hazardmap_writer_with_xml2(self):
         """
         A `HazardMapXMLWriter` instance is returned when the
