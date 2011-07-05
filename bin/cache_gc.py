@@ -139,7 +139,7 @@ def clear_job_data(job_id):
 
     print 'Attempting to clear cache data for job %s...' % job_id
 
-    result = kvs.gc(job_id)
+    result = kvs.cache_gc(job_id)
 
     if result is None:
         print 'No data found for job %s' % job_id
