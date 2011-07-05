@@ -19,19 +19,15 @@
 
 import unittest
 
-from openquake.utils import db
+from openquake import xml
+from openquake import java
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
+from db.alchemy import db_utils
 
-TEST_DB = 'openquake'
-TEST_DB_USER = 'oq_pshai_etl'
-TEST_DB_HOST = 'localhost'
-TEST_DB_PASSWORD = 'openquake'
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
 TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
-
-TEST_EQCAT_DB_USER = 'oq_eqcat_etl'
 
 
 class NrmlModelLoaderDBTestCase(unittest.TestCase):
@@ -42,7 +38,9 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
     """
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        engine = db.create_engine(TEST_DB, TEST_DB_USER, host=TEST_DB_HOST)
+        engine = db_utils.get_pshai_etl_session().connection().engine
+        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
+                                                xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file, engine)
 
         results = src_loader.serialize()
@@ -110,13 +108,47 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
         self.db_loader._read_model()
         self.csv_reader = self.db_loader.csv_reader
 
-    def test_csv_to_db_loader_end_to_end(self):
-        """
-            * Serializes the csv into the database
-            * Queries the database for the data just inserted
-            * Verifies the data against the csv
-            * Deletes the inserted records from the database
-        """
+        # start from a clean state
+        self._clean_db_data()
+
+    def tearDown(self):
+        # clean up after the test
+        self._clean_db_data()
+
+    def _retrieve_db_data(self, soup_db):
+
+        # compatible with SQLAlchemy 0.6.4; a bit of an hack because
+        # it knows how ".join" is implemented in SQLSoup; there does
+        # not seem a cleaner solution
+        def _join(soup_db, left, right, **kwargs):
+            from sqlalchemy import join
+
+            j = join(left, right)
+            return soup_db.map(j, **kwargs)
+
+        # doing some "trickery" with *properties and primary_key,
+        # to adapt the code for sqlalchemy 0.7
+
+        # surface join
+        surf_join = _join(soup_db, soup_db.catalog, soup_db.surface,
+            properties={'id_surface': [soup_db.surface.c.id]},
+                        exclude_properties=[soup_db.surface.c.id,
+                            soup_db.surface.c.last_update],
+            primary_key=[soup_db.surface.c.id])
+
+        # magnitude join
+        mag_join = _join(soup_db, surf_join, soup_db.magnitude,
+            properties={'id_magnitude': [soup_db.magnitude.c.id],
+                    'id_surface': [soup_db.surface.c.id]},
+                        exclude_properties=[soup_db.magnitude.c.id,
+                            soup_db.magnitude.c.last_update,
+                            soup_db.surface.c.last_update],
+            primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
+
+        return mag_join.order_by(soup_db.catalog.eventid).all()
+
+    def _verify_db_data(self, csv_loader, db_rows):
+
         def _pop_date_fields(csv):
             date_fields = ['year', 'month', 'day', 'hour', 'minute', 'second']
             res = [csv.pop(csv.index(field)) for field in date_fields]
@@ -129,73 +161,73 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
             unused_fields = ['longitude', 'latitude']
             [csv.pop(csv.index(field)) for field in unused_fields]
 
-        def _retrieve_db_data(soup_db):
+        # skip the header
+        csv_loader.csv_reader.next()
+        csv_els = list(csv_loader.csv_reader)
+        for csv_row, db_row in zip(csv_els, db_rows):
+            csv_keys = csv_row.keys()
+            # pops 'longitude', 'latitude' which are used to populate
+            # geometry_columns
+            _pop_geometry_fields(csv_keys)
 
-            # doing some "trickery" with *properties and primary_key,
-            # to adapt the # code for sqlalchemy 0.7
+            timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
+            csv_time = csv_loader._date_to_timestamp(*timestamp)
+            # first we compare the timestamps
+            self.assertEqual(str(db_row.time), csv_time)
 
-            # surface join
-            surf_join = soup_db.join(soup_db.catalog, soup_db.surface,
-                properties={'id_surface': [soup_db.surface.c.id]},
-                            exclude_properties=[soup_db.surface.c.id,
-                                soup_db.surface.c.last_update],
-                primary_key=[soup_db.surface.c.id])
+            # then, we cycle through the csv keys and consider some special
+            # cases
+            for csv_key in csv_keys:
+                db_val = getattr(db_row, csv_key)
+                csv_val = csv_row[csv_key]
 
-            # magnitude join
-            mag_join = soup_db.join(surf_join, soup_db.magnitude,
-                properties={'id_magnitude': [soup_db.magnitude.c.id],
-                        'id_surface': [soup_db.surface.c.id]},
-                            exclude_properties=[soup_db.magnitude.c.id,
-                                soup_db.magnitude.c.last_update,
-                                soup_db.surface.c.last_update],
-                primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
+                def convert_val(v):
+                    v = v.strip()
 
-            return mag_join.order_by(soup_db.catalog.eventid).all()
-
-        def _verify_db_data(csv_loader, db_rows):
-            # skip the header
-            csv_loader.csv_reader.next()
-            csv_els = list(csv_loader.csv_reader)
-            for csv_row, db_row in zip(csv_els, db_rows):
-                csv_keys = csv_row.keys()
-                # pops 'longitude', 'latitude' which are used to populate
-                # geometry_columns
-                _pop_geometry_fields(csv_keys)
-
-                timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
-                csv_time = csv_loader._date_to_timestamp(*timestamp)
-                # first we compare the timestamps
-                self.assertEqual(str(db_row.time), csv_time)
-
-                # then, we cycle through the csv keys and consider some special
-                # cases
-                for csv_key in csv_keys:
-                    db_val = getattr(db_row, csv_key)
-                    csv_val = csv_row[csv_key]
-                    if not len(csv_val.strip()):
-                        csv_val = None
-                    if csv_key == 'agency':
-                        self.assertEqual(str(db_val), str(csv_val))
+                    if csv_key in ['agency', 'identifier']:
+                        coerce_to = str
                     else:
-                        self.assertEqual(float(db_val), float(csv_val))
+                        coerce_to = float
 
-        def _delete_db_data(soup_db, db_rows):
-            # cleaning the db
-            for db_row in db_rows:
-                soup_db.delete(db_row)
+                    if not len(v):
+                        return None
+                    else:
+                        return coerce_to(v)
 
-        engine = db.create_engine(dbname=TEST_DB, user=TEST_EQCAT_DB_USER,
-                                  password=TEST_DB_PASSWORD)
+                self.assertEqual(db_val, convert_val(csv_val))
+
+    def _writer_soup(self):
+        engine = db_utils.get_eqcat_writer_session().connection().engine
+
+        csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
+        return csv_loader._sql_soup_init('eqcat')
+
+    def _clean_db_data(self):
+        soup_db = self._writer_soup()
+        db_rows = self._retrieve_db_data(soup_db)
+
+        for db_row in db_rows:
+            soup_db.delete(db_row)
+
+        soup_db.commit()
+
+    def test_csv_to_db_loader_end_to_end(self):
+        """
+            * Serializes the csv into the database
+            * Queries the database for the data just inserted
+            * Verifies the data against the csv
+            * Deletes the inserted records from the database
+        """
+
+        engine = db_utils.get_eqcat_etl_session().connection().engine
 
         csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
         csv_loader.serialize()
-        db_rows = _retrieve_db_data(csv_loader.soup)
+        db_rows = self._retrieve_db_data(csv_loader.soup)
 
         # rewind the file
         csv_loader.csv_fd.seek(0)
 
-        _verify_db_data(csv_loader, db_rows)
-
-        _delete_db_data(csv_loader.soup, db_rows)
+        self._verify_db_data(csv_loader, db_rows)
 
         csv_loader.soup.commit()

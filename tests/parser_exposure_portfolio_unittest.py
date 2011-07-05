@@ -29,6 +29,7 @@ from tests.utils import helpers
 
 TEST_FILE = 'exposure-portfolio.xml'
 INVALID_TEST_FILE = "tests/data/invalid/small_exposure.xml"
+MISMATCHED_TEST_FILE = "examples/source-model.xml"
 
 
 class ExposurePortfolioFileTestCase(unittest.TestCase):
@@ -43,6 +44,10 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
 
         self.assertRaises(xml.XMLValidationError,
                           _parse_exposure, INVALID_TEST_FILE)
+
+        self.assertRaises(xml.XMLMismatchError, _parse_exposure,
+                          os.path.join(helpers.SCHEMA_DIR,
+                                       MISMATCHED_TEST_FILE))
 
     def test_filter_region_constraint_known_to_fail(self):
 
