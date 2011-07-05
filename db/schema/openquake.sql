@@ -717,8 +717,6 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
-drop table uiapi.loss_map_data;
-drop table uiapi.loss_map;
 
 -- Design decision: store both probabilistic and event based loss map in the
 -- same tables (with some checks for consistency)
