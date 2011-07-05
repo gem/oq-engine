@@ -43,9 +43,9 @@ class Redis(object):
     """ A Borg-style wrapper for Redis client class. """
     __shared_state = {}
 
-    def __new__(cls, host=settings.KVS_HOST, 
-                     port=settings.KVS_PORT, 
-                     **kwargs): #pylint: disable=W0613
+    def __new__(cls, host=settings.KVS_HOST,
+                     port=settings.KVS_PORT,
+                     **kwargs):  # pylint: disable=W0613
         self = object.__new__(cls)
         self.__dict__ = cls.__shared_state
         return self
