@@ -714,13 +714,10 @@ class EventBasedMixin(BasePSHAMixin):
 
     def write_gmf_files(self, ses):
         """Generate a GeoTiff file and a NRML file for each GMF."""
-        image_grid = self.region.grid
         iml_list = [float(param)
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
 
-        LOG.debug("Generating GMF image, grid is %s col by %s rows" % (
-                image_grid.columns, image_grid.rows))
         LOG.debug("IML: %s" % (iml_list))
         files = []
         for event_set in ses:
