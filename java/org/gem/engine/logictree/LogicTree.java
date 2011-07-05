@@ -1,9 +1,5 @@
 package org.gem.engine.logictree;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -45,41 +41,6 @@ public class LogicTree<Element> implements Iterable<Element>, Serializable
         this.name = name;
         this.ebMap = new HashMap<String, Element>();
         this.branchingLevels = new ArrayList<LogicTreeBranchingLevel>();
-    }
-
-    @SuppressWarnings("unchecked")
-    public static LogicTree fromFile(String fileName)
-    {
-        URL data = GemComputeHazardLogicTree.class.getResource(fileName);
-
-        FileInputStream inputStream = null;
-        File file = new File(data.getFile());
-
-        try
-        {
-            inputStream = new FileInputStream(file.getPath());
-        }
-        catch (FileNotFoundException e)
-        {
-            String msg = file.getPath() + " not found!!";
-
-            logger.error(msg);
-            throw new RuntimeException(msg);
-        }
-
-        ObjectInputStream objectInputStream;
-
-        try
-        {
-            objectInputStream = new ObjectInputStream(inputStream);
-            Object obj = objectInputStream.readObject();
-
-            return (LogicTree) obj;
-        }
-        catch (Exception e)
-        {
-            throw new RuntimeException(e);
-        }
     }
 
     public void appendBranchingLevel(LogicTreeBranchingLevel branchingLevel)
