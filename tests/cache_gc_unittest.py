@@ -76,7 +76,7 @@ class CacheGCTestCase(unittest.TestCase):
         exit_backup = sys.exit
         sys.exit = fake_exit
 
-        with mock.patch('openquake.kvs.gc_cache') as gc_mock:
+        with mock.patch('openquake.kvs.cache_gc') as gc_mock:
             # we don't really care what the return val is
             gc_mock.return_value = 3
 
