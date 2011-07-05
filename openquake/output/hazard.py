@@ -592,7 +592,7 @@ class HazardMapDBWriter(BaseDBWriter):
         We first insert a `uiapi.output` record for the hazard map and then
         an `uiapi.hazard_map_data` record for each datum in the `iterable`.
         """
-        logger.info("> serialize")
+        logger.info("> hazmap-serialize")
 
         logger.info("serializing %s points" % len(iterable))
         self.insert_output("hazard_map")
@@ -609,7 +609,7 @@ class HazardMapDBWriter(BaseDBWriter):
         self.session.commit()
 
         logger.info("serialized %s points" % len(iterable))
-        logger.info("< serialize")
+        logger.info("< hazmap-serialize")
 
     def insert_map_datum(self, point, value):
         """Inserts a single hazard map datum.
@@ -675,7 +675,7 @@ class HazardCurveDBWriter(BaseDBWriter):
         an uiapi.hazard_curve_node_data for each site with a given
         branch label/statistic type
         """
-        logger.info("> serialize")
+        logger.info("> hazcurve-serialize")
 
         logger.info("serializing %s points" % len(iterable))
         self.insert_output("hazard_curve")
@@ -685,7 +685,7 @@ class HazardCurveDBWriter(BaseDBWriter):
         self.session.commit()
 
         logger.info("serialized %s points" % len(iterable))
-        logger.info("< serialize")
+        logger.info("< hazcurve-serialize")
 
     def insert_curve_datum(self, point, values):
         """Insert a single hazard curve"""
@@ -751,7 +751,7 @@ class GMFDBWriter(BaseDBWriter):
         We first insert a `uiapi.output` record for the GMF and then
         an u1api.hazard_gmf_data for each site
         """
-        logger.info("> serialize")
+        logger.info("> gmf-serialize")
 
         logger.info("serializing %s points" % len(iterable))
         self.insert_output("gmf")
@@ -761,7 +761,7 @@ class GMFDBWriter(BaseDBWriter):
         self.session.commit()
 
         logger.info("serialized %s points" % len(iterable))
-        logger.info("< serialize")
+        logger.info("< gmf-serialize")
 
     def insert_gmf_datum(self, point, values):
         """Insert a single hazard curve"""
