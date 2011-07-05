@@ -709,12 +709,10 @@ class HazardCurveDBWriter(BaseDBWriter):
         else:
             if 'endBranchLabel' in values:
                 hazard_curve_item = HazardCurveData(
-                    output=self.output, end_branch_label=curve_label,
-                    imls=values['IMLValues'])
+                    output=self.output, end_branch_label=curve_label)
             else:
                 hazard_curve_item = HazardCurveData(
-                    output=self.output, statistic_type=curve_label,
-                    imls=values['IMLValues'])
+                    output=self.output, statistic_type=curve_label)
 
                 if 'quantileValue' in values:
                     hazard_curve_item.quantile = values['quantileValue']

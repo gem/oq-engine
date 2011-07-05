@@ -206,8 +206,6 @@ class HazardCurveData(Base):
     statistic_type = sa.Column(
         sa.Enum("mean", "median", "quantile", native_enum=False))
     quantile = sa.Column(sa.Float)
-    imls = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
-                     doc="Intensity measure levels")
 
     def __repr__(self):
         return(":hazard_curve_data: %s, %s" % (
