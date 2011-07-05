@@ -727,18 +727,20 @@ ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss curve.
+-- QUESTION: if it turns out there is no actual data to store in this table,
+-- can we just get rid of it (and put a FK to output.id in loss_map_data)?
 CREATE TABLE uiapi.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL
 ) TABLESPACE uiapi_ts;
 
 
--- Loss curve data.
+-- Loss curve data. Holds the asset, its position and the calculated curve.
 CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
-    asset_id VARCHAR,
+    asset_id VARCHAR, -- QUESTION: is the postfix '_id' in the column name confusing? This is not a FK.
     end_branch_label VARCHAR,
     abscissae float[] NOT NULL,
     poes float[] NOT NULL
