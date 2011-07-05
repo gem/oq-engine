@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
+  <exposurePortfolio gml:id="ep">
+    <invalid />
+    <exposureList gml:id="LA01" assetCategory="buildings" lossCategory="economic_loss">
+      <gml:description>Collection of exposure values for existing building in Los Angeles County, California, US</gml:description>
+      <assetDefinition gml:id="a5624">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>18.02</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5625">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>5.07</assetValue>
+      </assetDefinition>
+      <assetDefinition gml:id="a5626">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-118.077721 33.852034</gml:pos>
+          </gml:Point>
+        </site>
+        <assetDescription>LA building</assetDescription>
+        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <structureCategory>RM1L</structureCategory>
+        <assetValue>16.33</assetValue>
+      </assetDefinition>
+    </exposureList>
+  </exposurePortfolio>
+</nrml>

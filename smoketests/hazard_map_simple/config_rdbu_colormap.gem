@@ -1,5 +1,7 @@
 [general]
 
+CALCULATION_MODE = Event Based
+
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 REGION_VERTEX = 38.0, -122.2, 38.0, -121.7, 37.5, -121.7, 37.5, -122.2
@@ -106,9 +108,6 @@ SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 
-# CALCULATION MODE (Event Based, Classical)
-HAZARD_CALCULATION_MODE = Classical
-
 # (used if Event Based approach is chosen)
 NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 # (used if Event Based approach is chosen)
@@ -126,8 +125,6 @@ POES_HAZARD_MAPS = 0.1
 HAZARD_MAP_CPT = RdBu_11.cpt
 
 [RISK]
-
-RISK_CALCULATION_MODE = Probabilistic Event
 
 # file containing the exposure in nrml format
 EXPOSURE = small_exposure.xml

@@ -1,5 +1,7 @@
 [general]
 
+CALCULATION_MODE = Deterministic
+
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 REGION_VERTEX = 34.07, -118.25, 34.07, -118.22, 34.04, -118.22, 34.04, -118.25
@@ -43,8 +45,6 @@ REFERENCE_VS30_VALUE = 760.0
 # output directory - relative to this file
 OUTPUT_DIR = computed_output
 
-HAZARD_CALCULATION_MODE = Deterministic
-
 GMPE_MODEL_NAME = BA_2008_AttenRel
 
 NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 5
@@ -54,8 +54,6 @@ GMF_RANDOM_SEED = 3
 SINGLE_RUPTURE_MODEL = simple-fault-rupture.xml
 
 [RISK]
-
-RISK_CALCULATION_MODE = Deterministic
 
 # file containing the exposure in nrml format
 EXPOSURE = LA_small_portfolio.xml
