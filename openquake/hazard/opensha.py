@@ -396,23 +396,25 @@ class ClassicalMixin(BasePSHAMixin):
         """
         site_list = self.sites_for_region()
         results = self.do_curves(
-            site_list, serializer=self.write_hazardcurve_file)
-        self.do_means(site_list, curve_serializer=self.write_hazardcurve_file,
+            site_list, serializer=self.serialize_hazardcurve)
+        self.do_means(site_list, curve_serializer=self.serialize_hazardcurve,
                       map_serializer=self.serialize_hazardmap)
         self.do_quantiles(
-            site_list, curve_serializer=self.write_hazardcurve_file,
+            site_list, curve_serializer=self.serialize_hazardcurve,
             map_serializer=self.serialize_hazardmap)
 
         return results
 
-    def write_hazardcurve_file(self, curve_keys):
-        """Generate a NRML file with hazard curves for a collection of
-        hazard curves from KVS, identified through their KVS keys.
+    def serialize_hazardcurve(self, curve_keys):
+        """
+        Takes a collection of hazard curves from the KVS,
+        identified by their KVS keys, and either writes an NRML hazard
+        curve file or creates a DB output record for the hazard curve.
 
         curve_keys is a list of KVS keys of the hazard curves to be
         serialized.
 
-        The hazard curve file can be written
+        The hazard curve data can be written
         (1) for a set of hazard curves belonging to the same realization
             (= endBranchLabel) and a set of sites.
         (2) for a mean hazard curve at a set of sites
