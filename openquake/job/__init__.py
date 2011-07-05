@@ -46,8 +46,6 @@ SITES_PER_BLOCK = 100
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
-flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
-                  'Computation result output type')
 
 # TODO unify with utils/oqrunner/config_writer.py
 CALCULATION_MODE = {
@@ -69,9 +67,9 @@ ENUM_MAP = {
 }
 
 
-def run_job(job_file):
+def run_job(job_file, output_type):
     """ Given a job_file, run the job. If we don't get results log it """
-    a_job = Job.from_file(job_file)
+    a_job = Job.from_file(job_file, output_type)
     # TODO(JMC): Expose a way to set whether jobs should be partitioned
     results = a_job.launch()
     if not results:
@@ -226,7 +224,7 @@ class Job(object):
         return Job(params, job_id)
 
     @staticmethod
-    def from_file(config_file):
+    def from_file(config_file, output_type):
         """ Create a job from external configuration files. """
         config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file))
@@ -239,7 +237,7 @@ class Job(object):
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
-        if FLAGS.output_type == 'db':
+        if output_type == 'db':
             params['SERIALIZE_RESULTS_TO_DB'] = 'True'
             if 'OPENQUAKE_JOB_ID' not in params:
                 params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
