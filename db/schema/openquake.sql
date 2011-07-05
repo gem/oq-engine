@@ -758,7 +758,7 @@ CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
-    asset_id VARCHAR, -- QUESTION: is the postfix '_id' in the column name confusing? This is not a FK.
+    asset_ref VARCHAR,
     end_branch_label VARCHAR,
     abscissae float[] NOT NULL,
     poes float[] NOT NULL
