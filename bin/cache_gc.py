@@ -142,7 +142,7 @@ def clear_job_data(job_id):
     result = kvs.cache_gc(job_id)
 
     if result is None:
-        print 'No data found for job %s' % job_id
+        print 'Job %s not found.' % job_id
     else:
         print 'Removed %s keys.' % result
 
