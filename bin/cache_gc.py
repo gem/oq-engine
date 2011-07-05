@@ -83,7 +83,7 @@ def strip_dashes(arg):
     return arg.split('-')[-1]
 
 
-def _get_current_job_ids()
+def _get_current_job_ids():
     """
     """
     jobs = tokens.current_jobs()
@@ -110,7 +110,7 @@ def list_cached_jobs():
     if len(job_ids) > 0:
         # print the jobs
         print 'Currently cached jobs:'
-        for job in jobs:
+        for job in job_ids:
             print job
 
     else:
@@ -133,11 +133,19 @@ def clear_job_data(job_id):
     try:
         job_id = int(job_id)
     except ValueError:
-        print "Job ID should be an integer."
-        print "Use the --list option to show current jobs."
-        sys.exit()
+        print 'Job ID should be an integer.'
+        print 'Use the --list option to show current jobs.'
+        raise
 
-    print 'clearing job data for job %s' % job_id
+    print 'Attempting to clear cache data for job %s...' % job_id
+
+    result = kvs.gc(job_id)
+
+    if result is None:
+        print 'No data found for job %s' % job_id
+    else:
+        print 'Removed %s keys.' % result
+
     sys.exit()
 
 
