@@ -10,8 +10,6 @@ import org.gem.params.IMLListParams;
 import org.gem.params.IntensityMeasureParams;
 import org.gem.params.SiteParams;
 import org.gem.params.SourceType;
-import org.gem.scratch.AtkBoo_2006_AttenRel;
-import org.gem.scratch.ZhaoEtAl_2006_AttenRel;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
 import org.opensha.commons.calc.magScalingRelations.magScalingRelImpl.WC1994_MagAreaRelationship;
 import org.opensha.commons.data.Site;
@@ -289,17 +287,17 @@ public class CalculationSettings {
         Gmpe.put(McVerryetal_2000_AttenRel.SHORT_NAME, gmpeCalcSetMcVerry2000);
 
         // Calculation Parameters for Zhao et al. (2000)
-        HashMap<String, Object> gmpeCalcSetZhao2000 =
-                new HashMap<String, Object>();
-        gmpeCalcSetZhao2000.put(ComponentParam.NAME, componentZhao);
-        Gmpe.put(ZhaoEtAl_2006_AttenRel.SHORT_NAME, gmpeCalcSetZhao2000);
-
-        // Calculation Parameters for Atkinson and Boore 2006
-        HashMap<String, Object> gmpeCalcSetAB2006 =
-                new HashMap<String, Object>();
-        gmpeCalcSetAB2006.put(ComponentParam.NAME, componentAtkBoo);
-        gmpeCalcSetAB2006.put(Vs30_Param.NAME, vs30AtkBoo);
-        Gmpe.put(AtkBoo_2006_AttenRel.SHORT_NAME, gmpeCalcSetAB2006);
+//        HashMap<String, Object> gmpeCalcSetZhao2000 =
+//                new HashMap<String, Object>();
+//        gmpeCalcSetZhao2000.put(ComponentParam.NAME, componentZhao);
+//        Gmpe.put(ZhaoEtAl_2006_AttenRel.SHORT_NAME, gmpeCalcSetZhao2000);
+//
+//        // Calculation Parameters for Atkinson and Boore 2006
+//        HashMap<String, Object> gmpeCalcSetAB2006 =
+//                new HashMap<String, Object>();
+//        gmpeCalcSetAB2006.put(ComponentParam.NAME, componentAtkBoo);
+//        gmpeCalcSetAB2006.put(Vs30_Param.NAME, vs30AtkBoo);
+//        Gmpe.put(AtkBoo_2006_AttenRel.SHORT_NAME, gmpeCalcSetAB2006);
     }
 
     public HashMap<SourceType, HashMap<String, Object>> getErf() {
