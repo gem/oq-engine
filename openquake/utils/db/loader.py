@@ -36,7 +36,7 @@ import geoalchemy
 import numpy
 import sqlalchemy
 
-from openquake import java
+from openquake import java, xml
 from openquake.utils import db
 
 SRC_DATA_PKG = 'org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData'
@@ -490,6 +490,8 @@ class SourceModelLoader(object):
         self.input_id = input_id
 
         # Java SourceModelReader object
+        java.jvm().java.lang.System.setProperty(
+            "openquake.nrml.schema", xml.nrml_schema_file())
         self.src_reader = java.jclass('SourceModelReader')(
             self.src_model_path, self.mfd_bin_width)
 
