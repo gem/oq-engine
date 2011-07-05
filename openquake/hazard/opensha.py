@@ -398,10 +398,10 @@ class ClassicalMixin(BasePSHAMixin):
         results = self.do_curves(
             site_list, serializer=self.write_hazardcurve_file)
         self.do_means(site_list, curve_serializer=self.write_hazardcurve_file,
-                      map_serializer=self.write_hazardmap_file)
+                      map_serializer=self.serialize_hazardmap)
         self.do_quantiles(
             site_list, curve_serializer=self.write_hazardcurve_file,
-            map_serializer=self.write_hazardmap_file)
+            map_serializer=self.serialize_hazardmap)
 
         return results
 
@@ -522,9 +522,11 @@ class ClassicalMixin(BasePSHAMixin):
         xmlwriter.serialize(hc_data)
         return nrml_path
 
-    def write_hazardmap_file(self, map_keys):
-        """Generate a NRML file with a hazard map for a collection of
-        hazard map nodes from KVS, identified through their KVS keys.
+    def serialize_hazardmap(self, map_keys):
+        """
+        Takes a collection of hazard map nodes from the KVS,
+        identified by their KVS keys, and either writes an NRML hazard
+        map file or creates a DB output record for the hazard map.
 
         map_keys is a list of KVS keys of the hazard map nodes to be
         serialized.
