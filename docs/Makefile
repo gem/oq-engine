@@ -72,17 +72,17 @@ qthelp:
 	@echo
 	@echo "Build finished; now you can run "qcollectiongenerator" with the" \
 	      ".qhcp project file in $(BUILDDIR)/qthelp, like this:"
-	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/OpenGEM.qhcp"
+	@echo "# qcollectiongenerator $(BUILDDIR)/qthelp/OpenQuake.qhcp"
 	@echo "To view the help file:"
-	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/OpenGEM.qhc"
+	@echo "# assistant -collectionFile $(BUILDDIR)/qthelp/OpenQuake.qhc"
 
 devhelp:
 	$(SPHINXBUILD) -b devhelp $(ALLSPHINXOPTS) $(BUILDDIR)/devhelp
 	@echo
 	@echo "Build finished."
 	@echo "To view the help file:"
-	@echo "# mkdir -p $$HOME/.local/share/devhelp/OpenGEM"
-	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/OpenGEM"
+	@echo "# mkdir -p $$HOME/.local/share/devhelp/OpenQuake"
+	@echo "# ln -s $(BUILDDIR)/devhelp $$HOME/.local/share/devhelp/OpenQuake"
 	@echo "# devhelp"
 
 epub:

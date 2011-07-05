@@ -141,15 +141,15 @@ public class GmpeLogicTreeData {
         LogicTree logicTree = logicTreeMap.get(tectReg);
         String gmpeNames = "";
         String weights = "";
-        for (int i = 0; i < logicTree.getBranchingLevel(0).getBranchList()
+        for (int i = 0; i < logicTree.getBranchingLevelAt(0).getBranchList()
                 .size(); i++) {
             gmpeNames =
                     gmpeNames
-                            + logicTree.getBranchingLevel(0).getBranch(i)
+                            + logicTree.getBranchingLevelAt(0).getBranch(i)
                                     .getBranchingValue() + " ";
             weights =
                     weights
-                            + logicTree.getBranchingLevel(0).getBranch(i)
+                            + logicTree.getBranchingLevelAt(0).getBranch(i)
                                     .getWeight() + " ";
         }
         gmpeNames = gmpeNames.trim();
@@ -197,12 +197,12 @@ public class GmpeLogicTreeData {
             branch = new LogicTreeBranch((i + 1), gmpeName, gmpeWeight);
             branchingLevel.addBranch(branch);
         }
-        gmpeLogicTree.addBranchingLevel(branchingLevel);
+        gmpeLogicTree.appendBranchingLevel(branchingLevel);
 
         // instantiate GMPE for each branch through reflection
         for (int i = 0; i < numBranch; i++) {
             String gmpeName =
-                    gmpeLogicTree.getBranchingLevel(0).getBranch(i)
+                    gmpeLogicTree.getBranchingLevelAt(0).getBranch(i)
                             .getBranchingValue();
             Class cl = null;
             Constructor cstr = null;
@@ -221,7 +221,7 @@ public class GmpeLogicTreeData {
             setGmpeParams(component, intensityMeasureType, period, damping,
                     truncType, truncLevel, stdType, vs30, ar);
             gmpeLogicTree.getEBMap().put(
-                    Integer.toString(gmpeLogicTree.getBranchingLevel(0)
+                    Integer.toString(gmpeLogicTree.getBranchingLevelAt(0)
                             .getBranch(i).getRelativeID()), ar);
         }
         return gmpeLogicTree;
@@ -234,22 +234,9 @@ public class GmpeLogicTreeData {
             double period, double damping, String truncType, double truncLevel,
             String stdType, double vs30, AttenuationRelationship ar) {
         String gmpeName = ar.getClass().getCanonicalName();
-        if (ar.getParameter(ComponentParam.NAME).isAllowed(component)) {
-            ar.getParameter(ComponentParam.NAME).setValue(component);
-        } else {
-            String msg =
-                    "The chosen component: "
-                            + component
-                            + " is not supported by "
-                            + gmpeName
-                            + "\n"
-                            + "The supported components are the following:\n"
-                            + ar.getParameter(ComponentParam.NAME)
-                                    .getConstraint() + "\n"
-                            + "Check your input file!\n" + "Execution stopped.";
-            logger.error(msg);
-            throw new IllegalArgumentException(msg);
-        }
+
+        ar.setComponentParameter(component, intensityMeasureType);
+        
         if (ar.getSupportedIntensityMeasuresList().containsParameter(
                 intensityMeasureType)) {
             ar.setIntensityMeasure(intensityMeasureType);

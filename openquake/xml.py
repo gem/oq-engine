@@ -18,11 +18,12 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Constants and helper functions for XML processing,
 including namespaces, and namespace maps.
 """
+
+import os
 
 from lxml import etree
 
@@ -92,12 +93,61 @@ RISK_LOSS_MAP_MEAN_LOSS_TAG = "%smean" % NRML
 RISK_LOSS_MAP_STANDARD_DEVIATION_TAG = "%sstdDev" % NRML
 RISK_LOSS_MAP_LOSS_CATEGORY_ATTR = "lossCategory"
 RISK_LOSS_MAP_UNIT_ATTR = "unit"
-RISK_LOSS_MAP_ASSET_REF_TAG = "%sassetRef" % NRML
+RISK_LOSS_MAP_ASSET_REF_ATTR = "assetRef"
+
+
+class XMLValidationError(Exception):
+    """XML schema validation error"""
+
+    def __init__(self, message, file_name):
+        """Constructs a new validation exception for the given file name"""
+        Exception.__init__(self, "XML Validation error for file '%s': %s" %
+                                 (file_name, message))
+
+        self.file_name = file_name
+
+
+class XMLMismatchError(Exception):
+    """Wrong document type (eg. logic tree instead of source model)"""
+
+    def __init__(self, file_name, actual_tag, expected_tag):
+        """Constructs a new type mismatch exception for the given file name"""
+        Exception.__init__(self)
+
+        self.file_name = file_name
+        self.actual_tag = actual_tag
+        self.expected_tag = expected_tag
+
+    _HUMANIZE_FILE = {
+        'logicTreeSet': 'logic tree',
+        'sourceModel': 'source model',
+        'exposurePortfolio': 'exposure portfolio',
+        'vulnerabilityModel': 'vulnerability model',
+        }
+
+    @property
+    def message(self):
+        """Exception message string"""
+        return "XML mismatch error for file '%s': expected %s but got %s" % (
+            self.file_name, self._HUMANIZE_FILE.get(self.expected_tag),
+            self._HUMANIZE_FILE.get(self.actual_tag, 'unknown file type'))
+
+    def __str__(self):
+        return self.message
+
+
+def nrml_schema_file():
+    """Returns the absolute path to the NRML schema file"""
+    # TODO needs to be adjusted for the packaged version
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), '..',
+                        'docs', 'schema', NRML_SCHEMA_FILE)
+
 
 def validates_against_xml_schema(xml_instance_path, schema_path):
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
     return xmlschema.validate(xml_doc)
+
 
 def element_equal_to_site(element, site):
     """Check whether a given XML element (containing a gml:pos) has the same
@@ -109,6 +159,7 @@ def element_equal_to_site(element, site):
         return True
     else:
         return False
+
 
 def lon_lat_from_site(element):
     """Extract (lon, lat) pair from gml:pos sub-element of element."""
@@ -122,10 +173,12 @@ def lon_lat_from_site(element):
         '||'.join(element.attrib.values()))
     return lon_lat_from_gml_pos(pos_el[0])
 
+
 def lon_lat_from_gml_pos(pos_el):
     """Return (lon, lat) coordinate pair from gml:pos element."""
     coord = pos_el.text.strip().split()
     return (float(coord[0]), float(coord[1]))
+
 
 def strip_namespace_from_tag(full_tag, namespace):
     return full_tag[len(namespace):]

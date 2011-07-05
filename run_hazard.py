@@ -19,8 +19,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
-
 """Runs a classical PSHA hazard computation
 
 Expects to compute:
@@ -41,7 +39,8 @@ from openquake.job import mixins
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configuration file')
+flags.DEFINE_string('config_file', 'openquake-config.gem',
+    'OpenQuake configuration file')
 
 if __name__ == '__main__':
     args = FLAGS(sys.argv)
@@ -49,5 +48,5 @@ if __name__ == '__main__':
 
     engine = job.Job.from_file(FLAGS.config_file)
 
-    with mixins.Mixin(engine, openquake.hazard.job.HazJobMixin, key="hazard"):
+    with mixins.Mixin(engine, openquake.hazard.job.HazJobMixin):
         engine.execute()

@@ -266,7 +266,7 @@ public class LogicTreeProcessor {
         // sample first branching level to get the starting source model
         int branchNumber = lt.sampleBranchingLevel(0, rn);
         LogicTreeBranch branch =
-                lt.getBranchingLevel(0).getBranch(branchNumber - 1);
+                lt.getBranchingLevelAt(0).getBranch(branchNumber - 1);
         if (branch.getNameInputFile() != null) {
             String sourceName = null;
             if (hasPath) { // job from file
@@ -296,14 +296,14 @@ public class LogicTreeProcessor {
         // loop over sources
         // for each source, loop over remaining branching levels and apply
         // uncertainties
-        int numBranchingLevels = lt.getBranchingLevelsList().size();
+        int numBranchingLevels = lt.getBranchingLevels().size();
         int sourceIndex = 0;
         for (GEMSourceData src : srcList) {
             for (int i = 1; i < numBranchingLevels; i++) {
                 // sample the current branching level
                 branchNumber = lt.sampleBranchingLevel(i, rn);
                 // get the sampled branch
-                branch = lt.getBranchingLevel(i).getBranch(branchNumber - 1);
+                branch = lt.getBranchingLevelAt(i).getBranch(branchNumber - 1);
                 if (branch.getRule() != null) {
                     // at the moment we apply rules to all source
                     // typologies. In
@@ -860,7 +860,7 @@ public class LogicTreeProcessor {
             LogicTree<ScalarIntensityMeasureRelationshipAPI> ltGMPE =
                     listLtGMPE.get(trt);
 
-            ltGMPE.printGemLogicTreeStructure();
+            ltGMPE.toString();
 
             // sample the first branching level
             int branch = ltGMPE.sampleBranchingLevel(0, rn);

@@ -31,10 +31,12 @@
 
 """ Mixin class """
 
+
 def loader(target, mixin):
     """ Load the mixin into the target's class """
     target.__class__.__bases__ += (mixin,)
     return target
+
 
 def unloader(target, mixin):
     """ Unload the mixin from the target's class __bases__"""
@@ -45,12 +47,12 @@ def unloader(target, mixin):
 
 class Mixin:
     """ A callable that handles mixing behaviour into a target, and
-    provides the opener api so we can use it with the python with 
+    provides the opener api so we can use it with the python with
     syntax.
     """
     mixins = {}
-    def __init__(self, target, mixin, key=""):
-        self.key = key.upper() + "_CALCULATION_MODE"
+
+    def __init__(self, target, mixin):
         self.target = target
         self.mixin = mixin
 
@@ -77,17 +79,17 @@ class Mixin:
     def _load_proxied_mixin(self):
         """ Load the proxied mixin requested by the calculation mode """
 
-        calc_mode = self.target[self.key]
+        calc_mode = self.target["CALCULATION_MODE"]
         loader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     def _unload_proxied_mixin(self):
         """ Unload the proxied mixin requested by the calculation mode """
-        calc_mode = self.target[self.key]
+        calc_mode = self.target["CALCULATION_MODE"]
         unloader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
     @classmethod
     def ordered_mixins(cls):
-        """ Return a list of mixins sorted by the order value specified at 
+        """ Return a list of mixins sorted by the order value specified at
         registration """
 
         return [(k, v['mixin'])
@@ -96,8 +98,8 @@ class Mixin:
 
     @classmethod
     def register(cls, key, mixin, order=0):
-        """ Register a new mixin. We expect a string key, a class, and an 
-        optional order. The order is really only optional in the mixin 
+        """ Register a new mixin. We expect a string key, a class, and an
+        optional order. The order is really only optional in the mixin
         proxies."""
         if not key in cls.mixins:
-            cls.mixins[key] = {'mixin': mixin, 'order': order }
+            cls.mixins[key] = {'mixin': mixin, 'order': order}
