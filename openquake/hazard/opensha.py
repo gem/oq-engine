@@ -461,7 +461,7 @@ class ClassicalMixin(BasePSHAMixin):
             "%s hazard curves: %s" % (curve_mode, len(curve_keys), nrml_file))
         LOG.debug("IML: %s" % iml_list)
 
-        xmlwriter = hazard_output.HazardCurveXMLWriter(nrml_path)
+        curve_writer = create_hazardcurve_writer(self.params, nrml_path)
         hc_data = []
 
         for hc_key in curve_keys:
@@ -519,7 +519,7 @@ class ClassicalMixin(BasePSHAMixin):
             hc_attrib.update(hc_attrib_update)
             hc_data.append((site_obj, hc_attrib))
 
-        xmlwriter.serialize(hc_data)
+        curve_writer.serialize(hc_data)
         return nrml_path
 
     def serialize_hazardmap(self, map_keys):
@@ -842,6 +842,27 @@ def _collect_map_keys_per_quantile(keys):
             quantile_values[curr_qv] = []
         quantile_values[curr_qv].append(quantile_key)
     return quantile_values
+
+
+def create_hazardcurve_writer(params, nrml_path):
+    """Create a hazard curve writer observing the settings in the config file.
+
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard curve.
+    :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
+        :py:class:`output.hazard.HazardCurveDBWriter` instance.
+    """
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        return hazard_output.HazardCurveXMLWriter(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+        session = get_uiapi_writer_session()
+        return hazard_output.HazardCurveDBWriter(session, nrml_path, job_db_key)
 
 
 def create_hazardmap_writer(params, nrml_path):
