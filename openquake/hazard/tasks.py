@@ -66,14 +66,6 @@ def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
         hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
 
 
-def write_out_ses(job_file, stochastic_set_key):
-    """ Write out Stochastic Event Set """
-    hazengine = job.Job.from_file(job_file)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        ses = kvs.get_value_json_decoded(stochastic_set_key)
-        hazengine.write_gmf_files(ses)
-
-
 @task
 def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
