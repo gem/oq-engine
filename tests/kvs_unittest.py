@@ -350,32 +350,30 @@ class GarbageCollectionTestCase(unittest.TestCase):
     Tests for KVS garbage collection.
     """
 
-    @classmethod
-    def setUpClass(cls):
-        cls.client = kvs.get_client()
+    def setUp(self):
+        self.client = kvs.get_client()
 
-        cls.client.delete(tokens.CURRENT_JOBS)
-        cls.client.delete(tokens.NEXT_JOB_ID)
+        self.client.delete(tokens.CURRENT_JOBS)
+        self.client.delete(tokens.NEXT_JOB_ID)
 
-        cls.test_job = tokens.next_job_key()
+        self.test_job = tokens.next_job_key()
 
         # create some keys to hold fake data for test_job
-        cls.gmf1_key = tokens.gmfs_key(cls.test_job, 0, 0)
-        cls.gmf2_key = tokens.gmfs_key(cls.test_job, 0, 1)
-        cls.vuln_key = tokens.vuln_key(cls.test_job)
+        self.gmf1_key = tokens.gmfs_key(self.test_job, 0, 0)
+        self.gmf2_key = tokens.gmfs_key(self.test_job, 0, 1)
+        self.vuln_key = tokens.vuln_key(self.test_job)
 
         # now create the fake data for test_job
-        cls.client.set(cls.gmf1_key, 'fake gmf data 1')
-        cls.client.set(cls.gmf2_key, 'fake gmf data 2')
-        cls.client.set(cls.vuln_key, 'fake vuln curve data')
+        self.client.set(self.gmf1_key, 'fake gmf data 1')
+        self.client.set(self.gmf2_key, 'fake gmf data 2')
+        self.client.set(self.vuln_key, 'fake vuln curve data')
 
         # this job will have no data
-        cls.dataless_job = tokens.next_job_key()
+        self.dataless_job = tokens.next_job_key()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.client.delete(tokens.CURRENT_JOBS)
-        cls.client.delete(tokens.NEXT_JOB_ID)
+    def tearDown(self):
+        self.client.delete(tokens.CURRENT_JOBS)
+        self.client.delete(tokens.NEXT_JOB_ID)
 
     def test_gc_some_job_data(self):
         """
@@ -427,10 +425,3 @@ class GarbageCollectionTestCase(unittest.TestCase):
         result = kvs.cache_gc(nonexist_job)
 
         self.assertTrue(result is None)
-
-        job_key_fmt = '::JOB::%s::'
-
-        self.assertEqual(job_key_fmt % 1, tokens.next_job_key())
-
-        # verify that the IDs are incrementing properly
-        self.assertEqual(job_key_fmt % 2, tokens.next_job_key())
