@@ -387,7 +387,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
         self.assertTrue(all(keys_exist()))
 
-        result = kvs.gc(self.test_job)
+        result = kvs.cache_gc(self.test_job)
 
         # 3 things be deleted
         self.assertEqual(3, result)
@@ -401,15 +401,15 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
     def test_gc_dataless_job(self):
         """
-        Test that :py:function:`openquake.kvs.gc` returns 0 (to indicate that
-        the job existed but there was nothing to delete).
+        Test that :py:function:`openquake.kvs.cache_gc` returns 0 (to indicate
+        that the job existed but there was nothing to delete).
 
         The job key should key should be removed from CURRENT_JOBS.
         """
         self.assertTrue(
             self.client.sismember(tokens.CURRENT_JOBS, self.dataless_job))
 
-        result = kvs.gc(self.dataless_job)
+        result = kvs.cache_gc(self.dataless_job)
 
         self.assertEqual(0, result)
 
@@ -420,11 +420,11 @@ class GarbageCollectionTestCase(unittest.TestCase):
     def test_gc_nonexistent_job(self):
         """
         If we try to run garbage collection on a nonexistent job, the result of
-        :py:function:`openquake.kvs.gc` should be None.
+        :py:function:`openquake.kvs.cache_gc` should be None.
         """
         nonexist_job = JOB_KEY_FMT % '1234nonexistent'
 
-        result = kvs.gc(nonexist_job)
+        result = kvs.cache_gc(nonexist_job)
 
         self.assertTrue(result is None)
 
