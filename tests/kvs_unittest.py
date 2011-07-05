@@ -51,6 +51,8 @@ MULTIPLE_CURVES_ONE_BRANCH = \
 MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
     read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
 
+JOB_KEY_FMT = '::JOB::%s::'
+
 
 class KVSTestCase(unittest.TestCase):
 
@@ -207,6 +209,7 @@ class KVSTestCase(unittest.TestCase):
 
 
 class TokensTestCase(unittest.TestCase):
+
     def setUp(self):
         self.job_id = 123456
         self.product = "TestProduct"
@@ -271,19 +274,149 @@ class TokensTestCase(unittest.TestCase):
         ev = "%s!ATestProduct!!Testville,TestLand" % self.job_id
         self.assertEqual(key, ev)
 
+class JobTokensTestCase(unittest.TestCase):
+    """
+    Tests related specifically to management of job keys.
+    """
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.client = kvs.get_client()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.delete(tokens.CURRENT_JOBS)
+        cls.client.delete(tokens.NEXT_JOB_ID)
+
+    def setUp(self):
+        self.client.delete(tokens.CURRENT_JOBS)
+        self.client.delete(tokens.NEXT_JOB_ID)
+
     def test_next_job_key(self):
         """
         Test the generation of job keys using
         :py:function:`openquake.kvs.tokens.next_job_key`.
         """
-        kvs.get_client().delete(tokens.NEXT_JOB_ID)
+
+        job_key_1 = JOB_KEY_FMT % 1
+        job_key_2 = JOB_KEY_FMT % 2
 
         # it should be empty to start with
         self.assertTrue(kvs.get(tokens.NEXT_JOB_ID) is None)
 
-        job_key_fmt = '::JOB::%s::'
-
-        self.assertEqual(job_key_fmt % 1, tokens.next_job_key())
+        self.assertEqual(job_key_1, tokens.next_job_key())
 
         # verify that the IDs are incrementing properly
-        self.assertEqual(job_key_fmt % 2, tokens.next_job_key())
+        self.assertEqual(job_key_2, tokens.next_job_key())
+
+        # now verify that these keys have been added to the CURRENT_JOBS set
+        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_key_1))
+        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_key_2))
+
+    def test_next_job_key_raises_on_duplicate(self):
+        """
+        Test that :py:function:`openquake.kvs.tokens.next_job_key` raises an AssertionError
+        if there is somehow there is a duplicate job key.
+        """
+        self.assertEqual(0, len(self.client.smembers(tokens.CURRENT_JOBS)))
+
+        self.client.sadd(tokens.CURRENT_JOBS, JOB_KEY_FMT % 1)
+
+        self.assertRaises(AssertionError, tokens.next_job_key)
+
+    def test_current_jobs(self):
+        """
+        Test the retrieval of the current jobs from the CURRENT_JOBS set.
+        Exercises :py:function:`openquake.kvs.tokens.current_jobs`.
+        """
+        self.assertFalse(self.client.exists(tokens.CURRENT_JOBS))
+
+        # load some sample jobs into the CURRENT_JOBS set
+        jobs = [JOB_KEY_FMT % x for x in range(1, 4)]
+
+        for job in jobs:
+            self.client.sadd(tokens.CURRENT_JOBS, job)
+
+        current_jobs = tokens.current_jobs()
+
+        self.assertEqual(jobs, current_jobs)
+
+
+class GarbageCollectionTestCase(unittest.TestCase):
+    """
+    Tests for KVS garbage collection.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.client = kvs.get_client()
+
+        cls.client.delete(tokens.CURRENT_JOBS)
+        cls.client.delete(tokens.NEXT_JOB_ID)
+
+        cls.test_job = tokens.next_job_key()
+
+        # create some keys to hold fake data for test_job
+        cls.gmf1_key = tokens.gmfs_key(cls.test_job, 0, 0)
+        cls.gmf2_key = tokens.gmfs_key(cls.test_job, 0, 1)
+        cls.vuln_key = tokens.vuln_key(cls.test_job)
+
+        # now create the fake data for test_job
+        cls.client.set(cls.gmf1_key, 'fake gmf data 1')
+        cls.client.set(cls.gmf2_key, 'fake gmf data 2')
+        cls.client.set(cls.vuln_key, 'fake vuln curve data')
+
+        # this job will have no data
+        cls.dataless_job = tokens.next_job_key()
+
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.delete(tokens.CURRENT_JOBS)
+        cls.client.delete(tokens.NEXT_JOB_ID)
+
+    def test_gc_some_job_data(self):
+        """
+        Test that all job data is cleared and the job key is removed from CURRENT_JOBS.
+        """
+        keys_exist = lambda: [self.client.exists(x) for x in (self.gmf1_key, self.gmf2_key, self.vuln_key)]
+
+        self.assertTrue(all(keys_exist()))
+
+        result = kvs.gc(self.test_job)
+
+        # 3 things be deleted
+        self.assertEqual(3, result)
+
+        for x in keys_exist():
+            self.assertFalse(x)
+
+        # make sure the job was deleted from CURRENT_JOBS
+        self.assertFalse(self.client.sismember(tokens.CURRENT_JOBS, self.test_job))
+
+    def test_gc_dataless_job(self):
+        """
+        Test that :py:function:`openquake.kvs.gc` returns 0 (to indicate that nothing was
+        deleted).
+
+        However, the job key should key should be removed from CURRENT_JOBS.
+        """
+        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, self.dataless_job))
+
+        result = kvs.gc(self.dataless_job)
+
+        self.assertEqual(0, result)
+
+        # make sure the job was deleted from CURRENT_JOBS
+        self.assertFalse(self.client.sismember(tokens.CURRENT_JOBS, self.dataless_job))
+
+    def test_gc_nonexistent_job(self):
+        """
+        If we try to run garbage collection on a nonexistent job, the result of
+        :py:function:`openquake.kvs.gc` should be None.
+        """
+        nonexist_job = JOB_KEY_FMT % '1234nonexistent'
+
+        result = kvs.gc(nonexist_job)
+
+        self.assertTrue(result is None)
