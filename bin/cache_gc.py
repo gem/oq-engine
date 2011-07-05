@@ -48,7 +48,7 @@ def main(cl_args):
     :type cl_cargs: list of strings
     """
     try:
-        opts, _  = getopt.getopt(cl_args, SHORT_ARGS, LONG_ARGS)
+        opts, _ = getopt.getopt(cl_args, SHORT_ARGS, LONG_ARGS)
     except getopt.GetoptError, e:
         # Invalid arg specified; print the error and help, then exit
         print e

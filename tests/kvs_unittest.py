@@ -274,11 +274,12 @@ class TokensTestCase(unittest.TestCase):
         ev = "%s!ATestProduct!!Testville,TestLand" % self.job_id
         self.assertEqual(key, ev)
 
+
 class JobTokensTestCase(unittest.TestCase):
     """
     Tests related specifically to management of job keys.
     """
-    
+
     @classmethod
     def setUpClass(cls):
         cls.client = kvs.get_client()
@@ -300,7 +301,7 @@ class JobTokensTestCase(unittest.TestCase):
 
         job_key_1 = JOB_KEY_FMT % 1
         job_key_2 = JOB_KEY_FMT % 2
-        
+
         kvs.get_client().delete(tokens.NEXT_JOB_ID)
 
         # it should be empty to start with
@@ -370,7 +371,6 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
         # this job will have no data
         cls.dataless_job = tokens.next_job_key()
-
 
     @classmethod
     def tearDownClass(cls):
