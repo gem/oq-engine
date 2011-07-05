@@ -713,7 +713,7 @@ class EventBasedMixin(BasePSHAMixin):
         return results
 
     def write_gmf_files(self, ses):
-        """Generate a GeoTiff file and a NRML file for each GMF."""
+        """Generate a NRML file for each GMF."""
         iml_list = [float(param)
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
@@ -723,9 +723,6 @@ class EventBasedMixin(BasePSHAMixin):
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                # NOTE(fab): we have to explicitly convert the JSON-decoded
-                # tokens from Unicode to string, otherwise the path will not
-                # be accepted by the GeoTiffFile constructor
                 common_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                         "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                        str(rupture.replace("!", "_"))))
