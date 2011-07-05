@@ -43,11 +43,6 @@ flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configurat
 flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
                   'Computation result output type')
 
-flags.DEFINE_boolean('profile', False, 'Run profiler?')
-flags.DEFINE_boolean('load_profile', False, 'Load profiler data?')
-flags.DEFINE_string('profile_log', 'gem-risk.profile', 'Profiling log')
-
-flags.DEFINE_boolean('partition', False, 'Partition job?')
 flags.DEFINE_boolean('version', False, 'Show version information')
 
 
@@ -86,15 +81,5 @@ if __name__ == '__main__':
     # Collate results
     # Generate output
 
-    if FLAGS.profile:
-        import cProfile
-        cProfile.run('tasks.main(FLAGS.vulnerability, \
-                        FLAGS.hazard_curves, FLAGS.region, \
-                        FLAGS.exposure, FLAGS.loss_map)', FLAGS.profile_log)
-    elif FLAGS.load_profile:
-        import pstats
-        p = pstats.Stats(FLAGS.profile_log)
-        p.sort_stats('cumulative').print_stats(30)
-    else:
-        register_mixins()
-        job.run_job(FLAGS.config_file, FLAGS.output_type)
+    register_mixins()
+    job.run_job(FLAGS.config_file, FLAGS.output_type)
