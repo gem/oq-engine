@@ -80,13 +80,17 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     either a XMLValidationError or the original Java exception"""
     ex = runtime_exception.__javaobject__
 
+    if type(ex) is jpype.JPackage('org').gem.engine.XMLValidationError:
+        raise xml.XMLValidationError(ex.getCause().getMessage(),
+                                     path or ex.getFileName())
+
+    if type(ex) is jpype.JPackage('org').gem.engine.XMLMismatchError:
+        raise xml.XMLMismatchError(path or ex.getFileName(), ex.getActualTag(),
+                                   ex.getExpectedTag())
+
     if ex.getCause() and type(ex.getCause()) is \
             jpype.JPackage('org').dom4j.DocumentException:
-        if path:
-            msg = '%s: %s' % (path, ex.getCause().getMessage())
-        else:
-            msg = ex.getCause().getMessage()
-        raise xml.XMLValidationError(msg)
+        raise xml.XMLValidationError(ex.getCause().getMessage(), path)
 
     raise runtime_exception
 
@@ -106,7 +110,7 @@ class BasePSHAMixin(Mixin):
         jpype = java.jvm()
         try:
             self.calc.sampleAndSaveERFTree(self.cache, key, seed)
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             unwrap_validation_error(
                 jpype, ex,
                 self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE_PATH"))
@@ -119,7 +123,7 @@ class BasePSHAMixin(Mixin):
         jpype = java.jvm()
         try:
             self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             unwrap_validation_error(
                 jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE_PATH"))
 
@@ -671,7 +675,7 @@ class ClassicalMixin(BasePSHAMixin):
                 self.generate_gmpe_map(),
                 self.get_iml_list(),
                 float(self.params['MAXIMUM_DISTANCE']))
-        except jpype.JException(jpype.java.lang.RuntimeException), ex:
+        except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
 
         # write the curves to the KVS and return a list of the keys

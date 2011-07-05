@@ -35,6 +35,9 @@ public class LogicTreeReaderTest {
     public static final String LT_INVALID_GMPE_TEST_FILE =
             "tests/data/invalid/gmpe_logic_tree.xml";
 
+    public static final String LT_MISMATCHED_TEST_FILE =
+            "docs/schema/examples/source-model.xml";
+
     @Before
     public void setUp() {
         System.setProperty("openquake.nrml.schema",
@@ -111,7 +114,7 @@ public class LogicTreeReaderTest {
                 .addBranch(new LogicTreeBranch(1, "BA_2008_AttenRel", 0.5));
         branchingLevel
                 .addBranch(new LogicTreeBranch(2, "CB_2008_AttenRel", 0.5));
-        gmpeLogicTreeActiveShallow.addBranchingLevel(branchingLevel);
+        gmpeLogicTreeActiveShallow.appendBranchingLevel(branchingLevel);
         gmpeLogicTreeHashMap.put(TectonicRegionType.ACTIVE_SHALLOW.toString(),
                 gmpeLogicTreeActiveShallow);
 
@@ -119,7 +122,7 @@ public class LogicTreeReaderTest {
         branchingLevel = new LogicTreeBranchingLevel(1, "", 0);
         branchingLevel.addBranch(new LogicTreeBranch(1,
                 "McVerryetal_2000_AttenRel", 1.0));
-        gmpeLogicTreeSubductionInterface.addBranchingLevel(branchingLevel);
+        gmpeLogicTreeSubductionInterface.appendBranchingLevel(branchingLevel);
         gmpeLogicTreeHashMap.put(TectonicRegionType.SUBDUCTION_INTERFACE
                 .toString(), gmpeLogicTreeSubductionInterface);
 
@@ -146,7 +149,7 @@ public class LogicTreeReaderTest {
         branch = new LogicTreeBranch(2, "source_model_2.xml", 0.5);
         branch.setNameInputFile("source_model_2.xml");
         branchingLevel.addBranch(branch);
-        sourceModelLogicTree.addBranchingLevel(branchingLevel);
+        sourceModelLogicTree.appendBranchingLevel(branchingLevel);
 
         branchingLevel = new LogicTreeBranchingLevel(2, "", 0);
         branch = new LogicTreeBranch(1, "0.2", 0.2);
@@ -161,7 +164,7 @@ public class LogicTreeReaderTest {
         branch.setRule(new LogicTreeRule(LogicTreeRuleParam.mMaxGRRelative,
                 -0.2));
         branchingLevel.addBranch(branch);
-        sourceModelLogicTree.addBranchingLevel(branchingLevel);
+        sourceModelLogicTree.appendBranchingLevel(branchingLevel);
 
         branchingLevel = new LogicTreeBranchingLevel(3, "", 0);
         branch = new LogicTreeBranch(1, "0.1", 0.2);
@@ -173,7 +176,7 @@ public class LogicTreeReaderTest {
         branch = new LogicTreeBranch(3, "-0.1", 0.2);
         branch.setRule(new LogicTreeRule(LogicTreeRuleParam.bGRRelative, -0.1));
         branchingLevel.addBranch(branch);
-        sourceModelLogicTree.addBranchingLevel(branchingLevel);
+        sourceModelLogicTree.appendBranchingLevel(branchingLevel);
 
         HashMap<String, LogicTree> sourceModelLogicTreeHashMap =
                 new HashMap<String, LogicTree>();
@@ -213,5 +216,26 @@ public class LogicTreeReaderTest {
     @Test
     public void gmpeSchemaValidationTest() {
         checkFailsValidation(LT_INVALID_GMPE_TEST_FILE);
+    }
+
+    /**
+     * Test that a document mismatch throws a meaningful error
+     */
+    @Test
+    public void documentMismatchTest() {
+        boolean threw = false;
+
+        try {
+            LogicTreeReader reader = new LogicTreeReader(LT_MISMATCHED_TEST_FILE);
+
+            reader.read();
+        }
+        catch (XMLMismatchError e) {
+            threw = true;
+            assertEquals("sourceModel", e.getActualTag());
+            assertEquals("logicTreeSet", e.getExpectedTag());
+        }
+
+        assertTrue("Parsing threw a XMLMismatchError", threw);
     }
 }

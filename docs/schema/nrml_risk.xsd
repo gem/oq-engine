@@ -23,17 +23,11 @@
     <!-- ============================================================= -->
     
     <xs:simpleType name="AssetCategory">
-        <xs:restriction base="xs:string">
-            <xs:enumeration value="population"/>
-            <xs:enumeration value="buildings"/>
-        </xs:restriction>
+        <xs:restriction base="xs:string" />
     </xs:simpleType>
     
     <xs:simpleType name="LossCategory">
-        <xs:restriction base="xs:string">
-            <xs:enumeration value="fatalities"/>
-            <xs:enumeration value="economic_loss"/>
-        </xs:restriction>
+        <xs:restriction base="xs:string" />
     </xs:simpleType>
     
     <xs:simpleType name="AssetValueUnit">
