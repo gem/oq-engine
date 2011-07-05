@@ -724,8 +724,7 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE uiapi.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_map_id VARCHAR, -- QUESTION: is the column name with "_id" suffix confusing?
-                         -- This is not a FK, is just a human readable identifier
+    loss_map_ref VARCHAR,
     end_branch_label VARCHAR,
     loss_category VARCHAR, -- open-ended, cfr Vitor's mail
     unit VARCHAR, -- open-ended
@@ -743,7 +742,7 @@ CREATE TABLE uiapi.loss_map (
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
-    asset_id VARCHAR, -- QUESTION: again, the suffix _id is maybe misleading? This is not a FK.
+    asset_ref VARCHAR,
     loss_mean float,
     loss_std_dev float,
     loss_value float,
