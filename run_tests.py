@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 This is our basic test running framework.
 
@@ -38,16 +37,15 @@ import os
 import sys
 import unittest
 
-from openquake import logs
 from openquake import flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")
+flags.DEFINE_boolean('bb_suite', False, "Run black box tests suite?")
 
 if __name__ == '__main__':
     sys.argv = FLAGS(sys.argv)
     sys.path.append("%s/tests" % os.path.abspath(os.path.curdir))
-    logs.init_logs()
     try:
         import nose
 
@@ -55,14 +53,13 @@ if __name__ == '__main__':
         args.remove('run_tests.py')
         args = ['nosetests', '-x', '-e', 'do_test.+'] + args
 
-        if (FLAGS.debug == "debug"):
-            pass
-        else:
-            args.append("--logging-clear-handlers")
-
         if FLAGS.speed_tests:
             print "Running speed tests with %s" % args
             nose.run(defaultTest='tests.xml_speedtests', argv=args)
+        elif FLAGS.bb_suite:
+            args = args + ["--testmatch", "bb_.+"]
+            print "Running the black box tests suite..."
+            nose.run(defaultTest="tests", argv=args)
         else:
             nose.run(defaultTest='tests', argv=args)
 

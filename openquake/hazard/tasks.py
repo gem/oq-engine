@@ -62,14 +62,14 @@ def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
     """ Generate ground motion fields """
     # TODO(JMC): Use a block_id instead of a site_list
     hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
         hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
 
 
 def write_out_ses(job_file, stochastic_set_key):
     """ Write out Stochastic Event Set """
     hazengine = job.Job.from_file(job_file)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
         ses = kvs.get_value_json_decoded(stochastic_set_key)
         hazengine.write_gmf_files(ses)
 
@@ -78,7 +78,7 @@ def write_out_ses(job_file, stochastic_set_key):
 def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
     hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin, key="hazard"):
+    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
         keys = hazengine.compute_hazard_curve(site_list, realization)
 
         if callback:
