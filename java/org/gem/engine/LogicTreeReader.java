@@ -23,7 +23,7 @@ import org.gem.engine.logictree.LogicTreeRuleParam;
 
 /**
  * Class for reading logic tree data in a nrML format file.
- * 
+ *
  */
 public class LogicTreeReader {
 
@@ -31,6 +31,7 @@ public class LogicTreeReader {
 
     private final Map<String, LogicTree> logicTreeHashMap;
 
+    private static final String LOGIC_TREE_SET = "logicTreeSet";
     private static final String BRANCHING_LEVEL = "branchingLevel";
     private static final String TECTONIC_REGION = "tectonicRegion";
     private static final String UNCERTAINTY_TYPE = "uncertaintyType";
@@ -120,6 +121,9 @@ public class LogicTreeReader {
         Iterator i = root.elements().iterator();
         while (i.hasNext()) {
             Element logicTreeSetElem = (Element) i.next();
+            String localName = logicTreeSetElem.getQName().getName();
+            if (localName != LOGIC_TREE_SET)
+                throw new XMLMismatchError(null, localName, LOGIC_TREE_SET);
 
             Map<String, LogicTree> logicTrees =
                     parseLogicTreeSet(logicTreeSetElem, indexLogicTree);
@@ -135,7 +139,7 @@ public class LogicTreeReader {
 
     /**
      * Parse child elements of a &lt;logicTreeSet&gt; element.
-     * 
+     *
      * @param logicTreeSet
      * @param indexLogicTree
      * @return Map of LogicTrees, keyed by tectonicRegion. If no tectonicRegion
@@ -171,7 +175,7 @@ public class LogicTreeReader {
 
     /**
      * Parse attributes and children of a &lt;logicTree&gt; element.
-     * 
+     *
      * @param logicTreeElem
      * @param logicTree
      * @return tectonicRegion of the logic tree (or null if none is defined)
@@ -192,7 +196,7 @@ public class LogicTreeReader {
 
     /**
      * Parse attributes and children of a &lt;logicTreeBranchSet&gt; element.
-     * 
+     *
      * @param branchSet
      * @param logicTree
      */
@@ -215,12 +219,12 @@ public class LogicTreeReader {
 
             indexBranch++;
         }
-        logicTree.addBranchingLevel(branchingLevel);
+        logicTree.appendBranchingLevel(branchingLevel);
     }
 
     /**
      * Parse child elements of &lt;logicTreeBranch&gt; element.
-     * 
+     *
      * @param logicTreeBranch
      * @param branchingLevel
      * @param uncertaintyType
