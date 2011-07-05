@@ -24,27 +24,37 @@ NRML serialization of risk-related data sets.
 - loss map
 """
 
+import logging
+from os.path import basename
+
 from lxml import etree
 
-from openquake import logs
+import sqlalchemy
+
+from db.alchemy.models import OqJob, Output
+from db.alchemy.models import LossAssetData, LossCurveData
+
 from openquake import shapes
 from openquake import xml
 
 from openquake.output import nrml
+from openquake.xml import NRML_NS, GML_NS
 
-LOG = logs.RISK_LOG
+LOGGER = logging.getLogger('loss-output')
+
+NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
 class BaseXMLWriter(nrml.TreeNRMLWriter):
-    """ This is the base class which prepares the XML document (for risk)
-        to be customized in another class
+    """
+    This is the base class which prepares the XML document (for risk) to be
+    customized in another class.
     """
     container_tag = None
 
     def __init__(self, path):
         super(BaseXMLWriter, self).__init__(path)
 
-        self.assets_per_id = {}
         self.result_el = None
 
     def write(self, point, values):
@@ -72,98 +82,177 @@ class BaseXMLWriter(nrml.TreeNRMLWriter):
             self.result_el = result_el
 
 
-class LossMapXMLWriter(BaseXMLWriter):
-    """ This class serializes loss maps to NRML.
-        in particular Mean Loss and Standard Deviation
+class LossMapXMLWriter(nrml.TreeNRMLWriter):
+    """
+    This class serializes loss maps to NRML. The primary contents of a loss map
+    include the mean and standard deviation loss values for each asset in a
+    defined region over many computed realizations.
     """
 
-    LM_CONTAINER_DEFAULT_ID = 'lm_1'
-    container_tag = xml.RISK_LOSS_MAP_CONTAINER_TAG
+    DEFAULT_METADATA = {
+        'nrmlID': 'undefined', 'riskResultID': 'undefined',
+        'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
+        'lossCategory': 'undefined', 'unit': 'undefined'}
 
     def __init__(self, path):
-        super(LossMapXMLWriter, self).__init__(path)
+        nrml.TreeNRMLWriter.__init__(self, path)
         self.lmnode_counter = 0
-        self.loss_map_el = None
 
-    def write(self, point, values):
-        """Writes an asset element with loss map ratio information.
+        # root <nrml> element:
+        self._create_root_element()
 
-        :param point: the point of the grid we want to compute
-        :type point: :py:class:`openquake.shapes.Site`
+        # <riskResult>
+        self.risk_result_node = etree.SubElement(
+            self.root_node, xml.RISK_RESULT_TAG)
 
-        :param values: is a pair of (loss map values, asset_object)
-        :type values: with the following members
-            :py:class:`dict` (loss_map_vals) with the following keys:
-                ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stdev*** - the Standard Deviation for a certain Node/Site
+        # <lossMap>
+        self.loss_map_node = etree.SubElement(
+            self.risk_result_node, xml.RISK_LOSS_MAP_CONTAINER_TAG)
 
-            :py:class:`dict` (asset_object)
-                ***assetID*** - the assetID
-                ***endBranchLabel*** - endBranchLabel
-                ***lossCategory*** - for example, "economic_loss"
-                ***unit*** - for example EUR
+    def serialize(self, data):
         """
-        super(LossMapXMLWriter, self).write(point, values)
+        Overrides the base `serialize` method to handle writing metadata for
+        the `nrml`, `riskResult`, and `lossMap` elements (in addition to the
+        site/asset/loss data).
 
-        (loss_map_vals, asset_object) = values
+        :param data: List of data to serialize to the output file.
 
-        if not self.lmnode_counter:
-            self.loss_map_el = etree.SubElement(self.result_el,
-                self.container_tag)
+            Each element should consist of a tuple of (site, (loss, asset))
+            information.
+            See :py:meth:`write` for details.
 
-        if 'list_id' in asset_object:
-            nrml.set_gml_id(self.loss_map_el, str(
-                asset_object['list_id']))
+            Optionally, the first element may be a dict containing metadata
+            about the loss map.
+            For example::
+
+                [{'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
+                  'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
+                  'unit': 'EUR'},
+                  ...
+                  <remaining data>]
+
+            If no metadata is specified, defaults will be used.
+        """
+        if isinstance(data[0], dict):
+            self.write_metadata(data[0])
+            data = data[1:]
         else:
-            nrml.set_gml_id(self.loss_map_el, self.LM_CONTAINER_DEFAULT_ID)
+            self.write_metadata(self.DEFAULT_METADATA)
 
-        if 'endBranchLabel' in asset_object:
-            self.loss_map_el.set(xml.RISK_END_BRANCH_ATTR_NAME,
-                str(asset_object[xml.RISK_END_BRANCH_ATTR_NAME]))
+        nrml.TreeNRMLWriter.serialize(self, data)
 
-        if 'lossCategory' in asset_object:
-            self.loss_map_el.set(xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR,
-                asset_object[xml.RISK_LOSS_MAP_LOSS_CATEGORY_ATTR])
+    def write_metadata(self, metadata):
+        """
+        Write gml:ids and other meta data for `nrml`, `riskResult`, and
+        `lossMap` XML elements.
 
-        if 'unit' in asset_object:
-            self.loss_map_el.set(xml.RISK_LOSS_MAP_UNIT_ATTR,
-                str(asset_object[xml.RISK_LOSS_MAP_UNIT_ATTR]))
+        :param metadata: A dict containing metadata about the loss map.
+            For example::
 
-        self.lmnode_counter += 1
-        lmnode_id = "s_%i" % self.lmnode_counter
+                {'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
+                 'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
+                 'unit': 'EUR'}
 
-        # nrml:asset, needs gml:id
-        lmnode_el = etree.SubElement(self.loss_map_el,
-            xml.RISK_LMNODE_TAG)
-        nrml.set_gml_id(lmnode_el, lmnode_id)
-        self.assets_per_id[lmnode_id] = lmnode_el
+            If any of these items are not defined in the dict, default values
+            will be used.
 
-        # check if nrml:site is already existing
-        site_el = lmnode_el.find(xml.RISK_SITE_TAG)
-        if site_el is None:
-            site_el = etree.SubElement(lmnode_el, xml.RISK_SITE_TAG)
+        :type metadata: dict
+        """
+        # set gml:id attributes:
+        for node, key in (
+            (self.root_node, 'nrmlID'),
+            (self.risk_result_node, 'riskResultID'),
+            (self.loss_map_node, 'lossMapID')):
+            nrml.set_gml_id(
+                node, metadata.get(key, self.DEFAULT_METADATA[key]))
 
-            point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
-            point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
+        # set the rest of the <lossMap> attributes
+        for key in ('endBranchLabel', 'lossCategory', 'unit'):
+            self.loss_map_node.set(
+                key, metadata.get(key, self.DEFAULT_METADATA[key]))
 
-            pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
-            pos_el.text = "%s %s" % (point.longitude, point.latitude)
+    def write(self, site, values):
+        """Writes an asset element with loss map ratio information.
+        This method assumes that `riskResult` and `lossMap` element
+        data has already been written.
 
-        elif not xml.element_equal_to_site(site_el, point):
-            error_msg = "asset %s cannot have two differing sites: %s, %s " \
-                % (lmnode_id, xml.lon_lat_from_site(site_el), point)
-            raise ValueError(error_msg)
+        :param site: the region location of the data being written
+        :type site: :py:class:`openquake.shapes.Site`
 
-        loss_el = etree.SubElement(lmnode_el,
+        :param values: contains a list of pairs in the form
+            (loss dict, asset dict) with all the data
+            to be written related to the given site
+        :type values: tuple with the following members
+            :py:class:`dict` (loss dict) with the following keys:
+                ***mean_loss*** - the Mean Loss for a certain Node/Site
+                ***stddev_loss*** - the Standard Deviation for a certain
+                    Node/Site
+
+            :py:class:`dict` (asset dict)
+                ***assetID*** - the assetID
+        """
+
+        def new_loss_node(lmnode_el, loss_dict, asset_dict):
+            """
+            Create a new asset loss node under a pre-existing parent LMNode.
+            """
+            loss_el = etree.SubElement(lmnode_el,
                                     xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
-        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_TAG,
-                    str(asset_object['assetID']))
-        mean_loss = etree.SubElement(loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
-        mean_loss.text = "%s" % loss_map_vals['mean_loss']
-        stddev = etree.SubElement(loss_el,
-                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-        stddev.text = "%s" % loss_map_vals['stddev']
+            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                        str(asset_dict['assetID']))
+            mean_loss = etree.SubElement(
+                loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+            mean_loss.text = "%s" % loss_dict['mean_loss']
+            stddev = etree.SubElement(loss_el,
+                            xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+            stddev.text = "%s" % loss_dict['stddev_loss']
+
+        # Generate an id for the new LMNode
+        # Note: ids are created start at '1'
+        self.lmnode_counter += 1
+        lmnode_id = "lmn_%i" % self.lmnode_counter
+
+        # Create the new LMNode
+        lmnode_el = etree.SubElement(self.loss_map_node, xml.RISK_LMNODE_TAG)
+
+        # Set the gml:id
+        nrml.set_gml_id(lmnode_el, lmnode_id)
+
+        # We also need Site, gml:Point, and gml:pos nodes
+        # for the new LMNode.
+        # Each one (site, point, pos) is the parent of the next.
+        site_el = etree.SubElement(lmnode_el, xml.RISK_SITE_TAG)
+
+        point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
+        point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
+
+        pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
+        pos_el.text = "%s %s" % (site.longitude, site.latitude)
+
+        # now add the loss nodes as a child of the LMNode
+        # we have loss data in first position, asset data in second position
+        # ({'stddev_loss': 100, 'mean_loss': 0}, {'assetID': 'a1711'})
+        for value in values:
+            new_loss_node(lmnode_el, value[0], value[1])
+
+    def _get_site_elem_for_site(self, site):
+        """
+        Searches the current xml document for a Site node matching the input
+        Site object.
+
+        :param site: Site object to match with Site node in the xml document
+        :type site: :py:class:`shapes.Site` object
+
+        :returns: matching Site node (of type :py:class:`lxml.etree._Element`,
+            or None if no match is found
+        """
+        site_nodes = self.loss_map_node.xpath(
+            './nrml:LMNode/nrml:site', namespaces=NAMESPACES)
+        for node in site_nodes:
+            if xml.element_equal_to_site(node, site):
+                return node
+        return None
 
 
 class CurveXMLWriter(BaseXMLWriter):
@@ -282,6 +371,147 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     curves_tag = xml.RISK_LOSS_RATIO_CURVES_TAG
     curve_tag = xml.RISK_LOSS_RATIO_CURVE_TAG
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
+
+
+class OutputDBWriter(object):
+    """
+    Abstact class implementing the "serialize" interface to output an iterable
+    to the database.
+
+    Subclasses must implement get_output_type() and insert_datum().
+    """
+    def __init__(self, session, nrml_path, oq_job_id):
+        self.nrml_path = nrml_path
+        self.oq_job_id = oq_job_id
+        self.session = session
+        job = self.session.query(OqJob).filter(
+            OqJob.id == self.oq_job_id).one()
+        self.output = Output(owner=job.owner, oq_job=job,
+                             display_name=basename(self.nrml_path),
+                             output_type=self.get_output_type(),
+                             db_backed=True)
+
+    def get_output_type(self):
+        """
+        The type of the output record as a string (e.g. 'loss_curve')
+        """
+        raise NotImplementedError()
+
+    def insert_datum(self, key, values):
+        """
+        Called for each item of the iterable during serialize.
+        """
+        raise NotImplementedError()
+
+    def serialize(self, iterable):
+        """
+        Implementation of the "serialize" interface.
+
+        An Output record with type get_output_type() will be created, then
+        each item of the iterable will be serialized in turn to the database.
+        """
+        LOGGER.info("> serialize")
+        LOGGER.info("serializing %s points" % len(iterable))
+
+        self.session.add(self.output)
+        LOGGER.info("output = '%s'" % self.output)
+
+        for key, values in iterable:
+            self.insert_datum(key, values)
+
+        self.session.commit()
+
+        LOGGER.info("serialized %s points" % len(iterable))
+        LOGGER.info("< serialize")
+
+
+class CurveDBWriter(OutputDBWriter):
+    """
+    Abstract class implementing a serializer to output loss curves to the
+    database.
+
+    Subclasses must implement get_output_type().
+    """
+
+    def get_output_type(self):
+        return super(CurveDBWriter, self).get_output_type()
+
+    def insert_datum(self, key, values):
+        """
+        Called for each item in the iterable beeing serialized.
+
+        Parameters will look something like:
+
+        key=Site(-118.077721, 33.852034)
+        values=(Curve([...]), {..., u'assetID': u'a5625', ...})
+        """
+        point = key
+
+        if isinstance(point, shapes.GridPoint):
+            point = point.site
+
+        curve_object, asset_object = values
+
+        self._real_insert_datum(asset_object, point, curve_object)
+
+    def _real_insert_datum(self, asset_object, point, curve_object):
+        """
+        Called for each item in the iterable beeing serialized.
+
+        Parameters will look something like:
+
+        asset_object={..., u'assetID': u'a5625', ...}
+        point=Site(-118.077721, 33.852034)
+        curve_object=Curve([...]),
+        """
+        asset = self._get_or_create_loss_asset_data(asset_object, point)
+
+        curve = LossCurveData(
+            loss_asset=asset,
+            end_branch_label=asset_object.get('endBranchLabel'),
+            abscissae=[float(x) for x in curve_object.abscissae],
+            poes=[float(y) for y in curve_object.ordinates])
+        self.session.add(curve)
+
+    def _get_or_create_loss_asset_data(self, asset_object, point):
+        """
+        Return the LossAssetData record for the given asset_object, creating it
+        if necessary.
+        """
+        asset_id = asset_object['assetID']
+
+        try:
+            asset = self.session.query(LossAssetData)\
+                .filter(LossAssetData.output == self.output)\
+                .filter(LossAssetData.asset_id == asset_id).one()
+        except sqlalchemy.orm.exc.NoResultFound:
+            asset = LossAssetData(
+                output=self.output,
+                asset_id=asset_id,
+                pos="POINT(%s %s)" % (point.longitude, point.latitude))
+            self.session.add(asset)
+        else:
+            if not asset.pos == point:
+                error_msg = "asset %s has two different positions" % asset_id
+                raise ValueError(error_msg)
+
+        return asset
+
+
+class LossCurveDBWriter(CurveDBWriter):
+    """
+    Serializer to the database for loss curves.
+    """
+    def get_output_type(self):
+        return "loss_curve"
+
+
+class LossRatioCurveDBWriter(CurveDBWriter):
+    """
+    Serializer to the database for loss ratio curves.
+    """
+    def get_output_type(self):
+        return "loss_ratio_curve"
 
 
 def _curve_vals_as_gmldoublelist(curve_object):

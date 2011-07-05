@@ -25,11 +25,16 @@
 -- of our database users/roles.
 
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
-GRANT USAGE ON SCHEMA pshai TO GROUP openquake;
 GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
+GRANT USAGE ON SCHEMA pshai TO GROUP openquake;
+GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
 GRANT ALL ON SEQUENCE admin.oq_user_id_seq TO oq_admin;
 GRANT ALL ON SEQUENCE admin.organization_id_seq TO oq_admin;
+
+GRANT ALL ON SEQUENCE eqcat.catalog_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE eqcat.magnitude_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE eqcat.surface_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE pshai.complex_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.fault_edge_id_seq to GROUP openquake;
@@ -42,6 +47,24 @@ GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 
+GRANT ALL ON SEQUENCE uiapi.loss_asset_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.loss_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.hazard_map_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.hazard_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.hazard_curve_node_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.loss_map_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
+
+GRANT SELECT ON geometry_columns TO GROUP openquake;
+GRANT SELECT ON pshai.complex_source TO GROUP openquake;
+GRANT SELECT ON pshai.simple_source TO GROUP openquake;
+GRANT SELECT ON pshai.complex_rupture TO GROUP openquake;
+GRANT SELECT ON pshai.simple_rupture TO GROUP openquake;
+
 -- admin.oq_user
 GRANT SELECT ON admin.oq_user TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
@@ -50,58 +73,124 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
 GRANT SELECT ON admin.organization TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON admin.organization TO oq_admin;
 
+-- eqcat.catalog
+GRANT SELECT ON eqcat.catalog TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON eqcat.catalog TO oq_eqcat_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.catalog TO oq_eqcat_writer;
+
+-- eqcat.magnitude
+GRANT SELECT ON eqcat.magnitude TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON eqcat.magnitude TO oq_eqcat_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.magnitude TO oq_eqcat_writer;
+
+-- eqcat.surface
+GRANT SELECT ON eqcat.surface TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON eqcat.surface TO oq_eqcat_etl;
+GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
+
+-- eqcat.catalog_allfields view
+GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
+
 -- pshai.complex_fault
 GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.complex_fault TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.complex_fault TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.complex_fault TO oq_uiapi_writer;
 
 -- pshai.fault_edge
 GRANT SELECT ON pshai.fault_edge TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.fault_edge TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.fault_edge TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.fault_edge TO oq_uiapi_writer;
 
 -- pshai.focal_mechanism
 GRANT SELECT ON pshai.focal_mechanism TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.focal_mechanism TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.focal_mechanism TO oq_pshai_writer;
-
--- pshai.magnitude_type
-GRANT SELECT ON pshai.magnitude_type TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.focal_mechanism TO oq_uiapi_writer;
 
 -- pshai.mfd_evd
 GRANT SELECT ON pshai.mfd_evd TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.mfd_evd TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_evd TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_evd TO oq_uiapi_writer;
 
 -- pshai.mfd_tgr
 GRANT SELECT ON pshai.mfd_tgr TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.mfd_tgr TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_tgr TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.mfd_tgr TO oq_uiapi_writer;
 
 -- pshai.r_depth_distr
 GRANT SELECT ON pshai.r_depth_distr TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.r_depth_distr TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_depth_distr TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_depth_distr TO oq_uiapi_writer;
 
 -- pshai.r_rate_mdl
 GRANT SELECT ON pshai.r_rate_mdl TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.r_rate_mdl TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_rate_mdl TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.r_rate_mdl TO oq_uiapi_writer;
 
 -- pshai.rupture
 GRANT SELECT ON pshai.rupture TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.rupture TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.rupture TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.rupture TO oq_uiapi_writer;
 
 -- pshai.simple_fault
 GRANT SELECT ON pshai.simple_fault TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.simple_fault TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.simple_fault TO oq_uiapi_writer;
 
 -- pshai.source
 GRANT SELECT ON pshai.source TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON pshai.source TO oq_pshai_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_pshai_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON pshai.source TO oq_uiapi_writer;
 
--- pshai.tectonic_region
-GRANT SELECT ON pshai.tectonic_region TO GROUP openquake;
+-- uiapi.hazard_map_data
+GRANT SELECT ON uiapi.hazard_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_map_data TO oq_uiapi_writer;
+
+-- uiapi.hazard_curve_data
+GRANT SELECT ON uiapi.hazard_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_curve_data TO oq_uiapi_writer;
+
+-- uiapi.hazard_curve_node_data
+GRANT SELECT ON uiapi.hazard_curve_node_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_curve_node_data TO oq_uiapi_writer;
+
+-- uiapi.loss_asset_data
+GRANT SELECT ON uiapi.loss_asset_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_asset_data TO oq_uiapi_writer;
+
+-- uiapi.loss_curve_data
+GRANT SELECT ON uiapi.loss_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_curve_data TO oq_uiapi_writer;
+
+-- uiapi.input
+GRANT SELECT ON uiapi.input TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_uiapi_writer;
+
+-- uiapi.loss_map_data
+GRANT SELECT ON uiapi.loss_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_map_data TO oq_uiapi_writer;
+
+-- uiapi.oq_job
+GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
+
+-- uiapi.oq_params
+GRANT SELECT ON uiapi.oq_params TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_params TO oq_uiapi_writer;
+
+-- uiapi.output
+GRANT SELECT ON uiapi.output TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.output TO oq_uiapi_writer;
+
+-- uiapi.upload
+GRANT SELECT ON uiapi.upload TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_uiapi_writer;

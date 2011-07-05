@@ -193,7 +193,9 @@ class Job(object):
         """Compute valid region with appropriate cell size from config file."""
         if not self.has('REGION_VERTEX'):
             return None
+        # REGION_VERTEX coordinates are defined in the order (lat, lon)
         verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
+
         # Flips lon and lat, and builds a list of coord tuples
         coords = zip(verts[1::2], verts[::2])
         region = shapes.RegionConstraint.from_coordinates(coords)
@@ -220,7 +222,7 @@ class Job(object):
             if key.upper() not in self.sections:
                 continue
 
-            with Mixin(self, mixin, key=key):
+            with Mixin(self, mixin):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
@@ -242,7 +244,7 @@ class Job(object):
         # otherwise we use the input region
         if self.has(EXPOSURE):
             sites = self._read_sites_from_exposure()
-            LOG.debug("Loaded %s sites from exposure portfolio." % len(sites))
+            LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
             sites = self.region.sites
         else:
@@ -328,6 +330,7 @@ class Job(object):
                     data_file.seek(0)
                     kvs_client.set(sha1, data_file.read())
                     self.params[key] = sha1
+                    self.params[key + "_PATH"] = path
 
     def to_kvs(self, write_cfg=True):
         """Store this job into kvs."""
