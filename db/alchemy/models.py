@@ -92,8 +92,7 @@ class OqParams(Base):
     job_type = sa.Column(sa.Enum("classical", "event_based", "deterministic",
                                  native_enum=False),
                          nullable=False, default="classical")
-    upload_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.upload.id"),
-                          nullable=False)
+    upload_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.upload.id"))
     upload = relationship("Upload")
     region_grid_spacing = sa.Column(sa.Float, nullable=False)
     min_magnitude = sa.Column(sa.Float)
