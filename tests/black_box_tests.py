@@ -40,7 +40,7 @@ class HazardMapTestCase(unittest.TestCase):
         kvs.flush()
 
         self.engine = job.Job.from_file(
-            helpers.smoketest_file("HazardMapTest/config.gem"))
+            helpers.smoketest_file("HazardMapTest/config.gem"), 'xml')
 
     def bb_we_compute_the_same_sites_in_the_region(self):
         """We compute results on the correct sites.
