@@ -26,6 +26,7 @@ from bin import cache_gc
 from openquake import kvs
 from openquake.kvs import tokens
 
+
 class CacheGCTestCase(unittest.TestCase):
 
     @classmethod
@@ -76,12 +77,13 @@ class CacheGCTestCase(unittest.TestCase):
         sys.exit = fake_exit
 
         with mock.patch('openquake.kvs.gc') as gc_mock:
-            gc_mock.return_value = 3  # we don't really care what the return val is
+            # we don't really care what the return val is
+            gc_mock.return_value = 3
 
             cache_gc.clear_job_data(1)
             self.assertEqual(1, gc_mock.call_count)
 
-            # same thing, but this time with a str for the ID 
+            # same thing, but this time with a str for the ID
             cache_gc.clear_job_data('2')
             self.assertEqual(2, gc_mock.call_count)
 
