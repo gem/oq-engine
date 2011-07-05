@@ -744,25 +744,25 @@ SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2)
 ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
--- Loss asset data.
-CREATE TABLE uiapi.loss_asset_data (
+-- Loss curve.
+CREATE TABLE uiapi.loss_curve (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    asset_id VARCHAR,
-    UNIQUE (output_id, asset_id)
+    output_id INTEGER NOT NULL
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_asset_data', 'pos', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_asset_data ALTER COLUMN pos SET NOT NULL;
 
 
 -- Loss curve data.
 CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
-    loss_asset_id INTEGER NOT NULL,
+    loss_curve_id INTEGER NOT NULL,
+
+    asset_id VARCHAR,
     end_branch_label VARCHAR,
     abscissae float[] NOT NULL,
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'pos', 4326, 'POINT', 2);
+ALTER TABLE uiapi.loss_curve_data ALTER COLUMN pos SET NOT NULL;
 
 
 ------------------------------------------------------------------------
