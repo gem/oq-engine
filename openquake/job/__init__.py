@@ -241,6 +241,8 @@ class Job(object):
         params['BASE_PATH'] = base_path
         if FLAGS.output_type == 'db':
             params['SERIALIZE_RESULTS_TO_DB'] = 'True'
+            if 'OPENQUAKE_JOB_ID' not in params:
+                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
         else:
             params['SERIALIZE_RESULTS_TO_DB'] = 'False'
         job = Job(params, sections=sections, base_path=base_path)
