@@ -732,7 +732,6 @@ class EventBasedMixin(BasePSHAMixin):
                 common_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                         "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                        str(rupture.replace("!", "_"))))
-                tiff_path = "%s.tiff" % common_path
                 nrml_path = "%s.xml" % common_path
                 xmlwriter = hazard_output.GMFXMLWriter(nrml_path)
                 gmf_data = {}
@@ -743,7 +742,6 @@ class EventBasedMixin(BasePSHAMixin):
                         {'groundMotion': math.exp(float(site['mag']))}
 
                 xmlwriter.serialize(gmf_data)
-                files.append(tiff_path)
                 files.append(nrml_path)
         return files
 
