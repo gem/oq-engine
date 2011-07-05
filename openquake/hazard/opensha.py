@@ -844,6 +844,19 @@ def _collect_map_keys_per_quantile(keys):
     return quantile_values
 
 
+def _create_writer(params, nrml_path, create_xml_writer, create_db_writer):
+    """Common code for the functions below"""
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        return create_xml_writer(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+        session = get_uiapi_writer_session()
+        return create_db_writer(session, nrml_path, job_db_key)
+
+
 def create_hazardcurve_writer(params, nrml_path):
     """Create a hazard curve writer observing the settings in the config file.
 
@@ -854,15 +867,9 @@ def create_hazardcurve_writer(params, nrml_path):
     :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
         :py:class:`output.hazard.HazardCurveDBWriter` instance.
     """
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
-        return hazard_output.HazardCurveXMLWriter(nrml_path)
-    else:
-        job_db_key = params.get("OPENQUAKE_JOB_ID")
-        assert job_db_key, "No job db key in the configuration parameters"
-        job_db_key = int(job_db_key)
-        session = get_uiapi_writer_session()
-        return hazard_output.HazardCurveDBWriter(session, nrml_path, job_db_key)
+    return _create_writer(params, nrml_path,
+                          hazard_output.HazardCurveXMLWriter,
+                          hazard_output.HazardCurveDBWriter)
 
 
 def create_hazardmap_writer(params, nrml_path):
@@ -875,15 +882,9 @@ def create_hazardmap_writer(params, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
-        return hazard_output.HazardMapXMLWriter(nrml_path)
-    else:
-        job_db_key = params.get("OPENQUAKE_JOB_ID")
-        assert job_db_key, "No job db key in the configuration parameters"
-        job_db_key = int(job_db_key)
-        session = get_uiapi_writer_session()
-        return hazard_output.HazardMapDBWriter(session, nrml_path, job_db_key)
+    return _create_writer(params, nrml_path,
+                          hazard_output.HazardMapXMLWriter,
+                          hazard_output.HazardMapDBWriter)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
