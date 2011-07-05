@@ -29,7 +29,7 @@ import unittest
 
 from db.alchemy.db_utils import (
     SessionCache, get_eqcat_writer_session, get_pshai_writer_session,
-    get_uiapi_writer_session)
+    get_uiapi_writer_session, get_eqcat_etl_session, get_pshai_etl_session)
 
 
 class SessionCacheInitSessionTestCase(unittest.TestCase):
@@ -252,9 +252,9 @@ class SessionCacheGetTestCase(unittest.TestCase):
         self.assertTrue(sc.__sessions__.get("usr3") is None)
 
 
-class GetWriterSessionTestCase(unittest.TestCase):
+class GetSessionTestCase(unittest.TestCase):
     """
-    Tests the various alchemy.db_utils.get_xxxxx_writer_session() functions.
+    Tests the various alchemy.db_utils.get_xxxxx_xxxx_session() functions.
     """
 
     test_data = (
@@ -263,7 +263,11 @@ class GetWriterSessionTestCase(unittest.TestCase):
         ("OQ_DB_PSHAI_WRITER", "OQ_DB_PSHAI_WRITER_PWD",
          get_pshai_writer_session),
         ("OQ_DB_UIAPI_WRITER", "OQ_DB_UIAPI_WRITER_PWD",
-         get_uiapi_writer_session))
+         get_uiapi_writer_session),
+        ("OQ_DB_EQCAT_ETL", "OQ_DB_EQCAT_ETL_PWD",
+         get_eqcat_etl_session),
+        ("OQ_DB_PSHAI_ETL", "OQ_DB_PSHAI_ETL_PWD",
+         get_pshai_etl_session))
 
     def setUp(self):
         # Save the original get() method.
@@ -278,9 +282,9 @@ class GetWriterSessionTestCase(unittest.TestCase):
         # Restore the original get() method.
         SessionCache().get = self.original_method
 
-    def test_get_writer_session_with_no_env(self):
+    def test_get_session_with_no_env(self):
         """
-        An `AssertionError` is raised if the `OQ_DB_EQCAT_WRITER` environment
+        An `AssertionError` is raised if the `OQ_DB_<ns>_<access>` environment
         variable is not set.
         """
         for env_user, _, function in self.test_data:
@@ -288,7 +292,7 @@ class GetWriterSessionTestCase(unittest.TestCase):
                 del os.environ[env_user]
             self.assertRaises(AssertionError, function)
 
-    def test_get_writer_session(self):
+    def test_get_session(self):
         """
         SessionCache.get() is called with the appropriate environment
         variables.
@@ -303,7 +307,7 @@ class GetWriterSessionTestCase(unittest.TestCase):
             self.assertEqual("usr1", user)
             self.assertEqual("pwd1", passwd)
 
-    def test_get_writer_session_with_none_passwd(self):
+    def test_get_session_with_none_passwd(self):
         """
         SessionCache.get() is called with the appropriate environment
         variables.

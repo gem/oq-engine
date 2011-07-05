@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <project name="GEM Java Tests" default="help" basedir=".">
 
-	<property name="lib.dir" value="lib" />
+	<property name="syslib.dir" value="/usr/share/java" />
 	<property name="src.dir" value="java" />
 	<property name="test.dir" value="java_tests" />
 
@@ -14,7 +14,7 @@
 	<property name="tests.report.dir" value="${dist.dir}/tests_result" />
 
 	<path id="dependencies">
-		<fileset dir="${lib.dir}" includes="*.jar" />
+		<fileset dir="${syslib.dir}" excludes="java-oq*" includes="*.jar" />
 	</path>
 
     <target name="help" description="Display detailed usage information">
