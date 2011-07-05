@@ -137,7 +137,6 @@ COMMENT ON COLUMN uiapi.hazard_curve_data.statistic_type IS 'Statistic type, one
     - Median   (median)
     - Quantile (quantile)';
 COMMENT ON COLUMN uiapi.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
-COMMENT ON COLUMN uiapi.hazard_curve_data.imls IS 'Intensity measure levels.';
 
 COMMENT ON TABLE uiapi.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
 COMMENT ON COLUMN uiapi.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
