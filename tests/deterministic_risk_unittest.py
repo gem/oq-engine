@@ -143,7 +143,7 @@ class DeterministicRiskTestCase(unittest.TestCase):
         """
         Exercise the deterministic risk job and make sure it runs end-to-end.
         """
-        risk_job = job.Job.from_file(TEST_JOB_FILE)
+        risk_job = job.Job.from_file(TEST_JOB_FILE, 'xml')
         results = risk_job.launch()
 
         # for results, we should a list of True values
