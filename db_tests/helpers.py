@@ -125,7 +125,8 @@ class DbTestMixin(TestMixin):
             anyway.
         """
         oqp = job.oq_params
-        self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
+        if oqp.upload is not None:
+            self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
         if filesystem_only:
             return
         session = get_uiapi_writer_session()
