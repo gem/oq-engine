@@ -172,9 +172,8 @@ def generate_block_id():
     return BLOCK_ID_GENERATOR.next()
 
 
-def gc(job_key):
+def cache_gc(job_key):
     """
-<<<<<<< HEAD
     Garbage collection for the KVS. This works by simply removing all keys
     which contain the input job key.
 
