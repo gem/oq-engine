@@ -717,29 +717,50 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
+drop table uiapi.loss_map_data;
+drop table uiapi.loss_map;
+
+-- Design decision: store both probabilistic and event based loss map in the
+-- same tables (with some checks for consistency)
+-- uiapi.output.output_type will contain the actual loss map type
+CREATE TABLE uiapi.loss_map (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    loss_map_id VARCHAR, -- QUESTION: is the column name with "_id" suffix confusing?
+                         -- This is not a FK, is just a human readable identifier
+    end_branch_label VARCHAR,
+    loss_category VARCHAR, -- open-ended, cfr Vitor's mail
+    unit VARCHAR, -- open-ended
+    -- time_span and poe are significant only for probabilistic calculations,
+    -- fact that is hard to enforce here
+    time_span float CONSTRAINT non_negative_time_span CHECK (time_span >= 0.0),
+    poe float CONSTRAINT valid_poe CHECK ((poe >= 0.0) AND (poe <= 1.0))
+) TABLESPACE uiapi_ts;
+
+-- QUESTION: as we have done for the loss curves, I got rid of the intermediate
+-- "site" table, and I merged it with the "asset" table.  But this leaves me
+-- without a place to store, in the future when it will probably needed, the
+-- aggregated loss value per site; the aggregated value is useful for plotting
+-- purposes.
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    end_branch_label VARCHAR,
-    loss_category VARCHAR,
-    unit VARCHAR CONSTRAINT unit_value CHECK(unit IS NULL or unit IN ('EUR', 'USD'))
+    loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
+    asset_id VARCHAR, -- QUESTION: again, the suffix _id is maybe misleading? This is not a FK.
+    loss_mean float,
+    loss_std_dev float,
+    loss_value float,
+    -- loss_mean AND loss_std_dev for event based calculations
+    --
+    --   OR
+    --
+    -- loss_value for probabilistic calculations
+    CONSTRAINT valid_loss CHECK
+        ((loss_value IS NULL AND loss_mean IS NOT NULL AND loss_std_dev IS NOT NULL)
+            OR (loss_value IS NOT NULL AND loss_mean IS NULL AND loss_std_dev IS NULL))
 ) TABLESPACE uiapi_ts;
-
-CREATE TABLE uiapi.loss_map_node_data (
-    id SERIAL PRIMARY KEY,
-    loss_map_data_id INTEGER NOT NULL,
-    value float -- aggregation of the loss values for this site
-) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_map_node_data', 'site', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_map_node_data ALTER COLUMN site SET NOT NULL;
-
-CREATE TABLE uiapi.loss_map_node_asset_data (
-    id SERIAL PRIMARY KEY,
-    loss_map_node_data_id INTEGER NOT NULL,
-    asset_id VARCHAR,
-    mean float NOT NULL,
-    std_dev float NOT NULL
-) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'loss_map_site_data', 'site', 4326, 'POINT', 2);
+-- A site appears at most once inside a loss map
+ALTER TABLE uiapi.loss_map_data ALTER COLUMN site SET NOT NULL UNIQUE;
 
 
 -- Loss asset data.
