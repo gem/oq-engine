@@ -85,6 +85,10 @@ def strip_dashes(arg):
 
 def _get_current_job_ids():
     """
+    Get a list of the current jobs from the KVS and parse out the numeric job
+    IDs.
+
+    :returns: list of ints
     """
     jobs = tokens.current_jobs()
 
