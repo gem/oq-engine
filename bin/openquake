@@ -30,9 +30,6 @@ if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'openquake')):
     sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from fabric.api import env, local, run
-from multiprocessing import Process
-
 from openquake import flags
 from openquake import logs
 from openquake import __version__
@@ -54,74 +51,6 @@ flags.DEFINE_boolean('partition', False, 'Partition job?')
 flags.DEFINE_boolean('server', False, 'Launch redis-server and RabbitMQ subprocs')
 flags.DEFINE_boolean('version', False, 'Show version information')
 flags.DEFINE_boolean('worker', False, 'Launch celery subprocs')
-
-
-def _launch_worker_subprocs():
-    """Start celery as python subprocs.
-
-    There should only be one copy of celery running.
-
-    If a process is already running, don't kill it
-    and carry on.
-
-    If a process is not running, launch it as a
-    multiprocessing.Process
-    """
-    # set the host string (otherwise, the user will be prompted for one)
-    env.host_string = 'localhost'
-
-    # launch celery if it's not already running
-    if not _is_running('[c]elery'):
-        print "Starting celery..."
-        Process(target=local, args=('celeryd',)).start()
-
-
-def _launch_server_subprocs():
-    """Start redis-server and RabbitMQ as python subprocs.
-
-    There should only be one copy of RabbitMQ running
-    and (for now) only one copy of redis-server.
-
-    If a process is already running, don't kill it
-    and carry on.
-
-    If a process is not running, launch it as a
-    multiprocessing.Process
-    """
-    # set the host string (otherwise, the user will be prompted for one)
-    env.host_string = 'localhost'
-
-
-    # launch rabbitmq if it's not already running
-    if not _is_running('[r]abbitmq'):
-        print "Starting rabbitmq..."
-        Process(target=local, args=('sudo rabbitmq-server',)).start()
-
-
-    # launch kvs if it's not already running
-    if not _is_running('[r]edis-server'):
-        print "Starting redis-server..."
-        Process(target=local, args=('redis-server',)).start()
-
-
-def _is_running(proc_name):
-    """Checks to see if a process is already
-    running by executing a 'ps aux | grep proc_name'.
-
-    Be sure to surroud the first letter
-    of the proc_name with [] to avoid getting
-    a false positive from the grep
-    (example: '[r]edis-server', instead of 'redis-server').
-    """
-    # set fabric to warn only (so fabric run() calls with no
-    # response don't crash and burn)
-    env.warn_only = True
-
-    is_running = run('ps aux | grep %s' % proc_name) != ''
-    # reset warn only
-    env.warn_only = False
-
-    return is_running
 
 
 def register_mixins():
@@ -165,12 +94,6 @@ if __name__ == '__main__':
         import pstats
         p = pstats.Stats(FLAGS.profile_log)
         p.sort_stats('cumulative').print_stats(30)
-    elif FLAGS.server:
-        # launch redis and rabbitmq
-        _launch_server_subprocs()
-    elif FLAGS.worker:
-        # launch celery
-        _launch_worker_subprocs()
     else:
         register_mixins()
         job.run_job(FLAGS.config_file, FLAGS.output_type)
