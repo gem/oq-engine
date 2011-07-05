@@ -178,11 +178,11 @@ def gc(job_key):
     the input job key.
 
     The job key must be a member of the 'CURRENT_JOBS' set. If it isn't, this function will
-    do nothing and simply return 0.
+    do nothing and simply return None.
 
     :param job_key: specially formatted job key; see :py:function:`openquake.kvs.tokens.next_job_key` for more info
 
-    :returns: the number of deleted keys (int)
+    :returns: the number of deleted keys (int), or None if the job doesn't exist in CURRENT_JOBS
     """
     client = get_client()
 
@@ -191,12 +191,16 @@ def gc(job_key):
         # do the garbage collection
         keys = client.keys('*%s*' % job_key)
 
-        success = client.delete(*keys)
-        # delete should return True
-        assert success
+        if len(keys) > 0:
+
+            success = client.delete(*keys)
+            # delete should return True
+            assert success
+
+        # finally, remove the job key from CURRENT_JOBS
+        client.srem(tokens.CURRENT_JOBS, job_key)
 
         return len(keys)
     else:
         # does not match a current job
-        # return 0
-        return 0
+        return None

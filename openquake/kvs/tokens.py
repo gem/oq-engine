@@ -274,6 +274,8 @@ def next_job_key():
     not_dupe = client.sadd(CURRENT_JOBS, job_key)
     # We need to make this returns True, otherwise there is a duplication;
     # this is bad.
+    # TODO: Lars Butler, Tue Jul  5 15:34:50 2011
+    # Should we do anything with the generated key if there's an error here?
     assert not_dupe
 
     return job_key
@@ -286,4 +288,4 @@ def current_jobs():
     :returns: list of job keys (as strings), or an empty list if there are no
         current jobs
     """
-    return list(openquake.kvs.get_client().smembers(CURRENT_JOBS))
+    return sorted(list(openquake.kvs.get_client().smembers(CURRENT_JOBS)))
