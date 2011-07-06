@@ -1,7 +1,5 @@
 /*
-  Static data for the OpenQuake database schema.
-
-    Copyright (c) 2010-2011, GEM Foundation.
+    Copyright (c) 2011, GEM Foundation.
 
     OpenQuake is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License version 3
@@ -19,10 +17,14 @@
 */
 
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
+COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
+    - unknown
+    - hazard_curve
+    - hazard_map
+    - gmf
+    - loss_curve
+    - loss_map';
 
-INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0.3.9-1');
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 2);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 6);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 19);
+COMMENT ON TABLE uiapi.gmf_data IS 'Holds data for the ground motion field';
+COMMENT ON COLUMN uiapi.gmf_data.ground_motion IS 'Ground motion for a specific site';
+COMMENT ON COLUMN uiapi.gmf_data.location IS 'Site coordinates';

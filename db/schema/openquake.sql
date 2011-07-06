@@ -640,11 +640,12 @@ CREATE TABLE uiapi.output (
     -- Output type, one of:
     --      hazard_curve
     --      hazard_map
+    --      gmf
     --      loss_curve
     --      loss_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'loss_curve', 'loss_map')),
+            'gmf', 'loss_curve', 'loss_map')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -704,6 +705,17 @@ CREATE TABLE uiapi.hazard_curve_node_data (
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE uiapi.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
+
+
+-- GMF data.
+CREATE TABLE uiapi.gmf_data (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,
+    -- Ground motion value
+    ground_motion float NOT NULL
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'gmf_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
@@ -885,6 +897,10 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.hazard_curve_node_data
 ADD CONSTRAINT uiapi_hazard_curve_node_data_output_fk
 FOREIGN KEY (hazard_curve_data_id) REFERENCES uiapi.hazard_curve_data(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.gmf_data
+ADD CONSTRAINT uiapi_gmf_data_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_map_data
 ADD CONSTRAINT uiapi_loss_map_data_output_fk
