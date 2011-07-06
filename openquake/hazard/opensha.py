@@ -713,11 +713,13 @@ class EventBasedMixin(BasePSHAMixin):
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
-                    results.extend(self.write_gmf_files(ses))
+                    results.extend(self.serialize_gmf(ses))
         return results
 
-    def write_gmf_files(self, ses):
-        """Generate a NRML file for each GMF."""
+    def serialize_gmf(self, ses):
+        """
+        Write each GMF to an NRML file or to DB depending on job configuration.
+        """
         iml_list = [float(param)
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
@@ -731,7 +733,7 @@ class EventBasedMixin(BasePSHAMixin):
                         "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                        str(rupture.replace("!", "_"))))
                 nrml_path = "%s.xml" % common_path
-                xmlwriter = hazard_output.GMFXMLWriter(nrml_path)
+                gmf_writer = create_gmf_writer(self.params, nrml_path)
                 gmf_data = {}
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
@@ -739,8 +741,9 @@ class EventBasedMixin(BasePSHAMixin):
                     gmf_data[site_obj] = \
                         {'groundMotion': math.exp(float(site['mag']))}
 
-                xmlwriter.serialize(gmf_data)
+                gmf_writer.serialize(gmf_data)
                 files.append(nrml_path)
+
         return files
 
     @preload
@@ -887,6 +890,21 @@ def create_hazardmap_writer(params, nrml_path):
     return _create_writer(params, nrml_path,
                           hazard_output.HazardMapXMLWriter,
                           hazard_output.HazardMapDBWriter)
+
+
+def create_gmf_writer(params, nrml_path):
+    """Create a GMF writer using the settings in the config file.
+
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        ground motion field.
+    :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
+        :py:class:`output.hazard.GMFDBWriter` instance.
+    """
+    return _create_writer(params, nrml_path,
+                          hazard_output.GMFXMLWriter,
+                          hazard_output.GMFDBWriter)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
