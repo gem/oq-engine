@@ -39,7 +39,7 @@ class CacheGCTestCase(unittest.TestCase):
         # create 3 jobs
         # this will add job keys to CURRENT_JOBS
         for i in range(1, 4):
-            tokens.next_job_key()
+            tokens.alloc_job_key()
 
     @classmethod
     def tearDownClass(cls):
@@ -64,27 +64,22 @@ class CacheGCTestCase(unittest.TestCase):
 
     def test_clear_job_data(self):
         """
-        Verify that :py:function:`openquake.kvs.gc` is called.
+        Verify that :py:function:`openquake.kvs.cache_gc` is called.
 
-        :py:function:`openquake.kvs.gc` will be mocked in this test
+        :py:function:`openquake.kvs.cache_gc` will be mocked in this test
         since the actual code is exercised in a separate.
         """
-        def fake_exit(*args):
-            pass
-
-        # we don't want the test to exit prematurely
-        exit_backup = sys.exit
-        sys.exit = fake_exit
-
         with mock.patch('openquake.kvs.cache_gc') as gc_mock:
             # we don't really care what the return val is
             gc_mock.return_value = 3
 
+            # make sure cache_gc was called and the args are correct
             cache_gc.clear_job_data(1)
             self.assertEqual(1, gc_mock.call_count)
+            self.assertEqual(((1, ), {}), gc_mock.call_args)
 
             # same thing, but this time with a str for the ID
             cache_gc.clear_job_data('2')
             self.assertEqual(2, gc_mock.call_count)
-
-        sys.exit = exit_backup
+            # the string '2' should be converted to an int before cache_gc is called
+            self.assertEqual(((2, ), {}), gc_mock.call_args)
