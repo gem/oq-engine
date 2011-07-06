@@ -144,6 +144,10 @@ if [ "$check_table_spaces" == "on" ]; then
     done
 fi
 
+# Starting from here this script is executing many batches
+# Stopping as soon as one fails makes the error stand out
+set -e
+
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
 psql -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name"
