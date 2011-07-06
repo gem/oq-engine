@@ -82,3 +82,11 @@ class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     create_function = staticmethod(opensha.create_hazardcurve_writer)
     xml_writer_class = hazard_output.HazardCurveXMLWriter
     db_writer_class = hazard_output.HazardCurveDBWriter
+
+
+class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
+    """Tests for hazard.opensha.create_gmf_writer()."""
+
+    create_function = staticmethod(opensha.create_gmf_writer)
+    xml_writer_class = hazard_output.GMFXMLWriter
+    db_writer_class = hazard_output.GMFDBWriter
