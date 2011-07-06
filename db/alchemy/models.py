@@ -234,6 +234,22 @@ class HazardCurveNodeData(Base):
             self.id, self.poes))
 
 
+class GMFData(Base):
+    __tablename__ = "gmf_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
+                          nullable=False)
+    output = relationship("Output", backref="gmfdata_set")
+    location = ga.GeometryColumn(ga.Point(2), nullable=False)
+    ground_motion = sa.Column(sa.Float)
+
+    def __repr__(self):
+        return(":hgmf_data: %s, %s, %s" % (
+            self.id, self.location, self.ground_motion))
+
+
 class LossMapData(Base):
     __tablename__ = "loss_map_data"
     __table_args__ = {"schema": "uiapi"}
