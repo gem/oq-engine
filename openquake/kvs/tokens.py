@@ -283,7 +283,7 @@ def next_job_key():
 
 def current_jobs():
     """
-    Get all current job keys.
+    Get all current job keys, sorted in ascending order.
 
     :returns: list of job keys (as strings), or an empty list if there are no
         current jobs
