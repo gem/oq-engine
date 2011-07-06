@@ -69,7 +69,7 @@ public class LogicTreeProcessorTest extends BaseRedisTest {
      * correctly been extracted to a data object ("EqkRuptureDataForKvs") so
      * that the content of the json string (generated with gson) will be
      * correct.<br>
-     * 
+     *
      * @throws ConfigurationException
      */
     @Test
@@ -126,10 +126,9 @@ public class LogicTreeProcessorTest extends BaseRedisTest {
         /*
          * debug - if you want to have a look, print it to the console:
          */
-        // System.out.println("eqkRuptureSerialisation() expected = "
+        // logger.info("eqkRuptureSerialisation() expected = "
         // + expected);
-        // System.out
-        // .println("eqkRuptureSerialisation() fromKvs = " + fromKvs);
+        // logger.info("eqkRuptureSerialisation() fromKvs = " + fromKvs);
         assertEquals(expected, fromKvs);
     }
 

@@ -16,7 +16,6 @@
 
 
 import os
-import re
 import sys
 import unittest
 
@@ -26,7 +25,7 @@ from openquake import flags
 from openquake import java
 from openquake import logs
 
-LOG_FILE_PATH = os.path.join(os.getcwd(), 'test.log')
+LOG_FILE_PATH = os.path.join(os.getcwd(), 'test_file_for_the_logs_module.log')
 
 
 class LogsTestCase(unittest.TestCase):
