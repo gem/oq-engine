@@ -135,6 +135,10 @@ def jvm(max_mem=None):
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
+            # force the default Xerces parser configuration, otherwise
+            # some random system-installed JAR might override it
+            "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration="\
+                           "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
             # "-Dlog4j.debug", # turn on log4j internal debugging
             "-Dlog4j.configuration=file://%s" % log4j_properties_path,
             "-Xmx%sM" % max_mem)
