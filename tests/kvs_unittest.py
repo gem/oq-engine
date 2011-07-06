@@ -18,6 +18,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import mock
 import os
 import time
 import unittest
@@ -293,10 +294,10 @@ class JobTokensTestCase(unittest.TestCase):
         self.client.delete(tokens.CURRENT_JOBS)
         self.client.delete(tokens.NEXT_JOB_ID)
 
-    def test_next_job_key(self):
+    def test_alloc_job_key(self):
         """
         Test the generation of job keys using
-        :py:function:`openquake.kvs.tokens.next_job_key`.
+        :py:function:`openquake.kvs.tokens.alloc_job_key`.
         """
 
         job_key_1 = JOB_KEY_FMT % 1
@@ -307,25 +308,25 @@ class JobTokensTestCase(unittest.TestCase):
         # it should be empty to start with
         self.assertTrue(kvs.get(tokens.NEXT_JOB_ID) is None)
 
-        self.assertEqual(job_key_1, tokens.next_job_key())
+        self.assertEqual(job_key_1, tokens.alloc_job_key())
 
         # verify that the IDs are incrementing properly
-        self.assertEqual(job_key_2, tokens.next_job_key())
+        self.assertEqual(job_key_2, tokens.alloc_job_key())
 
         # now verify that these keys have been added to the CURRENT_JOBS set
         self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_key_1))
         self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_key_2))
 
-    def test_next_job_key_raises_on_duplicate(self):
+    def test_alloc_job_key_raises_on_duplicate(self):
         """
-        Test that :py:function:`openquake.kvs.tokens.next_job_key` raises an
-        AssertionError if there is somehow there is a duplicate job key.
+        Test that :py:function:`openquake.kvs.tokens.alloc_job_key` raises an
+        RuntimeError if there is somehow a duplicate job key.
         """
         self.assertEqual(0, len(self.client.smembers(tokens.CURRENT_JOBS)))
 
         self.client.sadd(tokens.CURRENT_JOBS, JOB_KEY_FMT % 1)
 
-        self.assertRaises(AssertionError, tokens.next_job_key)
+        self.assertRaises(RuntimeError, tokens.alloc_job_key)
 
     def test_current_jobs(self):
         """
@@ -356,7 +357,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client.delete(tokens.CURRENT_JOBS)
         self.client.delete(tokens.NEXT_JOB_ID)
 
-        self.test_job = tokens.next_job_key()
+        self.test_job = tokens.alloc_job_key()
 
         # create some keys to hold fake data for test_job
         self.gmf1_key = tokens.gmfs_key(self.test_job, 0, 0)
@@ -369,7 +370,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client.set(self.vuln_key, 'fake vuln curve data')
 
         # this job will have no data
-        self.dataless_job = tokens.next_job_key()
+        self.dataless_job = tokens.alloc_job_key()
 
     def tearDown(self):
         self.client.delete(tokens.CURRENT_JOBS)
@@ -380,18 +381,14 @@ class GarbageCollectionTestCase(unittest.TestCase):
         Test that all job data is cleared and the job key is removed from
         CURRENT_JOBS.
         """
-        keys_exist = lambda: [self.client.exists(x) for x in \
-            (self.gmf1_key, self.gmf2_key, self.vuln_key)]
-
-        self.assertTrue(all(keys_exist()))
-
         result = kvs.cache_gc(self.test_job)
 
-        # 3 things be deleted
+        # 3 things should have been deleted
         self.assertEqual(3, result)
 
-        for x in keys_exist():
-            self.assertFalse(x)
+        # make sure each piece of data was deleted
+        for key in (self.gmf1_key, self.gmf2_key, self.vuln_key):
+            self.assertFalse(self.client.exists(key))
 
         # make sure the job was deleted from CURRENT_JOBS
         self.assertFalse(
@@ -425,3 +422,16 @@ class GarbageCollectionTestCase(unittest.TestCase):
         result = kvs.cache_gc(nonexist_job)
 
         self.assertTrue(result is None)
+
+    def test_gc_raises_when_redis_delete_fails(self):
+        """
+        If Redis fails to delete data for the given job, a RuntimeError should
+        raised.
+
+        If a Redis 'delete' does not succeed, the method will return False. The
+        'delete' method will be mocked in this test to produce such an error.
+        """
+        with mock.patch('redis.client.Redis.delete') as delete_mock:
+            delete_mock.return_value = False
+
+            self.assertRaises(RuntimeError, kvs.cache_gc, self.test_job)
