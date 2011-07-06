@@ -69,8 +69,10 @@ def main(cl_args):
             show_help()
         elif opt == 'list':
             list_cached_jobs()
+            break
         elif opt == 'job':
             clear_job_data(val)
+            break
         else:
             print "Unknown option: %s" % opt
             show_help()
@@ -121,8 +123,6 @@ def list_cached_jobs():
         # there are no jobs
         print 'There are currently no jobs cached.'
 
-    sys.exit()
-
 
 def clear_job_data(job_id):
     """
@@ -149,8 +149,6 @@ def clear_job_data(job_id):
         print 'Job %s not found.' % job_id
     else:
         print 'Removed %s keys.' % result
-
-    sys.exit()
 
 
 def show_help():

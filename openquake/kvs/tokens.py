@@ -20,6 +20,11 @@
 
 import openquake.kvs
 
+from openquake import logs
+
+
+LOG = logs.LOG
+
 # hazard tokens
 SOURCE_MODEL_TOKEN = 'sources'
 GMPE_TOKEN = 'gmpe'
@@ -241,7 +246,7 @@ NEXT_JOB_ID = 'NEXT_JOB_ID'
 CURRENT_JOBS = 'CURRENT_JOBS'
 
 
-def next_job_key():
+def alloc_job_key():
     """
     The KVS used by the OpenQuake engine maintains a 'NEXT_JOB_ID' key whose
     value is an integer.
@@ -259,24 +264,20 @@ def next_job_key():
         NOTE(LB): I wanted to use UUIDs, but millions of keys at 36 bytes per
         key consumes a lot more storage space in the KVS.
     """
-    # If the key doesn't exist, create it and set the initial value to 1.
-    if not openquake.kvs.get(NEXT_JOB_ID):
-        openquake.kvs.set(NEXT_JOB_ID, 1)
-
-    job_key = '::JOB::%s::' % openquake.kvs.get(NEXT_JOB_ID)
-
     client = openquake.kvs.get_client()
 
-    client.incr(NEXT_JOB_ID)
+    job_key = '::JOB::%s::' % client.incr(NEXT_JOB_ID)
 
     # Add this key to set of current jobs.
     # This set can be queried to perform garbage collection.
-    not_dupe = client.sadd(CURRENT_JOBS, job_key)
+    duplicate = not client.sadd(CURRENT_JOBS, job_key)
     # We need to make this returns True, otherwise there is a duplication;
     # this is bad.
-    # TODO: Lars Butler, Tue Jul  5 15:34:50 2011
-    # Should we do anything with the generated key if there's an error here?
-    assert not_dupe
+    if duplicate:
+        msg = "Cannot allocate job key '%s': this key already exists in " \
+            "'CURRENT_JOBS'. This is probably a bug." % job_key
+        LOG.error(msg)
+        raise RuntimeError(msg)
 
     return job_key
 
