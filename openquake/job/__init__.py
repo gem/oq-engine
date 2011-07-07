@@ -29,6 +29,7 @@ from ConfigParser import ConfigParser, RawConfigParser
 from openquake import flags
 from openquake import kvs
 from openquake import shapes
+from openquake.kvs import tokens
 from openquake.logs import LOG
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
@@ -160,11 +161,8 @@ class Job(object):
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, sections=list(), base_path=None):
-        if job_id is None:
-            job_id = kvs.generate_random_id()
-
-        self.job_id = job_id
+    def __init__(self, params, sections=list(), base_path=None):
+        self.job_id = tokens.alloc_job_key()
         self.blocks_keys = []
         self.partition = True
         self.params = params
