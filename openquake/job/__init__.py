@@ -22,6 +22,7 @@
 import hashlib
 import os
 import re
+import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
@@ -228,6 +229,12 @@ class Job(object):
                 # _execute() method calls the expected tasks.
                 LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key))
                 results.extend(self.execute())
+
+        # run KVS garbage collection aynchronously
+        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
+
+        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
+        subprocess.Popen(gc_cmd, env=os.environ)
 
         return results
 

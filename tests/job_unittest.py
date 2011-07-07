@@ -18,6 +18,7 @@
 
 
 import math
+import mock
 import os
 import unittest
 import sys
@@ -183,6 +184,23 @@ class JobTestCase(unittest.TestCase):
 
         # but we have 1 block instead of 6
         self.assertEqual(1, len(blocks_keys))
+
+    def test_job_calls_kvs_garbage_collection(self):
+        """
+        This test ensures that jobs call cache_gc.py upon job completion to ensure
+        that obsolete KVS cache is deleted.
+
+        Mocking is used in this test to make it faster and more light weight.
+        """
+        with mock.patch('openquake.job.Job._partition') as part_mock:
+            with mock.patch('openquake.job.Job.execute') as exec_mock:
+                with mock.patch('subprocess.Popen') as popen_mock:
+                    self.job.launch()
+                    self.assertEqual(1, popen.call_count)
+                    print popen.call_args
+                    self.assertTrue(False)
+        
+        
 
 
 class BlockTestCase(unittest.TestCase):
