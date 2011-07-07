@@ -30,13 +30,11 @@ from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
+from openquake.job import config
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
-EXPOSURE = "EXPOSURE"
-INPUT_REGION = "INPUT_REGION"
-HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
@@ -45,16 +43,19 @@ flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
 
 
 def run_job(job_file):
-    """ Given a job_file, run the job. If we don't get results log it """
+    """Given a job_file, run the job."""
     a_job = Job.from_file(job_file)
-    # TODO(JMC): Expose a way to set whether jobs should be partitioned
-    results = a_job.launch()
-    if not results:
-        LOG.critical("The job configuration is inconsistent, "
-                "aborting computation.")
-    else:
+
+    if a_job.is_valid():
+        results = a_job.launch()
+        
         for filepath in results:
             print filepath
+    else:
+        LOG.critical("The job configuration is inconsistent:")
+
+        for error_message in a_job.config_errors():
+            LOG.critical("   >>> %s" % error_message)
 
 
 def parse_config_file(config_file):
@@ -86,22 +87,6 @@ def parse_config_file(config_file):
                 sections.append(section)
                 params[key] = value
     return sections, params
-
-
-def validate(fn):
-    """Validate this job before running the decorated function."""
-
-    def validator(self, *args):
-        """Validate this job before running the decorated function."""
-        try:
-            # TODO(JMC): Add good stuff here
-            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
-        except AssertionError, e:
-            LOG.exception(e)
-            return []
-        return fn(self, *args)
-
-    return validator
 
 
 def guarantee_file(base_path, file_spec):
@@ -178,6 +163,17 @@ class Job(object):
         and specified, false otherwise."""
         return name in self.params and self.params[name]
 
+    def is_valid(self):
+        """Return true if this job is valid and can be
+        processed, false otherwise."""
+        validators = config.default_validators(self.sections, self.params)
+        return validators.is_valid()
+
+    def config_errors(self):
+        """Return the configuration errors, if this job is not valid."""
+        validators = config.default_validators(self.sections, self.params)
+        return validators.error_message()
+
     @property
     def id(self):  # pylint: disable=C0103
         """Return the id of this job."""
@@ -208,7 +204,6 @@ class Job(object):
         filename = "%s-super.gem" % self.job_id
         return os.path.join(self.base_path or '', "./", filename)
 
-    @validate
     def launch(self):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
@@ -242,7 +237,7 @@ class Job(object):
 
         # we use the exposure, if specified,
         # otherwise we use the input region
-        if self.has(EXPOSURE):
+        if self.has(config.EXPOSURE):
             sites = self._read_sites_from_exposure()
             LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
@@ -269,7 +264,7 @@ class Job(object):
         """
 
         sites = []
-        path = os.path.join(self.base_path, self[EXPOSURE])
+        path = os.path.join(self.base_path, self[config.EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
         constraint = self.region
         if not constraint:
