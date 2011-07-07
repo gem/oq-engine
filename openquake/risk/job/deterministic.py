@@ -34,13 +34,15 @@ from openquake import shapes
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.risk import deterministic_event_based as det
+
+from openquake.job.mixins import Mixin
 from openquake.risk.job import general
 
 
 LOGGER = logs.LOG
 
 
-class DeterministicEventBasedMixin:
+class DeterministicEventBasedMixin(Mixin):
     """Deterministic Event Based method for performing risk calculations.
 
     Note that this mixin, during execution, will always be an instance of the
