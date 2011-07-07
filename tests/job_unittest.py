@@ -26,7 +26,8 @@ from openquake import shapes
 from tests.utils import helpers
 from openquake import job
 from openquake import flags
-from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
+from openquake.job import Job, LOG
+from openquake.job import config
 from openquake.job.mixins import Mixin
 from openquake.risk.job.general import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
@@ -129,7 +130,7 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
     def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
+        a_job = Job({config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
                                             EXPOSURE_TEST_FILE)})
         a_job._partition()
         blocks_keys = a_job.blocks_keys
@@ -142,9 +143,9 @@ class JobTestCase(unittest.TestCase):
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
         args = {
-            EXPOSURE: os.path.join(
+            config.EXPOSURE: os.path.join(
                 helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-            INPUT_REGION: helpers.get_data_path(REGION_EXPOSURE_TEST_FILE)}
+            config.INPUT_REGION: helpers.get_data_path(REGION_EXPOSURE_TEST_FILE)}
         a_job = Job(args)
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
@@ -161,7 +162,7 @@ class JobTestCase(unittest.TestCase):
         job.SITES_PER_BLOCK = 1
 
         # test exposure has 6 assets
-        a_job = Job({EXPOSURE: os.path.join(
+        a_job = Job({config.EXPOSURE: os.path.join(
                 helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
 
         self.generated_files.append(a_job.super_config_path)
