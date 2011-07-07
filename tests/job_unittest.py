@@ -25,9 +25,11 @@ import sys
 from openquake import shapes
 from tests.utils import helpers
 from openquake import job
+from openquake import kvs
 from openquake import flags
 from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
 from openquake.job.mixins import Mixin
+from openquake.kvs import tokens
 from openquake.risk.job.general import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -121,7 +123,17 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_a_job_has_an_identifier(self):
-        self.assertEqual(1, Job({}, 1).id)
+        """
+        Test that the :py:class:`openquake.job.Job` constructor automatically
+        assigns a proper job ID.
+        """
+        client = kvs.get_client()
+        # delete the job key manage info in the KVS
+        # this gives us a clean slate
+        client.delete(tokens.CURRENT_JOBS)
+        client.delete(tokens.NEXT_JOB_ID)
+
+        self.assertEqual('::JOB::1::', Job({}).job_id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = Job.from_file(os.path.join(helpers.DATA_DIR, CONFIG_FILE))

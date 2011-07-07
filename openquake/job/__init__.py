@@ -141,7 +141,9 @@ class Job(object):
         """Return the job in the underlying kvs system with the given id."""
 
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
-        return Job(params, job_id)
+        job = Job(params)
+        job.job_id = job_id
+        return job
 
     @staticmethod
     def from_file(config_file):
