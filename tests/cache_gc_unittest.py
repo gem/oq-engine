@@ -28,6 +28,9 @@ from openquake.kvs import tokens
 
 
 class CacheGCTestCase(unittest.TestCase):
+    """
+    Tests for the various functions in the bin/cache_gc.py script.
+    """
 
     @classmethod
     def setUpClass(cls):
@@ -38,7 +41,7 @@ class CacheGCTestCase(unittest.TestCase):
 
         # create 3 jobs
         # this will add job keys to CURRENT_JOBS
-        for i in range(1, 4):
+        for _ in range(1, 4):
             tokens.alloc_job_key()
 
     @classmethod
@@ -76,10 +79,11 @@ class CacheGCTestCase(unittest.TestCase):
             # make sure cache_gc was called and the args are correct
             cache_gc.clear_job_data(1)
             self.assertEqual(1, gc_mock.call_count)
-            self.assertEqual(((1, ), {}), gc_mock.call_args)
+            self.assertEqual(
+                ((tokens.JOB_KEY_FMT % 1, ), {}), gc_mock.call_args)
 
             # same thing, but this time with a str for the ID
             cache_gc.clear_job_data('2')
             self.assertEqual(2, gc_mock.call_count)
-            # the string '2' should be converted to an int before cache_gc is called
-            self.assertEqual(((2, ), {}), gc_mock.call_args)
+            self.assertEqual(
+                ((tokens.JOB_KEY_FMT % 2, ), {}), gc_mock.call_args)

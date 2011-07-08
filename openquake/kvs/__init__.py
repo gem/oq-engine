@@ -196,6 +196,10 @@ def cache_gc(job_key):
         # finally, remove the job key from CURRENT_JOBS
         client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_key)
 
+        msg = 'KVS garbage collection removed %s keys for job %s'
+        msg %= (len(keys), job_key)
+        LOG.info(msg)
+
         return len(keys)
     else:
         # does not match a current job
