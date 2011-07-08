@@ -32,7 +32,6 @@ from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake.shapes import Curve
 
-from openquake.job.mixins import Mixin
 from openquake.risk.common import  compute_loss_curve
 from openquake.risk.job import general
 
@@ -40,11 +39,8 @@ from openquake.risk.job import general
 LOGGER = logs.LOG
 
 
-class ClassicalPSHABasedMixin(Mixin):
+class ClassicalPSHABasedMixin():
     """Mixin for Classical PSHA Based Risk Job"""
-
-    def __init__(self):
-        pass
 
     @general.preload
     @general.output
