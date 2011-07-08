@@ -22,6 +22,8 @@
 Utility functions of general interest.
 """
 
+import cPickle
+
 
 def singleton(cls):
     """This class decorator facilitates the definition of singletons."""
@@ -35,3 +37,18 @@ def singleton(cls):
             instances[cls] = cls()
         return instances[cls]
     return getinstance
+
+
+# Memoize taken from the Python Cookbook that handles also unhashable types
+class MemoizeMutable:
+    """ This decorator enables method/function caching in memory """
+    def __init__(self, fun):
+        self.fun = fun
+        self.memo = {}
+
+    def __call__(self, *args, **kwds):
+        key = cPickle.dumps(args, 1) + cPickle.dumps(kwds, 1)
+        if not key in self.memo:
+            self.memo[key] = self.fun(*args, **kwds)
+
+        return self.memo[key]
