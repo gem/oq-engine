@@ -32,18 +32,13 @@ from tests.utils import helpers
 
 from openquake.kvs import reader
 from openquake.kvs import tokens
-from openquake.parser import vulnerability
 
-from openquake.output import hazard as hazard_output
-from openquake.parser import hazard as hazard_parser
 
 LOG = logs.LOG
 
 TEST_FILE = "nrml_test_result.xml"
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
-
-read_one_line = lambda path: open(path, 'r').readline().strip('\n')
 
 ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
 MULTIPLE_CURVES_ONE_BRANCH = \
@@ -52,14 +47,29 @@ MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
     read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
 
 
+def read_one_line(path):
+    """
+    Read and return a single line from the given file.
+
+    :param path: path to a (text) file
+    :type path: str
+
+    :returns: first line from the file
+    """
+    return open(path, 'r').readline().strip('\n')
+
+
 class KVSTestCase(unittest.TestCase):
+    """
+    Tests for various KVS storage operations.
+    """
 
     def setUp(self):
         # starting the jvm...
         print "About to start the jvm..."
         jpype = java.jvm()
         java_class = jpype.JClass("org.gem.engine.hazard.redis.Cache")
-        print ("Not dead yet, and found the class...")
+        print "Not dead yet, and found the class..."
         self.java_client = java_class(settings.KVS_HOST, settings.KVS_PORT)
 
         self.python_client = kvs.get_client(binary=False)
@@ -71,7 +81,8 @@ class KVSTestCase(unittest.TestCase):
         self._delete_test_file()
         self.python_client.flushdb()
 
-    def _delete_test_file(self):
+    @staticmethod
+    def _delete_test_file():
         try:
             os.remove(os.path.join(helpers.DATA_DIR, TEST_FILE))
         except OSError:
@@ -79,7 +90,6 @@ class KVSTestCase(unittest.TestCase):
 
     def test_can_wrap_the_java_client(self):
         self.java_client.set("KEY", "VALUE")
-        result = self.java_client.get("KEY")
         self.assertEqual("VALUE", self.java_client.get("KEY"))
 
     def test_can_write_in_java_and_read_in_python(self):
@@ -207,6 +217,9 @@ class KVSTestCase(unittest.TestCase):
 
 
 class TokensTestCase(unittest.TestCase):
+    """
+    Tests for functions related to generation/allocation of KVS keys.
+    """
 
     def setUp(self):
         self.job_id = 123456
