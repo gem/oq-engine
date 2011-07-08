@@ -22,6 +22,7 @@ This module tests the risk side of the deterministic event based calculation.
 """
 
 import json
+import mock
 import unittest
 
 from openquake import flags
@@ -144,8 +145,13 @@ class DeterministicRiskTestCase(unittest.TestCase):
         Exercise the deterministic risk job and make sure it runs end-to-end.
         """
         risk_job = job.Job.from_file(TEST_JOB_FILE)
-        results = risk_job.launch()
 
-        # for results, we should a list of True values
-        # one for hazard, one for risk
-        self.assertEqual([True, True], results)
+        # KVS garbage collection is going to be called asynchronously by the
+        # job. We don't actually want that to happen.
+        with mock.patch('subprocess.Popen'):
+
+            results = risk_job.launch()
+
+            # for results, we should a list of True values
+            # one for hazard, one for risk
+            self.assertEqual([True, True], results)

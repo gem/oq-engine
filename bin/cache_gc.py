@@ -143,20 +143,14 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    attempt_msg = 'Attempting to clear cache data for job %s...' % job_id
-    LOG.info(attempt_msg)
-    print attempt_msg
+    print 'Attempting to clear cache data for job %s...' % job_id
 
-    result = kvs.cache_gc(job_id)
+    result = kvs.cache_gc(tokens.JOB_KEY_FMT % job_id)
 
     if result is None:
-        job_not_found = 'Job %s not found.' % job_id
-        LOG.error(job_not_found)
-        print job_not_found
+        print 'Job %s not found.' % job_id
     else:
-        keys_removed = 'Removed %s keys.' % result
-        LOG.info(keys_removed)
-        print keys_removed
+        print 'Removed %s keys.' % result
 
 
 def show_help():
