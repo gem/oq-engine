@@ -30,7 +30,7 @@ from numpy import subtract, mean
 
 from openquake import shapes
 from openquake.risk.common import loop, collect
-from openquake.utils.general import Memoize
+from openquake.utils.general import MemoizeMutable
 
 STEPS_PER_INTERVAL = 5
 
@@ -76,7 +76,7 @@ def _generate_loss_ratios(vuln_function):
     return _split_loss_ratios(loss_ratios)
 
 
-@Memoize
+@MemoizeMutable
 def _compute_lrem(vuln_function, distribution=None):
     """Compute the LREM (Loss Ratio Exceedance Matrix)."""
 
