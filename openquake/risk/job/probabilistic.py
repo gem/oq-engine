@@ -40,7 +40,6 @@ from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
 
-
 LOGGER = logs.LOG
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
