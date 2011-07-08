@@ -35,3 +35,18 @@ def singleton(cls):
             instances[cls] = cls()
         return instances[cls]
     return getinstance
+
+
+class Memoize:
+    """ This decorator enables method/function caching in memory """
+    def __init__(self, func):
+        self.fun = func
+        self.mem = {}
+
+    def __call__(self, *args, **kwargs):
+        if (args, str(kwargs)) in self.mem:
+            return self.mem[args, str(kwargs)]
+        else:
+            tmp = self.fun(*args, **kwargs)
+            self.mem[args, str(kwargs)] = tmp
+            return tmp
