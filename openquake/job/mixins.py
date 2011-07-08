@@ -87,12 +87,6 @@ class Mixin:
         calc_mode = self.target["CALCULATION_MODE"]
         unloader(self.target, self.mixin.mixins[calc_mode]['mixin'])
 
-    def execute(self):
-        """
-        Override this in subclass to define mixin execution behavior.
-        """
-        raise NotImplementedError
-
     @classmethod
     def ordered_mixins(cls):
         """ Return a list of mixins sorted by the order value specified at

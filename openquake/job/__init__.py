@@ -230,13 +230,31 @@ class Job(object):
                 LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key))
                 results.extend(self.execute())
 
-        # run KVS garbage collection aynchronously
-        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
-
-        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
-        subprocess.Popen(gc_cmd, env=os.environ)
+        self.cleanup()
 
         return results
+
+    def cleanup(self):
+        """
+        Perform any necessary cleanup steps after the job completes.
+
+        Currently, this method only clears KVS cache data for the job.
+        """
+        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
+
+        # run KVS garbage collection aynchronously
+        match = re.match(r'^::JOB::(\d+)::$', str(self.job_id))
+        if match:
+            job_number = match.group(1)
+        else:
+            # invalid job_id; something is horribly wrong
+            msg = "KVS garbage collection failed: job ID '%s' is invalid."
+            msg %= self.job_id
+            LOG.critical(msg)
+            raise RuntimeError(msg)
+
+        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
+        subprocess.Popen(gc_cmd, env=os.environ)
 
     def _partition(self):
         """Split the set of sites to compute in blocks and store

@@ -36,7 +36,6 @@ from openquake.risk import common
 from openquake.risk import probabilistic_event_based
 from openquake.parser import vulnerability
 
-from openquake.job.mixins import Mixin
 from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
@@ -46,7 +45,7 @@ LOGGER = logs.LOG
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
 
-class ProbabilisticEventMixin(Mixin):
+class ProbabilisticEventMixin():
     # TODO (al-maisan) Consider refactoring our job system to make use of
     # dependency injection techniques as opposed to monkey patching python's
     # internal class structures. See also:
