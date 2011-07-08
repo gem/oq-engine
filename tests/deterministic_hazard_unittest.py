@@ -61,7 +61,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         flags.FLAGS.include_defaults = False
 
         self.engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
-        self.engine.job_id = 1234
 
         self.engine.params[NUMBER_OF_CALC_KEY] = "1"
 
