@@ -17,11 +17,9 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import math
 import mock
 import os
 import unittest
-import sys
 
 from openquake import shapes
 from tests.utils import helpers
@@ -70,7 +68,7 @@ class JobTestCase(unittest.TestCase):
         for cfg in self.generated_files:
             try:
                 os.remove(cfg)
-            except OSError, e:
+            except OSError:
                 pass
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
@@ -106,8 +104,8 @@ class JobTestCase(unittest.TestCase):
         FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
-        for job in [self.job, self.job_with_includes]:
-            self.assertTrue(os.path.isfile(job.super_config_path))
+        for each_job in [self.job, self.job_with_includes]:
+            self.assertTrue(os.path.isfile(each_job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
         self.assertEqual(self.job.params, self.job_with_includes.params)
@@ -204,7 +202,7 @@ class JobTestCase(unittest.TestCase):
         risk_exec_path = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
 
-        with mock.patch('openquake.job.Job._partition') as part_mock:
+        with mock.patch('openquake.job.Job._partition'):
             with mock.patch(haz_exec_path) as haz_exec:
                 haz_exec.return_value = []
 
@@ -313,7 +311,7 @@ class BlockSplitterTestCase(unittest.TestCase):
     def _assert_number_of_blocks_is(self, number):
         counter = 0
 
-        for block in self.splitter:
+        for _block in self.splitter:
             counter += 1
 
         self.assertEqual(number, counter)
