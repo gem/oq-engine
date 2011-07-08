@@ -29,7 +29,6 @@ from openquake import kvs
 from openquake import settings
 from openquake import shapes
 from tests.utils import helpers
-from openquake import settings
 
 from openquake.kvs import reader
 from openquake.kvs import tokens
