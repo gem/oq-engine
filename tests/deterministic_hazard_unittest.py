@@ -57,6 +57,9 @@ def compute_ground_motion_field(self, random_generator):
 
 
 class DeterministicEventBasedMixinTestCase(unittest.TestCase):
+    """
+    Tests for the Deterministic Hazard engine.
+    """
 
     @classmethod
     def setUpClass(cls):
