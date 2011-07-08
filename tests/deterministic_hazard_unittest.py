@@ -23,6 +23,7 @@ event based calculation.
 """
 
 import math
+import mock
 import numpy
 import unittest
 import json
@@ -57,23 +58,29 @@ def compute_ground_motion_field(self, random_generator):
 
 class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        cls.kvs_client = kvs.get_client(binary=False)
+        kvs.flush()
+
+    @classmethod
+    def tearDownClass(cls):
+        kvs.flush()
+
     def setUp(self):
         flags.FLAGS.include_defaults = False
 
-        self.engine = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
+        self.job = job.Job.from_file(DETERMINISTIC_SMOKE_TEST)
 
-        self.engine.params[NUMBER_OF_CALC_KEY] = "1"
+        self.job.params[NUMBER_OF_CALC_KEY] = "1"
 
         # saving the default java implementation
         self.default = \
             det.DeterministicEventBasedMixin.compute_ground_motion_field
 
-        kvs.flush()
-        self.kvs_client = kvs.get_client(binary=False)
+        self.grid = self.job.region.grid
 
-        self.grid = self.engine.region.grid
-
-        self.engine.to_kvs()
+        self.job.to_kvs()
 
     def tearDown(self):
         # restoring the default java implementation
@@ -92,8 +99,11 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
-        # True, True means that both mixins (hazard and risk) are triggered
-        self.assertEqual([True, True], self.engine.launch())
+        # KVS garbage collection is going to be called asynchronously by the
+        # job. We don't actually want that to happen in this test.
+        with mock.patch('subprocess.Popen'):
+            # True, True means that both mixins (hazard and risk) are triggered
+            self.assertEqual([True, True], self.job.launch())
 
     def test_the_hazard_subsystem_stores_gmfs_for_all_the_sites(self):
         """The hazard subsystem stores the computed gmfs in kvs.
@@ -105,24 +115,28 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
-        self.engine.launch()
-        decoder = json.JSONDecoder()
+        # KVS garbage collection is going to be called asynchronously by the
+        # job. We don't actually want that to happen in this test.
+        with mock.patch('subprocess.Popen'):
 
-        for site in self.engine.sites_for_region():
-            point = self.grid.point_at(site)
-            key = kvs.tokens.ground_motion_values_key(
-                self.engine.id, point)
+            self.job.launch()
+            decoder = json.JSONDecoder()
 
-            # just one calculation is triggered in this test case
-            self.assertEqual(1, self.kvs_client.llen(key))
-            gmv = decoder.decode(self.kvs_client.lpop(key))
-            self.assertEqual(0, self.kvs_client.llen(key))
+            for site in self.job.sites_for_region():
+                point = self.grid.point_at(site)
+                key = kvs.tokens.ground_motion_values_key(
+                    self.job.id, point)
 
-            self.assertTrue(
-                numpy.allclose(site.latitude, gmv["site_lat"]))
+                # just one calculation is triggered in this test case
+                self.assertEqual(1, self.kvs_client.llen(key))
+                gmv = decoder.decode(self.kvs_client.lpop(key))
+                self.assertEqual(0, self.kvs_client.llen(key))
 
-            self.assertTrue(
-                numpy.allclose(site.longitude, gmv["site_lon"]))
+                self.assertTrue(
+                    numpy.allclose(site.latitude, gmv["site_lat"]))
+
+                self.assertTrue(
+                    numpy.allclose(site.longitude, gmv["site_lon"]))
 
     def test_multiple_computations_are_triggered(self):
         """The hazard subsystem is able to trigger multiple computations.
@@ -136,29 +150,33 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
-        self.engine.params["INTENSITY_MEASURE_TYPE"] = "MMI"
-        self.engine.params[NUMBER_OF_CALC_KEY] = "3"
+        self.job.params["INTENSITY_MEASURE_TYPE"] = "MMI"
+        self.job.params[NUMBER_OF_CALC_KEY] = "3"
 
-        self.engine.launch()
-        decoder = json.JSONDecoder()
+        # KVS garbage collection is going to be called asynchronously by the
+        # job. We don't actually want that to happen in this test.
+        with mock.patch('subprocess.Popen'):
 
-        for site in self.engine.sites_for_region():
-            point = self.grid.point_at(site)
-            key = kvs.tokens.ground_motion_values_key(
-                self.engine.id, point)
+            self.job.launch()
+            decoder = json.JSONDecoder()
 
-            self.assertEqual(3, self.kvs_client.llen(key))
-            gmv = decoder.decode(self.kvs_client.lpop(key))
-            self.assertEqual(0.5, gmv["mag"])
+            for site in self.job.sites_for_region():
+                point = self.grid.point_at(site)
+                key = kvs.tokens.ground_motion_values_key(
+                    self.job.id, point)
 
-            # since the org.opensha.commons.geo.Location object
-            # stores lat/lon in radians, values are not
-            # exactly the same
-            self.assertTrue(
-                numpy.allclose(site.latitude, gmv["site_lat"]))
+                self.assertEqual(3, self.kvs_client.llen(key))
+                gmv = decoder.decode(self.kvs_client.lpop(key))
+                self.assertEqual(0.5, gmv["mag"])
 
-            self.assertTrue(
-                numpy.allclose(site.longitude, gmv["site_lon"]))
+                # since the org.opensha.commons.geo.Location object
+                # stores lat/lon in radians, values are not
+                # exactly the same
+                self.assertTrue(
+                    numpy.allclose(site.latitude, gmv["site_lat"]))
+
+                self.assertTrue(
+                    numpy.allclose(site.longitude, gmv["site_lon"]))
 
     def test_transforms_a_java_gmf_to_dict(self):
         location1 = java.jclass("Location")(1.0, 2.0)
@@ -183,21 +201,25 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             self.assertTrue(gmv["site_lat"] in (1.0, 1.1, 1.2))
 
     def test_the_number_of_calculation_must_be_greater_than_zero(self):
-        self.engine.params[NUMBER_OF_CALC_KEY] = "0"
-        self.assertRaises(ValueError, self.engine.launch)
+        self.job.params[NUMBER_OF_CALC_KEY] = "0"
+        self.assertRaises(ValueError, self.job.launch)
 
-        self.engine.params[NUMBER_OF_CALC_KEY] = "-1"
-        self.assertRaises(ValueError, self.engine.launch)
+        self.job.params[NUMBER_OF_CALC_KEY] = "-1"
+        self.assertRaises(ValueError, self.job.launch)
 
     def test_simple_computation_using_the_java_calculator(self):
-        self.engine.launch()
+        # KVS garbage collection is going to be called asynchronously by the
+        # job. We don't actually want that to happen in this test.
+        with mock.patch('subprocess.Popen'):
 
-        for site in self.engine.sites_for_region():
-            point = self.grid.point_at(site)
-            key = kvs.tokens.ground_motion_values_key(
-                self.engine.id, point)
+            self.job.launch()
 
-            self.assertTrue(kvs.get_keys(key))
+            for site in self.job.sites_for_region():
+                point = self.grid.point_at(site)
+                key = kvs.tokens.ground_motion_values_key(
+                    self.job.id, point)
+
+                self.assertTrue(kvs.get_keys(key))
 
     def test_when_measure_type_is_not_mmi_exp_is_stored(self):
         location = java.jclass("Location")(1.0, 2.0)
@@ -221,21 +243,21 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
     def test_loads_the_rupture_model(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
-        calculator.params = self.engine.params
+        calculator.params = self.job.params
 
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_loads_the_gmpe(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
-        calculator.params = self.engine.params
+        calculator.params = self.job.params
 
         self.assertTrue("org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel",
                         calculator.gmpe.__class__.__name__)
 
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
-        calculator.params = self.engine.params
+        calculator.params = self.job.params
 
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
         gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])

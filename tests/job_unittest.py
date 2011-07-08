@@ -57,7 +57,7 @@ class JobTestCase(unittest.TestCase):
         # which will be allocated for us
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
-        
+
         self.generated_files = []
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE))
         self.job_with_includes = \
@@ -140,7 +140,7 @@ class JobTestCase(unittest.TestCase):
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
 
-        self.assertEqual('::JOB::1::', Job({}).job_id)
+        self.assertEqual(tokens.JOB_KEY_FMT % 1, Job({}).job_id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = Job.from_file(os.path.join(helpers.DATA_DIR, CONFIG_FILE))
