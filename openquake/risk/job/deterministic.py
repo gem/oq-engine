@@ -327,7 +327,7 @@ def load_assets_for_point(job_id, point):
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
-    """Collect the loss map data for all the region.""" 
+    """Collect the loss map data for all the region."""
     for site, data in block_loss_map_data.iteritems():
         if site in region_loss_map_data:
             region_loss_map_data[site].extend(data)
