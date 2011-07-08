@@ -51,6 +51,13 @@ FLAGS = flags.FLAGS
 
 class JobTestCase(unittest.TestCase):
     def setUp(self):
+        client = kvs.get_client()
+
+        # delete managed job id info so we can predict the job key
+        # which will be allocated for us
+        client.delete(tokens.CURRENT_JOBS)
+        client.delete(tokens.NEXT_JOB_ID)
+        
         self.generated_files = []
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE))
         self.job_with_includes = \
@@ -129,8 +136,7 @@ class JobTestCase(unittest.TestCase):
         assigns a proper job ID.
         """
         client = kvs.get_client()
-        # delete the job key manage info in the KVS
-        # this gives us a clean slate
+
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
 
@@ -185,22 +191,56 @@ class JobTestCase(unittest.TestCase):
         # but we have 1 block instead of 6
         self.assertEqual(1, len(blocks_keys))
 
-    def test_job_calls_kvs_garbage_collection(self):
+    def test_job_calls_cleanup(self):
         """
-        This test ensures that jobs call cache_gc.py upon job completion to ensure
-        that obsolete KVS cache is deleted.
+        This test ensures that jobs call
+        :py:method:`openquake.job.Job.cleanup`.
 
-        Mocking is used in this test to make it faster and more light weight.
+        The test job file defines an Event-Based calculation; the Event-Based
+        mixins are mocked in this test (so the entire calculation isn't
+        actually run).
         """
+        haz_exec_path = 'openquake.hazard.opensha.EventBasedMixin.execute'
+        risk_exec_path = \
+            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
+
         with mock.patch('openquake.job.Job._partition') as part_mock:
-            with mock.patch('openquake.job.Job.execute') as exec_mock:
-                with mock.patch('subprocess.Popen') as popen_mock:
-                    self.job.launch()
-                    self.assertEqual(1, popen.call_count)
-                    print popen.call_args
-                    self.assertTrue(False)
-        
-        
+            with mock.patch(haz_exec_path) as haz_exec:
+                haz_exec.return_value = []
+
+                with mock.patch(risk_exec_path) as risk_exec:
+                    risk_exec.return_value = []
+
+                    with mock.patch('openquake.job.Job.cleanup') as clean_mock:
+                        self.job.launch()
+
+                        self.assertEqual(1, clean_mock.call_count)
+
+    def test_cleanup_calls_cache_gc(self):
+        """
+        This ensures that the job cleanup method
+        :py:method:`openquake.job.Job.cleanup` properly initiates KVS
+        garbage collection.
+        """
+        expected_args = (['python', 'bin/cache_gc.py', '--job=1'],)
+        expected_kwargs = {'env': os.environ}
+
+        with mock.patch('subprocess.Popen') as popen_mock:
+            self.job.cleanup()
+
+            self.assertEqual(1, popen_mock.call_count)
+            self.assertEqual(
+                (expected_args, expected_kwargs),
+                popen_mock.call_args)
+
+    def test_cleanup_raises_on_bad_job_id(self):
+        """
+        If the ID of a job is somehow corrupted, verify that a RuntimeError is
+        raised by :py:method:`openquake.job.Job.cleanup`.
+        """
+        self.job.job_id = 'this-is-invalid'
+
+        self.assertRaises(RuntimeError, self.job.cleanup)
 
 
 class BlockTestCase(unittest.TestCase):
