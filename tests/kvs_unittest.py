@@ -40,12 +40,6 @@ TEST_FILE = "nrml_test_result.xml"
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
 
-ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
-MULTIPLE_CURVES_ONE_BRANCH = \
-    read_one_line(helpers.get_data_path('multi-curves-one-branch.json'))
-MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
-    read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
-
 
 def read_one_line(path):
     """
@@ -57,6 +51,13 @@ def read_one_line(path):
     :returns: first line from the file
     """
     return open(path, 'r').readline().strip('\n')
+
+
+ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
+MULTIPLE_CURVES_ONE_BRANCH = \
+    read_one_line(helpers.get_data_path('multi-curves-one-branch.json'))
+MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
+    read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
 
 
 class KVSTestCase(unittest.TestCase):
