@@ -242,7 +242,6 @@ class Job(object):
         """
         LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
 
-        # run KVS garbage collection aynchronously
         match = re.match(r'^::JOB::(\d+)::$', str(self.job_id))
         if match:
             job_number = match.group(1)
@@ -253,6 +252,7 @@ class Job(object):
             LOG.critical(msg)
             raise RuntimeError(msg)
 
+        # run KVS garbage collection aynchronously
         gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
         subprocess.Popen(gc_cmd, env=os.environ)
 
