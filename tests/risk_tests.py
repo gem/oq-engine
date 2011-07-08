@@ -687,8 +687,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_data["AggregateLossCurve"]["ordinate_property"] = \
                 "PoE in 50.0 years"
 
-        expected_data["AggregateLossCurve"["curve_title"] = \
-            "Aggregate Loss Curve"
+        agg_loss_curve = "Aggregate Loss Curve"
+        expected_data["AggregateLossCurve"["curve_title"] = agg_loss_curve
 
         self.assertEqual(expected_data, aggregate._for_plotting(curve, 50.0))
 
