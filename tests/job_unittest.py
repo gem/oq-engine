@@ -49,9 +49,9 @@ FLAGS = flags.FLAGS
 class JobTestCase(unittest.TestCase):
     def setUp(self):
         self.generated_files = []
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE))
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
         self.job_with_includes = \
-            Job.from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
+            Job.from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES), 'xml')
 
         self.generated_files.append(self.job.super_config_path)
         self.generated_files.append(self.job_with_includes.super_config_path)
@@ -91,7 +91,7 @@ class JobTestCase(unittest.TestCase):
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
         job_with_only_hazard = \
-            Job.from_file(helpers.get_data_path(HAZARD_ONLY))
+            Job.from_file(helpers.get_data_path(HAZARD_ONLY), 'xml')
         self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
         FLAGS.include_defaults = True
 
@@ -124,7 +124,8 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(1, Job({}, 1).id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = Job.from_file(os.path.join(helpers.DATA_DIR, CONFIG_FILE))
+        self.job = Job.from_file(
+            os.path.join(helpers.DATA_DIR, CONFIG_FILE), 'xml')
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
