@@ -2,22 +2,29 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""Deterministic Risk Computations based on Hazard, Exposure and Vulnerability
+"""Hazard and Risk Computations based on Hazard, Exposure and Vulnerability
 
-Expects to receive:
-    Shakemap (ground motion per grid cell)
-    Exposure (value per grid cell)
-    Vulnerability functions (multiple lists per grid cell)
-    Region of interest
+It receives its inputs through a configuration file and stores the results in
+XML.
 
-It can receive these either through gflags (current functionality), or
-through a configuration file.
+Hazard computations
+    Expected inputs
+        Source model logic trees
+        GMPE logic trees
 
-Expects to compute:
-    A grid of loss-ratio curves and store the results in XML
-    A grid of loss curves and store the results in XML
-    A map of losses at each interval and store the results in GeoTIFF
+    Expected outputs
+        Hazard maps
+        Hazard curves
 
+Risk computations
+    Expected inputs
+        Exposure (value per grid cell)
+        Vulnerability functions (multiple lists per grid cell)
+
+    Expected outputs
+        A grid of loss-ratio curves
+        A grid of loss curves
+        A map of losses at each interval
 """
 
 import os
