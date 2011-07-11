@@ -45,7 +45,7 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
+flags.DEFINE_boolean('include_defaults', True, "Include default configs")
 
 # TODO unify with utils/oqrunner/config_writer.py
 CALCULATION_MODE = {
