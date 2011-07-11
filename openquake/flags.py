@@ -20,13 +20,11 @@ In the future, we may extend this to use either cement, or the nova
 gflags extensions.
 """
 
-# pylint: disable=W0401, W0622, W0614
+# pylint: disable=W0622,W0611
 
 from gflags import FLAGS
-from gflags import DEFINE_string
+from gflags import DEFINE_string, DEFINE_enum
 from gflags import DEFINE_boolean, DEFINE_integer
-
-(_, _, _, _) = FLAGS, DEFINE_boolean, DEFINE_integer, DEFINE_string
 
 DEFINE_string('debug', 'warn',
     'Turns on debug logging and verbose output.'
