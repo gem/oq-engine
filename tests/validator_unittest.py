@@ -91,16 +91,17 @@ class ValidatorSetTestCase(unittest.TestCase):
         error_messages = ["MESSAGE#1", "MESSAGE#2", "MESSAGE#3"]
         self.assertEquals(error_messages, set.is_valid()[1])
 
+
 class ConfigurationConstraintsTestCase(unittest.TestCase):
-    
+
     def test_with_risk_processing_the_exposure_must_be_specified(self):
         sections = [config.RISK_SECTION, "HAZARD", "general"]
         params = {}
-        
+
         engine = job.Job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure"}
-        
+
         engine = job.Job(params, sections=sections)
         self.assertTrue(engine.is_valid()[0])

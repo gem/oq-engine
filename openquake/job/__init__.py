@@ -29,7 +29,7 @@ from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
-from openquake.job import config
+from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
@@ -261,7 +261,7 @@ class Job(object):
             is returned
         """
 
-        validators = config.default_validators(self.sections, self.params)
+        validators = conf.default_validators(self.sections, self.params)
         return validators.is_valid()
 
     @property
@@ -327,7 +327,7 @@ class Job(object):
 
         # we use the exposure, if specified,
         # otherwise we use the input region
-        if self.has(config.EXPOSURE):
+        if self.has(conf.EXPOSURE):
             sites = self._read_sites_from_exposure()
             LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
@@ -354,7 +354,7 @@ class Job(object):
         """
 
         sites = []
-        path = os.path.join(self.base_path, self[config.EXPOSURE])
+        path = os.path.join(self.base_path, self[conf.EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
         constraint = self.region
         if not constraint:
