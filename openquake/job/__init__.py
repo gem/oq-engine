@@ -252,9 +252,11 @@ class Job(object):
             LOG.critical(msg)
             raise RuntimeError(msg)
 
-        # run KVS garbage collection aynchronously
         gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
-        subprocess.Popen(gc_cmd, env=os.environ)
+
+        # run KVS garbage collection aynchronously
+        # stdout goes to /dev/null to silence any output from the GC
+        subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
 
     def _partition(self):
         """Split the set of sites to compute in blocks and store
