@@ -39,7 +39,7 @@ class ValidatorSet(object):
         :returns: the status of this set and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
-            is returned
+            tuple is returned
         """
 
         valid = True
@@ -78,7 +78,7 @@ class ExposureValidator(object):
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
-            is returned
+            tuple is returned
         """
 
         if RISK_SECTION in self.sections:
