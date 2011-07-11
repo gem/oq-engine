@@ -16,88 +16,96 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+"""
+This module tests contains logic related to the configuration and
+its validation.
+"""
 
 EXPOSURE = "EXPOSURE"
 RISK_SECTION = "RISK"
 INPUT_REGION = "INPUT_REGION"
 
 
-class Validator(object):
-    """This class represents a constraint on the
-    configuration file."""
-
-    def is_valid(self):
-        """Return true if this constraint is true,
-        false otherwise."""
-        raise NotImplementedError()
-
-    def error_message(self):
-        """Return the error message of this constraint,
-        if it is not valid."""
-        raise NotImplementedError()
-
-
-class ValidatorSet(Validator):
+class ValidatorSet(object):
     """A set of validators."""
 
     def __init__(self):
-        super(ValidatorSet, self).__init__()
         self.validators = []
 
     def is_valid(self):
-        """Return true if all validators are true,
-        false otherwise."""
-        result = True
+        """Return true if all validators defined in this set
+        are valid, false otherwise.
 
-        for validator in self.validators:
-            if not validator.is_valid():
-                result = False
+        :returns: the status of this set and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            is returned
+        """
 
-        return result
-
-    def error_message(self):
-        """When this set is not valid, return the
-        error messages of the failed validators."""
+        valid = True
         error_messages = []
-        
-        for validator in self.validators:
-            if not validator.is_valid():
-                error_messages.append(validator.error_message())
-        
-        return error_messages
 
-    def append(self, validator):
-        """Add a validator to this set."""
+        for validator in self.validators:
+            if not validator.is_valid()[0]:
+                error_messages.extend(validator.is_valid()[1])
+                valid = False
+
+        return (valid, error_messages)
+
+    def add(self, validator):
+        """Add a validator to this set.
+
+        :param validator: the validator to add to this set.
+        :type validator: :py:class:`object` defining an is_valid()
+            method conformed to the validator interface.
+        """
+
         self.validators.append(validator)
 
-        
-class ExposureValidator(Validator):
+
+class ExposureValidator(object):
     """Validator that checks if the exposure file
     is specified when computing risk jobs."""
 
     def __init__(self, sections, params):
-        super(Validator, self).__init__()
-
         self.sections = sections
         self.params = params
 
     def is_valid(self):
-        """Return true if the EXPOSURE parameter is
-        specified, false otherwise."""
+        """Return true if the EXPOSURE parameter is specified,
+        false otherwise. When invalid returns also the error messages.
+
+        :returns: the status of this validator and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            is returned
+        """
+
         if RISK_SECTION in self.sections:
-            return EXPOSURE in self.params
+            if not EXPOSURE in self.params:
+                return (False, [
+                    "With RISK processing, the EXPOSURE must be specified"])
 
-        return True
-
-    def error_message(self):
-        return "With RISK processing, the EXPOSURE must be specified"
+        return (True, [])
 
 
 def default_validators(sections, params):
-    """Create the set of defaults validator for a job."""
+    """Create the set of defaults validator for a job.
+
+    :param sections: sections defined for the job.
+    :type sections: :py:class:`list`
+    :param params: parameters defined for the job.
+    :type params: :py:class:`dict` where each key is the parameter
+        name, and each value is the parameter value
+        specified in the configuration file
+    :returns: the default validators for a job
+    :rtype: an instance of
+        :py:class:`openquake.config.ValidatorSet`
+    """
+
     exposure = ExposureValidator(sections, params)
 
     validators = ValidatorSet()
-    validators.append(exposure)
-    
+    validators.add(exposure)
+
     return validators
