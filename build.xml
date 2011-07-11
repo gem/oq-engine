@@ -17,11 +17,11 @@
 		<fileset dir="${syslib.dir}" excludes="java-oq*" includes="*.jar" />
 	</path>
 
-    <target name="help" description="Display detailed usage information">
-        <exec executable="ant">
-            <arg value="-p"/>
-        </exec>
-    </target>
+	<target name="help" description="Display detailed usage information">
+		<exec executable="ant">
+			<arg value="-p"/>
+		</exec>
+	</target>
 
 	<target name="clean" description="Clean build directories">
 		<delete dir="${dist.dir}" />
