@@ -258,7 +258,7 @@ class Job(object):
         :returns: the status of this job and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
-            is returned
+            tuple is returned
         """
 
         validators = conf.default_validators(self.sections, self.params)
