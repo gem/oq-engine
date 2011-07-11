@@ -31,5 +31,6 @@ from gflags import DEFINE_boolean, DEFINE_integer
 
 (_, _, _, _) = FLAGS, DEFINE_boolean, DEFINE_integer, DEFINE_string
 
-DEFINE_string('debug', 'warn', 
-    'Turns on debug logging and verbose output')
+DEFINE_string('debug', 'warn',
+    'Turns on debug logging and verbose output.'
+    ' One of debug, info, warn, error, critical.')
