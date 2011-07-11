@@ -355,8 +355,10 @@ class Job(object):
                     LOG.debug("Slurping %s" % path)
                     sha1 = hashlib.sha1(data_file.read()).hexdigest()
                     data_file.seek(0)
-                    kvs_client.set(sha1, data_file.read())
-                    self.params[key] = sha1
+
+                    file_key = kvs.generate_key([self.job_id, sha1])
+                    kvs_client.set(file_key, data_file.read())
+                    self.params[key] = file_key
                     self.params[key + "_PATH"] = path
 
     def to_kvs(self, write_cfg=True):
