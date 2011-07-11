@@ -16,8 +16,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-""" A single hazard/risk job """
+"""A single hazard/risk job."""
 
 import hashlib
 import os
@@ -45,16 +44,17 @@ flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
 def run_job(job_file):
     """Given a job_file, run the job."""
     a_job = Job.from_file(job_file)
+    is_job_valid = a_job.is_valid()
 
-    if a_job.is_valid():
+    if is_job_valid[0]:
         results = a_job.launch()
-        
+
         for filepath in results:
             print filepath
     else:
         LOG.critical("The job configuration is inconsistent:")
 
-        for error_message in a_job.config_errors():
+        for error_message in is_job_valid[1]:
             LOG.critical("   >>> %s" % error_message)
 
 
@@ -165,14 +165,16 @@ class Job(object):
 
     def is_valid(self):
         """Return true if this job is valid and can be
-        processed, false otherwise."""
+        processed, false otherwise.
+
+        :returns: the status of this job and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            is returned
+        """
+
         validators = config.default_validators(self.sections, self.params)
         return validators.is_valid()
-
-    def config_errors(self):
-        """Return the configuration errors, if this job is not valid."""
-        validators = config.default_validators(self.sections, self.params)
-        return validators.error_message()
 
     @property
     def id(self):  # pylint: disable=C0103
@@ -345,10 +347,8 @@ class Job(object):
 
 
 class AlwaysTrueConstraint():
-    """ A stubbed constraint for block splitting """
-
+    """A stubbed constraint for block splitting."""
     #pylint: disable=W0232,W0613,R0201
-
     def match(self, point):
         """ stub a match filter to always return true """
         return True
