@@ -50,6 +50,7 @@ flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configurat
 flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
                   'Computation result output type')
 
+flags.DEFINE_boolean('help', False, 'Show this help')
 flags.DEFINE_boolean('version', False, 'Show version information')
 
 
@@ -74,6 +75,12 @@ if __name__ == '__main__':
     if FLAGS.version:
         print utils_version.info(__version__)
         sys.exit(0)
+    elif FLAGS.help:
+        print __doc__
+
+        print "Flags:"
+        print flags.get_flags_help()
+        sys.exit(1)
 
     logs.init_logs()
 
