@@ -108,6 +108,28 @@ class JobTestCase(unittest.TestCase):
             self.assertTrue(os.path.isfile(each_job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
+        sha_from_file_key = lambda params, key: params[key].split('!')[1]
+
+        # A unique job key is prepended to these file hashes
+        # to enable garabage collection.
+        # Thus, we have to do a little voodoo to make this test work.
+        src_model = 'SOURCE_MODEL_LOGIC_TREE_FILE'
+        gmpe = 'GMPE_LOGIC_TREE_FILE'
+
+        job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
+        job2_src_model_sha = sha_from_file_key(self.job_with_includes.params, src_model)
+        self.assertEqual(job1_src_model_sha, job2_src_model_sha)
+
+        del self.job.params[src_model]
+        del self.job_with_includes.params[src_model]
+
+        job1_gmpe_sha = sha_from_file_key(self.job.params, gmpe)
+        job2_gmpe_sha = sha_from_file_key(self.job_with_includes.params, gmpe)
+        self.assertEqual(job1_gmpe_sha, job2_gmpe_sha)
+
+        del self.job.params[gmpe]
+        del self.job_with_includes.params[gmpe]
+
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
