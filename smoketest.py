@@ -53,11 +53,11 @@ CHECKOUT_DIR = os.path.abspath(os.path.join(
 REPO_URL = "git@github.com:gem/OpenGemModel.git"
 
 if __name__ == '__main__':
-    sys.argv = FLAGS(sys.argv)  
+    sys.argv = FLAGS(sys.argv)
     logs.init_logs()
-    
+
     # Make sure there's a checkout and it's up to date (of OpenGemModel)
     if not os.path.exists(CHECKOUT_DIR):
         repo = Repo.clone_from(REPO_URL, CHECKOUT_DIR)
     job_path = os.path.join(CHECKOUT_DIR, "tests", sys.argv[1], "config.gem")
-    job.run_job(job_path)
+    job.run_job(job_path, 'xml')
