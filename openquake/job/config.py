@@ -90,7 +90,7 @@ class ExposureValidator(object):
 
 
 def default_validators(sections, params):
-    """Create the set of defaults validator for a job.
+    """Create the set of default validators for a job.
 
     :param sections: sections defined for the job.
     :type sections: :py:class:`list`
