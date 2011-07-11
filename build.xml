@@ -69,6 +69,9 @@
 				<pathelement path="${instrumented.dir}/classes" />
 			</classpath>
 
+			<!-- force the default Xerces parser configuration, otherwise some random system-installed JAR might override it -->
+			<sysproperty key="org.apache.xerces.xni.parser.XMLParserConfiguration" value="org.apache.xerces.parsers.XIncludeAwareParserConfiguration"/>
+
 			<formatter type="xml" />
 
 			<batchtest fork="yes" todir="${tests.report.dir}">
