@@ -34,3 +34,7 @@ from gflags import DEFINE_boolean, DEFINE_integer
 DEFINE_string('debug', 'warn',
     'Turns on debug logging and verbose output.'
     ' One of debug, info, warn, error, critical.')
+
+# These are added by default by gflags, but we don't need them
+del FLAGS.helpshort
+del FLAGS.helpxml
