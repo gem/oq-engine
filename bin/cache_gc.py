@@ -32,6 +32,9 @@ import getopt
 import re
 import sys
 
+import oqpath
+oqpath.set_oq_path()
+
 from openquake import kvs
 from openquake import logs
 from openquake.kvs import tokens
@@ -55,8 +58,6 @@ def main(cl_args):
         # Invalid arg specified; print the error and help, then exit
         print e
         show_help()
-
-    print opts
 
     # strip dashes
     opts = [(strip_dashes(opt), val) for opt, val in opts]
@@ -102,9 +103,9 @@ def _get_current_job_ids():
     for job in jobs:
         match = re.match(r'^::JOB::(\d+)::$', job)
         if match:
-            job_ids.append(match.group(1))
+            job_ids.append(int(match.group(1)))
 
-    return job_ids
+    return sorted(job_ids)
 
 
 def list_cached_jobs():
