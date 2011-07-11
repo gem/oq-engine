@@ -23,13 +23,9 @@ Expects to compute:
 import os
 import sys
 
-# this is a hack so that it is easier to test these scripts,
-# it will add the proper directories to the path so that 
-# this script can be run from a checkout
-if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                  'openquake')):
-    sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-    
+import oqpath
+oqpath.set_oq_path()
+
 from fabric.api import env, local, run
 from multiprocessing import Process
 

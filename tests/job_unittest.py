@@ -221,15 +221,24 @@ class JobTestCase(unittest.TestCase):
         garbage collection.
         """
         expected_args = (['python', 'bin/cache_gc.py', '--job=1'],)
-        expected_kwargs = {'env': os.environ}
 
         with mock.patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
 
             self.assertEqual(1, popen_mock.call_count)
-            self.assertEqual(
-                (expected_args, expected_kwargs),
-                popen_mock.call_args)
+
+            actual_args, actual_kwargs = popen_mock.call_args
+
+            self.assertEqual(expected_args, actual_args)
+
+            # testing the kwargs is slight more complex, since stdout is
+            # directed to /dev/null
+            popen_stdout = actual_kwargs['stdout']
+            self.assertTrue(isinstance(popen_stdout, file))
+            self.assertEqual('/dev/null', popen_stdout.name)
+            self.assertEqual('w', popen_stdout.mode)
+
+            self.assertEqual(os.environ, actual_kwargs['env'])
 
     def test_cleanup_raises_on_bad_job_id(self):
         """

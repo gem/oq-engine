@@ -56,7 +56,7 @@ class CacheGCTestCase(unittest.TestCase):
         IDs.
         """
         job_ids = cache_gc._get_current_job_ids()
-        self.assertEqual(['1', '2', '3'], job_ids)
+        self.assertEqual([1, 2, 3], job_ids)
 
     def test_clear_job_data_raises(self):
         """
