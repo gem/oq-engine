@@ -690,9 +690,7 @@ CREATE TABLE uiapi.hazard_curve_data (
     quantile float CONSTRAINT quantile_value
         CHECK(
             ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
-            OR (((statistic_type <> 'quantile') AND (quantile IS NULL)))),
-    -- Intensity measure levels
-    imls float[] NOT NULL
+            OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
 ) TABLESPACE uiapi_ts;
 
 
