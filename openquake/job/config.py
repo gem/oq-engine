@@ -57,7 +57,7 @@ class ValidatorSet(object):
 
         :param validator: the validator to add to this set.
         :type validator: :py:class:`object` defining an is_valid()
-            method conformed to the validator interface.
+            method conformed to the validator interface
         """
 
         self.validators.append(validator)
