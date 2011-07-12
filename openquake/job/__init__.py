@@ -30,11 +30,11 @@ from ConfigParser import ConfigParser, RawConfigParser
 from openquake import flags
 from openquake import kvs
 from openquake import shapes
-from openquake.kvs import tokens
 from openquake.logs import LOG
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
+from openquake.kvs.tokens import alloc_job_key
 
 from db.alchemy.models import OqJob, OqUser, OqParams
 from db.alchemy.db_utils import get_uiapi_writer_session
@@ -223,8 +223,7 @@ class Job(object):
         """Return the job in the underlying kvs system with the given id."""
 
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
-        job = Job(params)
-        job.job_id = job_id
+        job = Job(params, job_id=job_id)
         return job
 
     @staticmethod
@@ -251,8 +250,9 @@ class Job(object):
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, sections=list(), base_path=None):
-        self.job_id = tokens.alloc_job_key()
+    def __init__(self, params, job_id=alloc_job_key(), sections=list(),
+        base_path=None):
+        self.job_id = job_id
         self.blocks_keys = []
         self.partition = True
         self.params = params
