@@ -26,7 +26,8 @@ from tests.utils import helpers
 from openquake import job
 from openquake import kvs
 from openquake import flags
-from openquake.job import Job, EXPOSURE, INPUT_REGION, LOG
+from openquake.job import Job, LOG
+from openquake.job import config
 from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
 from openquake.risk.job.general import RiskJobMixin
@@ -48,6 +49,7 @@ FLAGS = flags.FLAGS
 
 
 class JobTestCase(unittest.TestCase):
+
     def setUp(self):
         client = kvs.get_client()
 
@@ -72,7 +74,9 @@ class JobTestCase(unittest.TestCase):
                 pass
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
+
         class call_logger(object):
+
             def __init__(self, method):
                 self.called = False
                 self.method = method
@@ -169,7 +173,7 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
     def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
+        a_job = Job({config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
                                             EXPOSURE_TEST_FILE)})
         a_job._partition()
         blocks_keys = a_job.blocks_keys
@@ -182,9 +186,10 @@ class JobTestCase(unittest.TestCase):
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
         args = {
-            EXPOSURE: os.path.join(
+            config.EXPOSURE: os.path.join(
                 helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-            INPUT_REGION: helpers.get_data_path(REGION_EXPOSURE_TEST_FILE)}
+            config.INPUT_REGION: helpers.get_data_path(
+            REGION_EXPOSURE_TEST_FILE)}
         a_job = Job(args)
         self.generated_files.append(a_job.super_config_path)
         a_job._partition()
@@ -201,7 +206,7 @@ class JobTestCase(unittest.TestCase):
         job.SITES_PER_BLOCK = 1
 
         # test exposure has 6 assets
-        a_job = Job({EXPOSURE: os.path.join(
+        a_job = Job({config.EXPOSURE: os.path.join(
                 helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
 
         self.generated_files.append(a_job.super_config_path)
@@ -296,7 +301,7 @@ class BlockSplitterTestCase(unittest.TestCase):
         self._assert_number_of_blocks_is(0)
 
     def test_splits_the_set_into_a_single_block(self):
-        self.splitter = job.BlockSplitter((SITE,), 3)
+        self.splitter = job.BlockSplitter((SITE, ), 3)
         self._assert_number_of_blocks_is(1)
 
         self.splitter = job.BlockSplitter((SITE, SITE), 3)
@@ -314,11 +319,11 @@ class BlockSplitterTestCase(unittest.TestCase):
 
     def test_generates_the_correct_blocks(self):
         self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
-        expected_blocks = (job.Block((SITE, SITE, SITE)),)
+        expected_blocks = (job.Block((SITE, SITE, SITE)), )
         self._assert_blocks_are(expected_blocks)
 
         self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
-        expected_blocks = (job.Block((SITE, SITE)), job.Block((SITE,)))
+        expected_blocks = (job.Block((SITE, SITE)), job.Block((SITE, )))
         self._assert_blocks_are(expected_blocks)
 
     def test_splitting_with_region_intersection(self):
@@ -330,7 +335,7 @@ class BlockSplitterTestCase(unittest.TestCase):
 
         expected_blocks = (
                 job.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
-                job.Block((shapes.Site(2.0, 2.0),)))
+                job.Block((shapes.Site(2.0, 2.0), )))
 
         self.splitter = job.BlockSplitter(sites, 2,
                                             constraint=region_constraint)
