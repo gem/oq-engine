@@ -119,6 +119,8 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEqual(loss_curve.unit, 'EUR')
         self.assertEqual(loss_curve.end_branch_label, None)
+        self.assertEqual(loss_curve.loss_category, None)
+
         # loss curve data records
         self.assertEqual(4, len(loss_curve.losscurvedata_set))
 
