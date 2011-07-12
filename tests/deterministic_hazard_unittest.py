@@ -64,13 +64,16 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kvs_client = kvs.get_client(binary=False)
-        kvs.flush()
+        # kvs.flush()
 
     @classmethod
     def tearDownClass(cls):
-        kvs.flush()
+        # kvs.flush()
+        pass
 
     def setUp(self):
+        kvs.flush()
+
         flags.FLAGS.include_defaults = False
 
         self.job = job.Job.from_file(DETERMINISTIC_SMOKE_TEST, 'xml')
@@ -91,6 +94,8 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             self.default
 
         flags.FLAGS.include_defaults = True
+
+        kvs.flush()
 
     def test_triggered_with_deterministic_calculation_mode(self):
         """The deterministic calculator is triggered.
@@ -131,6 +136,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
                     self.job.id, point)
 
                 # just one calculation is triggered in this test case
+                print "key is %s" % key
                 self.assertEqual(1, self.kvs_client.llen(key))
                 gmv = decoder.decode(self.kvs_client.lpop(key))
                 self.assertEqual(0, self.kvs_client.llen(key))

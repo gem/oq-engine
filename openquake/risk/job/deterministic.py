@@ -41,7 +41,7 @@ from openquake.risk.job import general
 LOGGER = logs.LOG
 
 
-class DeterministicEventBasedMixin():
+class DeterministicEventBasedMixin:
     """Deterministic Event Based method for performing risk calculations.
 
     Note that this mixin, during execution, will always be an instance of the
