@@ -16,8 +16,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-""" A single hazard/risk job """
+"""A single hazard/risk job."""
 
 import hashlib
 import os
@@ -30,31 +29,57 @@ from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
+from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
-EXPOSURE = "EXPOSURE"
-INPUT_REGION = "INPUT_REGION"
-HAZARD_CURVES = "HAZARD_CURVES"
+from db.alchemy.models import OqJob, OqUser, OqParams
+from db.alchemy.db_utils import get_uiapi_writer_session
+import geoalchemy as ga
+
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
+flags.DEFINE_boolean('include_defaults', True, "Include default configs")
+
+# TODO unify with utils/oqrunner/config_writer.py
+CALCULATION_MODE = {
+    'Classical': 'classical',
+    'Deterministic': 'deterministic',
+    'Event Based': 'event_based',
+}
+
+ENUM_MAP = {
+    'Average Horizontal': 'average',
+    'Average Horizontal (GMRotI50)': 'gmroti50',
+    'PGA': 'pga',
+    'SA': 'sa',
+    'PGV': 'pgv',
+    'PGD': 'pgd',
+    'None': 'none',
+    '1 Sided': 'onesided',
+    '2 Sided': 'twosided',
+}
 
 
-def run_job(job_file):
-    """ Given a job_file, run the job. If we don't get results log it """
-    a_job = Job.from_file(job_file)
-    # TODO(JMC): Expose a way to set whether jobs should be partitioned
-    results = a_job.launch()
-    if not results:
-        LOG.critical("The job configuration is inconsistent, "
-                "aborting computation.")
-    else:
+def run_job(job_file, output_type):
+    """Given a job_file, run the job."""
+
+    a_job = Job.from_file(job_file, output_type)
+    is_job_valid = a_job.is_valid()
+
+    if is_job_valid[0]:
+        results = a_job.launch()
+
         for filepath in results:
             print filepath
+    else:
+        LOG.critical("The job configuration is inconsistent:")
+
+        for error_message in is_job_valid[1]:
+            LOG.critical("   >>> %s" % error_message)
 
 
 def parse_config_file(config_file):
@@ -88,28 +113,70 @@ def parse_config_file(config_file):
     return sections, params
 
 
-def validate(fn):
-    """Validate this job before running the decorated function."""
-
-    def validator(self, *args):
-        """Validate this job before running the decorated function."""
-        try:
-            # TODO(JMC): Add good stuff here
-            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
-        except AssertionError, e:
-            LOG.exception(e)
-            return []
-        return fn(self, *args)
-
-    return validator
-
-
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
 
     url = urlparse.urlparse(file_spec)
     return resolve_handler(url, base_path).get()
+
+
+def prepare_job(params):
+    """
+    Create a new OqJob and fill in the related OpParams entry.
+
+    Returns the newly created job object.
+    """
+    session = get_uiapi_writer_session()
+
+    # TODO specify the owner as a command line parameter
+    owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
+    oqp = OqParams(upload=None)
+    job = OqJob(owner=owner, path=None, oq_params=oqp,
+                job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    # fill-in parameters
+    oqp.job_type = job.job_type
+    oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
+    oqp.component = ENUM_MAP[params['COMPONENT']]
+    oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
+    oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
+    oqp.truncation_level = float(params['TRUNCATION_LEVEL'])
+    oqp.reference_vs30_value = float(params['REFERENCE_VS30_VALUE'])
+
+    if oqp.imt == 'sa':
+        oqp.period = float(params.get('PERIOD', 0.0))
+
+    if oqp.job_type != 'classical':
+        oqp.gm_correlated = (
+            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+    else:
+        oqp.imls = [float(v) for v in
+                        params['INTENSITY_MEASURE_LEVELS'].split(",")]
+        oqp.poes = [float(v) for v in
+                        params['POES_HAZARD_MAPS'].split(" ")]
+
+    if oqp.job_type != 'deterministic':
+        oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
+        oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
+        oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+
+    if oqp.job_type == 'event_based':
+        oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
+
+    # config lat/lon -> postgis -> lon/lat
+    coords = [float(v) for v in
+                  params['REGION_VERTEX'].split(",")]
+    vertices = ["%f %f" % (coords[i + 1], coords[i])
+                    for i in xrange(0, len(coords), 2)]
+    region = "SRID=4326;POLYGON((%s, %s))" % (", ".join(vertices), vertices[0])
+    oqp.region = ga.WKTSpatialElement(region)
+
+    session.add(oqp)
+    session.add(job)
+    session.commit()
+
+    return job
 
 
 class Job(object):
@@ -143,7 +210,7 @@ class Job(object):
         return Job(params, job_id)
 
     @staticmethod
-    def from_file(config_file):
+    def from_file(config_file, output_type):
         """ Create a job from external configuration files. """
         config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file))
@@ -156,6 +223,12 @@ class Job(object):
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
+        if output_type == 'db':
+            params['SERIALIZE_RESULTS_TO_DB'] = 'True'
+            if 'OPENQUAKE_JOB_ID' not in params:
+                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+        else:
+            params['SERIALIZE_RESULTS_TO_DB'] = 'False'
         job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file  # pylint: disable=W0201
         return job
@@ -177,6 +250,19 @@ class Job(object):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
         return name in self.params and self.params[name]
+
+    def is_valid(self):
+        """Return true if this job is valid and can be
+        processed, false otherwise.
+
+        :returns: the status of this job and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            tuple is returned
+        """
+
+        validators = conf.default_validators(self.sections, self.params)
+        return validators.is_valid()
 
     @property
     def id(self):  # pylint: disable=C0103
@@ -208,7 +294,6 @@ class Job(object):
         filename = "%s-super.gem" % self.job_id
         return os.path.join(self.base_path or '', "./", filename)
 
-    @validate
     def launch(self):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
@@ -242,7 +327,7 @@ class Job(object):
 
         # we use the exposure, if specified,
         # otherwise we use the input region
-        if self.has(EXPOSURE):
+        if self.has(conf.EXPOSURE):
             sites = self._read_sites_from_exposure()
             LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
@@ -269,7 +354,7 @@ class Job(object):
         """
 
         sites = []
-        path = os.path.join(self.base_path, self[EXPOSURE])
+        path = os.path.join(self.base_path, self[conf.EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
         constraint = self.region
         if not constraint:
@@ -350,10 +435,8 @@ class Job(object):
 
 
 class AlwaysTrueConstraint():
-    """ A stubbed constraint for block splitting """
-
+    """A stubbed constraint for block splitting."""
     #pylint: disable=W0232,W0613,R0201
-
     def match(self, point):
         """ stub a match filter to always return true """
         return True

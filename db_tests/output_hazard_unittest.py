@@ -22,7 +22,7 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.hazard import HazardMapDBWriter, HazardCurveDBWriter
+from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
 
@@ -106,6 +106,14 @@ HAZARD_CURVE_DATA = [
       'PoEValues': [0.354, 0.114, 0.023, 0.002],
       'IMT': 'PGA',
       'endBranchLabel': '2'})]
+
+
+GMF_DATA = {
+    Site(-117, 40): {'groundMotion': 0.0},
+    Site(-116, 40): {'groundMotion': 0.1},
+    Site(-116, 41): {'groundMotion': 0.2},
+    Site(-117, 41): {'groundMotion': 0.3},
+}
 
 
 class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -278,4 +286,55 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             return sorted([(s, norm(v)) for s, v in values], key=sort_key)
 
         self.assertEquals(normalize(HAZARD_CURVE_DATA),
+                          normalize(inserted_data))
+
+
+class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """
+    Unit tests for the GMFDBWriter class, which serializes
+    hazard curvess to the database.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def test_serialize(self):
+        """serialize() inserts the output and the gmf_data records."""
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        gmfw = GMFDBWriter(session, output_path, self.job.id)
+
+        # This job has no outputs before calling the function under test.
+        self.assertEqual(0, len(self.job.output_set))
+
+        # Call the function under test.
+        gmfw.serialize(GMF_DATA)
+
+        # After calling the function under test we see the expected output.
+        self.assertEqual(1, len(self.job.output_set))
+
+        # After calling the function under test we see the expected map data.
+        [output] = self.job.output_set
+        self.assertEqual(0, len(output.hazardcurvedata_set))
+        self.assertEqual(0, len(output.lossmapdata_set))
+        self.assertEqual(4, len(output.gmfdata_set))
+
+        # read data from the DB and check that it's equal to the original data
+        inserted_data = []
+
+        for gmfd in output.gmfdata_set:
+            location = gmfd.location.coords(session)
+            inserted_data.append((Site(location[0], location[1]),
+                                  {'groundMotion': gmfd.ground_motion}))
+
+        def normalize(values):
+            def sort_key(v):
+                return v[0].longitude, v[0].latitude, v[1]
+
+            return sorted(values, key=sort_key)
+
+        self.assertEquals(normalize(GMF_DATA.items()),
                           normalize(inserted_data))
