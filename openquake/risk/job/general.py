@@ -73,18 +73,6 @@ def output(fn):
     return output_writer
 
 
-def _serialize(path, **kwargs):
-    """ Serialize the curves """
-    LOG.debug("Serializing %s" % kwargs['curve_mode'])
-    # TODO(JMC): Take mean or max for each site
-    if kwargs["curve_mode"] == "loss_ratio":
-        output_generator = risk_output.LossRatioCurveXMLWriter(path)
-    elif kwargs["curve_mode"] == 'loss':
-        output_generator = risk_output.LossCurveXMLWriter(path)
-    output_generator.serialize(kwargs['curves'])
-    return path
-
-
 def _plot(curve_path, result_path, **kwargs):
     """
     Build a plotter, and then render the plot
@@ -150,7 +138,13 @@ class RiskJobMixin(mixins.Mixin):
         serialize_path = os.path.join(self.base_path,
                                       self['OUTPUT_DIR'],
                                       serialize_filename)
-        results = [_serialize(serialize_path, **kwargs)]
+
+        LOG.debug("Serializing %s" % kwargs['curve_mode'])
+        writer = risk_output.create_loss_curve_writer(kwargs['curve_mode'],
+            serialize_path, self.params)
+        writer.serialize(kwargs['curves'])
+
+        results = [serialize_path]
 
         curve_filename = "%s-block-%s.svg" % (
                                 self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
