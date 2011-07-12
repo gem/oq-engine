@@ -40,7 +40,6 @@ from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
 from openquake.kvs import tokens
-from openquake.output import geotiff, cpt
 from openquake.output import hazard as hazard_output
 from openquake.utils import tasks as utils_tasks
 
@@ -615,51 +614,11 @@ class ClassicalMixin(BasePSHAMixin):
                 hm_attrib.update(hm_attrib_update)
                 hm_data.append((site_obj, hm_attrib))
 
-            hm_geotiff_name = '%s-%s-%s.tiff' % (
-                HAZARD_MAP_FILENAME_PREFIX, str(poe), filename_part)
-            geotiff_path = os.path.join(output_path, hm_geotiff_name)
-
-            self._write_hazard_map_geotiff(geotiff_path, hm_data)
             map_writer.serialize(hm_data)
 
             files.append(nrml_path)
-            files.append(geotiff_path)
 
         return files
-
-    def _write_hazard_map_geotiff(self, path, haz_map_data):
-        """
-        Write out a hazard map geotiff using the input hazard map data.
-
-        :param path: path to output file, including file name
-        :param haz_map_data: list of hazard map data to be serialized to the
-            geotiff
-        :type haz_map_data: list of tuples of (shapes.Site object, hazard map
-            data dict)
-        """
-        try:
-            cpt_path = os.path.join(
-                    self.params['BASE_PATH'], self.params['HAZARD_MAP_CPT'])
-            cpt_reader = cpt.CPTReader(cpt_path)
-            colormap = cpt_reader.get_colormap()
-        except (IOError, KeyError):
-            LOG.info(
-                "Unable to read hazard map CPT file from job config."
-                " Using default colormap.")
-            colormap = geotiff.HazardMapGeoTiffFile.DEFAULT_COLORMAP
-
-        iml_min_max = None
-        if 'HAZARD_MAP_IML_MIN' in self.params and \
-            'HAZARD_MAP_IML_MAX' in self.params:
-            iml_min_max = (
-                float(self.params['HAZARD_MAP_IML_MIN']),
-                float(self.params['HAZARD_MAP_IML_MAX']))
-        hm_writer = geotiff.HazardMapGeoTiffFile(
-            path, self.region.grid, colormap=colormap,
-            iml_min_max=iml_min_max, html_wrapper=True)
-
-        # write the hazard map and close the file
-        return hm_writer.serialize(haz_map_data)
 
     @preload
     def compute_hazard_curve(self, site_list, realization):
@@ -754,45 +713,29 @@ class EventBasedMixin(BasePSHAMixin):
         return results
 
     def write_gmf_files(self, ses):
-        """Generate a GeoTiff file and a NRML file for each GMF."""
-        image_grid = self.region.grid
+        """Generate a NRML file for each GMF."""
         iml_list = [float(param)
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
 
-        LOG.debug("Generating GMF image, grid is %s col by %s rows" % (
-                image_grid.columns, image_grid.rows))
         LOG.debug("IML: %s" % (iml_list))
         files = []
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                # NOTE(fab): we have to explicitly convert the JSON-decoded
-                # tokens from Unicode to string, otherwise the path will not
-                # be accepted by the GeoTiffFile constructor
                 common_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
                         "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                        str(rupture.replace("!", "_"))))
-                tiff_path = "%s.tiff" % common_path
                 nrml_path = "%s.xml" % common_path
-                gwriter = geotiff.GMFGeoTiffFile(tiff_path, image_grid,
-                    init_value=0.0, iml_list=iml_list,
-                    discrete=True)
                 xmlwriter = hazard_output.GMFXMLWriter(nrml_path)
                 gmf_data = {}
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
                     site_obj = shapes.Site(site['lon'], site['lat'])
-                    point = image_grid.point_at(site_obj)
-                    gwriter.write((point.row, point.column),
-                        math.exp(float(site['mag'])))
                     gmf_data[site_obj] = \
                         {'groundMotion': math.exp(float(site['mag']))}
 
-                gwriter.close()
                 xmlwriter.serialize(gmf_data)
-                files.append(tiff_path)
-                files.append(gwriter.html_path)
                 files.append(nrml_path)
         return files
 
@@ -909,8 +852,8 @@ def create_hazardmap_writer(params, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    db_flag = params.get("SERIALIZE_MAPS_TO_DB")
-    if not db_flag or db_flag.lower() == "false":
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
         return hazard_output.HazardMapXMLWriter(nrml_path)
     else:
         job_db_key = params.get("OPENQUAKE_JOB_ID")

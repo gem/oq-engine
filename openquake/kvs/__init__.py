@@ -23,11 +23,14 @@ the underlying kvs systems.
 """
 
 import json
-import logging
 import uuid
 import openquake.kvs.tokens
+
+from openquake import logs
 from openquake.kvs.redis import Redis
 
+
+LOG = logs.LOG
 
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
@@ -170,3 +173,45 @@ BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
 def generate_block_id():
     """Generate a unique id for a block."""
     return BLOCK_ID_GENERATOR.next()
+
+
+def cache_gc(job_key):
+    """
+    Garbage collection for the KVS. This works by simply removing all keys
+    which contain the input job key.
+
+    The job key must be a member of the 'CURRENT_JOBS' set. If it isn't, this
+    function will do nothing and simply return None.
+
+    :param job_key: specially formatted job key;
+        see :py:function:`openquake.kvs.tokens.alloc_job_key` for more info
+
+    :returns: the number of deleted keys (int), or None if the job doesn't
+        exist in CURRENT_JOBS
+    """
+    client = get_client()
+
+    if client.sismember(openquake.kvs.tokens.CURRENT_JOBS, job_key):
+        # matches a current job
+        # do the garbage collection
+        keys = client.keys('*%s*' % job_key)
+
+        if len(keys) > 0:
+
+            success = client.delete(*keys)
+            # delete should return True
+            if not success:
+                msg = 'Redis failed to delete data for job %s' % job_key
+                LOG.error(msg)
+                raise RuntimeError(msg)
+
+        # finally, remove the job key from CURRENT_JOBS
+        client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_key)
+
+        return len(keys)
+    else:
+        # does not match a current job
+        msg = 'KVS garbage collection was called with an invalid job key: ' \
+            '%s is not recognized as a current job.'
+        LOG.error(msg)
+        return None

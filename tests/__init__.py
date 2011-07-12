@@ -16,6 +16,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+from cache_gc_unittest import *
 from geo_unittest import *
 from handlers_unittest import *
 from hazard_nrml_unittest import *
@@ -41,3 +42,4 @@ from black_box_tests import *
 from parser_hazard_map_unittest import *
 from db_loader_unittest import *
 from shapes_unittest import *
+from validator_unittest import *

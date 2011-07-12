@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.gem.CalculationSettings;
 import org.gem.params.SourceType;
 import org.opensha.commons.calc.magScalingRelations.MagAreaRelationship;
@@ -36,7 +38,7 @@ import org.opensha.sha.util.TectonicRegionType;
  * <p>
  * Title: GEM1ERF
  * </p>
- * 
+ *
  * @TODO 1) test and verify all the options contained herein 2) fix problem that
  *       lowerSeisDepth for point sources can be inconsistent with given
  *       aveRupTomDepthVersusMag. For example, if both shallow and very deep
@@ -49,13 +51,15 @@ import org.opensha.sha.util.TectonicRegionType;
  *       parameter to a separate class (as is done for IMRs); this will clean
  *       things a lot 6) Add spinning, dipping faults for point-sources option.
  *       7) Review all documentation and add more (including to glossary?)
- * 
+ *
  * @author : Edward Field
  * @Date :
  * @version 1.0
  */
 
 public class GEM1ERF extends EqkRupForecast {
+
+    private static Log logger = LogFactory.getLog(GEM1ERF.class);
 
     // name of this ERF
     public final static String NAME = new String("GEM1 Eqk Rup Forecast");
@@ -437,7 +441,7 @@ public class GEM1ERF extends EqkRupForecast {
     /**
      * This returns a GEM1ERF, with a given duration, and with default
      * parameters
-     * 
+     *
      * @param sourceDataList
      * @param timeSpan
      * @return
@@ -488,7 +492,7 @@ public class GEM1ERF extends EqkRupForecast {
     /**
      * This initializes the ERF & sets parameters from calcSet (if calcSet !=
      * null)
-     * 
+     *
      * @param calcSet
      */
     protected void initialize(CalculationSettings calcSet) {
@@ -546,10 +550,10 @@ public class GEM1ERF extends EqkRupForecast {
         if (numSubInterface > 0)
             tectonicRegionTypes.add(TectonicRegionType.SUBDUCTION_INTERFACE);
         if (D) {
-            System.out.println("numActiveShallow=" + numActiveShallow);
-            System.out.println("numStableShallow=" + numStableShallow);
-            System.out.println("numSubSlab=" + numSubSlab);
-            System.out.println("numSubInterface=" + numSubInterface);
+            logger.info("numActiveShallow=" + numActiveShallow);
+            logger.info("numStableShallow=" + numStableShallow);
+            logger.info("numSubSlab=" + numSubSlab);
+            logger.info("numSubInterface=" + numSubInterface);
         }
     }
 
@@ -1101,7 +1105,7 @@ public class GEM1ERF extends EqkRupForecast {
     }
 
     /**
-     * 
+     *
      * @param areaSourceData
      * @return ProbEqkSource
      */
@@ -1160,7 +1164,7 @@ public class GEM1ERF extends EqkRupForecast {
     }
 
     /**
-     * 
+     *
      * @param gridSourceData
      * @return ProbEqkSource
      */
@@ -1221,7 +1225,7 @@ public class GEM1ERF extends EqkRupForecast {
 
     /**
      * Returns the ith earthquake source
-     * 
+     *
      * @param iSource
      *            : index of the source needed
      */
@@ -1246,7 +1250,7 @@ public class GEM1ERF extends EqkRupForecast {
                 throw new RuntimeException(NAME + ": " + srcData.getClass()
                         + " not yet supported");
             if (sourceCache != null) {
-                System.out.println("Caching source " + iSource);
+                logger.info("Caching source " + iSource);
                 sourceCache.put(new Integer(iSource), source);
             }
         }
@@ -1255,7 +1259,7 @@ public class GEM1ERF extends EqkRupForecast {
 
     /**
      * Get the number of earthquake sources
-     * 
+     *
      * @return integer
      */
     @Override
@@ -1265,7 +1269,7 @@ public class GEM1ERF extends EqkRupForecast {
 
     /**
      * Get the list of all earthquake sources.
-     * 
+     *
      * @return ArrayList of Prob Earthquake sources
      */
     @Override
@@ -1278,7 +1282,7 @@ public class GEM1ERF extends EqkRupForecast {
 
     /**
      * Return the name for this class
-     * 
+     *
      * @return : return the name for this class
      */
     @Override
@@ -1387,9 +1391,9 @@ public class GEM1ERF extends EqkRupForecast {
 
     /**
      * This acts on a parameter change event.
-     * 
+     *
      * This sets the flag to indicate that the sources need to be updated
-     * 
+     *
      * @param event
      */
     @Override
