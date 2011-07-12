@@ -117,9 +117,9 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         [loss_curve] = output.losscurve_set
 
-        self.assertEqual(loss_curve.end_branch_label, None) # FIXME
+        self.assertEqual(loss_curve.end_branch_label, None)
         # loss curve data records
-        self.assertEqual(4, len(output.losscurvedata_set))
+        self.assertEqual(4, len(loss_curve.losscurvedata_set))
 
         inserted_data = []
 
