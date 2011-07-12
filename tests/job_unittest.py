@@ -121,7 +121,8 @@ class JobTestCase(unittest.TestCase):
         gmpe = 'GMPE_LOGIC_TREE_FILE'
 
         job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
-        job2_src_model_sha = sha_from_file_key(self.job_with_includes.params, src_model)
+        job2_src_model_sha = sha_from_file_key(
+            self.job_with_includes.params, src_model)
         self.assertEqual(job1_src_model_sha, job2_src_model_sha)
 
         del self.job.params[src_model]
