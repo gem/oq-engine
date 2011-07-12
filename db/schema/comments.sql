@@ -159,15 +159,18 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 COMMENT ON TABLE uiapi.loss_map_data IS 'Holds location/loss data for loss maps.';
 COMMENT ON COLUMN uiapi.loss_map_data.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
 
-COMMENT ON TABLE uiapi.loss_asset_data IS 'Holds the asset id and its position for which loss curves were calculated.';
-COMMENT ON COLUMN uiapi.loss_asset_data.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
-COMMENT ON COLUMN uiapi.loss_asset_data.asset_id IS 'The asset id';
-COMMENT ON COLUMN uiapi.loss_asset_data.pos IS 'The position of the asset';
+COMMENT ON TABLE uiapi.loss_curve IS 'Holds the parameters common to a set of loss curves.';
+COMMENT ON COLUMN uiapi.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN uiapi.loss_curve.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN uiapi.loss_curve.loss_category IS 'The category of the losses';
+COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
+COMMENT ON COLUMN uiapi.loss_curve.time_span IS 'Interval of time considered in the calculations';
 
 COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
-COMMENT ON COLUMN uiapi.loss_curve_data.loss_asset_id IS 'The foreign key to the asset record to which the loss curve belongs';
-COMMENT ON COLUMN uiapi.loss_curve_data.end_branch_label IS 'End branch label for this curve';
-COMMENT ON COLUMN uiapi.loss_curve_data.abscissae IS 'The abscissae of the curve';
+COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN uiapi.loss_curve_data.pos IS 'The position of the asset';
+COMMENT ON COLUMN uiapi.loss_curve_data.losses IS 'Losses (0 <= loss <= 1 for loss ratio curves)';
 COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
