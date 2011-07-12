@@ -476,8 +476,7 @@ class CurveDBWriter(OutputDBWriter):
                 # timeSpan) are currently not passed in by the calculators
                 end_branch_label=asset_object.get('endBranchLabel'),
                 loss_category=asset_object.get('lossCategory'),
-                time_span=asset_object.get('timeSpan')
-            )
+                time_span=asset_object.get('timeSpan'))
 
             self.session.add(self.curve)
 
@@ -490,6 +489,7 @@ class CurveDBWriter(OutputDBWriter):
             poes=[float(y) for y in curve_object.ordinates])
 
         self.session.add(data)
+
 
 class LossCurveDBWriter(CurveDBWriter):
     """
@@ -521,6 +521,7 @@ def _curve_poe_as_gmldoublelist(curve_object):
     The list of values is converted to string joined by a space.
     """
     return " ".join([str(ordinate) for ordinate in curve_object.ordinates])
+
 
 def create_loss_curve_writer(curve_mode, nrml_path, params):
     """Create a loss curve writer observing the settings in the config file.
