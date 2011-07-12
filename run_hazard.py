@@ -46,7 +46,7 @@ if __name__ == '__main__':
     args = FLAGS(sys.argv)
     logs.init_logs()
 
-    engine = job.Job.from_file(FLAGS.config_file)
+    engine = job.Job.from_file(FLAGS.config_file, 'xml')
 
     with mixins.Mixin(engine, openquake.hazard.job.HazJobMixin):
         engine.execute()
