@@ -23,6 +23,7 @@ Helper code to set up system path values properly (for bin/ scripts).
 import os
 import sys
 
+
 def set_oq_path():
     """
     Adds the current directory to the system PATH so scripts can be run from
@@ -31,4 +32,3 @@ def set_oq_path():
     if os.path.exists(os.path.join(os.path.dirname(os.path.dirname(__file__)),
                   'openquake')):
         sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
