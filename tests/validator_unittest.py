@@ -31,7 +31,7 @@ import unittest
 class AlwaysTrueValidator(object):
 
     def is_valid(self):
-        return (True, ["Always true error message"])
+        return (True, [])
 
 
 class AlwaysFalseValidator(object):
