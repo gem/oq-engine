@@ -275,7 +275,6 @@ class LossCurve(Base):
     end_branch_label = sa.Column(sa.String)
     loss_category = sa.Column(sa.String)
     unit = sa.Column(sa.String)
-    time_span = sa.Column(sa.Float)
 
     def __repr__(self):
         return ":loss_curve: %s" % self.id
