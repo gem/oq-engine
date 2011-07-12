@@ -609,3 +609,40 @@ def _curve_poe_as_gmldoublelist(curve_object):
     The list of values is converted to string joined by a space.
     """
     return " ".join([str(ordinate) for ordinate in curve_object.ordinates])
+
+def create_loss_curve_writer(curve_mode, nrml_path, params):
+    """Create a loss curve writer observing the settings in the config file.
+
+    :param str curve_mode: one of 'loss', 'loss_ratio'
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard map.
+    :returns: an instance of
+        :py:class:`output.risk.LossCurveXMLWriter`,
+        :py:class:`output.risk.LossCurveDBWriter`,
+        :py:class:`output.risk.LossRatioCurveXMLWriter` or
+        :py:class:`output.risk.LossRatioCurveDBWriter`
+    """
+
+    assert curve_mode in ('loss', 'loss_ratio')
+
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        if curve_mode == 'loss':
+            writer_class = LossCurveXMLWriter
+        elif curve_mode == 'loss_ratio':
+            writer_class = LossRatioCurveXMLWriter
+
+        return writer_class(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+
+        if curve_mode == 'loss':
+            writer_class = LossCurveDBWriter
+        elif curve_mode == 'loss_ratio':
+            writer_class = LossRatioCurveDBWriter
+
+        return writer_class(get_uiapi_writer_session(), nrml_path, job_db_key)
