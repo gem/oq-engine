@@ -36,6 +36,10 @@ from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 
+from db.alchemy.models import OqJob, OqUser, OqParams
+from db.alchemy.db_utils import get_uiapi_writer_session
+import geoalchemy as ga
+
 EXPOSURE = "EXPOSURE"
 INPUT_REGION = "INPUT_REGION"
 HAZARD_CURVES = "HAZARD_CURVES"
@@ -43,12 +47,31 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('include_defaults', True, "Exclude default configs")
+flags.DEFINE_boolean('include_defaults', True, "Include default configs")
+
+# TODO unify with utils/oqrunner/config_writer.py
+CALCULATION_MODE = {
+    'Classical': 'classical',
+    'Deterministic': 'deterministic',
+    'Event Based': 'event_based',
+}
+
+ENUM_MAP = {
+    'Average Horizontal': 'average',
+    'Average Horizontal (GMRotI50)': 'gmroti50',
+    'PGA': 'pga',
+    'SA': 'sa',
+    'PGV': 'pgv',
+    'PGD': 'pgd',
+    'None': 'none',
+    '1 Sided': 'onesided',
+    '2 Sided': 'twosided',
+}
 
 
-def run_job(job_file):
+def run_job(job_file, output_type):
     """ Given a job_file, run the job. If we don't get results log it """
-    a_job = Job.from_file(job_file)
+    a_job = Job.from_file(job_file, output_type)
     # TODO(JMC): Expose a way to set whether jobs should be partitioned
     results = a_job.launch()
     if not results:
@@ -114,6 +137,64 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
+def prepare_job(params):
+    """
+    Create a new OqJob and fill in the related OpParams entry.
+
+    Returns the newly created job object.
+    """
+    session = get_uiapi_writer_session()
+
+    # TODO specify the owner as a command line parameter
+    owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
+    oqp = OqParams(upload=None)
+    job = OqJob(owner=owner, path=None, oq_params=oqp,
+                job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    # fill-in parameters
+    oqp.job_type = job.job_type
+    oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
+    oqp.component = ENUM_MAP[params['COMPONENT']]
+    oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
+    oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
+    oqp.truncation_level = float(params['TRUNCATION_LEVEL'])
+    oqp.reference_vs30_value = float(params['REFERENCE_VS30_VALUE'])
+
+    if oqp.imt == 'sa':
+        oqp.period = float(params.get('PERIOD', 0.0))
+
+    if oqp.job_type != 'classical':
+        oqp.gm_correlated = (
+            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+    else:
+        oqp.imls = [float(v) for v in
+                        params['INTENSITY_MEASURE_LEVELS'].split(",")]
+        oqp.poes = [float(v) for v in
+                        params['POES_HAZARD_MAPS'].split(" ")]
+
+    if oqp.job_type != 'deterministic':
+        oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
+        oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
+        oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+
+    if oqp.job_type == 'event_based':
+        oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
+
+    # config lat/lon -> postgis -> lon/lat
+    coords = [float(v) for v in
+                  params['REGION_VERTEX'].split(",")]
+    vertices = ["%f %f" % (coords[i + 1], coords[i])
+                    for i in xrange(0, len(coords), 2)]
+    region = "SRID=4326;POLYGON((%s, %s))" % (", ".join(vertices), vertices[0])
+    oqp.region = ga.WKTSpatialElement(region)
+
+    session.add(oqp)
+    session.add(job)
+    session.commit()
+
+    return job
+
+
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
@@ -147,7 +228,7 @@ class Job(object):
         return job
 
     @staticmethod
-    def from_file(config_file):
+    def from_file(config_file, output_type):
         """ Create a job from external configuration files. """
         config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file))
@@ -160,6 +241,12 @@ class Job(object):
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
+        if output_type == 'db':
+            params['SERIALIZE_RESULTS_TO_DB'] = 'True'
+            if 'OPENQUAKE_JOB_ID' not in params:
+                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+        else:
+            params['SERIALIZE_RESULTS_TO_DB'] = 'False'
         job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file  # pylint: disable=W0201
         return job
