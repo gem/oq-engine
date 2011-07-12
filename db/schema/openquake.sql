@@ -563,7 +563,7 @@ CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
-    upload_id INTEGER NOT NULL,
+    upload_id INTEGER,
     region_grid_spacing float NOT NULL,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
