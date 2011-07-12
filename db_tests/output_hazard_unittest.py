@@ -259,8 +259,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             for hcdn in hcd.hazardcurvenodedata_set:
                 location = hcdn.location.coords(session)
                 node = (Site(location[0], location[1]),
-                        {'IMLValues': hcd.imls,
-                         'PoEValues': hcdn.poes})
+                        {'PoEValues': hcdn.poes})
                 if hcd.end_branch_label:
                     node[1]['endBranchLabel'] = hcd.end_branch_label
                 else:
@@ -278,8 +277,8 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
                 dic = dict(dic)
 
                 # remove keys not stored in the database
-                dic.pop('investigationTimeSpan', None)
-                dic.pop('IMT', None)
+                for k in ['IMLValues', 'investigationTimeSpan', 'IMT']:
+                    dic.pop(k, None)
 
                 return dic
 
