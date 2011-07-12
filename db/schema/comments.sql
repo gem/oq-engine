@@ -143,6 +143,10 @@ COMMENT ON TABLE uiapi.hazard_curve_node_data IS 'Holds location/POE data for ha
 COMMENT ON COLUMN uiapi.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
 COMMENT ON COLUMN uiapi.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
 
+COMMENT ON TABLE uiapi.gmf_data IS 'Holds data for the ground motion field';
+COMMENT ON COLUMN uiapi.gmf_data.ground_motion IS 'Ground motion for a specific site';
+COMMENT ON COLUMN uiapi.gmf_data.location IS 'Site coordinates';
+
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
@@ -162,10 +166,10 @@ COMMENT ON COLUMN uiapi.loss_asset_data.asset_id IS 'The asset id';
 COMMENT ON COLUMN uiapi.loss_asset_data.pos IS 'The position of the asset';
 
 COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
-COMMENT ON COLUMN uiapi.loss_curve.data.loss_asset_id IS 'The foreign key to the asset record to which the loss curve belongs';
-COMMENT ON COLUMN uiapi.loss_curve.data.end_branch_label IS 'End branch label for this curve';
-COMMENT ON COLUMN uiapi.loss_curve.data.abscissae IS 'The abscissae of the curve';
-COMMENT ON COLUMN uiapi.loss_curve.data.poes IS 'Probabilities of exceedence';
+COMMENT ON COLUMN uiapi.loss_curve_data.loss_asset_id IS 'The foreign key to the asset record to which the loss curve belongs';
+COMMENT ON COLUMN uiapi.loss_curve_data.end_branch_label IS 'End branch label for this curve';
+COMMENT ON COLUMN uiapi.loss_curve_data.abscissae IS 'The abscissae of the curve';
+COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
@@ -193,6 +197,7 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - unknown
     - hazard_curve
     - hazard_map
+    - gmf
     - loss_curve
     - loss_map';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';

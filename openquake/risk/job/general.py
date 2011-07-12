@@ -29,6 +29,7 @@ from openquake.output import geotiff
 from openquake import job
 from openquake.job import mixins
 from openquake import kvs
+from openquake.job import config
 from openquake import logs
 from openquake import shapes
 from openquake.output import curve
@@ -115,7 +116,7 @@ class RiskJobMixin(mixins.Mixin):
     def store_exposure_assets(self):
         """ Load exposure assets and write to kvs """
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
-            (self.base_path, self.params[job.EXPOSURE]))
+            (self.base_path, self.params[config.EXPOSURE]))
 
         for site, asset in exposure_parser.filter(self.region):
             # TODO(JMC): This is kludgey
