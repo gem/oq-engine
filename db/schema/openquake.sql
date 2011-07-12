@@ -752,8 +752,7 @@ CREATE TABLE uiapi.loss_curve (
 
     end_branch_label VARCHAR,
     loss_category VARCHAR,
-    unit VARCHAR, -- e.g. EUR, USD
-    time_span float CONSTRAINT non_negative_time_span CHECK (time_span >= 0.0)
+    unit VARCHAR -- e.g. EUR, USD
 ) TABLESPACE uiapi_ts;
 
 

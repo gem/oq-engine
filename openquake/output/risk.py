@@ -560,11 +560,10 @@ class CurveDBWriter(OutputDBWriter):
         if self.curve is None:
             self.curve = LossCurve(output=self.output,
                 unit=asset_object.get('assetValueUnit'),
-                # The following attributes (endBranchLabel, lossCategory,
-                # timeSpan) are currently not passed in by the calculators
+                # The following attributes (endBranchLabel, lossCategory) are
+                # currently not passed in by the calculators
                 end_branch_label=asset_object.get('endBranchLabel'),
-                loss_category=asset_object.get('lossCategory'),
-                time_span=asset_object.get('timeSpan'))
+                loss_category=asset_object.get('lossCategory'))
 
             self.session.add(self.curve)
 
