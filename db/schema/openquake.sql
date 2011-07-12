@@ -642,10 +642,11 @@ CREATE TABLE uiapi.output (
     --      hazard_map
     --      gmf
     --      loss_curve
+    --      loss_ratio_curve
     --      loss_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'loss_curve', 'loss_map')),
+            'gmf', 'loss_curve', 'loss_ratio_curve', 'loss_map')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -745,11 +746,14 @@ ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss curve.
--- QUESTION: if it turns out there is no actual data to store in this table,
--- can we just get rid of it (and put a FK to output.id in loss_map_data)?
 CREATE TABLE uiapi.loss_curve (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL
+    output_id INTEGER NOT NULL,
+
+    end_branch_label VARCHAR,
+    loss_category VARCHAR,
+    unit VARCHAR, -- e.g. EUR, USD
+    time_span float CONSTRAINT non_negative_time_span CHECK (time_span >= 0.0)
 ) TABLESPACE uiapi_ts;
 
 
@@ -759,8 +763,9 @@ CREATE TABLE uiapi.loss_curve_data (
     loss_curve_id INTEGER NOT NULL,
 
     asset_ref VARCHAR,
-    end_branch_label VARCHAR,
-    abscissae float[] NOT NULL,
+    -- Losses. For ratio curves 0 <= loss <= 1
+    losses float[] NOT NULL,
+    -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'pos', 4326, 'POINT', 2);
@@ -924,13 +929,13 @@ ALTER TABLE uiapi.loss_map
 ADD CONSTRAINT uiapi_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_asset_data
-ADD CONSTRAINT uiapi_loss_asset_data_output_fk
+ALTER TABLE uiapi.loss_curve
+ADD CONSTRAINT uiapi_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_curve_data
-ADD CONSTRAINT uiapi_loss_curve_data_loss_asset_fk
-FOREIGN KEY (loss_asset_id) REFERENCES uiapi.loss_asset_data(id) ON DELETE CASCADE;
+ADD CONSTRAINT uiapi_loss_curve_data_loss_curve_fk
+FOREIGN KEY (loss_curve_id) REFERENCES uiapi.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_map_data
 ADD CONSTRAINT uiapi_loss_map_data_loss_map_fk

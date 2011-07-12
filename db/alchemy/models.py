@@ -289,20 +289,22 @@ class LossMapData(Base):
         return(":loss_map_data: %s" % self.id)
 
 
-class LossAssetData(Base):
-    __tablename__ = "loss_asset_data"
+class LossCurve(Base):
+    __tablename__ = "loss_curve"
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
                           nullable=False)
-    output = relationship("Output", backref="lossassetdata_set")
-    asset_id = sa.Column(sa.String)
-    pos = ga.GeometryColumn(ga.Point(2), nullable=False)
+    output = relationship("Output", backref="losscurve_set")
+
+    end_branch_label = sa.Column(sa.String)
+    loss_category = sa.Column(sa.String)
+    unit = sa.Column(sa.String)
+    time_span = sa.Column(sa.Float)
 
     def __repr__(self):
-        return(":loss_asset_data: %s, %s" % (
-            self.id, self.pos))
+        return ":loss_curve: %s" % self.id
 
 
 class LossCurveData(Base):
@@ -310,13 +312,14 @@ class LossCurveData(Base):
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
-    loss_asset_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("uiapi.loss_asset_data.id"),
+    loss_curve_id = sa.Column(sa.Integer,
+                              sa.ForeignKey("uiapi.loss_curve.id"),
                               nullable=False)
-    loss_asset = relationship("LossAssetData", backref="losscurvedata_set")
+    loss_curve = relationship("LossCurve", backref="losscurvedata_set")
 
-    end_branch_label = sa.Column(sa.String)
-    abscissae = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
+    pos = ga.GeometryColumn(ga.Point(2), nullable=False)
+    asset_ref = sa.Column(sa.String)
+    losses = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
     poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
                      doc="Probabilities of exceedence")
 
