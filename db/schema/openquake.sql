@@ -761,7 +761,7 @@ CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
-    asset_ref VARCHAR,
+    asset_ref VARCHAR NOT NULL,
     -- Losses. For ratio curves 0 <= loss <= 1
     losses float[] NOT NULL,
     -- Probabilities of exceedence
