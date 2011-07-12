@@ -16,8 +16,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-""" A single hazard/risk job """
+"""A single hazard/risk job."""
 
 import hashlib
 import os
@@ -30,6 +29,7 @@ from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
+from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
@@ -38,9 +38,6 @@ from db.alchemy.models import OqJob, OqUser, OqParams
 from db.alchemy.db_utils import get_uiapi_writer_session
 import geoalchemy as ga
 
-EXPOSURE = "EXPOSURE"
-INPUT_REGION = "INPUT_REGION"
-HAZARD_CURVES = "HAZARD_CURVES"
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 SITES_PER_BLOCK = 100
 
@@ -68,16 +65,21 @@ ENUM_MAP = {
 
 
 def run_job(job_file, output_type):
-    """ Given a job_file, run the job. If we don't get results log it """
+    """Given a job_file, run the job."""
+
     a_job = Job.from_file(job_file, output_type)
-    # TODO(JMC): Expose a way to set whether jobs should be partitioned
-    results = a_job.launch()
-    if not results:
-        LOG.critical("The job configuration is inconsistent, "
-                "aborting computation.")
-    else:
+    is_job_valid = a_job.is_valid()
+
+    if is_job_valid[0]:
+        results = a_job.launch()
+
         for filepath in results:
             print filepath
+    else:
+        LOG.critical("The job configuration is inconsistent:")
+
+        for error_message in is_job_valid[1]:
+            LOG.critical("   >>> %s" % error_message)
 
 
 def parse_config_file(config_file):
@@ -109,22 +111,6 @@ def parse_config_file(config_file):
                 sections.append(section)
                 params[key] = value
     return sections, params
-
-
-def validate(fn):
-    """Validate this job before running the decorated function."""
-
-    def validator(self, *args):
-        """Validate this job before running the decorated function."""
-        try:
-            # TODO(JMC): Add good stuff here
-            assert self.has(EXPOSURE) or self.has(INPUT_REGION)
-        except AssertionError, e:
-            LOG.exception(e)
-            return []
-        return fn(self, *args)
-
-    return validator
 
 
 def guarantee_file(base_path, file_spec):
@@ -265,6 +251,19 @@ class Job(object):
         and specified, false otherwise."""
         return name in self.params and self.params[name]
 
+    def is_valid(self):
+        """Return true if this job is valid and can be
+        processed, false otherwise.
+
+        :returns: the status of this job and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            tuple is returned
+        """
+
+        validators = conf.default_validators(self.sections, self.params)
+        return validators.is_valid()
+
     @property
     def id(self):  # pylint: disable=C0103
         """Return the id of this job."""
@@ -295,7 +294,6 @@ class Job(object):
         filename = "%s-super.gem" % self.job_id
         return os.path.join(self.base_path or '', "./", filename)
 
-    @validate
     def launch(self):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
@@ -329,7 +327,7 @@ class Job(object):
 
         # we use the exposure, if specified,
         # otherwise we use the input region
-        if self.has(EXPOSURE):
+        if self.has(conf.EXPOSURE):
             sites = self._read_sites_from_exposure()
             LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
@@ -356,7 +354,7 @@ class Job(object):
         """
 
         sites = []
-        path = os.path.join(self.base_path, self[EXPOSURE])
+        path = os.path.join(self.base_path, self[conf.EXPOSURE])
         reader = exposure.ExposurePortfolioFile(path)
         constraint = self.region
         if not constraint:
@@ -437,10 +435,8 @@ class Job(object):
 
 
 class AlwaysTrueConstraint():
-    """ A stubbed constraint for block splitting """
-
+    """A stubbed constraint for block splitting."""
     #pylint: disable=W0232,W0613,R0201
-
     def match(self, point):
         """ stub a match filter to always return true """
         return True
