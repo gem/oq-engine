@@ -42,7 +42,7 @@ RISK_LOSS_CURVE_DATA = [
        u'structureCategory': u'RM1L', u'lon': -118.077721,
        u'assetDescription': u'LA building',
        u'vulnerabilityFunctionReference': u'HAZUS_RM1L_LC',
-       u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+       u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
      (Curve([(7.18e-06, 1.0), (1.91e-05, 1.0), (3.12e-05, 1.0),
@@ -52,7 +52,7 @@ RISK_LOSS_CURVE_DATA = [
       u'structureCategory': u'URML',
       u'lon': -118.077721, u'assetDescription': u'LA building',
       u'vulnerabilityFunctionReference': u'HAZUS_URML_LC',
-      u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+      u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
      (Curve([(5.48e-06, 1.0), (1.45e-05, 1.0), (2.36e-05, 1.0),
@@ -62,7 +62,7 @@ RISK_LOSS_CURVE_DATA = [
       u'structureCategory': u'URML', u'lon': -118.077721,
       u'assetDescription': u'LA building',
       u'vulnerabilityFunctionReference': u'HAZUS_URML_LS',
-      u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+      u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
      (Curve([(9.77e-06, 1.0), (2.64e-05, 1.0), (4.31e-05, 1.0),
@@ -72,7 +72,7 @@ RISK_LOSS_CURVE_DATA = [
       u'structureCategory': u'C3L', u'lon': -118.077721,
       u'assetDescription': u'LA building',
       u'vulnerabilityFunctionReference': u'HAZUS_C3L_MC',
-      u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+      u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 ]
 
 
@@ -117,6 +117,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         [loss_curve] = output.losscurve_set
 
+        self.assertEqual(loss_curve.unit, 'EUR')
         self.assertEqual(loss_curve.end_branch_label, None)
         # loss curve data records
         self.assertEqual(4, len(loss_curve.losscurvedata_set))
