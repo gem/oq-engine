@@ -39,7 +39,7 @@ from openquake.risk.job import general
 LOGGER = logs.LOG
 
 
-class ClassicalPSHABasedMixin():
+class ClassicalPSHABasedMixin:
     """Mixin for Classical PSHA Based Risk Job"""
 
     @general.preload
