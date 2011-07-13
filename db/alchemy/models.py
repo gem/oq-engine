@@ -299,7 +299,7 @@ class LossCurve(Base):
     output = relationship("Output", backref="losscurve_set")
 
     end_branch_label = sa.Column(sa.String)
-    loss_category = sa.Column(sa.String)
+    category = sa.Column(sa.String)
     unit = sa.Column(sa.String)
 
     def __repr__(self):
@@ -316,7 +316,7 @@ class LossCurveData(Base):
                               nullable=False)
     loss_curve = relationship("LossCurve", backref="losscurvedata_set")
 
-    pos = ga.GeometryColumn(ga.Point(2), nullable=False)
+    location = ga.GeometryColumn(ga.Point(2), nullable=False)
     asset_ref = sa.Column(sa.String)
     losses = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
     poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
