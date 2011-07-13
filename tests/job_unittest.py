@@ -278,6 +278,15 @@ class JobTestCase(unittest.TestCase):
 
         self.assertRaises(RuntimeError, self.job.cleanup)
 
+    def test_job_init_assigns_unique_id(self):
+        """
+        This test ensures that unique job IDs are assigned to each Job object.
+        """
+        job1 = Job({})
+        job2 = Job({})
+
+        self.assertNotEqual(job1.job_id, job2.job_id)
+
 
 class BlockTestCase(unittest.TestCase):
 
