@@ -563,7 +563,7 @@ class CurveDBWriter(OutputDBWriter):
                 # The following attributes (endBranchLabel, lossCategory) are
                 # currently not passed in by the calculators
                 end_branch_label=asset_object.get('endBranchLabel'),
-                loss_category=asset_object.get('lossCategory'))
+                category=asset_object.get('lossCategory'))
 
             self.session.add(self.curve)
 
@@ -571,8 +571,8 @@ class CurveDBWriter(OutputDBWriter):
         # the same coordinates as point
         data = LossCurveData(loss_curve=self.curve,
             asset_ref=asset_object['assetID'],
-            pos="POINT(%s %s)" % (point.longitude, point.latitude),
             losses=[float(x) for x in curve_object.abscissae],
+            location="POINT(%s %s)" % (point.longitude, point.latitude),
             poes=[float(y) for y in curve_object.ordinates])
 
         self.session.add(data)

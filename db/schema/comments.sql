@@ -175,14 +175,14 @@ COMMENT ON COLUMN uiapi.loss_map_data.std_dev IS 'The standard deviation of the 
 COMMENT ON TABLE uiapi.loss_curve IS 'Holds the parameters common to a set of loss curves.';
 COMMENT ON COLUMN uiapi.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
 COMMENT ON COLUMN uiapi.loss_curve.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN uiapi.loss_curve.loss_category IS 'The category of the losses';
+COMMENT ON COLUMN uiapi.loss_curve.category IS 'The category of the losses';
 COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
 COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
 COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
 COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN uiapi.loss_curve_data.pos IS 'The position of the asset';
 COMMENT ON COLUMN uiapi.loss_curve_data.losses IS 'Losses (0 <= loss <= 1 for loss ratio curves)';
+COMMENT ON COLUMN uiapi.loss_curve_data.location IS 'The position of the asset';
 COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';

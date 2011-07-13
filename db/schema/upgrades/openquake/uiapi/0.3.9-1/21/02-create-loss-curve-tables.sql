@@ -39,7 +39,7 @@ CREATE TABLE uiapi.loss_curve (
     output_id INTEGER NOT NULL,
 
     end_branch_label VARCHAR,
-    loss_category VARCHAR,
+    category VARCHAR,
     unit VARCHAR -- e.g. EUR, USD
 ) TABLESPACE uiapi_ts;
 
@@ -54,8 +54,8 @@ CREATE TABLE uiapi.loss_curve_data (
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'pos', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_curve_data ALTER COLUMN pos SET NOT NULL;
+SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE uiapi.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 CREATE INDEX uiapi_loss_curve_output_id_idx on uiapi.loss_curve(output_id);
 CREATE INDEX uiapi_loss_curve_data_loss_curve_id_idx on uiapi.loss_curve_data(loss_curve_id);
@@ -84,12 +84,12 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_curve_data TO oq_uiapi_writer;
 COMMENT ON TABLE uiapi.loss_curve IS 'Holds the parameters common to a set of loss curves.';
 COMMENT ON COLUMN uiapi.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
 COMMENT ON COLUMN uiapi.loss_curve.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN uiapi.loss_curve.loss_category IS 'The category of the losses';
+COMMENT ON COLUMN uiapi.loss_curve.category IS 'The category of the losses';
 COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
 COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
 COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
 COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN uiapi.loss_curve_data.pos IS 'The position of the asset';
+COMMENT ON COLUMN uiapi.loss_curve_data.location IS 'The position of the asset';
 COMMENT ON COLUMN uiapi.loss_curve_data.losses IS 'Losses (0 <= loss <= 1 for loss ratio curves)';
 COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';
