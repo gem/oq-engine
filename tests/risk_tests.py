@@ -19,6 +19,7 @@
 
 import os
 import json
+import mock
 import numpy
 import unittest
 from math import log
@@ -245,7 +246,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 
-        self.job = job.Job(self.params, self.job_id, base_path=".")
+        self.job = job.Job(self.params, base_path=".")
         self.job.to_kvs()
 
         # deleting old file
@@ -686,34 +687,58 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_data["AggregateLossCurve"]["ordinate_property"] = \
                 "PoE in 50.0 years"
 
-        expected_data["AggregateLossCurve"] \
-                ["curve_title"] = "Aggregate Loss Curve"
+        expected_data["AggregateLossCurve"]["curve_title"] = \
+            "Aggregate Loss Curve"
 
         self.assertEqual(expected_data, aggregate._for_plotting(curve, 50.0))
 
-    def test_plots_the_aggregate_curve(self):
-        aggregate.compute_aggregate_curve(self.job)
-        self._assert_plot_is_produced()
+    def test_comp_agg_curve_calls_plotter(self):
+        """
+        If the AGGREGATE_LOSS_CURVE parameter in the job config file, aggregate
+        loss curve SVGs will be produced using
+        :py:class:`openquake.output.curve.CurvePlot`
+
+        If AGGREGATE_LOSS_CURVE is defined in the config file (with any value),
+        this test ensures that the plotter is called.
+        :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
+        this test.
+        """
+        with mock.patch(
+            'openquake.output.curve.CurvePlot.write') as write_mock:
+            with mock.patch(
+                'openquake.output.curve.CurvePlot.close') as close_mock:
+                aggregate.compute_aggregate_curve(self.job)
+
+                # make sure write() and close() were both called
+                self.assertEqual(1, write_mock.call_count)
+                self.assertEqual(1, close_mock.call_count)
 
     def test_plots_the_aggregate_curve_only_if_specified(self):
-        del(self.params["AGGREGATE_LOSS_CURVE"])
+        """
+        If the AGGREGATE_LOSS_CURVE parameter in the job config file, aggregate
+        loss curve SVGs will be produced using
+        :py:class:`openquake.output.curve.CurvePlot`
+
+        If AGGREGATE_LOSS_CURVE is not defined in the config file, this test
+        ensures that the plotter is not called.
+        :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
+        this test.
+        """
+        del self.params["AGGREGATE_LOSS_CURVE"]
 
         # storing a new job definition in kvs
-        self.job = job.Job(self.params, self.job_id, base_path=".")
+        self.job = job.Job(self.params, base_path=".")
         self.job.to_kvs()
 
-        aggregate.compute_aggregate_curve(self.job)
-        self._assert_plot_is_not_produced()
+        with mock.patch(
+            'openquake.output.curve.CurvePlot.write') as write_mock:
+            with mock.patch(
+                'openquake.output.curve.CurvePlot.close') as close_mock:
+                aggregate.compute_aggregate_curve(self.job)
 
-    def _assert_plot_is_not_produced(self):
-        self.assertFalse(os.path.exists(
-                os.path.join(helpers.OUTPUT_DIR,
-                aggregate._filename(self.job_id))))
-
-    def _assert_plot_is_produced(self):
-        self.assertTrue(os.path.exists(
-                os.path.join(helpers.OUTPUT_DIR,
-                aggregate._filename(self.job_id))))
+                # the plotter should not be called
+                self.assertEqual(0, write_mock.call_count)
+                self.assertEqual(0, close_mock.call_count)
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase):
