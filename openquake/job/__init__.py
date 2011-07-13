@@ -21,6 +21,7 @@
 import hashlib
 import os
 import re
+import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
@@ -33,6 +34,7 @@ from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
 from openquake.parser import exposure
+from openquake.kvs.tokens import alloc_job_key
 
 from db.alchemy.models import OqJob, OqUser, OqParams
 from db.alchemy.db_utils import get_uiapi_writer_session
@@ -207,7 +209,8 @@ class Job(object):
         """Return the job in the underlying kvs system with the given id."""
 
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
-        return Job(params, job_id)
+        job = Job(params, job_id=job_id)
+        return job
 
     @staticmethod
     def from_file(config_file, output_type):
@@ -233,11 +236,12 @@ class Job(object):
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, sections=list(), base_path=None):
+    def __init__(self, params, job_id=None, sections=list(),
+        base_path=None):
         if job_id is None:
-            job_id = kvs.generate_random_id()
-
-        self.job_id = job_id
+            self.job_id = alloc_job_key()
+        else:
+            self.job_id = job_id
         self.blocks_keys = []
         self.partition = True
         self.params = params
@@ -314,7 +318,33 @@ class Job(object):
                 LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key))
                 results.extend(self.execute())
 
+        self.cleanup()
+
         return results
+
+    def cleanup(self):
+        """
+        Perform any necessary cleanup steps after the job completes.
+
+        Currently, this method only clears KVS cache data for the job.
+        """
+        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
+
+        match = re.match(r'^::JOB::(\d+)::$', str(self.job_id))
+        if match:
+            job_number = match.group(1)
+        else:
+            # invalid job_id; something is horribly wrong
+            msg = "KVS garbage collection failed: job ID '%s' is invalid."
+            msg %= self.job_id
+            LOG.critical(msg)
+            raise RuntimeError(msg)
+
+        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
+
+        # run KVS garbage collection aynchronously
+        # stdout goes to /dev/null to silence any output from the GC
+        subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
 
     def _partition(self):
         """Split the set of sites to compute in blocks and store
@@ -413,8 +443,10 @@ class Job(object):
                     LOG.debug("Slurping %s" % path)
                     sha1 = hashlib.sha1(data_file.read()).hexdigest()
                     data_file.seek(0)
-                    kvs_client.set(sha1, data_file.read())
-                    self.params[key] = sha1
+
+                    file_key = kvs.generate_key([self.job_id, sha1])
+                    kvs_client.set(file_key, data_file.read())
+                    self.params[key] = file_key
                     self.params[key + "_PATH"] = path
 
     def to_kvs(self, write_cfg=True):

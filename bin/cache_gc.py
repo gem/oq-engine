@@ -29,12 +29,17 @@ data.
 """
 
 import getopt
-import logging
 import re
 import sys
 
+import oqpath
+oqpath.set_oq_path()
+
 from openquake import kvs
+from openquake import logs
 from openquake.kvs import tokens
+
+LOG = logs.LOG
 
 SHORT_ARGS = 'hlj:'
 LONG_ARGS = ['help', 'job=', 'list']
@@ -53,8 +58,6 @@ def main(cl_args):
         # Invalid arg specified; print the error and help, then exit
         print e
         show_help()
-
-    print opts
 
     # strip dashes
     opts = [(strip_dashes(opt), val) for opt, val in opts]
@@ -96,13 +99,14 @@ def _get_current_job_ids():
 
     # parse out the job IDs
     job_ids = []
+    job_re = re.compile(r'^::JOB::(\d+)::$')
 
     for job in jobs:
-        match = re.match(r'^::JOB::(\d+)::$', job)
+        match = job_re.match(job)
         if match:
-            job_ids.append(match.group(1))
+            job_ids.append(int(match.group(1)))
 
-    return job_ids
+    return sorted(job_ids)
 
 
 def list_cached_jobs():
@@ -143,7 +147,7 @@ def clear_job_data(job_id):
 
     print 'Attempting to clear cache data for job %s...' % job_id
 
-    result = kvs.cache_gc(job_id)
+    result = kvs.cache_gc(tokens.JOB_KEY_FMT % job_id)
 
     if result is None:
         print 'Job %s not found.' % job_id
