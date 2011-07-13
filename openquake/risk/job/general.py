@@ -151,13 +151,6 @@ class RiskJobMixin(mixins.Mixin):
                                       serialize_filename)
         results = [_serialize(serialize_path, **kwargs)]
 
-        curve_filename = "%s-block-%s.svg" % (
-                                self['LOSS_CURVES_OUTPUT_PREFIX'], block_id)
-        curve_results_path = os.path.join(self.base_path,
-                                          self['OUTPUT_DIR'],
-                                          curve_filename)
-
-        results.extend(_plot(serialize_path, curve_results_path, **kwargs))
         return results
 
     def _write_output_for_block(self, job_id, block_id):
