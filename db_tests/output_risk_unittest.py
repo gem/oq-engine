@@ -42,7 +42,7 @@ RISK_LOSS_CURVE_DATA = [
        u'structureCategory': u'RM1L', u'lon': -118.077721,
        u'assetDescription': u'LA building',
        u'vulnerabilityFunctionReference': u'HAZUS_RM1L_LC',
-       u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+       u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
      (Curve([(7.18e-06, 1.0), (1.91e-05, 1.0), (3.12e-05, 1.0),
@@ -52,7 +52,7 @@ RISK_LOSS_CURVE_DATA = [
       u'structureCategory': u'URML',
       u'lon': -118.077721, u'assetDescription': u'LA building',
       u'vulnerabilityFunctionReference': u'HAZUS_URML_LC',
-      u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+      u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
      (Curve([(5.48e-06, 1.0), (1.45e-05, 1.0), (2.36e-05, 1.0),
@@ -62,7 +62,7 @@ RISK_LOSS_CURVE_DATA = [
       u'structureCategory': u'URML', u'lon': -118.077721,
       u'assetDescription': u'LA building',
       u'vulnerabilityFunctionReference': u'HAZUS_URML_LS',
-      u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+      u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
      (Curve([(9.77e-06, 1.0), (2.64e-05, 1.0), (4.31e-05, 1.0),
@@ -72,7 +72,7 @@ RISK_LOSS_CURVE_DATA = [
       u'structureCategory': u'C3L', u'lon': -118.077721,
       u'assetDescription': u'LA building',
       u'vulnerabilityFunctionReference': u'HAZUS_C3L_MC',
-      u'listID': u'LA01', u'assetValueUnit': None, u'lat': 33.852034})),
+      u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 ]
 
 
@@ -95,18 +95,16 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
 
-    def test_insert(self):
+    def test_serialize(self):
         """All the records are inserted correctly."""
         output = self.writer.output
 
         # Call the function under test.
-        data = RISK_LOSS_CURVE_DATA
-        self.writer.serialize(data)
+        self.writer.serialize(RISK_LOSS_CURVE_DATA)
 
-        # After calling the function under test we see the expected output.
+        # output record
         self.assertEqual(1, len(self.job.output_set))
 
-        # Make sure the inserted output record has the right data.
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
@@ -114,21 +112,28 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual("loss_curve", output.output_type)
         self.assertTrue(self.job is output.oq_job)
 
-        # After calling the function under test we see the expected loss asset
-        # data.
-        self.assertEqual(4, len(output.lossassetdata_set))
+        # loss curve record
+        self.assertEqual(1, len(output.losscurve_set))
+
+        [loss_curve] = output.losscurve_set
+
+        self.assertEqual(loss_curve.unit, 'EUR')
+        self.assertEqual(loss_curve.end_branch_label, None)
+        self.assertEqual(loss_curve.loss_category, None)
+
+        # loss curve data records
+        self.assertEqual(4, len(loss_curve.losscurvedata_set))
 
         inserted_data = []
 
-        for lad in output.lossassetdata_set:
-            pos = lad.pos.coords(self.session)
+        for lcd in loss_curve.losscurvedata_set:
+            pos = lcd.pos.coords(self.session)
 
-            for curve in lad.losscurvedata_set:
-                data = (Site(pos[0], pos[1]),
-                        (Curve(zip(curve.abscissae, curve.poes)),
-                        {u'assetID': lad.asset_id}))
+            data = (Site(pos[0], pos[1]),
+                    (Curve(zip(lcd.losses, lcd.poes)),
+                    {u'assetID': lcd.asset_ref}))
 
-                inserted_data.append(data)
+            inserted_data.append(data)
 
         def normalize(values):
             result = []
