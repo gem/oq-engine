@@ -236,9 +236,12 @@ class Job(object):
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=alloc_job_key(), sections=list(),
+    def __init__(self, params, job_id=None, sections=list(),
         base_path=None):
-        self.job_id = job_id
+        if job_id is None:
+            self.job_id = alloc_job_key()
+        else:
+            self.job_id = job_id
         self.blocks_keys = []
         self.partition = True
         self.params = params
