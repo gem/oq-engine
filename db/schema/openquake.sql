@@ -751,7 +751,7 @@ CREATE TABLE uiapi.loss_curve (
     output_id INTEGER NOT NULL,
 
     end_branch_label VARCHAR,
-    loss_category VARCHAR,
+    category VARCHAR,
     unit VARCHAR -- e.g. EUR, USD
 ) TABLESPACE uiapi_ts;
 
@@ -767,8 +767,8 @@ CREATE TABLE uiapi.loss_curve_data (
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'pos', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_curve_data ALTER COLUMN pos SET NOT NULL;
+SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE uiapi.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 
 ------------------------------------------------------------------------
