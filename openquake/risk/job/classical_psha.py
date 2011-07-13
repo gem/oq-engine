@@ -67,7 +67,7 @@ class ClassicalPSHABasedMixin:
 
         """
 
-        block = job.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(block_id)
 
         #pylint: disable=W0201
         self.vuln_curves = \
