@@ -29,7 +29,7 @@ from openquake import shapes
 from tests.utils import helpers
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.job import Block
+from openquake.risk.job.general import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
@@ -941,7 +941,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         mixin.id = self.job_id
         mixin.vuln_curves = {"ID": self.vuln_function}
 
-        block = job.Block.from_kvs(self.block_id)
+        block = Block.from_kvs(self.block_id)
 
         asset = {"vulnerabilityFunctionReference": "ID",
                  "assetID": 22.61, "assetValue": 1}
