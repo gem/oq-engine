@@ -99,9 +99,10 @@ def _get_current_job_ids():
 
     # parse out the job IDs
     job_ids = []
+    job_re = re.compile(r'^::JOB::(\d+)::$')
 
     for job in jobs:
-        match = re.match(r'^::JOB::(\d+)::$', job)
+        match = job_re.match(job)
         if match:
             job_ids.append(int(match.group(1)))
 
