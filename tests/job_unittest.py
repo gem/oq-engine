@@ -285,6 +285,9 @@ class JobTestCase(unittest.TestCase):
         job1 = Job({})
         job2 = Job({})
 
+        self.assertTrue(job1.job_id is not None)
+        self.assertTrue(job2.job_id is not None)
+
         self.assertNotEqual(job1.job_id, job2.job_id)
 
 
