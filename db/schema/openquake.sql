@@ -717,6 +717,8 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
+-- See https://bugs.launchpad.net/openquake/+bug/805434 and
+-- https://bugs.launchpad.net/openquake/+bug/797708
 
 -- Design decision: store both probabilistic and event based loss map in the
 -- same tables (with some checks for consistency)
@@ -726,11 +728,11 @@ CREATE TABLE uiapi.loss_map (
     output_id INTEGER NOT NULL, -- FK to output.id
     loss_map_ref VARCHAR,
     end_branch_label VARCHAR,
-    loss_category VARCHAR, -- open-ended, cfr Vitor's mail
-    unit VARCHAR, -- open-ended
-    -- time_span and poe are significant only for probabilistic calculations,
+    loss_category VARCHAR,
+    unit VARCHAR, -- e.g. USD, EUR
+    -- poe and time_span are significant only for probabilistic calculations,
     -- fact that is hard to enforce here
-    time_span float CONSTRAINT non_negative_time_span CHECK (time_span >= 0.0),
+    -- the time_span AKA investigation_time is stored in the oq_params table
     poe float CONSTRAINT valid_poe CHECK ((poe >= 0.0) AND (poe <= 1.0))
 ) TABLESPACE uiapi_ts;
 
@@ -738,11 +740,11 @@ CREATE TABLE uiapi.loss_map (
 -- "site" table, and I merged it with the "asset" table.  But this leaves me
 -- without a place to store, in the future when it will probably needed, the
 -- aggregated loss value per site; the aggregated value is useful for plotting
--- purposes.
+-- purposes. Maybe a "site" table would be useful in this case?
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
-    asset_ref VARCHAR,
+    asset_ref VARCHAR NOT NULL,
     loss_mean float,
     loss_std_dev float,
     loss_value float,
@@ -756,8 +758,6 @@ CREATE TABLE uiapi.loss_map_data (
             OR (loss_value IS NOT NULL AND loss_mean IS NULL AND loss_std_dev IS NULL))
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_map_site_data', 'site', 4326, 'POINT', 2);
--- A site appears at most once inside a loss map
-ALTER TABLE uiapi.loss_map_data ALTER COLUMN site SET NOT NULL UNIQUE;
 
 
 -- Loss asset data.
