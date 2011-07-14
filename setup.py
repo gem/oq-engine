@@ -32,6 +32,8 @@
 
 import os
 
+import openquake
+
 from distutils.core import setup
 
 scripts = ["bin/%s" % x for x in os.listdir('bin')]
@@ -54,7 +56,8 @@ with os.popen("which gfortran") as gf:
         raise EnvironmentError("You need to install gfortran")
 
 setup(name='openquake',
-      version='0.11',
+      # version='0.11',
+      version='.'.join([str(x) for x in openquake.__version__]),
       description='OpenQuake Platform',
       author='gem-core',
       author_email='openquake-dev@googlegroups.com',
