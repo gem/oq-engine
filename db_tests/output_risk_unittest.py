@@ -119,7 +119,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEqual(loss_curve.unit, 'EUR')
         self.assertEqual(loss_curve.end_branch_label, None)
-        self.assertEqual(loss_curve.loss_category, None)
+        self.assertEqual(loss_curve.category, None)
 
         # loss curve data records
         self.assertEqual(4, len(loss_curve.losscurvedata_set))
@@ -127,20 +127,22 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         inserted_data = []
 
         for lcd in loss_curve.losscurvedata_set:
-            pos = lcd.pos.coords(self.session)
+            loc = lcd.location.coords(self.session)
 
-            data = (Site(pos[0], pos[1]),
-                    (Curve(zip(lcd.losses, lcd.poes)),
-                    {u'assetID': lcd.asset_ref}))
+            data = (Site(loc[0], loc[1]),
+                    (Curve(zip(lcd.ratios, lcd.poes)),
+                    {u'assetID': lcd.asset_ref,
+                     u'assetValue': lcd.asset_value}))
 
             inserted_data.append(data)
 
         def normalize(values):
             result = []
-            for value in values:
-                result.append((value[0],
-                               (value[1][0],
-                                {'assetID': value[1][1]['assetID']})))
+            for site, (curve, asset) in values:
+                result.append((site,
+                               (curve,
+                                {'assetID': asset['assetID'],
+                                 'assetValue': asset['assetValue']})))
 
             return sorted(result, key=lambda v: v[1][1]['assetID'])
 
