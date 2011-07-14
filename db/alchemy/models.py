@@ -247,61 +247,49 @@ class GMFData(Base):
             self.id, self.location, self.ground_motion))
 
 
-class LossMapData(Base):
-    __tablename__ = "loss_map_data"
+class LossMap(Base):
+    __tablename__ = "loss_map"
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
 
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
                           nullable=False)
-    output = relationship("Output", backref="lossmapdata_set")
+    output = relationship("Output", backref="lossmap_set")
 
-    end_branch_label = sa.Column(sa.String)
-    loss_category = sa.Column(sa.String)
-    unit = sa.Column(sa.Enum("EUR", "USD", default=None, native_enum=False),
-                     nullable=True)
+    loss_map_type = sa.Column(sa.Enum("probabilistic", "deterministic",
+                                      native_enum=False),
+                              nullable=False)
+    loss_map_ref = sa.Column(sa.String, nullable=True)
+    end_branch_label = sa.Column(sa.String, nullable=True)
+    category = sa.Column(sa.String, nullable=True)
+    unit = sa.Column(sa.String, nullable=True)
+    poe = sa.Column(sa.Float, nullable=True)
 
     def __repr__(self):
-        return(":loss_map_data: %s" % self.id)
+        return(":loss_map: %s" % self.id)
 
 
-class LossMapNodeData(Base):
-    __tablename__ = "loss_map_node_data"
+class LossMapData(Base):
+    __tablename__ = "loss_map_data"
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
 
-    loss_map_data_id = sa.Column(sa.Integer,
-                          sa.ForeignKey("uiapi.loss_map_data.id"),
-                          nullable=False)
-    loss_map_data = relationship("LossMapData", backref="lossmapnodedata_set")
+    loss_map_id = sa.Column(sa.Integer,
+                            sa.ForeignKey("uiapi.loss_map.id"),
+                            nullable=False)
+    loss_map = relationship("LossMap",
+                            backref="lossmapdata_set")
 
+    asset_ref = sa.Column(sa.String, nullable=False)
     site = ga.GeometryColumn(ga.Point(2), nullable=False)
+    mean = sa.Column(sa.Float, nullable=True)
+    std_dev = sa.Column(sa.Float, nullable=True)
     value = sa.Column(sa.Float, nullable=True)
 
     def __repr__(self):
-        return(":loss_map_node_data: %s" % self.id)
-
-
-class LossMapNodeAssetData(Base):
-    __tablename__ = "loss_map_node_asset_data"
-    __table_args__ = {"schema": "uiapi"}
-
-    id = sa.Column(sa.Integer, primary_key=True)
-
-    loss_map_node_data_id = sa.Column(sa.Integer,
-                          sa.ForeignKey("uiapi.loss_map_node_data.id"),
-                          nullable=False)
-    loss_map_node_data = relationship("LossMapNodeData",
-                                      backref="lossmapnodeassetdata_set")
-
-    asset_id = sa.Column(sa.String)
-    mean = sa.Column(sa.Float)
-    std_dev= sa.Column(sa.Float)
-
-    def __repr__(self):
-        return(":loss_map_node_asset_data: %s" % self.id)
+        return(":loss_map_data: %s" % self.id)
 
 
 class LossAssetData(Base):
