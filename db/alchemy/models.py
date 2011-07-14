@@ -318,7 +318,8 @@ class LossCurveData(Base):
 
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
     asset_ref = sa.Column(sa.String)
-    losses = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
+    asset_value = sa.Column(sa.Float, nullable=False)
+    ratios = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
     poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
                      doc="Probabilities of exceedence")
 

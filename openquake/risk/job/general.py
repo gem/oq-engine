@@ -120,10 +120,12 @@ class RiskJobMixin(mixins.Mixin):
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
-    def _serialize_and_plot(self, block_id, **kwargs):
+    def _serialize(self, block_id, **kwargs):
         """
-        Build filename/paths for serializing/plotting and call _serialize
-        and then _plot. Return the list of filenames.
+        Build filename/paths for serializing and call _serialize
+
+        Return the list of filenames. The list will be empty if nothing was
+        actually serialized.
         """
 
         if kwargs['curve_mode'] == 'loss_ratio':
@@ -142,11 +144,12 @@ class RiskJobMixin(mixins.Mixin):
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
         writer = risk_output.create_loss_curve_writer(kwargs['curve_mode'],
             serialize_path, self.params)
-        writer.serialize(kwargs['curves'])
+        if writer:
+            writer.serialize(kwargs['curves'])
 
-        results = [serialize_path]
-
-        return results
+            return [serialize_path]
+        else:
+            return []
 
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
@@ -178,11 +181,11 @@ class RiskJobMixin(mixins.Mixin):
                     loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
                     loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
-        results = self._serialize_and_plot(block_id,
+        results = self._serialize(block_id,
                                            curves=loss_ratio_curves,
                                            curve_mode='loss_ratio')
         if loss_curves:
-            results.extend(self._serialize_and_plot(block_id,
+            results.extend(self._serialize(block_id,
                                                 curves=loss_curves,
                                                 curve_mode='loss',
                                                 curve_mode_prefix='loss_curve',
