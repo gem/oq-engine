@@ -86,7 +86,7 @@ class ProbabilisticEventMixin:
         realizations = int(self['NUMBER_OF_LOGIC_TREE_SAMPLES'])
         num_ses = histories * realizations
 
-        block = job.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(block_id)
         sites_list = block.sites
         gmfs = {}
         for site in sites_list:
@@ -139,7 +139,7 @@ class ProbabilisticEventMixin:
                 vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         # TODO(jmc): DONT assumes that hazard and risk grid are the same
-        block = job.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(block_id)
 
         for point in block.grid(self.region):
             key = kvs.generate_product_key(self.job_id,
