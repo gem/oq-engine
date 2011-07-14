@@ -214,7 +214,7 @@ class RiskJobMixin(mixins.Mixin):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
-        block = job.Block.from_kvs(block_id)
+        block = Block.from_kvs(block_id)
         for point in block.grid(self.region):
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
