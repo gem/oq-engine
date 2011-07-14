@@ -55,20 +55,24 @@ with os.popen("which gfortran") as gf:
     if not gf:
         raise EnvironmentError("You need to install gfortran")
 
-setup(name='openquake',
-      # version='0.11',
-      version='.'.join([str(x) for x in openquake.__version__]),
-      description='OpenQuake Platform',
-      author='gem-core',
-      author_email='openquake-dev@googlegroups.com',
-      url='http://www.openquake.org/',
-      packages=['openquake','openquake.hazard',
-                'openquake.job','openquake.kvs',
-                'openquake.output','openquake.parser',
-                'openquake.risk', 'openquake.risk.job'],
-      data_files=[('/etc/openquake', ['celeryconfig.py']),
-                  ('lib', libs),('dist', dist)],
-      scripts=scripts,
-      install_requires=["pyyaml", "shapely", "python-gflags",
-                        "lxml", "sphinx", "guppy", "libLAS",
-                        "numpy", "scipy", "celery", "nose", "django"])
+setup(
+    name='openquake',
+    version='.'.join([str(x) for x in openquake.__version__]),
+    description='OpenQuake Platform',
+    author='gem-core',
+    author_email='openquake-dev@googlegroups.com',
+    url='http://www.openquake.org/',
+    packages=[
+        'openquake','openquake.hazard',
+        'openquake.job','openquake.kvs',
+        'openquake.output','openquake.parser',
+        'openquake.risk', 'openquake.risk.job'],
+    data_files=[
+        ('/etc/openquake', ['celeryconfig.py']),
+        ('lib', libs),
+        ('dist', dist)],
+    scripts=scripts,
+    install_requires=[
+        "pyyaml", "shapely", "python-gflags",
+        "lxml", "sphinx", "guppy", "libLAS",
+        "numpy", "scipy", "celery", "nose", "django"])
