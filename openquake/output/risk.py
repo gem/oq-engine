@@ -512,21 +512,18 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 
-class CurveDBWriter(OutputDBWriter):
+class LossCurveDBWriter(OutputDBWriter):
     """
-    Abstract class implementing a serializer to output loss curves to the
-    database.
-
-    Subclasses must implement get_output_type().
+    Serializer to the database for loss curves.
     """
 
     def __init__(self, *args, **kwargs):
-        super(CurveDBWriter, self).__init__(*args, **kwargs)
+        super(LossCurveDBWriter, self).__init__(*args, **kwargs)
 
         self.curve = None
 
     def get_output_type(self):
-        return super(CurveDBWriter, self).get_output_type()
+        return "loss_curve"
 
     def insert_datum(self, key, values):
         """
@@ -571,27 +568,12 @@ class CurveDBWriter(OutputDBWriter):
         # the same coordinates as point
         data = LossCurveData(loss_curve=self.curve,
             asset_ref=asset_object['assetID'],
-            losses=[float(x) for x in curve_object.abscissae],
+            asset_value=asset_object['assetValue'],
             location="POINT(%s %s)" % (point.longitude, point.latitude),
+            ratios=[float(x) for x in curve_object.abscissae],
             poes=[float(y) for y in curve_object.ordinates])
 
         self.session.add(data)
-
-
-class LossCurveDBWriter(CurveDBWriter):
-    """
-    Serializer to the database for loss curves.
-    """
-    def get_output_type(self):
-        return "loss_curve"
-
-
-class LossRatioCurveDBWriter(CurveDBWriter):
-    """
-    Serializer to the database for loss ratio curves.
-    """
-    def get_output_type(self):
-        return "loss_ratio_curve"
 
 
 def _curve_vals_as_gmldoublelist(curve_object):
@@ -613,16 +595,18 @@ def _curve_poe_as_gmldoublelist(curve_object):
 def create_loss_curve_writer(curve_mode, nrml_path, params):
     """Create a loss curve writer observing the settings in the config file.
 
+    If no writer is available for the given curve_mode and settings, returns
+    None.
+
     :param str curve_mode: one of 'loss', 'loss_ratio'
     :param dict params: the settings from the OpenQuake engine configuration
         file.
     :param str nrml_path: the full path of the XML/NRML representation of the
         hazard map.
-    :returns: an instance of
+    :returns: None or an instance of
         :py:class:`output.risk.LossCurveXMLWriter`,
         :py:class:`output.risk.LossCurveDBWriter`,
-        :py:class:`output.risk.LossRatioCurveXMLWriter` or
-        :py:class:`output.risk.LossRatioCurveDBWriter`
+        :py:class:`output.risk.LossRatioCurveXMLWriter`
     """
 
     assert curve_mode in ('loss', 'loss_ratio')
@@ -641,8 +625,9 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
         job_db_key = int(job_db_key)
 
         if curve_mode == 'loss':
-            writer_class = LossCurveDBWriter
+            # We don't store loss as such in the db, since we store asset
+            # values together with the ratios and we know that loss=ratio*value
+            return None
         elif curve_mode == 'loss_ratio':
-            writer_class = LossRatioCurveDBWriter
-
-        return writer_class(get_uiapi_writer_session(), nrml_path, job_db_key)
+            return LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
+                                     job_db_key)
