@@ -152,33 +152,6 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual("hazard_map", output.output_type)
         self.assertTrue(self.job is output.oq_job)
 
-    def test_insert_map_datum(self):
-        """An `uiapi.hazard_map_data` record is inserted correctly."""
-        self.output = self.setup_output()
-        session = get_uiapi_writer_session()
-        hmw = HazardMapDBWriter(
-            session, self.output.path, self.output.oq_job.id)
-        hmw.output = self.output
-
-        # This output has no map data before calling the function under test.
-        self.assertEqual(0, len(self.output.hazardmapdata_set))
-        self.assertEqual(0, len(self.output.lossmap_set))
-
-        # Call the function under test.
-        data = HAZARD_MAP_DATA[-1]
-        hmw.insert_map_datum(*data)
-
-        # After calling the function under test we see the expected map data.
-        self.assertEqual(1, len(self.output.hazardmapdata_set))
-        self.assertEqual(0, len(self.output.lossmap_set))
-
-        # Make sure the inserted map data is correct.
-        [hmd] = self.output.hazardmapdata_set
-        point = data[0].point
-        self.assertEqual([point.x, point.y], hmd.location.coords(session))
-        self.assertEqual(round_float(data[1].get("IML")),
-                         round_float(hmd.value))
-
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
         self.job = self.setup_classic_job()
