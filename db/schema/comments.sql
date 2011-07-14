@@ -156,22 +156,24 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
-COMMENT ON TABLE uiapi.loss_map_data IS 'Holds metadata for loss maps.';
-COMMENT ON COLUMN uiapi.loss_map_data.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN uiapi.loss_map_data.end_branch_label IS 'End branch label for this map.';
-COMMENT ON COLUMN uiapi.loss_map_data.loss_category IS 'Loss category (e.g. economic_loss).';
-COMMENT ON COLUMN uiapi.loss_map_data.unit IS 'Monetary unit (one of EUR, USD). Optional.';
+COMMENT ON TABLE uiapi.loss_map IS 'Holds metadata for loss maps.';
+COMMENT ON COLUMN uiapi.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN uiapi.loss_map.loss_map_type IS 'The type of this loss map, one of:
+    - probabilistic (classical psha-based or probabilistic based calculations)
+    - deterministic (deterministic event-based calculations)';
+COMMENT ON COLUMN uiapi.loss_map.loss_map_ref IS 'A simple identifier';
+COMMENT ON COLUMN uiapi.loss_map.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN uiapi.loss_map.category IS 'Loss category (e.g. economic_loss).';
+COMMENT ON COLUMN uiapi.loss_map.unit IS 'Monetary unit (one of EUR, USD)';
+COMMENT ON COLUMN uiapi.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
-COMMENT ON TABLE uiapi.loss_map_node_data IS 'Holds site for a loss map.';
-COMMENT ON COLUMN uiapi.loss_map_node_data.loss_map_data_id IS 'The foreign key to the loss map metadata';
-COMMENT ON COLUMN uiapi.loss_map_node_data.site IS 'The site for this loss map';
-COMMENT ON COLUMN uiapi.loss_map_node_data.value IS 'The aggregated loss value for this site';
-
-COMMENT ON TABLE uiapi.loss_map_node_asset_data IS 'Holds an asset and mean and standard deviation for its loss.';
-COMMENT ON COLUMN uiapi.loss_map_node_asset_data.loss_map_node_data_id IS 'The foreign key to the loss map site';
-COMMENT ON COLUMN uiapi.loss_map_node_asset_data.asset_id IS 'The asset reference';
-COMMENT ON COLUMN uiapi.loss_map_node_asset_data.mean IS 'The mean loss';
-COMMENT ON COLUMN uiapi.loss_map_node_asset_data.std_dev IS 'The standard deviation of the loss';
+COMMENT ON TABLE uiapi.loss_map_data IS 'Holds an asset, its position and either a value or a mean plus standard deviation for its loss.';
+COMMENT ON COLUMN uiapi.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
+COMMENT ON COLUMN uiapi.loss_map_data.asset_ref IS 'The asset reference';
+COMMENT ON COLUMN uiapi.loss_map_data.site IS 'The site of the asset';
+COMMENT ON COLUMN uiapi.loss_map_data.mean IS 'The mean loss (for deterministic maps)';
+COMMENT ON COLUMN uiapi.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps)';
+COMMENT ON COLUMN uiapi.loss_map_data.value IS 'The value of the loss (for probabilistic maps)';
 
 COMMENT ON TABLE uiapi.loss_asset_data IS 'Holds the asset id and its position for which loss curves were calculated.';
 COMMENT ON COLUMN uiapi.loss_asset_data.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';

@@ -717,47 +717,40 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
--- See https://bugs.launchpad.net/openquake/+bug/805434 and
--- https://bugs.launchpad.net/openquake/+bug/797708
 
--- Design decision: store both probabilistic and event based loss map in the
--- same tables (with some checks for consistency)
--- uiapi.output.output_type will contain the actual loss map type
 CREATE TABLE uiapi.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
+    loss_map_type VARCHAR NOT NULL CONSTRAINT loss_map_type
+            CHECK (loss_map_type IN ('probabilistic', 'deterministic')),
     loss_map_ref VARCHAR,
     end_branch_label VARCHAR,
-    loss_category VARCHAR,
+    category VARCHAR,
     unit VARCHAR, -- e.g. USD, EUR
-    -- poe and time_span are significant only for probabilistic calculations,
-    -- fact that is hard to enforce here
-    -- the time_span AKA investigation_time is stored in the oq_params table
-    poe float CONSTRAINT valid_poe CHECK ((poe >= 0.0) AND (poe <= 1.0))
+    -- poe and investigation_time are significant only for probabilistic calculations
+    -- investigation_time is stored in the oq_params table
+    poe float CONSTRAINT valid_poe
+        CHECK ((loss_map_type = 'probabilistic' AND (poe >= 0.0) AND (poe <= 1.0))
+               OR (loss_map_type != 'probabilistic' AND poe IS NULL))
 ) TABLESPACE uiapi_ts;
 
--- QUESTION: as we have done for the loss curves, I got rid of the intermediate
--- "site" table, and I merged it with the "asset" table.  But this leaves me
--- without a place to store, in the future when it will probably needed, the
--- aggregated loss value per site; the aggregated value is useful for plotting
--- purposes. Maybe a "site" table would be useful in this case?
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
-    loss_mean float,
-    loss_std_dev float,
-    loss_value float,
-    -- loss_mean AND loss_std_dev for event based calculations
+    mean float,
+    std_dev float,
+    value float,
+    -- mean AND std_dev for event based calculations
     --
     --   OR
     --
-    -- loss_value for probabilistic calculations
+    -- value for probabilistic calculations
     CONSTRAINT valid_loss CHECK
-        ((loss_value IS NULL AND loss_mean IS NOT NULL AND loss_std_dev IS NOT NULL)
-            OR (loss_value IS NOT NULL AND loss_mean IS NULL AND loss_std_dev IS NULL))
+        ((value IS NULL AND mean IS NOT NULL AND std_dev IS NOT NULL)
+            OR (value IS NOT NULL AND mean IS NULL AND std_dev IS NULL))
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_map_site_data', 'site', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'site', 4326, 'POINT', 2);
 
 
 -- Loss asset data.
@@ -934,8 +927,8 @@ ALTER TABLE uiapi.gmf_data
 ADD CONSTRAINT uiapi_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_map_data
-ADD CONSTRAINT uiapi_loss_map_data_output_fk
+ALTER TABLE uiapi.loss_map
+ADD CONSTRAINT uiapi_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_asset_data
@@ -946,16 +939,9 @@ ALTER TABLE uiapi.loss_curve_data
 ADD CONSTRAINT uiapi_loss_curve_data_loss_asset_fk
 FOREIGN KEY (loss_asset_id) REFERENCES uiapi.loss_asset_data(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_map_node_data
-ADD CONSTRAINT uiapi_loss_map_node_data_loss_map_data_fk
-FOREIGN KEY (loss_map_data_id) REFERENCES uiapi.loss_map_data(id) ON DELETE CASCADE;
-
-ALTER TABLE uiapi.loss_map_node_data
-ADD CONSTRAINT uiapi_loss_map_node_data_unique_site UNIQUE (loss_map_data_id, site);
-
-ALTER TABLE uiapi.loss_map_node_asset_data
-ADD CONSTRAINT uiapi_loss_map_node_asset_data_loss_map_node_data_fk
-FOREIGN KEY (loss_map_node_data_id) REFERENCES uiapi.loss_map_node_data(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.loss_map_data
+ADD CONSTRAINT uiapi_loss_map_data_loss_map_fk
+FOREIGN KEY (loss_map_id) REFERENCES uiapi.loss_map(id) ON DELETE CASCADE;
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude

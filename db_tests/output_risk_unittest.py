@@ -149,6 +149,7 @@ LOSS_MAP_METADATA = {
     'lossMapID': 'test_lm_id',
     'endBranchLabel': 'test_ebl',
     'lossCategory': 'economic_loss',
+    'lossMapType': 'deterministic',
     'unit': 'EUR'}
 
 SITE_A = Site(-117.0, 38.0)
@@ -186,7 +187,7 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
 
-    def test_insert(self):
+    def test_serialize_deterministic(self):
         """All the records are inserted correctly."""
 
         output = self.writer.output
@@ -195,10 +196,8 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = SAMPLE_LOSS_MAP_DATA
         self.writer.serialize(data)
 
-        # After calling the function under test we see the expected output.
+        # Output record
         self.assertEqual(1, len(self.job.output_set))
-
-        # Make sure the inserted output record has the right data.
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
@@ -206,35 +205,32 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual("loss_map", output.output_type)
         self.assertTrue(self.job is output.oq_job)
 
-        # LossMapData
-        self.assertEqual(1, len(output.lossmapdata_set))
-        [data] = output.lossmapdata_set
+        # LossMap record
+        self.assertEqual(1, len(output.lossmap_set))
+        [metadata] = output.lossmap_set
+        self.assertEqual(LOSS_MAP_METADATA['lossMapType'],
+                         metadata.loss_map_type)
         self.assertEqual(LOSS_MAP_METADATA['endBranchLabel'],
-                         data.end_branch_label)
+                         metadata.end_branch_label)
         self.assertEqual(LOSS_MAP_METADATA['lossCategory'],
-                         data.loss_category)
-        self.assertEqual(LOSS_MAP_METADATA['unit'], data.unit)
+                         metadata.category)
+        self.assertEqual(LOSS_MAP_METADATA['unit'], metadata.unit)
 
-        # LossMapNodeData
-        self.assertEqual(2, len(data.lossmapnodedata_set))
-        [node_a, node_b] = data.lossmapnodedata_set
-        self.assertEqual(SITE_A, Site(*node_a.site.coords(self.session)))
-        self.assertEqual(node_a.value, None)
-        self.assertEqual(SITE_B, Site(*node_b.site.coords(self.session)))
-        self.assertEqual(node_b.value, None)
+        # LossMapData records
+        self.assertEqual(3, len(metadata.lossmapdata_set))
+        [data_a, data_b, data_c] = metadata.lossmapdata_set
 
-        # LossMapNodeAssetData
-        self.assertEqual(2, len(node_a.lossmapnodeassetdata_set))
-        [node_a_asset_1, node_a_asset_2] = node_a.lossmapnodeassetdata_set
-        self.assertEqual(SITE_A_ASSET_ONE['assetID'], node_a_asset_1.asset_id)
-        self.assertEqual(SITE_A_LOSS_ONE['mean_loss'], node_a_asset_1.mean)
-        self.assertEqual(SITE_A_LOSS_ONE['stddev_loss'], node_a_asset_1.std_dev)
-        self.assertEqual(SITE_A_ASSET_TWO['assetID'], node_a_asset_2.asset_id)
-        self.assertEqual(SITE_A_LOSS_TWO['mean_loss'], node_a_asset_2.mean)
-        self.assertEqual(SITE_A_LOSS_TWO['stddev_loss'], node_a_asset_2.std_dev)
+        self.assertEqual(SITE_A, Site(*data_a.site.coords(self.session)))
+        self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
+        self.assertEqual(SITE_A_LOSS_ONE['mean_loss'], data_a.mean)
+        self.assertEqual(SITE_A_LOSS_ONE['stddev_loss'], data_a.std_dev)
 
-        self.assertEqual(1, len(node_b.lossmapnodeassetdata_set))
-        [node_b_asset_1] = node_b.lossmapnodeassetdata_set
-        self.assertEqual(SITE_B_ASSET_ONE['assetID'], node_b_asset_1.asset_id)
-        self.assertEqual(SITE_B_LOSS_ONE['mean_loss'], node_b_asset_1.mean)
-        self.assertEqual(SITE_B_LOSS_ONE['stddev_loss'], node_b_asset_1.std_dev)
+        self.assertEqual(SITE_A, Site(*data_b.site.coords(self.session)))
+        self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
+        self.assertEqual(SITE_A_LOSS_TWO['mean_loss'], data_b.mean)
+        self.assertEqual(SITE_A_LOSS_TWO['stddev_loss'], data_b.std_dev)
+
+        self.assertEqual(SITE_B, Site(*data_c.site.coords(self.session)))
+        self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
+        self.assertEqual(SITE_B_LOSS_ONE['mean_loss'], data_c.mean)
+        self.assertEqual(SITE_B_LOSS_ONE['stddev_loss'], data_c.std_dev)

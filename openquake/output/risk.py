@@ -31,8 +31,9 @@ from lxml import etree
 
 import sqlalchemy
 
+from db.alchemy.db_utils import get_uiapi_writer_session
 from db.alchemy.models import OqJob, Output
-from db.alchemy.models import LossMapData, LossMapNodeData, LossMapNodeAssetData
+from db.alchemy.models import LossMap, LossMapData
 from db.alchemy.models import LossAssetData, LossCurveData
 
 from openquake import logs
@@ -340,33 +341,31 @@ class LossMapDBWriter(OutputDBWriter):
             :py:class:`dict` (asset dict)
                 ***assetID*** - the assetID
         """
-        node = self._insert_node(site)
-
         for loss, asset in values:
-            node_asset = LossMapNodeAssetData(
-                loss_map_node_data=node,
-                asset_id=asset['assetID'],
-                mean=loss['mean_loss'],
-                std_dev=loss['stddev_loss'])
-            self.session.add(node_asset)
-
-    def _insert_node(self, site):
-        # FIXME insert at most once
-        node = LossMapNodeData(
-            loss_map_data=self.data,
-            site="POINT(%s %s)" % (site.longitude, site.latitude))
-        self.session.add(node)
-        return node
+            data = LossMapData(
+                loss_map=self.data,
+                asset_ref=asset['assetID'],
+                site="POINT(%s %s)" % (site.longitude, site.latitude),
+                mean=loss.get('mean_loss'), # for deterministic loss maps
+                std_dev=loss.get('stddev_loss'), # for deterministic loss maps
+                value=loss.get('value')) # for probabilistic loss maps
+            self.session.add(data)
 
     def _insert_metadata(self, metadata):
-        kwargs = {'output': self.output}
+        kwargs = {
+            'output': self.output,
+        }
 
-        for key, metadata_key in (('end_branch_label', 'endBranchLabel'),
-                                  ('loss_category', 'lossCategory'),
-                                  ('unit', 'unit')):
+        for key, metadata_key in (('loss_map_ref', 'lossMapID'),
+                                  ('end_branch_label', 'endBranchLabel'),
+                                  ('category', 'lossCategory'),
+                                  ('unit', 'unit'),
+                                  ('loss_map_type', 'lossMapType'),
+                                  ('poe', 'poe') # for probabilistic loss maps
+                                  ):
             kwargs[key] = metadata.get(metadata_key)
 
-        self.data = LossMapData(**kwargs)
+        self.data = LossMap(**kwargs)
         self.session.add(self.data)
 
 class CurveXMLWriter(BaseXMLWriter):
