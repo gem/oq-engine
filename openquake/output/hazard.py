@@ -545,15 +545,15 @@ class BaseDBWriter(object):
 
     def insert_output(self, output_type):
         """Insert an `uiapi.output` record for the job at hand."""
-        LOGGER.info("> insert_output")
+        LOGGER.debug("> insert_output")
         job = self.session.query(OqJob).filter(
             OqJob.id == self.oq_job_id).one()
         self.output = Output(owner=job.owner, oq_job=job,
                              display_name=basename(self.nrml_path),
                              output_type=output_type, db_backed=True)
         self.session.add(self.output)
-        LOGGER.info("output = '%s'" % self.output)
-        LOGGER.info("< insert_output")
+        LOGGER.debug("output = '%s'" % self.output)
+        LOGGER.debug("< insert_output")
 
 
 class HazardMapDBWriter(BaseDBWriter):
@@ -586,7 +586,7 @@ class HazardMapDBWriter(BaseDBWriter):
         """
         LOGGER.info("> hazmap-serialize")
 
-        LOGGER.info("serializing %s points" % len(iterable))
+        LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("hazard_map")
 
         for key, value in iterable:
@@ -600,8 +600,8 @@ class HazardMapDBWriter(BaseDBWriter):
         self.session.add(self.output)
         self.session.commit()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< hazmap-serialize")
+        LOGGER.debug("serialized %s points" % len(iterable))
+        LOGGER.debug("< hazmap-serialize")
 
     def insert_map_datum(self, point, value):
         """Inserts a single hazard map datum.
@@ -669,15 +669,15 @@ class HazardCurveDBWriter(BaseDBWriter):
         """
         LOGGER.info("> hazcurve-serialize")
 
-        LOGGER.info("serializing %s points" % len(iterable))
+        LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("hazard_curve")
 
         for key, value in iterable:
             self.insert_curve_datum(key, value)
         self.session.commit()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< hazcurve-serialize")
+        LOGGER.debug("serialized %s points" % len(iterable))
+        LOGGER.debug("< hazcurve-serialize")
 
     def insert_curve_datum(self, point, values):
         """Insert a single hazard curve"""
@@ -743,15 +743,15 @@ class GMFDBWriter(BaseDBWriter):
         """
         LOGGER.info("> gmf-serialize")
 
-        LOGGER.info("serializing %s points" % len(iterable))
+        LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("gmf")
 
         for key, value in iterable.items():
             self.insert_gmf_datum(key, value)
         self.session.commit()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< gmf-serialize")
+        LOGGER.debug("serialized %s points" % len(iterable))
+        LOGGER.debug("< gmf-serialize")
 
     def insert_gmf_datum(self, point, values):
         """Insert a single hazard curve"""
