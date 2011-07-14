@@ -642,11 +642,10 @@ CREATE TABLE uiapi.output (
     --      hazard_map
     --      gmf
     --      loss_curve
-    --      loss_ratio_curve
     --      loss_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'loss_curve', 'loss_ratio_curve', 'loss_map')),
+            'gmf', 'loss_curve', 'loss_map')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -756,14 +755,15 @@ CREATE TABLE uiapi.loss_curve (
 ) TABLESPACE uiapi_ts;
 
 
--- Loss curve data. Holds the asset, its position and the calculated curve.
+-- Loss curve data. Holds the asset, its position and value plus the calculated curve.
 CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
     asset_ref VARCHAR NOT NULL,
-    -- Losses. For ratio curves 0 <= loss <= 1
-    losses float[] NOT NULL,
+    asset_value float NOT NULL,
+    -- Loss ratios
+    ratios float[] NOT NULL CONSTRAINT valid_ratios CHECK (0 <= ALL(ratios) AND 1 >= ALL(ratios)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
