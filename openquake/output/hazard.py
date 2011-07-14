@@ -561,6 +561,10 @@ class HazardMapDBWriter(BaseDBWriter):
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
     """
+    def __init__(self, session, nrml_path, oq_job_id):
+        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+
+        self.node_values = []
 
     def serialize(self, iterable):
         """Writes hazard map data to the database.
@@ -588,6 +592,7 @@ class HazardMapDBWriter(BaseDBWriter):
 
         LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("hazard_map")
+        self.session.flush()
 
         for key, value in iterable:
             self.insert_map_datum(key, value)
@@ -597,7 +602,10 @@ class HazardMapDBWriter(BaseDBWriter):
             data[1].get("IML") for data in iterable))
         self.output.max_value = round_float(max(
             data[1].get("IML") for data in iterable))
-        self.session.add(self.output)
+
+        raw_insert = "INSERT INTO uiapi.hazard_map_data (output_id, value, location) VALUES " + ", ".join(["(%s, %s, GeomFromText(%s, 4326))"] * len(iterable))
+        self.session.connection().connection.cursor().execute(raw_insert, self.node_values)
+
         self.session.commit()
 
         LOGGER.debug("serialized %s points" % len(iterable))
@@ -613,7 +621,6 @@ class HazardMapDBWriter(BaseDBWriter):
         :type point: :py:class:`shapes.GridPoint` or :py:class:`shapes.Site`
         :param float value: the value for the given location
         """
-        LOGGER.debug("> insert_map_datum")
         if isinstance(point, shapes.GridPoint):
             point = point.site.point
         if isinstance(point, shapes.Site):
@@ -624,12 +631,9 @@ class HazardMapDBWriter(BaseDBWriter):
             LOGGER.warn(
                 "No IML value for position: [%s, %s]" % (point.x, point.y))
         else:
-            datum = HazardMapData(location="POINT(%s %s)" % (point.x, point.y),
-                                  output=self.output, value=round_float(value))
-            self.session.add(datum)
-            self.session.commit()
-            LOGGER.debug("datum = [%s, %s], %s" % (point.x, point.y, datum))
-        LOGGER.debug("< insert_map_datum")
+            self.node_values.append(self.output.id)
+            self.node_values.append(round_float(value))
+            self.node_values.append("POINT(%s %s)" % (point.x, point.y))
 
 
 class HazardCurveDBWriter(BaseDBWriter):
@@ -642,6 +646,7 @@ class HazardCurveDBWriter(BaseDBWriter):
         BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
+        self.node_values = []
 
     def serialize(self, iterable):
         """Writes hazard curve data to the database.
@@ -675,6 +680,9 @@ class HazardCurveDBWriter(BaseDBWriter):
         for key, value in iterable:
             self.insert_curve_datum(key, value)
         self.session.commit()
+
+        raw_insert = "INSERT INTO uiapi.hazard_curve_node_data (hazard_curve_data_id, poes, location) VALUES " + ", ".join(["(%s, %s, GeomFromText(%s, 4326))"] * len(iterable))
+        self.session.connection().connection.cursor().execute(raw_insert, self.node_values)
 
         LOGGER.debug("serialized %s points" % len(iterable))
         LOGGER.debug("< hazcurve-serialize")
@@ -710,12 +718,12 @@ class HazardCurveDBWriter(BaseDBWriter):
                     hazard_curve_item.quantile = values['quantileValue']
 
             self.curves_per_branch_label[curve_label] = hazard_curve_item
+            self.session.flush()
 
         point = point.point
-        # adds the node data to the session
-        HazardCurveNodeData(
-            hazard_curve_data=hazard_curve_item, poes=values['PoEValues'],
-            location="POINT(%s %s)" % (point.x, point.y))
+        self.node_values.append(hazard_curve_item.id)
+        self.node_values.append(values['PoEValues'])
+        self.node_values.append("POINT(%s %s)" % (point.x, point.y))
 
 
 class GMFDBWriter(BaseDBWriter):
@@ -744,18 +752,20 @@ class GMFDBWriter(BaseDBWriter):
         LOGGER.info("> gmf-serialize")
 
         LOGGER.debug("serializing %s points" % len(iterable))
-        self.insert_output("gmf")
 
-        for key, value in iterable.items():
-            self.insert_gmf_datum(key, value)
+        self.insert_output("gmf")
+        self.session.flush()
+
+        vals = []
+        for point, values in iterable.items():
+            vals.append(self.output.id)
+            vals.append(values['groundMotion'])
+            vals.append("POINT(%s %s)" % (point.point.x, point.point.y))
+
+        raw_insert = "INSERT INTO uiapi.gmf_data (output_id, ground_motion, location) VALUES " + ", ".join(["(%s, %s, GeomFromText(%s, 4326))"] * len(iterable))
+        self.session.connection().connection.cursor().execute(raw_insert, vals)
+
         self.session.commit()
 
         LOGGER.debug("serialized %s points" % len(iterable))
         LOGGER.debug("< gmf-serialize")
-
-    def insert_gmf_datum(self, point, values):
-        """Insert a single hazard curve"""
-        point = point.point
-        # adds the node data to the session
-        GMFData(output=self.output, ground_motion=values['groundMotion'],
-            location="POINT(%s %s)" % (point.x, point.y))
