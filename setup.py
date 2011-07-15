@@ -61,6 +61,5 @@ setup(
         ('dist', dist)],
     scripts=scripts,
     install_requires=[
-        "pyyaml", "shapely", "python-gflags",
-        "lxml", "sphinx", "guppy", "libLAS",
-        "numpy", "scipy", "celery", "nose", "django"])
+        "shapely", "python-gflags", "lxml", "sphinx", "guppy", "numpy",
+        "scipy", "celery", "nose", "django"])
