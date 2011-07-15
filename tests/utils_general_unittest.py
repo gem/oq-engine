@@ -61,14 +61,15 @@ class MemoizerTestCase(unittest.TestCase):
         def my_memoized_method(*args, **kwargs):
             """ the memoized decorated method """
             self.counter += 1
+            return self.counter
 
         # not cached
         my_memoized_method([1, 2, 3],
                            {'key1', 'value1', 'key2', 'value2'})
 
-        # cached
-        my_memoized_method([1, 2, 3],
-                           {'key1', 'value1', 'key2', 'value2'})
+        # cached with return values
+        self.assertEqual(1, my_memoized_method([1, 2, 3],
+                           {'key1', 'value1', 'key2', 'value2'}))
 
         # should be called only one time
         self.assertEqual(self.counter, 1)
@@ -80,12 +81,13 @@ class MemoizerTestCase(unittest.TestCase):
         def my_memoized_method(mystring, myint):
             """ the memoized decorated method """
             self.counter += 1
+            return self.counter
 
         # not cached
         my_memoized_method('bla', 1)
 
-        # cached
-        my_memoized_method('bla', 1)
+        # cached with return values
+        self.assertEqual(1, my_memoized_method('bla', 1))
 
         # should be called only one time
         self.assertEqual(self.counter, 1)
