@@ -162,7 +162,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # This output has no map data before calling the function under test.
         self.assertEqual(0, len(self.output.hazardmapdata_set))
-        self.assertEqual(0, len(self.output.lossmapdata_set))
+        self.assertEqual(0, len(self.output.lossmap_set))
 
         # Call the function under test.
         data = HAZARD_MAP_DATA[-1]
@@ -170,7 +170,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # After calling the function under test we see the expected map data.
         self.assertEqual(1, len(self.output.hazardmapdata_set))
-        self.assertEqual(0, len(self.output.lossmapdata_set))
+        self.assertEqual(0, len(self.output.lossmap_set))
 
         # Make sure the inserted map data is correct.
         [hmd] = self.output.hazardmapdata_set
@@ -198,7 +198,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
         self.assertEqual(len(HAZARD_MAP_DATA), len(output.hazardmapdata_set))
-        self.assertEqual(0, len(output.lossmapdata_set))
+        self.assertEqual(0, len(output.lossmap_set))
 
     def test_serialize_sets_min_max_values(self):
         """
@@ -250,7 +250,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
         self.assertEqual(4, len(output.hazardcurvedata_set))
-        self.assertEqual(0, len(output.lossmapdata_set))
+        self.assertEqual(0, len(output.lossmap_set))
 
         # read data from the DB and check that it's equal to the original data
         inserted_data = []
@@ -318,7 +318,7 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
         self.assertEqual(0, len(output.hazardcurvedata_set))
-        self.assertEqual(0, len(output.lossmapdata_set))
+        self.assertEqual(0, len(output.lossmap_set))
         self.assertEqual(4, len(output.gmfdata_set))
 
         # read data from the DB and check that it's equal to the original data
