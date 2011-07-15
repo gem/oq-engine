@@ -55,7 +55,7 @@ class MemoizerTestCase(unittest.TestCase):
         self.counter = 0
 
     def test_unashable_types(self):
-        """ Tests unhashable types like dict, lists """
+        """ Tests 'unhashable' types like dict, lists """
 
         @general.MemoizeMutable
         def my_memoized_method(*args, **kwargs):
