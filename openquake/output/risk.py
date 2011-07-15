@@ -486,58 +486,6 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 
-class OutputDBWriter(object):
-    """
-    Abstact class implementing the "serialize" interface to output an iterable
-    to the database.
-
-    Subclasses must implement get_output_type() and insert_datum().
-    """
-    def __init__(self, session, nrml_path, oq_job_id):
-        self.nrml_path = nrml_path
-        self.oq_job_id = oq_job_id
-        self.session = session
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=basename(self.nrml_path),
-                             output_type=self.get_output_type(),
-                             db_backed=True)
-
-    def get_output_type(self):
-        """
-        The type of the output record as a string (e.g. 'loss_curve')
-        """
-        raise NotImplementedError()
-
-    def insert_datum(self, key, values):
-        """
-        Called for each item of the iterable during serialize.
-        """
-        raise NotImplementedError()
-
-    def serialize(self, iterable):
-        """
-        Implementation of the "serialize" interface.
-
-        An Output record with type get_output_type() will be created, then
-        each item of the iterable will be serialized in turn to the database.
-        """
-        LOGGER.info("> serialize")
-        LOGGER.info("serializing %s points" % len(iterable))
-
-        self.session.add(self.output)
-        LOGGER.info("output = '%s'" % self.output)
-
-        for key, values in iterable:
-            self.insert_datum(key, values)
-
-        self.session.commit()
-
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< serialize")
-
-
 class CurveDBWriter(OutputDBWriter):
     """
     Abstract class implementing a serializer to output loss curves to the
