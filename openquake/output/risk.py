@@ -25,13 +25,10 @@ NRML serialization of risk-related data sets.
 """
 import os
 
-from os.path import basename
-
 from lxml import etree
 
 import sqlalchemy
 
-from db.alchemy.db_utils import get_uiapi_writer_session
 from db.alchemy.models import OqJob, Output
 from db.alchemy.models import LossMap, LossMapData
 from db.alchemy.models import LossAssetData, LossCurveData
@@ -309,9 +306,18 @@ class OutputDBWriter(object):
 
 
 class LossMapDBWriter(OutputDBWriter):
+    """
+    Serialize to the database probabilistic and deterministic loss maps.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(LossMapDBWriter, self).__init__(*args, **kwargs)
+
+        self.metadata = None
+
     def get_output_type(self):
         """
-        The type of the output record as a string (e.g. 'loss_curve')
+        The type of the output record as a string
         """
         return 'loss_map'
 
@@ -343,7 +349,7 @@ class LossMapDBWriter(OutputDBWriter):
         """
         for loss, asset in values:
             data = LossMapData(
-                loss_map=self.data,
+                loss_map=self.metadata,
                 asset_ref=asset['assetID'],
                 site="POINT(%s %s)" % (site.longitude, site.latitude),
                 mean=loss.get('mean_loss'), # for deterministic loss maps
@@ -352,6 +358,9 @@ class LossMapDBWriter(OutputDBWriter):
             self.session.add(data)
 
     def _insert_metadata(self, metadata):
+        """
+        Insert a record holding the metadata of a loss map.
+        """
         kwargs = {
             'output': self.output,
         }
@@ -365,8 +374,8 @@ class LossMapDBWriter(OutputDBWriter):
                                   ):
             kwargs[key] = metadata.get(metadata_key)
 
-        self.data = LossMap(**kwargs)
-        self.session.add(self.data)
+        self.metadata = LossMap(**kwargs)
+        self.session.add(self.metadata)
 
 class CurveXMLWriter(BaseXMLWriter):
     """This class serializes a set of loss or loss ratio curves to NRML.
