@@ -49,9 +49,6 @@ class MemoizeMutable:
     def __call__(self, *args, **kwds):
         key = cPickle.dumps(args, 1) + cPickle.dumps(kwds, 1)
         if not key in self.memo:
-            print 'MISS!'
             self.memo[key] = self.fun(*args, **kwds)
-        else:
-            print 'HIT!'
 
         return self.memo[key]
