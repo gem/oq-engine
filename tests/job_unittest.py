@@ -53,8 +53,10 @@ class JobTestCase(unittest.TestCase):
     def setUp(self):
         client = kvs.get_client()
 
-        # delete managed job id info so we can predict the job key
+        # Delete managed job id info so we can predict the job key
         # which will be allocated for us
+        # Playing with NEXT_JOB_ID can lead to unexpected behaviour in other
+        # tests, see comment in tearDown
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
 
@@ -72,6 +74,13 @@ class JobTestCase(unittest.TestCase):
                 os.remove(cfg)
             except OSError:
                 pass
+
+        # Playing with NEXT_JOB_ID breaks the uniqueness of the job_ids,
+        # causing failures of tests in kvs_unittest.py, if they run after this
+        # To avoid this we garbage collect job we know we used in this test
+        # case.
+        kvs.cache_gc('::JOB::1::')
+        kvs.cache_gc('::JOB::2::')
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
 
