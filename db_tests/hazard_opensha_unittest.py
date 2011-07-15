@@ -27,38 +27,36 @@ from openquake.hazard import opensha
 from openquake.output import hazard as hazard_output
 
 
-class CreateHazardmapWriterTestCase(unittest.TestCase):
-    """Tests for hazard.opensha.create_hazardmap_writer()."""
-
-    def test_create_hazardmap_writer_with_xml2(self):
+class CreateWriterTestBase(object):
+    def test_create_writer_with_xml(self):
         """
-        A `HazardMapXMLWriter` instance is returned when the
+        A `*XMLWriter` instance is returned when the
         SERIALIZE_RESULTS_TO_DB parameter is set to 'False'.
         """
-        writer = opensha.create_hazardmap_writer(
+        writer = self.create_function(
             dict(SERIALIZE_RESULTS_TO_DB='False'), "/tmp/b.xml")
-        self.assertTrue(isinstance(writer, hazard_output.HazardMapXMLWriter))
+        self.assertTrue(isinstance(writer, self.xml_writer_class))
 
-    def test_create_hazardmap_writer_with_db(self):
+    def test_create_writer_with_db(self):
         """
-        A `HazardMapDBWriter` instance is returned when the
+        A `*DBWriter` instance is returned when the
         SERIALIZE_RESULTS_TO_DB parameter is set to 'True'.
         """
-        writer = opensha.create_hazardmap_writer(
+        writer = self.create_function(
             dict(SERIALIZE_RESULTS_TO_DB='True', OPENQUAKE_JOB_ID='11'),
             "/tmp/c.xml")
-        self.assertTrue(isinstance(writer, hazard_output.HazardMapDBWriter))
+        self.assertTrue(isinstance(writer, self.db_writer_class))
 
-    def test_create_hazardmap_writer_with_db_and_no_job_id(self):
+    def test_create_writer_with_db_and_no_job_id(self):
         """
         An AssertionError is raised when the SERIALIZE_RESULTS_TO_DB parameter
         is set to 'True'. but the OPENQUAKE_JOB_ID parameter is absent.
         """
         config = dict(SERIALIZE_RESULTS_TO_DB='True')
         self.assertRaises(
-            AssertionError, opensha.create_hazardmap_writer, config, "/tmp")
+            AssertionError, self.create_function, config, "/tmp")
 
-    def test_create_hazardmap_writer_with_db_and_invalid_job_id(self):
+    def test_create_writer_with_db_and_invalid_job_id(self):
         """
         An exception is raised when the SERIALIZE_RESULTS_TO_DB parameter is
         set to 'True'. but the OPENQUAKE_JOB_ID parameter could not be
@@ -67,4 +65,28 @@ class CreateHazardmapWriterTestCase(unittest.TestCase):
         config = dict(SERIALIZE_RESULTS_TO_DB='True',
                       OPENQUAKE_JOB_ID="number")
         self.assertRaises(
-            ValueError, opensha.create_hazardmap_writer, config, "/tmp")
+            ValueError, self.create_function, config, "/tmp")
+
+
+class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
+    """Tests for hazard.opensha.create_hazardmap_writer()."""
+
+    create_function = staticmethod(opensha.create_hazardmap_writer)
+    xml_writer_class = hazard_output.HazardMapXMLWriter
+    db_writer_class = hazard_output.HazardMapDBWriter
+
+
+class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
+    """Tests for hazard.opensha.create_hazardcurve_writer()."""
+
+    create_function = staticmethod(opensha.create_hazardcurve_writer)
+    xml_writer_class = hazard_output.HazardCurveXMLWriter
+    db_writer_class = hazard_output.HazardCurveDBWriter
+
+
+class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
+    """Tests for hazard.opensha.create_gmf_writer()."""
+
+    create_function = staticmethod(opensha.create_gmf_writer)
+    xml_writer_class = hazard_output.GMFXMLWriter
+    db_writer_class = hazard_output.GMFDBWriter
