@@ -168,6 +168,7 @@ SAMPLE_LOSS_MAP_DATA = [
     (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)]),
     (SITE_B, [(SITE_B_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
+
 class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     Unit tests for the LossMapDBWriter class, which serializes
