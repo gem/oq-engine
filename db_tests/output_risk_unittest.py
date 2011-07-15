@@ -215,6 +215,7 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(LOSS_MAP_METADATA['lossCategory'],
                          metadata.category)
         self.assertEqual(LOSS_MAP_METADATA['unit'], metadata.unit)
+        self.assertEqual(None, metadata.poe)
 
         # LossMapData records
         self.assertEqual(3, len(metadata.lossmapdata_set))
@@ -224,13 +225,16 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
         self.assertEqual(SITE_A_LOSS_ONE['mean_loss'], data_a.mean)
         self.assertEqual(SITE_A_LOSS_ONE['stddev_loss'], data_a.std_dev)
+        self.assertEqual(None, data_a.value)
 
         self.assertEqual(SITE_A, Site(*data_b.site.coords(self.session)))
         self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
         self.assertEqual(SITE_A_LOSS_TWO['mean_loss'], data_b.mean)
         self.assertEqual(SITE_A_LOSS_TWO['stddev_loss'], data_b.std_dev)
+        self.assertEqual(None, data_b.value)
 
         self.assertEqual(SITE_B, Site(*data_c.site.coords(self.session)))
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
         self.assertEqual(SITE_B_LOSS_ONE['mean_loss'], data_c.mean)
         self.assertEqual(SITE_B_LOSS_ONE['stddev_loss'], data_c.std_dev)
+        self.assertEqual(None, data_c.value)
