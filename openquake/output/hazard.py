@@ -577,6 +577,10 @@ class BulkInserter(object):
             ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
         cursor.execute(sql, self.values)
 
+        self.fields = None
+        self.values = []
+        self.count = 0
+
 
 class BaseDBWriter(object):
     """Common code for hazard DB writers"""
