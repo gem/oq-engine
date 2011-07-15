@@ -556,6 +556,7 @@ class BulkInserter(object):
         """
         if not self.fields:
             self.fields = kwargs.keys()
+        assert set(self.fields) == set(kwargs.keys())
         for k in self.fields:
             self.values.append(kwargs[k])
         self.count += 1
