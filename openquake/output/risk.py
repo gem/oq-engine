@@ -253,6 +253,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
                 return node
         return None
 
+
 class OutputDBWriter(object):
     """
     Abstact class implementing the "serialize" interface to output an iterable
@@ -352,9 +353,9 @@ class LossMapDBWriter(OutputDBWriter):
                 loss_map=self.metadata,
                 asset_ref=asset['assetID'],
                 site="POINT(%s %s)" % (site.longitude, site.latitude),
-                mean=loss.get('mean_loss'), # for deterministic loss maps
-                std_dev=loss.get('stddev_loss'), # for deterministic loss maps
-                value=loss.get('value')) # for probabilistic loss maps
+                mean=loss.get('mean_loss'),  # for deterministic loss maps
+                std_dev=loss.get('stddev_loss'),  # for deterministic loss maps
+                value=loss.get('value'))  # for probabilistic loss maps
             self.session.add(data)
 
     def _insert_metadata(self, metadata):
@@ -370,12 +371,13 @@ class LossMapDBWriter(OutputDBWriter):
                                   ('category', 'lossCategory'),
                                   ('unit', 'unit'),
                                   ('loss_map_type', 'lossMapType'),
-                                  ('poe', 'poe') # for probabilistic loss maps
-                                  ):
+                                  # poe is for probabilistic loss maps
+                                  ('poe', 'poe')):
             kwargs[key] = metadata.get(metadata_key)
 
         self.metadata = LossMap(**kwargs)
         self.session.add(self.metadata)
+
 
 class CurveXMLWriter(BaseXMLWriter):
     """This class serializes a set of loss or loss ratio curves to NRML.
