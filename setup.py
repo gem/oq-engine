@@ -22,7 +22,7 @@ import os
 
 import openquake
 
-from distutils.core import setup
+from setuptools import setup
 
 scripts = ["bin/%s" % x for x in os.listdir('bin')]
 scripts.append('celeryconfig.py')
