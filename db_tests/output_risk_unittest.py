@@ -130,9 +130,8 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             loc = lcd.location.coords(self.session)
 
             data = (Site(loc[0], loc[1]),
-                    (Curve(zip(lcd.ratios, lcd.poes)),
-                    {u'assetID': lcd.asset_ref,
-                     u'assetValue': lcd.asset_value}))
+                    (Curve(zip(lcd.losses, lcd.poes)),
+                    {u'assetID': lcd.asset_ref}))
 
             inserted_data.append(data)
 
@@ -141,8 +140,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             for site, (curve, asset) in values:
                 result.append((site,
                                (curve,
-                                {'assetID': asset['assetID'],
-                                 'assetValue': asset['assetValue']})))
+                                {'assetID': asset['assetID']})))
 
             return sorted(result, key=lambda v: v[1][1]['assetID'])
 

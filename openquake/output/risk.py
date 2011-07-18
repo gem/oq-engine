@@ -560,7 +560,6 @@ class LossCurveDBWriter(OutputDBWriter):
 
         The asset_object contains at least this items:
             * **assetID** - the assetID
-            * **assetValue** - the value of the asset (float)
             * **assetValueUnit** - the unit of the value (e.g. EUR)
 
         """
@@ -579,9 +578,8 @@ class LossCurveDBWriter(OutputDBWriter):
         # the same coordinates as point
         data = LossCurveData(loss_curve=self.curve,
             asset_ref=asset_object['assetID'],
-            asset_value=asset_object['assetValue'],
             location="POINT(%s %s)" % (point.longitude, point.latitude),
-            ratios=[float(x) for x in curve.abscissae],
+            losses=[float(x) for x in curve.abscissae],
             poes=[float(y) for y in curve.ordinates])
 
         self.session.add(data)
@@ -636,9 +634,8 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
         job_db_key = int(job_db_key)
 
         if curve_mode == 'loss':
-            # We don't store loss as such in the db, since we store asset
-            # values together with the ratios and we know that loss=ratio*value
-            return None
-        elif curve_mode == 'loss_ratio':
             return LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
                                      job_db_key)
+        elif curve_mode == 'loss_ratio':
+            # We are non interested in storing loss ratios in the db
+            return None

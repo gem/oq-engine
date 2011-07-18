@@ -761,9 +761,7 @@ CREATE TABLE uiapi.loss_curve_data (
     loss_curve_id INTEGER NOT NULL,
 
     asset_ref VARCHAR NOT NULL,
-    asset_value float NOT NULL,
-    -- Loss ratios
-    ratios float[] NOT NULL CONSTRAINT valid_ratios CHECK (0 <= ALL(ratios) AND 1 >= ALL(ratios)),
+    losses float[] NOT NULL CONSTRAINT non_negative_losses CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
