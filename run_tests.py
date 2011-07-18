@@ -51,7 +51,7 @@ if __name__ == '__main__':
 
         args = sys.argv
         args.remove('run_tests.py')
-        args = ['nosetests', '-x', '-e', 'do_test.+'] + args
+        args = ['nosetests', '-x'] + args
 
         if FLAGS.speed_tests:
             print "Running speed tests with %s" % args
