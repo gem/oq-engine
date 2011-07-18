@@ -16,19 +16,17 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-import math
+import mock
 import os
 import unittest
-import sys
 
-from openquake import shapes
 from tests.utils import helpers
-from openquake import job
+from openquake import kvs
 from openquake import flags
 from openquake.job import Job, LOG
-from openquake.job import config
 from openquake.job.mixins import Mixin
 from openquake.risk.job import general
+from openquake.kvs import tokens
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
@@ -47,6 +45,15 @@ FLAGS = flags.FLAGS
 class JobTestCase(unittest.TestCase):
 
     def setUp(self):
+        client = kvs.get_client()
+
+        # Delete managed job id info so we can predict the job key
+        # which will be allocated for us
+        # Playing with NEXT_JOB_ID can lead to unexpected behaviour in other
+        # tests, see comment in tearDown
+        client.delete(tokens.CURRENT_JOBS)
+        client.delete(tokens.NEXT_JOB_ID)
+
         self.generated_files = []
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
         self.job_with_includes = \
@@ -59,8 +66,15 @@ class JobTestCase(unittest.TestCase):
         for cfg in self.generated_files:
             try:
                 os.remove(cfg)
-            except OSError, e:
+            except OSError:
                 pass
+
+        # Playing with NEXT_JOB_ID breaks the uniqueness of the job_ids,
+        # causing failures of tests in kvs_unittest.py, if they run after this
+        # To avoid this we garbage collect job we know we used in this test
+        # case.
+        kvs.cache_gc('::JOB::1::')
+        kvs.cache_gc('::JOB::2::')
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
 
@@ -97,15 +111,39 @@ class JobTestCase(unittest.TestCase):
         FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
-        for job in [self.job, self.job_with_includes]:
-            self.assertTrue(os.path.isfile(job.super_config_path))
+        for each_job in [self.job, self.job_with_includes]:
+            self.assertTrue(os.path.isfile(each_job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
+        sha_from_file_key = lambda params, key: params[key].split('!')[1]
+
+        # A unique job key is prepended to these file hashes
+        # to enable garabage collection.
+        # Thus, we have to do a little voodoo to make this test work.
+        src_model = 'SOURCE_MODEL_LOGIC_TREE_FILE'
+        gmpe = 'GMPE_LOGIC_TREE_FILE'
+
+        job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
+        job2_src_model_sha = sha_from_file_key(
+            self.job_with_includes.params, src_model)
+        self.assertEqual(job1_src_model_sha, job2_src_model_sha)
+
+        del self.job.params[src_model]
+        del self.job_with_includes.params[src_model]
+
+        job1_gmpe_sha = sha_from_file_key(self.job.params, gmpe)
+        job2_gmpe_sha = sha_from_file_key(self.job_with_includes.params, gmpe)
+        self.assertEqual(job1_gmpe_sha, job2_gmpe_sha)
+
+        del self.job.params[gmpe]
+        del self.job_with_includes.params[gmpe]
+
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
         with Mixin(self.job, general.RiskJobMixin):
-            self.assertTrue(general.RiskJobMixin in self.job.__class__.__bases__)
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
 
         with Mixin(self.job, ClassicalPSHABasedMixin):
             self.assertTrue(
@@ -113,7 +151,9 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_mixes_in_properly(self):
         with Mixin(self.job, general.RiskJobMixin):
-            self.assertTrue(general.RiskJobMixin in self.job.__class__.__bases__)
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
+
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
@@ -122,10 +162,90 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_a_job_has_an_identifier(self):
-        self.assertEqual(1, Job({}, 1).id)
+        """
+        Test that the :py:class:`openquake.job.Job` constructor automatically
+        assigns a proper job ID.
+        """
+        client = kvs.get_client()
+
+        client.delete(tokens.CURRENT_JOBS)
+        client.delete(tokens.NEXT_JOB_ID)
+
+        self.assertEqual(tokens.JOB_KEY_FMT % 1, Job({}).job_id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = Job.from_file(
             os.path.join(helpers.DATA_DIR, CONFIG_FILE), 'xml')
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
+
+    def test_job_calls_cleanup(self):
+        """
+        This test ensures that jobs call
+        :py:method:`openquake.job.Job.cleanup`.
+
+        The test job file defines an Event-Based calculation; the Event-Based
+        mixins are mocked in this test (so the entire calculation isn't
+        actually run).
+        """
+        haz_exec_path = 'openquake.hazard.opensha.EventBasedMixin.execute'
+        risk_exec_path = \
+            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
+
+        with mock.patch(haz_exec_path) as haz_exec:
+            haz_exec.return_value = []
+
+            with mock.patch(risk_exec_path) as risk_exec:
+                risk_exec.return_value = []
+
+                with mock.patch('openquake.job.Job.cleanup') as clean_mock:
+                    self.job.launch()
+
+                    self.assertEqual(1, clean_mock.call_count)
+
+    def test_cleanup_calls_cache_gc(self):
+        """
+        This ensures that the job cleanup method
+        :py:method:`openquake.job.Job.cleanup` properly initiates KVS
+        garbage collection.
+        """
+        expected_args = (['python', 'bin/cache_gc.py', '--job=1'], )
+
+        with mock.patch('subprocess.Popen') as popen_mock:
+            self.job.cleanup()
+
+            self.assertEqual(1, popen_mock.call_count)
+
+            actual_args, actual_kwargs = popen_mock.call_args
+
+            self.assertEqual(expected_args, actual_args)
+
+            # testing the kwargs is slight more complex, since stdout is
+            # directed to /dev/null
+            popen_stdout = actual_kwargs['stdout']
+            self.assertTrue(isinstance(popen_stdout, file))
+            self.assertEqual('/dev/null', popen_stdout.name)
+            self.assertEqual('w', popen_stdout.mode)
+
+            self.assertEqual(os.environ, actual_kwargs['env'])
+
+    def test_cleanup_raises_on_bad_job_id(self):
+        """
+        If the ID of a job is somehow corrupted, verify that a RuntimeError is
+        raised by :py:method:`openquake.job.Job.cleanup`.
+        """
+        self.job.job_id = 'this-is-invalid'
+
+        self.assertRaises(RuntimeError, self.job.cleanup)
+
+    def test_job_init_assigns_unique_id(self):
+        """
+        This test ensures that unique job IDs are assigned to each Job object.
+        """
+        job1 = Job({})
+        job2 = Job({})
+
+        self.assertTrue(job1.job_id is not None)
+        self.assertTrue(job2.job_id is not None)
+
+        self.assertNotEqual(job1.job_id, job2.job_id)
