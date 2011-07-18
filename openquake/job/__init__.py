@@ -457,6 +457,21 @@ class Job(object):
         key = kvs.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
+    def sites_to_compute(self):
+        if  self.has(conf.SITES):
+            coords = [float(x) for x in self.params[conf.SITES].split(",")]
+            sites = []
+
+            while (len(coords) > 0):
+                lat = coords.pop(0)
+                lon = coords.pop(0)
+
+                sites.append(shapes.Site(lon, lat))
+
+            return sites
+        else:
+            return self.sites_for_region()
+
     def sites_for_region(self):
         """Return the list of sites for the region at hand."""
         verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]

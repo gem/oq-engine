@@ -94,14 +94,27 @@ class ValidatorSetTestCase(unittest.TestCase):
 
 class ConfigurationConstraintsTestCase(unittest.TestCase):
 
-    def test_with_risk_processing_the_exposure_must_be_specified(self):
-        sections = [config.RISK_SECTION, "HAZARD", "general"]
+    def test_with_risk_processing_both_exposure_and_region_must_be_specified(self):
+        sections = [config.RISK_SECTION, config.HAZARD_SECTION, config.GENERAL_SECTION]
         params = {}
 
         engine = job.Job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure"}
+
+        engine = job.Job(params, sections=sections)
+        self.assertFalse(engine.is_valid()[0])
+
+        params = {config.EXPOSURE: "/a/path/to/exposure",
+                config.REGION_GRID_SPACING: 0.5}
+
+        engine = job.Job(params, sections=sections)
+        self.assertFalse(engine.is_valid()[0])
+        
+        params = {config.EXPOSURE: "/a/path/to/exposure",
+                config.INPUT_REGION: "a, polygon",
+                config.REGION_GRID_SPACING: 0.5}
 
         engine = job.Job(params, sections=sections)
         self.assertTrue(engine.is_valid()[0])

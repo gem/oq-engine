@@ -48,7 +48,7 @@ def compute_ground_motion_field(self, random_generator):
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.sites_for_region():
+    for site in self.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
@@ -130,7 +130,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             self.job.launch()
             decoder = json.JSONDecoder()
 
-            for site in self.job.sites_for_region():
+            for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
                     self.job.id, point)
@@ -169,7 +169,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             self.job.launch()
             decoder = json.JSONDecoder()
 
-            for site in self.job.sites_for_region():
+            for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
                     self.job.id, point)
@@ -223,7 +223,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
             self.job.launch()
 
-            for site in self.job.sites_for_region():
+            for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
                     self.job.id, point)

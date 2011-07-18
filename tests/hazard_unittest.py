@@ -153,7 +153,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
             # LOG.debug("dir of hazengine is %s" % dir(hazengine))
             for realization in xrange(0, realizations):
-                for site in hazengine.sites_for_region():
+                for site in hazengine.sites_to_compute():
                     key = tokens.hazard_curve_key(
                         hazengine.id, realization, site)
                     expected_keys.append(key)
@@ -184,7 +184,7 @@ class HazardEngineTestCase(unittest.TestCase):
             if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
 
                 LOG.debug("verifying KVS entries for mean hazard curves")
-                for site in hazengine.sites_for_region():
+                for site in hazengine.sites_to_compute():
                     key = tokens.mean_hazard_curve_key(hazengine.id, site)
                     value = self.kvs_client.get(key)
                     self.assertTrue(
@@ -204,7 +204,7 @@ class HazardEngineTestCase(unittest.TestCase):
                     classical_psha.POES_PARAM_NAME)
 
                 for poe in poes:
-                    for site in hazengine.sites_for_region():
+                    for site in hazengine.sites_to_compute():
                         key = tokens.mean_hazard_map_key(
                             hazengine.id, site, poe)
                         value = self.kvs_client.get(key)
@@ -222,7 +222,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 "%s quantile values" % len(quantiles))
 
             for quantile in quantiles:
-                for site in hazengine.sites_for_region():
+                for site in hazengine.sites_to_compute():
                     key = tokens.quantile_hazard_curve_key(
                         hazengine.id, site, quantile)
                     value = self.kvs_client.get(key)
@@ -248,7 +248,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 for quantile in quantiles:
                     for poe in poes:
-                        for site in hazengine.sites_for_region():
+                        for site in hazengine.sites_to_compute():
                             key = tokens.quantile_hazard_map_key(
                                 hazengine.id, site, poe, quantile)
                             value = self.kvs_client.get(key)

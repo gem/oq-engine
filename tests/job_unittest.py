@@ -173,51 +173,6 @@ class JobTestCase(unittest.TestCase):
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
 
-    def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                            EXPOSURE_TEST_FILE)})
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        expected_block = job.Block((shapes.Site(9.15000, 45.16667),
-            shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        args = {
-            config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-            config.INPUT_REGION: helpers.get_data_path(
-            REGION_EXPOSURE_TEST_FILE)}
-        a_job = Job(args)
-        self.generated_files.append(a_job.super_config_path)
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        expected_block = job.Block((shapes.Site(9.15, 45.16667),
-                                    shapes.Site(9.15333, 45.122),
-                                    shapes.Site(9.14777, 45.17999)))
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    def test_with_no_partition_we_just_process_a_single_block(self):
-        job.SITES_PER_BLOCK = 1
-
-        # test exposure has 6 assets
-        a_job = Job({config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
-
-        self.generated_files.append(a_job.super_config_path)
-
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        # but we have 1 block instead of 6
-        self.assertEqual(1, len(blocks_keys))
-
     def test_job_calls_cleanup(self):
         """
         This test ensures that jobs call
@@ -289,6 +244,38 @@ class JobTestCase(unittest.TestCase):
         self.assertTrue(job2.job_id is not None)
 
         self.assertNotEqual(job1.job_id, job2.job_id)
+
+    def test_computes_sites_in_region_with_only_hazard_and_region_vertex_param(self):
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region, config.REGION_GRID_SPACING: 1.0}
+
+        job = Job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0), shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+        self.assertEquals(expected_sites, job.sites_to_compute())
+
+    def test_computes_specific_sites_with_only_hazard_and_sites_param(self):
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        sites = "1.0, 1.5, 1.5, 2.5, 3.0, 3.0, 4.0, 4.5"
+
+        params = {config.SITES: sites}
+
+        job = Job(params, sections=sections)
+        expected_sites = [shapes.Site(1.5, 1.0), shapes.Site(2.5, 1.5), shapes.Site(3.0, 3.0), shapes.Site(4.5, 4.0)]
+        self.assertEquals(expected_sites, job.sites_to_compute())
+
+    def test_computes_sites_in_region_with_risk_jobs(self):
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION, config.RISK_SECTION]
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region, config.REGION_GRID_SPACING: 1.0}
+
+        job = Job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0), shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+        self.assertEquals(expected_sites, job.sites_to_compute())
 
 
 class BlockTestCase(unittest.TestCase):
