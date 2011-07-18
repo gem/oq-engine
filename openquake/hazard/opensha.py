@@ -394,7 +394,7 @@ class ClassicalMixin(BasePSHAMixin):
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
         """
-        site_list = self.sites_for_region()
+        site_list = self.sites_to_compute()
         results = self.do_curves(
             site_list, serializer=self.serialize_hazardcurve)
         self.do_means(site_list, curve_serializer=self.serialize_hazardcurve,
@@ -697,7 +697,7 @@ class EventBasedMixin(BasePSHAMixin):
                 stochastic_set_id = "%s!%s" % (i, j)
                 pending_tasks.append(
                     tasks.compute_ground_motion_fields.delay(
-                        self.id, self.sites_for_region(), stochastic_set_id,
+                        self.id, self.sites_to_compute(), stochastic_set_id,
                         gmf_generator.getrandbits(32)))
 
             for task in pending_tasks:
