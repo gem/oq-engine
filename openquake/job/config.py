@@ -100,7 +100,7 @@ def default_validators(sections, params):
     :type params: :py:class:`dict` where each key is the parameter
         name, and each value is the parameter value
         specified in the configuration file
-    :returns: the default validators for a job
+    :returns: the default validators for a job.
     :rtype: an instance of
         :py:class:`openquake.config.ValidatorSet`
     """
