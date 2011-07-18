@@ -526,7 +526,8 @@ class OutputTestCase(unittest.TestCase):
                 band.XSize, 1, geotiff.GDAL_PIXEL_DATA_TYPE)
 
             tuple_of_floats = struct.unpack('f' * band.XSize, scanline)
-            band_raster[row_idx, :] = tuple_of_floats
+            band_raster[row_idx, :] = tuple_of_floats  # couldn't find a way to
+                                                       # comply with pep8
 
         self.assertTrue(numpy.allclose(band_raster, raster))
 
@@ -992,17 +993,16 @@ class OutputTestCase(unittest.TestCase):
     def test_loss_curve_writer_creation(self):
         # XML writers
         params = {"SERIALIZE_RESULTS_TO_DB": "False"}
-        writer = create_loss_curve_writer("loss_ratio", "fake_path.xml", params)
+        writer = create_loss_curve_writer("loss_ratio", "fakepath.xml", params)
         self.assertEqual(type(writer), LossRatioCurveXMLWriter)
-        writer = create_loss_curve_writer("loss", "fake_path.xml", params)
+        writer = create_loss_curve_writer("loss", "fakepath.xml", params)
         self.assertEqual(type(writer), LossCurveXMLWriter)
 
         # database writers
         params = {
             "SERIALIZE_RESULTS_TO_DB": "True",
-            "OPENQUAKE_JOB_ID": 1
-        }
-        writer = create_loss_curve_writer("loss_ratio", "fake_path.xml", params)
+            "OPENQUAKE_JOB_ID": 1}
+        writer = create_loss_curve_writer("loss_ratio", "fakepath.xml", params)
         self.assertEqual(type(writer), LossCurveDBWriter)
-        writer = create_loss_curve_writer("loss", "fake_path.xml", params)
+        writer = create_loss_curve_writer("loss", "fakepath.xml", params)
         self.assertEqual(writer, None)
