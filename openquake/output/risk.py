@@ -529,7 +529,8 @@ class LossCurveDBWriter(OutputDBWriter):
         """
         Called for each item in the iterable beeing serialized.
 
-        :param key: the location of the asset for which the loss curve has been calculated
+        :param key: the location of the asset for which the loss curve has been
+                    calculated
         :type key: :py:class:`openquake.shapes.Site`
 
         :param values: a tuple (curve, asset_object). See
