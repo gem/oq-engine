@@ -750,7 +750,7 @@ CREATE TABLE uiapi.loss_map_data (
         ((value IS NULL AND mean IS NOT NULL AND std_dev IS NOT NULL)
             OR (value IS NOT NULL AND mean IS NULL AND std_dev IS NULL))
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'site', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
 
 
 -- Loss asset data.

@@ -283,7 +283,7 @@ class LossMapData(Base):
                             backref="lossmapdata_set")
 
     asset_ref = sa.Column(sa.String, nullable=False)
-    site = ga.GeometryColumn(ga.Point(2), nullable=False)
+    location = ga.GeometryColumn(ga.Point(2), nullable=False)
     mean = sa.Column(sa.Float, nullable=True)
     std_dev = sa.Column(sa.Float, nullable=True)
     value = sa.Column(sa.Float, nullable=True)
