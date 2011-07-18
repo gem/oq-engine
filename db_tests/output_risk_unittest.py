@@ -149,7 +149,7 @@ LOSS_MAP_METADATA = {
     'lossMapID': 'test_lm_id',
     'endBranchLabel': 'test_ebl',
     'lossCategory': 'economic_loss',
-    'lossMapType': 'deterministic',
+    'deterministic': True,
     'unit': 'EUR'}
 
 SITE_A = Site(-117.0, 38.0)
@@ -209,8 +209,8 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         # LossMap record
         self.assertEqual(1, len(output.lossmap_set))
         [metadata] = output.lossmap_set
-        self.assertEqual(LOSS_MAP_METADATA['lossMapType'],
-                         metadata.loss_map_type)
+        self.assertEqual(LOSS_MAP_METADATA['deterministic'],
+                         metadata.deterministic)
         self.assertEqual(LOSS_MAP_METADATA['endBranchLabel'],
                          metadata.end_branch_label)
         self.assertEqual(LOSS_MAP_METADATA['lossCategory'],
