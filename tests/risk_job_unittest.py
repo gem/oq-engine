@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import os
 import unittest
 
@@ -31,6 +30,7 @@ from tests.utils import helpers
 
 TEST_FILE = "exposure-portfolio.xml"
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
+
 
 class EpsilonTestCase(unittest.TestCase):
     """Tests the `epsilon` method in class `ProbabilisticEventMixin`"""
@@ -129,105 +129,113 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.site_3 = shapes.Site(3.0, 1.0)
 
     def test_an_empty_set_produces_no_blocks(self):
-        self._assert_number_of_blocks_is((), 0, 1)
+        self._assert_number_of_blocks_is((), expected=0, block_size=1)
 
     def test_splits_the_set_into_a_single_block(self):
         self._assert_number_of_blocks_is(
-            (self.site_1, ), 1, sites_per_block=3)
+            (self.site_1, ), expected=1, block_size=3)
 
         self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1), 1, sites_per_block=3)
+            (self.site_1, self.site_1), expected=1, block_size=3)
 
         self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1, self.site_1), 1, sites_per_block=3)
+            (self.site_1, self.site_1, self.site_1), expected=1, block_size=3)
 
     def test_splits_the_set_into_multiple_blocks(self):
         self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1), 2, sites_per_block=1)
+            (self.site_1, self.site_1), expected=2, block_size=1)
 
         self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1, self.site_1), 2, sites_per_block=2)
+            (self.site_1, self.site_1, self.site_1), expected=2, block_size=2)
 
     def test_generates_the_correct_blocks(self):
-        expected_blocks = (general.Block(
+        expected = (general.Block(
             (self.site_1, self.site_2, self.site_3)), )
 
         self._assert_blocks_are(
-            expected_blocks, (self.site_1, self.site_2, self.site_3), None, 3)
+            expected, (self.site_1, self.site_2, self.site_3),
+            constraint=None, block_size=3)
 
-        expected_blocks = (general.Block(
+        expected = (general.Block(
             (self.site_1, self.site_2)), general.Block((self.site_3, )))
 
         self._assert_blocks_are(
-            expected_blocks, (self.site_1, self.site_2, self.site_3), None, 2)
+            expected, (self.site_1, self.site_2, self.site_3),
+            constraint=None, block_size=2)
 
     def test_splitting_with_region_intersection(self):
-        region_constraint = shapes.RegionConstraint.from_simple(
+        constraint = shapes.RegionConstraint.from_simple(
             (0.0, 0.0), (2.0, 2.0))
 
         sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
-            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
+                shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
 
-        expected_blocks = (
+        expected = (
             general.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
             general.Block((shapes.Site(2.0, 2.0), )))
 
-        self._assert_blocks_are(expected_blocks, sites, region_constraint, 2)
+        self._assert_blocks_are(expected, sites, constraint, block_size=2)
 
-    def _assert_blocks_are(
-        self, expected_blocks, sites, constraint, sites_per_block):
+    def _assert_blocks_are(self, expected, sites, constraint, block_size):
 
         for idx, block in enumerate(
-            general.split_into_blocks(sites, constraint, sites_per_block)):
+            general.split_into_blocks(sites, constraint, block_size)):
 
-            self.assertEqual(expected_blocks[idx], block)
+            self.assertEqual(expected[idx], block)
 
-    def _assert_number_of_blocks_is(
-        self, sites, expected_number, sites_per_block):
+    def _assert_number_of_blocks_is(self, sites, expected, block_size):
 
         counter = 0
 
-        for block in general.split_into_blocks(sites, None, sites_per_block):
+        for _ in general.split_into_blocks(sites, None, block_size):
             counter += 1
 
-        self.assertEqual(expected_number, counter)
+        self.assertEqual(expected, counter)
 
 
 class RiskJobMixinTestCase(unittest.TestCase):
-    
+
     def test_prepares_blocks_using_the_exposure(self):
+        """The base risk mixin is able to read the exposure file,
+        split the sites into blocks and store them in KVS."""
+
         mixin = general.RiskJobMixin(None, None)
-        
+
         mixin.params = {config.EXPOSURE: os.path.join(
             helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)}
-        
+
         mixin.region = None
         mixin.base_path = "."
         mixin.partition()
 
-        expected_block = general.Block((shapes.Site(9.15000, 45.16667),
+        expected = general.Block((shapes.Site(9.15000, 45.16667),
             shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
 
         self.assertEqual(1, len(mixin.blocks_keys))
 
         self.assertEqual(
-            expected_block, general.Block.from_kvs(mixin.blocks_keys[0]))
+            expected, general.Block.from_kvs(mixin.blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
+        """When reading the exposure file, the mixin also provides filtering
+        on the region specified in the REGION_VERTEX and REGION_GRID_SPACING
+        paramaters."""
+
         region_vertex = \
             "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
-        
+
         params = {config.EXPOSURE: os.path.join(
                 helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
                 config.INPUT_REGION: region_vertex,
                 config.REGION_GRID_SPACING: 0.1,
+                # the calculation mode is filled to let the mixin runs
                 config.CALCULATION_MODE: "Event Based"}
 
         a_job = job.Job(params)
-        
+
         expected_block = general.Block(
             (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)))
-        
+
         with Mixin(a_job, general.RiskJobMixin):
             a_job.partition()
 
