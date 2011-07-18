@@ -113,18 +113,6 @@ def generate_product_key(job_id, product, block_id="", site=""):
     return generate_key([job_id, product, block_id, site])
 
 
-def generate_random_id(length=DEFAULT_LENGTH_RANDOM_ID):
-    """This function returns a random ID by using the uuid4 method. In order
-    to have reasonably short IDs, the ID returned from uuid4() is truncated.
-    This is not optimized for being collision-free. See documentation of uuid:
-    http://docs.python.org/library/uuid.html
-    http://en.wikipedia.org/wiki/Universally_unique_identifier
-    """
-    if length > MAX_LENGTH_RANDOM_ID:
-        length = MAX_LENGTH_RANDOM_ID
-    return str(uuid.uuid4())[0:length]
-
-
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
     try:
@@ -207,6 +195,10 @@ def cache_gc(job_key):
 
         # finally, remove the job key from CURRENT_JOBS
         client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_key)
+
+        msg = 'KVS garbage collection removed %s keys for job %s'
+        msg %= (len(keys), job_key)
+        LOG.info(msg)
 
         return len(keys)
     else:
