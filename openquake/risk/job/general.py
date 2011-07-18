@@ -38,7 +38,7 @@ from openquake.parser import vulnerability
 from celery.decorators import task
 
 LOG = logs.LOG
-SITES_PER_BLOCK = 100
+BLOCK_SIZE = 100
 
 
 def preload(fn):
@@ -122,7 +122,7 @@ class RiskJobMixin(mixins.Mixin):
     mixins = {}
 
     def partition(self):
-        """Split the set of sites to compute in blocks and store
+        """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
 
         sites = []
@@ -160,7 +160,7 @@ class RiskJobMixin(mixins.Mixin):
         return sites
 
     def store_exposure_assets(self):
-        """Load exposure assets and write them to kvs."""
+        """Load exposure assets and write them to KVS."""
 
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
             (self.base_path, self.params[config.EXPOSURE]))
@@ -338,7 +338,7 @@ class Block(object):
         self.block_id = block_id
 
     def grid(self, region):
-        """Provides an iterator across the unique grid points within a region,
+        """Provide an iterator across the unique grid points within a region,
          corresponding to the sites within this block."""
 
         used_points = []
@@ -353,7 +353,7 @@ class Block(object):
 
     @classmethod
     def from_kvs(cls, block_id):
-        """Return the block in the underlying kvs system with the given id."""
+        """Return the block in the underlying KVS system with the given id."""
 
         raw_sites = kvs.get_value_json_decoded(block_id)
 
@@ -365,7 +365,7 @@ class Block(object):
         return Block(sites, block_id)
 
     def to_kvs(self):
-        """Store this block into the underlying kvs system."""
+        """Store this block into the underlying KVS system."""
 
         raw_sites = []
 
@@ -380,7 +380,7 @@ class Block(object):
         return self.block_id
 
 
-def split_into_blocks(sites, constraint, sites_per_block=SITES_PER_BLOCK):
+def split_into_blocks(sites, constraint, block_size=BLOCK_SIZE):
     """Split the set of sites into blocks. Provide an iterator
     to the blocks.
 
@@ -391,6 +391,8 @@ def split_into_blocks(sites, constraint, sites_per_block=SITES_PER_BLOCK):
     :type constraint: :py:class:`openquake.shapes.RegionConstraint` object
     :param sites_per_block: the number of sites per block.
     :type sites_per_block: integer
+    :returns: for each call on this iterator, the next block is returned.
+    :rtype: :py:class:`openquake.risk.general.Block`
     """
 
     filtered_sites = []
@@ -402,7 +404,7 @@ def split_into_blocks(sites, constraint, sites_per_block=SITES_PER_BLOCK):
         else:
             filtered_sites.append(site)
 
-        if len(filtered_sites) == sites_per_block:
+        if len(filtered_sites) == block_size:
             yield(Block(filtered_sites))
             filtered_sites = []
 

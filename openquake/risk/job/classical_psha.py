@@ -24,7 +24,6 @@ import json
 from celery.exceptions import TimeoutError
 from math import exp
 
-from openquake import job
 from openquake import kvs
 from openquake import logs
 
