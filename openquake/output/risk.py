@@ -529,29 +529,39 @@ class LossCurveDBWriter(OutputDBWriter):
         """
         Called for each item in the iterable beeing serialized.
 
-        Parameters will look something like:
+        :param key: the location of the asset for which the loss curve has been calculated
+        :type key: :py:class:`openquake.shapes.Site`
 
-        key=Site(-118.077721, 33.852034)
-        values=(Curve([...]), {..., u'assetID': u'a5625', ...})
+        :param values: a tuple (curve, asset_object). See
+        :py:meth:`insert_asset_loss_curve` for more details.
         """
         point = key
 
         if isinstance(point, shapes.GridPoint):
             point = point.site
 
-        curve_object, asset_object = values
+        curve, asset_object = values
 
-        self._real_insert_datum(asset_object, point, curve_object)
+        self.insert_asset_loss_curve(asset_object, point, curve)
 
-    def _real_insert_datum(self, asset_object, point, curve_object):
+    def insert_asset_loss_curve(self, asset_object, point, curve):
         """
-        Called for each item in the iterable beeing serialized.
+        Store into the database the loss curve of a given asset.
 
-        Parameters will look something like:
+        :param asset_object: the asset for which the loss curve is being stored
+        :type asset_object: :py:class:`dict`
 
-        asset_object={'assetID': 'a5625', ...}
-        point=Site(-118.077721, 33.852034)
-        curve_object=Curve([...]),
+        :param point: the location of the asset
+        :type point: :py:class:`openquake.shapes.Site`
+
+        :param curve: the loss curve
+        :type curve: :py:class:`openquake.shapes.Curve`
+
+        The asset_object contains at least this items:
+            * **assetID** - the assetID
+            * **assetValue** - the value of the asset (float)
+            * **assetValueUnit** - the unit of the value (e.g. EUR)
+
         """
 
         if self.curve is None:
@@ -570,8 +580,8 @@ class LossCurveDBWriter(OutputDBWriter):
             asset_ref=asset_object['assetID'],
             asset_value=asset_object['assetValue'],
             location="POINT(%s %s)" % (point.longitude, point.latitude),
-            ratios=[float(x) for x in curve_object.abscissae],
-            poes=[float(y) for y in curve_object.ordinates])
+            ratios=[float(x) for x in curve.abscissae],
+            poes=[float(y) for y in curve.ordinates])
 
         self.session.add(data)
 
