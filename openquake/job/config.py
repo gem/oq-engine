@@ -23,7 +23,11 @@ its validation.
 
 EXPOSURE = "EXPOSURE"
 RISK_SECTION = "RISK"
-INPUT_REGION = "INPUT_REGION"
+INPUT_REGION = "REGION_VERTEX"
+HAZARD_SECTION = "HAZARD"
+GENERAL_SECTION = "general"
+REGION_GRID_SPACING = "REGION_GRID_SPACING"
+SITES = "SITES"
 
 
 class ValidatorSet(object):
@@ -62,8 +66,8 @@ class ValidatorSet(object):
 
         self.validators.append(validator)
 
-
-class ExposureValidator(object):
+# TODO (ac): Update doc!
+class RiskMandatoryParametersValidator(object):
     """Validator that checks if the exposure file
     is specified when computing risk jobs."""
 
@@ -81,10 +85,13 @@ class ExposureValidator(object):
             tuple is returned
         """
 
+        mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
+
         if RISK_SECTION in self.sections:
-            if not EXPOSURE in self.params:
-                return (False, [
-                    "With RISK processing, the EXPOSURE must be specified"])
+            for mandatory_param in mandatory_params:
+                if mandatory_param not in self.params.keys():
+                    return (False, [
+                        "With RISK processing, EXPOSURE, REGION_VERTEX and REGION_GRID_SPACING must be specified"])
 
         return (True, [])
 
@@ -103,7 +110,7 @@ def default_validators(sections, params):
         :py:class:`openquake.config.ValidatorSet`
     """
 
-    exposure = ExposureValidator(sections, params)
+    exposure = RiskMandatoryParametersValidator(sections, params)
 
     validators = ValidatorSet()
     validators.add(exposure)
