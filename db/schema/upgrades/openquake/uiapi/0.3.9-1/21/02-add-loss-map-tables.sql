@@ -35,17 +35,8 @@ CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
-    mean float,
-    std_dev float,
-    value float,
-    -- mean AND std_dev for deterministic calculations
-    --
-    --   OR
-    --
-    -- value for non deterministic calculations
-    CONSTRAINT valid_loss CHECK
-        ((value IS NULL AND mean IS NOT NULL AND std_dev IS NOT NULL)
-            OR (value IS NOT NULL AND mean IS NULL AND std_dev IS NULL))
+    value float NOT NULL,
+    std_dev float NOT NULL DEFAULT 0.0 -- for non deterministic calculations std_dev is 0
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
