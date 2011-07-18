@@ -257,9 +257,7 @@ class LossMap(Base):
                           nullable=False)
     output = relationship("Output", backref="lossmap_set")
 
-    loss_map_type = sa.Column(sa.Enum("probabilistic", "deterministic",
-                                      native_enum=False),
-                              nullable=False)
+    deterministic = sa.Column(sa.Boolean, nullable=False)
     loss_map_ref = sa.Column(sa.String, nullable=True)
     end_branch_label = sa.Column(sa.String, nullable=True)
     category = sa.Column(sa.String, nullable=True)

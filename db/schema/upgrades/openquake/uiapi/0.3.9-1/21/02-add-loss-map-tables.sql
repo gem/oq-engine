@@ -19,17 +19,16 @@
 CREATE TABLE uiapi.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    loss_map_type VARCHAR NOT NULL CONSTRAINT loss_map_type
-            CHECK (loss_map_type IN ('probabilistic', 'deterministic')),
+    deterministic BOOLEAN NOT NULL,
     loss_map_ref VARCHAR,
     end_branch_label VARCHAR,
     category VARCHAR,
     unit VARCHAR, -- e.g. USD, EUR
-    -- poe and investigation_time are significant only for probabilistic calculations
+    -- poe and investigation_time are significant only for non deterministic calculations
     -- investigation_time is stored in the oq_params table
     poe float CONSTRAINT valid_poe
-        CHECK ((loss_map_type = 'probabilistic' AND (poe >= 0.0) AND (poe <= 1.0))
-               OR (loss_map_type != 'probabilistic' AND poe IS NULL))
+        CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
+               OR (deterministic AND poe IS NULL))
 ) TABLESPACE uiapi_ts;
 
 CREATE TABLE uiapi.loss_map_data (
@@ -39,11 +38,11 @@ CREATE TABLE uiapi.loss_map_data (
     mean float,
     std_dev float,
     value float,
-    -- mean AND std_dev for event based calculations
+    -- mean AND std_dev for deterministic calculations
     --
     --   OR
     --
-    -- value for probabilistic calculations
+    -- value for non deterministic calculations
     CONSTRAINT valid_loss CHECK
         ((value IS NULL AND mean IS NOT NULL AND std_dev IS NOT NULL)
             OR (value IS NOT NULL AND mean IS NULL AND std_dev IS NULL))

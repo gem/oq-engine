@@ -26,9 +26,7 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
 
 COMMENT ON TABLE uiapi.loss_map IS 'Holds metadata for loss maps.';
 COMMENT ON COLUMN uiapi.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN uiapi.loss_map.loss_map_type IS 'The type of this loss map, one of:
-    - probabilistic (classical psha-based or probabilistic based calculations)
-    - deterministic (deterministic event-based calculations)';
+COMMENT ON COLUMN uiapi.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
 COMMENT ON COLUMN uiapi.loss_map.loss_map_ref IS 'A simple identifier';
 COMMENT ON COLUMN uiapi.loss_map.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN uiapi.loss_map.category IS 'Loss category (e.g. economic_loss).';
