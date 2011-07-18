@@ -376,8 +376,8 @@ class LossMapDBWriter(OutputDBWriter):
                                   ('end_branch_label', 'endBranchLabel'),
                                   ('category', 'lossCategory'),
                                   ('unit', 'unit'),
-                                  ('loss_map_type', 'lossMapType'),
-                                  # poe is for probabilistic loss maps
+                                  ('deterministic', 'deterministic'),
+                                  # poe is for non deterministic loss maps
                                   ('poe', 'poe')):
             kwargs[key] = metadata.get(metadata_key)
 
