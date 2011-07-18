@@ -20,17 +20,22 @@
 """ Mixin for Classical PSHA Risk Calculation """
 
 import json
-from openquake import job
-from celery.exceptions import TimeoutError
 
-from openquake.parser import vulnerability
-from openquake.shapes import Curve
-from openquake.risk.job import general
-from openquake.risk import classical_psha_based as cpsha_based
-from openquake.risk.common import  compute_loss_curve
+from celery.exceptions import TimeoutError
+from math import exp
+
+from openquake import job
 from openquake import kvs
 from openquake import logs
-from math import exp
+
+from openquake.parser import vulnerability
+from openquake.risk import classical_psha_based as cpsha_based
+from openquake.shapes import Curve
+
+from openquake.risk.common import  compute_loss_curve
+from openquake.risk.job import general
+
+
 LOGGER = logs.LOG
 
 

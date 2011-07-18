@@ -433,7 +433,7 @@ class ClassicalMixin(BasePSHAMixin):
         elif _is_quantile_hazard_curve_key(curve_keys[0]):
 
             # get quantile value from KVS key
-            quantile_value = tokens.quantile_value_from_hazard_curve_key(
+            quantile_value = tokens.quantile_from_haz_curve_key(
                 curve_keys[0])
             hc_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile_value}
@@ -442,7 +442,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         elif _is_realization_hazard_curve_key(curve_keys[0]):
             realization_reference_str = \
-                tokens.realization_value_from_hazard_curve_key(curve_keys[0])
+                tokens.realization_from_haz_curve_key(curve_keys[0])
             hc_attrib_update = {'endBranchLabel': realization_reference_str}
             filename_part = realization_reference_str
             curve_mode = 'realization'
@@ -478,7 +478,7 @@ class ClassicalMixin(BasePSHAMixin):
                                 "quantile mode"
                     raise RuntimeError(error_msg)
 
-                elif tokens.quantile_value_from_hazard_curve_key(hc_key) != \
+                elif tokens.quantile_from_haz_curve_key(hc_key) != \
                     quantile_value:
                     error_msg = "quantile value must be the same for all "\
                                 "hazard curves in an instance file"
@@ -489,7 +489,7 @@ class ClassicalMixin(BasePSHAMixin):
                     error_msg = "non-realization hazard curve key found in "\
                                 "realization mode"
                     raise RuntimeError(error_msg)
-                elif tokens.realization_value_from_hazard_curve_key(
+                elif tokens.realization_from_haz_curve_key(
                     hc_key) != realization_reference_str:
                     error_msg = "realization value must be the same for all "\
                                 "hazard curves in an instance file"
@@ -553,7 +553,7 @@ class ClassicalMixin(BasePSHAMixin):
         elif _is_quantile_hazmap_key(map_keys[0]):
 
             # get quantile value from KVS key
-            quantile_value = tokens.quantile_value_from_hazard_map_key(
+            quantile_value = tokens.quantile_from_haz_map_key(
                 map_keys[0])
             hm_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile_value}
@@ -596,7 +596,7 @@ class ClassicalMixin(BasePSHAMixin):
                                     "quantile mode"
                         raise RuntimeError(error_msg)
 
-                    elif tokens.quantile_value_from_hazard_map_key(hm_key) != \
+                    elif tokens.quantile_from_haz_map_key(hm_key) != \
                         quantile_value:
                         error_msg = "quantile value must be the same for all "\
                                     "hazard map nodes in an instance file"
@@ -770,27 +770,27 @@ def gmf_id(history_idx, realization_idx, rupture_idx):
 
 
 def _is_realization_hazard_curve_key(kvs_key):
-    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+    return (tokens.product_type_from_kvs_key(kvs_key) == \
                 tokens.HAZARD_CURVE_KEY_TOKEN)
 
 
 def _is_mean_hazard_curve_key(kvs_key):
-    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+    return (tokens.product_type_from_kvs_key(kvs_key) == \
                 tokens.MEAN_HAZARD_CURVE_KEY_TOKEN)
 
 
 def _is_quantile_hazard_curve_key(kvs_key):
-    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+    return (tokens.product_type_from_kvs_key(kvs_key) == \
                 tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
 
 def _is_mean_hazmap_key(kvs_key):
-    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+    return (tokens.product_type_from_kvs_key(kvs_key) == \
                 tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
 
 
 def _is_quantile_hazmap_key(kvs_key):
-    return (tokens.extract_product_type_from_kvs_key(kvs_key) == \
+    return (tokens.product_type_from_kvs_key(kvs_key) == \
                 tokens.QUANTILE_HAZARD_MAP_KEY_TOKEN)
 
 
@@ -829,7 +829,7 @@ def _collect_curve_keys_per_quantile(keys):
     quantile_values = {}
     while len(keys) > 0:
         quantile_key = keys.pop()
-        curr_qv = tokens.quantile_value_from_hazard_curve_key(
+        curr_qv = tokens.quantile_from_haz_curve_key(
             quantile_key)
         if curr_qv not in quantile_values:
             quantile_values[curr_qv] = []
@@ -841,7 +841,7 @@ def _collect_map_keys_per_quantile(keys):
     quantile_values = {}
     while len(keys) > 0:
         quantile_key = keys.pop()
-        curr_qv = tokens.quantile_value_from_hazard_map_key(
+        curr_qv = tokens.quantile_from_haz_map_key(
             quantile_key)
         if curr_qv not in quantile_values:
             quantile_values[curr_qv] = []

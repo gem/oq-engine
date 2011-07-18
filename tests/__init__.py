@@ -43,3 +43,4 @@ from parser_hazard_map_unittest import *
 from db_loader_unittest import *
 from shapes_unittest import *
 from validator_unittest import *
+from utils_general_unittest import *
