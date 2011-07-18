@@ -155,9 +155,9 @@ def quantile_hazard_map_key(job_id, site, poe, quantile):
                                       str(quantile)])
 
 
-def quantile_value_from_hazard_curve_key(kvs_key):
+def quantile_from_haz_curve_key(kvs_key):
     """Extract quantile value from a KVS key for a quantile hazard curve."""
-    if extract_product_type_from_kvs_key(kvs_key) == \
+    if product_type_from_kvs_key(kvs_key) == \
         QUANTILE_HAZARD_CURVE_KEY_TOKEN:
         (_part_before, _sep, quantile_str) = kvs_key.rpartition(
             openquake.kvs.KVS_KEY_SEPARATOR)
@@ -166,9 +166,9 @@ def quantile_value_from_hazard_curve_key(kvs_key):
         return None
 
 
-def quantile_value_from_hazard_map_key(kvs_key):
+def quantile_from_haz_map_key(kvs_key):
     """Extract quantile value from a KVS key for a quantile hazard map node."""
-    if extract_product_type_from_kvs_key(kvs_key) == \
+    if product_type_from_kvs_key(kvs_key) == \
         QUANTILE_HAZARD_MAP_KEY_TOKEN:
         (_part_before, _sep, quantile_str) = kvs_key.rpartition(
             openquake.kvs.KVS_KEY_SEPARATOR)
@@ -181,7 +181,7 @@ def poe_value_from_hazard_map_key(kvs_key):
     """Extract PoE value (as float) from a KVS key for a hazard map.
     """
 
-    if extract_product_type_from_kvs_key(kvs_key) in (
+    if product_type_from_kvs_key(kvs_key) in (
         MEAN_HAZARD_MAP_KEY_TOKEN, QUANTILE_HAZARD_MAP_KEY_TOKEN):
 
         # the PoE is the fourth component of the key, after product
@@ -200,10 +200,10 @@ def hazard_curve_key(job_id, realization_num, site):
                                        site.hash()])
 
 
-def realization_value_from_hazard_curve_key(kvs_key):
+def realization_from_haz_curve_key(kvs_key):
     """Extract realization value (as string) from a KVS key
     for a hazard curve."""
-    if extract_product_type_from_kvs_key(kvs_key) == HAZARD_CURVE_KEY_TOKEN:
+    if product_type_from_kvs_key(kvs_key) == HAZARD_CURVE_KEY_TOKEN:
 
         # the realization is the third component of the key, after product
         # token and job ID
@@ -212,8 +212,18 @@ def realization_value_from_hazard_curve_key(kvs_key):
         return None
 
 
-def extract_product_type_from_kvs_key(kvs_key):
-    (product_type, sep, part_after) = kvs_key.partition(
+def product_type_from_kvs_key(kvs_key):
+    """
+    Given a KVS key, extract the type of product from the key.
+    For example, given a key for a mean hazard map, the string
+    'mean_hazard_map' will be returned.
+
+    :param kvs_key: kvs product key
+    :type kvs_key: str
+
+    :returns: product type portion of the key
+    """
+    (product_type, _sep, _part_after) = kvs_key.partition(
         openquake.kvs.KVS_KEY_SEPARATOR)
     return product_type
 
@@ -244,6 +254,7 @@ def ground_motion_values_key(job_id, point):
 
 NEXT_JOB_ID = 'NEXT_JOB_ID'
 CURRENT_JOBS = 'CURRENT_JOBS'
+JOB_KEY_FMT = '::JOB::%s::'
 
 
 def alloc_job_key():
@@ -266,7 +277,7 @@ def alloc_job_key():
     """
     client = openquake.kvs.get_client()
 
-    job_key = '::JOB::%s::' % client.incr(NEXT_JOB_ID)
+    job_key = JOB_KEY_FMT % client.incr(NEXT_JOB_ID)
 
     # Add this key to set of current jobs.
     # This set can be queried to perform garbage collection.
