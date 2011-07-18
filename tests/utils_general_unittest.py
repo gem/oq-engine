@@ -63,8 +63,8 @@ class MemoizerTestCase(unittest.TestCase):
             return self.counter
 
         # not cached
-        my_memoized_method(
-            [1, 2, 3], {'key1': 'value1', 'key2': 'value2'})
+        my_memoized_method([1, 2, 3],
+                           {'key1': 'value1', 'key2': 'value2'})
 
         # cached with return values
         self.assertEqual(1, my_memoized_method([1, 2, 3],
