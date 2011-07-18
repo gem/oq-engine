@@ -42,15 +42,14 @@ CREATE TABLE uiapi.loss_curve (
     unit VARCHAR -- e.g. EUR, USD
 ) TABLESPACE uiapi_ts;
 
+
 -- Loss curve data. Holds the asset, its position and value plus the calculated curve.
 CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
     asset_ref VARCHAR NOT NULL,
-    asset_value float NOT NULL,
-    -- Loss ratios
-    ratios float[] NOT NULL CONSTRAINT valid_ratios CHECK (0 <= ALL(ratios) AND 1 >= ALL(ratios)),
+    losses float[] NOT NULL CONSTRAINT non_negative_losses CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -90,7 +89,6 @@ COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)'
 COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
 COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
 COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN uiapi.loss_curve_data.asset_value IS 'The value of the asset';
 COMMENT ON COLUMN uiapi.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN uiapi.loss_curve_data.ratios IS 'Loss ratios (0 <= loss <= 1)';
+COMMENT ON COLUMN uiapi.loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';

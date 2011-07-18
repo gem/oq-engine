@@ -1003,6 +1003,6 @@ class OutputTestCase(unittest.TestCase):
             "SERIALIZE_RESULTS_TO_DB": "True",
             "OPENQUAKE_JOB_ID": 1}
         writer = create_loss_curve_writer("loss_ratio", "fakepath.xml", params)
-        self.assertEqual(type(writer), LossCurveDBWriter)
-        writer = create_loss_curve_writer("loss", "fakepath.xml", params)
         self.assertEqual(writer, None)
+        writer = create_loss_curve_writer("loss", "fakepath.xml", params)
+        self.assertEqual(type(writer), LossCurveDBWriter)
