@@ -29,9 +29,7 @@ import os
 import copy
 import numpy
 import struct
-import subprocess
 import unittest
-import copy
 
 from osgeo import gdal, gdalconst
 
