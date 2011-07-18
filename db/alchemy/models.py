@@ -282,9 +282,8 @@ class LossMapData(Base):
 
     asset_ref = sa.Column(sa.String, nullable=False)
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
-    mean = sa.Column(sa.Float, nullable=True)
-    std_dev = sa.Column(sa.Float, nullable=True)
-    value = sa.Column(sa.Float, nullable=True)
+    value = sa.Column(sa.Float, nullable=False)
+    std_dev = sa.Column(sa.Float, nullable=False, default=0.0)
 
     def __repr__(self):
         return(":loss_map_data: %s" % self.id)
