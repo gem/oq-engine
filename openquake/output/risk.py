@@ -358,7 +358,7 @@ class LossMapDBWriter(OutputDBWriter):
             data = LossMapData(
                 loss_map=self.metadata,
                 asset_ref=asset['assetID'],
-                site="POINT(%s %s)" % (site.longitude, site.latitude),
+                location="POINT(%s %s)" % (site.longitude, site.latitude),
                 mean=loss.get('mean_loss'),  # for deterministic loss maps
                 std_dev=loss.get('stddev_loss'),  # for deterministic loss maps
                 value=loss.get('value'))  # for probabilistic loss maps
