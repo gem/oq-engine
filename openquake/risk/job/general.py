@@ -325,7 +325,6 @@ class RiskJobMixin(mixins.Mixin):
 
         return result.items()
 
-
 class EpsilonProvider(object):
     """
     Simple class for combining job configuration parameters and an `epsilon`
