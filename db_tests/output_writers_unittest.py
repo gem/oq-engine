@@ -25,7 +25,7 @@ import unittest
 
 from openquake.hazard import opensha
 from openquake.output import hazard as hazard_output
-
+from openquake.output import risk as risk_output
 
 class CreateWriterTestBase(object):
     def test_create_writer_with_xml(self):
@@ -90,3 +90,25 @@ class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     create_function = staticmethod(opensha.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter
     db_writer_class = hazard_output.GMFDBWriter
+
+class CreateRiskWriterTest(unittest.TestCase):
+    def test_loss_curve_writer_creation(self):
+        # XML writers
+        params = {"SERIALIZE_RESULTS_TO_DB": "False"}
+        writer = risk_output.create_loss_curve_writer("loss_ratio",
+                                                      "fakepath.xml", params)
+        self.assertEqual(type(writer), risk_output.LossRatioCurveXMLWriter)
+        writer = risk_output.create_loss_curve_writer("loss", "fakepath.xml",
+                                                      params)
+        self.assertEqual(type(writer), risk_output.LossCurveXMLWriter)
+
+        # database writers
+        params = {
+            "SERIALIZE_RESULTS_TO_DB": "True",
+            "OPENQUAKE_JOB_ID": 1}
+        writer = risk_output.create_loss_curve_writer("loss_ratio",
+                                                      "fakepath.xml", params)
+        self.assertEqual(writer, None)
+        writer = risk_output.create_loss_curve_writer("loss", "fakepath.xml",
+                                                      params)
+        self.assertEqual(type(writer), risk_output.LossCurveDBWriter)
