@@ -22,7 +22,7 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.risk import LossCurveDBWriter
+from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter
 from openquake.shapes import Site, Curve
 
 from db_tests import helpers
@@ -141,3 +141,181 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEquals(normalize(RISK_LOSS_CURVE_DATA),
                           normalize(inserted_data))
+
+
+SITE_A = Site(-117.0, 38.0)
+SITE_A_ASSET_ONE = {'assetID': 'a1711'}
+SITE_A_ASSET_TWO = {'assetID': 'a1712'}
+
+SITE_B = Site(-118.0, 39.0)
+SITE_B_ASSET_ONE = {'assetID': 'a1713'}
+
+LOSS_MAP_METADATA = {
+    'nrmlID': 'test_nrml_id',
+    'riskResultID': 'test_rr_id',
+    'lossMapID': 'test_lm_id',
+    'endBranchLabel': 'test_ebl',
+    'lossCategory': 'economic_loss',
+    'unit': 'EUR'}
+
+DETERMINISTIC_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
+DETERMINISTIC_LOSS_MAP_METADATA.update({
+    'deterministic': True})
+
+SITE_A_DETERMINISTIC_LOSS_ONE = {'mean_loss': 0, 'stddev_loss': 100}
+SITE_A_DETERMINISTIC_LOSS_TWO = {'mean_loss': 5, 'stddev_loss': 2000.0}
+
+SITE_B_DETERMINISTIC_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
+
+SAMPLE_DETERMINISTIC_LOSS_MAP_DATA = [
+    DETERMINISTIC_LOSS_MAP_METADATA,
+    (SITE_A, [(SITE_A_DETERMINISTIC_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_DETERMINISTIC_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_DETERMINISTIC_LOSS_ONE, SITE_B_ASSET_ONE)])]
+
+NONDETERMINISTIC_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
+NONDETERMINISTIC_LOSS_MAP_METADATA.update({
+    'poe': 0.6,
+    'deterministic': False})
+
+SITE_A_NONDETERMINISTIC_LOSS_ONE = {'value': 12}
+SITE_A_NONDETERMINISTIC_LOSS_TWO = {'value': 66}
+
+SITE_B_NONDETERMINISTIC_LOSS_ONE = {'value': 1000.0}
+
+SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA = [
+    NONDETERMINISTIC_LOSS_MAP_METADATA,
+    (SITE_A, [(SITE_A_NONDETERMINISTIC_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_NONDETERMINISTIC_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_NONDETERMINISTIC_LOSS_ONE, SITE_B_ASSET_ONE)])]
+
+
+class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """
+    Unit tests for the LossMapDBWriter class, which serializes
+    loss maps to the database.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def setUp(self):
+        self.job = self.setup_classic_job()
+        self.session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        self.display_name = os.path.basename(output_path)
+
+        self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
+
+    def test_serialize_deterministic(self):
+        """
+        All the records for deterministic loss maps are inserted correctly.
+        """
+
+        output = self.writer.output
+
+        # Call the function under test.
+        data = SAMPLE_DETERMINISTIC_LOSS_MAP_DATA
+        self.writer.serialize(data)
+
+        # Output record
+        self.assertEqual(1, len(self.job.output_set))
+        [output] = self.job.output_set
+        self.assertTrue(output.db_backed)
+        self.assertTrue(output.path is None)
+        self.assertEqual(self.display_name, output.display_name)
+        self.assertEqual("loss_map", output.output_type)
+        self.assertTrue(self.job is output.oq_job)
+
+        # LossMap record
+        self.assertEqual(1, len(output.lossmap_set))
+        [metadata] = output.lossmap_set
+        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
+                         metadata.deterministic)
+        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['endBranchLabel'],
+                         metadata.end_branch_label)
+        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['lossCategory'],
+                         metadata.category)
+        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['unit'],
+                         metadata.unit)
+        self.assertEqual(None, metadata.poe)
+
+        # LossMapData records
+        self.assertEqual(3, len(metadata.lossmapdata_set))
+        [data_a, data_b, data_c] = metadata.lossmapdata_set
+
+        self.assertEqual(SITE_A, Site(*data_a.location.coords(self.session)))
+        self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
+        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_ONE['mean_loss'],
+                        data_a.value)
+        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_ONE['stddev_loss'],
+                         data_a.std_dev)
+
+        self.assertEqual(SITE_A, Site(*data_b.location.coords(self.session)))
+        self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
+        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_TWO['mean_loss'],
+                         data_b.value)
+        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_TWO['stddev_loss'],
+                         data_b.std_dev)
+
+        self.assertEqual(SITE_B, Site(*data_c.location.coords(self.session)))
+        self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
+        self.assertEqual(SITE_B_DETERMINISTIC_LOSS_ONE['mean_loss'],
+                         data_c.value)
+        self.assertEqual(SITE_B_DETERMINISTIC_LOSS_ONE['stddev_loss'],
+                         data_c.std_dev)
+
+    def test_serialize_nondeterministic(self):
+        """
+        All the records for non-deterministic loss maps are inserted correctly.
+        """
+
+        output = self.writer.output
+
+        # Call the function under test.
+        data = SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA
+        self.writer.serialize(data)
+
+        # Output record
+        self.assertEqual(1, len(self.job.output_set))
+        [output] = self.job.output_set
+        self.assertTrue(output.db_backed)
+        self.assertTrue(output.path is None)
+        self.assertEqual(self.display_name, output.display_name)
+        self.assertEqual("loss_map", output.output_type)
+        self.assertTrue(self.job is output.oq_job)
+
+        # LossMap record
+        self.assertEqual(1, len(output.lossmap_set))
+        [metadata] = output.lossmap_set
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
+                         metadata.deterministic)
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['endBranchLabel'],
+                         metadata.end_branch_label)
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['lossCategory'],
+                         metadata.category)
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['unit'],
+                         metadata.unit)
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['poe'],
+                         metadata.poe)
+
+        # LossMapData records
+        self.assertEqual(3, len(metadata.lossmapdata_set))
+        [data_a, data_b, data_c] = metadata.lossmapdata_set
+
+        self.assertEqual(SITE_A, Site(*data_a.location.coords(self.session)))
+        self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
+        self.assertEqual(SITE_A_NONDETERMINISTIC_LOSS_ONE['value'],
+                         data_a.value)
+
+        self.assertEqual(SITE_A, Site(*data_b.location.coords(self.session)))
+        self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
+        self.assertEqual(SITE_A_NONDETERMINISTIC_LOSS_TWO['value'],
+                         data_b.value)
+
+        self.assertEqual(SITE_B, Site(*data_c.location.coords(self.session)))
+        self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
+        self.assertEqual(SITE_B_NONDETERMINISTIC_LOSS_ONE['value'],
+                         data_c.value)
