@@ -27,6 +27,7 @@ from openquake.hazard import opensha
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
 
+
 class CreateWriterTestBase(object):
     def test_create_writer_with_xml(self):
         """
@@ -90,6 +91,7 @@ class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     create_function = staticmethod(opensha.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter
     db_writer_class = hazard_output.GMFDBWriter
+
 
 class CreateRiskWriterTest(unittest.TestCase):
     def test_loss_curve_writer_creation(self):
