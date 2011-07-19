@@ -403,6 +403,13 @@ class Job(object):
         kvs.set_value_json_encoded(key, self.params)
 
     def sites_to_compute(self):
+        """Return the sites used to trigger the computation on the
+        hazard subsystem.
+        
+        If the SITES parameter is specified, the computation is triggered
+        only the sites specified in that parameter, otherwise
+        the region is used."""
+
         if  self.has(conf.SITES):
             coords = [float(x) for x in self.params[conf.SITES].split(",")]
             sites = []

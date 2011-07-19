@@ -23,7 +23,8 @@ import unittest
 from tests.utils import helpers
 from openquake import kvs
 from openquake import flags
-from openquake.job import Job, LOG
+from openquake import shapes
+from openquake.job import Job, LOG, config
 from openquake.job.mixins import Mixin
 from openquake.risk.job import general
 from openquake.kvs import tokens
@@ -250,34 +251,54 @@ class JobTestCase(unittest.TestCase):
 
         self.assertNotEqual(job1.job_id, job2.job_id)
 
-    def test_computes_sites_in_region_with_only_hazard_and_region_vertex_param(self):
+    def test_computes_sites_in_region_when_specified(self):
+        """When we have hazard jobs only, and we specify a region,
+        we use the standard algorithm to split the region in sites. In this
+        example, the region has just four sites (the region boundaries).
+        """
         sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
         input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
 
-        params = {config.INPUT_REGION: input_region, config.REGION_GRID_SPACING: 1.0}
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
 
         job = Job(params, sections=sections)
 
-        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0), shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
         self.assertEquals(expected_sites, job.sites_to_compute())
 
-    def test_computes_specific_sites_with_only_hazard_and_sites_param(self):
+    def test_computes_specific_sites_when_specified(self):
+        """When we have hazard jobs only, and we specify a list of sites
+        (SITES parameter in the configuration file) we trigger the
+        computation only on those sites.
+        """
         sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
         sites = "1.0, 1.5, 1.5, 2.5, 3.0, 3.0, 4.0, 4.5"
 
         params = {config.SITES: sites}
 
         job = Job(params, sections=sections)
-        expected_sites = [shapes.Site(1.5, 1.0), shapes.Site(2.5, 1.5), shapes.Site(3.0, 3.0), shapes.Site(4.5, 4.0)]
+
+        expected_sites = [shapes.Site(1.5, 1.0), shapes.Site(2.5, 1.5),
+                shapes.Site(3.0, 3.0), shapes.Site(4.5, 4.0)]
+
         self.assertEquals(expected_sites, job.sites_to_compute())
 
     def test_computes_sites_in_region_with_risk_jobs(self):
-        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION, config.RISK_SECTION]
+        """When we have hazard and risk jobs, we always use the region."""
+        sections = [config.HAZARD_SECTION,
+                config.GENERAL_SECTION, config.RISK_SECTION]
+
         input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
 
-        params = {config.INPUT_REGION: input_region, config.REGION_GRID_SPACING: 1.0}
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
 
         job = Job(params, sections=sections)
 
-        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0), shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
         self.assertEquals(expected_sites, job.sites_to_compute())
