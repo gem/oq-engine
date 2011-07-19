@@ -29,20 +29,21 @@ from openquake.utils import round_float
 from db_tests import helpers
 
 # See data in output_hazard_unittest.py
-HAZARD_CURVE_DATA = [
-    (Site(-122.2, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'statistics': 'mean'}),
-    (Site(-122.1, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.454, 0.214, 0.123, 0.102],
-      'IMT': 'PGA',
-      'statistics': 'mean'}),
-]
+def HAZARD_CURVE_DATA():
+    return [
+        (Site(-122.2, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'statistics': 'mean'}),
+        (Site(-122.1, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.454, 0.214, 0.123, 0.102],
+          'IMT': 'PGA',
+          'statistics': 'mean'}),
+    ]
 
 
 class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -54,7 +55,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         session = get_uiapi_writer_session()
         output_path = self.generate_output_path(self.job)
         hcw = HazardCurveDBWriter(session, output_path, self.job.id)
-        hcw.serialize(HAZARD_CURVE_DATA)
+        hcw.serialize(HAZARD_CURVE_DATA())
 
     def tearDown(self):
         if hasattr(self, "job") and self.job:
