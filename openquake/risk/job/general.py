@@ -23,7 +23,6 @@ import os
 
 from scipy.stats import norm
 
-from openquake.output import geotiff
 from openquake import job
 from openquake.job import mixins
 from openquake import kvs
@@ -213,35 +212,47 @@ class RiskJobMixin(mixins.Mixin):
         else:
             return []
 
+    def grid_assets(self, grid):
+        """
+        Generates the tuples (point, asset) for all assets known to this job
+        that are contained in grid.
+
+        point is a point of the grid
+        asset is a dict representing an asset
+        """
+
+        for point in grid:
+            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
+            for asset in [json.loads(x) for x in asset_list]:
+                yield point, asset
+
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
-        block = Block.from_kvs(block_id)
-        for point in block.grid(self.region):
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
-                site = shapes.Site(asset['lon'], asset['lat'])
+        block = job.Block.from_kvs(block_id)
+        for point, asset in self.grid_assets(block.grid(self.region)):
+            site = shapes.Site(asset['lon'], asset['lat'])
 
-                loss_curve = kvs.get(
-                                kvs.tokens.loss_curve_key(job_id,
-                                                          point.row,
-                                                          point.column,
-                                                          asset["assetID"]))
-                loss_ratio_curve = kvs.get(
-                                kvs.tokens.loss_ratio_key(job_id,
-                                                          point.row,
-                                                          point.column,
-                                                          asset["assetID"]))
+            loss_curve = kvs.get(
+                            kvs.tokens.loss_curve_key(job_id,
+                                                        point.row,
+                                                        point.column,
+                                                        asset["assetID"]))
+            loss_ratio_curve = kvs.get(
+                            kvs.tokens.loss_ratio_key(job_id,
+                                                        point.row,
+                                                        point.column,
+                                                        asset["assetID"]))
 
-                if loss_curve:
-                    loss_curve = shapes.Curve.from_json(loss_curve)
-                    loss_curves.append((site, (loss_curve, asset)))
+            if loss_curve:
+                loss_curve = shapes.Curve.from_json(loss_curve)
+                loss_curves.append((site, (loss_curve, asset)))
 
-                if loss_ratio_curve:
-                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
+            if loss_ratio_curve:
+                loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
         results = self._serialize(block_id,
                                            curves=loss_ratio_curves,
@@ -260,24 +271,20 @@ class RiskJobMixin(mixins.Mixin):
         """
         result = []
 
-        for point in self.region.grid:
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
-                key = kvs.tokens.loss_key(self.id, point.row, point.column,
-                        asset["assetID"], loss_poe)
-                loss_value = kvs.get(key)
-                LOG.debug("Loss for asset %s at %s %s is %s" %
-                    (asset["assetID"], asset['lon'], asset['lat'], loss_value))
-                if loss_value:
-                    risk_site = shapes.Site(asset['lon'], asset['lat'])
-                    loss = {
-                        "value": loss_value,
-                    }
-                    result.append((risk_site, (loss, asset)))
+        for point, asset in self.grid_assets(self.region.grid):
+            key = kvs.tokens.loss_key(self.id, point.row, point.column,
+                    asset["assetID"], loss_poe)
+            loss_value = kvs.get(key)
+            LOG.debug("Loss for asset %s at %s %s is %s" %
+                (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+            if loss_value:
+                risk_site = shapes.Site(asset['lon'], asset['lat'])
+                loss = {
+                    "value": loss_value,
+                }
+                result.append((risk_site, (loss, asset)))
 
         return result
-
 
 
 class EpsilonProvider(object):
