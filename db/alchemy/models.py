@@ -317,7 +317,7 @@ class LossCurveData(Base):
     loss_curve = relationship("LossCurve", backref="losscurvedata_set")
 
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
-    asset_ref = sa.Column(sa.String)
+    asset_ref = sa.Column(sa.String, nullable=False)
     losses = sa.Column(postgresql.ARRAY(sa.Float), nullable=False)
     poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
                      doc="Probabilities of exceedence")
