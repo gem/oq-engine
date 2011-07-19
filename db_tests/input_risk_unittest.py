@@ -29,6 +29,7 @@ from openquake.utils import round_float
 
 from db_tests import helpers
 
+
 # See data in output_hazard_unittest.py
 def HAZARD_CURVE_DATA():
     return [
@@ -141,7 +142,9 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals({}, gmfs)
 
         # only the keys in gmfs are used
-        gmfs = dict(('%d!%d' % (i, j), []) for i in xrange(3) for j in xrange(2))
+        gmfs = dict(('%d!%d' % (i, j), [])
+                        for i in xrange(3)
+                        for j in xrange(2))
         mixin._load_db_gmfs(gmfs, self.job.id)
         # avoid rounding errors
         for k, v in gmfs.items():
