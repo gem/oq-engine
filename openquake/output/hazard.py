@@ -43,10 +43,9 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 
 import logging
 from lxml import etree
-from os.path import basename
 
 from db.alchemy.models import HazardMapData, HazardCurveData, \
-    HazardCurveNodeData, GMFData, OqJob, Output
+    HazardCurveNodeData, GMFData
 
 from openquake import shapes
 from openquake import writer
@@ -54,7 +53,7 @@ from openquake.utils import round_float
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
 
 
-LOGGER = logging.getLogger('hazard-map-serializer')
+LOGGER = logging.getLogger('hazard-serializer')
 LOGGER.setLevel(logging.DEBUG)
 
 
@@ -582,35 +581,13 @@ class BulkInserter(object):
         self.count = 0
 
 
-class BaseDBWriter(object):
-    """Common code for hazard DB writers"""
-
-    def __init__(self, session, nrml_path, oq_job_id):
-        self.nrml_path = nrml_path
-        self.oq_job_id = oq_job_id
-        self.session = session
-        self.output = None
-
-    def insert_output(self, output_type):
-        """Insert an `uiapi.output` record for the job at hand."""
-        LOGGER.debug("> insert_output")
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=basename(self.nrml_path),
-                             output_type=output_type, db_backed=True)
-        self.session.add(self.output)
-        LOGGER.debug("output = '%s'" % self.output)
-        LOGGER.debug("< insert_output")
-
-
-class HazardMapDBWriter(BaseDBWriter):
+class HazardMapDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
     """
     def __init__(self, session, nrml_path, oq_job_id):
-        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+        super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.insert_point = BulkInserter(HazardMapData)
 
@@ -683,14 +660,15 @@ class HazardMapDBWriter(BaseDBWriter):
                 location="POINT(%s %s)" % (point.x, point.y))
 
 
-class HazardCurveDBWriter(BaseDBWriter):
+class HazardCurveDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
     """
 
     def __init__(self, session, nrml_path, oq_job_id):
-        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+        super(HazardCurveDBWriter, self).__init__(session, nrml_path,
+                                                  oq_job_id)
 
         self.curves_per_branch_label = {}
         self.insert_curve_node = BulkInserter(HazardCurveNodeData)
@@ -772,14 +750,14 @@ class HazardCurveDBWriter(BaseDBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-class GMFDBWriter(BaseDBWriter):
+class GMFDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
     """
 
     def __init__(self, session, nrml_path, oq_job_id):
-        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+        super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
 
