@@ -74,8 +74,22 @@ def output(fn):
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
             results.extend(self._write_output_for_block(self.job_id, block_id))
+
         for loss_poe in conditional_loss_poes:
-            results.extend(self.write_loss_map(loss_poe))
+            path = os.path.join(self.base_path,
+                                self['OUTPUT_DIR'],
+                                "losses_at-%s.tiff" % loss_poe)
+            writer = risk_output.create_loss_map_writer(path, self.params)
+
+            metadata = {
+                "deterministic": False,
+                "poe": loss_poe,
+            }
+
+            writer.serialize([metadata] + self.asset_losses_per_site(loss_poe))
+
+            results.append(path)
+
         return results
 
     return output_writer
@@ -240,32 +254,30 @@ class RiskJobMixin(mixins.Mixin):
                                                 render_multi=True))
         return results
 
-    def write_loss_map(self, loss_poe):
-        """ Iterates through all the assets and maps losses at loss_poe """
-        # Make a special grid at a higher resolution
-        risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
-        path = os.path.join(self.base_path,
-                            self['OUTPUT_DIR'],
-                            "losses_at-%s.tiff" % loss_poe)
-        output_generator = geotiff.LossMapGeoTiffFile(path, risk_grid,
-                init_value=0.0, normalize=True)
+    def asset_losses_per_site(self, loss_poe):
+        """
+        Iterates through all the assets and maps losses at loss_poe
+        """
+        result = []
+
         for point in self.region.grid:
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
             for asset in [json.loads(x) for x in asset_list]:
                 key = kvs.tokens.loss_key(self.id, point.row, point.column,
                         asset["assetID"], loss_poe)
-                loss = kvs.get(key)
+                loss_value = kvs.get(key)
                 LOG.debug("Loss for asset %s at %s %s is %s" %
-                    (asset["assetID"], asset['lon'], asset['lat'], loss))
-                if loss:
-                    loss_ratio = float(loss) / float(asset["assetValue"])
+                    (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+                if loss_value:
                     risk_site = shapes.Site(asset['lon'], asset['lat'])
-                    risk_point = risk_grid.point_at(risk_site)
-                    output_generator.write(
-                            (risk_point.row, risk_point.column), loss_ratio)
-        output_generator.close()
-        return [path]
+                    loss = {
+                        "value": loss_value,
+                    }
+                    result.append((risk_site, (loss, asset)))
+
+        return result
+
 
 
 class EpsilonProvider(object):
