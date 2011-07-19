@@ -162,15 +162,15 @@ COMMENT ON COLUMN uiapi.loss_map.deterministic IS 'Is the loss map result of det
 COMMENT ON COLUMN uiapi.loss_map.loss_map_ref IS 'A simple identifier';
 COMMENT ON COLUMN uiapi.loss_map.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN uiapi.loss_map.category IS 'Loss category (e.g. economic_loss).';
-COMMENT ON COLUMN uiapi.loss_map.unit IS 'Monetary unit (one of EUR, USD)';
+COMMENT ON COLUMN uiapi.loss_map.unit IS 'Unit of measurement';
 COMMENT ON COLUMN uiapi.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
-COMMENT ON TABLE uiapi.loss_map_data IS 'Holds an asset, its position and a value plus (for non deterministic maps) the standard deviation for its loss.';
+COMMENT ON TABLE uiapi.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
 COMMENT ON COLUMN uiapi.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
 COMMENT ON COLUMN uiapi.loss_map_data.asset_ref IS 'The asset reference';
 COMMENT ON COLUMN uiapi.loss_map_data.location IS 'The position of the asset';
 COMMENT ON COLUMN uiapi.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN uiapi.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non deterministic maps the standard deviation is 0)';
+COMMENT ON COLUMN uiapi.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
 
 COMMENT ON TABLE uiapi.loss_asset_data IS 'Holds the asset id and its position for which loss curves were calculated.';
 COMMENT ON COLUMN uiapi.loss_asset_data.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
