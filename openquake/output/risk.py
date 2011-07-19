@@ -23,7 +23,8 @@ NRML serialization of risk-related data sets.
 - loss curves
 - loss map
 """
-import os
+
+import logging
 
 from lxml import etree
 
@@ -34,6 +35,7 @@ from db.alchemy.models import OqJob, Output
 
 from openquake import logs
 from openquake import shapes
+from openquake import writer
 from openquake import xml
 
 from openquake.output import nrml
@@ -253,59 +255,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         return None
 
 
-class OutputDBWriter(object):
-    """
-    Abstact class implementing the "serialize" interface to output an iterable
-    to the database.
-
-    Subclasses must implement get_output_type() and insert_datum().
-    """
-    def __init__(self, session, nrml_path, oq_job_id):
-        self.nrml_path = nrml_path
-        self.oq_job_id = oq_job_id
-        self.session = session
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=os.path.basename(self.nrml_path),
-                             output_type=self.get_output_type(),
-                             db_backed=True)
-
-    def get_output_type(self):
-        """
-        The type of the output record as a string (e.g. 'loss_curve')
-        """
-        raise NotImplementedError()
-
-    def insert_datum(self, key, values):
-        """
-        Called for each item of the iterable during serialize.
-        """
-        raise NotImplementedError()
-
-    def serialize(self, iterable):
-        """
-        Implementation of the "serialize" interface.
-
-        An Output record with type get_output_type() will be created, then
-        each item of the iterable will be serialized in turn to the database.
-        """
-        LOGGER.info("> serialize")
-        LOGGER.info("serializing %s points" % len(iterable))
-
-        self.session.add(self.output)
-        LOGGER.info("output = '%s'" % self.output)
-
-        for key, values in iterable:
-            self.insert_datum(key, values)
-
-        self.session.commit()
-
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< serialize")
-
-
-class LossMapDBWriter(OutputDBWriter):
+class LossMapDBWriter(writer.DBWriter):
     """
     Serialize to the database deterministic and non-deterministic loss maps.
 
@@ -329,6 +279,8 @@ class LossMapDBWriter(OutputDBWriter):
         return 'loss_map'
 
     def serialize(self, iterable):
+        self.insert_output(self.get_output_type())
+
         if isinstance(iterable[0], dict):
             self._insert_metadata(iterable[0])
             iterable = iterable[1:]
@@ -513,7 +465,7 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 
-class LossCurveDBWriter(OutputDBWriter):
+class LossCurveDBWriter(writer.DBWriter):
     """
     Serializer to the database for loss curves.
     """
