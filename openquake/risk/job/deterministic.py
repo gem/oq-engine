@@ -26,7 +26,6 @@ import json
 import numpy
 import os
 
-from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -34,7 +33,6 @@ from openquake import shapes
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.risk import deterministic_event_based as det
-
 from openquake.risk.job import general
 
 
@@ -183,7 +181,7 @@ class DeterministicEventBasedMixin:
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
 
-        block = job.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(block_id)
 
         block_losses = self._compute_loss_for_block(
             block, vuln_model, epsilon_provider)
