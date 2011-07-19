@@ -27,9 +27,9 @@ INPUT_REGION = "REGION_VERTEX"
 HAZARD_SECTION = "HAZARD"
 GENERAL_SECTION = "general"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
-SITES = "SITES"
 CALCULATION_MODE = "CALCULATION_MODE"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
+SITES = "SITES"
 
 
 class ValidatorSet(object):
@@ -68,17 +68,17 @@ class ValidatorSet(object):
 
         self.validators.append(validator)
 
-# TODO (ac): Update doc!
+
 class RiskMandatoryParametersValidator(object):
-    """Validator that checks if the exposure file
-    is specified when computing risk jobs."""
+    """Validator that checks if the mandatory parameters
+    for risk processing are specified."""
 
     def __init__(self, sections, params):
         self.sections = sections
         self.params = params
 
     def is_valid(self):
-        """Return true if the EXPOSURE parameter is specified,
+        """Return true if the mandatory risk parameters are specified,
         false otherwise. When invalid returns also the error messages.
 
         :returns: the status of this validator and the related error messages.
@@ -93,7 +93,8 @@ class RiskMandatoryParametersValidator(object):
             for mandatory_param in mandatory_params:
                 if mandatory_param not in self.params.keys():
                     return (False, [
-                        "With RISK processing, EXPOSURE, REGION_VERTEX and REGION_GRID_SPACING must be specified"])
+                            "With RISK processing, EXPOSURE, REGION_VERTEX " +
+                            "and REGION_GRID_SPACING must be specified"])
 
         return (True, [])
 
