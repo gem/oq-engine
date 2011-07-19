@@ -16,21 +16,17 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import mock
 import os
 import unittest
 
-from openquake import shapes
 from tests.utils import helpers
-from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake.job import Job, LOG
-from openquake.job import config
 from openquake.job.mixins import Mixin
+from openquake.risk.job import general
 from openquake.kvs import tokens
-from openquake.risk.job.general import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
@@ -39,8 +35,6 @@ CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
-SITE = shapes.Site(1.0, 1.0)
-EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
@@ -53,8 +47,10 @@ class JobTestCase(unittest.TestCase):
     def setUp(self):
         client = kvs.get_client()
 
-        # delete managed job id info so we can predict the job key
+        # Delete managed job id info so we can predict the job key
         # which will be allocated for us
+        # Playing with NEXT_JOB_ID can lead to unexpected behaviour in other
+        # tests, see comment in tearDown
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
 
@@ -72,6 +68,13 @@ class JobTestCase(unittest.TestCase):
                 os.remove(cfg)
             except OSError:
                 pass
+
+        # Playing with NEXT_JOB_ID breaks the uniqueness of the job_ids,
+        # causing failures of tests in kvs_unittest.py, if they run after this
+        # To avoid this we garbage collect job we know we used in this test
+        # case.
+        kvs.cache_gc('::JOB::1::')
+        kvs.cache_gc('::JOB::2::')
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
 
@@ -138,16 +141,19 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin):
-            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+        with Mixin(self.job, general.RiskJobMixin):
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
 
         with Mixin(self.job, ClassicalPSHABasedMixin):
             self.assertTrue(
                 ClassicalPSHABasedMixin in self.job.__class__.__bases__)
 
     def test_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin):
-            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+        with Mixin(self.job, general.RiskJobMixin):
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
+
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
@@ -186,17 +192,16 @@ class JobTestCase(unittest.TestCase):
         risk_exec_path = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
 
-        with mock.patch('openquake.job.Job._partition'):
-            with mock.patch(haz_exec_path) as haz_exec:
-                haz_exec.return_value = []
+        with mock.patch(haz_exec_path) as haz_exec:
+            haz_exec.return_value = []
 
-                with mock.patch(risk_exec_path) as risk_exec:
-                    risk_exec.return_value = []
+            with mock.patch(risk_exec_path) as risk_exec:
+                risk_exec.return_value = []
 
-                    with mock.patch('openquake.job.Job.cleanup') as clean_mock:
-                        self.job.launch()
+                with mock.patch('openquake.job.Job.cleanup') as clean_mock:
+                    self.job.launch()
 
-                        self.assertEqual(1, clean_mock.call_count)
+                    self.assertEqual(1, clean_mock.call_count)
 
     def test_cleanup_calls_cache_gc(self):
         """
@@ -204,7 +209,7 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=1'],)
+        expected_args = (['python', 'bin/cache_gc.py', '--job=1'], )
 
         with mock.patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
@@ -276,79 +281,3 @@ class JobTestCase(unittest.TestCase):
 
         expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0), shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
         self.assertEquals(expected_sites, job.sites_to_compute())
-
-
-class BlockTestCase(unittest.TestCase):
-
-    def test_a_block_has_a_unique_id(self):
-        self.assertTrue(job.Block(()).id)
-        self.assertTrue(job.Block(()).id != job.Block(()).id)
-
-    def test_can_serialize_a_block_into_kvs(self):
-        block = job.Block((SITE, SITE))
-        block.to_kvs()
-
-        self.assertEqual(block, job.Block.from_kvs(block.id))
-
-
-class BlockSplitterTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.splitter = None
-
-    def test_an_empty_set_produces_no_blocks(self):
-        self.splitter = job.BlockSplitter(())
-        self._assert_number_of_blocks_is(0)
-
-    def test_splits_the_set_into_a_single_block(self):
-        self.splitter = job.BlockSplitter((SITE, ), 3)
-        self._assert_number_of_blocks_is(1)
-
-        self.splitter = job.BlockSplitter((SITE, SITE), 3)
-        self._assert_number_of_blocks_is(1)
-
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
-        self._assert_number_of_blocks_is(1)
-
-    def test_splits_the_set_into_multiple_blocks(self):
-        self.splitter = job.BlockSplitter((SITE, SITE), 1)
-        self._assert_number_of_blocks_is(2)
-
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
-        self._assert_number_of_blocks_is(2)
-
-    def test_generates_the_correct_blocks(self):
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
-        expected_blocks = (job.Block((SITE, SITE, SITE)), )
-        self._assert_blocks_are(expected_blocks)
-
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
-        expected_blocks = (job.Block((SITE, SITE)), job.Block((SITE, )))
-        self._assert_blocks_are(expected_blocks)
-
-    def test_splitting_with_region_intersection(self):
-        region_constraint = shapes.RegionConstraint.from_simple(
-                (0.0, 0.0), (2.0, 2.0))
-
-        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
-            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
-
-        expected_blocks = (
-                job.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
-                job.Block((shapes.Site(2.0, 2.0), )))
-
-        self.splitter = job.BlockSplitter(sites, 2,
-                                            constraint=region_constraint)
-        self._assert_blocks_are(expected_blocks)
-
-    def _assert_blocks_are(self, expected_blocks):
-        for idx, block in enumerate(self.splitter):
-            self.assertEqual(expected_blocks[idx], block)
-
-    def _assert_number_of_blocks_is(self, number):
-        counter = 0
-
-        for _block in self.splitter:
-            counter += 1
-
-        self.assertEqual(number, counter)
