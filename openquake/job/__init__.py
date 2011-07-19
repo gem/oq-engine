@@ -236,15 +236,19 @@ class Job(object):
         return job
 
     def __init__(self, params, job_id=None, sections=list(),
-        base_path=None):
+        base_path=None, validator=None):
+
         if job_id is None:
             self.job_id = alloc_job_key()
         else:
             self.job_id = job_id
+
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
         self.base_path = base_path
+        self.validator = validator
+
         if base_path:
             self.to_kvs()
 
@@ -263,7 +267,11 @@ class Job(object):
             tuple is returned
         """
 
-        return conf.default_validators(self.sections, self.params).is_valid()
+        if self.validator is None:
+            self.validator = conf.default_validators(
+                self.sections, self.params)
+
+        return self.validator.is_valid()
 
     @property
     def id(self):  # pylint: disable=C0103
@@ -405,9 +413,9 @@ class Job(object):
     def sites_to_compute(self):
         """Return the sites used to trigger the computation on the
         hazard subsystem.
-        
+
         If the SITES parameter is specified, the computation is triggered
-        only the sites specified in that parameter, otherwise
+        only on the sites specified in that parameter, otherwise
         the region is used."""
 
         if  self.has(conf.SITES):

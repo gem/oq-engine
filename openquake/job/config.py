@@ -30,6 +30,8 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 CALCULATION_MODE = "CALCULATION_MODE"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
+DETERMINISTIC_MODE = "Deterministic"
+CALCULATION_MODE = "CALCULATION_MODE"
 
 
 class ValidatorSet(object):
@@ -99,6 +101,48 @@ class RiskMandatoryParametersValidator(object):
         return (True, [])
 
 
+class ComputationTypeValidator(object):
+    """Validator that checks if the user has specified the correct
+    algorithm to use for grabbing the sites to compute."""
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """Return true if the user has specified the region
+        or the set of sites, false otherwise.
+        """
+
+        if INPUT_REGION in self.params.keys() and SITES in self.params.keys():
+            return (False,
+                "You can specify the input region or a set of sites, not both")
+
+        return (True, [])
+
+
+class DeterministicComputationValidator(object):
+    """Validator that if the deterministic calculation
+    mode specified in the configuration file is for an
+    hazard + risk job. We don't currently support deterministic
+    calculations for hazard only jobs."""
+
+    def __init__(self, sections, params):
+        self.params = params
+        self.sections = sections
+
+    def is_valid(self):
+        """Return true if the deterministic calculation mode
+        specified is for an hazard + risk job, false otherwise."""
+
+        if RISK_SECTION not in self.sections \
+                and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
+
+            return (False, "With DETERMINISTIC calculations we"
+                    + " only support hazard + risk jobs.")
+
+        return (True, [])
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -114,8 +158,12 @@ def default_validators(sections, params):
     """
 
     exposure = RiskMandatoryParametersValidator(sections, params)
+    deterministic = DeterministicComputationValidator(sections, params)
+    hazard_comp_type = ComputationTypeValidator(params)
 
     validators = ValidatorSet()
+    validators.add(hazard_comp_type)
+    validators.add(deterministic)
     validators.add(exposure)
 
     return validators
