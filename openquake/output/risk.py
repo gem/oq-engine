@@ -342,6 +342,30 @@ class LossMapDBWriter(writer.DBWriter):
         self.session.flush()
 
 
+def create_loss_map_writer(nrml_path, params):
+    """Create a loss map writer observing the settings in the config file.
+
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        loss map.
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :returns: None or an instance of
+        :py:class:`output.risk.LossMapXMLWriter` or
+        :py:class:`output.risk.LossMapDBWriter`
+    """
+
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        return LossMapXMLWriter(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+
+        return LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
+                               job_db_key)
+
+
 class CurveXMLWriter(BaseXMLWriter):
     """This class serializes a set of loss or loss ratio curves to NRML.
     Since the curves have to be collected under several different asset
