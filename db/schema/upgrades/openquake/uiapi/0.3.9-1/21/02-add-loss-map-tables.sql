@@ -24,8 +24,7 @@ CREATE TABLE uiapi.loss_map (
     end_branch_label VARCHAR,
     category VARCHAR,
     unit VARCHAR, -- e.g. USD, EUR
-    -- poe and investigation_time are significant only for non deterministic calculations
-    -- investigation_time is stored in the oq_params table
+    -- poe is significant only for non-deterministic calculations
     poe float CONSTRAINT valid_poe
         CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
                OR (deterministic AND poe IS NULL))
@@ -36,7 +35,8 @@ CREATE TABLE uiapi.loss_map_data (
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
-    std_dev float NOT NULL DEFAULT 0.0 -- for non deterministic calculations std_dev is 0
+    -- for non-deterministic calculations std_dev is 0
+    std_dev float NOT NULL DEFAULT 0.0
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
