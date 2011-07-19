@@ -534,6 +534,54 @@ def _ensure_attributes_set(attr_list, node):
     return True
 
 
+class BulkInserter(object):
+    """Handle bulk object insertion"""
+
+    def __init__(self, sa_model):
+        """Create a new bulk inserter for a SQLAlchemy model class"""
+        self.table = sa_model.__table__
+        self.fields = None
+        self.values = []
+        self.count = 0
+
+    def add_entry(self, **kwargs):
+        """
+        Add a new entry to be inserted
+
+        The first time the method is called the field list is stored;
+        subsequent add_entry() calls must provide the same set of
+        keyword arguments.
+
+        Handles PostGIS/GeoAlchemy types.
+        """
+        if not self.fields:
+            self.fields = kwargs.keys()
+        assert set(self.fields) == set(kwargs.keys())
+        for k in self.fields:
+            self.values.append(kwargs[k])
+        self.count += 1
+
+    def flush(self, session):
+        """Inserts the entries in the database using a bulk insert query"""
+        cursor = session.connection().connection.cursor()
+        value_args = []
+        for f in self.fields:
+            col = self.table.columns[f]
+            if hasattr(col.type, 'srid'):
+                value_args.append('GeomFromText(%%s, %d)' % col.type.srid)
+            else:
+                value_args.append('%s')
+
+        sql = "INSERT INTO %s.%s (%s) VALUES " % (
+            self.table.schema, self.table.name, ", ".join(self.fields)) + \
+            ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
+        cursor.execute(sql, self.values)
+
+        self.fields = None
+        self.values = []
+        self.count = 0
+
+
 class BaseDBWriter(object):
     """Common code for hazard DB writers"""
 
@@ -545,15 +593,15 @@ class BaseDBWriter(object):
 
     def insert_output(self, output_type):
         """Insert an `uiapi.output` record for the job at hand."""
-        LOGGER.info("> insert_output")
+        LOGGER.debug("> insert_output")
         job = self.session.query(OqJob).filter(
             OqJob.id == self.oq_job_id).one()
         self.output = Output(owner=job.owner, oq_job=job,
                              display_name=basename(self.nrml_path),
                              output_type=output_type, db_backed=True)
         self.session.add(self.output)
-        LOGGER.info("output = '%s'" % self.output)
-        LOGGER.info("< insert_output")
+        LOGGER.debug("output = '%s'" % self.output)
+        LOGGER.debug("< insert_output")
 
 
 class HazardMapDBWriter(BaseDBWriter):
@@ -561,6 +609,10 @@ class HazardMapDBWriter(BaseDBWriter):
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
     """
+    def __init__(self, session, nrml_path, oq_job_id):
+        BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
+
+        self.insert_point = BulkInserter(HazardMapData)
 
     def serialize(self, iterable):
         """Writes hazard map data to the database.
@@ -586,8 +638,9 @@ class HazardMapDBWriter(BaseDBWriter):
         """
         LOGGER.info("> hazmap-serialize")
 
-        LOGGER.info("serializing %s points" % len(iterable))
+        LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("hazard_map")
+        self.session.flush()
 
         for key, value in iterable:
             self.insert_map_datum(key, value)
@@ -597,11 +650,12 @@ class HazardMapDBWriter(BaseDBWriter):
             data[1].get("IML") for data in iterable))
         self.output.max_value = round_float(max(
             data[1].get("IML") for data in iterable))
-        self.session.add(self.output)
+
+        self.insert_point.flush(self.session)
         self.session.commit()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< hazmap-serialize")
+        LOGGER.debug("serialized %s points" % len(iterable))
+        LOGGER.debug("< hazmap-serialize")
 
     def insert_map_datum(self, point, value):
         """Inserts a single hazard map datum.
@@ -613,7 +667,6 @@ class HazardMapDBWriter(BaseDBWriter):
         :type point: :py:class:`shapes.GridPoint` or :py:class:`shapes.Site`
         :param float value: the value for the given location
         """
-        LOGGER.debug("> insert_map_datum")
         if isinstance(point, shapes.GridPoint):
             point = point.site.point
         if isinstance(point, shapes.Site):
@@ -624,12 +677,10 @@ class HazardMapDBWriter(BaseDBWriter):
             LOGGER.warn(
                 "No IML value for position: [%s, %s]" % (point.x, point.y))
         else:
-            datum = HazardMapData(location="POINT(%s %s)" % (point.x, point.y),
-                                  output=self.output, value=round_float(value))
-            self.session.add(datum)
-            self.session.commit()
-            LOGGER.debug("datum = [%s, %s], %s" % (point.x, point.y, datum))
-        LOGGER.debug("< insert_map_datum")
+            self.insert_point.add_entry(
+                output_id=self.output.id,
+                value=round_float(value),
+                location="POINT(%s %s)" % (point.x, point.y))
 
 
 class HazardCurveDBWriter(BaseDBWriter):
@@ -642,6 +693,7 @@ class HazardCurveDBWriter(BaseDBWriter):
         BaseDBWriter.__init__(self, session, nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
+        self.insert_curve_node = BulkInserter(HazardCurveNodeData)
 
     def serialize(self, iterable):
         """Writes hazard curve data to the database.
@@ -669,15 +721,17 @@ class HazardCurveDBWriter(BaseDBWriter):
         """
         LOGGER.info("> hazcurve-serialize")
 
-        LOGGER.info("serializing %s points" % len(iterable))
+        LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("hazard_curve")
 
         for key, value in iterable:
             self.insert_curve_datum(key, value)
+
+        self.insert_curve_node.flush(self.session)
         self.session.commit()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< hazcurve-serialize")
+        LOGGER.debug("serialized %s points" % len(iterable))
+        LOGGER.debug("< hazcurve-serialize")
 
     def insert_curve_datum(self, point, values):
         """Insert a single hazard curve"""
@@ -710,12 +764,12 @@ class HazardCurveDBWriter(BaseDBWriter):
                     hazard_curve_item.quantile = values['quantileValue']
 
             self.curves_per_branch_label[curve_label] = hazard_curve_item
+            self.session.flush()
 
-        point = point.point
-        # adds the node data to the session
-        HazardCurveNodeData(
-            hazard_curve_data=hazard_curve_item, poes=values['PoEValues'],
-            location="POINT(%s %s)" % (point.x, point.y))
+        self.insert_curve_node.add_entry(
+            hazard_curve_data_id=hazard_curve_item.id,
+            poes=values['PoEValues'],
+            location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
 class GMFDBWriter(BaseDBWriter):
@@ -743,19 +797,22 @@ class GMFDBWriter(BaseDBWriter):
         """
         LOGGER.info("> gmf-serialize")
 
-        LOGGER.info("serializing %s points" % len(iterable))
-        self.insert_output("gmf")
+        LOGGER.debug("serializing %s points" % len(iterable))
 
-        for key, value in iterable.items():
-            self.insert_gmf_datum(key, value)
+        self.insert_output("gmf")
+        self.session.flush()
+
+        insert_gmf = BulkInserter(GMFData)
+
+        for point, values in iterable.items():
+            insert_gmf.add_entry(
+                output_id=self.output.id,
+                ground_motion=values['groundMotion'],
+                location="POINT(%s %s)" % (point.point.x, point.point.y))
+
+        insert_gmf.flush(self.session)
+
         self.session.commit()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< gmf-serialize")
-
-    def insert_gmf_datum(self, point, values):
-        """Insert a single hazard curve"""
-        point = point.point
-        # adds the node data to the session
-        GMFData(output=self.output, ground_motion=values['groundMotion'],
-            location="POINT(%s %s)" % (point.x, point.y))
+        LOGGER.debug("serialized %s points" % len(iterable))
+        LOGGER.debug("< gmf-serialize")
