@@ -178,7 +178,7 @@ COMMENT ON COLUMN uiapi.loss_curve.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN uiapi.loss_curve.category IS 'The category of the losses';
 COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
-COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of excedeence for a given loss curve.';
+COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
 COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
 COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN uiapi.loss_curve_data.location IS 'The position of the asset';
