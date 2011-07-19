@@ -309,12 +309,12 @@ class LossMapDBWriter(writer.DBWriter):
             }
             if self.metadata.deterministic:
                 kwargs.update({
-                    'value': loss.get('mean_loss'),
-                    'std_dev': loss.get('stddev_loss'),
+                    'value': float(loss.get('mean_loss')),
+                    'std_dev': float(loss.get('stddev_loss')),
                 })
             else:
                 kwargs.update({
-                    'value': loss.get('value'),
+                    'value': float(loss.get('value')),
                     'std_dev': 0.0,
                 })
             self.bulk_inserter.add_entry(**kwargs)
