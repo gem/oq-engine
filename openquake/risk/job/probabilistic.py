@@ -82,7 +82,7 @@ class ProbabilisticEventMixin():
 
         return results  # TODO(jmc): Move output from being a decorator
 
-    def _gmf_db_list(self, job_id):
+    def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
         session = get_uiapi_writer_session()
 
@@ -114,7 +114,7 @@ class ProbabilisticEventMixin():
 
     def _load_db_gmfs(self, gmfs, job_id):
         """Aggregates GMF data from the DB by site"""
-        all_gmfs = self._gmf_db_list(self.params['OPENQUAKE_JOB_ID'])
+        all_gmfs = self._gmf_db_list(job_id)
 
         for gmf_id in all_gmfs:
             field = self._get_db_gmf(gmf_id)
