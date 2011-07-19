@@ -247,20 +247,46 @@ class GMFData(Base):
             self.id, self.location, self.ground_motion))
 
 
+class LossMap(Base):
+    __tablename__ = "loss_map"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
+                          nullable=False)
+    output = relationship("Output", backref="lossmap_set")
+
+    deterministic = sa.Column(sa.Boolean, nullable=False)
+    loss_map_ref = sa.Column(sa.String, nullable=True)
+    end_branch_label = sa.Column(sa.String, nullable=True)
+    category = sa.Column(sa.String, nullable=True)
+    unit = sa.Column(sa.String, nullable=True)
+    poe = sa.Column(sa.Float, nullable=True)
+
+    def __repr__(self):
+        return(":loss_map: %s" % self.id)
+
+
 class LossMapData(Base):
     __tablename__ = "loss_map_data"
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
-    output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
-                          nullable=False)
-    output = relationship("Output", backref="lossmapdata_set")
+
+    loss_map_id = sa.Column(sa.Integer,
+                            sa.ForeignKey("uiapi.loss_map.id"),
+                            nullable=False)
+    loss_map = relationship("LossMap",
+                            backref="lossmapdata_set")
+
+    asset_ref = sa.Column(sa.String, nullable=False)
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
     value = sa.Column(sa.Float, nullable=False)
+    std_dev = sa.Column(sa.Float, nullable=False, default=0.0)
 
     def __repr__(self):
-        return(":loss_map_data: %s, %s" % (
-            self.id, self.value))
+        return(":loss_map_data: %s" % self.id)
 
 
 class LossAssetData(Base):
