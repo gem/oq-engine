@@ -113,10 +113,52 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         engine = job.Job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
-        
+
         params = {config.EXPOSURE: "/a/path/to/exposure",
                 config.INPUT_REGION: "a, polygon",
                 config.REGION_GRID_SPACING: 0.5}
 
         engine = job.Job(params, sections=sections)
         self.assertTrue(engine.is_valid()[0])
+
+    def test_hazard_computation_type(self):
+        """Region (REGION_VERTEX)
+        and specific sites (SITES) are not supported at the same time."""
+
+        params = {config.SITES: "some, sites"}
+        validator = config.ComputationTypeValidator(params)
+
+        engine = job.Job(params, validator=validator)
+        self.assertTrue(engine.is_valid()[0])
+
+        params = {config.INPUT_REGION: "a, polygon"}
+        validator = config.ComputationTypeValidator(params)
+
+        engine = job.Job(params, validator=validator)
+        self.assertTrue(engine.is_valid()[0])
+
+        params = {config.SITES: "some, sites",
+                config.INPUT_REGION: "a, polygon"}
+
+        validator = config.ComputationTypeValidator(params)
+
+        engine = job.Job(params, validator=validator)
+        self.assertFalse(engine.is_valid()[0])
+
+    def test_deterministic_is_not_supported_alone(self):
+        """When we specify a deterministic computation, we only
+        support hazard + risk jobs."""
+
+        sections = [config.RISK_SECTION,
+                config.HAZARD_SECTION, config.GENERAL_SECTION]
+
+        params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
+
+        validator = config.DeterministicComputationValidator(sections, params)
+        engine = job.Job(None, sections=sections, validator=validator)
+
+        self.assertTrue(engine.is_valid()[0])
+
+        sections.remove(config.RISK_SECTION)
+
+        self.assertFalse(engine.is_valid()[0])
