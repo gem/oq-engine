@@ -45,7 +45,7 @@ with os.popen("which gfortran") as gf:
 
 setup(
     name='openquake',
-    version='.'.join([str(x) for x in openquake.__version__[:3]),
+    version='.'.join(str(x) for x in openquake.__version__[:3]),
     description='OpenQuake Platform',
     author='gem-core',
     author_email='openquake-dev@googlegroups.com',
