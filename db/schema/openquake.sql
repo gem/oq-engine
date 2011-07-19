@@ -755,17 +755,20 @@ CREATE TABLE uiapi.loss_curve (
 ) TABLESPACE uiapi_ts;
 
 
--- Loss curve data. Holds the asset, its position and value plus the calculated curve.
+-- Loss curve data. Holds the asset, its position and value plus the calculated
+-- curve.
 CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
     asset_ref VARCHAR NOT NULL,
-    losses float[] NOT NULL CONSTRAINT non_negative_losses CHECK (0 <= ALL(losses)),
+    losses float[] NOT NULL CONSTRAINT non_negative_losses
+        CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT',
+                         2);
 ALTER TABLE uiapi.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 
