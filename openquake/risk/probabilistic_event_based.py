@@ -158,13 +158,17 @@ def _mean_based(vuln_function, ground_motion_field_set):
     loss_ratios = []
     imls = vuln_function.imls
 
+    first_iml = imls[0]
+    last_iml = imls[-1]
+
+
     # seems like with numpy you can only specify a single fill value
     # if the x_new is outside the range. Here we need two different values,
     # depending if the x_new is below or upon the defined values
     for ground_motion_field in ground_motion_field_set["IMLs"]:
-        if ground_motion_field < imls[0]:
+        if ground_motion_field < first_iml:
             loss_ratios.append(0.0)
-        elif ground_motion_field > imls[-1]:
+        elif ground_motion_field > last_iml:
             loss_ratios.append(vuln_function.means[-1])
         else:
             loss_ratios.append(vuln_function.ordinate_for(
