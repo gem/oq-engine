@@ -52,50 +52,52 @@ class ValidatorSetTestCase(unittest.TestCase):
         self.assertEquals([], config.ValidatorSet().is_valid()[1])
 
     def test_with_a_validator_the_result_is_the_validator(self):
-        set = config.ValidatorSet()
-        set.add(AlwaysTrueValidator())
+        validator = config.ValidatorSet()
+        validator.add(AlwaysTrueValidator())
 
-        self.assertTrue(set.is_valid()[0])
+        self.assertTrue(validator.is_valid()[0])
 
     def test_a_set_is_valid_when_all_validators_are_valid(self):
-        set = config.ValidatorSet()
+        validator = config.ValidatorSet()
 
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
 
-        self.assertTrue(set.is_valid()[0])
-        set.add(AlwaysFalseValidator(""))
+        self.assertTrue(validator.is_valid()[0])
+        validator.add(AlwaysFalseValidator(""))
 
-        self.assertFalse(set.is_valid()[0])
+        self.assertFalse(validator.is_valid()[0])
 
     def test_no_error_messages_when_the_set_is_valid(self):
-        set = config.ValidatorSet()
+        validator = config.ValidatorSet()
 
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
 
-        self.assertEquals([], set.is_valid()[1])
+        self.assertEquals([], validator.is_valid()[1])
 
     def test_the_set_keeps_track_of_the_failed_validators(self):
-        set = config.ValidatorSet()
+        validator = config.ValidatorSet()
 
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysFalseValidator("MESSAGE#1"))
-        set.add(AlwaysFalseValidator("MESSAGE#2"))
-        set.add(AlwaysFalseValidator("MESSAGE#3"))
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysFalseValidator("MESSAGE#1"))
+        validator.add(AlwaysFalseValidator("MESSAGE#2"))
+        validator.add(AlwaysFalseValidator("MESSAGE#3"))
 
-        self.assertFalse(set.is_valid()[0])
+        self.assertFalse(validator.is_valid()[0])
 
         error_messages = ["MESSAGE#1", "MESSAGE#2", "MESSAGE#3"]
-        self.assertEquals(error_messages, set.is_valid()[1])
+        self.assertEquals(error_messages, validator.is_valid()[1])
 
 
 class ConfigurationConstraintsTestCase(unittest.TestCase):
 
-    def test_with_risk_processing_both_exposure_and_region_must_be_specified(self):
-        sections = [config.RISK_SECTION, config.HAZARD_SECTION, config.GENERAL_SECTION]
+    def test_risk_mandatory_parameters(self):
+        sections = [config.RISK_SECTION,
+                config.HAZARD_SECTION, config.GENERAL_SECTION]
+
         params = {}
 
         engine = job.Job(params, sections=sections)
