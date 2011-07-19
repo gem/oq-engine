@@ -28,6 +28,8 @@ HAZARD_SECTION = "HAZARD"
 GENERAL_SECTION = "general"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
+CALCULATION_MODE = "CALCULATION_MODE"
+REGION_GRID_SPACING = "REGION_GRID_SPACING"
 
 
 class ValidatorSet(object):
@@ -105,7 +107,7 @@ def default_validators(sections, params):
     :type params: :py:class:`dict` where each key is the parameter
         name, and each value is the parameter value
         specified in the configuration file
-    :returns: the default validators for a job
+    :returns: the default validators for a job.
     :rtype: an instance of
         :py:class:`openquake.config.ValidatorSet`
     """
