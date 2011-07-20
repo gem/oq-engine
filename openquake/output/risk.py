@@ -24,14 +24,11 @@ NRML serialization of risk-related data sets.
 - loss map
 """
 
-import logging
-
 from lxml import etree
 
 from db.alchemy.db_utils import get_uiapi_writer_session
 from db.alchemy.models import LossCurve, LossCurveData
 from db.alchemy.models import LossMap, LossMapData
-from db.alchemy.models import OqJob, Output
 
 from openquake import logs
 from openquake import shapes
