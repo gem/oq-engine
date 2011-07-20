@@ -271,6 +271,7 @@ class LossMapDBWriter(writer.DBWriter):
         super(LossMapDBWriter, self).__init__(*args, **kwargs)
 
         self.metadata = None
+        self.bulk_inserter = writer.BulkInserter(LossMapData)
 
     def get_output_type(self):
         """
@@ -308,7 +309,7 @@ class LossMapDBWriter(writer.DBWriter):
         """
         for loss, asset in values:
             kwargs = {
-                'loss_map': self.metadata,
+                'loss_map_id': self.metadata.id,
                 'asset_ref': asset['assetID'],
                 'location': "POINT(%s %s)" % (site.longitude, site.latitude),
             }
@@ -322,8 +323,7 @@ class LossMapDBWriter(writer.DBWriter):
                     'value': loss.get('value'),
                     'std_dev': 0.0,
                 })
-            data = LossMapData(**kwargs)
-            self.session.add(data)
+            self.bulk_inserter.add_entry(**kwargs)
 
     def _insert_metadata(self, metadata):
         """
@@ -345,6 +345,7 @@ class LossMapDBWriter(writer.DBWriter):
 
         self.metadata = LossMap(**kwargs)
         self.session.add(self.metadata)
+        self.session.flush()
 
 
 class CurveXMLWriter(BaseXMLWriter):
@@ -474,6 +475,7 @@ class LossCurveDBWriter(writer.DBWriter):
         super(LossCurveDBWriter, self).__init__(*args, **kwargs)
 
         self.curve = None
+        self.bulk_inserter = writer.BulkInserter(LossCurveData)
 
     def get_output_type(self):
         return "loss_curve"
@@ -526,16 +528,16 @@ class LossCurveDBWriter(writer.DBWriter):
                 category=asset_object.get('lossCategory'))
 
             self.session.add(self.curve)
+            self.session.flush()
 
         # Note: asset_object has lon and lat attributes that appear to contain
         # the same coordinates as point
-        data = LossCurveData(loss_curve=self.curve,
+        self.bulk_inserter.add_entry(
+            loss_curve_id=self.curve.id,
             asset_ref=asset_object['assetID'],
             location="POINT(%s %s)" % (point.longitude, point.latitude),
             losses=[float(x) for x in curve.abscissae],
             poes=[float(y) for y in curve.ordinates])
-
-        self.session.add(data)
 
 
 def _curve_vals_as_gmldoublelist(curve_object):
