@@ -29,7 +29,7 @@ psql_batch_options='--set ON_ERROR_STOP=1'
 # Where do the table spaces live?
 tspace_path='/var/lib/postgresql/8.4/main/ts'
 # What table spaces should be created?
-tspace_list="admin eqcat pshai riski uiapi"
+tspace_list="admin eqcat oqmif pshai uiapi"
 
 schema_path=""
 db_name=""
@@ -50,7 +50,7 @@ fi
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
 # What OpenQuake db users should be created?
-db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer opengeo_reader opengeo_writer oq_uiapi_reader oq_uiapi_writer oq_riski_writer"
+db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer opengeo_reader opengeo_writer oq_uiapi_reader oq_uiapi_writer oq_gem4ged"
 
 for i in $*
 do
