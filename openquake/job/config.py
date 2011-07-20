@@ -114,8 +114,8 @@ class ComputationTypeValidator(object):
         """
 
         if INPUT_REGION in self.params.keys() and SITES in self.params.keys():
-            return (False,
-                "You can specify the input region or a set of sites, not both")
+            return (False, ["You can specify the input region or "
+                    + "a set of sites, not both"])
 
         return (True, [])
 
@@ -137,8 +137,8 @@ class DeterministicComputationValidator(object):
         if RISK_SECTION not in self.sections \
                 and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
 
-            return (False, "With DETERMINISTIC calculations we"
-                    + " only support hazard + risk jobs.")
+            return (False, ["With DETERMINISTIC calculations we"
+                    + " only support hazard + risk jobs."])
 
         return (True, [])
 
