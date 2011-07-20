@@ -36,8 +36,6 @@ from osgeo import gdal, gdalconst
 from openquake import shapes
 from tests.utils import helpers
 from openquake.output import geotiff, curve, cpt
-from openquake.output.risk import create_loss_map_writer, LossMapXMLWriter, \
-                                  LossMapDBWriter
 
 # we define some test regions which have a lower-left corner at 0.0/0.0
 # the default grid spacing of 0.1 degrees is used
@@ -989,16 +987,3 @@ class OutputTestCase(unittest.TestCase):
         hm_writer = geotiff.HazardMapGeoTiffFile(
             test_file_path, test_region.grid, TEST_COLORMAP)
         self.assertEqual('relative', hm_writer.scaling)
-
-    def test_loss_curve_writer_creation(self):
-        # XML writer
-        params = {"SERIALIZE_RESULTS_TO_DB": "False"}
-        writer = create_loss_map_writer("fakepath.xml", params)
-        self.assertEqual(type(writer), LossMapXMLWriter)
-
-        # database writer
-        params = {
-            "SERIALIZE_RESULTS_TO_DB": "True",
-            "OPENQUAKE_JOB_ID": 1}
-        writer = create_loss_map_writer("fakepath.xml", params)
-        self.assertEqual(type(writer), LossMapDBWriter)
