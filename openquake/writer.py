@@ -131,6 +131,12 @@ class DBWriter(object):
         LOGGER.info("output = '%s'" % self.output)
         LOGGER.info("< insert_output")
 
+    def get_output_type(self):
+        """
+        The type of the output record as a string
+        """
+        raise NotImplementedError()
+
     def insert_datum(self, key, values):
         """
         Called for each item of the iterable during serialize.
