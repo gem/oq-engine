@@ -17,7 +17,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 """
-This module tests contains logic related to the configuration and
+This module contains logic related to the configuration and
 its validation.
 """
 
@@ -124,7 +124,7 @@ class DeterministicComputationValidator(object):
     """Validator that if the deterministic calculation
     mode specified in the configuration file is for an
     hazard + risk job. We don't currently support deterministic
-    calculations for hazard only jobs."""
+    calculations for hazard jobs only."""
 
     def __init__(self, sections, params):
         self.params = params
