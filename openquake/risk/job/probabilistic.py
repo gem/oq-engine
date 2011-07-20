@@ -112,9 +112,22 @@ class ProbabilisticEventMixin():
 
         return shapes.Field(field)
 
-    def _load_db_gmfs(self, gmfs, job_id):
+    def _sites_to_gmf_keys(self, sites):
+        """Returns the GMF keys "row!col" for the given site list"""
+        keys = []
+
+        for site in sites:
+            risk_point = self.region.grid.point_at(site)
+            key = "%s!%s" % (risk_point.row, risk_point.column)
+            keys.append(key)
+
+        return keys
+
+    def _get_db_gmfs(self, sites, job_id):
         """Aggregates GMF data from the DB by site"""
         all_gmfs = self._gmf_db_list(job_id)
+        gmf_keys = self._sites_to_gmf_keys(sites)
+        gmfs = dict((k, []) for k in gmf_keys)
 
         for gmf_id in all_gmfs:
             field = self._get_db_gmf(gmf_id)
@@ -123,8 +136,13 @@ class ProbabilisticEventMixin():
                 (row, col) = key.split("!")
                 gmfs[key].append(field.get(int(row), int(col)))
 
-    def _load_kvs_gmfs(self, gmfs, histories, realizations):
+        return gmfs
+
+    def _get_kvs_gmfs(self, sites, histories, realizations):
         """Aggregates GMF data from the KVS by site"""
+        gmf_keys = self._sites_to_gmf_keys(sites)
+        gmfs = dict((k, []) for k in gmf_keys)
+
         for i in range(0, histories):
             for j in range(0, realizations):
                 key = kvs.generate_product_key(
@@ -138,6 +156,8 @@ class ProbabilisticEventMixin():
                         (row, col) = key.split("!")
                         gmfs[key].append(field.get(int(row), int(col)))
 
+        return gmfs
+
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         # TODO(JMC): Confirm this works regardless of the method of haz calc.
@@ -146,18 +166,12 @@ class ProbabilisticEventMixin():
         num_ses = histories * realizations
 
         block = general.Block.from_kvs(block_id)
-        sites_list = block.sites
-        gmfs = {}
-
-        for site in sites_list:
-            risk_point = self.region.grid.point_at(site)
-            key = "%s!%s" % (risk_point.row, risk_point.column)
-            gmfs[key] = []
 
         if self.params.get("OPENQUAKE_JOB_ID"):
-            self._load_db_gmfs(gmfs, self.params['OPENQUAKE_JOB_ID'])
+            gmfs = self._get_db_gmfs(block.sites,
+                                     self.params['OPENQUAKE_JOB_ID'])
         else:
-            self._load_kvs_gmfs(gmfs, histories, realizations)
+            gmfs = self._get_kvs_gmfs(block.sites, histories, realizations)
 
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
