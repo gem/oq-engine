@@ -89,7 +89,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
             self.teardown_output(self.output)
 
     def test_read_curve(self):
-        """Verify _get_kvs_curve."""
+        """Verify _get_db_curve."""
         mixin = ClassicalPSHABasedMixin()
         mixin.params = {
             "OPENQUAKE_JOB_ID": str(self.job.id),
