@@ -25,6 +25,7 @@
 CREATE SCHEMA admin;
 CREATE SCHEMA eqcat;
 CREATE SCHEMA pshai;
+CREATE SCHEMA riski;
 CREATE SCHEMA uiapi;
 
 
@@ -763,6 +764,34 @@ CREATE TABLE uiapi.loss_curve_data (
     abscissae float[] NOT NULL,
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
+
+
+-- Exposure model
+CREATE TABLE riski.exposure_model (
+    id SERIAL PRIMARY KEY,
+    description VARCHAR,
+    -- e.g. "buildings", "bridges" etc.
+    category VARCHAR NOT NULL,
+    -- e.g. "EUR", "count", "density" etc.
+    unit VARCHAR NOT NULL,
+) TABLESPACE riski_ts;
+
+
+-- Per-asset exposure data
+CREATE TABLE riski.exposure_data (
+    id SERIAL PRIMARY KEY,
+    exposure_model_id INTEGER NOT NULL,
+    -- The asset reference is unique within an exposure model.
+    asset_ref VARCHAR NOT NULL,
+    value float NOT NULL,
+    -- Vulnerability function reference
+    vf_ref VARCHAR NOT NULL,
+    structure_type VARCHAR,
+    retrofitting_cost float,
+    UNIQUE (exposure_model_id, asset_ref)
+) TABLESPACE riski_ts;
+SELECT AddGeometryColumn('riski', 'exposure_data', 'site', 4326, 'POINT', 2);
+ALTER TABLE riski.exposure_data ALTER COLUMN site SET NOT NULL;
 
 
 ------------------------------------------------------------------------
