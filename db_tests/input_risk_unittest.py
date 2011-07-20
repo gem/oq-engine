@@ -124,8 +124,22 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
+    def test_site_keys(self):
+        """Verify _sites_to_gmf_keys"""
+        mixin = ProbabilisticEventMixin()
+        mixin.params = {
+            "OPENQUAKE_JOB_ID": str(self.job.id),
+        }
+        mixin.region = Region.from_coordinates([(-117, 40), (-117, 42),
+                                                (-116, 42), (-116, 40)])
+        mixin.region.cell_size = 1.0
+
+        keys = mixin._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
+
+        self.assertEquals(["0!0", "2!1"], keys)
+
     def test_read_gmfs(self):
-        """Verify _load_db_gmfs."""
+        """Verify _get_db_gmfs."""
         mixin = ProbabilisticEventMixin()
         mixin.params = {
             "OPENQUAKE_JOB_ID": str(self.job.id),
@@ -137,15 +151,14 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(3, len(mixin._gmf_db_list(self.job.id)))
 
         # only the keys in gmfs are used
-        gmfs = {}
-        mixin._load_db_gmfs(gmfs, self.job.id)
+        gmfs = mixin._get_db_gmfs([], self.job.id)
         self.assertEquals({}, gmfs)
 
         # only the keys in gmfs are used
-        gmfs = dict(('%d!%d' % (i, j), [])
-                        for i in xrange(3)
-                        for j in xrange(2))
-        mixin._load_db_gmfs(gmfs, self.job.id)
+        sites = [Site(lon, lat)
+                        for lon in xrange(-117, -115)
+                        for lat in xrange(40, 43)]
+        gmfs = mixin._get_db_gmfs(sites, self.job.id)
         # avoid rounding errors
         for k, v in gmfs.items():
             gmfs[k] = [round(i, 1) for i in v]
