@@ -154,3 +154,51 @@ class DBWriter(object):
 
         LOGGER.info("serialized %s points" % len(iterable))
         LOGGER.info("< serialize")
+
+
+class BulkInserter(object):
+    """Handle bulk object insertion"""
+
+    def __init__(self, sa_model):
+        """Create a new bulk inserter for a SQLAlchemy model class"""
+        self.table = sa_model.__table__
+        self.fields = None
+        self.values = []
+        self.count = 0
+
+    def add_entry(self, **kwargs):
+        """
+        Add a new entry to be inserted
+
+        The first time the method is called the field list is stored;
+        subsequent add_entry() calls must provide the same set of
+        keyword arguments.
+
+        Handles PostGIS/GeoAlchemy types.
+        """
+        if not self.fields:
+            self.fields = kwargs.keys()
+        assert set(self.fields) == set(kwargs.keys())
+        for k in self.fields:
+            self.values.append(kwargs[k])
+        self.count += 1
+
+    def flush(self, session):
+        """Inserts the entries in the database using a bulk insert query"""
+        cursor = session.connection().connection.cursor()
+        value_args = []
+        for f in self.fields:
+            col = self.table.columns[f]
+            if hasattr(col.type, 'srid'):
+                value_args.append('GeomFromText(%%s, %d)' % col.type.srid)
+            else:
+                value_args.append('%s')
+
+        sql = "INSERT INTO %s.%s (%s) VALUES " % (
+            self.table.schema, self.table.name, ", ".join(self.fields)) + \
+            ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
+        cursor.execute(sql, self.values)
+
+        self.fields = None
+        self.values = []
+        self.count = 0
