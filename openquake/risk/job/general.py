@@ -18,6 +18,7 @@
 
 """Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
 
+from collections import defaultdict
 import json
 import os
 
@@ -269,7 +270,7 @@ class RiskJobMixin(mixins.Mixin):
         """
         Iterates through all the assets and maps losses at loss_poe
         """
-        result = []
+        result = defaultdict(list)
 
         for point, asset in self.grid_assets(self.region.grid):
             key = kvs.tokens.loss_key(self.id, point.row, point.column,
@@ -282,9 +283,9 @@ class RiskJobMixin(mixins.Mixin):
                 loss = {
                     "value": loss_value,
                 }
-                result.append((risk_site, (loss, asset)))
+                result[risk_site].append((loss, asset))
 
-        return result
+        return result.items()
 
 
 class EpsilonProvider(object):
