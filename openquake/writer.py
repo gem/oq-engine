@@ -113,6 +113,7 @@ class DBWriter(object):
         self.oq_job_id = oq_job_id
         self.session = session
         self.output = None
+        self.bulk_inserter = None
 
     def insert_output(self, output_type):
         assert self.output is None
@@ -150,6 +151,8 @@ class DBWriter(object):
         for key, values in iterable:
             self.insert_datum(key, values)
 
+        if self.bulk_inserter:
+            self.bulk_inserter.flush(self.session)
         self.session.commit()
 
         LOGGER.info("serialized %s points" % len(iterable))

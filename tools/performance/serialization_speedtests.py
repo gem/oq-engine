@@ -227,7 +227,7 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     @test_helpers.timeit
     def test_serialize_small(self):
-        data = LOSS_MAP_DATA(['a%d' % i for i in range(15)], 20, 4)
+        data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
 
         self.job = self.setup_classic_job()
         session = get_uiapi_writer_session()
