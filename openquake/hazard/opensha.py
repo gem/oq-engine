@@ -61,6 +61,7 @@ HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
 
 def preload(fn):
     """A decorator for preload steps that must run on the Jobber node"""
+
     def preloader(self, *args, **kwargs):
         """Validate job"""
         self.cache = java.jclass("KVS")(
