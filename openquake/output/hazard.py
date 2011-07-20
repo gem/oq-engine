@@ -561,8 +561,11 @@ class HazardMapDBWriter(writer.DBWriter):
 
         self.bulk_inserter = writer.BulkInserter(HazardMapData)
 
+    def get_output_type(self):
+        return "hazard_map"
+
     def serialize(self, iterable):
-        self.insert_output("hazard_map")
+        self.insert_output(self.get_output_type())
 
         # Update the output record with the minimum/maximum values.
         self.output.min_value = round_float(min(
