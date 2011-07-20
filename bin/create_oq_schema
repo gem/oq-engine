@@ -14,6 +14,7 @@ The command line arguments are as follows:
     --db-user=user      Run all commands as this database user [postgres].
     --no-tab-spaces     Don't check/create table spaces and their paths
     --schema-path=path  Absolute path to directory with the schema files.
+    --tab-spaces-only   Check/create table spaces and their paths and exit
     --yes               Don't pause for user input, assume yes on all questions
 HSD
 exit 0
@@ -35,6 +36,7 @@ schema_path=""
 db_name=""
 user_interaction="on"
 check_table_spaces="on"
+table_spaces_only="off"
 
 db_admin_user="postgres"
 
@@ -72,6 +74,9 @@ do
     --no-tab-spaces)
         check_table_spaces="off"
         ;;
+    --tab-spaces-only)
+        table_spaces_only="on"
+        ;;
     -y|--yes)
         user_interaction="off"
         ;;
@@ -86,33 +91,40 @@ do
 done
 
 schema_file="$schema_path/openquake.sql"
-if [ ! -r $schema_file ]; then
-    echo "!! Could not find/read schema file: $schema_file"
-    exit 3
-fi
 
-if [ -z "$db_name" ]; then
-    echo "!! Please specify a database name."
-    exit 4
-fi
+if [ "$table_spaces_only" == "off" ]; then
+    # None of this is relevant if we only want to check table spaces.
+    if [ ! -r $schema_file ]; then
+        echo "!! Could not find/read schema file: $schema_file"
+        exit 3
+    fi
+
+    if [ -z "$db_name" ]; then
+        echo "!! Please specify a database name."
+        exit 4
+    fi
 
 
-if [ "$user_interaction" = "on" ]; then
-    # Last chance to abort.
-    echo '!! This will destroy *ALL* data in the OpenQuake database !!'
-    echo 'Press <enter> to continue'
-    read
-fi
+    if [ "$user_interaction" = "on" ]; then
+        # Last chance to abort.
+        echo '!! This will destroy *ALL* data in the OpenQuake database !!'
+        echo 'Press <enter> to continue'
+        read
+    fi
 
-# Drop database and table spaces..
-echo ".. Dropping database $db_name .."
-psql -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name"
-if [ "$check_table_spaces" == "on" ]; then
-    for tspace in $tspace_list; do
-        full_ts_name="${tspace}_ts"
-        echo ".. Dropping table space $full_ts_name .."
-        psql -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name"
-    done
+    # Drop database
+    echo ".. Dropping database $db_name .."
+    psql -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name"
+    # Drop table spaces..
+    if [ "$check_table_spaces" == "on" ]; then
+        for tspace in $tspace_list; do
+            full_ts_name="${tspace}_ts"
+            echo ".. Dropping table space $full_ts_name .."
+            psql -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name"
+        done
+    fi
+else
+    check_table_spaces="on"
 fi
 
 echo -n ".. Current table spaces: "
@@ -142,6 +154,10 @@ if [ "$check_table_spaces" == "on" ]; then
             psql -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
         fi
     done
+fi
+
+if [ "$table_spaces_only" == "on" ]; then
+    exit 0
 fi
 
 # Starting from here this script is executing many batches
