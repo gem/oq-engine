@@ -38,7 +38,7 @@ from openquake.parser import vulnerability
 from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_uiapi_reader_session
 from db.alchemy import models
 from sqlalchemy import func as sqlfunc
 
@@ -84,7 +84,7 @@ class ProbabilisticEventMixin():
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
-        session = get_uiapi_writer_session()
+        session = get_uiapi_reader_session()
 
         ids = session.query(models.Output.id) \
             .filter(models.Output.oq_job_id == job_id) \
@@ -94,7 +94,7 @@ class ProbabilisticEventMixin():
 
     def _get_db_gmf(self, gmf_id):
         """Returns a field for the given GMF"""
-        session = get_uiapi_writer_session()
+        session = get_uiapi_reader_session()
         grid = self.region.grid
         field = zeros((grid.rows, grid.columns))
 
