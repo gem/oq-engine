@@ -52,7 +52,7 @@ fi
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
 # What OpenQuake db users should be created?
-db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer opengeo_reader opengeo_writer oq_uiapi_reader oq_uiapi_writer oq_gem4ged"
+db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer opengeo_reader opengeo_writer oq_uiapi_reader oq_uiapi_writer oq_ged4gem"
 
 for i in $*
 do
