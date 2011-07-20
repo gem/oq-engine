@@ -125,6 +125,7 @@ class DBWriter(object):
                              display_name=basename(self.nrml_path),
                              output_type=output_type, db_backed=True)
         self.session.add(self.output)
+        self.session.flush()
         LOGGER.info("output = '%s'" % self.output)
         LOGGER.info("< insert_output")
 
