@@ -533,54 +533,6 @@ def _ensure_attributes_set(attr_list, node):
     return True
 
 
-class BulkInserter(object):
-    """Handle bulk object insertion"""
-
-    def __init__(self, sa_model):
-        """Create a new bulk inserter for a SQLAlchemy model class"""
-        self.table = sa_model.__table__
-        self.fields = None
-        self.values = []
-        self.count = 0
-
-    def add_entry(self, **kwargs):
-        """
-        Add a new entry to be inserted
-
-        The first time the method is called the field list is stored;
-        subsequent add_entry() calls must provide the same set of
-        keyword arguments.
-
-        Handles PostGIS/GeoAlchemy types.
-        """
-        if not self.fields:
-            self.fields = kwargs.keys()
-        assert set(self.fields) == set(kwargs.keys())
-        for k in self.fields:
-            self.values.append(kwargs[k])
-        self.count += 1
-
-    def flush(self, session):
-        """Inserts the entries in the database using a bulk insert query"""
-        cursor = session.connection().connection.cursor()
-        value_args = []
-        for f in self.fields:
-            col = self.table.columns[f]
-            if hasattr(col.type, 'srid'):
-                value_args.append('GeomFromText(%%s, %d)' % col.type.srid)
-            else:
-                value_args.append('%s')
-
-        sql = "INSERT INTO %s.%s (%s) VALUES " % (
-            self.table.schema, self.table.name, ", ".join(self.fields)) + \
-            ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
-        cursor.execute(sql, self.values)
-
-        self.fields = None
-        self.values = []
-        self.count = 0
-
-
 class HazardMapDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
@@ -589,7 +541,7 @@ class HazardMapDBWriter(writer.DBWriter):
     def __init__(self, session, nrml_path, oq_job_id):
         super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
-        self.insert_point = BulkInserter(HazardMapData)
+        self.insert_point = writer.BulkInserter(HazardMapData)
 
     def serialize(self, iterable):
         """Writes hazard map data to the database.
@@ -671,7 +623,7 @@ class HazardCurveDBWriter(writer.DBWriter):
                                                   oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.insert_curve_node = BulkInserter(HazardCurveNodeData)
+        self.insert_curve_node = writer.BulkInserter(HazardCurveNodeData)
 
     def serialize(self, iterable):
         """Writes hazard curve data to the database.
@@ -780,7 +732,7 @@ class GMFDBWriter(writer.DBWriter):
         self.insert_output("gmf")
         self.session.flush()
 
-        insert_gmf = BulkInserter(GMFData)
+        insert_gmf = writer.BulkInserter(GMFData)
 
         for point, values in iterable.items():
             insert_gmf.add_entry(

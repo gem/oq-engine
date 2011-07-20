@@ -21,7 +21,7 @@
 import unittest
 
 from db.alchemy.models import OqUser, GMFData
-from openquake.output.hazard import BulkInserter
+from openquake.writer import BulkInserter
 
 
 def _map_values(fields, values):
