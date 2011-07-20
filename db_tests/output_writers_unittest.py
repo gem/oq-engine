@@ -114,3 +114,16 @@ class CreateRiskWriterTest(unittest.TestCase):
         writer = risk_output.create_loss_curve_writer("loss", "fakepath.xml",
                                                       params)
         self.assertEqual(type(writer), risk_output.LossCurveDBWriter)
+
+    def test_loss_map_writer_creation(self):
+        # XML writer
+        params = {"SERIALIZE_RESULTS_TO_DB": "False"}
+        writer = risk_output.create_loss_map_writer("fakepath.xml", params)
+        self.assertEqual(type(writer), risk_output.LossMapXMLWriter)
+
+        # database writer
+        params = {
+            "SERIALIZE_RESULTS_TO_DB": "True",
+            "OPENQUAKE_JOB_ID": 1}
+        writer = risk_output.create_loss_map_writer("fakepath.xml", params)
+        self.assertEqual(type(writer), risk_output.LossMapDBWriter)
