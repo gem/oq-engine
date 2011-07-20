@@ -149,7 +149,12 @@ class DBWriter(object):
             self.insert_output(self.get_output_type())
         LOGGER.info("output = '%s'" % self.output)
 
-        for key, values in iterable:
+        if isinstance(iterable, dict):
+            items = iterable.iteritems()
+        else:
+            items = iterable
+
+        for key, values in items:
             self.insert_datum(key, values)
 
         if self.bulk_inserter:
