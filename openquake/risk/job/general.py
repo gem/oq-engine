@@ -73,18 +73,6 @@ def output(fn):
     return output_writer
 
 
-def _serialize(path, **kwargs):
-    """ Serialize the curves """
-    LOG.debug("Serializing %s" % kwargs['curve_mode'])
-    # TODO(JMC): Take mean or max for each site
-    if kwargs["curve_mode"] == "loss_ratio":
-        output_generator = risk_output.LossRatioCurveXMLWriter(path)
-    elif kwargs["curve_mode"] == 'loss':
-        output_generator = risk_output.LossCurveXMLWriter(path)
-    output_generator.serialize(kwargs['curves'])
-    return path
-
-
 def _plot(curve_path, result_path, **kwargs):
     """
     Build a plotter, and then render the plot
@@ -132,10 +120,12 @@ class RiskJobMixin(mixins.Mixin):
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
-    def _serialize_and_plot(self, block_id, **kwargs):
+    def _serialize(self, block_id, **kwargs):
         """
-        Build filename/paths for serializing/plotting and call _serialize
-        and then _plot. Return the list of filenames.
+        Build filename/paths for serializing and call _serialize
+
+        Return the list of filenames. The list will be empty if nothing was
+        actually serialized.
         """
 
         if kwargs['curve_mode'] == 'loss_ratio':
@@ -150,9 +140,16 @@ class RiskJobMixin(mixins.Mixin):
         serialize_path = os.path.join(self.base_path,
                                       self['OUTPUT_DIR'],
                                       serialize_filename)
-        results = [_serialize(serialize_path, **kwargs)]
 
-        return results
+        LOG.debug("Serializing %s" % kwargs['curve_mode'])
+        writer = risk_output.create_loss_curve_writer(kwargs['curve_mode'],
+            serialize_path, self.params)
+        if writer:
+            writer.serialize(kwargs['curves'])
+
+            return [serialize_path]
+        else:
+            return []
 
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
@@ -184,11 +181,11 @@ class RiskJobMixin(mixins.Mixin):
                     loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
                     loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
-        results = self._serialize_and_plot(block_id,
+        results = self._serialize(block_id,
                                            curves=loss_ratio_curves,
                                            curve_mode='loss_ratio')
         if loss_curves:
-            results.extend(self._serialize_and_plot(block_id,
+            results.extend(self._serialize(block_id,
                                                 curves=loss_curves,
                                                 curve_mode='loss',
                                                 curve_mode_prefix='loss_curve',
