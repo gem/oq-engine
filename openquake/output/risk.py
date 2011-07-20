@@ -27,6 +27,7 @@ import os
 
 from lxml import etree
 
+from db.alchemy.db_utils import get_uiapi_writer_session
 from db.alchemy.models import LossCurve, LossCurveData
 from db.alchemy.models import LossMap, LossMapData
 from db.alchemy.models import OqJob, Output
