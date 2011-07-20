@@ -116,8 +116,10 @@ class DBWriter(object):
         self.bulk_inserter = None
 
     def insert_output(self, output_type):
-        assert self.output is None
         """Insert an `uiapi.output` record for the job at hand."""
+
+        assert self.output is None
+
         LOGGER.info("> insert_output")
         job = self.session.query(OqJob).filter(
             OqJob.id == self.oq_job_id).one()
