@@ -37,8 +37,8 @@ GRANT ALL ON SEQUENCE eqcat.catalog_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE eqcat.magnitude_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE eqcat.surface_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE oqmif.exposure_model_seq_id to GROUP openquake;
-GRANT ALL ON SEQUENCE oqmif.exposure_data_seq_id to GROUP openquake;
+GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE pshai.complex_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.fault_edge_id_seq to GROUP openquake;

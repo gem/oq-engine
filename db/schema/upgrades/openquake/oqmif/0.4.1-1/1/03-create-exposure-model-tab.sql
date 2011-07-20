@@ -30,7 +30,7 @@ CREATE TABLE oqmif.exposure_model (
 
 CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-GRANT ALL ON SEQUENCE oqmif.exposure_model_seq_id to GROUP openquake;
+GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON oqmif.exposure_model TO oq_ged4gem;
 
