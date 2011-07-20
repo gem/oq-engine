@@ -271,9 +271,6 @@ class LossMapDBWriter(writer.DBWriter):
         self.bulk_inserter = writer.BulkInserter(LossMapData)
 
     def get_output_type(self):
-        """
-        The type of the output record as a string
-        """
         return 'loss_map'
 
     def serialize(self, iterable):
