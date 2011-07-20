@@ -537,42 +537,32 @@ class HazardMapDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
+
+    The data passed to serialize() will look something like this:
+
+        [(Site(-121.7, 37.6),
+         {'IML': 1.9266716959669603,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'mean',
+          'vs30': 760.0}),
+                        . . .
+         {'IML': 1.925653989154411,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'mean',
+          'vs30': 760.0})]
     """
+
     def __init__(self, session, nrml_path, oq_job_id):
         super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
-        self.insert_point = writer.BulkInserter(HazardMapData)
+        self.bulk_inserter = writer.BulkInserter(HazardMapData)
 
     def serialize(self, iterable):
-        """Writes hazard map data to the database.
-
-        :param iterable: will look something like this:
-               [(Site(-121.7, 37.6),
-                 {'IML': 1.9266716959669603,
-                  'IMT': 'PGA',
-                  'investigationTimeSpan': '50.0',
-                  'poE': 0.01,
-                  'statistics': 'mean',
-                  'vs30': 760.0}),
-                        . . .
-                 {'IML': 1.925653989154411,
-                  'IMT': 'PGA',
-                  'investigationTimeSpan': '50.0',
-                  'poE': 0.01,
-                  'statistics': 'mean',
-                  'vs30': 760.0})]
-
-        We first insert a `uiapi.output` record for the hazard map and then
-        an `uiapi.hazard_map_data` record for each datum in the `iterable`.
-        """
-        LOGGER.info("> hazmap-serialize")
-
-        LOGGER.debug("serializing %s points" % len(iterable))
         self.insert_output("hazard_map")
-        self.session.flush()
-
-        for key, value in iterable:
-            self.insert_map_datum(key, value)
 
         # Update the output record with the minimum/maximum values.
         self.output.min_value = round_float(min(
@@ -580,13 +570,9 @@ class HazardMapDBWriter(writer.DBWriter):
         self.output.max_value = round_float(max(
             data[1].get("IML") for data in iterable))
 
-        self.insert_point.flush(self.session)
-        self.session.commit()
+        super(HazardMapDBWriter, self).serialize(iterable)
 
-        LOGGER.debug("serialized %s points" % len(iterable))
-        LOGGER.debug("< hazmap-serialize")
-
-    def insert_map_datum(self, point, value):
+    def insert_datum(self, point, value):
         """Inserts a single hazard map datum.
 
         Please note that `point.x` and `point.y` store the longitude and the
@@ -606,7 +592,7 @@ class HazardMapDBWriter(writer.DBWriter):
             LOGGER.warn(
                 "No IML value for position: [%s, %s]" % (point.x, point.y))
         else:
-            self.insert_point.add_entry(
+            self.bulk_inserter.add_entry(
                 output_id=self.output.id,
                 value=round_float(value),
                 location="POINT(%s %s)" % (point.x, point.y))
@@ -616,6 +602,23 @@ class HazardCurveDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
+
+    The data passed to serialize() will look something like this:
+
+        [(Site(-122.2, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'endBranchLabel': '1_1'}),
+                 . . .
+         (Site(-122.0, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'quantileValue': 0.6,
+           'statistics': 'quantile'})]
     """
 
     def __init__(self, session, nrml_path, oq_job_id):
@@ -623,47 +626,12 @@ class HazardCurveDBWriter(writer.DBWriter):
                                                   oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.insert_curve_node = writer.BulkInserter(HazardCurveNodeData)
+        self.bulk_inserter = writer.BulkInserter(HazardCurveNodeData)
 
-    def serialize(self, iterable):
-        """Writes hazard curve data to the database.
+    def get_output_type(self):
+        return "hazard_curve"
 
-        :param iterable: will look something like this:
-               [(Site(-122.2, 37.5),
-                 {'investigationTimeSpan': '50.0',
-                  'IMLValues': [0.778, 1.09, 1.52, 2.13],
-                  'PoEValues': [0.354, 0.114, 0.023, 0.002],
-                  'IMT': 'PGA',
-                  'endBranchLabel': '1_1'}),
-                        . . .
-                (Site(-122.0, 37.5),
-                 {'investigationTimeSpan': '50.0',
-                  'IMLValues': [0.778, 1.09, 1.52, 2.13],
-                  'PoEValues': [0.354, 0.114, 0.023, 0.002],
-                  'IMT': 'PGA',
-                  'quantileValue': 0.6,
-                  'statistics': 'quantile'})]
-
-        We first insert a `uiapi.output` record for the hazard curve and then
-        an u1api.hazard_curve_data for each branch label/statistic type and
-        an uiapi.hazard_curve_node_data for each site with a given
-        branch label/statistic type
-        """
-        LOGGER.info("> hazcurve-serialize")
-
-        LOGGER.debug("serializing %s points" % len(iterable))
-        self.insert_output("hazard_curve")
-
-        for key, value in iterable:
-            self.insert_curve_datum(key, value)
-
-        self.insert_curve_node.flush(self.session)
-        self.session.commit()
-
-        LOGGER.debug("serialized %s points" % len(iterable))
-        LOGGER.debug("< hazcurve-serialize")
-
-    def insert_curve_datum(self, point, values):
+    def insert_datum(self, point, values):
         """Insert a single hazard curve"""
         # check if we have hazard curves for an end branch label, or
         # for mean/median/quantile
@@ -696,7 +664,7 @@ class HazardCurveDBWriter(writer.DBWriter):
             self.curves_per_branch_label[curve_label] = hazard_curve_item
             self.session.flush()
 
-        self.insert_curve_node.add_entry(
+        self.bulk_inserter.add_entry(
             hazard_curve_data_id=hazard_curve_item.id,
             poes=values['PoEValues'],
             location="POINT(%s %s)" % (point.point.x, point.point.y))
@@ -706,43 +674,26 @@ class GMFDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
+
+    The data passed to serialize() will look something like this:
+
+        {Site(-117, 40): {'groundMotion': 0.0},
+         Site(-116, 40): {'groundMotion': 0.1},
+         Site(-116, 41): {'groundMotion': 0.2},
+         Site(-117, 41): {'groundMotion': 0.3}}
     """
 
     def __init__(self, session, nrml_path, oq_job_id):
         super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
+        self.bulk_inserter = writer.BulkInserter(GMFData)
 
-    def serialize(self, iterable):
-        """Writes hazard curve data to the database.
+    def get_output_type(self):
+        return "gmf"
 
-        :param iterable: will look something like this:
-               {Site(-117, 40): {'groundMotion': 0.0},
-                Site(-116, 40): {'groundMotion': 0.1},
-                Site(-116, 41): {'groundMotion': 0.2},
-                Site(-117, 41): {'groundMotion': 0.3}}
-
-        We first insert a `uiapi.output` record for the GMF and then
-        an u1api.hazard_gmf_data for each site
-        """
-        LOGGER.info("> gmf-serialize")
-
-        LOGGER.debug("serializing %s points" % len(iterable))
-
-        self.insert_output("gmf")
-        self.session.flush()
-
-        insert_gmf = writer.BulkInserter(GMFData)
-
-        for point, values in iterable.items():
-            insert_gmf.add_entry(
-                output_id=self.output.id,
-                ground_motion=values['groundMotion'],
-                location="POINT(%s %s)" % (point.point.x, point.point.y))
-
-        insert_gmf.flush(self.session)
-
-        self.session.commit()
-
-        LOGGER.debug("serialized %s points" % len(iterable))
-        LOGGER.debug("< gmf-serialize")
+    def insert_datum(self, point, values):
+        self.bulk_inserter.add_entry(
+            output_id=self.output.id,
+            ground_motion=values['groundMotion'],
+            location="POINT(%s %s)" % (point.point.x, point.point.y))
