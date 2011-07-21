@@ -51,7 +51,7 @@ class ValidatorSetTestCase(unittest.TestCase):
     def test_an_empty_set_has_no_error_messages(self):
         self.assertEquals([], config.ValidatorSet().is_valid()[1])
 
-    def test_with_a_validator_the_result_is_the_validator(self):
+    def test_with_a_single_validator_the_result_is_the_validator(self):
         validator = config.ValidatorSet()
         validator.add(AlwaysTrueValidator())
 
@@ -122,8 +122,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         self.assertTrue(engine.is_valid()[0])
 
     def test_hazard_computation_type(self):
-        """Region (REGION_VERTEX)
-        and specific sites (SITES) are not supported at the same time."""
+        """Region (REGION_VERTEX) and specific sites (SITES)
+        are not supported at the same time."""
 
         params = {config.SITES: "some, sites"}
         validator = config.ComputationTypeValidator(params)
