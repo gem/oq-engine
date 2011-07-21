@@ -64,12 +64,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kvs_client = kvs.get_client(binary=False)
-        # kvs.flush()
-
-    @classmethod
-    def tearDownClass(cls):
-        # kvs.flush()
-        pass
 
     def setUp(self):
         kvs.flush()

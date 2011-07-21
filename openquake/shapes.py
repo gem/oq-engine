@@ -20,10 +20,10 @@
 
 """Collection of base classes for processing spatially-related data."""
 
-import math
-
 import geohash
 import json
+import math
+import numpy
 
 from numpy import zeros
 from numpy import empty
@@ -626,15 +626,15 @@ class VulnerabilityFunction(object):
 
     @property
     def imls(self):
-        return self._imls
+        return numpy.array(self._imls)
 
     @property
     def loss_ratios(self):
-        return self._loss_ratios
+        return numpy.array(self._loss_ratios)
 
     @property
     def covs(self):
-        return self._covs
+        return numpy.array(self._covs)
 
     def _clip_iml(self, iml_value):
         """
