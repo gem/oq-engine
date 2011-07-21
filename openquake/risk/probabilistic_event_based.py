@@ -119,26 +119,6 @@ def _sampled_based(vuln_function, ground_motion_field_set,
     return array(loss_ratios)
 
 
-#    for ground_motion_field in ground_motion_field_set["IMLs"]:
-#        mean_ratio = vuln_function.ordinate_for(ground_motion_field)
-#
-#        if mean_ratio <= 0.0:
-#            loss_ratios.append(0.0)
-#        else:
-#            variance = (mean_ratio * vuln_function.cov_for(
-#                    ground_motion_field)) ** 2.0
-#
-#            epsilon = epsilon_provider.epsilon(asset)
-#            sigma = math.sqrt(math.log((variance / mean_ratio ** 2.0) + 1.0))
-#
-#            mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-#                    variance + mean_ratio ** 2.0))
-#
-#            loss_ratios.append(math.exp(mu + (epsilon * sigma)))
-
-    #return array(loss_ratios)
-
-
 def _mean_based(vuln_function, ground_motion_field_set):
     """Compute the set of loss ratios when the vulnerability function
     has all the CVs (Coefficent of Variation) set to zero.
