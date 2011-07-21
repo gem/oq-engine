@@ -173,6 +173,19 @@ class DBWriter(object):
         LOGGER.info("< serialize")
 
 
+class CompositeWriter(object):
+    """A writer that outputs to multiple writers"""
+
+    def __init__(self, *writers):
+        self.writers = writers
+
+    def serialize(self, iterable):
+        """Implementation of the "serialize" interface."""
+
+        for writer in self.writers:
+            if writer:
+                writer.serialize(iterable)
+
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
