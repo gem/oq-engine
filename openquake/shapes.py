@@ -579,45 +579,179 @@ class Curve(object):
         return json.JSONEncoder().encode(as_dict)
 
 
-class VulnerabilityFunction(Curve):
-    """This class represents a vulnerability fuction.
+class VulnerabilityFunction(object):
+    """
+    This class represents a vulnerability fuction.
 
     A vulnerability function has IMLs (Intensity Measure Levels) as
     X values and MLRs, CVs (Mean Loss Ratio and Coefficent of Variation)
     as Y values.
     """
 
+    def __init__(self, imls, loss_ratios, covs):
+        """
+        :param imls: Intensity Measure Levels for the vulnerability function.
+            All values must be > 0.0.
+        :type imls: list of floats; values must be arranged in ascending order with no duplicates
+        :param loss_ratios: Loss ratio values, where 0.0 <= value <= 1.0.
+        :type loss_ratios: list of floats, equal in length to imls
+        :param covs: Coefficients of Variation. All values must be >= 0.0.
+        :type covs: list of floats, equal in length to imls
+        """
+        self._imls = imls
+        self._covs = covs
+        self._loss_ratios = loss_ratios
+
+        # Check for proper IML ordering:
+        assert self._imls == sorted(set(self._imls)), \
+            "IML values must be arranged in ascending order with no duplicates."
+
+        # Check for proper IML values (> 0.0).
+        assert all(x > 0.0 for x in self._imls), \
+            "IML values must be > 0.0."
+
+        # Check CoV and loss ratio list lengths:
+        assert len(self._covs) == len(self._imls), \
+            "CoV list should be the same length as the IML list."
+        assert len(self._loss_ratios) == len(self._imls), \
+            "Loss ratio list should be the same length as the IML list."
+
+        # Check for proper CoV values (>= 0.0):
+        assert all(x >= 0.0 for x in self._covs), \
+            "CoV values must be >= 0.0."
+
+        # Check for proper loss ratio values (0.0 <= value <= 1.0):
+        assert all(x >= 0.0 and x <= 1.0 for x in self._loss_ratios), \
+            "Loss ratio values must be in the interval [0.0, 1.0]."
+
     @property
-    def means(self):
-        """Return the mean loss ratios of this function."""
-        if self.is_empty:
-            return self.ordinates
-        else:
-            return self.ordinates[:, 0]
+    def imls(self):
+        return self._imls
+
+    @property
+    def loss_ratios(self):
+        return self._loss_ratios
+
+    @property
+    def covs(self):
+        return self._covs
+
+    def _clip_iml(self, iml_value):
+        """
+        'Clip' an IML value to the range defined for this vulnerability function.
+
+        Consider the example IML range [0.005, 0.007, 0.009].
+        If the input IML value is less than the min value (0.005), return the min value.
+        If the input IML value is greater than the max value (0.009), return the max value.
+        Otherwise, the IML will not change.
+
+        :param iml_value: IML value
+        :type iml_value: float
+
+        :returns: clipped IML value
+        """
+        if iml_value < self.imls[0]:
+            iml_value = self.imls[0]
+        elif iml_value > self.imls[-1]:
+            iml_value = self.imls[-1]
+
+        return iml_value
+
+    def cov(self, iml_value):
+        """
+        For a given IML value, interpolate the corresponding Coefficient of Variation value on the curve.
+
+        Input IML values are clipped to the IML range defined for this vulnerability function.
+
+        :param iml_value: IML value
+        :type iml_value: float
+        """
+        iml_value = self._clip_iml(iml_value)
+
+        return interp1d(self.imls, self.covs)(iml_value)
+
+    def loss_ratio(self, iml_value):
+        """
+        For a given IML value, interpolate the corresponding loss ratio value on the curve.
+
+        Input IML values are clipped to IML range defined for this vulnerability function.
+
+        :param iml_value: IML value
+        :type iml_value: float
+        """
+        iml_value = self._clip_iml(iml_value)
+
+        return interp1d(self.imls, self.loss_ratios)(iml_value)
 
     def __iter__(self):
         """Iterate on the values of this function, returning triples
         in the form of (iml, mean loss ratio, cov)."""
-        for idx in range(len(self.abscissae)):
-            yield((self.abscissae[idx],
-                    self.ordinates[idx][0],
-                    self.ordinates[idx][1]))
+        for index in range(len(self.imls)):
+            yield((self.imls[index], self.loss_ratios[index], self.covs[index]))
 
-    def cov_for(self, iml):
-        """Return the interpolated CV (Coefficent of Variation)
-        for the given IML (Intensity Measure Level)."""
-        return self.ordinate_for(iml, 1)
+    def to_json(self):
+        """
+        Serialize this curve in JSON format.
+        Given the following sample data::
+            imls = [0.005, 0.007]
+            loss_ratios = [0.1, 0.3]
+            covs = [0.2, 0.4]
 
-    @property
-    def imls(self):
-        """Return the imls of this function."""
-        return self.abscissae
+        the output will be a JSON string structured like so::
+            {'0.005': [0.1, 0.2],
+             '0.007': [0.3, 0.4]}
+        """
+        as_dict = {}
 
-    @property
-    def covs(self):
-        """Return the covs of this function."""
-        return self.ordinates[:, 1]
+        for iml, loss_ratio, cov in self:
+            as_dict[str(iml)] = [loss_ratio, cov]
+
+        return json.JSONEncoder().encode(as_dict)
+
+    @classmethod
+    def from_dict(cls, vuln_func_dict):
+        """
+        Construct a VulnerabiltyFunction from a dictionary.
+
+        The dictionary keys can be unordered and of
+        whatever type can be converted to float with float().
+        :param vuln_func_dict: A dictionary of [loss ratio, CoV] pairs, keyed by IMLs.
+            The IML keys can be numbers represented as either a string or float.
+            Example::
+                {'0.005': [0.1, 0.2],
+                 '0.007': [0.3, 0.4],
+                 0.0098: [0.5, 0.6]}
+
+        :type vuln_func_dict: dict
+
+        :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
+        """
+        # flatten out the dict and convert keys to floats:
+        data = [(float(iml), lr_cov) for iml, lr_cov in vuln_func_dict.items()]
+        # sort the data (by iml) in ascending order:
+        data = sorted(data, key=lambda x: x[0])
+
+        imls = []
+        loss_ratios = []
+        covs = []
+
+        for iml, (lr, cov) in data:
+            imls.append(iml)
+            loss_ratios.append(lr)
+            covs.append(cov)
+
+        return cls(imls, loss_ratios, covs)
+
+    @classmethod
+    def from_json(cls, json_str):
+        """Construct a curve from a serialized version in
+        json format.
+
+        :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
+        """
+        as_dict = json.JSONDecoder().decode(json_str)
+        return cls.from_dict(as_dict)
 
 
 EMPTY_CURVE = Curve(())
-EMPTY_VULN_FUNCTION = VulnerabilityFunction(())
+EMPTY_VULN_FUNCTION = VulnerabilityFunction([], [], [])
