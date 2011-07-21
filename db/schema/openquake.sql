@@ -717,34 +717,59 @@ ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
+
+CREATE TABLE uiapi.loss_map (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    deterministic BOOLEAN NOT NULL,
+    loss_map_ref VARCHAR,
+    end_branch_label VARCHAR,
+    category VARCHAR,
+    unit VARCHAR, -- e.g. USD, EUR
+    -- poe is significant only for non-deterministic calculations
+    poe float CONSTRAINT valid_poe
+        CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
+               OR (deterministic AND poe IS NULL))
+) TABLESPACE uiapi_ts;
+
 CREATE TABLE uiapi.loss_map_data (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
-    value float NOT NULL
+    loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
+    asset_ref VARCHAR NOT NULL,
+    value float NOT NULL,
+    -- for non-deterministic calculations std_dev is 0
+    std_dev float NOT NULL DEFAULT 0.0
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
--- Loss asset data.
-CREATE TABLE uiapi.loss_asset_data (
+-- Loss curve.
+CREATE TABLE uiapi.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    asset_id VARCHAR,
-    UNIQUE (output_id, asset_id)
+
+    end_branch_label VARCHAR,
+    category VARCHAR,
+    unit VARCHAR -- e.g. EUR, USD
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_asset_data', 'pos', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_asset_data ALTER COLUMN pos SET NOT NULL;
 
 
--- Loss curve data.
+-- Loss curve data. Holds the asset, its position and value plus the calculated
+-- curve.
 CREATE TABLE uiapi.loss_curve_data (
     id SERIAL PRIMARY KEY,
-    loss_asset_id INTEGER NOT NULL,
-    end_branch_label VARCHAR,
-    abscissae float[] NOT NULL,
+    loss_curve_id INTEGER NOT NULL,
+
+    asset_ref VARCHAR NOT NULL,
+    losses float[] NOT NULL CONSTRAINT non_negative_losses
+        CHECK (0 <= ALL(losses)),
+    -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT',
+                         2);
+ALTER TABLE uiapi.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 
 ------------------------------------------------------------------------
@@ -900,17 +925,21 @@ ALTER TABLE uiapi.gmf_data
 ADD CONSTRAINT uiapi_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_map_data
-ADD CONSTRAINT uiapi_loss_map_data_output_fk
+ALTER TABLE uiapi.loss_map
+ADD CONSTRAINT uiapi_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_asset_data
-ADD CONSTRAINT uiapi_loss_asset_data_output_fk
+ALTER TABLE uiapi.loss_curve
+ADD CONSTRAINT uiapi_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_curve_data
-ADD CONSTRAINT uiapi_loss_curve_data_loss_asset_fk
-FOREIGN KEY (loss_asset_id) REFERENCES uiapi.loss_asset_data(id) ON DELETE CASCADE;
+ADD CONSTRAINT uiapi_loss_curve_data_loss_curve_fk
+FOREIGN KEY (loss_curve_id) REFERENCES uiapi.loss_curve(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.loss_map_data
+ADD CONSTRAINT uiapi_loss_map_data_loss_map_fk
+FOREIGN KEY (loss_map_id) REFERENCES uiapi.loss_map(id) ON DELETE CASCADE;
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
