@@ -359,22 +359,26 @@ def create_loss_map_writer(deterministic, nrml_path, params):
         :py:class:`output.risk.LossMapDBWriter`
     """
 
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
+    def xml():
         if deterministic:
             return LossMapXMLWriter(nrml_path)
         else:
             # No XML schema for non-deterministic maps yet (see bug 805434)
             return None
-    else:
-        # Both deterministic and non-deterministic maps are stored in the same
-        # table
+
+    def db():
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
 
         return LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
                                job_db_key)
+
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        return writer.CompositeWriter(db(), xml())
+    else:
+        return db()
 
 
 class CurveXMLWriter(BaseXMLWriter):
@@ -604,15 +608,15 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
 
     assert curve_mode in ('loss', 'loss_ratio')
 
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
+    def xml():
         if curve_mode == 'loss':
             writer_class = LossCurveXMLWriter
         elif curve_mode == 'loss_ratio':
             writer_class = LossRatioCurveXMLWriter
 
         return writer_class(nrml_path)
-    else:
+
+    def db():
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
@@ -623,3 +627,9 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             return None
+
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        return writer.CompositeWriter(db(), xml())
+    else:
+        return db()
