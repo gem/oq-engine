@@ -91,7 +91,7 @@ def _generate_loss_ratios(vuln_function):
 
     # we manually add 0.0 as first loss ratio and 1.0 as last loss ratio
     loss_ratios = concatenate(
-        (array([0.0]), vuln_function.means, array([1.0])))
+        (array([0.0]), vuln_function.loss_ratios, array([1.0])))
 
     return _split_loss_ratios(loss_ratios)
 
