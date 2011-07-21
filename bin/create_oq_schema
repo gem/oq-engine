@@ -24,6 +24,9 @@ if [ $# -eq 0 ]; then
     help
 fi
 
+# Openquake version
+oq_version="0.4.1"
+
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
 
@@ -152,6 +155,8 @@ if [ "$check_table_spaces" == "on" ]; then
         ts_found=`psql -c '\db' -d postgres -U $db_admin_user | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
             psql -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
+             psql -d openquake -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
+             psql -d openquake -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
         fi
     done
 fi
