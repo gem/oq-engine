@@ -331,6 +331,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
     def test_to_json(self):
         """
+        Test that a VulnerabilityFunction can produce a correct JSON
+        representation of itself.
         """
         imls = [0.005, 0.007, 0.0098]
         loss_ratios = [0.1, 0.3, 0.5]
