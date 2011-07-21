@@ -19,6 +19,7 @@
 
 
 import decimal
+import json
 import re
 import unittest
 
@@ -155,3 +156,197 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(exp_lon, site.longitude)
         self.assertEqual(exp_lat, site.latitude)
+
+
+
+class CurveTestCase(unittest.TestCase):
+    """
+    Tests for the :py:class:`openquake.shapes.Curve` class.
+    """
+
+    def setUp(self):
+        # simple curve: f(x) = x^2
+        x_vals = [1,2,3]
+        y_vals = [x**2 for x in x_vals]
+        self.simple_curve = shapes.Curve(zip(x_vals, y_vals))
+
+        # straight line
+        self.straight_curve = shapes.Curve(zip(range(1, 4), range(1, 4)))
+
+    def test_ordinate_for_basic(self):
+        """
+        Test that we can find the appropriate y value given the basic curve
+        definition.
+        """
+        self.assertEqual(1, self.simple_curve.ordinate_for(1))
+        self.assertEqual(4, self.simple_curve.ordinate_for(2))
+        self.assertEqual(9, self.simple_curve.ordinate_for(3))
+
+    def test_ordinate_for_interpolate(self):
+        """
+        Test that we can find the appropriate y value by interpolating.
+        """
+        # Since this line is straight, the interpolated y value should be the
+        # same as the x value passed to ordinate_for.
+        self.assertEqual(1.11, self.straight_curve.ordinate_for(1.11))
+        self.assertEqual(2.9999, self.straight_curve.ordinate_for(2.9999))
+
+
+class VulnerabilityFunctionTestCase(unittest.TestCase):
+    """
+    Test for the :py:class`openquake.shapes.VulnerabilityFunction` class.
+    """
+    IMLS_GOOD = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
+    IMLS_BAD = [0.0, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
+    IMLS_DUPE = [0.005, 0.005, 0.0098, 0.0137, 0.0192, 0.0269]
+    IMLS_BAD_ORDER = [0.005, 0.0098, 0.007, 0.0137, 0.0192, 0.0269]
+
+    LOSS_RATIOS_GOOD = [0.1, 0.3, 0.0, 0.5, 1.0, 0.6]
+    LOSS_RATIOS_BAD = [0.1, 0.3, 0.0, 1.1, -0.1, 0.6]
+    LOSS_RATIOS_TOO_SHORT = [0.1, 0.3, 0.0, 0.5, 1.0]
+    LOSS_RATIOS_TOO_LONG = [0.1, 0.3, 0.0, 0.5, 1.0, 0.6, 0.5]
+
+    COVS_GOOD = [0.3, 0.1, 0.3, 0.0, 0.3, 10]
+    COVS_BAD = [-0.1, 0.1, 0.3, 0.0, 0.3, 10]
+    COVS_TOO_SHORT = [0.3, 0.1, 0.3, 0.0, 0.3]
+    COVS_TOO_LONG = [0.3, 0.1, 0.3, 0.0, 0.3, 10, 11]
+
+    TEST_VULN_FUNC = shapes.VulnerabilityFunction(IMLS_GOOD, LOSS_RATIOS_GOOD,
+        COVS_GOOD)
+
+    def test_constructor_with_good_input(self):
+        """
+        This test exercises the VulnerabilityFunction constructor with
+        known-good input.
+        """
+        shapes.VulnerabilityFunction(self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
+            self.COVS_GOOD)
+
+    def test_constructor_raises_on_bad_imls(self):
+        """
+        This test attempts to invoke AssertionErrors by passing 3 different
+        sets of bad IMLs to the constructor:
+            - IML list containing out-of-range value(s)
+            - IML list containing duplicates
+            - IML list ordered improperly
+        """
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_BAD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_DUPE, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_BAD_ORDER, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+
+    def test_constructor_raises_on_bad_cov(self):
+        """
+        This test attempts to invoke AssertionErrors by passing 3 different
+        sets of bad CoV values to the constructor:
+            - CoV list containing out-range-values
+            - CoV list which is shorter than the IML list
+            - CoV list which is longer than the IML list
+        """
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_BAD)
+
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_SHORT)
+
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_LONG)
+
+    def test_constructor_raises_on_bad_loss_ratios(self):
+        """
+        This test attempts to invoke AssertionErrors by passing 3 different
+        sets of bad loss ratio values to the constructor:
+            - loss ratio list containing out-range-values
+            - loss ratio list which is shorter than the IML list
+            - loss ratio list which is longer than the IML list
+        """
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_GOOD, self.LOSS_RATIOS_BAD, self.COVS_GOOD)
+
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_SHORT, self.COVS_GOOD)
+
+        self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
+            self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD)
+
+    def test_clip_low_iml_values(self):
+        """
+        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
+        ensure that low values are clipped to the lowest valid value in the
+        IML range.
+        """
+        self.assertEqual(0.005, self.TEST_VULN_FUNC._clip_iml(0.0049))
+
+    def test_clip_high_iml_values(self):
+        """
+        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
+        ensure that the high values are clipped to the highest valid value in
+        the IML range.
+        """
+        self.assertEqual(0.0269, self.TEST_VULN_FUNC._clip_iml(0.027))
+
+    def test_clip_iml_with_normal_value(self):
+        """
+        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
+        ensure that normal values (values within the defined IML range) are not
+        changed.
+        """
+        valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
+        for i in valid_imls:
+            self.assertEqual(i, self.TEST_VULN_FUNC._clip_iml(i))
+
+    def test_from_dict(self):
+        """
+        Test that a VulnerabilityFunction can be created from dictionary of
+        IML, Loss Ratio, and CoV values.
+        """
+        test_dict = {
+            '0.005': [0.1, 0.2],
+            '0.007': [0.3, 0.4],
+            0.0098: [0.5, 0.6]}
+
+        vuln_curve = shapes.VulnerabilityFunction.from_dict(test_dict)
+
+        self.assertEqual([0.005, 0.007, 0.0098], vuln_curve.imls)
+        self.assertEqual([0.1, 0.3, 0.5], vuln_curve.loss_ratios)
+        self.assertEqual([0.2, 0.4, 0.6], vuln_curve.covs)
+
+    def test_from_json(self):
+        """
+        Test that a VulnerabilityFunction can be constructed from a
+        properly formatted JSON string.
+        """
+        vuln_func_json = \
+            '{"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}'
+
+        vuln_curve = shapes.VulnerabilityFunction.from_json(vuln_func_json)
+
+        self.assertEqual([0.005, 0.007, 0.0098], vuln_curve.imls)
+        self.assertEqual([0.1, 0.3, 0.5], vuln_curve.loss_ratios)
+        self.assertEqual([0.2, 0.4, 0.6], vuln_curve.covs)
+
+    def test_to_json(self):
+        """
+        """
+        imls = [0.005, 0.007, 0.0098]
+        loss_ratios = [0.1, 0.3, 0.5]
+        covs = [0.2, 0.4, 0.6]
+
+        vuln_func = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+
+        expected_json = \
+            '{"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}'
+
+        # The JSON data (which is essentially a dict) may not come out with the
+        # data ordered in a predictable way. So, we'll decode the expected and
+        # actual values and compare them as dicts.
+
+        json_decoder = json.JSONDecoder()
+
+        self.assertEqual(
+            json_decoder.decode(expected_json),
+            json_decoder.decode(vuln_func.to_json()))
