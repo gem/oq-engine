@@ -779,8 +779,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # values between the imls
         psha.STEPS_PER_INTERVAL = 2
 
-        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.3, 0.2, 0.1]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         lrem = psha._compute_lrem(vuln_function)
 
@@ -823,8 +825,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 atol=0.00005))
 
     def test_bin_width_from_imls(self):
-        vuln_function = shapes.VulnerabilityFunction(
-                        [(0.1, 0.05), (0.2, 0.08), (0.4, 0.2), (0.6, 0.4)])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.5, 0.5, 0.5]
+
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
@@ -840,8 +845,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
               (0.36, 0.70), (0.55, 0.40),
               (0.70, 0.01)])
 
-        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.3, 0.2, 0.1]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         loss_ratio_curve = psha.compute_loss_ratio_curve(
                 vuln_function, hazard_curve)
@@ -912,19 +919,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
             {'x': str(log(0.700)), 'y': '0.01'}]}
 
         # Vitor provided this Vulnerability Function
-        self.vuln_function = shapes.VulnerabilityFunction([
-                (0.03, (0.001, 0.00)),
-                (0.04, (0.022, 0.00)),
-                (0.07, (0.051, 0.00)),
-                (0.10, (0.080, 0.00)),
-                (0.12, (0.100, 0.00)),
-                (0.22, (0.200, 0.00)),
-                (0.37, (0.405, 0.00)),
-                (0.52, (0.700, 0.00))])
+        imls_1 = [0.03, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
+        loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.700]
+        covs_1 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.vuln_function = shapes.VulnerabilityFunction(imls_1,
+            loss_ratios_1, covs_1)
 
-        self.vuln_function_2 = shapes.VulnerabilityFunction(
-            [(0.1, (0.05, 0.5)), (0.2, (0.08, 0.3)),
-            (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls_2 = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios_2 = [0.05, 0.08, 0.2, 0.4]
+        covs_2 = [0.5, 0.3, 0.2, 0.1]
+        self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
+            loss_ratios_2, covs_2)
 
         self.job_id = 1234
 
@@ -1003,8 +1008,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
               (0.36, 0.70), (0.55, 0.40),
               (0.70, 0.01)])
 
-        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.3, 0.2, 0.1]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         # pre computed values just use one intermediate
         # values between the imls
