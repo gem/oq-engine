@@ -29,9 +29,7 @@ import os
 import copy
 import numpy
 import struct
-import subprocess
 import unittest
-import copy
 
 from osgeo import gdal, gdalconst
 
@@ -526,7 +524,8 @@ class OutputTestCase(unittest.TestCase):
                 band.XSize, 1, geotiff.GDAL_PIXEL_DATA_TYPE)
 
             tuple_of_floats = struct.unpack('f' * band.XSize, scanline)
-            band_raster[row_idx, :] = tuple_of_floats
+            band_raster[row_idx, :] = tuple_of_floats  # couldn't find a way to
+                                                       # comply with pep8
 
         self.assertTrue(numpy.allclose(band_raster, raster))
 

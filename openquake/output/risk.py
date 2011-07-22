@@ -27,9 +27,8 @@ import os
 
 from lxml import etree
 
-import sqlalchemy
-
-from db.alchemy.models import LossAssetData, LossCurveData
+from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.models import LossCurve, LossCurveData
 from db.alchemy.models import LossMap, LossMapData
 from db.alchemy.models import OqJob, Output
 
@@ -514,93 +513,77 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 
-class CurveDBWriter(OutputDBWriter):
+class LossCurveDBWriter(OutputDBWriter):
     """
-    Abstract class implementing a serializer to output loss curves to the
-    database.
+    Serializer to the database for loss curves.
+    """
 
-    Subclasses must implement get_output_type().
-    """
+    def __init__(self, *args, **kwargs):
+        super(LossCurveDBWriter, self).__init__(*args, **kwargs)
+
+        self.curve = None
 
     def get_output_type(self):
-        return super(CurveDBWriter, self).get_output_type()
+        return "loss_curve"
 
     def insert_datum(self, key, values):
         """
         Called for each item in the iterable beeing serialized.
 
-        Parameters will look something like:
+        :param key: the location of the asset for which the loss curve has been
+                    calculated
+        :type key: :py:class:`openquake.shapes.Site`
 
-        key=Site(-118.077721, 33.852034)
-        values=(Curve([...]), {..., u'assetID': u'a5625', ...})
+        :param values: a tuple (curve, asset_object). See
+        :py:meth:`insert_asset_loss_curve` for more details.
         """
         point = key
 
         if isinstance(point, shapes.GridPoint):
             point = point.site
 
-        curve_object, asset_object = values
+        curve, asset_object = values
 
-        self._real_insert_datum(asset_object, point, curve_object)
+        self.insert_asset_loss_curve(asset_object, point, curve)
 
-    def _real_insert_datum(self, asset_object, point, curve_object):
+    def insert_asset_loss_curve(self, asset_object, point, curve):
         """
-        Called for each item in the iterable beeing serialized.
+        Store into the database the loss curve of a given asset.
 
-        Parameters will look something like:
+        :param asset_object: the asset for which the loss curve is being stored
+        :type asset_object: :py:class:`dict`
 
-        asset_object={..., u'assetID': u'a5625', ...}
-        point=Site(-118.077721, 33.852034)
-        curve_object=Curve([...]),
+        :param point: the location of the asset
+        :type point: :py:class:`openquake.shapes.Site`
+
+        :param curve: the loss curve
+        :type curve: :py:class:`openquake.shapes.Curve`
+
+        The asset_object contains at least this items:
+            * **assetID** - the assetID
+            * **assetValueUnit** - the unit of the value (e.g. EUR)
+
         """
-        asset = self._get_or_create_loss_asset_data(asset_object, point)
 
-        curve = LossCurveData(
-            loss_asset=asset,
-            end_branch_label=asset_object.get('endBranchLabel'),
-            abscissae=[float(x) for x in curve_object.abscissae],
-            poes=[float(y) for y in curve_object.ordinates])
-        self.session.add(curve)
+        if self.curve is None:
+            self.curve = LossCurve(output=self.output,
+                unit=asset_object.get('assetValueUnit'),
+                # The following attributes (endBranchLabel, lossCategory) are
+                # currently not passed in by the calculators
+                end_branch_label=asset_object.get('endBranchLabel'),
+                category=asset_object.get('lossCategory'))
 
-    def _get_or_create_loss_asset_data(self, asset_object, point):
-        """
-        Return the LossAssetData record for the given asset_object, creating it
-        if necessary.
-        """
-        asset_id = asset_object['assetID']
+            self.session.add(self.curve)
 
-        try:
-            asset = self.session.query(LossAssetData)\
-                .filter(LossAssetData.output == self.output)\
-                .filter(LossAssetData.asset_id == asset_id).one()
-        except sqlalchemy.orm.exc.NoResultFound:
-            asset = LossAssetData(
-                output=self.output,
-                asset_id=asset_id,
-                pos="POINT(%s %s)" % (point.longitude, point.latitude))
-            self.session.add(asset)
-        else:
-            if not asset.pos == point:
-                error_msg = "asset %s has two different positions" % asset_id
-                raise ValueError(error_msg)
+        # Note: asset_object has lon and lat attributes that appear to contain
+        # the same coordinates as point
+        data = LossCurveData(loss_curve=self.curve,
+            asset_ref=asset_object['assetID'],
+            location="POINT(%s %s)" % (point.longitude, point.latitude),
+            losses=[float(x) for x in curve.abscissae],
+            poes=[float(y) for y in curve.ordinates])
 
-        return asset
-
-
-class LossCurveDBWriter(CurveDBWriter):
-    """
-    Serializer to the database for loss curves.
-    """
-    def get_output_type(self):
-        return "loss_curve"
-
-
-class LossRatioCurveDBWriter(CurveDBWriter):
-    """
-    Serializer to the database for loss ratio curves.
-    """
-    def get_output_type(self):
-        return "loss_ratio_curve"
+        self.session.add(data)
 
 
 def _curve_vals_as_gmldoublelist(curve_object):
@@ -617,3 +600,43 @@ def _curve_poe_as_gmldoublelist(curve_object):
     The list of values is converted to string joined by a space.
     """
     return " ".join([str(ordinate) for ordinate in curve_object.ordinates])
+
+
+def create_loss_curve_writer(curve_mode, nrml_path, params):
+    """Create a loss curve writer observing the settings in the config file.
+
+    If no writer is available for the given curve_mode and settings, returns
+    None.
+
+    :param str curve_mode: one of 'loss', 'loss_ratio'
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard map.
+    :returns: None or an instance of
+        :py:class:`output.risk.LossCurveXMLWriter`,
+        :py:class:`output.risk.LossCurveDBWriter`,
+        :py:class:`output.risk.LossRatioCurveXMLWriter`
+    """
+
+    assert curve_mode in ('loss', 'loss_ratio')
+
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        if curve_mode == 'loss':
+            writer_class = LossCurveXMLWriter
+        elif curve_mode == 'loss_ratio':
+            writer_class = LossRatioCurveXMLWriter
+
+        return writer_class(nrml_path)
+    else:
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+
+        if curve_mode == 'loss':
+            return LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
+                                     job_db_key)
+        elif curve_mode == 'loss_ratio':
+            # We are non interested in storing loss ratios in the db
+            return None
