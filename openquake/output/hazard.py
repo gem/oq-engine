@@ -688,6 +688,25 @@ class HazardCurveDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
+class GMFDBReader(object):
+    def __init__(self, session):
+        self.session = session
+
+    def deserialize(self, output_id):
+        gmf_data = self.session.query(GMFData) \
+            .filter(GMFData.output_id == output_id).all()
+        points = {}
+
+        for datum in gmf_data:
+            location = datum.location.coords(self.session)
+
+            points[shapes.Site(location[0], location[1])] = {
+                'groundMotion': datum.ground_motion,
+            }
+
+        return points
+
+
 class GMFDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
