@@ -540,7 +540,12 @@ class Curve(object):
         return self.y_values.ndim > 1
 
     def ordinate_for(self, x_value, y_index=0):
-        """Return the y value corresponding to the given x value."""
+        """
+            Return the y value corresponding to the given x value.
+            interp1d parameters can be a list of x_values, y_values
+            this is very useful to speed up the computation and feed
+            "directly" numpy
+        """
 
         y_values = self.y_values
 
@@ -592,7 +597,8 @@ class VulnerabilityFunction(object):
         """
         :param imls: Intensity Measure Levels for the vulnerability function.
             All values must be >= 0.0.
-        :type imls: list of floats; values must be arranged in ascending order with no duplicates
+        :type imls: list of floats; values must be arranged in ascending order
+            with no duplicates
         :param loss_ratios: Loss ratio values, where 0.0 <= value <= 1.0.
         :type loss_ratios: list of floats, equal in length to imls
         :param covs: Coefficients of Variation. All values must be >= 0.0.
@@ -604,7 +610,7 @@ class VulnerabilityFunction(object):
 
         # Check for proper IML ordering:
         assert self._imls == sorted(set(self._imls)), \
-            "IML values must be arranged in ascending order with no duplicates."
+            "IML values must be in ascending order with no duplicates."
 
         # Check for proper IML values (> 0.0).
         assert all(x >= 0.0 for x in self._imls), \
@@ -664,11 +670,17 @@ class VulnerabilityFunction(object):
 
     def _clip_iml(self, iml_value):
         """
-        'Clip' an IML value to the range defined for this vulnerability function.
+        'Clip' an IML value to the range defined for this vulnerability
+        function.
 
         Consider the example IML range [0.005, 0.007, 0.009].
-        If the input IML value is less than the min value (0.005), return the min value.
-        If the input IML value is greater than the max value (0.009), return the max value.
+
+        If the input IML value is less than the min value (0.005), return the
+        min value.
+
+        If the input IML value is greater than the max value (0.009), return
+        the max value.
+
         Otherwise, the IML will not change.
 
         :param iml_value: IML value
@@ -685,9 +697,11 @@ class VulnerabilityFunction(object):
 
     def cov(self, iml_value):
         """
-        For a given IML value, interpolate the corresponding Coefficient of Variation value on the curve.
+        For a given IML value, interpolate the corresponding Coefficient of
+        Variation value on the curve.
 
-        Input IML values are clipped to the IML range defined for this vulnerability function.
+        Input IML values are clipped to the IML range defined for this
+        vulnerability function.
 
         :param iml_value: IML value
         :type iml_value: float
@@ -698,9 +712,11 @@ class VulnerabilityFunction(object):
 
     def loss_ratio(self, iml_value):
         """
-        For a given IML value, interpolate the corresponding loss ratio value on the curve.
+        For a given IML value, interpolate the corresponding loss ratio value
+        on the curve.
 
-        Input IML values are clipped to IML range defined for this vulnerability function.
+        Input IML values are clipped to IML range defined for this
+        vulnerability function.
 
         :param iml_value: IML value
         :type iml_value: float
@@ -713,7 +729,8 @@ class VulnerabilityFunction(object):
         """Iterate on the values of this function, returning triples
         in the form of (iml, mean loss ratio, cov)."""
         for index in range(len(self.imls)):
-            yield((self.imls[index], self.loss_ratios[index], self.covs[index]))
+            yield(
+                (self.imls[index],self.loss_ratios[index], self.covs[index]))
 
     def to_json(self):
         """
@@ -741,8 +758,10 @@ class VulnerabilityFunction(object):
 
         The dictionary keys can be unordered and of
         whatever type can be converted to float with float().
-        :param vuln_func_dict: A dictionary of [loss ratio, CoV] pairs, keyed by IMLs.
-            The IML keys can be numbers represented as either a string or float.
+        :param vuln_func_dict: A dictionary of [loss ratio, CoV] pairs, keyed
+            by IMLs.
+            The IML keys can be numbers represented as either a string or
+            float.
             Example::
                 {'0.005': [0.1, 0.2],
                  '0.007': [0.3, 0.4],
