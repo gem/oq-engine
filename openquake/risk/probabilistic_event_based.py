@@ -147,8 +147,17 @@ def _mean_based(vuln_function, ground_motion_field_set):
         elif ground_motion_field > imls[-1]:
             loss_ratios.append(vuln_function.means[-1])
         else:
-            loss_ratios.append(vuln_function.ordinate_for(
-                    ground_motion_field))
+            loss_ratios.append(None)
+
+    marked = [mark for mark in xrange(len(loss_ratios))
+        if loss_ratios[mark] == None]
+
+    retrieved = [ground_motion_field_set["IMLs"][mark] for mark in marked]
+
+    means = vuln_function.ordinate_for(retrieved)
+
+    for mark, mean_ratio in zip(marked, means):
+        loss_ratios[mark] = mean_ratio
 
     return array(loss_ratios)
 
