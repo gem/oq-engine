@@ -24,6 +24,8 @@ NRML serialization of risk-related data sets.
 - loss map
 """
 
+from collections import defaultdict
+
 from lxml import etree
 
 from db.alchemy.db_utils import get_uiapi_writer_session
@@ -252,6 +254,53 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         return None
 
 
+LOSS_MAP_METADATA_KEYS = [
+    ('loss_map_ref', 'lossMapID'),
+    ('end_branch_label', 'endBranchLabel'),
+    ('category', 'lossCategory'),
+    ('unit', 'unit'),
+    ('deterministic', 'deterministic'),
+    # poe is for non-deterministic loss maps
+    # enforced by a SQL constraint
+    ('poe', 'poe'),
+]
+
+
+class LossMapDBReader(object):
+    def __init__(self, session):
+        self.session = session
+
+    def deserialize(self, output_id):
+        loss_map = self.session.query(LossMap) \
+            .filter(LossMap.output_id == output_id).one()
+        loss_map_data = self.session.query(LossMapData) \
+            .filter(LossMapData.loss_map == loss_map).all()
+        items = defaultdict(list)
+
+        for datum in loss_map_data:
+            site, loss_asset = self._get_item(loss_map, datum)
+            items[site].append(loss_asset)
+
+        return [self._get_metadata(loss_map)] + items.items()
+
+    def _get_metadata(self, loss_map):
+        return dict((metadata_key, getattr(loss_map, key))
+                        for key, metadata_key in LOSS_MAP_METADATA_KEYS)
+
+    def _get_item(self, loss_map, datum):
+        location = datum.location.coords(self.session)
+        site = shapes.Site(location[0], location[1])
+        asset = {'assetID': datum.asset_ref}
+
+        if loss_map.deterministic:
+            loss = {'mean_loss': datum.value,
+                    'stddev_loss': datum.std_dev}
+        else:
+            loss = {'value': datum.value}
+
+        return site, (loss, asset)
+
+
 class LossMapDBWriter(writer.DBWriter):
     """
     Serialize to the database deterministic and non-deterministic loss maps.
@@ -327,14 +376,7 @@ class LossMapDBWriter(writer.DBWriter):
             'output': self.output,
         }
 
-        for key, metadata_key in (('loss_map_ref', 'lossMapID'),
-                                  ('end_branch_label', 'endBranchLabel'),
-                                  ('category', 'lossCategory'),
-                                  ('unit', 'unit'),
-                                  ('deterministic', 'deterministic'),
-                                  # poe is for non-deterministic loss maps
-                                  # enforced by a SQL constraint
-                                  ('poe', 'poe')):
+        for key, metadata_key in LOSS_MAP_METADATA_KEYS:
             kwargs[key] = metadata.get(metadata_key)
 
         self.metadata = LossMap(**kwargs)
