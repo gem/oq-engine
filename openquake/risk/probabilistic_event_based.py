@@ -99,12 +99,12 @@ def _sampled_based(vuln_function, ground_motion_field_set,
     loss_ratios = []
 
     for ground_motion_field in ground_motion_field_set["IMLs"]:
-        mean_ratio = vuln_function.ordinate_for(ground_motion_field)
+        mean_ratio = vuln_function.loss_ratio(ground_motion_field)
 
         if mean_ratio <= 0.0:
             loss_ratios.append(0.0)
         else:
-            variance = (mean_ratio * vuln_function.cov_for(
+            variance = (mean_ratio * vuln_function.cov(
                     ground_motion_field)) ** 2.0
 
             epsilon = epsilon_provider.epsilon(asset)
@@ -144,9 +144,9 @@ def _mean_based(vuln_function, ground_motion_field_set):
         if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
         elif ground_motion_field > imls[-1]:
-            loss_ratios.append(vuln_function.means[-1])
+            loss_ratios.append(vuln_function.loss_ratios[-1])
         else:
-            loss_ratios.append(vuln_function.ordinate_for(
+            loss_ratios.append(vuln_function.loss_ratio(
                     ground_motion_field))
 
     return array(loss_ratios)
