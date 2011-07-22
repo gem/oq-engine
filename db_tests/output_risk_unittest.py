@@ -23,7 +23,7 @@ import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
 from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter, \
-    LossMapDBReader
+    LossCurveDBReader, LossMapDBReader
 from openquake.shapes import Site, Curve
 
 from db_tests import helpers
@@ -77,11 +77,8 @@ RISK_LOSS_CURVE_DATA = [
 ]
 
 
-class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
-    """
-    Unit tests for the LossCurveDBWriter class, which serializes
-    loss curves to the database.
-    """
+class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for loss curve db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -95,7 +92,23 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.display_name = os.path.basename(output_path)
 
         self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
+        self.reader = LossCurveDBReader(self.session)
 
+    def normalize(self, values):
+        result = []
+        for site, (curve, asset) in values:
+            result.append((site,
+                           (curve,
+                            {'assetID': asset['assetID']})))
+
+        return sorted(result, key=lambda v: v[1][1]['assetID'])
+
+
+class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
+    """
+    Unit tests for the LossCurveDBWriter class, which serializes
+    loss curves to the database.
+    """
     def test_serialize(self):
         """All the records are inserted correctly."""
         output = self.writer.output
@@ -136,17 +149,26 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
             inserted_data.append(data)
 
-        def normalize(values):
-            result = []
-            for site, (curve, asset) in values:
-                result.append((site,
-                               (curve,
-                                {'assetID': asset['assetID']})))
+        self.assertEquals(self.normalize(RISK_LOSS_CURVE_DATA),
+                          self.normalize(inserted_data))
 
-            return sorted(result, key=lambda v: v[1][1]['assetID'])
 
-        self.assertEquals(normalize(RISK_LOSS_CURVE_DATA),
-                          normalize(inserted_data))
+class LossCurveDBReaderTestCase(LossCurveDBBaseTestCase):
+    """
+    Unit tests for the LossCurveDBReader class, which deserializes
+    loss curves from the database.
+    """
+    def test_deserialize(self):
+        """
+        Loss curve is read back correctly
+        """
+        self.writer.serialize(RISK_LOSS_CURVE_DATA)
+
+        # Call the function under test.
+        data = self.reader.deserialize(self.writer.output.id)
+
+        self.assertEquals(self.normalize(RISK_LOSS_CURVE_DATA),
+                          self.normalize(data))
 
 
 SITE_A = Site(-117.0, 38.0)

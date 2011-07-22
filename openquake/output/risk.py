@@ -537,6 +537,37 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
     abscissa_tag = xml.RISK_LOSS_RATIO_ABSCISSA_TAG
 
 
+class LossCurveDBReader(object):
+    def __init__(self, session):
+        self.session = session
+
+    def deserialize(self, output_id):
+        loss_curve = self.session.query(LossCurve) \
+            .filter(LossCurve.output_id == output_id).one()
+        loss_curve_data = self.session.query(LossCurveData) \
+            .filter(LossCurveData.loss_curve == loss_curve).all()
+
+        curves = []
+        asset = {
+            'assetValueUnit': loss_curve.unit,
+            'endBranchLabel': loss_curve.end_branch_label,
+            'lossCategory': loss_curve.category,
+        }
+
+        for datum in loss_curve_data:
+            location = datum.location.coords(self.session)
+            site = shapes.Site(location[0], location[1])
+
+            curve = shapes.Curve(zip(datum.losses, datum.poes))
+
+            asset_object = asset.copy()
+            asset_object['assetID'] = datum.asset_ref
+
+            curves.append((site, (curve, asset_object)))
+
+        return curves
+
+
 class LossCurveDBWriter(writer.DBWriter):
     """
     Serializer to the database for loss curves.
