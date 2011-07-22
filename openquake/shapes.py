@@ -540,7 +540,12 @@ class Curve(object):
         return self.y_values.ndim > 1
 
     def ordinate_for(self, x_value, y_index=0):
-        """Return the y value corresponding to the given x value."""
+        """
+            Return the y value corresponding to the given x value.
+            interp1d parameters can be a list of x_values, y_values
+            this is very useful to speed up the computation and feed
+            "directly" numpy
+        """
 
         y_values = self.y_values
 
