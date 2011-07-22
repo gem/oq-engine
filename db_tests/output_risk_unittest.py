@@ -22,7 +22,8 @@ import os
 import unittest
 
 from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter
+from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter, \
+    LossMapDBReader
 from openquake.shapes import Site, Curve
 
 from db_tests import helpers
@@ -195,11 +196,8 @@ SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA = [
     (SITE_B, [(SITE_B_NONDETERMINISTIC_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
 
-class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
-    """
-    Unit tests for the LossMapDBWriter class, which serializes
-    loss maps to the database.
-    """
+class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for loss map DB reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -213,7 +211,14 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.display_name = os.path.basename(output_path)
 
         self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
+        self.reader = LossMapDBReader(self.session)
 
+
+class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
+    """
+    Unit tests for the LossMapDBWriter class, which serializes
+    loss maps to the database.
+    """
     def test_serialize_deterministic(self):
         """
         All the records for deterministic loss maps are inserted correctly.
@@ -326,3 +331,69 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
         self.assertEqual(SITE_B_NONDETERMINISTIC_LOSS_ONE['value'],
                          data_c.value)
+
+
+class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
+    """
+    Unit tests for the LossMapDBReader class, which deserializes
+    loss maps from the database.
+    """
+    def test_deserialize_deterministic(self):
+        """
+        Deterministic loss map is read back correctly
+        """
+        self.writer.serialize(SAMPLE_DETERMINISTIC_LOSS_MAP_DATA)
+
+        # Call the function under test.
+        data = self.reader.deserialize(self.writer.output.id)
+        got_metadata = data.pop(0)
+        data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
+
+        # compare metadata, ignoring fields that we know aren't saved
+        result_metadata = dict(DETERMINISTIC_LOSS_MAP_METADATA)
+        result_metadata.pop('nrmlID')
+        result_metadata.pop('riskResultID')
+
+        # before overwriting, check the value is not set
+        assert 'poe' not in result_metadata
+        result_metadata['poe'] = None
+
+        self.assertEquals(result_metadata, result_metadata)
+
+        # compare sites ad losses
+        self.assertEquals(
+            self.normalize(SAMPLE_DETERMINISTIC_LOSS_MAP_DATA[1:]),
+            self.normalize(data))
+
+    def test_deserialize_nondeterministic(self):
+        """
+        Deterministic loss map is read back correctly
+        """
+        self.writer.serialize(SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA)
+
+        # Call the function under test.
+        data = self.reader.deserialize(self.writer.output.id)
+        got_metadata = data.pop(0)
+        data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
+
+        # compare metadata, ignoring fields that we know aren't saved
+        result_metadata = dict(NONDETERMINISTIC_LOSS_MAP_METADATA)
+        result_metadata.pop('nrmlID')
+        result_metadata.pop('riskResultID')
+
+        self.assertEquals(result_metadata, result_metadata)
+
+        # compare sites ad losses
+        self.assertEquals(
+            self.normalize(SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA[1:]),
+            self.normalize(data))
+
+    def normalize(self, data):
+        data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
+        result = []
+
+        for site, losses in data:
+            result.append((site, sorted(losses,
+                                        key=lambda e: e[1]['assetID'])))
+
+        return result
