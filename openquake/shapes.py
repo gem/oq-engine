@@ -591,7 +591,7 @@ class VulnerabilityFunction(object):
     def __init__(self, imls, loss_ratios, covs):
         """
         :param imls: Intensity Measure Levels for the vulnerability function.
-            All values must be > 0.0.
+            All values must be >= 0.0.
         :type imls: list of floats; values must be arranged in ascending order with no duplicates
         :param loss_ratios: Loss ratio values, where 0.0 <= value <= 1.0.
         :type loss_ratios: list of floats, equal in length to imls
@@ -599,16 +599,16 @@ class VulnerabilityFunction(object):
         :type covs: list of floats, equal in length to imls
         """
         self._imls = imls
-        self._covs = covs
         self._loss_ratios = loss_ratios
+        self._covs = covs
 
         # Check for proper IML ordering:
         assert self._imls == sorted(set(self._imls)), \
             "IML values must be arranged in ascending order with no duplicates."
 
         # Check for proper IML values (> 0.0).
-        assert all(x > 0.0 for x in self._imls), \
-            "IML values must be > 0.0."
+        assert all(x >= 0.0 for x in self._imls), \
+            "IML values must be >= 0.0."
 
         # Check CoV and loss ratio list lengths:
         assert len(self._covs) == len(self._imls), \
@@ -624,17 +624,43 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 and x <= 1.0 for x in self._loss_ratios), \
             "Loss ratio values must be in the interval [0.0, 1.0]."
 
+    def __eq__(self, other):
+        """
+        Compares IML, loss ratio, and CoV values to determine equality.
+        """
+        if not isinstance(other, VulnerabilityFunction):
+            return False
+        return allclose(self.imls, other.imls) \
+            and allclose(self.loss_ratios, other.loss_ratios) \
+            and allclose(self.covs, other.covs)
+
     @property
     def imls(self):
+        """
+        IML values as a numpy.array.
+        """
         return numpy.array(self._imls)
 
     @property
     def loss_ratios(self):
+        """
+        Loss ratios as a numpy.array.
+        """
         return numpy.array(self._loss_ratios)
 
     @property
     def covs(self):
+        """
+        Coeffecicients of Variation as a numpy.array.
+        """
         return numpy.array(self._covs)
+
+    @property
+    def is_empty(self):
+        """
+        True if there are no IML values in the function.
+        """
+        return len(self.imls) == 0
 
     def _clip_iml(self, iml_value):
         """
