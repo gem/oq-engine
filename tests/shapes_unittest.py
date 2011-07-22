@@ -197,7 +197,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
     Test for the :py:class`openquake.shapes.VulnerabilityFunction` class.
     """
     IMLS_GOOD = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
-    IMLS_BAD = [0.0, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
+    IMLS_BAD = [-0.1, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
     IMLS_DUPE = [0.005, 0.005, 0.0098, 0.0137, 0.0192, 0.0269]
     IMLS_BAD_ORDER = [0.005, 0.0098, 0.007, 0.0137, 0.0192, 0.0269]
 
@@ -311,9 +311,9 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
         vuln_curve = shapes.VulnerabilityFunction.from_dict(test_dict)
 
-        self.assertEqual([0.005, 0.007, 0.0098], vuln_curve.imls)
-        self.assertEqual([0.1, 0.3, 0.5], vuln_curve.loss_ratios)
-        self.assertEqual([0.2, 0.4, 0.6], vuln_curve.covs)
+        self.assertEqual([0.005, 0.007, 0.0098], vuln_curve._imls)
+        self.assertEqual([0.1, 0.3, 0.5], vuln_curve._loss_ratios)
+        self.assertEqual([0.2, 0.4, 0.6], vuln_curve._covs)
 
     def test_from_json(self):
         """
@@ -325,9 +325,9 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
         vuln_curve = shapes.VulnerabilityFunction.from_json(vuln_func_json)
 
-        self.assertEqual([0.005, 0.007, 0.0098], vuln_curve.imls)
-        self.assertEqual([0.1, 0.3, 0.5], vuln_curve.loss_ratios)
-        self.assertEqual([0.2, 0.4, 0.6], vuln_curve.covs)
+        self.assertEqual([0.005, 0.007, 0.0098], vuln_curve._imls)
+        self.assertEqual([0.1, 0.3, 0.5], vuln_curve._loss_ratios)
+        self.assertEqual([0.2, 0.4, 0.6], vuln_curve._covs)
 
     def test_to_json(self):
         """
@@ -352,3 +352,18 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.assertEqual(
             json_decoder.decode(expected_json),
             json_decoder.decode(vuln_func.to_json()))
+
+    def test_eq(self):
+        """
+        Execerise equality comparison of VulnerabilityFunctions. Two functions
+        created with the same IML, Loss Ratio, and CoV values should be
+        considered equal.
+        """
+        imls = [0.005, 0.007]
+        loss_ratios = [0.0, 1.0]
+        covs = [0.05, 0.05]
+
+        func1 = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        func2 = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+
+        self.assertEqual(func1, func2)
