@@ -331,29 +331,42 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
                           normalize(inserted_data))
 
 
-class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
-    """
-    Unit tests for the GMFDBWriter class, which serializes
-    hazard curvess to the database.
-    """
+class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for ground motion field db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
+    def setUp(self):
+        self.job = self.setup_classic_job()
+        self.session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        self.display_name = os.path.basename(output_path)
+
+        self.writer = GMFDBWriter(self.session, output_path, self.job.id)
+        self.reader = GMFDBReader(self.session)
+
+    def normalize(self, values):
+        def sort_key(v):
+            return v[0].longitude, v[0].latitude, v[1]
+
+        return sorted(values, key=sort_key)
+
+
+class GMFDBWriterTestCase(GMFDBBaseTestCase):
+    """
+    Unit tests for the GMFDBWriter class, which serializes
+    ground motion fields to the database.
+    """
     def test_serialize(self):
         """serialize() inserts the output and the gmf_data records."""
-        self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
-        output_path = self.generate_output_path(self.job)
-        gmfw = GMFDBWriter(session, output_path, self.job.id)
-
         # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        gmfw.serialize(GMF_DATA)
+        self.writer.serialize(GMF_DATA)
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -368,15 +381,30 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         inserted_data = []
 
         for gmfd in output.gmfdata_set:
-            location = gmfd.location.coords(session)
+            location = gmfd.location.coords(self.session)
             inserted_data.append((Site(location[0], location[1]),
                                   {'groundMotion': gmfd.ground_motion}))
 
-        def normalize(values):
-            def sort_key(v):
-                return v[0].longitude, v[0].latitude, v[1]
+        self.assertEquals(self.normalize(GMF_DATA.items()),
+                          self.normalize(inserted_data))
 
-            return sorted(values, key=sort_key)
 
-        self.assertEquals(normalize(GMF_DATA.items()),
-                          normalize(inserted_data))
+class GMFDBReaderTestCase(GMFDBBaseTestCase):
+    """
+    Unit tests for the GMFDBReader class, which deserializes
+    ground motion fields from the database.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def test_deserialize(self):
+        """Ground motion field is read back correctly"""
+        self.writer.serialize(GMF_DATA)
+
+        data = self.reader.deserialize(self.writer.output.id)
+
+        self.assertEquals(self.normalize(GMF_DATA.items()),
+                          self.normalize(data.items()))
