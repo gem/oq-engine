@@ -440,8 +440,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
     def test_loss_ratio_interp_many_values(self):
         """
-        Given a list of IML values (abcissae), test for proper interpolation of
-        loss ratios (ordinates).
+        Given a list of IML values (abscissae), test for proper interpolation
+        of loss ratios (ordinates).
         """
         expected_lrs = numpy.array([0.1, 0.2, 0.6])
         test_input = [0.005, 0.006, 0.0269]
@@ -454,8 +454,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
     def test_loss_ratio_interp_many_values_clipped(self):
         """
-        Given a list of IML values (abcissae), test for proper interpolation of
-        loss ratios (ordinates).
+        Given a list of IML values (abscissae), test for proper interpolation
+        of loss ratios (ordinates).
 
         This test also ensures that input IML values are 'clipped' to the IML
         range defined for the vulnerability function.
@@ -492,8 +492,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
     def test_cov_interp_many_values(self):
         """
-        Given a list of IML values (abcissae), test for proper interpolation of
-        CoVs.
+        Given a list of IML values (abscissae), test for proper interpolation
+        of CoVs.
         """
         expected_covs = numpy.array([0.3, 0.2, 10])
         test_input = [0.005, 0.006, 0.0269]
@@ -506,8 +506,8 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
     def test_cov_interp_many_values_clipped(self):
         """
-        Given a list of IML values (abcissae), test for proper interpolation of
-        CoVs.
+        Given a list of IML values (abscissae), test for proper interpolation
+        of CoVs.
 
         This test also ensures that input IML values are 'clipped' to the IML
         range defined for the vulnerability function.
