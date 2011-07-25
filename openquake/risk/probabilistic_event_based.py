@@ -98,7 +98,7 @@ def _sampled_based(vuln_function, ground_motion_field_set,
 
     loss_ratios = []
 
-    means = vuln_function.loss_ratio(ground_motion_field_set["IMLs"])
+    means = vuln_function.loss_ratio_for(ground_motion_field_set["IMLs"])
     covs = vuln_function.cov_for(ground_motion_field_set["IMLs"])
 
     for mean_ratio, cov in zip(means, covs):
@@ -147,7 +147,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
         elif ground_motion_field > imls[-1]:
             loss_ratios.append(vuln_function.loss_ratios[-1])
         else:
-            loss_ratios.append(vuln_function.loss_ratio(
+            loss_ratios.append(vuln_function.loss_ratio_for(
                     ground_motion_field))
 
     return array(loss_ratios)

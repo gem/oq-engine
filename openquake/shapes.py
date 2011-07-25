@@ -630,6 +630,7 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 and x <= 1.0 for x in self._loss_ratios), \
             "Loss ratio values must be in the interval [0.0, 1.0]."
 
+
     def __eq__(self, other):
         """
         Compares IML, loss ratio, and CoV values to determine equality.
@@ -668,10 +669,10 @@ class VulnerabilityFunction(object):
         """
         return len(self.imls) == 0
 
-    def _clip_iml(self, iml_value):
+    def _clip_iml(self, iml):
         """
-        'Clip' an IML value to the range defined for this vulnerability
-        function.
+        'Clip' an IML value (or sequence of values) to the
+        range defined for this vulnerability function.
 
         Consider the example IML range [0.005, 0.007, 0.009].
 
@@ -683,47 +684,71 @@ class VulnerabilityFunction(object):
 
         Otherwise, the IML will not change.
 
-        :param iml_value: IML value
-        :type iml_value: float
+        :param iml: IML value
+        :type iml: float, list/tuple of floats, or :py:class:`numpy.ndarray` of
+            floats
 
-        :returns: clipped IML value
+        :returns: Clipped IML value(s). If the input type is a single float,
+            return a float. If the input type is a sequence (list, tuple or
+            :py:class:`numpy.ndarray`), return a :py:class:`numpy.ndarray` of
+            clipped values.
         """
-        if iml_value < self.imls[0]:
-            iml_value = self.imls[0]
-        elif iml_value > self.imls[-1]:
-            iml_value = self.imls[-1]
+        if isinstance(iml, (list, tuple, numpy.ndarray)):
+            # convert to numpy.array so we can use numpy.putmask:
+            iml = numpy.array(iml)
 
-        return iml_value
+            # clip low values:
+            numpy.putmask(iml, iml < self.imls[0], self.imls[0])
 
-    def cov(self, iml_value):
+            # clip high values:
+            numpy.putmask(iml, iml > self.imls[-1], self.imls[-1])
+
+        else:
+            # should be a single (float) value
+            if iml < self.imls[0]:
+                iml = self.imls[0]
+            elif iml > self.imls[-1]:
+                iml = self.imls[-1]
+
+        return iml
+
+    def loss_ratio_for(self, iml):
         """
-        For a given IML value, interpolate the corresponding Coefficient of
-        Variation value on the curve.
+        Given 1 or more IML values, interpolate the corresponding loss ratio
+        value(s) on the curve.
 
-        Input IML values are clipped to the IML range defined for this
+        Input IML value(s) is/are clipped to IML range defined for this
         vulnerability function.
 
-        :param iml_value: IML value
-        :type iml_value: float
+        :param iml: IML value
+        :type iml: float (single value), list of floats, or
+            :py:class:`numpy.ndarray` of floats
+
+        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
+            values equal to the size of the input (1 or many)
         """
-        iml_value = self._clip_iml(iml_value)
+        iml = self._clip_iml(iml)
 
-        return interp1d(self.imls, self.covs)(iml_value)
+        return interp1d(self.imls, self.loss_ratios)(iml)
 
-    def loss_ratio(self, iml_value):
+    def cov_for(self, iml):
         """
-        For a given IML value, interpolate the corresponding loss ratio value
-        on the curve.
+        Given 1 or more IML values, interpolate the corresponding Coefficient
+        of Variation value(s) on the curve.
 
-        Input IML values are clipped to IML range defined for this
+        Input IML value(s) is/are clipped to IML range defined for this
         vulnerability function.
 
-        :param iml_value: IML value
-        :type iml_value: float
-        """
-        iml_value = self._clip_iml(iml_value)
+        :param iml: IML value
+        :type iml: float (single value), list of floats, or
+            :py:class:`numpy.ndarray` of floats
 
-        return interp1d(self.imls, self.loss_ratios)(iml_value)
+        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
+            values equal to the size of the input (1 or many)
+        """
+        iml = self._clip_iml(iml)
+
+        return interp1d(self.imls, self.covs)(iml)
 
     def __iter__(self):
         """Iterate on the values of this function, returning triples

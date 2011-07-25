@@ -20,8 +20,11 @@
 
 import decimal
 import json
+import numpy
 import re
 import unittest
+
+from numpy import allclose
 
 from openquake import shapes
 from openquake.utils import round_float
@@ -211,8 +214,10 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
     COVS_TOO_SHORT = [0.3, 0.1, 0.3, 0.0, 0.3]
     COVS_TOO_LONG = [0.3, 0.1, 0.3, 0.0, 0.3, 10, 11]
 
-    TEST_VULN_FUNC = shapes.VulnerabilityFunction(IMLS_GOOD, LOSS_RATIOS_GOOD,
-        COVS_GOOD)
+    @classmethod
+    def setUpClass(cls):
+        cls.test_func = shapes.VulnerabilityFunction(cls.IMLS_GOOD,
+            cls.LOSS_RATIOS_GOOD, cls.COVS_GOOD)
 
     def test_constructor_with_good_input(self):
         """
@@ -279,7 +284,20 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         ensure that low values are clipped to the lowest valid value in the
         IML range.
         """
-        self.assertEqual(0.005, self.TEST_VULN_FUNC._clip_iml(0.0049))
+        self.assertEqual(0.005, self.test_func._clip_iml(0.0049))
+
+    def test_clip_low_imls_many_values(self):
+        """
+        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
+        ensure that low values are clipped to the lowest valid value in the
+        IML range.
+        """
+        expected_imls = numpy.array([0.005, 0.005, 0.005])
+        test_input = [0.0049, 0.00001, 0.002]
+
+        self.assertTrue(allclose(expected_imls, self.test_func._clip_iml(test_input)))
+        # same test, except with a numpy.array-type input:
+        self.assertTrue(allclose(expected_imls, self.test_func._clip_iml(numpy.array(test_input))))
 
     def test_clip_high_iml_values(self):
         """
@@ -287,7 +305,20 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         ensure that the high values are clipped to the highest valid value in
         the IML range.
         """
-        self.assertEqual(0.0269, self.TEST_VULN_FUNC._clip_iml(0.027))
+        self.assertEqual(0.0269, self.test_func._clip_iml(0.027))
+
+    def test_clip_high_imls_many_values(self):
+        """
+        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
+        ensure that the high values are clipped to the highest valid value in
+        the IML range.
+        """
+        expected_imls = numpy.array([0.0269, 0.0269, 0.0269])
+        test_input = [0.027, 0.3, 10]
+
+        self.assertTrue(allclose(expected_imls, self.test_func._clip_iml(test_input)))
+        # same test, except with a numpy.array-type input:
+        self.assertTrue(allclose(expected_imls, self.test_func._clip_iml(numpy.array(test_input))))
 
     def test_clip_iml_with_normal_value(self):
         """
@@ -297,7 +328,21 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         """
         valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
         for i in valid_imls:
-            self.assertEqual(i, self.TEST_VULN_FUNC._clip_iml(i))
+            self.assertEqual(i, self.test_func._clip_iml(i))
+
+    def test_clip_imls_with_many_normal_values(self):
+        """
+        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
+        ensure that normal values (values within the defined IML range) are not
+        changed.
+        """
+        valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
+        expected_result = numpy.array(valid_imls)
+
+        self.assertTrue(allclose(expected_result, self.test_func._clip_iml(valid_imls)))
+        # same test, except with numpy.array-type input:
+        self.assertTrue(allclose(expected_result, self.test_func._clip_iml(numpy.array(valid_imls))))
+
 
     def test_from_dict(self):
         """
@@ -367,3 +412,93 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         func2 = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         self.assertEqual(func1, func2)
+
+    def test_loss_ratio_interp_single_value(self):
+        """
+        Test that single loss ratio values are properly interpolated.
+        """
+        # lower boundary:
+        self.assertEqual(0.1, self.test_func.loss_ratio_for(0.005))
+        # upper boundary:
+        self.assertEqual(0.6, self.test_func.loss_ratio_for(0.0269))
+        # between the first 2 IMLs:
+        self.assertEqual(0.2, self.test_func.loss_ratio_for(0.006))
+
+    def test_loss_ratio_interp_single_value_clipped(self):
+        """
+        Test that loss ratio interpolation properly clips out-of-range input values
+        to the IML range defined for the vulnerability function.
+        """
+        # test low-end clipping:
+        self.assertEqual(0.1, self.test_func.loss_ratio_for(0.0049))
+        # test high-end clipping:
+        self.assertEqual(0.6, self.test_func.loss_ratio_for(0.027))
+
+    def test_loss_ratio_interp_many_values(self):
+        """
+        Given a list of IML values (abcissae), test for proper interpolation of loss ratios (ordinates).
+        """
+        expected_lrs = numpy.array([0.1, 0.2, 0.6])
+        test_input = [0.005, 0.006, 0.0269]
+
+        self.assertTrue(allclose(expected_lrs, self.test_func.loss_ratio_for(test_input)))
+        # same thing, except the input is a numpy.ndarray type:
+        self.assertTrue(allclose(expected_lrs, self.test_func.loss_ratio_for(numpy.array(test_input))))
+
+    def test_loss_ratio_interp_many_values_clipped(self):
+        """
+        Given a list of IML values (abcissae), test for proper interpolation of loss ratios (ordinates).
+        This test also ensures that input IML values are 'clipped' to the IML range defined for the vulnerability
+        function.
+        """
+        expected_lrs = numpy.array([0.1, 0.2, 0.6])
+        test_input = [0.0049, 0.006, 0.027]
+
+        self.assertTrue(allclose(expected_lrs, self.test_func.loss_ratio_for(test_input)))
+        # same thing, except the input is a numpy.ndarray type:
+        self.assertTrue(allclose(expected_lrs, self.test_func.loss_ratio_for(numpy.array(test_input))))
+
+    def test_cov_interp_single_value(self):
+        """
+        Test that single CoV values are properly interpolated.
+        """
+        # lower boundary:
+        self.assertEqual(0.3, self.test_func.cov_for(0.005))
+        # upper boundary:
+        self.assertEqual(10, self.test_func.cov_for(0.0269))
+        # between the first 2 IMLs:
+        self.assertEqual(0.2, self.test_func.cov_for(0.006))
+
+    def test_cov_interp_single_value_clipped(self):
+        """
+        Test that CoV interpolation properly clips out-of-range input values
+        to the IML range defined for the vulnerability function.
+        """
+        # test low-end clipping:
+        self.assertEqual(0.3, self.test_func.cov_for(0.0049))
+        # test high-end clipping:
+        self.assertEqual(10, self.test_func.cov_for(0.027))
+
+    def test_cov_interp_many_values(self):
+        """
+        Given a list of IML values (abcissae), test for proper interpolation of CoVs.
+        """
+        expected_covs = numpy.array([0.3, 0.2, 10])
+        test_input = [0.005, 0.006, 0.0269]
+
+        self.assertTrue(allclose(expected_covs, self.test_func.cov_for(test_input)))
+        # same thing, except the input is a numpy.ndarray type:
+        self.assertTrue(allclose(expected_covs, self.test_func.cov_for(numpy.array(test_input))))
+
+    def test_cov_interp_many_values_clipped(self):
+        """
+        Given a list of IML values (abcissae), test for proper interpolation of CoVs.
+        This test also ensures that input IML values are 'clipped' to the IML range defined for the vulnerability
+        function.
+        """
+        expected_covs = numpy.array([0.3, 0.2, 10])
+        test_input = [0.0049, 0.006, 0.027]
+
+        self.assertTrue(allclose(expected_covs, self.test_func.cov_for(test_input)))
+        # same thing, except the input is a numpy.ndarray type:
+        self.assertTrue(allclose(expected_covs, self.test_func.cov_for(numpy.array(test_input))))
