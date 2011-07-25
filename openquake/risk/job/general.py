@@ -88,7 +88,8 @@ def output(fn):
                     "poe": loss_poe,
                 }
 
-                writer.serialize([metadata] + self.asset_losses_per_site(loss_poe))
+                writer.serialize([metadata]
+                                 + self.asset_losses_per_site(loss_poe))
 
                 results.append(path)
 
