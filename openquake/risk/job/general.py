@@ -270,7 +270,20 @@ class RiskJobMixin(mixins.Mixin):
 
     def asset_losses_per_site(self, loss_poe):
         """
-        Iterates through all the assets and maps losses at loss_poe
+        For each site in the region of this job, returns a list of assets and
+        their losses at a given probability of exceedance.
+
+        :returns: A list of tuples in the form expected by the
+        :py:class:`LossMapWriter.serialize` method:
+
+           (site, [(loss, asset), ...])
+
+           Where:
+
+            :py:class:`openquake.shapes.Site` the site
+            :py:class:`dict` the asset dict
+            :py:class:`dict` (loss dict) with the following key:
+                ***value*** - the value of the loss for the asset
         """
         result = defaultdict(list)
 
