@@ -78,8 +78,9 @@ def output(fn):
         for loss_poe in conditional_loss_poes:
             path = os.path.join(self.base_path,
                                 self['OUTPUT_DIR'],
-                                "losses_at-%s.tiff" % loss_poe)
-            writer = risk_output.create_loss_map_writer(path, self.params)
+                                "losses_at-%s.xml" % loss_poe)
+            writer = risk_output.create_loss_map_writer(False, path,
+                                                        self.params)
 
             metadata = {
                 "deterministic": False,

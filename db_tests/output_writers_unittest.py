@@ -115,15 +115,32 @@ class CreateRiskWriterTest(unittest.TestCase):
                                                       params)
         self.assertEqual(type(writer), risk_output.LossCurveDBWriter)
 
-    def test_loss_map_writer_creation(self):
+    def test_deterministic_loss_map_writer_creation(self):
         # XML writer
         params = {"SERIALIZE_RESULTS_TO_DB": "False"}
-        writer = risk_output.create_loss_map_writer("fakepath.xml", params)
+        writer = risk_output.create_loss_map_writer(True, "fakepath.xml",
+                                                    params)
         self.assertEqual(type(writer), risk_output.LossMapXMLWriter)
 
         # database writer
         params = {
             "SERIALIZE_RESULTS_TO_DB": "True",
             "OPENQUAKE_JOB_ID": 1}
-        writer = risk_output.create_loss_map_writer("fakepath.xml", params)
+        writer = risk_output.create_loss_map_writer(True, "fakepath.xml",
+                                                    params)
+        self.assertEqual(type(writer), risk_output.LossMapDBWriter)
+
+    def test_nondeterministic_loss_map_writer_creation(self):
+        # XML writer
+        params = {"SERIALIZE_RESULTS_TO_DB": "False"}
+        writer = risk_output.create_loss_map_writer(False, "fakepath.xml",
+                                                    params)
+        self.assertEqual(writer, None)
+
+        # database writer
+        params = {
+            "SERIALIZE_RESULTS_TO_DB": "True",
+            "OPENQUAKE_JOB_ID": 1}
+        writer = risk_output.create_loss_map_writer(False, "fakepath.xml",
+                                                    params)
         self.assertEqual(type(writer), risk_output.LossMapDBWriter)
