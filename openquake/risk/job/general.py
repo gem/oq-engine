@@ -82,14 +82,15 @@ def output(fn):
             writer = risk_output.create_loss_map_writer(False, path,
                                                         self.params)
 
-            metadata = {
-                "deterministic": False,
-                "poe": loss_poe,
-            }
+            if writer:
+                metadata = {
+                    "deterministic": False,
+                    "poe": loss_poe,
+                }
 
-            writer.serialize([metadata] + self.asset_losses_per_site(loss_poe))
+                writer.serialize([metadata] + self.asset_losses_per_site(loss_poe))
 
-            results.append(path)
+                results.append(path)
 
         return results
 
