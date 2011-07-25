@@ -559,8 +559,7 @@ class Curve(object):
 
         # inverting the function
         inverted_func = [(ordinate, x_value) for ordinate, x_value in
-                zip(self.ordinate_for(self.abscissae),
-            self.abscissae)]
+                zip(self.ordinate_for(self.abscissae), self.abscissae)]
 
         return Curve(inverted_func).ordinate_for(y_value)
 
