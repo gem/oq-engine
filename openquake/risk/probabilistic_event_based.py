@@ -136,6 +136,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
     """
 
     loss_ratios = []
+    retrieved = {}
     imls = vuln_function.imls
 
     # seems like with numpy you can only specify a single fill value
@@ -147,8 +148,15 @@ def _mean_based(vuln_function, ground_motion_field_set):
         elif ground_motion_field > imls[-1]:
             loss_ratios.append(vuln_function.means[-1])
         else:
-            loss_ratios.append(vuln_function.ordinate_for(
-                    ground_motion_field))
+            # The actual value is computed later
+            mark = len(loss_ratios)
+            retrieved[mark] = ground_motion_field_set['IMLs'][mark]
+            loss_ratios.append(0.0)
+
+    means = vuln_function.ordinate_for(retrieved.values())
+
+    for mark, mean_ratio in zip(retrieved.keys(), means):
+        loss_ratios[mark] = mean_ratio
 
     return array(loss_ratios)
 
