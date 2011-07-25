@@ -33,6 +33,7 @@ from openquake.utils.general import MemoizeMutable
 
 STEPS_PER_INTERVAL = 5
 
+
 def compute_loss_ratio_curve(vuln_function, hazard_curve):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
