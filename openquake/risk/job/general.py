@@ -218,8 +218,10 @@ class RiskJobMixin(mixins.Mixin):
         Generates the tuples (point, asset) for all assets known to this job
         that are contained in grid.
 
-        point is a point of the grid
-        asset is a dict representing an asset
+        :returns: tuples (point, asset) where:
+            * point is a :py:class:`openquake.shapes.Point` on the grid
+
+            * asset is a :py:class:`dict` representing an asset
         """
 
         for point in grid:
