@@ -45,8 +45,9 @@ import logging
 from lxml import etree
 
 from db.alchemy.models import HazardMap, HazardMapData, HazardCurveData, \
-    HazardCurveNodeData, GMFData
+    HazardCurveNodeData, GMFData, Output, OqParams, OqJob
 
+from openquake import job
 from openquake import shapes
 from openquake import writer
 from openquake.utils import round_float
@@ -614,6 +615,47 @@ class HazardMapDBWriter(writer.DBWriter):
                 hazard_map_id=self.hazard_map.id,
                 value=round_float(value),
                 location="POINT(%s %s)" % (point.x, point.y))
+
+
+class HazardCurveDBReader(object):
+    def __init__(self, session):
+        self.session = session
+
+    def deserialize(self, output_id):
+        hazard_curve_data = self.session.query(HazardCurveData) \
+            .filter(HazardCurveData.output_id == output_id).all()
+        params = self.session.query(OqParams) \
+            .join(OqJob) \
+            .join(Output) \
+            .filter(Output.id == output_id).one()
+        points = []
+
+        for hazard_curve_datum in hazard_curve_data:
+            hazard_curve_node_data = self.session.query(HazardCurveNodeData) \
+                .filter(HazardCurveNodeData.hazard_curve_data ==
+                        hazard_curve_datum).all()
+
+            common = {
+                'IMLValues': params.imls,
+                'investigationTimeSpan': params.investigation_time,
+                'IMT': job.REVERSE_ENUM_MAP[params.imt],
+            }
+
+            if hazard_curve_datum.end_branch_label is None:
+                common['statistics'] = hazard_curve_datum.statistic_type
+                if hazard_curve_datum.statistic_type == 'quantile':
+                    common['quantileValue'] = hazard_curve_datum.quantile
+            else:
+                common['endBranchLabel'] = hazard_curve_datum.end_branch_label
+
+            for datum in hazard_curve_node_data:
+                location = datum.location.coords(self.session)
+                attrs = common.copy()
+                attrs['PoEValues'] = datum.poes
+
+                points.append((shapes.Site(location[0], location[1]), attrs))
+
+        return points
 
 
 class HazardCurveDBWriter(writer.DBWriter):
