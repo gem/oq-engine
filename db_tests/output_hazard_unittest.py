@@ -263,29 +263,57 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(round_float(maximum), round_float(output.max_value))
 
 
-class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
-    """
-    Unit tests for the HazardCurveDBWriter class, which serializes
-    hazard curvess to the database.
-    """
+class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for hazard curve db reader/writer test"""
+    IMLS = [0.778, 1.09, 1.52, 2.13]
+
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
+    def setUp(self):
+        self.job = self.setup_classic_job()
+        self.session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        self.display_name = os.path.basename(output_path)
+
+        self.writer = HazardCurveDBWriter(self.session, output_path,
+                                          self.job.id)
+        self.reader = HazardCurveDBReader(self.session)
+
+    def sort(self, values):
+        def sort_key(v):
+            return v[0].longitude, v[0].latitude, v[1].get('statistics')
+
+        return sorted(values, key=sort_key)
+
+    def normalize(self, values):
+        def norm(dic):
+            dic = dict(dic)
+
+            # remove keys not stored in the database
+            for k in ['IMLValues', 'investigationTimeSpan', 'IMT']:
+                dic.pop(k, None)
+
+            return dic
+
+        return self.sort((s, norm(v)) for s, v in values)
+
+
+class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
+    """
+    Unit tests for the HazardCurveDBWriter class, which serializes
+    hazard curvess to the database.
+    """
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
-        self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
-        output_path = self.generate_output_path(self.job)
-        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
-
         # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hcw.serialize(HAZARD_CURVE_DATA)
+        self.writer.serialize(HAZARD_CURVE_DATA)
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -300,7 +328,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         for hcd in output.hazardcurvedata_set:
             for hcdn in hcd.hazardcurvenodedata_set:
-                location = hcdn.location.coords(session)
+                location = hcdn.location.coords(self.session)
                 node = (Site(location[0], location[1]),
                         {'PoEValues': hcdn.poes})
                 if hcd.end_branch_label:
@@ -312,23 +340,34 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
                 inserted_data.append(node)
 
-        def normalize(values):
-            def sort_key(v):
-                return v[0].longitude, v[0].latitude, v[1]
+        self.assertEquals(self.normalize(HAZARD_CURVE_DATA),
+                          self.normalize(inserted_data))
 
-            def norm(dic):
-                dic = dict(dic)
 
-                # remove keys not stored in the database
-                for k in ['IMLValues', 'investigationTimeSpan', 'IMT']:
-                    dic.pop(k, None)
+class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
+    """
+    Unit tests for the HazardMapDBReader class, which deserializes
+    hazard maps from the database.
+    """
+    def test_deserialize(self):
+        """Hazard map is read back correctly"""
+        self.writer.serialize(HAZARD_CURVE_DATA)
 
-                return dic
+        data = self.reader.deserialize(self.writer.output.id)
 
-            return sorted([(s, norm(v)) for s, v in values], key=sort_key)
+        def _normalize(data):
+            result = []
 
-        self.assertEquals(normalize(HAZARD_CURVE_DATA),
-                          normalize(inserted_data))
+            for pt, val in data:
+                new = val.copy()
+                new['investigationTimeSpan'] = \
+                    float(new['investigationTimeSpan'])
+                result.append((pt, new))
+
+            return result
+
+        self.assertEquals(self.sort(_normalize(HAZARD_CURVE_DATA)),
+                          self.sort(_normalize(data)))
 
 
 class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
