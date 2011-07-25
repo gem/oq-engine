@@ -39,23 +39,6 @@ def singleton(cls):
     return getinstance
 
 
-class Memoize:
-    """ This decorator enables method/function caching in memory
-        It is a bit faster than MemoizeMutable
-    """
-    def __init__(self, fun):
-        self.fun = fun
-        self.mem = {}
-
-    def __call__(self, *args, **kwargs):
-        if (args, str(kwargs)) in self.mem:
-            return self.mem[args, str(kwargs)]
-        else:
-            tmp = self.fun(*args, **kwargs)
-            self.mem[args, str(kwargs)] = tmp
-            return tmp
-
-
 # Memoize taken from the Python Cookbook that handles also unhashable types
 class MemoizeMutable:
     """ This decorator enables method/function caching in memory
