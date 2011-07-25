@@ -630,7 +630,6 @@ class VulnerabilityFunction(object):
         assert all(x >= 0.0 and x <= 1.0 for x in self._loss_ratios), \
             "Loss ratio values must be in the interval [0.0, 1.0]."
 
-
     def __eq__(self, other):
         """
         Compares IML, loss ratio, and CoV values to determine equality.
@@ -755,7 +754,7 @@ class VulnerabilityFunction(object):
         in the form of (iml, mean loss ratio, cov)."""
         for index in range(len(self.imls)):
             yield(
-                (self.imls[index],self.loss_ratios[index], self.covs[index]))
+                (self.imls[index], self.loss_ratios[index], self.covs[index]))
 
     def to_json(self):
         """
