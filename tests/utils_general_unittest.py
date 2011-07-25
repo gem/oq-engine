@@ -54,6 +54,31 @@ class MemoizerTestCase(unittest.TestCase):
     def setUp(self):
         self.counter = 0
 
+    def test_memoizer(self):
+        """ Tests the caching of 'normal' types """
+
+        @general.Memoize
+        def my_memoized_method(mystring, myint):
+            """ the memoized decorated method """
+            self.counter += 1
+            return self.counter
+
+        # not cached
+        my_memoized_method('bla', 1)
+
+        # cached with return values
+        self.assertEqual(1, my_memoized_method('bla', 1))
+
+        # should be called only one time
+        self.assertEqual(self.counter, 1)
+
+
+class MemoizerMutableTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.general.MemoizeMutable"""
+
+    def setUp(self):
+        self.counter = 0
+
     def test_unashable_types(self):
         """ Tests 'unhashable' types like dict, lists """
 
