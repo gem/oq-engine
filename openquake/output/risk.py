@@ -342,7 +342,7 @@ class LossMapDBWriter(writer.DBWriter):
         self.session.flush()
 
 
-def create_loss_map_writer(nrml_path, params):
+def create_loss_map_writer(deterministic, nrml_path, params):
     """Create a loss map writer observing the settings in the config file.
 
     :param str nrml_path: the full path of the XML/NRML representation of the
@@ -356,8 +356,14 @@ def create_loss_map_writer(nrml_path, params):
 
     db_flag = params["SERIALIZE_RESULTS_TO_DB"]
     if db_flag.lower() == "false":
-        return LossMapXMLWriter(nrml_path)
+        if deterministic:
+            return LossMapXMLWriter(nrml_path)
+        else:
+            # No XML schema for non-deterministic maps yet (see bug 805434)
+            return None
     else:
+        # Both deterministic and non-deterministic maps are stored in the same
+        # table
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
