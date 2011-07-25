@@ -520,3 +520,15 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         # same thing, except the input is a numpy.ndarray type:
         self.assertTrue(allclose(expected_covs,
             self.test_func.cov_for(numpy.array(test_input))))
+
+    def test_is_empty(self):
+        """
+        Test the 'is_empty' property of a vulnerability function.
+        """
+        empty_func = shapes.VulnerabilityFunction([], [], [])
+
+        # Test empty function:
+        self.assertTrue(empty_func.is_empty)
+
+        # Test non-empty function:
+        self.assertFalse(self.test_func.is_empty)
