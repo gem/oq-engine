@@ -191,7 +191,7 @@ def _compute_pes_from_imls(hazard_curve, imls):
     :type imls: list
     """
 
-    return array([hazard_curve.ordinate_for(iml) for iml in imls])
+    return hazard_curve.ordinate_for(imls)
 
 
 def _convert_pes_to_pos(hazard_curve, imls):
