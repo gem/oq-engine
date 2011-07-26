@@ -26,4 +26,4 @@ INSERT INTO admin.revision_info(artefact, revision) VALUES('openquake/admin', '0
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/eqcat', '0.3.9-1', 2);
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/oqmif', '0.4.2', 1);
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/pshai', '0.3.9-1', 6);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.3.9-1', 22);
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.4.2', 1);
