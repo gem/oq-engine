@@ -146,7 +146,6 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(expected_coord_list, actual_coord_list)
 
-
     def test_clip_low_iml_values(self):
         """
         Test :py:method:`openquake.shapes.range_clip` to
@@ -217,7 +216,6 @@ class ShapesTestCase(unittest.TestCase):
         # same test, except with numpy.array-type input:
         self.assertTrue(allclose(expected_result,
             shapes.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
-
 
 
 class CurveTestCase(unittest.TestCase):
@@ -349,7 +347,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
             self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD)
-
 
     def test_from_dict(self):
         """
@@ -570,7 +567,8 @@ class SiteTestCase(unittest.TestCase):
 
     def test_eq_rounded_lon_lat(self):
         """
-        Test equality comparison when constructing Sites from lon/lat values which need to be rounded.
+        Test equality comparison when constructing Sites from lon/lat values
+        which need to be rounded.
         """
         site1 = shapes.Site(-121.00000004, 29.00000006)
         site2 = shapes.Site(-121.0, 29.0000001)

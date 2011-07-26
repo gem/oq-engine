@@ -303,7 +303,9 @@ class JobTestCase(unittest.TestCase):
         """
         Test that the proper sites are read from a job configuration.
 
-        Most importantly, we want to make sure no duplicate sites are read. See this bug:
+        Most importantly, we want to make sure no duplicate sites are read.
+
+        See this bug:
         https://bugs.launchpad.net/openquake/+bug/812395
         """
         job_config_path = 'smoketests/simplecase/config.gem'

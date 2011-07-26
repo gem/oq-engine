@@ -329,7 +329,8 @@ class Site(object):
         return self.point.y
 
     def __eq__(self, other):
-        return self.longitude == other.longitude and self.latitude == other.latitude
+        return self.longitude == other.longitude \
+            and self.latitude == other.latitude
 
     def __ne__(self, other):
         return not self == other
@@ -442,6 +443,7 @@ class FieldSet(object):
         """Pop off the fields sequentially"""
         for field in self.fields.values():
             yield Field.from_dict(field, grid=self.grid)
+
 
 def range_clip(val, val_range):
     """
