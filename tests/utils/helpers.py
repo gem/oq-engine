@@ -31,6 +31,7 @@ import subprocess
 import guppy
 
 from openquake import flags
+from openquake.job import Job
 from openquake.logs import LOG
 from openquake import producer
 from openquake import settings
@@ -69,6 +70,20 @@ def smoketest_file(file_name):
     directory """
     return os.path.join(
         os.path.dirname(__file__), "../../smoketests", file_name)
+
+
+def job_from_file(config_file_path):
+    """
+    Create a Job instance from the given configuration file.
+
+    The results are configured to go to XML files.  *No* database record will
+    be stored for the job.  This allows running test on jobs without requiring
+    a database.
+    """
+
+    # Passing an OPENQUAKE_JOB_ID prevents the creation of a database record
+    # for the job
+    return Job.from_file(config_file_path, 'xml', {'OPENQUAKE_JOB_ID': '1'})
 
 
 class WordProducer(producer.FileProducer):
