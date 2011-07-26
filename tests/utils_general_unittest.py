@@ -48,7 +48,7 @@ class SingletonTestCase(unittest.TestCase):
         self.assertTrue(instance3 is instance1)
 
 
-class MemoizerMutableTestCase(unittest.TestCase):
+class MemoizerTestCase(unittest.TestCase):
     """Tests the behaviour of utils.general.MemoizeMutable"""
 
     def setUp(self):
