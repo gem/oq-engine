@@ -25,6 +25,7 @@ import json
 import math
 import numpy
 
+from itertools import izip
 from numpy import zeros
 from numpy import empty
 from numpy import allclose
@@ -766,9 +767,7 @@ class VulnerabilityFunction(object):
     def __iter__(self):
         """Iterate on the values of this function, returning triples
         in the form of (iml, mean loss ratio, cov)."""
-        for index in range(len(self.imls)):
-            yield(
-                (self.imls[index], self.loss_ratios[index], self.covs[index]))
+        return izip(self.imls, self.loss_ratios, self.covs)
 
     def to_json(self):
         """
