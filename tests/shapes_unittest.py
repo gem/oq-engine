@@ -155,3 +155,15 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(exp_lon, site.longitude)
         self.assertEqual(exp_lat, site.latitude)
+
+    def test_abscissa_for_is_correct(self):
+        curve_params = [(5.0, 0.138), (6.0, 0.099),
+                    (7.0, 0.068), (8.0, 0.041)]
+
+        expected_xvalues = [curve_param[0] for curve_param in curve_params]
+        y_values = [curve_param[1] for curve_param in curve_params]
+
+        curve = shapes.Curve(curve_params)
+
+        self.assertEqual(curve.abscissa_for(y_values).tolist(), 
+                expected_xvalues)
