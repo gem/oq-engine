@@ -443,6 +443,59 @@ class FieldSet(object):
         for field in self.fields.values():
             yield Field.from_dict(field, grid=self.grid)
 
+def range_clip(val, val_range):
+    """
+    'Clip' a value (or sequence of values) to the
+    specified range.
+
+    Consider the example IML range [0.005, 0.007, 0.009].
+
+    If the input IML value is less than the min value (0.005), return the
+    min value.
+
+    If the input IML value is greater than the max value (0.009), return
+    the max value.
+
+    Otherwise, the IML will not change.
+
+    :param val: numeric value(s) to clip
+    :type val: float, list/tuple of floats, or :py:class:`numpy.ndarray` of
+        floats
+    :param val_range: This is the range we 'clip' the input value(s) to. The
+        range values should be arranged in ascending order with no duplicates.
+        The length of the range must be at least 2 elements.
+    :type val_range: 1-dimensional :py:class:`numpy.ndarray`
+
+    :returns: Clipped value(s).
+        If the input type is a single value, return a numpy numeric type (such
+        as numpy.float64).
+        If the input val is a sequence (list, tuple or
+        :py:class:`numpy.ndarray`), return a :py:class:`numpy.ndarray` of
+        clipped values.
+    """
+    assert len(val_range) >= 2, "val_range must contain at least 2 elements"
+    assert list(val_range) == sorted(set(val_range)), \
+        "val_range must be arranged in ascending order with no duplicates"
+
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        # convert to numpy.array so we can use numpy.putmask:
+        val = numpy.array(val)
+
+        # clip low values:
+        numpy.putmask(val, val < val_range[0], val_range[0])
+
+        # clip high values:
+        numpy.putmask(val, val > val_range[-1], val_range[-1])
+
+    else:
+        # should be a single (float) value
+        if val < val_range[0]:
+            val = val_range[0]
+        elif val > val_range[-1]:
+            val = val_range[-1]
+
+    return val
+
 
 class Curve(object):
     """This class defines a curve (discrete function)
@@ -546,6 +599,8 @@ class Curve(object):
             this is very useful to speed up the computation and feed
             "directly" numpy
         """
+
+        x_value = range_clip(x_value, self.x_values)
 
         y_values = self.y_values
 
@@ -668,49 +723,6 @@ class VulnerabilityFunction(object):
         """
         return len(self.imls) == 0
 
-    def _clip_iml(self, iml):
-        """
-        'Clip' an IML value (or sequence of values) to the
-        range defined for this vulnerability function.
-
-        Consider the example IML range [0.005, 0.007, 0.009].
-
-        If the input IML value is less than the min value (0.005), return the
-        min value.
-
-        If the input IML value is greater than the max value (0.009), return
-        the max value.
-
-        Otherwise, the IML will not change.
-
-        :param iml: IML value
-        :type iml: float, list/tuple of floats, or :py:class:`numpy.ndarray` of
-            floats
-
-        :returns: Clipped IML value(s). If the input type is a single float,
-            return a float. If the input type is a sequence (list, tuple or
-            :py:class:`numpy.ndarray`), return a :py:class:`numpy.ndarray` of
-            clipped values.
-        """
-        if isinstance(iml, (list, tuple, numpy.ndarray)):
-            # convert to numpy.array so we can use numpy.putmask:
-            iml = numpy.array(iml)
-
-            # clip low values:
-            numpy.putmask(iml, iml < self.imls[0], self.imls[0])
-
-            # clip high values:
-            numpy.putmask(iml, iml > self.imls[-1], self.imls[-1])
-
-        else:
-            # should be a single (float) value
-            if iml < self.imls[0]:
-                iml = self.imls[0]
-            elif iml > self.imls[-1]:
-                iml = self.imls[-1]
-
-        return iml
-
     def loss_ratio_for(self, iml):
         """
         Given 1 or more IML values, interpolate the corresponding loss ratio
@@ -726,7 +738,7 @@ class VulnerabilityFunction(object):
         :returns: :py:class:`numpy.ndarray` containing a number of interpolated
             values equal to the size of the input (1 or many)
         """
-        iml = self._clip_iml(iml)
+        iml = range_clip(iml, self.imls)
 
         return interp1d(self.imls, self.loss_ratios)(iml)
 
@@ -745,7 +757,7 @@ class VulnerabilityFunction(object):
         :returns: :py:class:`numpy.ndarray` containing a number of interpolated
             values equal to the size of the input (1 or many)
         """
-        iml = self._clip_iml(iml)
+        iml = range_clip(iml, self.imls)
 
         return interp1d(self.imls, self.covs)(iml)
 

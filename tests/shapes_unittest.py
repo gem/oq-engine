@@ -48,6 +48,8 @@ def coord_list_from_wkt(wkt):
 
 class ShapesTestCase(unittest.TestCase):
 
+    TEST_IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
+
     def test_round_float(self):
         """
         This test exercises the :py:function:`openquake.utils.round_float`
@@ -160,24 +162,97 @@ class ShapesTestCase(unittest.TestCase):
         self.assertEqual(exp_lon, site.longitude)
         self.assertEqual(exp_lat, site.latitude)
 
+    def test_clip_low_iml_values(self):
+        """
+        Test :py:method:`openquake.shapes.range_clip` to
+        ensure that low values are clipped to the lowest valid value in the
+        IML range.
+        """
+        self.assertEqual(0.005, shapes.range_clip(0.0049, self.TEST_IMLS))
+
+    def test_clip_low_imls_many_values(self):
+        """
+        Test :py:method:`openquake.shapes.range_clip` to
+        ensure that low values are clipped to the lowest valid value in the
+        IML range.
+        """
+        expected_imls = numpy.array([0.005, 0.005, 0.005])
+        test_input = [0.0049, 0.00001, 0.002]
+
+        self.assertTrue(allclose(expected_imls,
+            shapes.range_clip(test_input, self.TEST_IMLS)))
+        # same test, except with a numpy.array-type input:
+        self.assertTrue(allclose(expected_imls,
+            shapes.range_clip(numpy.array(test_input), self.TEST_IMLS)))
+
+    def test_clip_high_iml_values(self):
+        """
+        Test :py:method:`openquake.shapes.range_clip` to
+        ensure that the high values are clipped to the highest valid value in
+        the IML range.
+        """
+        self.assertEqual(0.0269, shapes.range_clip(0.027, self.TEST_IMLS))
+
+    def test_clip_high_imls_many_values(self):
+        """
+        Test :py:method:`openquake.shapes.range_clip` to
+        ensure that the high values are clipped to the highest valid value in
+        the IML range.
+        """
+        expected_imls = numpy.array([0.0269, 0.0269, 0.0269])
+        test_input = [0.027, 0.3, 10]
+
+        self.assertTrue(allclose(expected_imls,
+            shapes.range_clip(test_input, self.TEST_IMLS)))
+        # same test, except with a numpy.array-type input:
+        self.assertTrue(allclose(expected_imls,
+            shapes.range_clip(numpy.array(test_input), self.TEST_IMLS)))
+
+    def test_clip_iml_with_normal_value(self):
+        """
+        Test :py:method:`openquake.shapes.range_clip` to
+        ensure that normal values (values within the defined IML range) are not
+        changed.
+        """
+        valid_imls = numpy.array([0.005, 0.0051, 0.0268, 0.0269])
+        for i in valid_imls:
+            self.assertEqual(i, shapes.range_clip(i, valid_imls))
+
+    def test_clip_imls_with_many_normal_values(self):
+        """
+        Test :py:method:`openquake.shapes.range_clip` to
+        ensure that normal values (values within the defined IML range) are not
+        changed.
+        """
+        valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
+        expected_result = numpy.array(valid_imls)
+
+        self.assertTrue(allclose(expected_result,
+            shapes.range_clip(valid_imls, self.TEST_IMLS)))
+        # same test, except with numpy.array-type input:
+        self.assertTrue(allclose(expected_result,
+            shapes.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
+
+
 
 class CurveTestCase(unittest.TestCase):
     """
-    Tests for the :py:class:`openquake.shapes.Curve` class.
+    Tests for :py:class:`openquake.shapes.Curve`.
     """
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         # simple curve: f(x) = x^2
         x_vals = [1, 2, 3]
         y_vals = [x ** 2 for x in x_vals]
-        self.simple_curve = shapes.Curve(zip(x_vals, y_vals))
+        cls.simple_curve = shapes.Curve(zip(x_vals, y_vals))
 
         # straight line
-        self.straight_curve = shapes.Curve(zip(range(1, 4), range(1, 4)))
+        cls.straight_curve = shapes.Curve(zip(range(1, 4), range(1, 4)))
 
     def test_ordinate_for_basic(self):
         """
-        Test that we can find the appropriate y value given the basic curve
+        Test that we can find the appropriate y value given the basic Curve
         definition.
         """
         self.assertEqual(1, self.simple_curve.ordinate_for(1))
@@ -186,17 +261,30 @@ class CurveTestCase(unittest.TestCase):
 
     def test_ordinate_for_interpolate(self):
         """
-        Test that we can find the appropriate y value by interpolating.
+        Test that we can find the appropriate y value on a Curve by
+        interpolating.
         """
         # Since this line is straight, the interpolated y value should be the
         # same as the x value passed to ordinate_for.
         self.assertEqual(1.11, self.straight_curve.ordinate_for(1.11))
         self.assertEqual(2.9999, self.straight_curve.ordinate_for(2.9999))
 
+    def test_curve_ordinate_for_clipping(self):
+        """
+        Test that :py:method:`openquake.shapes.Curve.ordinate_for` properly
+        clips input values to the valid range defined (and thus, doesn't throw
+        interpolation errors).
+        """
+        # test low-end:
+        self.assertEqual(1.0, self.straight_curve.ordinate_for(0.9))
+
+        # test high-end:
+        self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
+
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
     """
-    Test for the :py:class`openquake.shapes.VulnerabilityFunction` class.
+    Test for :py:class:`openquake.shapes.VulnerabilityFunction`.
     """
     IMLS_GOOD = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
     IMLS_BAD = [-0.1, 0.007, 0.0098, 0.0137, 0.0192, 0.0269]
@@ -218,7 +306,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         cls.test_func = shapes.VulnerabilityFunction(cls.IMLS_GOOD,
             cls.LOSS_RATIOS_GOOD, cls.COVS_GOOD)
 
-    def test_constructor_with_good_input(self):
+    def test_vuln_func_constructor_with_good_input(self):
         """
         This test exercises the VulnerabilityFunction constructor with
         known-good input.
@@ -226,7 +314,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         shapes.VulnerabilityFunction(self.IMLS_GOOD, self.LOSS_RATIOS_GOOD,
             self.COVS_GOOD)
 
-    def test_constructor_raises_on_bad_imls(self):
+    def test_vuln_func_constructor_raises_on_bad_imls(self):
         """
         This test attempts to invoke AssertionErrors by passing 3 different
         sets of bad IMLs to the constructor:
@@ -243,7 +331,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
             self.IMLS_BAD_ORDER, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
 
-    def test_constructor_raises_on_bad_cov(self):
+    def test_vuln_func_constructor_raises_on_bad_cov(self):
         """
         This test attempts to invoke AssertionErrors by passing 3 different
         sets of bad CoV values to the constructor:
@@ -260,7 +348,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
             self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_TOO_LONG)
 
-    def test_constructor_raises_on_bad_loss_ratios(self):
+    def test_vuln_func_constructor_raises_on_bad_loss_ratios(self):
         """
         This test attempts to invoke AssertionErrors by passing 3 different
         sets of bad loss ratio values to the constructor:
@@ -277,76 +365,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
             self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD)
 
-    def test_clip_low_iml_values(self):
-        """
-        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
-        ensure that low values are clipped to the lowest valid value in the
-        IML range.
-        """
-        self.assertEqual(0.005, self.test_func._clip_iml(0.0049))
-
-    def test_clip_low_imls_many_values(self):
-        """
-        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
-        ensure that low values are clipped to the lowest valid value in the
-        IML range.
-        """
-        expected_imls = numpy.array([0.005, 0.005, 0.005])
-        test_input = [0.0049, 0.00001, 0.002]
-
-        self.assertTrue(allclose(expected_imls,
-            self.test_func._clip_iml(test_input)))
-        # same test, except with a numpy.array-type input:
-        self.assertTrue(allclose(expected_imls,
-            self.test_func._clip_iml(numpy.array(test_input))))
-
-    def test_clip_high_iml_values(self):
-        """
-        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
-        ensure that the high values are clipped to the highest valid value in
-        the IML range.
-        """
-        self.assertEqual(0.0269, self.test_func._clip_iml(0.027))
-
-    def test_clip_high_imls_many_values(self):
-        """
-        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
-        ensure that the high values are clipped to the highest valid value in
-        the IML range.
-        """
-        expected_imls = numpy.array([0.0269, 0.0269, 0.0269])
-        test_input = [0.027, 0.3, 10]
-
-        self.assertTrue(allclose(expected_imls,
-            self.test_func._clip_iml(test_input)))
-        # same test, except with a numpy.array-type input:
-        self.assertTrue(allclose(expected_imls,
-            self.test_func._clip_iml(numpy.array(test_input))))
-
-    def test_clip_iml_with_normal_value(self):
-        """
-        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
-        ensure that normal values (values within the defined IML range) are not
-        changed.
-        """
-        valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
-        for i in valid_imls:
-            self.assertEqual(i, self.test_func._clip_iml(i))
-
-    def test_clip_imls_with_many_normal_values(self):
-        """
-        Test :py:method:`openquake.shapes.VulnerabilityFunction._clip_iml` to
-        ensure that normal values (values within the defined IML range) are not
-        changed.
-        """
-        valid_imls = [0.005, 0.0269, 0.0051, 0.0268]
-        expected_result = numpy.array(valid_imls)
-
-        self.assertTrue(allclose(expected_result,
-            self.test_func._clip_iml(valid_imls)))
-        # same test, except with numpy.array-type input:
-        self.assertTrue(allclose(expected_result,
-            self.test_func._clip_iml(numpy.array(valid_imls))))
 
     def test_from_dict(self):
         """
