@@ -342,7 +342,7 @@ class Job(object):
 
         gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
 
-        # run KVS garbage collection aynchronously
+        # run KVS garbage collection asynchronously
         # stdout goes to /dev/null to silence any output from the GC
         subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
 
@@ -358,7 +358,7 @@ class Job(object):
         # we use the exposure, if specified,
         # otherwise we use the input region
         if self.has(conf.EXPOSURE):
-            sites = self._read_sites_from_exposure()
+            sites = read_sites_from_exposure(self)
             LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
         elif self.region:
             sites = self.region.sites
@@ -376,27 +376,6 @@ class Job(object):
             block = Block(sites)
             self.blocks_keys.append(block.id)
             block.to_kvs()
-
-    def _read_sites_from_exposure(self):
-        """
-        Read the set of sites to compute from the exposure file specified
-        in the job definition.
-        """
-
-        sites = []
-        path = os.path.join(self.base_path, self[conf.EXPOSURE])
-        reader = exposure.ExposurePortfolioFile(path)
-        constraint = self.region
-        if not constraint:
-            constraint = AlwaysTrueConstraint()
-        else:
-            LOG.debug("Constraining exposure parsing to %s" %
-                constraint.polygon)
-
-        for asset_data in reader.filter(constraint):
-            sites.append(asset_data[0])
-
-        return sites
 
     def __getitem__(self, name):
         return self.params[name]
@@ -549,3 +528,33 @@ class BlockSplitter(object):
         if not filtered_sites:
             return
         yield(Block(filtered_sites))
+
+
+def read_sites_from_exposure(job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param job: a Job object with an EXPOSURE parameter defined
+    :type job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(job.base_path, job[conf.EXPOSURE])
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = job.region
+    if not constraint:
+        constraint = AlwaysTrueConstraint()
+    else:
+        LOG.debug("Constraining exposure parsing to %s" %
+            constraint.polygon)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates:
+        if not site in sites:
+            sites.append(site)
+
+    return sites

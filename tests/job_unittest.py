@@ -299,6 +299,25 @@ class JobTestCase(unittest.TestCase):
 
         self.assertNotEqual(job1.job_id, job2.job_id)
 
+    def test_read_sites_from_exposure(self):
+        """
+        Test that the proper sites are read from a job configuration.
+
+        Most importantly, we want to make sure no duplicate sites are read. See this bug:
+        https://bugs.launchpad.net/openquake/+bug/812395
+        """
+        job_config_path = 'smoketests/simplecase/config.gem'
+        test_job = Job.from_file(job_config_path, 'xml')
+
+        expected_sites = [
+            shapes.Site(-118.077721, 33.852034),
+            shapes.Site(-118.067592, 33.855398),
+            shapes.Site(-118.186739, 33.779013)]
+
+        actual_sites = job.read_sites_from_exposure(test_job)
+
+        self.assertEqual(expected_sites, actual_sites)
+
 
 class BlockTestCase(unittest.TestCase):
 
