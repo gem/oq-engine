@@ -444,6 +444,7 @@ class FieldSet(object):
         for field in self.fields.values():
             yield Field.from_dict(field, grid=self.grid)
 
+
 def range_clip(val, val_range):
     """
     'Clip' a value (or sequence of values) to the
