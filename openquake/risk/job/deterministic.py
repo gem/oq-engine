@@ -106,8 +106,7 @@ class DeterministicEventBasedMixin:
             LOGGER.debug("Starting serialization of the loss map...")
 
             # Add a metadata dict in the first list position
-            # TODO(LB): we need to define some meaningful values for the
-            # metadata here. For now, I'm just going to leave it blank.
+            # Note: the metadata is still incomplete (see bug 809410)
             loss_map_metadata = {'deterministic': True}
             loss_map_data.insert(0, loss_map_metadata)
             loss_map_writer.serialize(loss_map_data)
