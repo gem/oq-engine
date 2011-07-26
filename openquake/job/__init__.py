@@ -213,23 +213,38 @@ class Job(object):
         return job
 
     @staticmethod
-    def from_file(config_file, output_type):
-        """ Create a job from external configuration files. """
+    def from_file(config_file, output_type, params=None):
+        """
+        Create a job from external configuration files.
+
+        :param config_file: the external configuration file path
+        :param output_type: where to store results:
+            * 'db' database
+            * 'xml' XML files *plus* database
+        :param params: optional dictionary of default parameters, overridden by
+            the ones read from the config file
+        :type params: :py:class:`dict`
+        """
         config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file))
 
         base_path = os.path.abspath(os.path.dirname(config_file))
-        params = {}
+
+        if params is None:
+            params = {}
+
         sections = []
         for each_config_file in Job.default_configs() + [config_file]:
             new_sections, new_params = parse_config_file(each_config_file)
             sections.extend(new_sections)
             params.update(new_params)
         params['BASE_PATH'] = base_path
+
+        if 'OPENQUAKE_JOB_ID' not in params:
+            params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+
         if output_type == 'db':
             params['SERIALIZE_RESULTS_TO_DB'] = 'True'
-            if 'OPENQUAKE_JOB_ID' not in params:
-                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
         else:
             params['SERIALIZE_RESULTS_TO_DB'] = 'False'
         job = Job(params, sections=sections, base_path=base_path)
