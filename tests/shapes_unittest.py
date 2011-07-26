@@ -234,7 +234,6 @@ class ShapesTestCase(unittest.TestCase):
             shapes.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
 
 
-
 class CurveTestCase(unittest.TestCase):
     """
     Tests for :py:class:`openquake.shapes.Curve`.
@@ -364,7 +363,6 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
         self.assertRaises(AssertionError, shapes.VulnerabilityFunction,
             self.IMLS_GOOD, self.LOSS_RATIOS_TOO_LONG, self.COVS_GOOD)
-
 
     def test_from_dict(self):
         """
