@@ -170,7 +170,14 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
-        self.assertEqual(len(HAZARD_MAP_DATA), len(output.hazardmapdata_set))
+        [hazard_map] = output.hazardmap_set
+
+        self.assertEquals(0.01, hazard_map.poe)
+        self.assertEquals('mean', hazard_map.statistic_type)
+        self.assertEquals(None, hazard_map.quantile)
+
+        self.assertEqual(len(HAZARD_MAP_DATA),
+                         len(hazard_map.hazardmapdata_set))
         self.assertEqual(0, len(output.lossmap_set))
 
     def test_serialize_sets_min_max_values(self):
