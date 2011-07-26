@@ -345,10 +345,15 @@ class LossMapDBWriter(writer.DBWriter):
 def create_loss_map_writer(deterministic, nrml_path, params):
     """Create a loss map writer observing the settings in the config file.
 
-    :param str nrml_path: the full path of the XML/NRML representation of the
+    :param deterministic: Whether the loss map is deterministic (True) or
+        non-deterministic (False)
+    :type deterministic: boolean
+    :param nrml_path: the full path of the XML/NRML representation of the
         loss map.
-    :param dict params: the settings from the OpenQuake engine configuration
+    :type nrml_path: string
+    :param params: the settings from the OpenQuake engine configuration
         file.
+    :type params: :py:class:`dict`
     :returns: None or an instance of
         :py:class:`output.risk.LossMapXMLWriter` or
         :py:class:`output.risk.LossMapDBWriter`
