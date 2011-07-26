@@ -236,11 +236,14 @@ class JobTestCase(unittest.TestCase):
 
         session = get_uiapi_writer_session()
 
-        session.query(OqJob).filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+        session.query(OqJob)\
+            .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
+                                 'xml')
 
         session = get_uiapi_writer_session()
 
-        session.query(OqJob).filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+        session.query(OqJob)\
+            .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
