@@ -422,7 +422,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
     def test_eq(self):
         """
-        Execerise equality comparison of VulnerabilityFunctions. Two functions
+        Exercise equality comparison of VulnerabilityFunctions. Two functions
         created with the same IML, Loss Ratio, and CoV values should be
         considered equal.
         """
@@ -550,3 +550,14 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
 
         # Test non-empty function:
         self.assertFalse(self.test_func.is_empty)
+
+    def test_iter(self):
+        """
+        Test iterability of a vulnerability function.
+        """
+        expected = zip(self.IMLS_GOOD, self.LOSS_RATIOS_GOOD, self.COVS_GOOD)
+
+        # iterate and accumulate all of the vuln function values:
+        actual = [x for x in self.test_func]
+
+        self.assertEqual(expected, actual)
