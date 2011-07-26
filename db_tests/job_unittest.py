@@ -17,14 +17,16 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
+import os
 import unittest
 
+from openquake.job import Job
 from openquake.job import prepare_job
-from geoalchemy import functions as gfn
 
 from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.models import OqJob
 from db_tests import helpers
+from tests.utils import helpers as test_helpers
 
 
 def _toCoordList(polygon):
@@ -216,3 +218,29 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'histories': 1,
              'gm_correlated': False,
              }, self.job.oq_params)
+
+
+CONFIG_FILE = "config.gem"
+
+
+class JobTestCase(unittest.TestCase):
+
+    def tearDown(self):
+        try:
+            os.remove(self.job.super_config_path)
+        except OSError:
+            pass
+
+    def test_job_db_record_for_output_type_db(self):
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_uiapi_writer_session()
+
+        session.query(OqJob).filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+
+    def test_job_db_record_for_output_type_xml(self):
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'xml')
+
+        session = get_uiapi_writer_session()
+
+        session.query(OqJob).filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
