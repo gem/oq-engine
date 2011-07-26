@@ -73,11 +73,6 @@ NRML_SCHEMA_PATH_OLD = \
     os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 
-def generate_job():
-    jobobj = job.Job.from_file(TEST_JOB_FILE, 'xml')
-    return jobobj.id
-
-
 class LogicTreeValidationTestCase(unittest.TestCase):
     """Test XML parsing error handling"""
 
@@ -123,7 +118,7 @@ class HazardEngineTestCase(unittest.TestCase):
         """Construction of LogicTreeProcessor in Java should not throw
         errors, and should have params loaded from KVS."""
 
-        hazengine = job.Job.from_file(TEST_JOB_FILE, 'xml')
+        hazengine = helpers.job_from_file(TEST_JOB_FILE)
         self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
@@ -372,7 +367,7 @@ class HazardEngineTestCase(unittest.TestCase):
                             "schema" % nrml_path)
 
         test_file_path = "smoketests/classical_psha_simple/config.gem"
-        hazengine = job.Job.from_file(test_file_path, 'xml')
+        hazengine = helpers.job_from_file(test_file_path)
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             result_keys = hazengine.execute()
