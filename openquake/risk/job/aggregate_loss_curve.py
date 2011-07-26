@@ -51,7 +51,8 @@ def _for_plotting(loss_curve, time_span):
     return data
 
 
-def compute_aggregate_curve(job):
+# TODO (ac): Update doc!
+def compute_aggregate_curve(job, aggregate_curve):
     """Compute and plot an aggreate loss curve.
 
     This function expects to find in kvs a set of pre computed
@@ -69,16 +70,11 @@ def compute_aggregate_curve(job):
 
         return
 
-    epsilon_provider = general.EpsilonProvider(job.params)
-    aggregate_loss_curve = \
-        prob.AggregateLossCurve.from_kvs(job.id, epsilon_provider)
-
     path = os.path.join(job.params["BASE_PATH"],
             job.params["OUTPUT_DIR"], _filename(job.id))
 
     plotter = curve.CurvePlot(path)
-    plotter.write(_for_plotting(
-            aggregate_loss_curve.compute(),
+    plotter.write(_for_plotting(aggregate_curve,
             job.params["INVESTIGATION_TIME"]), autoscale_y=False)
 
     plotter.close()
