@@ -33,6 +33,7 @@ from openquake.utils.general import MemoizeMutable
 
 STEPS_PER_INTERVAL = 5
 
+
 def compute_loss_ratio_curve(vuln_function, hazard_curve):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
@@ -91,7 +92,7 @@ def _generate_loss_ratios(vuln_function):
 
     # we manually add 0.0 as first loss ratio and 1.0 as last loss ratio
     loss_ratios = concatenate(
-        (array([0.0]), vuln_function.means, array([1.0])))
+        (array([0.0]), vuln_function.loss_ratios, array([1.0])))
 
     return _split_loss_ratios(loss_ratios)
 
@@ -190,7 +191,7 @@ def _compute_pes_from_imls(hazard_curve, imls):
     :type imls: list
     """
 
-    return array([hazard_curve.ordinate_for(iml) for iml in imls])
+    return hazard_curve.ordinate_for(imls)
 
 
 def _convert_pes_to_pos(hazard_curve, imls):
