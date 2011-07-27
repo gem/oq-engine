@@ -114,13 +114,13 @@ class RiskJobMixin(mixins.Mixin):
         them in the underlying KVS system."""
 
         sites = []
-        self.blocks_keys = [] # pylint: disable=W0201
+        self.blocks_keys = []  # pylint: disable=W0201
         region_constraint = self.region
         sites = self._read_sites_from_exposure()
 
         block_count = 0
 
-        for block in split_into_blocks(sites, region_constraint):
+        for block in split_into_blocks(sites):
             self.blocks_keys.append(block.id)
             block.to_kvs()
 
@@ -377,35 +377,28 @@ class Block(object):
         return self.block_id
 
 
-def split_into_blocks(sites, constraint, block_size=BLOCK_SIZE):
+def split_into_blocks(sites, block_size=BLOCK_SIZE):
     """Split the set of sites into blocks. Provide an iterator
     to the blocks.
 
     :param sites: the sites to be splitted.
     :type sites: :py:class:`list`
-    :param constraint: the constraint used. Just the sites that match
-        the constraint are included. If None all sites are included.
-    :type constraint: :py:class:`openquake.shapes.RegionConstraint` object
     :param sites_per_block: the number of sites per block.
     :type sites_per_block: integer
     :returns: for each call on this iterator, the next block is returned.
     :rtype: :py:class:`openquake.risk.general.Block`
     """
 
-    filtered_sites = []
+    block_sites = []
 
     for site in sites:
-        if constraint:
-            if constraint.match(site):
-                filtered_sites.append(site)
-        else:
-            filtered_sites.append(site)
+        block_sites.append(site)
 
-        if len(filtered_sites) == block_size:
-            yield(Block(filtered_sites))
-            filtered_sites = []
+        if len(block_sites) == block_size:
+            yield(Block(block_sites))
+            block_sites = []
 
-    if not filtered_sites:
+    if not block_sites:
         return
 
-    yield(Block(filtered_sites))
+    yield(Block(block_sites))
