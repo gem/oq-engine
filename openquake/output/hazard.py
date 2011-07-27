@@ -534,6 +534,37 @@ def _ensure_attributes_set(attr_list, node):
     return True
 
 
+class HazardMapDBReader(object):
+    def __init__(self, session):
+        self.session = session
+
+    def deserialize(self, output_id):
+        hazard_map = self.session.query(HazardMap) \
+            .filter(HazardMap.output_id == output_id).one()
+        hazard_map_data = self.session.query(HazardMapData) \
+            .filter(HazardMapData.hazard_map_id == hazard_map.id)
+        params = self.session.query(OqParams) \
+            .join(OqJob) \
+            .join(Output) \
+            .filter(Output.id == output_id).one()
+        points = []
+
+        for datum in hazard_map_data:
+            location = datum.location.coords(self.session)
+
+            points.append(
+                (shapes.Site(location[0], location[1]),
+                {'IML': datum.value,
+                 'IMT': job.REVERSE_ENUM_MAP[params.imt],
+                 'investigationTimeSpan': params.investigation_time,
+                 'poE': hazard_map.poe,
+                 'statistics': hazard_map.statistic_type,
+                 'vs30': params.reference_vs30_value,
+                 }))
+
+        return points
+
+
 class HazardMapDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
