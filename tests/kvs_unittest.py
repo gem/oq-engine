@@ -17,20 +17,18 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import mock
 import os
-import time
+
 import unittest
 
 from openquake import java
 from openquake import logs
 from openquake import kvs
 from openquake import settings
-from openquake import shapes
 from tests.utils import helpers
 
-from openquake.kvs import reader
+
 from openquake.kvs import tokens
 
 
@@ -54,10 +52,6 @@ def read_one_line(path):
 
 
 ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
-MULTIPLE_CURVES_ONE_BRANCH = \
-    read_one_line(helpers.get_data_path('multi-curves-one-branch.json'))
-MULTIPLE_CURVES_MULTIPLE_BRANCHES = \
-    read_one_line(helpers.get_data_path('multi-curves-multi-branches.json'))
 
 
 class KVSTestCase(unittest.TestCase):
@@ -75,7 +69,6 @@ class KVSTestCase(unittest.TestCase):
 
         self.python_client = kvs.get_client(binary=False)
 
-        self.reader = reader.Reader(self.python_client)
         self._delete_test_file()
 
     def tearDown(self):
@@ -100,121 +93,6 @@ class KVSTestCase(unittest.TestCase):
     def test_can_write_in_python_and_read_in_java(self):
         self.python_client.set("KEY", "VALUE")
         self.assertEqual("VALUE", self.java_client.get("KEY"))
-
-    def test_an_empty_model_produces_an_empty_curve_set(self):
-        self.python_client.set("KEY", EMPTY_MODEL)
-        self.assertEqual(0, len(self.reader.as_curve("KEY")))
-
-    def test_an_error_is_raised_if_no_model_cached(self):
-        self.assertRaises(ValueError, self.reader.as_curve, "KEY")
-
-    def test_reads_one_curve(self):
-        self.python_client.set("KEY", ONE_CURVE_MODEL)
-        curves = self.reader.as_curve("KEY")
-
-        self.assertEqual(1, len(curves))
-        self.assertEqual(shapes.Curve(
-                ((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
-
-    def test_reads_multiple_curves_in_one_branch(self):
-        self.python_client.set("KEY", MULTIPLE_CURVES_ONE_BRANCH)
-        curves = self.reader.as_curve("KEY")
-
-        self.assertEqual(2, len(curves))
-        self.assertEqual(shapes.Curve(
-                ((1.0, 5.1), (2.0, 5.2), (3.0, 5.3))), curves[0])
-
-        self.assertEqual(shapes.Curve(
-                ((1.0, 6.1), (2.0, 6.2), (3.0, 6.3))), curves[1])
-
-    def test_reads_multiple_curves_in_multiple_branches(self):
-        self.python_client.set("KEY", MULTIPLE_CURVES_MULTIPLE_BRANCHES)
-        curves = self.reader.as_curve("KEY")
-
-        self.assertEqual(2, len(curves))
-        self.assertEqual(shapes.Curve(
-                ((1.0, 1.8), (2.0, 2.8), (3.0, 3.8))), curves[0])
-
-        self.assertEqual(shapes.Curve(
-                ((1.0, 1.5), (2.0, 2.5), (3.0, 3.5))), curves[1])
-
-    def test_end_to_end_curves_reading(self):
-        # Hazard object model serialization in JSON is tested in the Java side
-        self.java_client.set("KEY", ONE_CURVE_MODEL)
-
-        time.sleep(0.3)
-
-        curves = self.reader.as_curve("KEY")
-
-        self.assertEqual(1, len(curves))
-        self.assertEqual(shapes.Curve(
-                ((1.0, 0.1), (2.0, 0.2), (3.0, 0.3))), curves[0])
-
-    def test_an_empty_model_produces_an_empty_curve_set_nrml(self):
-        self.python_client.set("KEY", EMPTY_MODEL)
-        self.assertEqual(0, len(self.reader.for_nrml("KEY")))
-
-    def test_an_error_is_raised_if_no_model_cached_nrml(self):
-        self.assertRaises(ValueError, self.reader.for_nrml, "KEY")
-
-    def test_reads_one_curve_nrml(self):
-        self.python_client.set("KEY", ONE_CURVE_MODEL)
-        nrmls = self.reader.for_nrml("KEY")
-
-        data = {shapes.Site(2.0, 1.0): {
-                    "IMT": "IMT",
-                    "IDmodel": "FIXED",
-                    "timeSpanDuration": 50.0,
-                    "endBranchLabel": "label",
-                    "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [0.1, 0.2, 0.3]}}
-
-        self.assertEqual(1, len(nrmls.items()))
-        self.assertEquals(data, nrmls)
-
-    def test_reads_multiple_curves_in_one_branch_nrml(self):
-        self.python_client.set("KEY", MULTIPLE_CURVES_ONE_BRANCH)
-        nrmls = self.reader.for_nrml("KEY")
-
-        data = {shapes.Site(2.0, 1.0): {
-                    "IMT": "PGA",
-                    "IDmodel": "FIXED",
-                    "timeSpanDuration": 50.0,
-                    "endBranchLabel": "label",
-                    "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [5.1, 5.2, 5.3]},
-                shapes.Site(4.0, 4.0): {
-                    "IMT": "PGA",
-                    "IDmodel": "FIXED",
-                    "timeSpanDuration": 50.0,
-                    "endBranchLabel": "label",
-                    "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [6.1, 6.2, 6.3]}}
-
-        self.assertEqual(2, len(nrmls.items()))
-        self.assertEquals(data, nrmls)
-
-    def test_reads_multiple_curves_in_multiple_branches_nrml(self):
-        self.python_client.set("KEY", MULTIPLE_CURVES_MULTIPLE_BRANCHES)
-        nrmls = self.reader.for_nrml("KEY")
-
-        data = {shapes.Site(4.0, 4.0): {
-                    "IMT": "PGA",
-                    "IDmodel": "FIXED",
-                    "timeSpanDuration": 50.0,
-                    "endBranchLabel": "label1",
-                    "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [1.8, 2.8, 3.8]},
-                shapes.Site(4.0, 1.0): {
-                    "IMT": "PGA",
-                    "IDmodel": "FIXED",
-                    "timeSpanDuration": 50.0,
-                    "endBranchLabel": "label2",
-                    "IMLValues": [1.0, 2.0, 3.0],
-                    "Values": [1.5, 2.5, 3.5]}}
-
-        self.assertEqual(2, len(nrmls.items()))
-        self.assertEquals(data, nrmls)
 
 
 class TokensTestCase(unittest.TestCase):
