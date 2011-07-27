@@ -272,15 +272,24 @@ class ScriptsToRunTestCase(unittest.TestCase):
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         self.path = "%s/schema/upgrades" % self.tdir
-        self.top = "%s/openquake/pshai/0.3.9-1" % self.path
-        self.path1 = "%s/1" % self.top
-        os.makedirs(self.path1)
-        self.path1d = "%s/1/too_deep" % self.top
-        os.makedirs(self.path1d)
-        self.path2 = "%s/2" % self.top
-        os.makedirs(self.path2)
-        self.path3 = "%s/3" % self.top
-        os.makedirs(self.path3)
+        self.top = "%s/openquake/pshai" % self.path
+        # older revision
+        self.path_38_1 = "%s/0.3.8/1" % self.top
+        os.makedirs(self.path_38_1)
+        self.path_38_5 = "%s/0.3.8/5" % self.top
+        os.makedirs(self.path_38_5)
+        # current revision
+        self.path_39_1 = "%s/0.3.9-1/1" % self.top
+        os.makedirs(self.path_39_1)
+        self.path_39_1d = "%s/0.3.9-1/1/too_deep" % self.top
+        os.makedirs(self.path_39_1d)
+        self.path_39_2 = "%s/0.3.9-1/2" % self.top
+        os.makedirs(self.path_39_2)
+        self.path_39_3 = "%s/0.3.9-1/3" % self.top
+        os.makedirs(self.path_39_3)
+        # newer revision
+        self.path_42_1 = "%s/0.4.2/1" % self.top
+        os.makedirs(self.path_42_1)
 
     def tearDown(self):
         shutil.rmtree(self.tdir)
@@ -291,8 +300,10 @@ class ScriptsToRunTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": self.path, "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        touch("%s/01-a.sql" % self.path1)
-        touch("%s/01-a.sql" % self.path2)
+        touch("%s/01-a.sql" % self.path_38_1)
+        touch("%s/01-a.sql" % self.path_38_5)
+        touch("%s/01-a.sql" % self.path_39_1)
+        touch("%s/01-a.sql" % self.path_39_2)
         self.assertEqual([], scripts_to_run(artefact, rev_info, config))
 
     def test_scripts_to_run_with_available_upgrades(self):
@@ -301,11 +312,16 @@ class ScriptsToRunTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": self.path, "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        touch("%s/01-a.sql" % self.path1)
-        touch("%s/01-b.sql" % self.path2)
-        touch("%s/01-c.sql" % self.path3)
-        touch("%s/02-d.sql" % self.path3)
-        self.assertEqual(["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql"],
+        touch("%s/01-a.sql" % self.path_38_1)
+        touch("%s/01-a.sql" % self.path_39_1)
+        touch("%s/01-a.sql" % self.path_38_5)
+        touch("%s/01-b.sql" % self.path_39_2)
+        touch("%s/01-c.sql" % self.path_39_3)
+        touch("%s/02-d.sql" % self.path_39_3)
+        touch("%s/01-a.sql" % self.path_42_1)
+        touch("%s/02-b.sql" % self.path_42_1)
+        self.assertEqual(["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
+                          "0.4.2/1/01-a.sql", "0.4.2/1/02-b.sql"],
                          scripts_to_run(artefact, rev_info, config))
 
 
