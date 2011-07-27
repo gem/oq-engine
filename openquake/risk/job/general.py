@@ -115,7 +115,6 @@ class RiskJobMixin(mixins.Mixin):
 
         sites = []
         self.blocks_keys = []  # pylint: disable=W0201
-        region_constraint = self.region
         sites = self._read_sites_from_exposure()
 
         block_count = 0
