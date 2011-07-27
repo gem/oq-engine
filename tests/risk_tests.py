@@ -938,6 +938,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         mixin.job_id = self.job_id
         mixin.id = self.job_id
         mixin.vuln_curves = {"ID": self.vuln_function}
+        mixin.params = {}
 
         block = Block.from_kvs(self.block_id)
 
