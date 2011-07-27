@@ -30,7 +30,7 @@ from openquake import shapes
 from tests.utils import helpers
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.job import Block
+from openquake.risk.job.general import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
@@ -99,15 +99,11 @@ class EpsilonProvider(object):
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.vuln_function_1 = shapes.VulnerabilityFunction([
-                (0.01, (0.001, 0.00)),
-                (0.04, (0.022, 0.00)),
-                (0.07, (0.051, 0.00)),
-                (0.10, (0.080, 0.00)),
-                (0.12, (0.100, 0.00)),
-                (0.22, (0.200, 0.00)),
-                (0.37, (0.405, 0.00)),
-                (0.52, (0.700, 0.00))])
+        imls_1 = [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
+        loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7]
+        covs_1 = [0.0] * 8
+        self.vuln_function_1 = shapes.VulnerabilityFunction(imls_1,
+            loss_ratios_1, covs_1)
 
         self.gmfs = GMFs
 
@@ -115,57 +111,29 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 12, 8, 7, 7, 6, 5, 4, 4, 4, 4, 4, 2, 1,
                 1, 1, 1, 1, 1, 1])
 
-        self.vuln_function_2 = shapes.VulnerabilityFunction([
-                (0.00, (0.00, 0.00)), (0.04, (0.00, 0.00)),
-                (0.08, (0.00, 0.00)), (0.12, (0.01, 0.00)),
-                (0.16, (0.04, 0.00)), (0.20, (0.07, 0.00)),
-                (0.24, (0.11, 0.00)), (0.28, (0.15, 0.00)),
-                (0.32, (0.20, 0.00)), (0.36, (0.25, 0.00)),
-                (0.40, (0.30, 0.00)), (0.44, (0.35, 0.00)),
-                (0.48, (0.39, 0.00)), (0.53, (0.43, 0.00)),
-                (0.57, (0.47, 0.00)), (0.61, (0.51, 0.00)),
-                (0.65, (0.55, 0.00)), (0.69, (0.58, 0.00)),
-                (0.73, (0.61, 0.00)), (0.77, (0.64, 0.00)),
-                (0.81, (0.67, 0.00)), (0.85, (0.69, 0.00)),
-                (0.89, (0.71, 0.00)), (0.93, (0.73, 0.00)),
-                (0.97, (0.75, 0.00)), (1.01, (0.77, 0.00)),
-                (1.05, (0.79, 0.00)), (1.09, (0.80, 0.00)),
-                (1.13, (0.81, 0.00)), (1.17, (0.83, 0.00)),
-                (1.21, (0.84, 0.00)), (1.25, (0.85, 0.00)),
-                (1.29, (0.86, 0.00)), (1.33, (0.87, 0.00)),
-                (1.37, (0.88, 0.00)), (1.41, (0.89, 0.00)),
-                (1.45, (0.89, 0.00)), (1.49, (0.90, 0.00)),
-                (1.54, (0.91, 0.00)), (1.58, (0.91, 0.00)),
-                (1.62, (0.92, 0.00)), (1.66, (0.92, 0.00)),
-                (1.70, (0.93, 0.00)), (1.74, (0.93, 0.00)),
-                (1.78, (0.94, 0.00)), (1.82, (0.94, 0.00)),
-                (1.86, (0.94, 0.00)), (1.90, (0.95, 0.00)),
-                (1.94, (0.95, 0.00)), (1.98, (0.95, 0.00)),
-                (2.02, (0.95, 0.00)), (2.06, (0.96, 0.00)),
-                (2.10, (0.96, 0.00)), (2.14, (0.96, 0.00)),
-                (2.18, (0.96, 0.00)), (2.22, (0.97, 0.00)),
-                (2.26, (0.97, 0.00)), (2.30, (0.97, 0.00)),
-                (2.34, (0.97, 0.00)), (2.38, (0.97, 0.00)),
-                (2.42, (0.97, 0.00)), (2.46, (0.98, 0.00)),
-                (2.51, (0.98, 0.00)), (2.55, (0.98, 0.00)),
-                (2.59, (0.98, 0.00)), (2.63, (0.98, 0.00)),
-                (2.67, (0.98, 0.00)), (2.71, (0.98, 0.00)),
-                (2.75, (0.98, 0.00)), (2.79, (0.98, 0.00)),
-                (2.83, (0.98, 0.00)), (2.87, (0.99, 0.00)),
-                (2.91, (0.99, 0.00)), (2.95, (0.99, 0.00)),
-                (2.99, (0.99, 0.00)), (3.03, (0.99, 0.00)),
-                (3.07, (0.99, 0.00)), (3.11, (0.99, 0.00)),
-                (3.15, (0.99, 0.00)), (3.19, (0.99, 0.00)),
-                (3.23, (0.99, 0.00)), (3.27, (0.99, 0.00)),
-                (3.31, (0.99, 0.00)), (3.35, (0.99, 0.00)),
-                (3.39, (0.99, 0.00)), (3.43, (0.99, 0.00)),
-                (3.47, (0.99, 0.00)), (3.52, (0.99, 0.00)),
-                (3.56, (0.99, 0.00)), (3.60, (0.99, 0.00)),
-                (3.64, (0.99, 0.00)), (3.68, (0.99, 0.00)),
-                (3.72, (0.99, 0.00)), (3.76, (0.99, 0.00)),
-                (3.80, (0.99, 0.00)), (3.84, (1.00, 0.00)),
-                (3.88, (1.00, 0.00)), (3.92, (1.00, 0.00)),
-                (3.96, (1.00, 0.00)), (4.00, (1.00, 0.00))])
+        imls_2 = [0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
+            0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
+            0.85, 0.89, 0.93, 0.97, 1.01, 1.05, 1.09, 1.13, 1.17, 1.21, 1.25,
+            1.29, 1.33, 1.37, 1.41, 1.45, 1.49, 1.54, 1.58, 1.62, 1.66, 1.7,
+            1.74, 1.78, 1.82, 1.86, 1.9, 1.94, 1.98, 2.02, 2.06, 2.1, 2.14,
+            2.18, 2.22, 2.26, 2.3, 2.34, 2.38, 2.42, 2.46, 2.51, 2.55, 2.59,
+            2.63, 2.67, 2.71, 2.75, 2.79, 2.83, 2.87, 2.91, 2.95, 2.99, 3.03,
+            3.07, 3.11, 3.15, 3.19, 3.23, 3.27, 3.31, 3.35, 3.39, 3.43, 3.47,
+            3.52, 3.56, 3.6, 3.64, 3.68, 3.72, 3.76, 3.8, 3.84, 3.88, 3.92,
+            3.96, 4.0]
+        loss_ratios_2 = [0.0, 0.0, 0.0, 0.01, 0.04, 0.07, 0.11, 0.15, 0.2,
+            0.25, 0.3, 0.35, 0.39, 0.43, 0.47, 0.51, 0.55, 0.58, 0.61, 0.64,
+            0.67, 0.69, 0.71, 0.73, 0.75, 0.77, 0.79, 0.8, 0.81, 0.83, 0.84,
+            0.85, 0.86, 0.87, 0.88, 0.89, 0.89, 0.9, 0.91, 0.91, 0.92, 0.92,
+            0.93, 0.93, 0.94, 0.94, 0.94, 0.95, 0.95, 0.95, 0.95, 0.96, 0.96,
+            0.96, 0.96, 0.97, 0.97, 0.97, 0.97, 0.97, 0.97, 0.98, 0.98, 0.98,
+            0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.98, 0.99, 0.99, 0.99, 0.99,
+            0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99,
+            0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
+            1.0, 1.0, 1.0]
+        covs_2 = [0.0] * 100
+        self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
+            loss_ratios_2, covs_2)
 
         self.job_id = 1234
 
@@ -286,11 +254,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         to compute the loss ratios.
         """
 
-        vuln_function = shapes.VulnerabilityFunction([
-                (0.10, (0.05, 0.30)),
-                (0.30, (0.10, 0.30)),
-                (0.50, (0.15, 0.20)),
-                (1.00, (0.30, 0.20))])
+        imls = [0.10, 0.30, 0.50, 1.00]
+        loss_ratios = [0.05, 0.10, 0.15, 0.30]
+        covs = [0.30, 0.30, 0.20, 0.20]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077, \
                 -0.4336, 0.3426, 3.5784, 2.7694]
@@ -318,9 +285,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         is zero. So the resulting loss ratio must be zero.
         """
 
-        vuln_function = shapes.VulnerabilityFunction([
-                (0.10, (0.00, 0.30)),
-                (0.30, (0.10, 0.30))])
+        imls = [0.10, 0.30]
+        loss_ratios = [0.00, 0.10]
+        covs = [0.30, 0.30]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         epsilons = [0.5377]
         expected_asset = object()
@@ -779,8 +747,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # values between the imls
         psha.STEPS_PER_INTERVAL = 2
 
-        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.3, 0.2, 0.1]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         lrem = psha._compute_lrem(vuln_function)
 
@@ -823,8 +793,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
                 atol=0.00005))
 
     def test_bin_width_from_imls(self):
-        vuln_function = shapes.VulnerabilityFunction(
-                        [(0.1, 0.05), (0.2, 0.08), (0.4, 0.2), (0.6, 0.4)])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.5, 0.5, 0.5]
+
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
@@ -840,8 +813,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
               (0.36, 0.70), (0.55, 0.40),
               (0.70, 0.01)])
 
-        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.3, 0.2, 0.1]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         loss_ratio_curve = psha.compute_loss_ratio_curve(
                 vuln_function, hazard_curve)
@@ -912,19 +887,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
             {'x': str(log(0.700)), 'y': '0.01'}]}
 
         # Vitor provided this Vulnerability Function
-        self.vuln_function = shapes.VulnerabilityFunction([
-                (0.03, (0.001, 0.00)),
-                (0.04, (0.022, 0.00)),
-                (0.07, (0.051, 0.00)),
-                (0.10, (0.080, 0.00)),
-                (0.12, (0.100, 0.00)),
-                (0.22, (0.200, 0.00)),
-                (0.37, (0.405, 0.00)),
-                (0.52, (0.700, 0.00))])
+        imls_1 = [0.03, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
+        loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.700]
+        covs_1 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.vuln_function = shapes.VulnerabilityFunction(imls_1,
+            loss_ratios_1, covs_1)
 
-        self.vuln_function_2 = shapes.VulnerabilityFunction(
-            [(0.1, (0.05, 0.5)), (0.2, (0.08, 0.3)),
-            (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls_2 = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios_2 = [0.05, 0.08, 0.2, 0.4]
+        covs_2 = [0.5, 0.3, 0.2, 0.1]
+        self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
+            loss_ratios_2, covs_2)
 
         self.job_id = 1234
 
@@ -966,7 +939,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         mixin.id = self.job_id
         mixin.vuln_curves = {"ID": self.vuln_function}
 
-        block = job.Block.from_kvs(self.block_id)
+        block = Block.from_kvs(self.block_id)
 
         asset = {"vulnerabilityFunctionReference": "ID",
                  "assetID": 22.61, "assetValue": 1}
@@ -1003,8 +976,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
               (0.36, 0.70), (0.55, 0.40),
               (0.70, 0.01)])
 
-        vuln_function = shapes.VulnerabilityFunction([(0.1, (0.05, 0.5)),
-              (0.2, (0.08, 0.3)), (0.4, (0.2, 0.2)), (0.6, (0.4, 0.1))])
+        imls = [0.1, 0.2, 0.4, 0.6]
+        loss_ratios = [0.05, 0.08, 0.2, 0.4]
+        covs = [0.5, 0.3, 0.2, 0.1]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         # pre computed values just use one intermediate
         # values between the imls
@@ -1119,9 +1094,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
 class DeterministicEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.vuln_function = shapes.VulnerabilityFunction(
-            [(0.10, (0.05, 0.30)), (0.30, (0.10, 0.30)),
-            (0.50, (0.15, 0.20)), (1.00, (0.30, 0.20))])
+        imls = [0.10, 0.30, 0.50, 1.00]
+        loss_ratios = [0.05, 0.10, 0.15, 0.30]
+        covs = [0.30, 0.30, 0.20, 0.20]
+        self.vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios,
+            covs)
 
         self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                     -0.4336, 0.3426, 3.5784, 2.7694]
