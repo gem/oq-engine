@@ -239,8 +239,8 @@ class RiskJobMixin(mixins.Mixin):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
-        block = job.Block.from_kvs(block_id)
-        for point, asset in self.grid_assets_itearator(
+        block = Block.from_kvs(block_id)
+        for point, asset in self.grid_assets_iterator(
                 block.grid(self.region)):
             site = shapes.Site(asset['lon'], asset['lat'])
 
