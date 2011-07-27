@@ -147,8 +147,7 @@ class ProbabilisticEventMixin():
             gmf_slice = kvs.get_value_json_decoded(key)
 
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
+            for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                         point.column, point.row, asset, gmf_slice)
