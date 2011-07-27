@@ -231,7 +231,7 @@ def perform_upgrade(config):
         rev_data[info[0]] = dict(zip(columns, info[1:]))
     logging.debug(rev_data)
 
-    # Run upgrade scripts (if any) for all rtefacts.
+    # Run upgrade scripts (if any) for all artefacts.
     for artefact, rev_info in rev_data.iteritems():
         scripts = scripts_to_run(artefact, rev_info, config)
         if scripts:
