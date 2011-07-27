@@ -16,21 +16,17 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import mock
 import os
 import unittest
 
-from openquake import shapes
 from tests.utils import helpers
-from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake.job import Job, LOG
-from openquake.job import config
 from openquake.job.mixins import Mixin
+from openquake.risk.job import general
 from openquake.kvs import tokens
-from openquake.risk.job.general import RiskJobMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
@@ -39,8 +35,6 @@ CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
-SITE = shapes.Site(1.0, 1.0)
-EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
@@ -61,9 +55,9 @@ class JobTestCase(unittest.TestCase):
         client.delete(tokens.NEXT_JOB_ID)
 
         self.generated_files = []
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
         self.job_with_includes = \
-            Job.from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES), 'xml')
+            helpers.job_from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
 
         self.generated_files.append(self.job.super_config_path)
         self.generated_files.append(self.job_with_includes.super_config_path)
@@ -112,7 +106,7 @@ class JobTestCase(unittest.TestCase):
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
         job_with_only_hazard = \
-            Job.from_file(helpers.get_data_path(HAZARD_ONLY), 'xml')
+            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
         self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
         FLAGS.include_defaults = True
 
@@ -147,16 +141,19 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin):
-            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+        with Mixin(self.job, general.RiskJobMixin):
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
 
         with Mixin(self.job, ClassicalPSHABasedMixin):
             self.assertTrue(
                 ClassicalPSHABasedMixin in self.job.__class__.__bases__)
 
     def test_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin):
-            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+        with Mixin(self.job, general.RiskJobMixin):
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
+
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
@@ -177,55 +174,10 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(tokens.JOB_KEY_FMT % 1, Job({}).job_id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = Job.from_file(
-            os.path.join(helpers.DATA_DIR, CONFIG_FILE), 'xml')
+        self.job = helpers.job_from_file(
+            os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.id))
-
-    def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                            EXPOSURE_TEST_FILE)})
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        expected_block = job.Block((shapes.Site(9.15000, 45.16667),
-            shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        args = {
-            config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-            config.INPUT_REGION: helpers.get_data_path(
-            REGION_EXPOSURE_TEST_FILE)}
-        a_job = Job(args)
-        self.generated_files.append(a_job.super_config_path)
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        expected_block = job.Block((shapes.Site(9.15, 45.16667),
-                                    shapes.Site(9.15333, 45.122),
-                                    shapes.Site(9.14777, 45.17999)))
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    def test_with_no_partition_we_just_process_a_single_block(self):
-        job.SITES_PER_BLOCK = 1
-
-        # test exposure has 6 assets
-        a_job = Job({config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
-
-        self.generated_files.append(a_job.super_config_path)
-
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        # but we have 1 block instead of 6
-        self.assertEqual(1, len(blocks_keys))
 
     def test_job_calls_cleanup(self):
         """
@@ -240,17 +192,16 @@ class JobTestCase(unittest.TestCase):
         risk_exec_path = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
 
-        with mock.patch('openquake.job.Job._partition'):
-            with mock.patch(haz_exec_path) as haz_exec:
-                haz_exec.return_value = []
+        with mock.patch(haz_exec_path) as haz_exec:
+            haz_exec.return_value = []
 
-                with mock.patch(risk_exec_path) as risk_exec:
-                    risk_exec.return_value = []
+            with mock.patch(risk_exec_path) as risk_exec:
+                risk_exec.return_value = []
 
-                    with mock.patch('openquake.job.Job.cleanup') as clean_mock:
-                        self.job.launch()
+                with mock.patch('openquake.job.Job.cleanup') as clean_mock:
+                    self.job.launch()
 
-                        self.assertEqual(1, clean_mock.call_count)
+                    self.assertEqual(1, clean_mock.call_count)
 
     def test_cleanup_calls_cache_gc(self):
         """
@@ -258,7 +209,7 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=1'],)
+        expected_args = (['python', 'bin/cache_gc.py', '--job=1'], )
 
         with mock.patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
