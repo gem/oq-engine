@@ -153,41 +153,24 @@ class BlockSplitterTestCase(unittest.TestCase):
             (self.site_1, self.site_2, self.site_3)), )
 
         self._assert_blocks_are(
-            expected, (self.site_1, self.site_2, self.site_3),
-            constraint=None, block_size=3)
+            expected, (self.site_1, self.site_2, self.site_3), block_size=3)
 
         expected = (general.Block(
             (self.site_1, self.site_2)), general.Block((self.site_3, )))
 
         self._assert_blocks_are(
-            expected, (self.site_1, self.site_2, self.site_3),
-            constraint=None, block_size=2)
+            expected, (self.site_1, self.site_2, self.site_3), block_size=2)
 
-    def test_splitting_with_region_intersection(self):
-        constraint = shapes.RegionConstraint.from_simple(
-            (0.0, 0.0), (2.0, 2.0))
-
-        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
-                shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
-
-        expected = (
-            general.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
-            general.Block((shapes.Site(2.0, 2.0), )))
-
-        self._assert_blocks_are(expected, sites, constraint, block_size=2)
-
-    def _assert_blocks_are(self, expected, sites, constraint, block_size):
-
+    def _assert_blocks_are(self, expected, sites, block_size):
         for idx, block in enumerate(
-            general.split_into_blocks(sites, constraint, block_size)):
+            general.split_into_blocks(sites, block_size)):
 
             self.assertEqual(expected[idx], block)
 
     def _assert_number_of_blocks_is(self, sites, expected, block_size):
-
         counter = 0
 
-        for _ in general.split_into_blocks(sites, None, block_size):
+        for _ in general.split_into_blocks(sites, block_size):
             counter += 1
 
         self.assertEqual(expected, counter)
