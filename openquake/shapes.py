@@ -330,14 +330,21 @@ class Site(object):
         return self.point.y
 
     def __eq__(self, other):
-        return self.hash() == other.hash()
+        """
+        Compare lat and lon values to determine equality.
+
+        :param other: another Site
+        :type other: :py:class:`openquake.shapes.Site`
+        """
+        return self.longitude == other.longitude \
+            and self.latitude == other.latitude
 
     def __ne__(self, other):
         return not self == other
 
     def equals(self, other):
         """Verbose wrapper around =="""
-        return self.point.equals(other)
+        return self == other
 
     def hash(self):
         """Ugly geohashing function, get rid of this!
