@@ -283,7 +283,7 @@ class RiskJobMixin(mixins.Mixin):
         :type:loss_poe: float
         :param:assets_iterator: an iterator over the assets, returning (point,
             asset) tuples. See
-            :py:class:openquake.risk.job.general.grid_assets_iterator.
+            :py:class:`openquake.risk.job.general.grid_assets_iterator`.
 
         :returns: A list of tuples in the form expected by the
         :py:class:`LossMapWriter.serialize` method:
