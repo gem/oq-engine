@@ -953,9 +953,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         for point in block.grid(mixin.region):
             asset_key = kvs.tokens.asset_key(self.job_id, point.row,
                 point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-
-            for asset in [json.JSONDecoder().decode(x) for x in asset_list]:
+            for asset in kvs.get_list_json_decoded(asset_key):
                 loss_ratio_key = kvs.tokens.loss_ratio_key(
                     self.job_id, point.row, point.column, asset['assetID'])
                 self.assertTrue(kvs.get(loss_ratio_key))
