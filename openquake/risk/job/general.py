@@ -125,22 +125,22 @@ def compute_risk(job_id, block_id, **kwargs):
         return mixed.compute_risk(block_id, **kwargs)
 
 
-def read_sites_from_exposure(job):
+def read_sites_from_exposure(a_job):
     """
     Given the exposure model specified in the job config, read all sites which
     are located within the region of interest.
 
-    :param job: a Job object with an EXPOSURE parameter defined
-    :type job: :py:class:`openquake.job.Job`
+    :param a_job: a Job object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.Job`
 
     :returns: a list of :py:class:`openquake.shapes.Site` objects
     """
 
     sites = []
-    path = os.path.join(job.base_path, job.params[config.EXPOSURE])
+    path = os.path.join(a_job.base_path, a_job.params[config.EXPOSURE])
 
     reader = exposure.ExposurePortfolioFile(path)
-    constraint = job.region
+    constraint = a_job.region
 
     LOG.debug(
         "Constraining exposure parsing to %s" % constraint)
