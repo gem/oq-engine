@@ -202,6 +202,9 @@ class BulkInserter(object):
 
     def flush(self, session):
         """Inserts the entries in the database using a bulk insert query"""
+        if not self.values:
+            return
+
         cursor = session.connection().connection.cursor()
         value_args = []
         for f in self.fields:
