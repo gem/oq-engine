@@ -17,6 +17,8 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+
+import json
 import mock
 import os
 
@@ -37,6 +39,8 @@ LOG = logs.LOG
 TEST_FILE = "nrml_test_result.xml"
 
 EMPTY_MODEL = '{"modelName":"","hcRepList":[],"endBranchLabels":[]}'
+
+TEST_KEY = "a key for testing purposes"
 
 
 def read_one_line(path):
@@ -93,6 +97,14 @@ class KVSTestCase(unittest.TestCase):
     def test_can_write_in_python_and_read_in_java(self):
         self.python_client.set("KEY", "VALUE")
         self.assertEqual("VALUE", self.java_client.get("KEY"))
+
+    def test_get_list_json_decoded(self):
+        data = [{u'1': u'one'}, {u'2': u'two'}, {u'3': u'three'}]
+
+        for item in data:
+            kvs.get_client().rpush(TEST_KEY, json.dumps(item))
+
+        self.assertEqual(kvs.get_list_json_decoded(TEST_KEY), data)
 
 
 class TokensTestCase(unittest.TestCase):
