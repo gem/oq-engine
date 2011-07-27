@@ -16,9 +16,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-"""Mixin proxy for risk jobs, and associated Risk Job Mixin decorators"""
-
+"""Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
 
 import json
 import os
@@ -40,15 +38,24 @@ from openquake.parser import vulnerability
 from celery.decorators import task
 
 LOG = logs.LOG
+BLOCK_SIZE = 100
 
 
 def preload(fn):
-    """ Preload decorator """
+    """Preload decorator."""
 
     def preloader(self, *args, **kwargs):
-        """A decorator for preload steps that must run on the Jobber"""
+        """Define some preliminary steps needed before starting
+        the risk processing. The decorator:
+
+        * reads and stores in KVS the assets
+        * reads and stores in KVS the vulnerability model
+        * splits into blocks and stores in KVS the exposure sites
+        """
+
         self.store_exposure_assets()
         self.store_vulnerability_model()
+        self.partition()
 
         return fn(self, *args, **kwargs)
     return preloader
@@ -56,6 +63,7 @@ def preload(fn):
 
 def output(fn):
     """ Decorator for output """
+
     def output_writer(self, *args, **kwargs):
         """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
@@ -98,21 +106,61 @@ def compute_risk(job_id, block_id, **kwargs):
 
 
 class RiskJobMixin(mixins.Mixin):
-    """ A mixin proxy for Risk jobs """
+    """A mixin proxy for Risk jobs."""
     mixins = {}
 
+    def partition(self):
+        """Split the sites to compute in blocks and store
+        them in the underlying KVS system."""
+
+        sites = []
+        self.blocks_keys = []  # pylint: disable=W0201
+        sites = self._read_sites_from_exposure()
+
+        block_count = 0
+
+        for block in split_into_blocks(sites):
+            self.blocks_keys.append(block.id)
+            block.to_kvs()
+
+            block_count += 1
+
+        LOG.debug("Job has partitioned %s sites into %s blocks" % (
+                len(sites), block_count))
+
+    def _read_sites_from_exposure(self):
+        """Read the sites to compute from the exposure file specified
+        in the job definition."""
+
+        sites = []
+        path = os.path.join(self.base_path, self.params[config.EXPOSURE])
+
+        reader = exposure.ExposurePortfolioFile(path)
+        constraint = self.region
+
+        LOG.debug(
+            "Constraining exposure parsing to %s" % constraint)
+
+        for asset_data in reader.filter(constraint):
+            sites.append(asset_data[0])
+
+        return sites
+
     def store_exposure_assets(self):
-        """ Load exposure assets and write to kvs """
+        """Load exposure assets and write them to KVS."""
+
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
             (self.base_path, self.params[config.EXPOSURE]))
 
         for site, asset in exposure_parser.filter(self.region):
-            # TODO(JMC): This is kludgey
-            asset['lat'] = site.latitude
-            asset['lon'] = site.longitude
+# TODO(ac): This is kludgey (?)
+            asset["lat"] = site.latitude
+            asset["lon"] = site.longitude
             gridpoint = self.region.grid.point_at(site)
-            asset_key = kvs.tokens.asset_key(self.id, gridpoint.row,
-                gridpoint.column)
+
+            asset_key = kvs.tokens.asset_key(
+                self.id, gridpoint.row, gridpoint.column)
+
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
@@ -155,7 +203,7 @@ class RiskJobMixin(mixins.Mixin):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
-        block = job.Block.from_kvs(block_id)
+        block = Block.from_kvs(block_id)
         for point in block.grid(self.region):
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
             asset_list = kvs.get_client().lrange(asset_key, 0, -1)
@@ -272,3 +320,84 @@ class EpsilonProvider(object):
 
 
 mixins.Mixin.register("Risk", RiskJobMixin, order=2)
+
+
+class Block(object):
+    """A block is a collection of sites to compute."""
+
+    def __init__(self, sites, block_id=None):
+        self.sites = tuple(sites)
+
+        if not block_id:
+            block_id = kvs.generate_block_id()
+
+        self.block_id = block_id
+
+    def grid(self, region):
+        """Provide an iterator across the unique grid points within a region,
+         corresponding to the sites within this block."""
+
+        used_points = []
+        for site in self.sites:
+            point = region.grid.point_at(site)
+            if point not in used_points:
+                used_points.append(point)
+                yield point
+
+    def __eq__(self, other):
+        return self.sites == other.sites
+
+    @classmethod
+    def from_kvs(cls, block_id):
+        """Return the block in the underlying KVS system with the given id."""
+
+        raw_sites = kvs.get_value_json_decoded(block_id)
+
+        sites = []
+
+        for raw_site in raw_sites:
+            sites.append(shapes.Site(raw_site[0], raw_site[1]))
+
+        return Block(sites, block_id)
+
+    def to_kvs(self):
+        """Store this block into the underlying KVS system."""
+
+        raw_sites = []
+
+        for site in self.sites:
+            raw_sites.append(site.coords)
+
+        kvs.set_value_json_encoded(self.id, raw_sites)
+
+    @property
+    def id(self):  # pylint: disable=C0103
+        """Return the id of this block."""
+        return self.block_id
+
+
+def split_into_blocks(sites, block_size=BLOCK_SIZE):
+    """Split the set of sites into blocks. Provide an iterator
+    to the blocks.
+
+    :param sites: the sites to be splitted.
+    :type sites: :py:class:`list`
+    :param sites_per_block: the number of sites per block.
+    :type sites_per_block: integer
+    :returns: for each call on this iterator, the next block is returned.
+    :rtype: :py:class:`openquake.risk.general.Block`
+    """
+
+    block_sites = []
+
+    for site in sites:
+        block_sites.append(site)
+
+        if len(block_sites) == block_size:
+            yield(Block(block_sites))
+            block_sites = []
+
+    if not block_sites:
+        return
+
+    yield(Block(block_sites))

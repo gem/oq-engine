@@ -42,7 +42,7 @@ DETERMINISTIC_SMOKE_TEST = helpers.smoketest_file("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
 
 
-def compute_ground_motion_field(self, random_generator):
+def compute_ground_motion_field(self, _random_generator):
     """Stubbed version of the method that computes the ground motion
     field calling java stuff."""
 
@@ -64,19 +64,13 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.kvs_client = kvs.get_client(binary=False)
-        # kvs.flush()
-
-    @classmethod
-    def tearDownClass(cls):
-        # kvs.flush()
-        pass
 
     def setUp(self):
         kvs.flush()
 
         flags.FLAGS.include_defaults = False
 
-        self.job = job.Job.from_file(DETERMINISTIC_SMOKE_TEST, 'xml')
+        self.job = helpers.job_from_file(DETERMINISTIC_SMOKE_TEST)
 
         self.job.params[NUMBER_OF_CALC_KEY] = "1"
 
