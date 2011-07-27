@@ -121,7 +121,7 @@ class ComputationTypeValidator(object):
 
 
 class DeterministicComputationValidator(object):
-    """Validator that if the deterministic calculation
+    """Validator that checks if the deterministic calculation
     mode specified in the configuration file is for an
     hazard + risk job. We don't currently support deterministic
     calculations for hazard jobs only."""
