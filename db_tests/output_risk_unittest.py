@@ -249,7 +249,8 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # LossMapData records
         self.assertEqual(3, len(metadata.lossmapdata_set))
-        [data_a, data_b, data_c] = metadata.lossmapdata_set
+        [data_a, data_b, data_c] = sorted(metadata.lossmapdata_set,
+                                          key=lambda d: d.id)
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords(self.session)))
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
@@ -308,7 +309,8 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # LossMapData records
         self.assertEqual(3, len(metadata.lossmapdata_set))
-        [data_a, data_b, data_c] = metadata.lossmapdata_set
+        [data_a, data_b, data_c] = sorted(metadata.lossmapdata_set,
+                                          key=lambda d: d.id)
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords(self.session)))
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
