@@ -309,12 +309,12 @@ class LossMapDBWriter(writer.DBWriter):
             }
             if self.metadata.deterministic:
                 kwargs.update({
-                    'value': loss.get('mean_loss'),
-                    'std_dev': loss.get('stddev_loss'),
+                    'value': float(loss.get('mean_loss')),
+                    'std_dev': float(loss.get('stddev_loss')),
                 })
             else:
                 kwargs.update({
-                    'value': loss.get('value'),
+                    'value': float(loss.get('value')),
                     'std_dev': 0.0,
                 })
             self.bulk_inserter.add_entry(**kwargs)
@@ -340,6 +340,41 @@ class LossMapDBWriter(writer.DBWriter):
         self.metadata = LossMap(**kwargs)
         self.session.add(self.metadata)
         self.session.flush()
+
+
+def create_loss_map_writer(deterministic, nrml_path, params):
+    """Create a loss map writer observing the settings in the config file.
+
+    :param deterministic: Whether the loss map is deterministic (True) or
+        non-deterministic (False)
+    :type deterministic: boolean
+    :param nrml_path: the full path of the XML/NRML representation of the
+        loss map.
+    :type nrml_path: string
+    :param params: the settings from the OpenQuake engine configuration
+        file.
+    :type params: :py:class:`dict`
+    :returns: None or an instance of
+        :py:class:`output.risk.LossMapXMLWriter` or
+        :py:class:`output.risk.LossMapDBWriter`
+    """
+
+    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
+    if db_flag.lower() == "false":
+        if deterministic:
+            return LossMapXMLWriter(nrml_path)
+        else:
+            # No XML schema for non-deterministic maps yet (see bug 805434)
+            return None
+    else:
+        # Both deterministic and non-deterministic maps are stored in the same
+        # table
+        job_db_key = params.get("OPENQUAKE_JOB_ID")
+        assert job_db_key, "No job db key in the configuration parameters"
+        job_db_key = int(job_db_key)
+
+        return LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
+                               job_db_key)
 
 
 class CurveXMLWriter(BaseXMLWriter):
