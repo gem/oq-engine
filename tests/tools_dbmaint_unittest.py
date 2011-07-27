@@ -40,6 +40,17 @@ def touch(path):
 class RunCmdTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.run_cmd()."""
 
+    def setUp(self):
+        self.lang = ("LANG" in os.environ, os.environ.get("LANG"))
+
+        os.environ["LANG"] = 'C'
+
+    def tearDown(self):
+        if self.lang[0]:
+            os.environ["LANG"] = self.lang[1]
+        else:
+            del os.environ["LANG"]
+
     def test_run_cmd_with_success(self):
         """Invoke a command without errors."""
         code, out, err = run_cmd(["echo", "-n", "Hello world!"])
