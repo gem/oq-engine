@@ -28,7 +28,8 @@ import shutil
 import tempfile
 import unittest
 from tools.dbmaint import (
-    error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run)
+    error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run,
+    version_array)
 
 
 def touch(path):
@@ -388,3 +389,13 @@ class RunScriptsTestCase(unittest.TestCase):
                         "last_update=timezone('UTC'::text, now()) WHERE "
                         "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
                 mock_psql.call_args_list[2][1])
+
+
+class VersionArrayTestCase(unittest.TestCase):
+    """Tests the behaviour of dbmaint.version_array()."""
+
+    def test_version_with_dash(self):
+        self.assertEquals([3, 9, 1], version_array('3.9.1-1'))
+
+    def test_plain_version(self):
+        self.assertEquals([3, 9, 1], version_array('3.9.1'))
