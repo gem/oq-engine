@@ -188,7 +188,7 @@ def _compute_pes_from_imls(hazard_curve, imls):
     :type hazard_curve: :py:class:`openquake.shapes.Curve`
     :param imls: the IMLs (Intensity Measure Level) of the
         vulnerability function used to interpolate the hazard curve.
-    :type imls: list
+    :type imls: :py:class:`list`
     """
 
     return hazard_curve.ordinate_for(imls)
@@ -203,7 +203,7 @@ def _convert_pes_to_pos(hazard_curve, imls):
     :type hazard_curve: :py:class:`openquake.shapes.Curve`
     :param imls: the IMLs (Intensity Measure Level) of the
         vulnerability function used to interpolate the hazard curve.
-    :type imls: list
+    :type imls: :py:class:`list`
     """
 
     return collect(loop(_compute_pes_from_imls(hazard_curve, imls),
