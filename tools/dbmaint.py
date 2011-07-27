@@ -206,8 +206,8 @@ def run_scripts(artefact, rev_info, scripts, config):
         # Keep track of the max. step/revision applied.
         revision, step, _ = script.split('/')
         step = int(step)
-        if (version_key(revision), step) > \
-                (version_key(max_revision), max_step):
+        if ((version_key(revision), step) >
+            (version_key(max_revision), max_step)):
             max_step = step
             max_revision = revision
 
