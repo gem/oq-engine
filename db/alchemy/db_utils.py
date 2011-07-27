@@ -54,7 +54,7 @@ class SessionCache(object):
         assert user not in self.__sessions__, \
             "Internal error: repeated initialization for user '%s'" % user
 
-        db_name = os.environ.get("OQ_ENGINE_DB_NAME", "geonode")
+        db_name = os.environ.get("OQ_ENGINE_DB_NAME", "openquake")
         assert db_name, "No db name set for the OpenQuake engine"
 
         db_host = os.environ.get("OQ_ENGINE_DB_HOST", "localhost")
