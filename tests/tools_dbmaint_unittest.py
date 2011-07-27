@@ -22,6 +22,7 @@
 Unit tests for the tools/dbmaint.py tool.
 """
 
+from distutils import version
 import mock
 import os
 import shutil
@@ -29,7 +30,7 @@ import tempfile
 import unittest
 from tools.dbmaint import (
     error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run,
-    version_array, script_sort_key)
+    version_key, script_sort_key)
 
 
 def touch(path):
@@ -427,21 +428,21 @@ class RunScriptsTestCase(unittest.TestCase):
                 mock_psql.call_args_list[2][1])
 
 
-class VersionArrayTestCase(unittest.TestCase):
-    """Tests the behaviour of dbmaint.version_array()."""
+class VersionKeyTestCase(unittest.TestCase):
+    """Tests the behaviour of dbmaint.version_key()."""
 
     def test_version_with_dash(self):
-        self.assertEquals([3, 9, 1], version_array('3.9.1-1'))
+        self.assertEquals('3.9.1', str(version_key('3.9.1-1')))
 
     def test_plain_version(self):
-        self.assertEquals([3, 9, 1], version_array('3.9.1'))
+        self.assertEquals('3.9.1', str(version_key('3.9.1')))
 
 
 class ScriptSortKeyTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.script_sort_key()."""
 
     def test_sanity(self):
-        self.assertEquals(([0, 3, 9], 7, "01-a.sql"),
+        self.assertEquals((version.StrictVersion("0.3.9"), 7, "01-a.sql"),
                           script_sort_key("0.3.9-1/7/01-a.sql"))
 
     def test_different_revision(self):

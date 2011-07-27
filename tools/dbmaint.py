@@ -31,6 +31,7 @@ migration.
   -U | --user U   : database user to use [default: postgres]
 """
 
+from distutils import version
 import getopt
 import logging
 import subprocess
@@ -120,11 +121,11 @@ def find_scripts(path):
     return [r for r in result if r]
 
 
-def version_array(version):
+def version_key(string):
     # remove the trailing '-<release>' number if any
-    version, _ = (version + '-').split('-', 1)
+    string, _ = (string + '-').split('-', 1)
 
-    return [int(v) for v in version.split('.')]
+    return version.StrictVersion(string)
 
 
 def script_sort_key(script):
@@ -132,7 +133,7 @@ def script_sort_key(script):
     # step, then by file name
     revision, step, name = script.rsplit('/', 3)
 
-    return version_array(revision), int(step), name
+    return version_key(revision), int(step), name
 
 
 def scripts_to_run(artefact, rev_info, config):
@@ -159,7 +160,7 @@ def scripts_to_run(artefact, rev_info, config):
 
     # find upgrade scripts for revisions newer than the current one
     path = "%s/%s" % (config['path'], artefact)
-    current_revision_array = version_array(revision)
+    current_revision_array = version_key(revision)
     if os.path.isdir(path):
         dirs = [os.path.join(path, d)
                     for d in os.listdir(path)
@@ -167,7 +168,7 @@ def scripts_to_run(artefact, rev_info, config):
 
         for dir in dirs:
             path_revision = os.path.basename(dir)
-            dir_revision_array = version_array(path_revision)
+            dir_revision_array = version_key(path_revision)
 
             if dir_revision_array > current_revision_array:
                 result.extend(os.path.join(path_revision, s)
@@ -201,8 +202,8 @@ def run_scripts(artefact, rev_info, scripts, config):
         # Keep track of the max. step/revision applied.
         revision, step, _ = script.split('/')
         step = int(step)
-        if version_array(revision) + [step] > \
-                version_array(max_revision) + [max_step]:
+        if (version_key(revision), step) > \
+                (version_key(max_revision), max_step):
             max_step = step
             max_revision = revision
 
