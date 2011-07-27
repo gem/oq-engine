@@ -189,12 +189,16 @@ def run_scripts(artefact, rev_info, scripts, config):
     :param dict config: the configuration to use: database, host, user, path.
     """
     max_step = 0
+    max_revision = '0.0.0'
+
     for script in scripts:
         # Keep track of the max. step/revision applied.
         revision, step, _ = script.split('/')
         step = int(step)
-        if step > max_step:
+        if version_array(revision) + [step] > \
+                version_array(max_revision) + [max_step]:
             max_step = step
+            max_revision = revision
 
         # Run the SQL script.
         rev = rev_info['revision']
@@ -205,10 +209,10 @@ def run_scripts(artefact, rev_info, scripts, config):
             break
 
     if max_step != 0:
-        cmd = ("UPDATE admin.revision_info SET step=%s, "
+        cmd = ("UPDATE admin.revision_info SET step=%s, revision='%s', "
                "last_update=timezone('UTC'::text, now()) "
                "WHERE artefact='%s' AND revision = '%s'")
-        cmd %= (max_step, artefact, rev_info['revision'])
+        cmd %= (max_step, max_revision, artefact, rev_info['revision'])
         code, out, err = psql(config, cmd=cmd)
 
 
