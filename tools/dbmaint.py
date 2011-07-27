@@ -122,6 +122,8 @@ def find_scripts(path):
 
 
 def version_key(string):
+    """Returns a version representation useful for version comparison"""
+
     # remove the trailing '-<release>' number if any
     string, _ = (string + '-').split('-', 1)
 
@@ -129,8 +131,11 @@ def version_key(string):
 
 
 def script_sort_key(script):
-    # return a sort key to order files first by revision, then by
-    # step, then by file name
+    """
+    Return a sort key to order upgrade scripts first by revision, then
+    by step, then by file name
+    """
+
     revision, step, name = script.rsplit('/', 3)
 
     return version_key(revision), int(step), name
