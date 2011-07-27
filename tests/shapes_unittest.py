@@ -226,9 +226,9 @@ class CurveTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # simple curve: f(x) = x^2
-        x_vals = [1, 2, 3]
-        y_vals = [x ** 2 for x in x_vals]
-        cls.simple_curve = shapes.Curve(zip(x_vals, y_vals))
+        cls.x_vals = [1, 2, 3]
+        cls.y_vals = [x ** 2 for x in cls.x_vals]
+        cls.simple_curve = shapes.Curve(zip(cls.x_vals, cls.y_vals))
 
         # straight line
         cls.straight_curve = shapes.Curve(zip(range(1, 4), range(1, 4)))
@@ -263,6 +263,22 @@ class CurveTestCase(unittest.TestCase):
 
         # test high-end:
         self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
+
+    def test_abscissa_for_in_not_ascending_order_with_dups(self):
+        """ This tests the corner case when:
+            "vals must be arranged in ascending order with no duplicates"
+        """
+        vals = [1, 1, 1]
+
+        curve = shapes.Curve(zip(vals, vals))
+
+        self.assertRaises(AssertionError, curve.abscissa_for, vals)
+
+    def test_abscissa_for_with_multiple_yvals(self):
+        """ tests the correctness of the abscissa method """
+        self.assertEqual(
+            self.simple_curve.abscissa_for(self.y_vals).tolist(), 
+                self.x_vals)
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
