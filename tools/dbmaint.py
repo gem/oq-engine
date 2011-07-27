@@ -119,6 +119,13 @@ def find_scripts(path):
     return [r for r in result if r]
 
 
+def version_array(version):
+    # remove the trailing '-<release>' number if any
+    version, _ = (version + '-').split('-', 1)
+
+    return [int(v) for v in version.split('.')]
+
+
 def scripts_to_run(artefact, rev_info, config):
     """The SQL scripts that need to run given the `artefact` and `rev_info`.
 
