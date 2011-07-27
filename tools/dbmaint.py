@@ -165,7 +165,7 @@ def scripts_to_run(artefact, rev_info, config):
 
     # find upgrade scripts for revisions newer than the current one
     path = "%s/%s" % (config['path'], artefact)
-    current_revision_array = version_key(revision)
+    current_revision_key = version_key(revision)
     if os.path.isdir(path):
         dirs = [os.path.join(path, d)
                     for d in os.listdir(path)
@@ -173,9 +173,8 @@ def scripts_to_run(artefact, rev_info, config):
 
         for dir in dirs:
             path_revision = os.path.basename(dir)
-            dir_revision_array = version_key(path_revision)
 
-            if dir_revision_array > current_revision_array:
+            if version_key(path_revision) > current_revision_key:
                 result.extend(os.path.join(path_revision, s)
                                   for s in find_scripts(dir))
 
