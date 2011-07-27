@@ -71,47 +71,41 @@ class SessionCache(object):
 
 def get_eqcat_writer_session():
     """Return a database session for the `oq_eqcat_writer` user."""
-    assert os.environ.get("OQ_DB_EQCAT_WRITER"), \
-        "OQ_DB_EQCAT_WRITER environment variable not set."
-    return SessionCache().get(os.environ.get("OQ_DB_EQCAT_WRITER"),
-                              os.environ.get("OQ_DB_EQCAT_WRITER_PWD"))
+    db_user = os.environ.get("OQ_DB_EQCAT_WRITER", "oq_eqcat_writer")
+    return SessionCache().get(
+        db_user, os.environ.get("OQ_DB_EQCAT_WRITER_PWD", "openquake"))
 
 
 def get_pshai_writer_session():
     """Return a database session for the `oq_pshai_writer` user."""
-    assert os.environ.get("OQ_DB_PSHAI_WRITER"), \
-        "OQ_DB_PSHAI_WRITER environment variable not set."
-    return SessionCache().get(os.environ.get("OQ_DB_PSHAI_WRITER"),
-                              os.environ.get("OQ_DB_PSHAI_WRITER_PWD"))
+    db_user = os.environ.get("OQ_DB_PSHAI_WRITER", "oq_pshai_writer")
+    return SessionCache().get(
+        db_user, os.environ.get("OQ_DB_PSHAI_WRITER_PWD", "openquake"))
 
 
 def get_uiapi_writer_session():
     """Return a database session for the `oq_uiapi_writer` user."""
-    assert os.environ.get("OQ_DB_UIAPI_WRITER"), \
-        "OQ_DB_UIAPI_WRITER environment variable not set."
-    return SessionCache().get(os.environ.get("OQ_DB_UIAPI_WRITER"),
-                              os.environ.get("OQ_DB_UIAPI_WRITER_PWD"))
+    db_user = os.environ.get("OQ_DB_UIAPI_WRITER", "oq_uiapi_writer")
+    return SessionCache().get(
+        db_user, os.environ.get("OQ_DB_UIAPI_WRITER_PWD", "openquake"))
 
 
 def get_uiapi_reader_session():
     """Return a database session for the `oq_uiapi_reader` user."""
-    assert os.environ.get("OQ_DB_UIAPI_READER"), \
-        "OQ_DB_UIAPI_READER environment variable not set."
-    return SessionCache().get(os.environ.get("OQ_DB_UIAPI_READER"),
-                              os.environ.get("OQ_DB_UIAPI_READER_PWD"))
+    db_user = os.environ.get("OQ_DB_UIAPI_READER", "oq_uiapi_reader")
+    return SessionCache().get(
+        db_user, os.environ.get("OQ_DB_UIAPI_READER_PWD", "openquake"))
 
 
 def get_eqcat_etl_session():
     """Return a database session for the `oq_eqcat_etl` user."""
-    assert os.environ.get("OQ_DB_EQCAT_ETL"), \
-        "OQ_DB_EQCAT_ETL environment variable not set."
-    return SessionCache().get(os.environ.get("OQ_DB_EQCAT_ETL"),
-                              os.environ.get("OQ_DB_EQCAT_ETL_PWD"))
+    db_user = os.environ.get("OQ_DB_EQCAT_ETL", "oq_eqcat_etl")
+    return SessionCache().get(
+        db_user, os.environ.get("OQ_DB_EQCAT_ETL_PWD", "openquake"))
 
 
 def get_pshai_etl_session():
     """Return a database session for the `oq_pshai_etl` user."""
-    assert os.environ.get("OQ_DB_PSHAI_ETL"), \
-        "OQ_DB_PSHAI_ETL environment variable not set."
-    return SessionCache().get(os.environ.get("OQ_DB_PSHAI_ETL"),
-                              os.environ.get("OQ_DB_PSHAI_ETL_PWD"))
+    db_user = os.environ.get("OQ_DB_PSHAI_ETL", "oq_pshai_etl")
+    return SessionCache().get(
+        db_user, os.environ.get("OQ_DB_PSHAI_ETL_PWD", "openquake"))
