@@ -171,12 +171,12 @@ def scripts_to_run(artefact, rev_info, config):
                     for d in os.listdir(path)
                     if os.path.isdir(os.path.join(path, d))]
 
-        for dir in dirs:
-            path_revision = os.path.basename(dir)
+        for dir_name in dirs:
+            path_revision = os.path.basename(dir_name)
 
             if version_key(path_revision) > current_revision_key:
                 result.extend(os.path.join(path_revision, s)
-                                  for s in find_scripts(dir))
+                                  for s in find_scripts(dir_name))
 
     return sorted(result, key=script_sort_key)
 
