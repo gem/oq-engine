@@ -19,8 +19,6 @@
 
 """ Mixin for Classical PSHA Risk Calculation """
 
-import json
-
 from celery.exceptions import TimeoutError
 from math import exp
 
@@ -88,8 +86,7 @@ class ClassicalPSHABasedMixin:
 
             asset_key = kvs.tokens.asset_key(self.id,
                             point.row, point.column)
-            assets = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.JSONDecoder().decode(x) for x in assets]:
+            for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve)
