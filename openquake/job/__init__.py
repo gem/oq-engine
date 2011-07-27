@@ -242,10 +242,13 @@ class Job(object):
         if 'OPENQUAKE_JOB_ID' not in params:
             params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
 
-        if output_type == 'db':
-            params['SERIALIZE_RESULTS_TO_DB'] = 'True'
+            if output_type == 'db':
+                params['SERIALIZE_RESULTS_TO'] = 'db'
+            else:
+                params['SERIALIZE_RESULTS_TO'] = 'db,xml'
         else:
-            params['SERIALIZE_RESULTS_TO_DB'] = 'False'
+            params['SERIALIZE_RESULTS_TO'] = 'xml'
+
         job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file  # pylint: disable=W0201
         return job
