@@ -47,13 +47,14 @@ GRANT ALL ON SEQUENCE pshai.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.source_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE uiapi.loss_asset_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_curve_node_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.gmf_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.loss_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
@@ -170,9 +171,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_curve_node_data TO oq_uiapi_wr
 GRANT SELECT ON uiapi.gmf_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.gmf_data TO oq_uiapi_writer;
 
--- uiapi.loss_asset_data
-GRANT SELECT ON uiapi.loss_asset_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_asset_data TO oq_uiapi_writer;
+-- uiapi.loss_curve
+GRANT SELECT ON uiapi.loss_curve TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_curve TO oq_uiapi_writer;
 
 -- uiapi.loss_curve_data
 GRANT SELECT ON uiapi.loss_curve_data TO GROUP openquake;
@@ -181,6 +182,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_curve_data TO oq_uiapi_writer;
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_uiapi_writer;
+
+-- uiapi.loss_map
+GRANT SELECT ON uiapi.loss_map TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.loss_map TO oq_uiapi_writer;
 
 -- uiapi.loss_map_data
 GRANT SELECT ON uiapi.loss_map_data TO GROUP openquake;

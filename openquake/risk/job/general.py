@@ -81,18 +81,6 @@ def output(fn):
     return output_writer
 
 
-def _serialize(path, **kwargs):
-    """ Serialize the curves """
-    LOG.debug("Serializing %s" % kwargs['curve_mode'])
-    # TODO(JMC): Take mean or max for each site
-    if kwargs["curve_mode"] == "loss_ratio":
-        output_generator = risk_output.LossRatioCurveXMLWriter(path)
-    elif kwargs["curve_mode"] == 'loss':
-        output_generator = risk_output.LossCurveXMLWriter(path)
-    output_generator.serialize(kwargs['curves'])
-    return path
-
-
 def _plot(curve_path, result_path, **kwargs):
     """
     Build a plotter, and then render the plot
@@ -126,13 +114,12 @@ class RiskJobMixin(mixins.Mixin):
         them in the underlying KVS system."""
 
         sites = []
-        self.blocks_keys = [] # pylint: disable=W0201
-        region_constraint = self.region
+        self.blocks_keys = []  # pylint: disable=W0201
         sites = self._read_sites_from_exposure()
 
         block_count = 0
 
-        for block in split_into_blocks(sites, region_constraint):
+        for block in split_into_blocks(sites):
             self.blocks_keys.append(block.id)
             block.to_kvs()
 
@@ -181,10 +168,12 @@ class RiskJobMixin(mixins.Mixin):
         vulnerability.load_vulnerability_model(self.id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
-    def _serialize_and_plot(self, block_id, **kwargs):
+    def _serialize(self, block_id, **kwargs):
         """
-        Build filename/paths for serializing/plotting and call _serialize
-        and then _plot. Return the list of filenames.
+        Build filename/paths for serializing and call _serialize
+
+        Return the list of filenames. The list will be empty if nothing was
+        actually serialized.
         """
 
         if kwargs['curve_mode'] == 'loss_ratio':
@@ -199,9 +188,16 @@ class RiskJobMixin(mixins.Mixin):
         serialize_path = os.path.join(self.base_path,
                                       self['OUTPUT_DIR'],
                                       serialize_filename)
-        results = [_serialize(serialize_path, **kwargs)]
 
-        return results
+        LOG.debug("Serializing %s" % kwargs['curve_mode'])
+        writer = risk_output.create_loss_curve_writer(kwargs['curve_mode'],
+            serialize_path, self.params)
+        if writer:
+            writer.serialize(kwargs['curves'])
+
+            return [serialize_path]
+        else:
+            return []
 
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
@@ -233,11 +229,11 @@ class RiskJobMixin(mixins.Mixin):
                     loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
                     loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
-        results = self._serialize_and_plot(block_id,
+        results = self._serialize(block_id,
                                            curves=loss_ratio_curves,
                                            curve_mode='loss_ratio')
         if loss_curves:
-            results.extend(self._serialize_and_plot(block_id,
+            results.extend(self._serialize(block_id,
                                                 curves=loss_curves,
                                                 curve_mode='loss',
                                                 curve_mode_prefix='loss_curve',
@@ -380,35 +376,28 @@ class Block(object):
         return self.block_id
 
 
-def split_into_blocks(sites, constraint, block_size=BLOCK_SIZE):
+def split_into_blocks(sites, block_size=BLOCK_SIZE):
     """Split the set of sites into blocks. Provide an iterator
     to the blocks.
 
     :param sites: the sites to be splitted.
     :type sites: :py:class:`list`
-    :param constraint: the constraint used. Just the sites that match
-        the constraint are included. If None all sites are included.
-    :type constraint: :py:class:`openquake.shapes.RegionConstraint` object
     :param sites_per_block: the number of sites per block.
     :type sites_per_block: integer
     :returns: for each call on this iterator, the next block is returned.
     :rtype: :py:class:`openquake.risk.general.Block`
     """
 
-    filtered_sites = []
+    block_sites = []
 
     for site in sites:
-        if constraint:
-            if constraint.match(site):
-                filtered_sites.append(site)
-        else:
-            filtered_sites.append(site)
+        block_sites.append(site)
 
-        if len(filtered_sites) == block_size:
-            yield(Block(filtered_sites))
-            filtered_sites = []
+        if len(block_sites) == block_size:
+            yield(Block(block_sites))
+            block_sites = []
 
-    if not filtered_sites:
+    if not block_sites:
         return
 
-    yield(Block(filtered_sites))
+    yield(Block(block_sites))
