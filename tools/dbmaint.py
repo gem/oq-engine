@@ -125,7 +125,7 @@ def version_key(string):
     """Returns a version representation useful for version comparison"""
 
     # remove the trailing '-<release>' number if any
-    string, _ = (string + '-').split('-', 1)
+    string = string.split('-', 1)[0]
 
     return version.StrictVersion(string)
 
