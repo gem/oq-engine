@@ -25,7 +25,6 @@ import numpy
 import unittest
 
 from openquake import kvs
-from openquake import job
 from openquake import shapes
 from utils import helpers
 
@@ -39,8 +38,8 @@ class HazardMapTestCase(unittest.TestCase):
         self.expected_results = _load_expected_results()
         kvs.flush()
 
-        self.engine = job.Job.from_file(
-            helpers.smoketest_file("HazardMapTest/config.gem"), 'xml')
+        self.engine = helpers.job_from_file(
+            helpers.smoketest_file("HazardMapTest/config.gem"))
 
     def bb_we_compute_the_same_sites_in_the_region(self):
         """We compute results on the correct sites.
