@@ -29,7 +29,7 @@ import tempfile
 import unittest
 from tools.dbmaint import (
     error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run,
-    version_array)
+    version_array, script_sort_key)
 
 
 def touch(path):
@@ -435,3 +435,33 @@ class VersionArrayTestCase(unittest.TestCase):
 
     def test_plain_version(self):
         self.assertEquals([3, 9, 1], version_array('3.9.1'))
+
+
+class ScriptSortKeyTestCase(unittest.TestCase):
+    """Tests the behaviour of dbmaint.script_sort_key()."""
+
+    def test_sanity(self):
+        self.assertEquals(([0, 3, 9], 7, "01-a.sql"),
+                          script_sort_key("0.3.9-1/7/01-a.sql"))
+
+    def test_different_revision(self):
+        self.assertTrue(script_sort_key("0.3.9-1/1/01-a.sql") <
+                        script_sort_key("0.4.2/1/01-a.sql"))
+        self.assertTrue(script_sort_key("0.3.9-1/1/01-a.sql") <
+                        script_sort_key("0.3.10/1/01-a.sql"))
+        self.assertTrue(script_sort_key("0.3.9-1/4/01-a.sql") <
+                        script_sort_key("0.4.2/1/01-a.sql"))
+        self.assertTrue(script_sort_key("0.3.9-1/1/04-a.sql") <
+                        script_sort_key("0.4.2/1/01-a.sql"))
+
+    def test_different_step(self):
+        self.assertTrue(script_sort_key("0.4.2/1/01-a.sql") <
+                        script_sort_key("0.4.2/2/01-a.sql"))
+        self.assertTrue(script_sort_key("0.4.2/9/01-a.sql") <
+                        script_sort_key("0.4.2/10/01-a.sql"))
+
+    def test_different_file(self):
+        self.assertTrue(script_sort_key("0.3.9-1/1/01-a.sql") <
+                        script_sort_key("0.3.9-1/1/02-a.sql"))
+        self.assertTrue(script_sort_key("0.4.2/1/01-a.sql") <
+                        script_sort_key("0.4.2/1/02-a.sql"))
