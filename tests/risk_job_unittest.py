@@ -229,12 +229,13 @@ class RiskJobMixinTestCase(unittest.TestCase):
             self.assertEqual(
                 expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
 
+
 GRID_ASSETS = {
-    (0, 0): { 'assetID': 'asset_at_0_0', 'lat': 10.0, 'lon': 10.0 },
-    (0, 1): { 'assetID': 'asset_at_0_1', 'lat': 10.0, 'lon': 10.1 },
-    (1, 0): { 'assetID': 'asset_at_1_0', 'lat': 10.1, 'lon': 10.0 },
-    (1, 1): { 'assetID': 'asset_at_1_1', 'lat': 10.1, 'lon': 10.1 },
-}
+    (0, 0): {'assetID': 'asset_at_0_0', 'lat': 10.0, 'lon': 10.0},
+    (0, 1): {'assetID': 'asset_at_0_1', 'lat': 10.0, 'lon': 10.1},
+    (1, 0): {'assetID': 'asset_at_1_0', 'lat': 10.1, 'lon': 10.0},
+    (1, 1): {'assetID': 'asset_at_1_1', 'lat': 10.1, 'lon': 10.1}}
+
 
 class RiskMixinTestCase(unittest.TestCase):
 
@@ -252,11 +253,11 @@ class RiskMixinTestCase(unittest.TestCase):
             (shapes.GridPoint(self.grid, 0, 0), GRID_ASSETS[(0, 0)]),
             (shapes.GridPoint(self.grid, 1, 0), GRID_ASSETS[(0, 1)]),
             (shapes.GridPoint(self.grid, 0, 1), GRID_ASSETS[(1, 0)]),
-            (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])
-        ]
+            (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])]
 
     def test_grid_assets_iterator(self):
         with mock.patch('openquake.kvs.get_list_json_decoded') as get_mock:
+
             def get_list_json_decoded(key):
                 _, row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
 
