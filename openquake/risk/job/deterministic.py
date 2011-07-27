@@ -22,7 +22,6 @@ event based approach.
 """
 
 
-import json
 import numpy
 import os
 
@@ -303,9 +302,7 @@ def load_gmvs_for_point(job_id, point):
         realization of the calculation for a single point.
     """
     gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
-    gmfs = kvs.get_client().lrange(gmfs_key, 0, -1)
-    decoder = json.JSONDecoder()
-    return [float(decoder.decode(x)['mag']) for x in gmfs]
+    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
 
 
 def load_assets_for_point(job_id, point):
@@ -319,9 +316,7 @@ def load_assets_for_point(job_id, point):
             {u'assetValue': 124.27, u'vulnerabilityFunctionReference': u'ID'}
     """
     assets_key = kvs.tokens.asset_key(job_id, point.row, point.column)
-    assets = kvs.get_client().lrange(assets_key, 0, -1)
-    decoder = json.JSONDecoder()
-    return [decoder.decode(x) for x in assets]
+    return kvs.get_list_json_decoded(assets_key)
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
