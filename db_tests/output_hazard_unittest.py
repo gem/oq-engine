@@ -151,7 +151,26 @@ GMF_DATA = {
 }
 
 
-class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for hazard map db reader/writer test"""
+
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    def setUp(self):
+        self.job = self.setup_classic_job()
+        self.session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        self.display_name = os.path.basename(output_path)
+
+        self.writer = HazardMapDBWriter(self.session, output_path, self.job.id)
+        self.reader = HazardMapDBReader(self.session)
+
+
+class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
     """
     Unit tests for the HazardMapDBWriter class, which serializes
     hazard maps to the database.
@@ -164,17 +183,11 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_insert_output(self):
         """An `uiapi.output` record is inserted correctly."""
-        self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
-        output_path = self.generate_output_path(self.job)
-        display_name = os.path.basename(output_path)
-        hmw = HazardMapDBWriter(session, output_path, self.job.id)
-
         # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hmw.insert_output("hazard_map")
+        self.writer.insert_output("hazard_map")
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -183,22 +196,17 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
-        self.assertEqual(display_name, output.display_name)
+        self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
         self.assertTrue(self.job is output.oq_job)
 
     def test_serialize_mean(self):
         """serialize() inserts the output and the hazard_map_data records."""
-        self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
-        output_path = self.generate_output_path(self.job)
-        hmw = HazardMapDBWriter(session, output_path, self.job.id)
-
         # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hmw.serialize(HAZARD_MAP_MEAN_DATA)
+        self.writer.serialize(HAZARD_MAP_MEAN_DATA)
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -217,16 +225,11 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_serialize_quantile(self):
         """serialize() inserts the output and the hazard_map_data records."""
-        self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
-        output_path = self.generate_output_path(self.job)
-        hmw = HazardMapDBWriter(session, output_path, self.job.id)
-
         # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hmw.serialize(HAZARD_MAP_QUANTILE_DATA)
+        self.writer.serialize(HAZARD_MAP_QUANTILE_DATA)
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -247,13 +250,8 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         """
         serialize() sets the minimum and maximum values on the output record.
         """
-        self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
-        output_path = self.generate_output_path(self.job)
-        hmw = HazardMapDBWriter(session, output_path, self.job.id)
-
         # Call the function under test.
-        hmw.serialize(HAZARD_MAP_MEAN_DATA)
+        self.writer.serialize(HAZARD_MAP_MEAN_DATA)
 
         minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA)
         maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA)
@@ -261,6 +259,39 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         [output] = self.job.output_set
         self.assertEqual(round_float(minimum), round_float(output.min_value))
         self.assertEqual(round_float(maximum), round_float(output.max_value))
+
+
+class HazardMapDBReaderTestCase(HazardCurveDBBaseTestCase):
+    """
+    Unit tests for the HazardMapDBReader class, which deserializes
+    hazard maps from the database.
+    """
+    def test_deserialize_mean(self):
+        """Hazard map is read back correctly"""
+        self.writer.serialize(HAZARD_MAP_MEAN_DATA)
+
+        data = self.reader.deserialize(self.writer.output.id)
+
+        self.assertEquals(self.sort(self.normalize(HAZARD_MAP_MEAN_DATA)),
+                          self.sort(self.normalize(data)))
+
+    def sort(self, values):
+        def sort_key(v):
+            return v[0].longitude, v[0].latitude, v[1].get('statistics')
+
+        return sorted(values, key=sort_key)
+
+    def normalize(self, values):
+        result = []
+
+        for site, attrs in values:
+            new = attrs.copy()
+            new['IML'] = round_float(attrs['IML'])
+            new['investigationTimeSpan'] = float(new['investigationTimeSpan'])
+
+            result.append((site, new))
+
+        return result
 
 
 class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
