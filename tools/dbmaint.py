@@ -212,7 +212,6 @@ def run_scripts(artefact, rev_info, scripts, config):
             max_revision = revision
 
         # Run the SQL script.
-        rev = rev_info['revision']
         results = psql(config, script="%s/%s" % (artefact, script))
         if script_failed(results, script, config):
             # A step of '-1' indicates a broken upgrade.
