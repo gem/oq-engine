@@ -280,7 +280,18 @@ class CurveTestCase(unittest.TestCase):
         # test high-end:
         self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
 
+    def test_abscissa_for_in_not_ascending_order_with_dups(self):
+        """ This tests the corner case when:
+            "vals must be arranged in ascending order with no duplicates"
+        """
+        vals = [1, 1, 1]
+
+        curve = shapes.Curve(zip(vals, vals))
+
+        self.assertRaises(AssertionError, curve.abscissa_for, vals)
+
     def test_abscissa_for_with_multiple_yvals(self):
+        """ tests the correctness of the abscissa method """
         self.assertEqual(
             self.simple_curve.abscissa_for(self.y_vals).tolist(), 
                 self.x_vals)
