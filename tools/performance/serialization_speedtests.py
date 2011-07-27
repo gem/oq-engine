@@ -24,7 +24,8 @@ import unittest
 from db.alchemy.db_utils import get_uiapi_writer_session
 from db.alchemy import models
 from openquake.output.hazard import *
-from openquake.shapes import Site
+from openquake.output.risk import *
+from openquake.shapes import Site, Curve
 from openquake.utils import round_float
 
 from db_tests import helpers
@@ -78,6 +79,43 @@ def GMF_DATA(r1, r2):
     for lon in xrange(-179, -179 + r1):
         for lat in xrange(-90, + r2):
             data[Site(lon, lat)] = {'groundMotion': 0.0}
+
+    return data
+
+
+def LOSS_CURVE_DATA(r1, r2):
+    data = []
+    poes = imls = [0.1] * 20
+
+    for lon in xrange(-179, -179 + r1):
+        for lat in xrange(-90, + r2):
+            data.append((Site(lon, lat),
+                         (Curve(zip(imls, poes)),
+                          {'assetValue': 5.07,
+                           'assetID': 'a5625',
+                           'listDescription': 'Collection of exposure values',
+                           'structureCategory': 'RM1L',
+                           'lon': -118.077721,
+                           'assetDescription': 'LA building',
+                           'vulnerabilityFunctionReference': 'HAZUS_RM1L_LC',
+                           'listID': 'LA01',
+                           'assetValueUnit': 'EUR',
+                           'lat': 33.852034})))
+
+    return data
+
+
+def LOSS_MAP_DATA(assets, r1, r2):
+    data = [{'deterministic': True}]
+
+    for lon in xrange(-179, -179 + r1):
+        for lat in xrange(-90, + r2):
+            data.append((Site(lon, lat), []))
+
+            for asset in assets:
+                data[-1][-1].append(({'mean_loss': 120000.0,
+                                      'stddev_loss': 2000.0},
+                                     {'assetID': asset}))
 
     return data
 
@@ -152,5 +190,53 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
             # Call the function under test.
             gmfw.serialize(data)
+
+        session.commit()
+
+
+class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    @test_helpers.timeit
+    def test_serialize_small(self):
+        data = LOSS_CURVE_DATA(20, 4)
+
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+
+        for i in xrange(0, 20):
+            lcw = LossCurveDBWriter(session, output_path + str(i), self.job.id)
+
+            # Call the function under test.
+            lcw.serialize(data)
+
+        session.commit()
+
+
+class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+        if hasattr(self, "output") and self.output:
+            self.teardown_output(self.output)
+
+    @test_helpers.timeit
+    def test_serialize_small(self):
+        data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
+
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+
+        for i in xrange(0, 10):
+            lmw = LossMapDBWriter(session, output_path + str(i), self.job.id)
+
+            # Call the function under test.
+            lmw.serialize(data)
 
         session.commit()
