@@ -88,8 +88,11 @@ def output(fn):
                     "poe": loss_poe,
                 }
 
-                writer.serialize([metadata]
-                                 + self.asset_losses_per_site(loss_poe))
+                writer.serialize(
+                    [metadata]
+                    + self.asset_losses_per_site(
+                        loss_poe,
+                        self.grid_assets_iterator(self.region.grid)))
 
                 results.append(path)
 
@@ -216,21 +219,20 @@ class RiskJobMixin(mixins.Mixin):
         else:
             return []
 
-    def grid_assets(self, grid):
+    def grid_assets_iterator(self, grid):
         """
         Generates the tuples (point, asset) for all assets known to this job
         that are contained in grid.
 
         :returns: tuples (point, asset) where:
-            * point is a :py:class:`openquake.shapes.Point` on the grid
+            * point is a :py:class:`openquake.shapes.GridPoint` on the grid
 
             * asset is a :py:class:`dict` representing an asset
         """
 
         for point in grid:
             asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
+            for asset in kvs.get_list_json_decoded(asset_key):
                 yield point, asset
 
     def _write_output_for_block(self, job_id, block_id):
@@ -238,7 +240,8 @@ class RiskJobMixin(mixins.Mixin):
         loss_ratio_curves = []
         loss_curves = []
         block = job.Block.from_kvs(block_id)
-        for point, asset in self.grid_assets(block.grid(self.region)):
+        for point, asset in self.grid_assets_itearator(
+                block.grid(self.region)):
             site = shapes.Site(asset['lon'], asset['lat'])
 
             loss_curve = kvs.get(
@@ -271,10 +274,16 @@ class RiskJobMixin(mixins.Mixin):
                                                 render_multi=True))
         return results
 
-    def asset_losses_per_site(self, loss_poe):
+    def asset_losses_per_site(self, loss_poe, assets_iterator):
         """
         For each site in the region of this job, returns a list of assets and
         their losses at a given probability of exceedance.
+
+        :param:loss_poe: the probability of exceedance
+        :type:loss_poe: float
+        :param:assets_iterator: an iterator over the assets, returning (point,
+            asset) tuples. See
+            :py:class:openquake.risk.job.general.grid_assets_iterator.
 
         :returns: A list of tuples in the form expected by the
         :py:class:`LossMapWriter.serialize` method:
@@ -290,7 +299,7 @@ class RiskJobMixin(mixins.Mixin):
         """
         result = defaultdict(list)
 
-        for point, asset in self.grid_assets(self.region.grid):
+        for point, asset in assets_iterator:
             key = kvs.tokens.loss_key(self.id, point.row, point.column,
                     asset["assetID"], loss_poe)
             loss_value = kvs.get(key)
