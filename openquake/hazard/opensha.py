@@ -852,18 +852,27 @@ def _collect_map_keys_per_quantile(keys):
 
 def _create_writer(params, nrml_path, create_xml_writer, create_db_writer):
     """Common code for the functions below"""
-    def db():
+
+    serialize_to = params["SERIALIZE_RESULTS_TO"].split(',')
+
+    writers = []
+
+    if 'db' in serialize_to:
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
         session = get_uiapi_writer_session()
-        return create_db_writer(session, nrml_path, job_db_key)
+        writers.append(create_db_writer(session, nrml_path, job_db_key))
 
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
-        return writer.CompositeWriter(db(), create_xml_writer(nrml_path))
+    if 'xml' in serialize_to:
+        writers.append(create_xml_writer(nrml_path))
+
+    if len(writers) == 0:
+        return None
+    elif len(writers) == 1:
+        return writers[0]
     else:
-        return db()
+        return writer.CompositeWriter(*writers)
 
 
 def create_hazardcurve_writer(params, nrml_path):
