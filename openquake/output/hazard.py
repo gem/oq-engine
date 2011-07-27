@@ -563,6 +563,7 @@ class HazardMapDBWriter(writer.DBWriter):
         super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.bulk_inserter = writer.BulkInserter(HazardMapData)
+        self.hazard_map = None
 
     def get_output_type(self):
         return "hazard_map"
