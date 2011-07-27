@@ -104,7 +104,7 @@ class KVSTestCase(unittest.TestCase):
         for item in data:
             kvs.get_client().rpush(TEST_KEY, json.dumps(item))
 
-        self.assertEqual(kvs.get_list_json_decoded(TEST_KEY), data)
+        self.assertEqual(data, kvs.get_list_json_decoded(TEST_KEY))
 
 
 class TokensTestCase(unittest.TestCase):
