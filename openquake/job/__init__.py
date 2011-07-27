@@ -354,9 +354,40 @@ class Job(object):
 
         gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
 
-        # run KVS garbage collection aynchronously
+        # run KVS garbage collection asynchronously
         # stdout goes to /dev/null to silence any output from the GC
         subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
+
+    def _partition(self):
+        """Split the set of sites to compute in blocks and store
+        the in the underlying kvs system.
+        """
+
+        sites = []
+        self.blocks_keys = []
+        region_constraint = self.region
+
+        # we use the exposure, if specified,
+        # otherwise we use the input region
+        if self.has(conf.EXPOSURE):
+            sites = read_sites_from_exposure(self)
+            LOG.debug("Loaded %s assets from exposure portfolio." % len(sites))
+        elif self.region:
+            sites = self.region.sites
+        else:
+            raise Exception("I don't know how to get the sites!")
+        if self.partition:
+            block_count = 0
+            for block in BlockSplitter(sites, constraint=region_constraint):
+                self.blocks_keys.append(block.id)
+                block.to_kvs()
+                block_count += 1
+            LOG.debug("Job has partitioned %s sites into %s blocks" % (
+                    len(sites), block_count))
+        else:
+            block = Block(sites)
+            self.blocks_keys.append(block.id)
+            block.to_kvs()
 
     def __getitem__(self, name):
         return self.params[name]
@@ -424,3 +455,118 @@ class Job(object):
         region = shapes.Region.from_coordinates(coords)
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         return [site for site in region]
+
+
+class AlwaysTrueConstraint():
+    """A stubbed constraint for block splitting."""
+    #pylint: disable=W0232,W0613,R0201
+    def match(self, point):
+        """ stub a match filter to always return true """
+        return True
+
+
+class Block(object):
+    """A block is a collection of sites to compute."""
+
+    def __init__(self, sites, block_id=None):
+        self.sites = tuple(sites)
+        if not block_id:
+            block_id = kvs.generate_block_id()
+        self.block_id = block_id
+
+    def grid(self, region):
+        """Provides an iterator across the unique grid points within a region,
+         corresponding to the sites within this block."""
+        used_points = []
+        for site in self.sites:
+            point = region.grid.point_at(site)
+            if point not in used_points:
+                used_points.append(point)
+                yield point
+
+    def __eq__(self, other):
+        return self.sites == other.sites
+
+    @classmethod
+    def from_kvs(cls, block_id):
+        """Return the block in the underlying kvs system with the given id."""
+
+        raw_sites = kvs.get_value_json_decoded(block_id)
+
+        sites = []
+
+        for raw_site in raw_sites:
+            sites.append(shapes.Site(raw_site[0], raw_site[1]))
+
+        return Block(sites, block_id)
+
+    def to_kvs(self):
+        """Store this block into the underlying kvs system."""
+
+        raw_sites = []
+
+        for site in self.sites:
+            raw_sites.append(site.coords)
+
+        kvs.set_value_json_encoded(self.id, raw_sites)
+
+    @property
+    def id(self):  # pylint: disable=C0103
+        """Return the id of this block."""
+        return self.block_id
+
+
+class BlockSplitter(object):
+    """Split the sites into a set of blocks."""
+
+    def __init__(
+        self, sites, sites_per_block=SITES_PER_BLOCK, constraint=None):
+        self.sites = sites
+        self.constraint = constraint
+        self.sites_per_block = sites_per_block
+
+        if not self.constraint:
+            self.constraint = AlwaysTrueConstraint()
+
+    def __iter__(self):
+        filtered_sites = []
+
+        for site in self.sites:
+            if self.constraint.match(site):
+                filtered_sites.append(site)
+                if len(filtered_sites) == self.sites_per_block:
+                    yield(Block(filtered_sites))
+                    filtered_sites = []
+        if not filtered_sites:
+            return
+        yield(Block(filtered_sites))
+
+
+def read_sites_from_exposure(job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param job: a Job object with an EXPOSURE parameter defined
+    :type job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(job.base_path, job[conf.EXPOSURE])
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = job.region
+    if not constraint:
+        constraint = AlwaysTrueConstraint()
+    else:
+        LOG.debug("Constraining exposure parsing to %s" %
+            constraint.polygon)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates:
+        if not site in sites:
+            sites.append(site)
+
+    return sites

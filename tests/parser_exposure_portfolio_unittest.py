@@ -79,7 +79,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result = [
-            (shapes.Point(9.15333, 45.12200),
+            (shapes.Site(9.15333, 45.12200),
             {'listID': 'PAV01',
              'listDescription': 'Collection of existing building in ' \
                                 'downtown Pavia',
@@ -93,13 +93,13 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
             })]
 
         ctr = None
-        for ctr, (exposure_point, exposure_attr) in enumerate(
+        for ctr, (exposure_site, exposure_attr) in enumerate(
             ep.filter(region_constraint)):
 
-            # check topological equality for points
-            self.assertTrue(exposure_point.equals(expected_result[ctr][0]),
+            # check topological equality for sites
+            self.assertTrue(exposure_site.equals(expected_result[ctr][0]),
                 "filter yielded unexpected point at position %s: %s, %s" % (
-                ctr, exposure_point, expected_result[ctr][0]))
+                ctr, exposure_site, expected_result[ctr][0]))
 
             self.assertTrue(exposure_attr == expected_result[ctr][1],
                 "filter yielded unexpected attribute values at position " \

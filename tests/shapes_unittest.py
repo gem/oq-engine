@@ -146,22 +146,6 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(expected_coord_list, actual_coord_list)
 
-    def test_site_uses_round_floats(self):
-        """
-        This test ensures the coordinate precision is properly limited for
-        instances of :py:class:`openquake.shapes.Site`.
-        """
-        lon = -121.00000004
-        lat = 29.00000006
-
-        exp_lon = -121.0
-        exp_lat = 29.0000001
-
-        site = shapes.Site(lon, lat)
-
-        self.assertEqual(exp_lon, site.longitude)
-        self.assertEqual(exp_lat, site.latitude)
-
     def test_clip_low_iml_values(self):
         """
         Test :py:method:`openquake.shapes.range_clip` to
@@ -559,3 +543,56 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         actual = [x for x in self.test_func]
 
         self.assertEqual(expected, actual)
+
+
+class SiteTestCase(unittest.TestCase):
+
+    def test_site_uses_round_floats(self):
+        """
+        This test ensures the coordinate precision is properly limited for
+        instances of :py:class:`openquake.shapes.Site`.
+        """
+        lon = -121.00000004
+        lat = 29.00000006
+
+        exp_lon = -121.0
+        exp_lat = 29.0000001
+
+        site = shapes.Site(lon, lat)
+
+        self.assertEqual(exp_lon, site.longitude)
+        self.assertEqual(exp_lat, site.latitude)
+
+    def test_eq(self):
+        """
+        Test equality comparison of :py:class:`openquake.shapes.Site` objects.
+        """
+        lon = -121.0000001
+        lat = 29.0000006
+
+        # two Sites with the same lon/lat should be considered equal
+        site1 = shapes.Site(lon, lat)
+        site2 = shapes.Site(lon, lat)
+
+        self.assertEqual(site1, site2)
+
+    def test_eq_rounded_lon_lat(self):
+        """
+        Test equality comparison when constructing Sites from lon/lat values
+        which need to be rounded.
+        """
+        site1 = shapes.Site(-121.00000004, 29.00000006)
+        site2 = shapes.Site(-121.0, 29.0000001)
+
+        self.assertEqual(site1, site2)
+
+    def test_not_eq(self):
+        """
+        Test that two Sites with different lon/lat are considered not equal.
+        """
+        site1 = shapes.Site(-121.0, 29.0)
+        site2 = shapes.Site(-121.1, 29.0)
+        site3 = shapes.Site(-121.0, 29.1)
+
+        self.assertNotEqual(site1, site2)
+        self.assertNotEqual(site1, site3)

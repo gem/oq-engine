@@ -249,3 +249,100 @@ class JobTestCase(unittest.TestCase):
         self.assertTrue(job2.job_id is not None)
 
         self.assertNotEqual(job1.job_id, job2.job_id)
+
+    def test_read_sites_from_exposure(self):
+        """
+        Test that the proper sites are read from a job configuration.
+
+        Most importantly, we want to make sure no duplicate sites are read.
+
+        See this bug:
+        https://bugs.launchpad.net/openquake/+bug/812395
+        """
+        job_config_path = 'smoketests/simplecase/config.gem'
+        test_job = Job.from_file(job_config_path, 'xml')
+
+        expected_sites = [
+            shapes.Site(-118.077721, 33.852034),
+            shapes.Site(-118.067592, 33.855398),
+            shapes.Site(-118.186739, 33.779013)]
+
+        actual_sites = job.read_sites_from_exposure(test_job)
+
+        self.assertEqual(expected_sites, actual_sites)
+
+
+class BlockTestCase(unittest.TestCase):
+
+    def test_a_block_has_a_unique_id(self):
+        self.assertTrue(job.Block(()).id)
+        self.assertTrue(job.Block(()).id != job.Block(()).id)
+
+    def test_can_serialize_a_block_into_kvs(self):
+        block = job.Block((SITE, SITE))
+        block.to_kvs()
+
+        self.assertEqual(block, job.Block.from_kvs(block.id))
+
+
+class BlockSplitterTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.splitter = None
+
+    def test_an_empty_set_produces_no_blocks(self):
+        self.splitter = job.BlockSplitter(())
+        self._assert_number_of_blocks_is(0)
+
+    def test_splits_the_set_into_a_single_block(self):
+        self.splitter = job.BlockSplitter((SITE, ), 3)
+        self._assert_number_of_blocks_is(1)
+
+        self.splitter = job.BlockSplitter((SITE, SITE), 3)
+        self._assert_number_of_blocks_is(1)
+
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
+        self._assert_number_of_blocks_is(1)
+
+    def test_splits_the_set_into_multiple_blocks(self):
+        self.splitter = job.BlockSplitter((SITE, SITE), 1)
+        self._assert_number_of_blocks_is(2)
+
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
+        self._assert_number_of_blocks_is(2)
+
+    def test_generates_the_correct_blocks(self):
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
+        expected_blocks = (job.Block((SITE, SITE, SITE)), )
+        self._assert_blocks_are(expected_blocks)
+
+        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
+        expected_blocks = (job.Block((SITE, SITE)), job.Block((SITE, )))
+        self._assert_blocks_are(expected_blocks)
+
+    def test_splitting_with_region_intersection(self):
+        region_constraint = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+
+        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
+            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
+
+        expected_blocks = (
+                job.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
+                job.Block((shapes.Site(2.0, 2.0), )))
+
+        self.splitter = job.BlockSplitter(sites, 2,
+                                            constraint=region_constraint)
+        self._assert_blocks_are(expected_blocks)
+
+    def _assert_blocks_are(self, expected_blocks):
+        for idx, block in enumerate(self.splitter):
+            self.assertEqual(expected_blocks[idx], block)
+
+    def _assert_number_of_blocks_is(self, number):
+        counter = 0
+
+        for _block in self.splitter:
+            counter += 1
+
+        self.assertEqual(number, counter)
