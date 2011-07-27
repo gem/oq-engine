@@ -19,8 +19,6 @@
 
 """ Mixin for Classical PSHA Risk Calculation """
 
-import json
-
 from celery.exceptions import TimeoutError
 from math import exp
 
