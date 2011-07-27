@@ -125,6 +125,35 @@ def compute_risk(job_id, block_id, **kwargs):
         return mixed.compute_risk(block_id, **kwargs)
 
 
+def read_sites_from_exposure(a_job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param a_job: a Job object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(a_job.base_path, a_job.params[config.EXPOSURE])
+
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = a_job.region
+
+    LOG.debug(
+        "Constraining exposure parsing to %s" % constraint)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates (bug 812395):
+        if not site in sites:
+            sites.append(site)
+
+    return sites
+
+
 class RiskJobMixin(mixins.Mixin):
     """A mixin proxy for Risk jobs."""
     mixins = {}
@@ -135,7 +164,7 @@ class RiskJobMixin(mixins.Mixin):
 
         sites = []
         self.blocks_keys = []  # pylint: disable=W0201
-        sites = self._read_sites_from_exposure()
+        sites = read_sites_from_exposure(self)
 
         block_count = 0
 
@@ -147,24 +176,6 @@ class RiskJobMixin(mixins.Mixin):
 
         LOG.debug("Job has partitioned %s sites into %s blocks" % (
                 len(sites), block_count))
-
-    def _read_sites_from_exposure(self):
-        """Read the sites to compute from the exposure file specified
-        in the job definition."""
-
-        sites = []
-        path = os.path.join(self.base_path, self.params[config.EXPOSURE])
-
-        reader = exposure.ExposurePortfolioFile(path)
-        constraint = self.region
-
-        LOG.debug(
-            "Constraining exposure parsing to %s" % constraint)
-
-        for asset_data in reader.filter(constraint):
-            sites.append(asset_data[0])
-
-        return sites
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to KVS."""
