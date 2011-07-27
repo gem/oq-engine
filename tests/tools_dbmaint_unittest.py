@@ -259,8 +259,10 @@ class FindScriptsTestCase(unittest.TestCase):
         """
         touch("%s/01-a.sql" % self.path1)
         touch("%s/02-b.sql" % self.path1)
+        touch("%s/03-c.py" % self.path1)
         touch("%s/01-a.sql" % self.path2)
-        self.assertEqual(["1/01-a.sql", "1/02-b.sql", "2/01-a.sql"],
+        self.assertEqual(["1/01-a.sql", "1/02-b.sql", "1/03-c.py",
+                          "2/01-a.sql"],
                          list(sorted(find_scripts(self.top))))
 
 

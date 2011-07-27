@@ -109,7 +109,9 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
 def find_scripts(path):
     """Find all SQL scripts at level 2 of the given `path`."""
     result = []
-    cmd = "find %s -mindepth 2 -maxdepth 2 -type f -name *.sql" % path
+    cmd = "find %s -mindepth 2 -maxdepth 2 -type f" \
+          "     ( -name *.sql -o -name *.py )" % path
+
     code, out, err = run_cmd(cmd.split(), ignore_exit_code=True)
 
     if code == 0:
