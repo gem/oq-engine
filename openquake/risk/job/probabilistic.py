@@ -23,8 +23,6 @@ Probabilistic Event Mixin: defines the behaviour of a Job. Calls the
 compute_risk task
 """
 
-import json
-
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
