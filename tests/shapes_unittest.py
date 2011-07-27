@@ -568,8 +568,8 @@ class SiteTestCase(unittest.TestCase):
 
     def test_eq(self):
         """
-        Test Site equality comarisons. Two sites with the same lon/lat should be
-        considered equal.
+        Test Site equality comparisons. Two sites with the same lon/lat should
+        be considered equal.
         """
         lon = 121.0
         lat = 29.0
@@ -588,3 +588,26 @@ class SiteTestCase(unittest.TestCase):
         site2 = shapes.Site(-121.00000004, 29.00000006)
 
         self.assertEqual(site1, site2)
+
+    def test_hash(self):
+        """
+        Verify that two Sites with the same lon/lat have the same __hash__().
+        """
+        lon = 121.0
+        lat = 29.0
+
+        site1 = shapes.Site(lon, lat)
+        site2 = shapes.Site(lon, lat)
+
+        self.assertEqual(site1.__hash__(), site2.__hash__())
+
+    def test_hash_with_rounded_lon_lat(self):
+        """
+        Test the __hash__() equality of two Sites when using high-precision
+        lon/lat values (which are rounded down when the Site object is
+        created).
+        """
+        site1 = shapes.Site(-121.0, 29.0000001)
+        site2 = shapes.Site(-121.00000004, 29.00000006)
+
+        self.assertEqual(site1.__hash__(), site2.__hash__())

@@ -244,4 +244,5 @@ class RiskJobGeneralTestCase(unittest.TestCase):
             shapes.Site(-118.067592, 33.855398),
             shapes.Site(-118.186739, 33.779013)]
 
-        self.assertEqual(expected_sites, general.read_sites_from_exposure(test_job))
+        self.assertEqual(expected_sites,
+            general.read_sites_from_exposure(test_job))
