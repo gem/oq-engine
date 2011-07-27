@@ -126,6 +126,20 @@ def get_value_json_decoded(key):
         return None
 
 
+def get_list_json_decoded(key):
+    """
+    Get from the KVS a list of items.
+
+    :param key: the KVS key
+    :type key: string
+
+    The items stored under key are expected to be JSON encoded, and are decoded
+    before being returned.
+    """
+
+    return [json.loads(x) for x in get_client().lrange(key, 0, -1)]
+
+
 def set_value_json_encoded(key, value):
     """ Encode value and set in kvs """
     encoder = json.JSONEncoder()
