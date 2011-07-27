@@ -305,7 +305,7 @@ class ScriptsToRunTestCase(unittest.TestCase):
         touch("%s/01-b.sql" % self.path2)
         touch("%s/01-c.sql" % self.path3)
         touch("%s/02-d.sql" % self.path3)
-        self.assertEqual(["3/01-c.sql", "3/02-d.sql"],
+        self.assertEqual(["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql"],
                          scripts_to_run(artefact, rev_info, config))
 
 
@@ -342,7 +342,7 @@ class RunScriptsTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        scripts = ["3/01-c.sql", "3/02-d.sql"]
+        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql"]
         with mock.patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.return_value = (0, "", "")
@@ -379,7 +379,7 @@ class RunScriptsTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": False, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        scripts = ["3/01-c.sql", "3/02-d.sql"]
+        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql"]
         with mock.patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.side_effect = fail_on_first_even_script
