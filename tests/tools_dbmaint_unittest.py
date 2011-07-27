@@ -368,7 +368,7 @@ class RunScriptsTestCase(unittest.TestCase):
             # Run the actual function that is to be tested.
             run_scripts(artefact, rev_info, scripts, config)
 
-            # The mock was called thrice.
+            # The mock was called four times.
             self.assertEqual(4, mock_psql.call_count)
             # The first call executed an SQL script.
             self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
