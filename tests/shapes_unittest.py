@@ -146,22 +146,6 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(expected_coord_list, actual_coord_list)
 
-    def test_site_uses_round_floats(self):
-        """
-        This test ensures the coordinate precision is properly limited for
-        instances of :py:class:`openquake.shapes.Site`.
-        """
-        lon = -121.00000004
-        lat = 29.00000006
-
-        exp_lon = -121.0
-        exp_lat = 29.0000001
-
-        site = shapes.Site(lon, lat)
-
-        self.assertEqual(exp_lon, site.longitude)
-        self.assertEqual(exp_lat, site.latitude)
-
     def test_clip_low_iml_values(self):
         """
         Test :py:method:`openquake.shapes.range_clip` to
@@ -559,3 +543,48 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         actual = [x for x in self.test_func]
 
         self.assertEqual(expected, actual)
+
+
+class SiteTestCase(unittest.TestCase):
+    """
+    Tests for the :py:class:`openquake.shapes.Site` class.
+    """
+
+    def test_site_uses_round_floats(self):
+        """
+        This test ensures the coordinate precision is properly limited for
+        instances of :py:class:`openquake.shapes.Site`.
+        """
+        lon = -121.00000004
+        lat = 29.00000006
+
+        exp_lon = -121.0
+        exp_lat = 29.0000001
+
+        site = shapes.Site(lon, lat)
+
+        self.assertEqual(exp_lon, site.longitude)
+        self.assertEqual(exp_lat, site.latitude)
+
+    def test_eq(self):
+        """
+        Test Site equality comarisons. Two sites with the same lon/lat should be
+        considered equal.
+        """
+        lon = 121.0
+        lat = 29.0
+
+        site1 = shapes.Site(lon, lat)
+        site2 = shapes.Site(lon, lat)
+
+        self.assertEqual(site1, site2)
+
+    def test_eq_with_rounded_lon_lat(self):
+        """
+        Test Site equality comparisons when using high-precision lon/lat values
+        (which are rounded down when the Site object is created).
+        """
+        site1 = shapes.Site(-121.0, 29.0000001)
+        site2 = shapes.Site(-121.00000004, 29.00000006)
+
+        self.assertEqual(site1, site2)
