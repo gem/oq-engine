@@ -22,7 +22,6 @@ event based approach.
 """
 
 
-import json
 import numpy
 import os
 
