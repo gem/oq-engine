@@ -230,45 +230,48 @@ class RiskJobMixinTestCase(unittest.TestCase):
                 expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
 
 GRID_ASSETS = {
-    (0, 0): [{ 'assetID': 'asset_at_0_0', 'lat': 10.0, 'lon': 10.0 }],
-    (0, 1): [{ 'assetID': 'asset_at_0_1', 'lat': 10.0, 'lon': 10.1 }],
-    (1, 0): [{ 'assetID': 'asset_at_1_0', 'lat': 10.1, 'lon': 10.0 }],
-    (1, 1): [{ 'assetID': 'asset_at_1_1', 'lat': 10.1, 'lon': 10.1 }],
+    (0, 0): { 'assetID': 'asset_at_0_0', 'lat': 10.0, 'lon': 10.0 },
+    (0, 1): { 'assetID': 'asset_at_0_1', 'lat': 10.0, 'lon': 10.1 },
+    (1, 0): { 'assetID': 'asset_at_1_0', 'lat': 10.1, 'lon': 10.0 },
+    (1, 1): { 'assetID': 'asset_at_1_1', 'lat': 10.1, 'lon': 10.1 },
 }
 
 class RiskMixinTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.job = job.Job.from_file(os.path.join(
-            helpers.DATA_DIR, 'config.gem'), 'xml')
+        self.job = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
+                                         'config.gem'))
 
         self.grid = shapes.Grid(shapes.Region.from_coordinates(
             [(1.0, 3.0), (1.0, 4.0), (2.0, 4.0), (2.0, 3.0)]),
             1.0)
 
-        self.expected = [
-            (shapes.GridPoint(self.grid, 0, 0), GRID_ASSETS[(0, 0)][0]),
-            (shapes.GridPoint(self.grid, 1, 0), GRID_ASSETS[(0, 1)][0]),
-            (shapes.GridPoint(self.grid, 0, 1), GRID_ASSETS[(1, 0)][0]),
-            (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)][0])
+        # this is the expected output of grid_assets_iterator and an input of
+        # asset_losses_per_site
+        self.grid_assets = [
+            (shapes.GridPoint(self.grid, 0, 0), GRID_ASSETS[(0, 0)]),
+            (shapes.GridPoint(self.grid, 1, 0), GRID_ASSETS[(0, 1)]),
+            (shapes.GridPoint(self.grid, 0, 1), GRID_ASSETS[(1, 0)]),
+            (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])
         ]
 
-    def test_grid_assets(self):
-        with mock.patch('openquake.kvs.get_list_json_decoded') as get_list_mock:
+    def test_grid_assets_iterator(self):
+        with mock.patch('openquake.kvs.get_list_json_decoded') as get_mock:
             def get_list_json_decoded(key):
                 _, row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
 
-                return GRID_ASSETS[(row, col)]
+                return [GRID_ASSETS[(row, col)]]
 
-            get_list_mock.side_effect = get_list_json_decoded
+            get_mock.side_effect = get_list_json_decoded
 
             def row_col(item):
                 return item[0].row, item[0].column
 
             with job.mixins.Mixin(self.job, general.RiskJobMixin):
-                got = sorted(self.job.grid_assets_iterator(self.grid), key=row_col)
+                got = sorted(self.job.grid_assets_iterator(self.grid),
+                             key=row_col)
 
-                self.assertEqual(sorted(self.expected, key=row_col), got)
+                self.assertEqual(sorted(self.grid_assets, key=row_col), got)
 
     def test_asset_losses_per_site(self):
         with mock.patch('openquake.kvs.get') as get_mock:
@@ -278,11 +281,16 @@ class RiskMixinTestCase(unittest.TestCase):
                 return item[0].coords
 
             expected = [
-                (shapes.Site(10.0, 10.0), [({'value': 0.123}, GRID_ASSETS[(0, 0)][0])]),
-                (shapes.Site(10.1, 10.0), [({'value': 0.123}, GRID_ASSETS[(0, 1)][0])]),
-                (shapes.Site(10.0, 10.1), [({'value': 0.123}, GRID_ASSETS[(1, 0)][0])]),
-                (shapes.Site(10.1, 10.1), [({'value': 0.123}, GRID_ASSETS[(1, 1)][0])])]
+                (shapes.Site(10.0, 10.0),
+                    [({'value': 0.123}, GRID_ASSETS[(0, 0)])]),
+                (shapes.Site(10.1, 10.0),
+                    [({'value': 0.123}, GRID_ASSETS[(0, 1)])]),
+                (shapes.Site(10.0, 10.1),
+                    [({'value': 0.123}, GRID_ASSETS[(1, 0)])]),
+                (shapes.Site(10.1, 10.1),
+                    [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
             with job.mixins.Mixin(self.job, general.RiskJobMixin):
                 self.assertEqual(sorted(expected, key=coords),
-                sorted(self.job.asset_losses_per_site(0.5, self.expected), key=coords))
+                sorted(self.job.asset_losses_per_site(0.5, self.grid_assets),
+                       key=coords))
