@@ -18,12 +18,12 @@
 
 """Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
 
+from collections import defaultdict
 import json
 import os
 
 from scipy.stats import norm
 
-from openquake.output import geotiff
 from openquake import job
 from openquake.job import mixins
 from openquake import kvs
@@ -74,8 +74,28 @@ def output(fn):
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
             results.extend(self._write_output_for_block(self.job_id, block_id))
+
         for loss_poe in conditional_loss_poes:
-            results.extend(self.write_loss_map(loss_poe))
+            path = os.path.join(self.base_path,
+                                self['OUTPUT_DIR'],
+                                "losses_at-%s.xml" % loss_poe)
+            writer = risk_output.create_loss_map_writer(False, path,
+                                                        self.params)
+
+            if writer:
+                metadata = {
+                    "deterministic": False,
+                    "poe": loss_poe,
+                }
+
+                writer.serialize(
+                    [metadata]
+                    + self.asset_losses_per_site(
+                        loss_poe,
+                        self.grid_assets_iterator(self.region.grid)))
+
+                results.append(path)
+
         return results
 
     return output_writer
@@ -199,35 +219,49 @@ class RiskJobMixin(mixins.Mixin):
         else:
             return []
 
+    def grid_assets_iterator(self, grid):
+        """
+        Generates the tuples (point, asset) for all assets known to this job
+        that are contained in grid.
+
+        :returns: tuples (point, asset) where:
+            * point is a :py:class:`openquake.shapes.GridPoint` on the grid
+
+            * asset is a :py:class:`dict` representing an asset
+        """
+
+        for point in grid:
+            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            for asset in kvs.get_list_json_decoded(asset_key):
+                yield point, asset
+
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
-        block = Block.from_kvs(block_id)
-        for point in block.grid(self.region):
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
-                site = shapes.Site(asset['lon'], asset['lat'])
+        block = job.Block.from_kvs(block_id)
+        for point, asset in self.grid_assets_itearator(
+                block.grid(self.region)):
+            site = shapes.Site(asset['lon'], asset['lat'])
 
-                loss_curve = kvs.get(
-                                kvs.tokens.loss_curve_key(job_id,
-                                                          point.row,
-                                                          point.column,
-                                                          asset["assetID"]))
-                loss_ratio_curve = kvs.get(
-                                kvs.tokens.loss_ratio_key(job_id,
-                                                          point.row,
-                                                          point.column,
-                                                          asset["assetID"]))
+            loss_curve = kvs.get(
+                            kvs.tokens.loss_curve_key(job_id,
+                                                        point.row,
+                                                        point.column,
+                                                        asset["assetID"]))
+            loss_ratio_curve = kvs.get(
+                            kvs.tokens.loss_ratio_key(job_id,
+                                                        point.row,
+                                                        point.column,
+                                                        asset["assetID"]))
 
-                if loss_curve:
-                    loss_curve = shapes.Curve.from_json(loss_curve)
-                    loss_curves.append((site, (loss_curve, asset)))
+            if loss_curve:
+                loss_curve = shapes.Curve.from_json(loss_curve)
+                loss_curves.append((site, (loss_curve, asset)))
 
-                if loss_ratio_curve:
-                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
+            if loss_ratio_curve:
+                loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
         results = self._serialize(block_id,
                                            curves=loss_ratio_curves,
@@ -240,32 +274,45 @@ class RiskJobMixin(mixins.Mixin):
                                                 render_multi=True))
         return results
 
-    def write_loss_map(self, loss_poe):
-        """ Iterates through all the assets and maps losses at loss_poe """
-        # Make a special grid at a higher resolution
-        risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
-        path = os.path.join(self.base_path,
-                            self['OUTPUT_DIR'],
-                            "losses_at-%s.tiff" % loss_poe)
-        output_generator = geotiff.LossMapGeoTiffFile(path, risk_grid,
-                init_value=0.0, normalize=True)
-        for point in self.region.grid:
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
-                key = kvs.tokens.loss_key(self.id, point.row, point.column,
-                        asset["assetID"], loss_poe)
-                loss = kvs.get(key)
-                LOG.debug("Loss for asset %s at %s %s is %s" %
-                    (asset["assetID"], asset['lon'], asset['lat'], loss))
-                if loss:
-                    loss_ratio = float(loss) / float(asset["assetValue"])
-                    risk_site = shapes.Site(asset['lon'], asset['lat'])
-                    risk_point = risk_grid.point_at(risk_site)
-                    output_generator.write(
-                            (risk_point.row, risk_point.column), loss_ratio)
-        output_generator.close()
-        return [path]
+    def asset_losses_per_site(self, loss_poe, assets_iterator):
+        """
+        For each site in the region of this job, returns a list of assets and
+        their losses at a given probability of exceedance.
+
+        :param:loss_poe: the probability of exceedance
+        :type:loss_poe: float
+        :param:assets_iterator: an iterator over the assets, returning (point,
+            asset) tuples. See
+            :py:class:`openquake.risk.job.general.grid_assets_iterator`.
+
+        :returns: A list of tuples in the form expected by the
+        :py:class:`LossMapWriter.serialize` method:
+
+           (site, [(loss, asset), ...])
+
+           Where:
+
+            :py:class:`openquake.shapes.Site` the site
+            :py:class:`dict` the asset dict
+            :py:class:`dict` (loss dict) with the following key:
+                ***value*** - the value of the loss for the asset
+        """
+        result = defaultdict(list)
+
+        for point, asset in assets_iterator:
+            key = kvs.tokens.loss_key(self.id, point.row, point.column,
+                    asset["assetID"], loss_poe)
+            loss_value = kvs.get(key)
+            LOG.debug("Loss for asset %s at %s %s is %s" %
+                (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+            if loss_value:
+                risk_site = shapes.Site(asset['lon'], asset['lat'])
+                loss = {
+                    "value": loss_value,
+                }
+                result[risk_site].append((loss, asset))
+
+        return result.items()
 
 
 class EpsilonProvider(object):
