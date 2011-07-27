@@ -352,16 +352,7 @@ class Site(object):
         return self._geohash()
 
     def __hash__(self):
-        if not self:
-            return 0  # empty
-        geohash_val = self._geohash()
-        value = ord(geohash_val[0]) << 7
-        for char in geohash_val:
-            value = c_mul(1000003, value) ^ ord(char)
-        value = value ^ len(geohash_val)
-        if value == -1:
-            value = -2
-        return value
+        return hash((self.longitude, self.latitude))
 
     def to_java(self):
         """Converts to a Java Site object"""
