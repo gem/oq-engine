@@ -24,7 +24,6 @@ import json
 from celery.exceptions import TimeoutError
 from math import exp
 
-from openquake import job
 from openquake import kvs
 from openquake import logs
 
@@ -72,7 +71,7 @@ class ClassicalPSHABasedMixin:
 
         """
 
-        block = job.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(block_id)
 
         #pylint: disable=W0201
         self.vuln_curves = \

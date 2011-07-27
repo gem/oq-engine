@@ -17,15 +17,19 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import os
 import unittest
 
+from openquake import job
+from openquake import shapes
+from openquake.job import config
+from openquake.job.mixins import Mixin
 from openquake.risk.job import general
 from openquake.parser import exposure
 from tests.utils import helpers
 
 TEST_FILE = "exposure-portfolio.xml"
+EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 
 
 class EpsilonTestCase(unittest.TestCase):
@@ -99,3 +103,126 @@ class EpsilonTestCase(unittest.TestCase):
             e = self.assertRaises(
                 ValueError, self.epsilon_provider.epsilon, asset)
             break
+
+
+class BlockTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.site = shapes.Site(1.0, 1.0)
+
+    def test_a_block_has_a_unique_id(self):
+        self.assertTrue(general.Block(()).id)
+        self.assertTrue(general.Block(()).id != general.Block(()).id)
+
+    def test_can_serialize_a_block_into_kvs(self):
+        block = general.Block((self.site, self.site))
+        block.to_kvs()
+
+        self.assertEqual(block, general.Block.from_kvs(block.id))
+
+
+class BlockSplitterTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.site_1 = shapes.Site(1.0, 1.0)
+        self.site_2 = shapes.Site(2.0, 1.0)
+        self.site_3 = shapes.Site(3.0, 1.0)
+
+    def test_an_empty_set_produces_no_blocks(self):
+        self._assert_number_of_blocks_is((), expected=0, block_size=1)
+
+    def test_splits_the_set_into_a_single_block(self):
+        self._assert_number_of_blocks_is(
+            (self.site_1, ), expected=1, block_size=3)
+
+        self._assert_number_of_blocks_is(
+            (self.site_1, self.site_1), expected=1, block_size=3)
+
+        self._assert_number_of_blocks_is(
+            (self.site_1, self.site_1, self.site_1), expected=1, block_size=3)
+
+    def test_splits_the_set_into_multiple_blocks(self):
+        self._assert_number_of_blocks_is(
+            (self.site_1, self.site_1), expected=2, block_size=1)
+
+        self._assert_number_of_blocks_is(
+            (self.site_1, self.site_1, self.site_1), expected=2, block_size=2)
+
+    def test_generates_the_correct_blocks(self):
+        expected = (general.Block(
+            (self.site_1, self.site_2, self.site_3)), )
+
+        self._assert_blocks_are(
+            expected, (self.site_1, self.site_2, self.site_3), block_size=3)
+
+        expected = (general.Block(
+            (self.site_1, self.site_2)), general.Block((self.site_3, )))
+
+        self._assert_blocks_are(
+            expected, (self.site_1, self.site_2, self.site_3), block_size=2)
+
+    def _assert_blocks_are(self, expected, sites, block_size):
+        for idx, block in enumerate(
+            general.split_into_blocks(sites, block_size)):
+
+            self.assertEqual(expected[idx], block)
+
+    def _assert_number_of_blocks_is(self, sites, expected, block_size):
+        counter = 0
+
+        for _ in general.split_into_blocks(sites, block_size):
+            counter += 1
+
+        self.assertEqual(expected, counter)
+
+
+class RiskJobMixinTestCase(unittest.TestCase):
+
+    def test_prepares_blocks_using_the_exposure(self):
+        """The base risk mixin is able to read the exposure file,
+        split the sites into blocks and store them in KVS."""
+
+        mixin = general.RiskJobMixin(None, None)
+
+        mixin.params = {config.EXPOSURE: os.path.join(
+            helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)}
+
+        mixin.region = None
+        mixin.base_path = "."
+        mixin.partition()
+
+        expected = general.Block((shapes.Site(9.15000, 45.16667),
+            shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
+
+        self.assertEqual(1, len(mixin.blocks_keys))
+
+        self.assertEqual(
+            expected, general.Block.from_kvs(mixin.blocks_keys[0]))
+
+    def test_prepares_blocks_using_the_exposure_and_filtering(self):
+        """When reading the exposure file, the mixin also provides filtering
+        on the region specified in the REGION_VERTEX and REGION_GRID_SPACING
+        paramaters."""
+
+        region_vertex = \
+            "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
+
+        params = {config.EXPOSURE: os.path.join(
+                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
+                config.INPUT_REGION: region_vertex,
+                config.REGION_GRID_SPACING: 0.1,
+                # the calculation mode is filled to let the mixin runs
+                config.CALCULATION_MODE: "Event Based"}
+
+        a_job = job.Job(params)
+
+        expected_block = general.Block(
+            (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)))
+
+        with Mixin(a_job, general.RiskJobMixin):
+            a_job.partition()
+
+            self.assertEqual(1, len(a_job.blocks_keys))
+
+            self.assertEqual(
+                expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
