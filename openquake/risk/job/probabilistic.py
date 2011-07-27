@@ -23,6 +23,8 @@ Probabilistic Event Mixin: defines the behaviour of a Job. Calls the
 compute_risk task
 """
 
+from numpy import zeros
+
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
@@ -36,6 +38,9 @@ from openquake.parser import vulnerability
 from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
+from db.alchemy.db_utils import get_uiapi_reader_session
+from db.alchemy import models
+from sqlalchemy import func as sqlfunc
 
 LOGGER = logs.LOG
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
@@ -77,20 +82,66 @@ class ProbabilisticEventMixin():
 
         return results  # TODO(jmc): Move output from being a decorator
 
-    def slice_gmfs(self, block_id):
-        """Load and collate GMF values for all sites in this block. """
-        # TODO(JMC): Confirm this works regardless of the method of haz calc.
-        histories = int(self['NUMBER_OF_SEISMICITY_HISTORIES'])
-        realizations = int(self['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        num_ses = histories * realizations
+    def _gmf_db_list(self, job_id):  # pylint: disable=R0201
+        """Returns a list of the output IDs of all computed GMFs"""
+        session = get_uiapi_reader_session()
 
-        block = general.Block.from_kvs(block_id)
-        sites_list = block.sites
-        gmfs = {}
-        for site in sites_list:
+        ids = session.query(models.Output.id) \
+            .filter(models.Output.oq_job_id == job_id) \
+            .filter(models.Output.output_type == 'gmf')
+
+        return [row[0] for row in ids]
+
+    def _get_db_gmf(self, gmf_id):
+        """Returns a field for the given GMF"""
+        session = get_uiapi_reader_session()
+        grid = self.region.grid
+        field = zeros((grid.rows, grid.columns))
+
+        sites = session.query(
+                sqlfunc.ST_X(models.GMFData.location),
+                sqlfunc.ST_Y(models.GMFData.location),
+                models.GMFData.ground_motion) \
+            .filter(models.GMFData.output_id == gmf_id)
+
+        for x, y, value in sites:
+            site = shapes.Site(x, y)
+            grid_point = grid.point_at(site)
+
+            field[grid_point.row][grid_point.column] = value
+
+        return shapes.Field(field)
+
+    def _sites_to_gmf_keys(self, sites):
+        """Returns the GMF keys "row!col" for the given site list"""
+        keys = []
+
+        for site in sites:
             risk_point = self.region.grid.point_at(site)
             key = "%s!%s" % (risk_point.row, risk_point.column)
-            gmfs[key] = []
+            keys.append(key)
+
+        return keys
+
+    def _get_db_gmfs(self, sites, job_id):
+        """Aggregates GMF data from the DB by site"""
+        all_gmfs = self._gmf_db_list(job_id)
+        gmf_keys = self._sites_to_gmf_keys(sites)
+        gmfs = dict((k, []) for k in gmf_keys)
+
+        for gmf_id in all_gmfs:
+            field = self._get_db_gmf(gmf_id)
+
+            for key in gmfs.keys():
+                (row, col) = key.split("!")
+                gmfs[key].append(field.get(int(row), int(col)))
+
+        return gmfs
+
+    def _get_kvs_gmfs(self, sites, histories, realizations):
+        """Aggregates GMF data from the KVS by site"""
+        gmf_keys = self._sites_to_gmf_keys(sites)
+        gmfs = dict((k, []) for k in gmf_keys)
 
         for i in range(0, histories):
             for j in range(0, realizations):
@@ -104,6 +155,23 @@ class ProbabilisticEventMixin():
                     for key in gmfs.keys():
                         (row, col) = key.split("!")
                         gmfs[key].append(field.get(int(row), int(col)))
+
+        return gmfs
+
+    def slice_gmfs(self, block_id):
+        """Load and collate GMF values for all sites in this block. """
+        # TODO(JMC): Confirm this works regardless of the method of haz calc.
+        histories = int(self['NUMBER_OF_SEISMICITY_HISTORIES'])
+        realizations = int(self['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+        num_ses = histories * realizations
+
+        block = general.Block.from_kvs(block_id)
+
+        if self.params.get("OPENQUAKE_JOB_ID"):
+            gmfs = self._get_db_gmfs(block.sites,
+                                     self.params['OPENQUAKE_JOB_ID'])
+        else:
+            gmfs = self._get_kvs_gmfs(block.sites, histories, realizations)
 
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
@@ -159,6 +227,7 @@ class ProbabilisticEventMixin():
                     for loss_poe in conditional_loss_poes:
                         self.compute_conditional_loss(point.column, point.row,
                                 loss_curve, asset, loss_poe)
+
         return True
 
     def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):

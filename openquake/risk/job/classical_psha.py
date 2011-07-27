@@ -25,6 +25,10 @@ from math import exp
 from openquake import kvs
 from openquake import logs
 
+from db.alchemy.db_utils import get_uiapi_reader_session
+from db.alchemy import models
+from sqlalchemy import func as sqlfunc
+
 from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake.shapes import Curve
@@ -60,6 +64,37 @@ class ClassicalPSHABasedMixin:
                 return []
         return True
 
+    def _get_kvs_curve(self, site):
+        """Read hazard curve data from the KVS"""
+        curve_token = kvs.tokens.mean_hazard_curve_key(self.job_id, site)
+        decoded_curve = kvs.get_value_json_decoded(curve_token)
+
+        hazard_curve = Curve([(exp(float(el['x'])), el['y'])
+                        for el in decoded_curve['curve']])
+
+        return hazard_curve
+
+    def _get_db_curve(self, site):
+        """Read hazard curve data from the DB"""
+        session = get_uiapi_reader_session()
+        job_id = int(self.params["OPENQUAKE_JOB_ID"])
+
+        iml_query = session.query(models.OqParams.imls) \
+            .join(models.OqJob) \
+            .filter(models.OqJob.id == job_id)
+        curve_query = session.query(models.HazardCurveNodeData.poes) \
+            .join(models.HazardCurveData) \
+            .join(models.Output) \
+            .filter(models.Output.oq_job_id == job_id) \
+            .filter(models.HazardCurveData.statistic_type == 'mean') \
+            .filter(sqlfunc.ST_GeoHash(models.HazardCurveNodeData.location, 12)
+                        == site.hash())
+
+        hc = curve_query.one()
+        pms = iml_query.one()
+
+        return Curve(zip(pms.imls, hc.poes))
+
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
@@ -76,13 +111,10 @@ class ClassicalPSHABasedMixin:
                 vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         for point in block.grid(self.region):
-            curve_token = kvs.tokens.mean_hazard_curve_key(self.job_id,
-                                point.site)
-
-            decoded_curve = kvs.get_value_json_decoded(curve_token)
-
-            hazard_curve = Curve([(exp(float(el['x'])), el['y'])
-                            for el in decoded_curve['curve']])
+            if self.params.get("OPENQUAKE_JOB_ID"):
+                hazard_curve = self._get_db_curve(point.site)
+            else:
+                hazard_curve = self._get_kvs_curve(point.site)
 
             asset_key = kvs.tokens.asset_key(self.id,
                             point.row, point.column)
