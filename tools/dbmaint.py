@@ -29,15 +29,15 @@ migration.
   -n | --dryrun   : don't do anything just show what needs done
   -p | --path P   : path to schema upgrade files [default: db/schema/upgrades]
   -U | --user U   : database user to use [default: postgres]
-
-TODO: extend the tool to perform upgrades across versions.
 """
 
+from distutils import version
 import getopt
 import logging
 import subprocess
 import re
 import sys
+import os
 
 
 logging.basicConfig(level=logging.INFO)
@@ -109,7 +109,9 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
 def find_scripts(path):
     """Find all SQL scripts at level 2 of the given `path`."""
     result = []
-    cmd = "find %s -mindepth 2 -maxdepth 2 -type f -name *.sql" % path
+    cmd = "find %s -mindepth 2 -maxdepth 2 -type f" \
+          "     ( -name *.sql -o -name *.py )" % path
+
     code, out, err = run_cmd(cmd.split(), ignore_exit_code=True)
 
     if code == 0:
@@ -117,6 +119,26 @@ def find_scripts(path):
         for file in out.split('\n'):
             result.append(file[prefix_length:])
     return [r for r in result if r]
+
+
+def version_key(string):
+    """Returns a version representation useful for version comparison"""
+
+    # remove the trailing '-<release>' number if any
+    string = string.split('-', 1)[0]
+
+    return version.StrictVersion(string)
+
+
+def script_sort_key(script):
+    """
+    Return a sort key to order upgrade scripts first by revision, then
+    by step, then by file name
+    """
+
+    revision, step, name = script.rsplit('/', 3)
+
+    return version_key(revision), int(step), name
 
 
 def scripts_to_run(artefact, rev_info, config):
@@ -130,14 +152,33 @@ def scripts_to_run(artefact, rev_info, config):
         `config`)
     """
     result = []
-    path = "%s/%s/%s" % (config['path'], artefact, rev_info['revision'])
+    revision = rev_info['revision']
+
+    # find upgrade scripts for this revision
+    path = "%s/%s/%s" % (config['path'], artefact, revision)
     files = find_scripts(path)
     step = int(rev_info['step'])
     for script in files:
         spath, sfile = script.split('/')
         if (int(spath) > step):
-            result.append(script)
-    return list(sorted(result))
+            result.append(os.path.join(revision, script))
+
+    # find upgrade scripts for revisions newer than the current one
+    path = "%s/%s" % (config['path'], artefact)
+    current_revision_key = version_key(revision)
+    if os.path.isdir(path):
+        dirs = [os.path.join(path, d)
+                    for d in os.listdir(path)
+                    if os.path.isdir(os.path.join(path, d))]
+
+        for dir_name in dirs:
+            path_revision = os.path.basename(dir_name)
+
+            if version_key(path_revision) > current_revision_key:
+                result.extend(os.path.join(path_revision, s)
+                                  for s in find_scripts(dir_name))
+
+    return sorted(result, key=script_sort_key)
 
 
 def error_occurred(output):
@@ -159,26 +200,29 @@ def run_scripts(artefact, rev_info, scripts, config):
     :param dict config: the configuration to use: database, host, user, path.
     """
     max_step = 0
+    max_revision = '0.0.0'
+
     for script in scripts:
-        # Keep track of the max. step applied.
-        step, _ = script.split('/')
+        # Keep track of the max. step/revision applied.
+        revision, step, _ = script.split('/')
         step = int(step)
-        if step > max_step:
+        if ((version_key(revision), step) >
+            (version_key(max_revision), max_step)):
             max_step = step
+            max_revision = revision
 
         # Run the SQL script.
-        rev = rev_info['revision']
-        results = psql(config, script="%s/%s/%s" % (artefact, rev, script))
+        results = psql(config, script="%s/%s" % (artefact, script))
         if script_failed(results, script, config):
             # A step of '-1' indicates a broken upgrade.
             max_step = -1
             break
 
     if max_step != 0:
-        cmd = ("UPDATE admin.revision_info SET step=%s, "
+        cmd = ("UPDATE admin.revision_info SET step=%s, revision='%s', "
                "last_update=timezone('UTC'::text, now()) "
                "WHERE artefact='%s' AND revision = '%s'")
-        cmd %= (max_step, artefact, rev_info['revision'])
+        cmd %= (max_step, max_revision, artefact, rev_info['revision'])
         code, out, err = psql(config, cmd=cmd)
 
 
@@ -224,7 +268,7 @@ def perform_upgrade(config):
         rev_data[info[0]] = dict(zip(columns, info[1:]))
     logging.debug(rev_data)
 
-    # Run upgrade scripts (if any) for all rtefacts.
+    # Run upgrade scripts (if any) for all artefacts.
     for artefact, rev_info in rev_data.iteritems():
         scripts = scripts_to_run(artefact, rev_info, config)
         if scripts:

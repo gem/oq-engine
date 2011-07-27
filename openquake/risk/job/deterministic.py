@@ -98,16 +98,18 @@ class DeterministicEventBasedMixin:
             self['BASE_PATH'],
             self['OUTPUT_DIR'],
             'loss-map-%s.xml' % self.id)
-        loss_map_xml_writer = risk_output.LossMapXMLWriter(loss_map_path)
+        loss_map_writer = risk_output.create_loss_map_writer(True,
+                                                             loss_map_path,
+                                                             self.params)
 
-        LOGGER.debug("Starting serialization of the loss map...")
+        if loss_map_writer:
+            LOGGER.debug("Starting serialization of the loss map...")
 
-        # Add a metadata dict in the first list position
-        # TODO(LB): we need to define some meaningful values for the metadata
-        # here. For now, I'm just going to leave it blank.
-        loss_map_metadata = {}
-        loss_map_data.insert(0, loss_map_metadata)
-        loss_map_xml_writer.serialize(loss_map_data)
+            # Add a metadata dict in the first list position
+            # Note: the metadata is still incomplete (see bug 809410)
+            loss_map_metadata = {'deterministic': True}
+            loss_map_data.insert(0, loss_map_metadata)
+            loss_map_writer.serialize(loss_map_data)
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!

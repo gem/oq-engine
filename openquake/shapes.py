@@ -612,12 +612,11 @@ class Curve(object):
     def abscissa_for(self, y_value):
         """Return the x value corresponding to the given y value."""
 
-        data = []
         # inverting the function
-        for x_value in self.abscissae:
-            data.append((self.ordinate_for(x_value), x_value))
+        inverted_func = [(ordinate, x_value) for ordinate, x_value in
+                zip(self.ordinate_for(self.abscissae), self.abscissae)]
 
-        return Curve(data).ordinate_for(y_value)
+        return Curve(inverted_func).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
         """Check if the given value is outside the Y values boundaries."""

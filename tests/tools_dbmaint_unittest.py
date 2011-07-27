@@ -22,13 +22,15 @@
 Unit tests for the tools/dbmaint.py tool.
 """
 
+from distutils import version
 import mock
 import os
 import shutil
 import tempfile
 import unittest
 from tools.dbmaint import (
-    error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run)
+    error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run,
+    version_key, script_sort_key)
 
 
 def touch(path):
@@ -38,6 +40,17 @@ def touch(path):
 
 class RunCmdTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.run_cmd()."""
+
+    def setUp(self):
+        self.lang = ("LANG" in os.environ, os.environ.get("LANG"))
+
+        os.environ["LANG"] = 'C'
+
+    def tearDown(self):
+        if self.lang[0]:
+            os.environ["LANG"] = self.lang[1]
+        else:
+            del os.environ["LANG"]
 
     def test_run_cmd_with_success(self):
         """Invoke a command without errors."""
@@ -247,8 +260,10 @@ class FindScriptsTestCase(unittest.TestCase):
         """
         touch("%s/01-a.sql" % self.path1)
         touch("%s/02-b.sql" % self.path1)
+        touch("%s/03-c.py" % self.path1)
         touch("%s/01-a.sql" % self.path2)
-        self.assertEqual(["1/01-a.sql", "1/02-b.sql", "2/01-a.sql"],
+        self.assertEqual(["1/01-a.sql", "1/02-b.sql", "1/03-c.py",
+                          "2/01-a.sql"],
                          list(sorted(find_scripts(self.top))))
 
 
@@ -258,15 +273,24 @@ class ScriptsToRunTestCase(unittest.TestCase):
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         self.path = "%s/schema/upgrades" % self.tdir
-        self.top = "%s/openquake/pshai/0.3.9-1" % self.path
-        self.path1 = "%s/1" % self.top
-        os.makedirs(self.path1)
-        self.path1d = "%s/1/too_deep" % self.top
-        os.makedirs(self.path1d)
-        self.path2 = "%s/2" % self.top
-        os.makedirs(self.path2)
-        self.path3 = "%s/3" % self.top
-        os.makedirs(self.path3)
+        self.top = "%s/openquake/pshai" % self.path
+        # older revision
+        self.path_38_1 = "%s/0.3.8/1" % self.top
+        os.makedirs(self.path_38_1)
+        self.path_38_5 = "%s/0.3.8/5" % self.top
+        os.makedirs(self.path_38_5)
+        # current revision
+        self.path_39_1 = "%s/0.3.9-1/1" % self.top
+        os.makedirs(self.path_39_1)
+        self.path_39_1d = "%s/0.3.9-1/1/too_deep" % self.top
+        os.makedirs(self.path_39_1d)
+        self.path_39_2 = "%s/0.3.9-1/2" % self.top
+        os.makedirs(self.path_39_2)
+        self.path_39_3 = "%s/0.3.9-1/3" % self.top
+        os.makedirs(self.path_39_3)
+        # newer revision
+        self.path_42_1 = "%s/0.4.2/1" % self.top
+        os.makedirs(self.path_42_1)
 
     def tearDown(self):
         shutil.rmtree(self.tdir)
@@ -277,8 +301,10 @@ class ScriptsToRunTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": self.path, "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        touch("%s/01-a.sql" % self.path1)
-        touch("%s/01-a.sql" % self.path2)
+        touch("%s/01-a.sql" % self.path_38_1)
+        touch("%s/01-a.sql" % self.path_38_5)
+        touch("%s/01-a.sql" % self.path_39_1)
+        touch("%s/01-a.sql" % self.path_39_2)
         self.assertEqual([], scripts_to_run(artefact, rev_info, config))
 
     def test_scripts_to_run_with_available_upgrades(self):
@@ -287,11 +313,16 @@ class ScriptsToRunTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": self.path, "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        touch("%s/01-a.sql" % self.path1)
-        touch("%s/01-b.sql" % self.path2)
-        touch("%s/01-c.sql" % self.path3)
-        touch("%s/02-d.sql" % self.path3)
-        self.assertEqual(["3/01-c.sql", "3/02-d.sql"],
+        touch("%s/01-a.sql" % self.path_38_1)
+        touch("%s/01-a.sql" % self.path_39_1)
+        touch("%s/01-a.sql" % self.path_38_5)
+        touch("%s/01-b.sql" % self.path_39_2)
+        touch("%s/01-c.sql" % self.path_39_3)
+        touch("%s/02-d.sql" % self.path_39_3)
+        touch("%s/01-a.sql" % self.path_42_1)
+        touch("%s/02-b.sql" % self.path_42_1)
+        self.assertEqual(["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
+                          "0.4.2/1/01-a.sql", "0.4.2/1/02-b.sql"],
                          scripts_to_run(artefact, rev_info, config))
 
 
@@ -328,7 +359,8 @@ class RunScriptsTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        scripts = ["3/01-c.sql", "3/02-d.sql"]
+        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
+                   "0.4.2/2/01-a.sql"]
         with mock.patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.return_value = (0, "", "")
@@ -336,20 +368,24 @@ class RunScriptsTestCase(unittest.TestCase):
             # Run the actual function that is to be tested.
             run_scripts(artefact, rev_info, scripts, config)
 
-            # The mock was called thrice.
-            self.assertEqual(3, mock_psql.call_count)
+            # The mock was called four times.
+            self.assertEqual(4, mock_psql.call_count)
             # The first call executed an SQL script.
             self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
                              mock_psql.call_args_list[0][1])
             # The second call executed the second SQL script.
             self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/02-d.sql"},
                              mock_psql.call_args_list[1][1])
+            # The third call executed the second SQL script.
+            self.assertEqual({"script": "openquake/pshai/0.4.2/2/01-a.sql"},
+                             mock_psql.call_args_list[2][1])
             # The last call executed the command to update the revision step.
             self.assertEqual(
-                {"cmd": "UPDATE admin.revision_info SET step=3, "
+                {"cmd": "UPDATE admin.revision_info SET step=2, "
+                        "revision='0.4.2', "
                         "last_update=timezone('UTC'::text, now()) WHERE "
                         "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
-                mock_psql.call_args_list[2][1])
+                mock_psql.call_args_list[3][1])
 
     def test_run_scripts_with_failing_upgrades(self):
         """Upgrades are available but the second one will fail."""
@@ -365,7 +401,8 @@ class RunScriptsTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": False, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        scripts = ["3/01-c.sql", "3/02-d.sql"]
+        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
+                   "0.4.2/1/01-a.sql"]
         with mock.patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.side_effect = fail_on_first_even_script
@@ -385,6 +422,47 @@ class RunScriptsTestCase(unittest.TestCase):
             # a database upgrade failure.
             self.assertEqual(
                 {"cmd": "UPDATE admin.revision_info SET step=-1, "
+                        "revision='0.3.9-1', "
                         "last_update=timezone('UTC'::text, now()) WHERE "
                         "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
                 mock_psql.call_args_list[2][1])
+
+
+class VersionKeyTestCase(unittest.TestCase):
+    """Tests the behaviour of dbmaint.version_key()."""
+
+    def test_version_with_dash(self):
+        self.assertEquals('3.9.1', str(version_key('3.9.1-1')))
+
+    def test_plain_version(self):
+        self.assertEquals('3.9.1', str(version_key('3.9.1')))
+
+
+class ScriptSortKeyTestCase(unittest.TestCase):
+    """Tests the behaviour of dbmaint.script_sort_key()."""
+
+    def test_sanity(self):
+        self.assertEquals((version.StrictVersion("0.3.9"), 7, "01-a.sql"),
+                          script_sort_key("0.3.9-1/7/01-a.sql"))
+
+    def test_different_revision(self):
+        self.assertTrue(script_sort_key("0.3.9-1/1/01-a.sql") <
+                        script_sort_key("0.4.2/1/01-a.sql"))
+        self.assertTrue(script_sort_key("0.3.9-1/1/01-a.sql") <
+                        script_sort_key("0.3.10/1/01-a.sql"))
+        self.assertTrue(script_sort_key("0.3.9-1/4/01-a.sql") <
+                        script_sort_key("0.4.2/1/01-a.sql"))
+        self.assertTrue(script_sort_key("0.3.9-1/1/04-a.sql") <
+                        script_sort_key("0.4.2/1/01-a.sql"))
+
+    def test_different_step(self):
+        self.assertTrue(script_sort_key("0.4.2/1/01-a.sql") <
+                        script_sort_key("0.4.2/2/01-a.sql"))
+        self.assertTrue(script_sort_key("0.4.2/9/01-a.sql") <
+                        script_sort_key("0.4.2/10/01-a.sql"))
+
+    def test_different_file(self):
+        self.assertTrue(script_sort_key("0.3.9-1/1/01-a.sql") <
+                        script_sort_key("0.3.9-1/1/02-a.sql"))
+        self.assertTrue(script_sort_key("0.4.2/1/01-a.sql") <
+                        script_sort_key("0.4.2/1/02-a.sql"))
