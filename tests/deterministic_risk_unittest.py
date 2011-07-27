@@ -144,7 +144,7 @@ class DeterministicRiskTestCase(unittest.TestCase):
         """
         Exercise the deterministic risk job and make sure it runs end-to-end.
         """
-        risk_job = job.Job.from_file(TEST_JOB_FILE, 'xml')
+        risk_job = helpers.job_from_file(TEST_JOB_FILE)
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen.

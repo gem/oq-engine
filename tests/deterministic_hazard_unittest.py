@@ -70,7 +70,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         flags.FLAGS.include_defaults = False
 
-        self.job = job.Job.from_file(DETERMINISTIC_SMOKE_TEST, 'xml')
+        self.job = helpers.job_from_file(DETERMINISTIC_SMOKE_TEST)
 
         self.job.params[NUMBER_OF_CALC_KEY] = "1"
 
