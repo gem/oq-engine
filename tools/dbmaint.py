@@ -38,6 +38,7 @@ import logging
 import subprocess
 import re
 import sys
+import os
 
 
 logging.basicConfig(level=logging.INFO)
@@ -139,13 +140,17 @@ def scripts_to_run(artefact, rev_info, config):
         `config`)
     """
     result = []
-    path = "%s/%s/%s" % (config['path'], artefact, rev_info['revision'])
+    revision = rev_info['revision']
+
+    # find upgrade scripts for this revision
+    path = "%s/%s/%s" % (config['path'], artefact, revision)
     files = find_scripts(path)
     step = int(rev_info['step'])
     for script in files:
         spath, sfile = script.split('/')
         if (int(spath) > step):
-            result.append(script)
+            result.append(os.path.join(revision, script))
+
     return list(sorted(result))
 
 
@@ -169,15 +174,15 @@ def run_scripts(artefact, rev_info, scripts, config):
     """
     max_step = 0
     for script in scripts:
-        # Keep track of the max. step applied.
-        step, _ = script.split('/')
+        # Keep track of the max. step/revision applied.
+        revision, step, _ = script.split('/')
         step = int(step)
         if step > max_step:
             max_step = step
 
         # Run the SQL script.
         rev = rev_info['revision']
-        results = psql(config, script="%s/%s/%s" % (artefact, rev, script))
+        results = psql(config, script="%s/%s" % (artefact, script))
         if script_failed(results, script, config):
             # A step of '-1' indicates a broken upgrade.
             max_step = -1
