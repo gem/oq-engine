@@ -127,6 +127,14 @@ def version_array(version):
     return [int(v) for v in version.split('.')]
 
 
+def script_sort_key(script):
+    # return a sort key to order files first by revision, then by
+    # step, then by file name
+    revision, step, name = script.rsplit('/', 3)
+
+    return version_array(revision), int(step), name
+
+
 def scripts_to_run(artefact, rev_info, config):
     """The SQL scripts that need to run given the `artefact` and `rev_info`.
 
@@ -165,7 +173,7 @@ def scripts_to_run(artefact, rev_info, config):
                 result.extend(os.path.join(path_revision, s)
                                   for s in find_scripts(dir))
 
-    return list(sorted(result))
+    return sorted(result, key=script_sort_key)
 
 
 def error_occurred(output):
