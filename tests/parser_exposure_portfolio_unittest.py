@@ -79,7 +79,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result = [
-            (shapes.Point(9.15333, 45.12200),
+            (shapes.Site(9.15333, 45.12200),
             {'listID': 'PAV01',
              'listDescription': 'Collection of existing building in ' \
                                 'downtown Pavia',
