@@ -277,7 +277,7 @@ class CurveTestCase(unittest.TestCase):
     def test_abscissa_for_with_multiple_yvals(self):
         """ tests the correctness of the abscissa method """
         self.assertEqual(
-            self.simple_curve.abscissa_for(self.y_vals).tolist(), 
+            self.simple_curve.abscissa_for(self.y_vals).tolist(),
                 self.x_vals)
 
 
