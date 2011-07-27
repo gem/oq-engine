@@ -359,14 +359,11 @@ def create_loss_map_writer(deterministic, nrml_path, params):
         :py:class:`output.risk.LossMapDBWriter`
     """
 
-    def xml():
-        if deterministic:
-            return LossMapXMLWriter(nrml_path)
-        else:
-            # No XML schema for non-deterministic maps yet (see bug 805434)
-            return None
+    serialize_to = params["SERIALIZE_RESULTS_TO"].split(',')
 
-    def db():
+    writers = []
+
+    if 'db' in serialize_to:
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
@@ -374,11 +371,19 @@ def create_loss_map_writer(deterministic, nrml_path, params):
         return LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
                                job_db_key)
 
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
-        return writer.CompositeWriter(db(), xml())
+    if 'xml' in serialize_to:
+        if deterministic:
+            writers.append(LossMapXMLWriter(nrml_path))
+        else:
+            # No XML schema for non-deterministic maps yet (see bug 805434)
+            pass
+
+    if len(writers) == 0:
+        return None
+    elif len(writers) == 1:
+        return writers[0]
     else:
-        return db()
+        return writer.CompositeWriter(*writers)
 
 
 class CurveXMLWriter(BaseXMLWriter):
@@ -608,28 +613,33 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
 
     assert curve_mode in ('loss', 'loss_ratio')
 
-    def xml():
-        if curve_mode == 'loss':
-            writer_class = LossCurveXMLWriter
-        elif curve_mode == 'loss_ratio':
-            writer_class = LossRatioCurveXMLWriter
+    serialize_to = params["SERIALIZE_RESULTS_TO"].split(',')
 
-        return writer_class(nrml_path)
+    writers = []
 
-    def db():
+    if 'db' in serialize_to:
         job_db_key = params.get("OPENQUAKE_JOB_ID")
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
 
         if curve_mode == 'loss':
-            return LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
-                                     job_db_key)
+            writers.append(LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
+                                             job_db_key))
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
-            return None
+            pass
 
-    db_flag = params["SERIALIZE_RESULTS_TO_DB"]
-    if db_flag.lower() == "false":
-        return writer.CompositeWriter(db(), xml())
+    if 'xml' in serialize_to:
+        if curve_mode == 'loss':
+            writer_class = LossCurveXMLWriter
+        elif curve_mode == 'loss_ratio':
+            writer_class = LossRatioCurveXMLWriter
+
+        writers.append(writer_class(nrml_path))
+
+    if len(writers) == 0:
+        return None
+    elif len(writers) == 1:
+        return writers[0]
     else:
-        return db()
+        return writer.CompositeWriter(*writers)
