@@ -358,7 +358,8 @@ class RunScriptsTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql"]
+        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
+                   "0.4.2/2/01-a.sql"]
         with mock.patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.return_value = (0, "", "")
@@ -367,19 +368,23 @@ class RunScriptsTestCase(unittest.TestCase):
             run_scripts(artefact, rev_info, scripts, config)
 
             # The mock was called thrice.
-            self.assertEqual(3, mock_psql.call_count)
+            self.assertEqual(4, mock_psql.call_count)
             # The first call executed an SQL script.
             self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
                              mock_psql.call_args_list[0][1])
             # The second call executed the second SQL script.
             self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/02-d.sql"},
                              mock_psql.call_args_list[1][1])
+            # The third call executed the second SQL script.
+            self.assertEqual({"script": "openquake/pshai/0.4.2/2/01-a.sql"},
+                             mock_psql.call_args_list[2][1])
             # The last call executed the command to update the revision step.
             self.assertEqual(
-                {"cmd": "UPDATE admin.revision_info SET step=3, "
+                {"cmd": "UPDATE admin.revision_info SET step=2, "
+                        "revision='0.4.2', "
                         "last_update=timezone('UTC'::text, now()) WHERE "
                         "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
-                mock_psql.call_args_list[2][1])
+                mock_psql.call_args_list[3][1])
 
     def test_run_scripts_with_failing_upgrades(self):
         """Upgrades are available but the second one will fail."""
@@ -395,7 +400,8 @@ class RunScriptsTestCase(unittest.TestCase):
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": False, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
-        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql"]
+        scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
+                   "0.4.2/1/01-a.sql"]
         with mock.patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.side_effect = fail_on_first_even_script
@@ -415,6 +421,7 @@ class RunScriptsTestCase(unittest.TestCase):
             # a database upgrade failure.
             self.assertEqual(
                 {"cmd": "UPDATE admin.revision_info SET step=-1, "
+                        "revision='0.3.9-1', "
                         "last_update=timezone('UTC'::text, now()) WHERE "
                         "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
                 mock_psql.call_args_list[2][1])
