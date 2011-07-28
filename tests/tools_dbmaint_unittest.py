@@ -226,7 +226,7 @@ class FindScriptsTestCase(unittest.TestCase):
 
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
-        self.top = "%s/schema/upgrades/openquake/pshai/0.3.9-1" % self.tdir
+        self.top = "%s/schema/upgrades/openquake/hzrdi/0.3.9-1" % self.tdir
         self.path1 = "%s/1" % self.top
         os.makedirs(self.path1)
         self.path1d = "%s/1/too_deep" % self.top
@@ -273,7 +273,7 @@ class ScriptsToRunTestCase(unittest.TestCase):
     def setUp(self):
         self.tdir = tempfile.mkdtemp()
         self.path = "%s/schema/upgrades" % self.tdir
-        self.top = "%s/openquake/pshai" % self.path
+        self.top = "%s/openquake/hzrdi" % self.path
         # older revision
         self.path_38_1 = "%s/0.3.8/1" % self.top
         os.makedirs(self.path_38_1)
@@ -297,7 +297,7 @@ class ScriptsToRunTestCase(unittest.TestCase):
 
     def test_scripts_to_run_with_no_upgrades(self):
         """No upgrades are available."""
-        artefact = "openquake/pshai"
+        artefact = "openquake/hzrdi"
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": self.path, "host": "localhost",
                   "db": "openquake", "user": "postgres"}
@@ -309,7 +309,7 @@ class ScriptsToRunTestCase(unittest.TestCase):
 
     def test_scripts_to_run_with_available_upgrades(self):
         """Upgrades are available."""
-        artefact = "openquake/pshai"
+        artefact = "openquake/hzrdi"
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": self.path, "host": "localhost",
                   "db": "openquake", "user": "postgres"}
@@ -332,7 +332,7 @@ class ErrorOccuredTestCase(unittest.TestCase):
     def test_error_occured_with_error(self):
         """A psql error is detected correctly."""
         output = '''
-            psql:/tmp/openquake/pshai/0.3.9-1/5/55-eee.sql:1: ERROR:  relation
+            psql:/tmp/openquake/hzrdi/0.3.9-1/5/55-eee.sql:1: ERROR:  relation
             "admin.dbm_test" does not exist
             LINE 1: INSERT INTO admin.dbm_test(name) VALUES('5/55-eee.sql');
         '''
@@ -355,7 +355,7 @@ class RunScriptsTestCase(unittest.TestCase):
         very end to update the revision step.
         """
 
-        artefact = "openquake/pshai"
+        artefact = "openquake/hzrdi"
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": True, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
@@ -371,20 +371,20 @@ class RunScriptsTestCase(unittest.TestCase):
             # The mock was called four times.
             self.assertEqual(4, mock_psql.call_count)
             # The first call executed an SQL script.
-            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
+            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/01-c.sql"},
                              mock_psql.call_args_list[0][1])
             # The second call executed the second SQL script.
-            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/02-d.sql"},
+            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/02-d.sql"},
                              mock_psql.call_args_list[1][1])
             # The third call executed the second SQL script.
-            self.assertEqual({"script": "openquake/pshai/0.4.2/2/01-a.sql"},
+            self.assertEqual({"script": "openquake/hzrdi/0.4.2/2/01-a.sql"},
                              mock_psql.call_args_list[2][1])
             # The last call executed the command to update the revision step.
             self.assertEqual(
                 {"cmd": "UPDATE admin.revision_info SET step=2, "
                         "revision='0.4.2', "
                         "last_update=timezone('UTC'::text, now()) WHERE "
-                        "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
+                        "artefact='openquake/hzrdi' AND revision = '0.3.9-1'"},
                 mock_psql.call_args_list[3][1])
 
     def test_run_scripts_with_failing_upgrades(self):
@@ -397,7 +397,7 @@ class RunScriptsTestCase(unittest.TestCase):
             else:
                 return(0, "All goood", "")
 
-        artefact = "openquake/pshai"
+        artefact = "openquake/hzrdi"
         rev_info = {"step": "2", "id": "3", "revision": "0.3.9-1"}
         config = {"dryrun": False, "path": "/tmp", "host": "localhost",
                   "db": "openquake", "user": "postgres"}
@@ -413,10 +413,10 @@ class RunScriptsTestCase(unittest.TestCase):
             # The mock was called thrice.
             self.assertEqual(3, mock_psql.call_count)
             # The first call executed an SQL script.
-            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/01-c.sql"},
+            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/01-c.sql"},
                              mock_psql.call_args_list[0][1])
             # The second call executed the second SQL script.
-            self.assertEqual({"script": "openquake/pshai/0.3.9-1/3/02-d.sql"},
+            self.assertEqual({"script": "openquake/hzrdi/0.3.9-1/3/02-d.sql"},
                              mock_psql.call_args_list[1][1])
             # Please note how the step is assigned a -1 value which indicates
             # a database upgrade failure.
@@ -424,7 +424,7 @@ class RunScriptsTestCase(unittest.TestCase):
                 {"cmd": "UPDATE admin.revision_info SET step=-1, "
                         "revision='0.3.9-1', "
                         "last_update=timezone('UTC'::text, now()) WHERE "
-                        "artefact='openquake/pshai' AND revision = '0.3.9-1'"},
+                        "artefact='openquake/hzrdi' AND revision = '0.3.9-1'"},
                 mock_psql.call_args_list[2][1])
 
 
