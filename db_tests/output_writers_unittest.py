@@ -54,6 +54,7 @@ class ComposeWritersTest(unittest.TestCase):
         self.assertTrue(isinstance(w, output_writer.CompositeWriter))
         self.assertEqual(list(w.writers), ws)
 
+
 class CreateWriterTestBase(object):
     def test_create_writer_with_xml(self):
         """
