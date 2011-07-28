@@ -224,11 +224,12 @@ class Job(object):
         :type params: :py:class:`dict`
         """
 
-        # output_type can be set also to 'xml_without_db', which has the
-        # effect of serializing only to xml.  This allows to run tests without
-        # requiring a database.
-        # This is not documented in the public interface because is essentially
-        # a detail of our current tests and ci infrastructure.
+        # output_type can be set, in addition to 'db' and 'xml', also to
+        # 'xml_without_db', which has the effect of serializing only to xml
+        # without requiring a database at all.
+        # This allows to run tests without requiring a database.
+        # This is not documented in the public interface because it is
+        # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
         config_file = os.path.abspath(config_file)
