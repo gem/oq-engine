@@ -40,6 +40,8 @@ from openquake import xml
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
 
+from sqlalchemy import func as sqlfunc
+
 LOGGER = logs.RISK_LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
@@ -284,12 +286,15 @@ class LossMapDBReader(object):
         """
         loss_map = self.session.query(LossMap) \
             .filter(LossMap.output_id == output_id).one()
-        loss_map_data = self.session.query(LossMapData) \
+        loss_map_data = self.session.query(
+            sqlfunc.ST_X(LossMapData.location),
+            sqlfunc.ST_Y(LossMapData.location),
+            LossMapData) \
             .filter(LossMapData.loss_map == loss_map).all()
         items = defaultdict(list)
 
-        for datum in loss_map_data:
-            site, loss_asset = self._get_item(loss_map, datum)
+        for lon, lat, datum in loss_map_data:
+            site, loss_asset = self._get_item(loss_map, lon, lat, datum)
             items[site].append(loss_asset)
 
         return [self._get_metadata(loss_map)] + items.items()
@@ -303,7 +308,7 @@ class LossMapDBReader(object):
         return dict((metadata_key, getattr(loss_map, key))
                         for key, metadata_key in LOSS_MAP_METADATA_KEYS)
 
-    def _get_item(self, loss_map, datum):
+    def _get_item(self, loss_map, lon, lat, datum):  # pylint: disable=R0201
         """
         Returns the data for a point in the loss map
 
@@ -311,8 +316,7 @@ class LossMapDBReader(object):
 
         The format for loss and asset documented in :class:`LossMapDBWriter`.
         """
-        location = datum.location.coords(self.session)
-        site = shapes.Site(location[0], location[1])
+        site = shapes.Site(lon, lat)
         asset = {'assetID': datum.asset_ref}
 
         if loss_map.deterministic:
@@ -637,7 +641,10 @@ class LossCurveDBReader(object):
         """
         loss_curve = self.session.query(LossCurve) \
             .filter(LossCurve.output_id == output_id).one()
-        loss_curve_data = self.session.query(LossCurveData) \
+        loss_curve_data = self.session.query(
+            sqlfunc.ST_X(LossCurveData.location),
+            sqlfunc.ST_Y(LossCurveData.location),
+            LossCurveData) \
             .filter(LossCurveData.loss_curve == loss_curve).all()
 
         curves = []
@@ -647,16 +654,13 @@ class LossCurveDBReader(object):
             'lossCategory': loss_curve.category,
         }
 
-        for datum in loss_curve_data:
-            location = datum.location.coords(self.session)
-            site = shapes.Site(location[0], location[1])
-
+        for lon, lat, datum in loss_curve_data:
             curve = shapes.Curve(zip(datum.losses, datum.poes))
 
             asset_object = asset.copy()
             asset_object['assetID'] = datum.asset_ref
 
-            curves.append((site, (curve, asset_object)))
+            curves.append((shapes.Site(lon, lat), (curve, asset_object)))
 
         return curves
 
