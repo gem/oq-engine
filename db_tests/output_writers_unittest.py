@@ -44,7 +44,7 @@ class CreateWriterTestBase(object):
         SERIALIZE_RESULTS_TO  parameter is set to 'db'.
         """
         writer = self.create_function(
-            dict(SERIALIZE_RESULTS_TO ='db', OPENQUAKE_JOB_ID='11'),
+            dict(SERIALIZE_RESULTS_TO='db', OPENQUAKE_JOB_ID='11'),
             "/tmp/c.xml")
         self.assertTrue(isinstance(writer, self.db_writer_class))
 
@@ -53,7 +53,7 @@ class CreateWriterTestBase(object):
         An AssertionError is raised when the SERIALIZE_RESULTS_TO  parameter
         is set to 'db'. but the OPENQUAKE_JOB_ID parameter is absent.
         """
-        config = dict(SERIALIZE_RESULTS_TO ='db')
+        config = dict(SERIALIZE_RESULTS_TO='db')
         self.assertRaises(
             AssertionError, self.create_function, config, "/tmp")
 
@@ -63,7 +63,7 @@ class CreateWriterTestBase(object):
         set to 'True'. but the OPENQUAKE_JOB_ID parameter could not be
         converted to an integer
         """
-        config = dict(SERIALIZE_RESULTS_TO ='db',
+        config = dict(SERIALIZE_RESULTS_TO='db',
                       OPENQUAKE_JOB_ID="number")
         self.assertRaises(
             ValueError, self.create_function, config, "/tmp")

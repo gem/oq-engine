@@ -989,6 +989,7 @@ class OutputTestCase(unittest.TestCase):
             test_file_path, test_region.grid, TEST_COLORMAP)
         self.assertEqual('relative', hm_writer.scaling)
 
+
 class WriterTestCase(unittest.TestCase):
     def test_composite_accepts_null_writer(self):
         w = writer.CompositeWriter(None)

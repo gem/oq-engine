@@ -623,8 +623,8 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
         job_db_key = int(job_db_key)
 
         if curve_mode == 'loss':
-            writers.append(LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
-                                             job_db_key))
+            writers.append(LossCurveDBWriter(get_uiapi_writer_session(),
+                                             nrml_path, job_db_key))
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             pass
