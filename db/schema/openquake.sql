@@ -676,7 +676,7 @@ ALTER TABLE hzrdo.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Hazard curve data.
-CREATE TABLE uiapi.hazard_curve_data (
+CREATE TABLE hzrdo.hazard_curve_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     -- Realization reference string
@@ -696,7 +696,7 @@ CREATE TABLE uiapi.hazard_curve_data (
         CHECK(
             ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
             OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
-) TABLESPACE uiapi_ts;
+) TABLESPACE hzrdo_ts;
 
 
 -- Hazard curve node data.
@@ -950,13 +950,13 @@ ALTER TABLE hzrdo.hazard_map_data
 ADD CONSTRAINT hzrdo_hazard_map_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.hazard_curve_data
-ADD CONSTRAINT uiapi_hazard_curve_data_output_fk
+ALTER TABLE hzrdo.hazard_curve_data
+ADD CONSTRAINT hzrdo_hazard_curve_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.hazard_curve_node_data
 ADD CONSTRAINT uiapi_hazard_curve_node_data_output_fk
-FOREIGN KEY (hazard_curve_data_id) REFERENCES uiapi.hazard_curve_data(id) ON DELETE CASCADE;
+FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdo.hazard_curve_data(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.gmf_data
 ADD CONSTRAINT uiapi_gmf_data_output_fk
