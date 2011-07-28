@@ -187,6 +187,20 @@ class CompositeWriter(object):
                 writer.serialize(iterable)
 
 
+def compose_writers(writers):
+    """
+    Takes a list of writers (the list can be empty or contain None items) and
+    returns a single writer.
+    """
+
+    if len(writers) == 0:
+        return None
+    elif len(writers) == 1:
+        return writers[0]
+    else:
+        return CompositeWriter(*writers)
+
+
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
