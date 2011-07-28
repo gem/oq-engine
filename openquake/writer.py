@@ -190,10 +190,10 @@ class CompositeWriter(object):
 def compose_writers(writers):
     """
     Takes a list of writers (the list can be empty or contain None items) and
-    returns a single writer.
+    returns a single writer or None if the list didn't contain any writer.
     """
 
-    if len(writers) == 0:
+    if all(writer == None for writer in writers):  # True if the list is empty
         return None
     elif len(writers) == 1:
         return writers[0]
