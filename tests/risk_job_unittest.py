@@ -239,7 +239,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         """
         job_config_file = helpers.smoketest_file('simplecase/config.gem')
 
-        test_job = job.Job.from_file(job_config_file, 'xml')
+        test_job = helpers.job_from_file(job_config_file)
 
         expected_sites = [
             shapes.Site(-118.077721, 33.852034),
