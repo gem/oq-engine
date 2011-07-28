@@ -211,7 +211,7 @@ class Job(object):
         return job
 
     @staticmethod
-    def from_file(config_file, output_type, params=None):
+    def from_file(config_file, output_type):
         """
         Create a job from external configuration files.
 
@@ -223,13 +223,20 @@ class Job(object):
             the ones read from the config file
         :type params: :py:class:`dict`
         """
+
+        # output_type can be set also to 'xml_without_db', which has the
+        # effect of serializing only to xml.  This allows to run tests without
+        # requiring a database.
+        # This is not documented in the public interface because is essentially
+        # a detail of our current tests and ci infrastructure.
+        assert output_type in ('db', 'xml', 'xml_without_db')
+
         config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file))
 
         base_path = os.path.abspath(os.path.dirname(config_file))
 
-        if params is None:
-            params = {}
+        params = {}
 
         sections = []
         for each_config_file in Job.default_configs() + [config_file]:
@@ -238,15 +245,16 @@ class Job(object):
             params.update(new_params)
         params['BASE_PATH'] = base_path
 
-        if 'OPENQUAKE_JOB_ID' not in params:
+        if output_type == 'xml_without_db':
+            params['SERIALIZE_RESULTS_TO'] = 'xml'
+        else:
+            # create the database record for this job
             params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
 
             if output_type == 'db':
                 params['SERIALIZE_RESULTS_TO'] = 'db'
             else:
                 params['SERIALIZE_RESULTS_TO'] = 'db,xml'
-        else:
-            params['SERIALIZE_RESULTS_TO'] = 'xml'
 
         job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file  # pylint: disable=W0201
