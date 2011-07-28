@@ -37,7 +37,7 @@ from openquake.parser import exposure
 from openquake.kvs.tokens import alloc_job_key
 
 from db.alchemy.models import OqJob, OqUser, OqParams
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 import geoalchemy as ga
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -128,7 +128,7 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_uiapi_writer_session()
+    session = get_db_session("hzrdo", "writer")
 
     # TODO specify the owner as a command line parameter
     owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
