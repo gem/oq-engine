@@ -21,6 +21,7 @@
 
 COMMENT ON SCHEMA admin IS 'Administrative data';
 COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
+COMMENT ON SCHEMA oqmif IS 'OpenQuake tables for interfacing with external parties';
 COMMENT ON SCHEMA pshai IS 'PSHA input model';
 COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
 
@@ -47,6 +48,23 @@ COMMENT ON COLUMN eqcat.surface.semi_minor IS 'Semi-minor axis: The shortest rad
 COMMENT ON COLUMN eqcat.surface.semi_major IS 'Semi-major axis: The longest radius of an ellipse.';
 
 COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed for geonode integration';
+
+
+COMMENT ON TABLE oqmif.exposure_data IS 'Per-asset risk exposure data';
+COMMENT ON COLUMN oqmif.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
+COMMENT ON COLUMN oqmif.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
+COMMENT ON COLUMN oqmif.exposure_data.value IS 'The value of the asset at hand';
+COMMENT ON COLUMN oqmif.exposure_data.vf_ref IS 'A reference to the vulnerability function that should be used for the asset at hand';
+COMMENT ON COLUMN oqmif.exposure_data.structure_type IS 'An optional structure type for the asset at hand';
+COMMENT ON COLUMN oqmif.exposure_data.retrofitting_cost IS 'An optional cost of retrofitting for the asset at hand';
+COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last change of the exposure data for the asset at hand';
+
+COMMENT ON TABLE oqmif.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN oqmif.exposure_model.description IS 'An optional description of the risk exposure model at hand';
+COMMENT ON COLUMN oqmif.exposure_model.category IS 'The risk category modelled';
+COMMENT ON COLUMN oqmif.exposure_model.unit IS 'The unit of measurement for the exposure data in the model at hand';
+COMMENT ON COLUMN oqmif.exposure_model.last_update IS 'Date/time of the last change of the model at hand';
+
 
 COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
 COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
