@@ -27,9 +27,7 @@ import mock
 import os
 import unittest
 
-from db.alchemy.db_utils import (
-    SessionCache, get_eqcat_writer_session, get_hzrdi_writer_session,
-    get_uiapi_writer_session, get_eqcat_etl_session, get_hzrdi_etl_session)
+from db.alchemy.db_utils import SessionCache, get_db_session
 
 
 class SessionCacheInitSessionTestCase(unittest.TestCase):
