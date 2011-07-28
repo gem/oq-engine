@@ -261,7 +261,7 @@ def perform_upgrade(config):
     #  openquake/admin |  1 | 0.3.9-1  |    0
     #  openquake/eqcat |  2 | 0.3.9-1  |    0
     #  openquake/uiapi |  4 | 0.3.9-1  |    0
-    #  openquake/pshai |  3 | 0.3.9-1  |    0
+    #  openquake/hzrdi |  3 | 0.3.9-1  |    0
     # (4 rows)
     for info in db_rev_data:
         info = [d.strip() for d in info.split('|')]

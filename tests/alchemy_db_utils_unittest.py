@@ -28,8 +28,8 @@ import os
 import unittest
 
 from db.alchemy.db_utils import (
-    SessionCache, get_eqcat_writer_session, get_pshai_writer_session,
-    get_uiapi_writer_session, get_eqcat_etl_session, get_pshai_etl_session)
+    SessionCache, get_eqcat_writer_session, get_hzrdi_writer_session,
+    get_uiapi_writer_session, get_eqcat_etl_session, get_hzrdi_etl_session)
 
 
 class SessionCacheInitSessionTestCase(unittest.TestCase):
@@ -261,13 +261,13 @@ class GetSessionTestCase(unittest.TestCase):
         ("OQ_DB_EQCAT_WRITER", "OQ_DB_EQCAT_WRITER_PWD",
          get_eqcat_writer_session),
         ("OQ_DB_PSHAI_WRITER", "OQ_DB_PSHAI_WRITER_PWD",
-         get_pshai_writer_session),
+         get_hzrdi_writer_session),
         ("OQ_DB_UIAPI_WRITER", "OQ_DB_UIAPI_WRITER_PWD",
          get_uiapi_writer_session),
         ("OQ_DB_EQCAT_ETL", "OQ_DB_EQCAT_ETL_PWD",
          get_eqcat_etl_session),
         ("OQ_DB_PSHAI_ETL", "OQ_DB_PSHAI_ETL_PWD",
-         get_pshai_etl_session))
+         get_hzrdi_etl_session))
 
     def setUp(self):
         # Save the original get() method.
