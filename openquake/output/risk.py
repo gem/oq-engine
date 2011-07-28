@@ -368,8 +368,8 @@ def create_loss_map_writer(deterministic, nrml_path, params):
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
 
-        return LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
-                               job_db_key)
+        writers.append(LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
+                                       job_db_key))
 
     if 'xml' in serialize_to:
         if deterministic:
