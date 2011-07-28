@@ -378,12 +378,7 @@ def create_loss_map_writer(deterministic, nrml_path, params):
             # No XML schema for non-deterministic maps yet (see bug 805434)
             pass
 
-    if len(writers) == 0:
-        return None
-    elif len(writers) == 1:
-        return writers[0]
-    else:
-        return writer.CompositeWriter(*writers)
+    return writer.compose_writers(writers)
 
 
 class CurveXMLWriter(BaseXMLWriter):
@@ -637,9 +632,4 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
 
         writers.append(writer_class(nrml_path))
 
-    if len(writers) == 0:
-        return None
-    elif len(writers) == 1:
-        return writers[0]
-    else:
-        return writer.CompositeWriter(*writers)
+    return writer.compose_writers(writers)
