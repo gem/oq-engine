@@ -33,7 +33,6 @@ from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
-from openquake.parser import exposure
 from openquake.kvs.tokens import alloc_job_key
 
 from db.alchemy.models import OqJob, OqUser, OqParams
