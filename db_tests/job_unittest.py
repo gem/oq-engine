@@ -23,14 +23,15 @@ import unittest
 from openquake.job import Job
 from openquake.job import prepare_job
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
+
 from db.alchemy.models import OqJob
 from db_tests import helpers
 from tests.utils import helpers as test_helpers
 
 
 def _toCoordList(polygon):
-    session = get_uiapi_writer_session()
+    session = get_db_session("hzrdo", "writer")
 
     pts = []
 
@@ -234,7 +235,7 @@ class JobTestCase(unittest.TestCase):
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
@@ -243,7 +244,7 @@ class JobTestCase(unittest.TestCase):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
                                  'xml')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()

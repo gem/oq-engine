@@ -27,7 +27,7 @@ import os
 import shutil
 import tempfile
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 from db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
 from tests.helpers import TestMixin
 
@@ -41,7 +41,7 @@ class DbTestMixin(TestMixin):
         :param integer dbkey: if set use the upload record with given db key.
         :returns: a :py:class:`db.alchemy.models.Upload` instance
         """
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         if dbkey:
             upload = session.query(Upload).filter(Upload.id == dbkey).one()
             return upload
@@ -68,7 +68,7 @@ class DbTestMixin(TestMixin):
         shutil.rmtree(upload.path, ignore_errors=True)
         if filesystem_only:
             return
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         session.delete(upload)
         session.commit()
 
@@ -80,7 +80,7 @@ class DbTestMixin(TestMixin):
             created and captured in the job record
         :returns: a :py:class:`db.alchemy.models.OqJob` instance
         """
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         upload = self.setup_upload(upload_id)
         oqp = OqParams()
         oqp.job_type = "classical"

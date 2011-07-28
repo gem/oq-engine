@@ -26,7 +26,7 @@ NRML serialization of risk-related data sets.
 
 from lxml import etree
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 from db.alchemy.models import LossCurve, LossCurveData
 from db.alchemy.models import LossMap, LossMapData
 
@@ -373,7 +373,7 @@ def create_loss_map_writer(deterministic, nrml_path, params):
         assert job_db_key, "No job db key in the configuration parameters"
         job_db_key = int(job_db_key)
 
-        return LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
+        return LossMapDBWriter(get_db_session("risko", "writer"), nrml_path,
                                job_db_key)
 
 
@@ -618,8 +618,8 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
         job_db_key = int(job_db_key)
 
         if curve_mode == 'loss':
-            return LossCurveDBWriter(get_uiapi_writer_session(), nrml_path,
-                                     job_db_key)
+            return LossCurveDBWriter(get_db_session("risko", "writer"),
+                                     nrml_path, job_db_key)
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             return None
