@@ -129,7 +129,7 @@ class DbTestMixin(TestMixin):
             self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
         if filesystem_only:
             return
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         session.delete(job)
         session.delete(oqp)
         session.commit()
@@ -151,7 +151,7 @@ class DbTestMixin(TestMixin):
                         db_backed=db_backed)
         output.path = self.generate_output_path(job, output_type)
         output.display_name = os.path.basename(output.path)
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         session.add(output)
         session.commit()
         return output
@@ -178,7 +178,7 @@ class DbTestMixin(TestMixin):
         """
         job = output.oq_job
         if not filesystem_only:
-            session = get_uiapi_writer_session()
+            session = get_db_session("hzrdo", "writer")
             session.delete(output)
             session.commit()
         if teardown_job:
