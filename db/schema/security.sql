@@ -26,6 +26,7 @@
 
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
 GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
+GRANT USAGE ON SCHEMA oqmif TO GROUP openquake;
 GRANT USAGE ON SCHEMA pshai TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
@@ -35,6 +36,9 @@ GRANT ALL ON SEQUENCE admin.organization_id_seq TO oq_admin;
 GRANT ALL ON SEQUENCE eqcat.catalog_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE eqcat.magnitude_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE eqcat.surface_id_seq to GROUP openquake;
+
+GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE pshai.complex_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE pshai.fault_edge_id_seq to GROUP openquake;
@@ -94,6 +98,14 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
 
 -- eqcat.catalog_allfields view
 GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
+
+-- oqmif.exposure_model
+GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON oqmif.exposure_model TO oq_ged4gem;
+
+-- oqmif.exposure_data
+GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON oqmif.exposure_data TO oq_ged4gem;
 
 -- pshai.complex_fault
 GRANT SELECT ON pshai.complex_fault TO GROUP openquake;
