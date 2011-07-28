@@ -577,7 +577,7 @@ class HazardMapDBWriter(writer.DBWriter):
             output=self.output, poe=header['poE'],
             statistic_type=header['statistics'])
         if header['statistics'] == 'quantile':
-            self.hazard_map.quantile = header['quantile']
+            self.hazard_map.quantile = header['quantileValue']
 
         self.session.add(self.hazard_map)
         self.session.flush()
