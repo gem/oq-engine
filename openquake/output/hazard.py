@@ -567,15 +567,19 @@ class HazardMapDBReader(object):
         points = []
 
         for lon, lat, datum in hazard_map_data:
-            points.append(
-                (shapes.Site(lon, lat),
-                {'IML': datum.value,
-                 'IMT': job.REVERSE_ENUM_MAP[params.imt],
-                 'investigationTimeSpan': params.investigation_time,
-                 'poE': hazard_map.poe,
-                 'statistics': hazard_map.statistic_type,
-                 'vs30': params.reference_vs30_value,
-                 }))
+            values = {
+                'IML': datum.value,
+                'IMT': job.REVERSE_ENUM_MAP[params.imt],
+                'investigationTimeSpan': params.investigation_time,
+                'poE': hazard_map.poe,
+                'statistics': hazard_map.statistic_type,
+                'vs30': params.reference_vs30_value,
+            }
+
+            if hazard_map.statistic_type == 'quantile':
+                values['quantileValue'] = hazard_map.quantile
+
+            points.append((shapes.Site(lon, lat), values))
 
         return points
 
