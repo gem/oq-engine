@@ -81,4 +81,4 @@ def get_db_session(schema, role):
     pwd_var = env_var + "_PWD"
     user_name = "oq_%s_%s" % (schema, role)
     db_user = os.environ.get(env_var, user_name)
-    return SessionCache().get(db_user, os.environ.get(pwd_var))
+    return SessionCache().get(db_user, os.environ.get(pwd_var, "openquake"))

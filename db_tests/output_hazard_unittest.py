@@ -21,7 +21,7 @@
 import os
 import unittest
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
@@ -130,7 +130,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_insert_output(self):
         """An `uiapi.output` record is inserted correctly."""
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         output_path = self.generate_output_path(self.job)
         display_name = os.path.basename(output_path)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
@@ -155,7 +155,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         output_path = self.generate_output_path(self.job)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
@@ -178,7 +178,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         serialize() sets the minimum and maximum values on the output record.
         """
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         output_path = self.generate_output_path(self.job)
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
@@ -207,7 +207,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         output_path = self.generate_output_path(self.job)
         hcw = HazardCurveDBWriter(session, output_path, self.job.id)
 
@@ -275,7 +275,7 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_serialize(self):
         """serialize() inserts the output and the gmf_data records."""
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdo", "writer")
         output_path = self.generate_output_path(self.job)
         gmfw = GMFDBWriter(session, output_path, self.job.id)
 
