@@ -762,10 +762,21 @@ class HazardCurveDBWriter(writer.DBWriter):
 
 
 class GMFDBReader(object):
+    """
+    Read ground motion field data from the database, returning a data structure
+    that can be passed to :func:`GMFXMLWriter.serialize` to
+    produce an XML file.
+    """
+
     def __init__(self, session):
         self.session = session
 
     def deserialize(self, output_id):
+        """
+        Read a the given ground motion field from the database.
+
+        The structure of the result is documented in :class:`GMFDBWriter`.
+        """
         gmf_data = self.session.query(GMFData) \
             .filter(GMFData.output_id == output_id).all()
         points = {}
@@ -803,6 +814,14 @@ class GMFDBWriter(writer.DBWriter):
         return "gmf"
 
     def insert_datum(self, point, values):
+        """
+        Insert a single ground motion field entry.
+
+        :param point: location
+        :type point: :class:`openquake.shapes.Site`
+
+        :param values: dictionary with the `'groundMotion'` key
+        """
         self.bulk_inserter.add_entry(
             output_id=self.output.id,
             ground_motion=values['groundMotion'],
