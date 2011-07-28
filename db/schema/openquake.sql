@@ -723,7 +723,7 @@ ALTER TABLE hzrdo.gmf_data ALTER COLUMN location SET NOT NULL;
 
 -- Loss map data.
 
-CREATE TABLE uiapi.loss_map (
+CREATE TABLE risko.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
     deterministic BOOLEAN NOT NULL,
@@ -735,18 +735,18 @@ CREATE TABLE uiapi.loss_map (
     poe float CONSTRAINT valid_poe
         CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
                OR (deterministic AND poe IS NULL))
-) TABLESPACE uiapi_ts;
+) TABLESPACE risko_ts;
 
-CREATE TABLE uiapi.loss_map_data (
+CREATE TABLE risko.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- for non-deterministic calculations std_dev is 0
     std_dev float NOT NULL DEFAULT 0.0
-) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE uiapi.loss_map_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE risko_ts;
+SELECT AddGeometryColumn('risko', 'loss_map_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE risko.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss curve.
@@ -962,8 +962,8 @@ ALTER TABLE hzrdo.gmf_data
 ADD CONSTRAINT hzrdo_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_map
-ADD CONSTRAINT uiapi_loss_map_output_fk
+ALTER TABLE risko.loss_map
+ADD CONSTRAINT risko_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_curve
@@ -974,9 +974,9 @@ ALTER TABLE uiapi.loss_curve_data
 ADD CONSTRAINT uiapi_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES uiapi.loss_curve(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_map_data
-ADD CONSTRAINT uiapi_loss_map_data_loss_map_fk
-FOREIGN KEY (loss_map_id) REFERENCES uiapi.loss_map(id) ON DELETE CASCADE;
+ALTER TABLE risko.loss_map_data
+ADD CONSTRAINT risko_loss_map_data_loss_map_fk
+FOREIGN KEY (loss_map_id) REFERENCES risko.loss_map(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_data
 ADD CONSTRAINT oqmif_exposure_data_exposure_model_fk
