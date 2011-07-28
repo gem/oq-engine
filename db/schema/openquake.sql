@@ -750,19 +750,19 @@ ALTER TABLE risko.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss curve.
-CREATE TABLE uiapi.loss_curve (
+CREATE TABLE risko.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
 
     end_branch_label VARCHAR,
     category VARCHAR,
     unit VARCHAR -- e.g. EUR, USD
-) TABLESPACE uiapi_ts;
+) TABLESPACE risko_ts;
 
 
 -- Loss curve data. Holds the asset, its position and value plus the calculated
 -- curve.
-CREATE TABLE uiapi.loss_curve_data (
+CREATE TABLE risko.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
@@ -771,10 +771,10 @@ CREATE TABLE uiapi.loss_curve_data (
         CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
-) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT',
+) TABLESPACE risko_ts;
+SELECT AddGeometryColumn('risko', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
-ALTER TABLE uiapi.loss_curve_data ALTER COLUMN location SET NOT NULL;
+ALTER TABLE risko.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Exposure model
@@ -966,13 +966,13 @@ ALTER TABLE risko.loss_map
 ADD CONSTRAINT risko_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_curve
-ADD CONSTRAINT uiapi_loss_curve_output_fk
+ALTER TABLE risko.loss_curve
+ADD CONSTRAINT risko_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.loss_curve_data
-ADD CONSTRAINT uiapi_loss_curve_data_loss_curve_fk
-FOREIGN KEY (loss_curve_id) REFERENCES uiapi.loss_curve(id) ON DELETE CASCADE;
+ALTER TABLE risko.loss_curve_data
+ADD CONSTRAINT risko_loss_curve_data_loss_curve_fk
+FOREIGN KEY (loss_curve_id) REFERENCES risko.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE risko.loss_map_data
 ADD CONSTRAINT risko_loss_map_data_loss_map_fk
