@@ -700,14 +700,14 @@ CREATE TABLE hzrdo.hazard_curve_data (
 
 
 -- Hazard curve node data.
-CREATE TABLE uiapi.hazard_curve_node_data (
+CREATE TABLE hzrdo.hazard_curve_node_data (
     id SERIAL PRIMARY KEY,
     hazard_curve_data_id INTEGER NOT NULL,
     -- Probabilities of exceedence
     poes float[] NOT NULL
-) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE uiapi.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE hzrdo_ts;
+SELECT AddGeometryColumn('hzrdo', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdo.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
@@ -954,8 +954,8 @@ ALTER TABLE hzrdo.hazard_curve_data
 ADD CONSTRAINT hzrdo_hazard_curve_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.hazard_curve_node_data
-ADD CONSTRAINT uiapi_hazard_curve_node_data_output_fk
+ALTER TABLE hzrdo.hazard_curve_node_data
+ADD CONSTRAINT hzrdo_hazard_curve_node_data_output_fk
 FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdo.hazard_curve_data(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.gmf_data
