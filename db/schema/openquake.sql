@@ -24,9 +24,13 @@
 ------------------------------------------------------------------------
 CREATE SCHEMA admin;
 CREATE SCHEMA eqcat;
+CREATE SCHEMA hzrdi;
+CREATE SCHEMA hzrdo;
 CREATE SCHEMA oqmif;
-CREATE SCHEMA pshai;
+CREATE SCHEMA riski;
+CREATE SCHEMA risko;
 CREATE SCHEMA uiapi;
+
 
 
 ------------------------------------------------------------------------
@@ -144,7 +148,7 @@ WHERE
     AND eqcat.catalog.surface_id = eqcat.surface.id;
 
 -- rupture
-CREATE TABLE pshai.rupture (
+CREATE TABLE hzrdi.rupture (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- Associates the rupture with a source model input file (uploaded by a GUI
@@ -182,12 +186,12 @@ CREATE TABLE pshai.rupture (
     complex_fault_id INTEGER,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'rupture', 'point', 4326, 'POINT', 3);
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'rupture', 'point', 4326, 'POINT', 3);
 
 
 -- source
-CREATE TABLE pshai.source (
+CREATE TABLE hzrdi.source (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- Associates the source with a source model input file (uploaded by a GUI
@@ -221,13 +225,13 @@ CREATE TABLE pshai.source (
     r_depth_distr_id INTEGER,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'source', 'point', 4326, 'POINT', 2);
-SELECT AddGeometryColumn('pshai', 'source', 'area', 4326, 'POLYGON', 2);
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'source', 'point', 4326, 'POINT', 2);
+SELECT AddGeometryColumn('hzrdi', 'source', 'area', 4326, 'POLYGON', 2);
 
 
 -- Simple fault geometry
-CREATE TABLE pshai.simple_fault (
+CREATE TABLE hzrdi.simple_fault (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -244,13 +248,13 @@ CREATE TABLE pshai.simple_fault (
     mfd_evd_id INTEGER,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'edge', 4326, 'LINESTRING', 3);
-ALTER TABLE pshai.simple_fault ALTER COLUMN edge SET NOT NULL;
-SELECT AddGeometryColumn('pshai', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'edge', 4326, 'LINESTRING', 3);
+ALTER TABLE hzrdi.simple_fault ALTER COLUMN edge SET NOT NULL;
+SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
 -- Magnitude frequency distribution, Evenly discretized
-CREATE TABLE pshai.mfd_evd (
+CREATE TABLE hzrdi.mfd_evd (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- One of:
@@ -272,11 +276,11 @@ CREATE TABLE pshai.mfd_evd (
     total_moment_rate float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
+) TABLESPACE hzrdi_ts;
 
 
 -- Magnitude frequency distribution, Truncated Gutenberg Richter
-CREATE TABLE pshai.mfd_tgr (
+CREATE TABLE hzrdi.mfd_tgr (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- One of:
@@ -295,60 +299,60 @@ CREATE TABLE pshai.mfd_tgr (
     total_moment_rate float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
+) TABLESPACE hzrdi_ts;
 
 
 -- simple source view, needed for Opengeo server integration
-CREATE VIEW pshai.simple_source AS
+CREATE VIEW hzrdi.simple_source AS
 SELECT
-    -- Columns specific to pshai.source
-    pshai.source.id,
-    pshai.source.owner_id,
-    pshai.source.input_id,
-    pshai.source.gid,
-    pshai.source.name,
-    pshai.source.description,
-    pshai.source.si_type,
-    pshai.source.tectonic_region,
-    pshai.source.rake,
+    -- Columns specific to hzrdi.source
+    hzrdi.source.id,
+    hzrdi.source.owner_id,
+    hzrdi.source.input_id,
+    hzrdi.source.gid,
+    hzrdi.source.name,
+    hzrdi.source.description,
+    hzrdi.source.si_type,
+    hzrdi.source.tectonic_region,
+    hzrdi.source.rake,
 
-    -- Columns specific to pshai.simple_fault
-    pshai.simple_fault.dip,
-    pshai.simple_fault.upper_depth,
-    pshai.simple_fault.lower_depth,
-    pshai.simple_fault.edge,
-    pshai.simple_fault.outline,
+    -- Columns specific to hzrdi.simple_fault
+    hzrdi.simple_fault.dip,
+    hzrdi.simple_fault.upper_depth,
+    hzrdi.simple_fault.lower_depth,
+    hzrdi.simple_fault.edge,
+    hzrdi.simple_fault.outline,
 
     CASE WHEN mfd_evd_id IS NOT NULL THEN 'evd' ELSE 'tgr' END AS mfd_type,
 
     -- Common MFD columns, only one of each will be not NULL.
-    COALESCE(pshai.mfd_evd.magnitude_type, pshai.mfd_tgr.magnitude_type)
+    COALESCE(hzrdi.mfd_evd.magnitude_type, hzrdi.mfd_tgr.magnitude_type)
         AS magnitude_type,
-    COALESCE(pshai.mfd_evd.min_val, pshai.mfd_tgr.min_val) AS min_val,
-    COALESCE(pshai.mfd_evd.max_val, pshai.mfd_tgr.max_val) AS max_val,
-    COALESCE(pshai.mfd_evd.total_cumulative_rate,
-             pshai.mfd_tgr.total_cumulative_rate) AS total_cumulative_rate,
-    COALESCE(pshai.mfd_evd.total_moment_rate,
-             pshai.mfd_tgr.total_moment_rate) AS total_moment_rate,
+    COALESCE(hzrdi.mfd_evd.min_val, hzrdi.mfd_tgr.min_val) AS min_val,
+    COALESCE(hzrdi.mfd_evd.max_val, hzrdi.mfd_tgr.max_val) AS max_val,
+    COALESCE(hzrdi.mfd_evd.total_cumulative_rate,
+             hzrdi.mfd_tgr.total_cumulative_rate) AS total_cumulative_rate,
+    COALESCE(hzrdi.mfd_evd.total_moment_rate,
+             hzrdi.mfd_tgr.total_moment_rate) AS total_moment_rate,
 
-    -- Columns specific to pshai.mfd_evd
-    pshai.mfd_evd.bin_size AS evd_bin_size,
-    pshai.mfd_evd.mfd_values AS evd_values,
+    -- Columns specific to hzrdi.mfd_evd
+    hzrdi.mfd_evd.bin_size AS evd_bin_size,
+    hzrdi.mfd_evd.mfd_values AS evd_values,
 
-    -- Columns specific to pshai.mfd_tgr
-    pshai.mfd_tgr.a_val AS tgr_a_val,
-    pshai.mfd_tgr.b_val AS tgr_b_val
+    -- Columns specific to hzrdi.mfd_tgr
+    hzrdi.mfd_tgr.a_val AS tgr_a_val,
+    hzrdi.mfd_tgr.b_val AS tgr_b_val
 FROM
-    pshai.source
-JOIN pshai.simple_fault ON pshai.simple_fault.id = pshai.source.simple_fault_id
-LEFT OUTER JOIN pshai.mfd_evd ON
-    pshai.mfd_evd.id = pshai.simple_fault.mfd_evd_id
-LEFT OUTER JOIN pshai.mfd_tgr ON
-    pshai.mfd_tgr.id  = pshai.simple_fault.mfd_tgr_id;
+    hzrdi.source
+JOIN hzrdi.simple_fault ON hzrdi.simple_fault.id = hzrdi.source.simple_fault_id
+LEFT OUTER JOIN hzrdi.mfd_evd ON
+    hzrdi.mfd_evd.id = hzrdi.simple_fault.mfd_evd_id
+LEFT OUTER JOIN hzrdi.mfd_tgr ON
+    hzrdi.mfd_tgr.id  = hzrdi.simple_fault.mfd_tgr_id;
 
 
 -- simple rupture view, needed for Opengeo server integration
-CREATE VIEW pshai.simple_rupture (
+CREATE VIEW hzrdi.simple_rupture (
     id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
     rake, magnitude, magnitude_type, edge, fault_outline) AS
 SELECT
@@ -356,14 +360,14 @@ SELECT
     rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
     rup.magnitude_type, sfault.edge, sfault.outline
 FROM
-    pshai.rupture rup, pshai.simple_fault sfault
+    hzrdi.rupture rup, hzrdi.simple_fault sfault
 WHERE
     rup.si_type = 'simple'
     AND rup.simple_fault_id = sfault.id;
 
 
 -- Complex fault geometry
-CREATE TABLE pshai.complex_fault (
+CREATE TABLE hzrdi.complex_fault (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -375,12 +379,12 @@ CREATE TABLE pshai.complex_fault (
     fault_edge_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'complex_fault', 'outline', 4326, 'POLYGON', 3);
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'complex_fault', 'outline', 4326, 'POLYGON', 3);
 
 
 -- Fault edge
-CREATE TABLE pshai.fault_edge (
+CREATE TABLE hzrdi.fault_edge (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -389,15 +393,15 @@ CREATE TABLE pshai.fault_edge (
     description VARCHAR,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
-SELECT AddGeometryColumn('pshai', 'fault_edge', 'top', 4326, 'LINESTRING', 3);
-SELECT AddGeometryColumn('pshai', 'fault_edge', 'bottom', 4326, 'LINESTRING', 3);
-ALTER TABLE pshai.fault_edge ALTER COLUMN top SET NOT NULL;
-ALTER TABLE pshai.fault_edge ALTER COLUMN bottom SET NOT NULL;
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'fault_edge', 'top', 4326, 'LINESTRING', 3);
+SELECT AddGeometryColumn('hzrdi', 'fault_edge', 'bottom', 4326, 'LINESTRING', 3);
+ALTER TABLE hzrdi.fault_edge ALTER COLUMN top SET NOT NULL;
+ALTER TABLE hzrdi.fault_edge ALTER COLUMN bottom SET NOT NULL;
 
 
 -- complex source view, needed for Opengeo server integration
-CREATE VIEW pshai.complex_source (
+CREATE VIEW hzrdi.complex_source (
     id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
     rake, top_edge, bottom_edge, fault_outline) AS
 SELECT
@@ -405,14 +409,14 @@ SELECT
     src.si_type, src.tectonic_region, src.rake, fedge.top, fedge.bottom,
     cfault.outline
 FROM
-    pshai.source src, pshai.complex_fault cfault, pshai.fault_edge fedge
+    hzrdi.source src, hzrdi.complex_fault cfault, hzrdi.fault_edge fedge
 WHERE
     src.si_type = 'complex'
     AND src.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
 
 
 -- complex rupture view, needed for Opengeo server integration
-CREATE VIEW pshai.complex_rupture (
+CREATE VIEW hzrdi.complex_rupture (
     id, owner_id, input_id, gid, name, description, si_type, tectonic_region,
     rake, magnitude, magnitude_type, top_edge, bottom_edge, fault_outline) AS
 SELECT
@@ -420,14 +424,14 @@ SELECT
     rup.si_type, rup.tectonic_region, rup.rake, rup.magnitude,
     rup.magnitude_type, fedge.top, fedge.bottom, cfault.outline
 FROM
-    pshai.rupture rup, pshai.complex_fault cfault, pshai.fault_edge fedge
+    hzrdi.rupture rup, hzrdi.complex_fault cfault, hzrdi.fault_edge fedge
 WHERE
     rup.si_type = 'complex'
     AND rup.complex_fault_id = cfault.id AND cfault.fault_edge_id = fedge.id;
 
 
 -- Rupture depth distribution
-CREATE TABLE pshai.r_depth_distr (
+CREATE TABLE hzrdi.r_depth_distr (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -446,11 +450,11 @@ CREATE TABLE pshai.r_depth_distr (
     depth float[] NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
+) TABLESPACE hzrdi_ts;
 
 
 -- Rupture rate model
-CREATE TABLE pshai.r_rate_mdl (
+CREATE TABLE hzrdi.r_rate_mdl (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -465,10 +469,10 @@ CREATE TABLE pshai.r_rate_mdl (
     source_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
+) TABLESPACE hzrdi_ts;
 
 
-CREATE TABLE pshai.focal_mechanism (
+CREATE TABLE hzrdi.focal_mechanism (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- gml:id
@@ -486,7 +490,7 @@ CREATE TABLE pshai.focal_mechanism (
             rake is NULL OR ((rake >= -180.0) AND (rake <= 180.0))),
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE pshai_ts;
+) TABLESPACE hzrdi_ts;
 
 
 -- A batch of OpenQuake input files uploaded by the user
@@ -811,102 +815,102 @@ ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
 ALTER TABLE admin.oq_user ADD CONSTRAINT admin_oq_user_organization_fk
 FOREIGN KEY (organization_id) REFERENCES admin.organization(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_owner_fk
+ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_owner_fk
+ALTER TABLE hzrdi.source ADD CONSTRAINT hzrdi_source_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_owner_fk
+ALTER TABLE hzrdi.simple_fault ADD CONSTRAINT hzrdi_simple_fault_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_owner_fk
+ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.fault_edge ADD CONSTRAINT pshai_fault_edge_owner_fk
+ALTER TABLE hzrdi.fault_edge ADD CONSTRAINT hzrdi_fault_edge_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.mfd_evd ADD CONSTRAINT pshai_mfd_evd_owner_fk
+ALTER TABLE hzrdi.mfd_evd ADD CONSTRAINT hzrdi_mfd_evd_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.mfd_tgr ADD CONSTRAINT pshai_mfd_tgr_owner_fk
+ALTER TABLE hzrdi.mfd_tgr ADD CONSTRAINT hzrdi_mfd_tgr_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.r_depth_distr ADD CONSTRAINT pshai_r_depth_distr_owner_fk
+ALTER TABLE hzrdi.r_depth_distr ADD CONSTRAINT hzrdi_r_depth_distr_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.focal_mechanism ADD CONSTRAINT pshai_focal_mechanism_owner_fk
+ALTER TABLE hzrdi.focal_mechanism ADD CONSTRAINT hzrdi_focal_mechanism_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_owner_fk
+ALTER TABLE hzrdi.r_rate_mdl ADD CONSTRAINT hzrdi_r_rate_mdl_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_fault_edge_fk
-FOREIGN KEY (fault_edge_id) REFERENCES pshai.fault_edge(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_fault_edge_fk
+FOREIGN KEY (fault_edge_id) REFERENCES hzrdi.fault_edge(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_tgr_fk
-FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.r_rate_mdl ADD CONSTRAINT hzrdi_r_rate_mdl_mfd_tgr_fk
+FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_mfd_evd_fk
-FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.r_rate_mdl ADD CONSTRAINT hzrdi_r_rate_mdl_mfd_evd_fk
+FOREIGN KEY (mfd_evd_id) REFERENCES hzrdi.mfd_evd(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_focal_mechanism_fk
-FOREIGN KEY (focal_mechanism_id) REFERENCES pshai.focal_mechanism(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.r_rate_mdl ADD CONSTRAINT hzrdi_r_rate_mdl_focal_mechanism_fk
+FOREIGN KEY (focal_mechanism_id) REFERENCES hzrdi.focal_mechanism(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.r_rate_mdl ADD CONSTRAINT pshai_r_rate_mdl_source_fk
-FOREIGN KEY (source_id) REFERENCES pshai.source(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.r_rate_mdl ADD CONSTRAINT hzrdi_r_rate_mdl_source_fk
+FOREIGN KEY (source_id) REFERENCES hzrdi.source(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_mfd_tgr_fk
-FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.simple_fault ADD CONSTRAINT hzrdi_simple_fault_mfd_tgr_fk
+FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.simple_fault ADD CONSTRAINT pshai_simple_fault_mfd_evd_fk
-FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.simple_fault ADD CONSTRAINT hzrdi_simple_fault_mfd_evd_fk
+FOREIGN KEY (mfd_evd_id) REFERENCES hzrdi.mfd_evd(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_mfd_tgr_fk
-FOREIGN KEY (mfd_tgr_id) REFERENCES pshai.mfd_tgr(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_mfd_tgr_fk
+FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.complex_fault ADD CONSTRAINT pshai_complex_fault_mfd_evd_fk
-FOREIGN KEY (mfd_evd_id) REFERENCES pshai.mfd_evd(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_mfd_evd_fk
+FOREIGN KEY (mfd_evd_id) REFERENCES hzrdi.mfd_evd(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_simple_fault_fk
-FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.source ADD CONSTRAINT hzrdi_source_simple_fault_fk
+FOREIGN KEY (simple_fault_id) REFERENCES hzrdi.simple_fault(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_complex_fault_fk
-FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.source ADD CONSTRAINT hzrdi_source_complex_fault_fk
+FOREIGN KEY (complex_fault_id) REFERENCES hzrdi.complex_fault(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_r_depth_distr_fk
-FOREIGN KEY (r_depth_distr_id) REFERENCES pshai.r_depth_distr(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.source ADD CONSTRAINT hzrdi_source_r_depth_distr_fk
+FOREIGN KEY (r_depth_distr_id) REFERENCES hzrdi.r_depth_distr(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.source ADD CONSTRAINT pshai_source_input_fk
+ALTER TABLE hzrdi.source ADD CONSTRAINT hzrdi_source_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_simple_fault_fk
-FOREIGN KEY (simple_fault_id) REFERENCES pshai.simple_fault(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_simple_fault_fk
+FOREIGN KEY (simple_fault_id) REFERENCES hzrdi.simple_fault(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_complex_fault_fk
-FOREIGN KEY (complex_fault_id) REFERENCES pshai.complex_fault(id) ON DELETE RESTRICT;
+ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_complex_fault_fk
+FOREIGN KEY (complex_fault_id) REFERENCES hzrdi.complex_fault(id) ON DELETE RESTRICT;
 
-ALTER TABLE pshai.rupture ADD CONSTRAINT pshai_rupture_input_fk
+ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
-CREATE TRIGGER pshai_rupture_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON pshai.rupture
+CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.rupture
 FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
 
-CREATE TRIGGER pshai_source_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON pshai.source
+CREATE TRIGGER hzrdi_source_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.source
 FOR EACH ROW EXECUTE PROCEDURE check_source_sources();
 
-CREATE TRIGGER pshai_r_rate_mdl_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON pshai.r_rate_mdl
+CREATE TRIGGER hzrdi_r_rate_mdl_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.r_rate_mdl
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
-CREATE TRIGGER pshai_simple_fault_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON pshai.simple_fault
+CREATE TRIGGER hzrdi_simple_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.simple_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
-CREATE TRIGGER pshai_complex_fault_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON pshai.complex_fault
+CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
@@ -991,15 +995,15 @@ CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.cat
 
 CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER pshai_fault_edge_refresh_last_update_trig BEFORE UPDATE ON pshai.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER hzrdi_fault_edge_refresh_last_update_trig BEFORE UPDATE ON hzrdi.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER pshai_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER hzrdi_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER pshai_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER hzrdi_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER pshai_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON pshai.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER hzrdi_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER pshai_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON pshai.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER hzrdi_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON hzrdi.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
