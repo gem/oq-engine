@@ -24,6 +24,7 @@
 ------------------------------------------------------------------------
 CREATE SCHEMA admin;
 CREATE SCHEMA eqcat;
+CREATE SCHEMA oqmif;
 CREATE SCHEMA pshai;
 CREATE SCHEMA uiapi;
 
@@ -772,6 +773,38 @@ SELECT AddGeometryColumn('uiapi', 'loss_curve_data', 'location', 4326, 'POINT',
 ALTER TABLE uiapi.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 
+-- Exposure model
+CREATE TABLE oqmif.exposure_model (
+    id SERIAL PRIMARY KEY,
+    description VARCHAR,
+    -- e.g. "buildings", "bridges" etc.
+    category VARCHAR NOT NULL,
+    -- e.g. "EUR", "count", "density" etc.
+    unit VARCHAR NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE oqmif_ts;
+
+
+-- Per-asset exposure data
+CREATE TABLE oqmif.exposure_data (
+    id SERIAL PRIMARY KEY,
+    exposure_model_id INTEGER NOT NULL,
+    -- The asset reference is unique within an exposure model.
+    asset_ref VARCHAR NOT NULL,
+    value float NOT NULL,
+    -- Vulnerability function reference
+    vf_ref VARCHAR NOT NULL,
+    structure_type VARCHAR,
+    retrofitting_cost float,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    UNIQUE (exposure_model_id, asset_ref)
+) TABLESPACE oqmif_ts;
+SELECT AddGeometryColumn('oqmif', 'exposure_data', 'site', 4326, 'POINT', 2);
+ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
+
+
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
@@ -941,6 +974,11 @@ ALTER TABLE uiapi.loss_map_data
 ADD CONSTRAINT uiapi_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES uiapi.loss_map(id) ON DELETE CASCADE;
 
+ALTER TABLE oqmif.exposure_data
+ADD CONSTRAINT oqmif_exposure_data_exposure_model_fk
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id)
+ON DELETE CASCADE;
+
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
 FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
@@ -962,3 +1000,7 @@ CREATE TRIGGER pshai_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON pshai.mfd
 CREATE TRIGGER pshai_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON pshai.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER pshai_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON pshai.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
