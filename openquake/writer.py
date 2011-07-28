@@ -186,6 +186,7 @@ class CompositeWriter(object):
             if writer:
                 writer.serialize(iterable)
 
+
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
