@@ -34,7 +34,7 @@ from db_tests import helpers
 #   bin/openquake --config_file=smoketests/classical_psha_simple/config.gem
 #
 # and putting a breakpoint in openquake/writer.py, line 86
-HAZARD_MAP_DATA = [
+HAZARD_MAP_MEAN_DATA = [
     (Site(-121.7, 37.6),
      {'IML': 1.9266716959669603,
       'IMT': 'PGA',
@@ -62,6 +62,41 @@ HAZARD_MAP_DATA = [
       'investigationTimeSpan': '50.0',
       'poE': 0.01,
       'statistics': 'mean',
+      'vs30': 760.0})]
+
+
+HAZARD_MAP_QUANTILE_DATA = [
+    (Site(-121.7, 37.6),
+     {'IML': 1.9266716959669603,
+      'IMT': 'PGA',
+      'investigationTimeSpan': '50.0',
+      'poE': 0.01,
+      'statistics': 'quantile',
+      'quantileValue': 0.2,
+      'vs30': 760.0}),
+    (Site(-121.8, 38.0),
+     {'IML': 1.9352164637194078,
+      'IMT': 'PGA',
+      'investigationTimeSpan': '50.0',
+      'poE': 0.01,
+      'statistics': 'quantile',
+      'quantileValue': 0.2,
+      'vs30': 760.0}),
+    (Site(-122.1, 37.8),
+     {'IML': 1.9459475420737888,
+      'IMT': 'PGA',
+      'investigationTimeSpan': '50.0',
+      'poE': 0.01,
+      'statistics': 'quantile',
+      'quantileValue': 0.2,
+      'vs30': 760.0}),
+    (Site(-121.9, 37.7),
+     {'IML': 1.9566716959669603,
+      'IMT': 'PGA',
+      'investigationTimeSpan': '50.0',
+      'poE': 0.01,
+      'statistics': 'quantile',
+      'quantileValue': 0.2,
       'vs30': 760.0})]
 
 
@@ -152,7 +187,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual("hazard_map", output.output_type)
         self.assertTrue(self.job is output.oq_job)
 
-    def test_serialize(self):
+    def test_serialize_mean(self):
         """serialize() inserts the output and the hazard_map_data records."""
         self.job = self.setup_classic_job()
         session = get_uiapi_writer_session()
@@ -163,7 +198,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        hmw.serialize(HAZARD_MAP_DATA)
+        hmw.serialize(HAZARD_MAP_MEAN_DATA)
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -176,7 +211,35 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('mean', hazard_map.statistic_type)
         self.assertEquals(None, hazard_map.quantile)
 
-        self.assertEqual(len(HAZARD_MAP_DATA),
+        self.assertEqual(len(HAZARD_MAP_MEAN_DATA),
+                         len(hazard_map.hazardmapdata_set))
+        self.assertEqual(0, len(output.lossmap_set))
+
+    def test_serialize_quantile(self):
+        """serialize() inserts the output and the hazard_map_data records."""
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+        hmw = HazardMapDBWriter(session, output_path, self.job.id)
+
+        # This job has no outputs before calling the function under test.
+        self.assertEqual(0, len(self.job.output_set))
+
+        # Call the function under test.
+        hmw.serialize(HAZARD_MAP_QUANTILE_DATA)
+
+        # After calling the function under test we see the expected output.
+        self.assertEqual(1, len(self.job.output_set))
+
+        # After calling the function under test we see the expected map data.
+        [output] = self.job.output_set
+        [hazard_map] = output.hazardmap_set
+
+        self.assertEquals(0.01, hazard_map.poe)
+        self.assertEquals('quantile', hazard_map.statistic_type)
+        self.assertEquals(0.2, hazard_map.quantile)
+
+        self.assertEqual(len(HAZARD_MAP_QUANTILE_DATA),
                          len(hazard_map.hazardmapdata_set))
         self.assertEqual(0, len(output.lossmap_set))
 
@@ -190,10 +253,10 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         hmw = HazardMapDBWriter(session, output_path, self.job.id)
 
         # Call the function under test.
-        hmw.serialize(HAZARD_MAP_DATA)
+        hmw.serialize(HAZARD_MAP_MEAN_DATA)
 
-        minimum = min(data[1].get("IML") for data in HAZARD_MAP_DATA)
-        maximum = max(data[1].get("IML") for data in HAZARD_MAP_DATA)
+        minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA)
+        maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA)
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
         self.assertEqual(round_float(minimum), round_float(output.min_value))
