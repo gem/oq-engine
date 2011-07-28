@@ -28,127 +28,132 @@ from openquake.utils import round_float
 
 from db_tests import helpers
 
+
 # The data below was captured (and subsequently modified for testing purposes)
 # by running
 #
 #   bin/openquake --config_file=smoketests/classical_psha_simple/config.gem
 #
 # and putting a breakpoint in openquake/writer.py, line 86
-HAZARD_MAP_MEAN_DATA = [
-    (Site(-121.7, 37.6),
-     {'IML': 1.9266716959669603,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'mean',
-      'vs30': 760.0}),
-    (Site(-121.8, 38.0),
-     {'IML': 1.9352164637194078,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'mean',
-      'vs30': 760.0}),
-    (Site(-122.1, 37.8),
-     {'IML': 1.9459475420737888,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'mean',
-      'vs30': 760.0}),
-    (Site(-121.9, 37.7),
-     {'IML': 1.9566716959669603,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'mean',
-      'vs30': 760.0})]
+def HAZARD_MAP_MEAN_DATA():
+    return [
+        (Site(-121.7, 37.6),
+         {'IML': 1.9266716959669603,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'mean',
+          'vs30': 760.0}),
+        (Site(-121.8, 38.0),
+         {'IML': 1.9352164637194078,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'mean',
+          'vs30': 760.0}),
+        (Site(-122.1, 37.8),
+         {'IML': 1.9459475420737888,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'mean',
+          'vs30': 760.0}),
+        (Site(-121.9, 37.7),
+         {'IML': 1.9566716959669603,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'mean',
+          'vs30': 760.0})]
 
 
-HAZARD_MAP_QUANTILE_DATA = [
-    (Site(-121.7, 37.6),
-     {'IML': 1.9266716959669603,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'quantile',
-      'quantileValue': 0.2,
-      'vs30': 760.0}),
-    (Site(-121.8, 38.0),
-     {'IML': 1.9352164637194078,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'quantile',
-      'quantileValue': 0.2,
-      'vs30': 760.0}),
-    (Site(-122.1, 37.8),
-     {'IML': 1.9459475420737888,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'quantile',
-      'quantileValue': 0.2,
-      'vs30': 760.0}),
-    (Site(-121.9, 37.7),
-     {'IML': 1.9566716959669603,
-      'IMT': 'PGA',
-      'investigationTimeSpan': '50.0',
-      'poE': 0.01,
-      'statistics': 'quantile',
-      'quantileValue': 0.2,
-      'vs30': 760.0})]
+def HAZARD_MAP_QUANTILE_DATA():
+    return [
+        (Site(-121.7, 37.6),
+         {'IML': 1.9266716959669603,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'quantile',
+          'quantileValue': 0.2,
+          'vs30': 760.0}),
+        (Site(-121.8, 38.0),
+         {'IML': 1.9352164637194078,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'quantile',
+          'quantileValue': 0.2,
+          'vs30': 760.0}),
+        (Site(-122.1, 37.8),
+         {'IML': 1.9459475420737888,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'quantile',
+          'quantileValue': 0.2,
+          'vs30': 760.0}),
+        (Site(-121.9, 37.7),
+         {'IML': 1.9566716959669603,
+          'IMT': 'PGA',
+          'investigationTimeSpan': '50.0',
+          'poE': 0.01,
+          'statistics': 'quantile',
+          'quantileValue': 0.2,
+          'vs30': 760.0})]
 
 
 # same as the data above; the sites with statistics data were added by hand;
 # the IMLValues and PoEValues are trimmed to the last 4 values and 3 decimals
-HAZARD_CURVE_DATA = [
-    (Site(-122.2, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'endBranchLabel': '1_1'}),
-    (Site(-122.1, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'endBranchLabel': '1_2'}),
-    (Site(-122.0, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'endBranchLabel': '1_1'}),
-    (Site(-122.0, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'quantileValue': 0.6,
-      'statistics': 'quantile'}),
-    (Site(-122.1, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'quantileValue': 0.6,
-      'statistics': 'quantile'}),
-    (Site(-121.9, 37.5),
-     {'investigationTimeSpan': '50.0',
-      'IMLValues': [0.778, 1.09, 1.52, 2.13],
-      'PoEValues': [0.354, 0.114, 0.023, 0.002],
-      'IMT': 'PGA',
-      'endBranchLabel': '2'})]
+def HAZARD_CURVE_DATA():
+    return [
+        (Site(-122.2, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'endBranchLabel': '1_1'}),
+        (Site(-122.1, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'endBranchLabel': '1_2'}),
+        (Site(-122.0, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'endBranchLabel': '1_1'}),
+        (Site(-122.0, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'quantileValue': 0.6,
+          'statistics': 'quantile'}),
+        (Site(-122.1, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'quantileValue': 0.6,
+          'statistics': 'quantile'}),
+        (Site(-121.9, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'endBranchLabel': '2'})]
 
 
-GMF_DATA = {
-    Site(-117, 40): {'groundMotion': 0.0},
-    Site(-116, 40): {'groundMotion': 0.1},
-    Site(-116, 41): {'groundMotion': 0.2},
-    Site(-117, 41): {'groundMotion': 0.3},
-}
+def GMF_DATA():
+    return {
+        Site(-117, 40): {'groundMotion': 0.0},
+        Site(-116, 40): {'groundMotion': 0.1},
+        Site(-116, 41): {'groundMotion': 0.2},
+        Site(-117, 41): {'groundMotion': 0.3},
+    }
 
 
 class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -206,7 +211,7 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        self.writer.serialize(HAZARD_MAP_MEAN_DATA)
+        self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -219,7 +224,7 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.assertEquals('mean', hazard_map.statistic_type)
         self.assertEquals(None, hazard_map.quantile)
 
-        self.assertEqual(len(HAZARD_MAP_MEAN_DATA),
+        self.assertEqual(len(HAZARD_MAP_MEAN_DATA()),
                          len(hazard_map.hazardmapdata_set))
         self.assertEqual(0, len(output.lossmap_set))
 
@@ -229,7 +234,7 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        self.writer.serialize(HAZARD_MAP_QUANTILE_DATA)
+        self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -242,7 +247,7 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.assertEquals('quantile', hazard_map.statistic_type)
         self.assertEquals(0.2, hazard_map.quantile)
 
-        self.assertEqual(len(HAZARD_MAP_QUANTILE_DATA),
+        self.assertEqual(len(HAZARD_MAP_QUANTILE_DATA()),
                          len(hazard_map.hazardmapdata_set))
         self.assertEqual(0, len(output.lossmap_set))
 
@@ -251,10 +256,10 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         serialize() sets the minimum and maximum values on the output record.
         """
         # Call the function under test.
-        self.writer.serialize(HAZARD_MAP_MEAN_DATA)
+        self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
-        minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA)
-        maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA)
+        minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
+        maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
         self.assertEqual(round_float(minimum), round_float(output.min_value))
@@ -268,11 +273,11 @@ class HazardMapDBReaderTestCase(HazardCurveDBBaseTestCase):
     """
     def test_deserialize_mean(self):
         """Hazard map is read back correctly"""
-        self.writer.serialize(HAZARD_MAP_MEAN_DATA)
+        self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
         data = self.reader.deserialize(self.writer.output.id)
 
-        self.assertEquals(self.sort(self.normalize(HAZARD_MAP_MEAN_DATA)),
+        self.assertEquals(self.sort(self.normalize(HAZARD_MAP_MEAN_DATA())),
                           self.sort(self.normalize(data)))
 
     def sort(self, values):
@@ -344,7 +349,7 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        self.writer.serialize(HAZARD_CURVE_DATA)
+        self.writer.serialize(HAZARD_CURVE_DATA())
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -371,7 +376,7 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
 
                 inserted_data.append(node)
 
-        self.assertEquals(self.normalize(HAZARD_CURVE_DATA),
+        self.assertEquals(self.normalize(HAZARD_CURVE_DATA()),
                           self.normalize(inserted_data))
 
 
@@ -382,7 +387,7 @@ class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
     """
     def test_deserialize(self):
         """Hazard map is read back correctly"""
-        self.writer.serialize(HAZARD_CURVE_DATA)
+        self.writer.serialize(HAZARD_CURVE_DATA())
 
         data = self.reader.deserialize(self.writer.output.id)
 
@@ -397,7 +402,7 @@ class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
 
             return result
 
-        self.assertEquals(self.sort(_normalize(HAZARD_CURVE_DATA)),
+        self.assertEquals(self.sort(_normalize(HAZARD_CURVE_DATA())),
                           self.sort(_normalize(data)))
 
 
@@ -436,7 +441,7 @@ class GMFDBWriterTestCase(GMFDBBaseTestCase):
         self.assertEqual(0, len(self.job.output_set))
 
         # Call the function under test.
-        self.writer.serialize(GMF_DATA)
+        self.writer.serialize(GMF_DATA())
 
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
@@ -455,7 +460,7 @@ class GMFDBWriterTestCase(GMFDBBaseTestCase):
             inserted_data.append((Site(location[0], location[1]),
                                   {'groundMotion': gmfd.ground_motion}))
 
-        self.assertEquals(self.normalize(GMF_DATA.items()),
+        self.assertEquals(self.normalize(GMF_DATA().items()),
                           self.normalize(inserted_data))
 
 
@@ -472,9 +477,9 @@ class GMFDBReaderTestCase(GMFDBBaseTestCase):
 
     def test_deserialize(self):
         """Ground motion field is read back correctly"""
-        self.writer.serialize(GMF_DATA)
+        self.writer.serialize(GMF_DATA())
 
         data = self.reader.deserialize(self.writer.output.id)
 
-        self.assertEquals(self.normalize(GMF_DATA.items()),
+        self.assertEquals(self.normalize(GMF_DATA().items()),
                           self.normalize(data.items()))
