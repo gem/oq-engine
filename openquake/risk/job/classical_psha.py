@@ -25,7 +25,7 @@ from math import exp
 from openquake import kvs
 from openquake import logs
 
-from db.alchemy.db_utils import get_uiapi_reader_session
+from db.alchemy.db_utils import get_db_session
 from db.alchemy import models
 from sqlalchemy import func as sqlfunc
 
@@ -76,7 +76,7 @@ class ClassicalPSHABasedMixin:
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
-        session = get_uiapi_reader_session()
+        session = get_db_session("hzrdo", "reader")
         job_id = int(self.params["OPENQUAKE_JOB_ID"])
 
         iml_query = session.query(models.OqParams.imls) \
