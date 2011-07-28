@@ -245,7 +245,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
         """Writes hazard map for one site.
 
         point must be of type shapes.Site
-        val is a dictionary like this:
+        val is a dictionary like this::
 
         {'IML': 0.8,
          'IMT': 'PGA',
@@ -570,7 +570,7 @@ class HazardMapDBWriter(writer.DBWriter):
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
 
-    The data passed to serialize() will look something like this:
+    The data passed to :func:`serialize()` will look something like this::
 
         [(Site(-121.7, 37.6),
          {'IML': 1.9266716959669603,
@@ -694,7 +694,7 @@ class HazardCurveDBWriter(writer.DBWriter):
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
 
-    The data passed to serialize() will look something like this:
+    The data passed to :func:`serialize()` will look something like this::
 
         [(Site(-122.2, 37.5),
           {'investigationTimeSpan': '50.0',
@@ -785,7 +785,7 @@ class GMFDBWriter(writer.DBWriter):
     Serialize the location/IML data to the `uiapi.hazard_curve_data` database
     table.
 
-    The data passed to serialize() will look something like this:
+    The data passed to :func:`serialize()` will look something like this::
 
         {Site(-117, 40): {'groundMotion': 0.0},
          Site(-116, 40): {'groundMotion': 0.1},
