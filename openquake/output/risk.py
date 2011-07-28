@@ -619,10 +619,22 @@ class LossRatioCurveXMLWriter(CurveXMLWriter):
 
 
 class LossCurveDBReader(object):
+    """
+    Read loss curve data from the database, returning a data structure
+    that can be passed to :func:`LossCurveXMLWriter.serialize` to
+    produce an XML file.
+    """
+
     def __init__(self, session):
         self.session = session
 
     def deserialize(self, output_id):
+        """
+        Read a the given loss curve from the database.
+
+        The structure of the result is documented in
+        :class:`LossCurveDBWriter`.
+        """
         loss_curve = self.session.query(LossCurve) \
             .filter(LossCurve.output_id == output_id).one()
         loss_curve_data = self.session.query(LossCurveData) \
@@ -652,6 +664,24 @@ class LossCurveDBReader(object):
 class LossCurveDBWriter(writer.DBWriter):
     """
     Serializer to the database for loss curves.
+
+    The data passed to :func:`serialize()` will look something like this::
+
+        [(Site(-118.077721, 33.852034),
+          (Curve([(3.18e-06, 1.0), (xvalue, yvalue), (...), (...), ...]),
+           {'assetValue': 5.07,
+           'assetID': 'a5625',
+           'listDescription': 'Collection of exposure values for ...',
+           'structureCategory': 'RM1L',
+           'lon': -118.077721,
+           'assetDescription': 'LA building',
+           'vulnerabilityFunctionReference': 'HAZUS_RM1L_LC',
+           'listID': 'LA01',
+           'assetValueUnit': 'EUR',
+           'lat': 33.852034})),
+         (Site(...), (Curve(...), {...asset data...})),
+         ...
+         ]
     """
 
     def __init__(self, *args, **kwargs):
