@@ -51,7 +51,7 @@ class ComposeWritersTest(unittest.TestCase):
 
         w = output_writer.compose_writers(ws)
 
-        self.assertIsInstance(w, output_writer.CompositeWriter)
+        self.assertTrue(isinstance(w, output_writer.CompositeWriter))
         self.assertEqual(list(w.writers), ws)
 
 class CreateWriterTestBase(object):
