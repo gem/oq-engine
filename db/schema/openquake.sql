@@ -711,14 +711,14 @@ ALTER TABLE hzrdo.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
-CREATE TABLE uiapi.gmf_data (
+CREATE TABLE hzrdo.gmf_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     -- Ground motion value
     ground_motion float NOT NULL
-) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'gmf_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE uiapi.gmf_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE hzrdo_ts;
+SELECT AddGeometryColumn('hzrdo', 'gmf_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdo.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
@@ -958,8 +958,8 @@ ALTER TABLE hzrdo.hazard_curve_node_data
 ADD CONSTRAINT hzrdo_hazard_curve_node_data_output_fk
 FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdo.hazard_curve_data(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.gmf_data
-ADD CONSTRAINT uiapi_gmf_data_output_fk
+ALTER TABLE hzrdo.gmf_data
+ADD CONSTRAINT hzrdo_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.loss_map
