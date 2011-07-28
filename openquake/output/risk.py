@@ -364,12 +364,8 @@ def create_loss_map_writer(deterministic, nrml_path, params):
     writers = []
 
     if 'db' in serialize_to:
-        job_db_key = params.get("OPENQUAKE_JOB_ID")
-        assert job_db_key, "No job db key in the configuration parameters"
-        job_db_key = int(job_db_key)
-
         writers.append(LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
-                                       job_db_key))
+                                       writer.get_job_db_key(params)))
 
     if 'xml' in serialize_to:
         if deterministic:
@@ -613,13 +609,10 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
     writers = []
 
     if 'db' in serialize_to:
-        job_db_key = params.get("OPENQUAKE_JOB_ID")
-        assert job_db_key, "No job db key in the configuration parameters"
-        job_db_key = int(job_db_key)
-
         if curve_mode == 'loss':
             writers.append(LossCurveDBWriter(get_uiapi_writer_session(),
-                                             nrml_path, job_db_key))
+                                             nrml_path,
+                                             writer.get_job_db_key(params)))
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             pass

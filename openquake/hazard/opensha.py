@@ -858,11 +858,9 @@ def _create_writer(params, nrml_path, create_xml_writer, create_db_writer):
     writers = []
 
     if 'db' in serialize_to:
-        job_db_key = params.get("OPENQUAKE_JOB_ID")
-        assert job_db_key, "No job db key in the configuration parameters"
-        job_db_key = int(job_db_key)
         session = get_uiapi_writer_session()
-        writers.append(create_db_writer(session, nrml_path, job_db_key))
+        writers.append(create_db_writer(session, nrml_path,
+                                        writer.get_job_db_key(params)))
 
     if 'xml' in serialize_to:
         writers.append(create_xml_writer(nrml_path))
