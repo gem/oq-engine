@@ -57,7 +57,7 @@ GRANT ALL ON SEQUENCE hzrdi.source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdo.hazard_map_data_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE uiapi.hazard_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdo.hazard_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.hazard_curve_node_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.gmf_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
@@ -174,9 +174,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_uiapi_writer;
 GRANT SELECT ON hzrdo.hazard_map_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map_data TO oq_hzrdo_writer;
 
--- uiapi.hazard_curve_data
-GRANT SELECT ON uiapi.hazard_curve_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_curve_data TO oq_uiapi_writer;
+-- hzrdo.hazard_curve_data
+GRANT SELECT ON hzrdo.hazard_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_data TO oq_hzrdo_writer;
 
 -- uiapi.hazard_curve_node_data
 GRANT SELECT ON uiapi.hazard_curve_node_data TO GROUP openquake;
