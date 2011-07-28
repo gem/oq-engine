@@ -30,32 +30,32 @@ CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
 CREATE INDEX eqcat_catalog_depth_idx on eqcat.catalog(depth);
 CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
 
--- pshai.fault_edge
-CREATE INDEX pshai_fault_edge_bottom_idx ON pshai.fault_edge USING gist(bottom);
-CREATE INDEX pshai_fault_edge_top_idx ON pshai.fault_edge USING gist(top);
+-- hzrdi.fault_edge
+CREATE INDEX hzrdi_fault_edge_bottom_idx ON hzrdi.fault_edge USING gist(bottom);
+CREATE INDEX hzrdi_fault_edge_top_idx ON hzrdi.fault_edge USING gist(top);
 
--- pshai.rupture
-CREATE INDEX pshai_rupture_point_idx ON pshai.rupture USING gist(point);
+-- hzrdi.rupture
+CREATE INDEX hzrdi_rupture_point_idx ON hzrdi.rupture USING gist(point);
 
--- pshai.simple_fault
-CREATE INDEX pshai_simple_fault_edge_idx ON pshai.simple_fault USING gist(edge);
+-- hzrdi.simple_fault
+CREATE INDEX hzrdi_simple_fault_edge_idx ON hzrdi.simple_fault USING gist(edge);
 
--- pshai.source
-CREATE INDEX pshai_source_area_idx ON pshai.source USING gist(area);
-CREATE INDEX pshai_source_point_idx ON pshai.source USING gist(point);
+-- hzrdi.source
+CREATE INDEX hzrdi_source_area_idx ON hzrdi.source USING gist(area);
+CREATE INDEX hzrdi_source_point_idx ON hzrdi.source USING gist(point);
 
 -- index for the 'owner_id' foreign key
 CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
-CREATE INDEX pshai_complex_fault_owner_id_idx on pshai.complex_fault(owner_id);
-CREATE INDEX pshai_fault_edge_owner_id_idx on pshai.fault_edge(owner_id);
-CREATE INDEX pshai_focal_mechanism_owner_id_idx on pshai.focal_mechanism(owner_id);
-CREATE INDEX pshai_mfd_evd_owner_id_idx on pshai.mfd_evd(owner_id);
-CREATE INDEX pshai_mfd_tgr_owner_id_idx on pshai.mfd_tgr(owner_id);
-CREATE INDEX pshai_r_depth_distr_owner_id_idx on pshai.r_depth_distr(owner_id);
-CREATE INDEX pshai_r_rate_mdl_owner_id_idx on pshai.r_rate_mdl(owner_id);
-CREATE INDEX pshai_rupture_owner_id_idx on pshai.rupture(owner_id);
-CREATE INDEX pshai_simple_fault_owner_id_idx on pshai.simple_fault(owner_id);
-CREATE INDEX pshai_source_owner_id_idx on pshai.source(owner_id);
+CREATE INDEX hzrdi_complex_fault_owner_id_idx on hzrdi.complex_fault(owner_id);
+CREATE INDEX hzrdi_fault_edge_owner_id_idx on hzrdi.fault_edge(owner_id);
+CREATE INDEX hzrdi_focal_mechanism_owner_id_idx on hzrdi.focal_mechanism(owner_id);
+CREATE INDEX hzrdi_mfd_evd_owner_id_idx on hzrdi.mfd_evd(owner_id);
+CREATE INDEX hzrdi_mfd_tgr_owner_id_idx on hzrdi.mfd_tgr(owner_id);
+CREATE INDEX hzrdi_r_depth_distr_owner_id_idx on hzrdi.r_depth_distr(owner_id);
+CREATE INDEX hzrdi_r_rate_mdl_owner_id_idx on hzrdi.r_rate_mdl(owner_id);
+CREATE INDEX hzrdi_rupture_owner_id_idx on hzrdi.rupture(owner_id);
+CREATE INDEX hzrdi_simple_fault_owner_id_idx on hzrdi.simple_fault(owner_id);
+CREATE INDEX hzrdi_source_owner_id_idx on hzrdi.source(owner_id);
 
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
 CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
