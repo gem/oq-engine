@@ -71,18 +71,19 @@ class ExposurePortfolioFile(producer.FileProducer):
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with exposure-related attribute values for this site.
 
-    The attribute dictionary looks like this:
-    {'listID': 'PAV01',
-     'listDescription': 'Collection of existing building in ' \
-                        'downtown Pavia',
-     'assetID': 'asset_02',
-     'assetDescription': 'Moment-resisting non-ductile concrete ' \
-                         'frame low rise',
-     'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
-     'structureCategory': 'RC-LR-PC',
-     'assetValue': 250000.0,
-     'assetValueUnit': 'EUR'}
+    The attribute dictionary looks like this::
 
+        {'listID': 'PAV01',
+         'listDescription': 'Collection of existing building in ' \
+                            'downtown Pavia',
+         'assetID': 'asset_02',
+         'assetDescription': 'Moment-resisting non-ductile concrete ' \
+                             'frame low rise',
+         'assetCategory': 'buildings',
+         'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
+         'structureCategory': 'RC-LR-PC',
+         'assetValue': 250000.0,
+         'assetValueUnit': 'EUR'}
 
     Note: assetDescription is optional.
     """
