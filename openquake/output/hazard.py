@@ -535,10 +535,22 @@ def _ensure_attributes_set(attr_list, node):
 
 
 class HazardMapDBReader(object):
+    """
+    Read hazard map data from the database, returning a data structure
+    that can be passed to :func:`HazardMapXMLWriter.serialize` to
+    produce an XML file.
+    """
+
     def __init__(self, session):
         self.session = session
 
     def deserialize(self, output_id):
+        """
+        Read a the given hazard map from the database.
+
+        The structure of the result is documented in
+        :class:`HazardMapDBWriter`.
+        """
         hazard_map = self.session.query(HazardMap) \
             .filter(HazardMap.output_id == output_id).one()
         hazard_map_data = self.session.query(HazardMapData) \
