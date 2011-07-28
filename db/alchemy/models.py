@@ -64,6 +64,36 @@ class OqUser(Base):
         return(":oq_user: %s, %s" % (self.id, self.user_name))
 
 
+class ExposureModel(Base):
+    __tablename__ = "exposure_model"
+    __table_args__ = {"schema": "oqmif"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    description = sa.Column(sa.String, default="")
+    category = sa.Column(sa.String, nullable=False)
+    unit = sa.Column(sa.String, nullable=False)
+
+
+class ExposureModelData(Base):
+    __tablename__ = "exposure_data"
+    __table_args__ = {"schema": "oqmif"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+
+    exposure_model_id = sa.Column(
+        sa.Integer, sa.ForeignKey("oqmif.exposure_model.id"), nullable=False)
+    exposure_model = relationship("ExposureModel",
+                                  backref="exposuremodeldata_set")
+
+    site = ga.GeometryColumn(ga.Point(2), nullable=False)
+    asset_ref = sa.Column(sa.String, nullable=False)
+    value = sa.Column(sa.Float, nullable=False)
+    vf_ref = sa.Column(sa.String, nullable=False)
+    structure_type = sa.Column(sa.String, default="")
+    retrofitting_cost = sa.Column(sa.Float)
+
+
 class Upload(Base):
     __tablename__ = "upload"
     __table_args__ = {"schema": "uiapi"}
