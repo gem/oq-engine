@@ -24,9 +24,35 @@ Database related unit tests for hazard computations with the hazard engine.
 import unittest
 
 from openquake.hazard import opensha
+from openquake.output import writer as output_writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
 
+
+class ComposeWritersTest(unittest.TestCase):
+    def test_empty(self):
+        self.assertEqual(None, output_writer.compose_writers([]))
+
+    def test_writer_is_none(self):
+        self.assertEqual(None, output_writer.compose_writers([None]))
+
+    def test_single_writer(self):
+        class W:
+            pass
+
+        w = W()
+        self.assertEqual(w, output_writer.compose_writers([w]))
+
+    def test_multiple_writers(self):
+        class W:
+            pass
+
+        ws = [W(), W()]
+
+        w = output_writer.compose_writers(ws)
+
+        self.assertIsInstance(w, output_writer.CompositeWriter)
+        self.assertEqual(list(w.writers), ws)
 
 class CreateWriterTestBase(object):
     def test_create_writer_with_xml(self):
