@@ -649,10 +649,22 @@ class HazardMapDBWriter(writer.DBWriter):
 
 
 class HazardCurveDBReader(object):
+    """
+    Read hazard curve data from the database, returning a data
+    structure that can be passed to
+    :func:`HazardCurveXMLWriter.serialize` to produce an XML file.
+    """
+
     def __init__(self, session):
         self.session = session
 
     def deserialize(self, output_id):
+        """
+        Read a the given hazard curve from the database.
+
+        The structure of the result is documented in
+        :class:`HazardCurveDBWriter`.
+        """
         hazard_curve_data = self.session.query(HazardCurveData) \
             .filter(HazardCurveData.output_id == output_id).all()
         params = self.session.query(OqParams) \
@@ -723,7 +735,14 @@ class HazardCurveDBWriter(writer.DBWriter):
         return "hazard_curve"
 
     def insert_datum(self, point, values):
-        """Insert a single hazard curve"""
+        """
+        Insert a single hazard curve
+
+        :param point: location
+        :type point: :class:`openquake.shapes.Site`
+
+        :param values: dictionary of metadata/values
+        """
         # check if we have hazard curves for an end branch label, or
         # for mean/median/quantile
         if 'endBranchLabel' in values and 'statistics' in values:
