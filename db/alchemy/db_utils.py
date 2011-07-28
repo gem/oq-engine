@@ -77,8 +77,8 @@ def get_eqcat_writer_session():
                               os.environ.get("OQ_DB_EQCAT_WRITER_PWD"))
 
 
-def get_pshai_writer_session():
-    """Return a database session for the `oq_pshai_writer` user."""
+def get_hzrdi_writer_session():
+    """Return a database session for the `oq_hzrdi_writer` user."""
     assert os.environ.get("OQ_DB_PSHAI_WRITER"), \
         "OQ_DB_PSHAI_WRITER environment variable not set."
     return SessionCache().get(os.environ.get("OQ_DB_PSHAI_WRITER"),
@@ -109,8 +109,8 @@ def get_eqcat_etl_session():
                               os.environ.get("OQ_DB_EQCAT_ETL_PWD"))
 
 
-def get_pshai_etl_session():
-    """Return a database session for the `oq_pshai_etl` user."""
+def get_hzrdi_etl_session():
+    """Return a database session for the `oq_hzrdi_etl` user."""
     assert os.environ.get("OQ_DB_PSHAI_ETL"), \
         "OQ_DB_PSHAI_ETL environment variable not set."
     return SessionCache().get(os.environ.get("OQ_DB_PSHAI_ETL"),
