@@ -867,12 +867,7 @@ def _create_writer(params, nrml_path, create_xml_writer, create_db_writer):
     if 'xml' in serialize_to:
         writers.append(create_xml_writer(nrml_path))
 
-    if len(writers) == 0:
-        return None
-    elif len(writers) == 1:
-        return writers[0]
-    else:
-        return writer.CompositeWriter(*writers)
+    return writer.compose_writers(writers)
 
 
 def create_hazardcurve_writer(params, nrml_path):
