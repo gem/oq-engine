@@ -280,6 +280,15 @@ class HazardMapDBReaderTestCase(HazardCurveDBBaseTestCase):
         self.assertEquals(self.sort(self.normalize(HAZARD_MAP_MEAN_DATA())),
                           self.sort(self.normalize(data)))
 
+    def test_deserialize_quantile(self):
+        """Hazard map is read back correctly"""
+        self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
+
+        data = self.reader.deserialize(self.writer.output.id)
+
+        self.assertEquals(self.sort(self.normalize(HAZARD_MAP_QUANTILE_DATA())),
+                          self.sort(self.normalize(data)))
+
     def sort(self, values):
         def sort_key(v):
             return v[0].longitude, v[0].latitude, v[1].get('statistics')
