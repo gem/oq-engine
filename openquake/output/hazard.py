@@ -53,6 +53,8 @@ from openquake import writer
 from openquake.utils import round_float
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
 
+from sqlalchemy import func as sqlfunc
+
 
 LOGGER = logging.getLogger('hazard-serializer')
 LOGGER.setLevel(logging.DEBUG)
@@ -553,7 +555,10 @@ class HazardMapDBReader(object):
         """
         hazard_map = self.session.query(HazardMap) \
             .filter(HazardMap.output_id == output_id).one()
-        hazard_map_data = self.session.query(HazardMapData) \
+        hazard_map_data = self.session.query(
+            sqlfunc.ST_X(HazardMapData.location),
+            sqlfunc.ST_Y(HazardMapData.location),
+            HazardMapData) \
             .filter(HazardMapData.hazard_map_id == hazard_map.id)
         params = self.session.query(OqParams) \
             .join(OqJob) \
@@ -561,11 +566,9 @@ class HazardMapDBReader(object):
             .filter(Output.id == output_id).one()
         points = []
 
-        for datum in hazard_map_data:
-            location = datum.location.coords(self.session)
-
+        for lon, lat, datum in hazard_map_data:
             points.append(
-                (shapes.Site(location[0], location[1]),
+                (shapes.Site(lon, lat),
                 {'IML': datum.value,
                  'IMT': job.REVERSE_ENUM_MAP[params.imt],
                  'investigationTimeSpan': params.investigation_time,
@@ -686,7 +689,10 @@ class HazardCurveDBReader(object):
         points = []
 
         for hazard_curve_datum in hazard_curve_data:
-            hazard_curve_node_data = self.session.query(HazardCurveNodeData) \
+            hazard_curve_node_data = self.session.query(
+                sqlfunc.ST_X(HazardCurveNodeData.location),
+                sqlfunc.ST_Y(HazardCurveNodeData.location),
+                HazardCurveNodeData) \
                 .filter(HazardCurveNodeData.hazard_curve_data ==
                         hazard_curve_datum).all()
 
@@ -703,12 +709,11 @@ class HazardCurveDBReader(object):
             else:
                 common['endBranchLabel'] = hazard_curve_datum.end_branch_label
 
-            for datum in hazard_curve_node_data:
-                location = datum.location.coords(self.session)
+            for lon, lat, datum in hazard_curve_node_data:
                 attrs = common.copy()
                 attrs['PoEValues'] = datum.poes
 
-                points.append((shapes.Site(location[0], location[1]), attrs))
+                points.append((shapes.Site(lon, lat), attrs))
 
         return points
 
@@ -808,15 +813,16 @@ class GMFDBReader(object):
 
         The structure of the result is documented in :class:`GMFDBWriter`.
         """
-        gmf_data = self.session.query(GMFData) \
+        gmf_data = self.session.query(
+            sqlfunc.ST_X(GMFData.location),
+            sqlfunc.ST_Y(GMFData.location),
+            GMFData.ground_motion) \
             .filter(GMFData.output_id == output_id).all()
         points = {}
 
-        for datum in gmf_data:
-            location = datum.location.coords(self.session)
-
-            points[shapes.Site(location[0], location[1])] = {
-                'groundMotion': datum.ground_motion,
+        for lon, lat, ground_motion in gmf_data:
+            points[shapes.Site(lon, lat)] = {
+                'groundMotion': ground_motion,
             }
 
         return points
