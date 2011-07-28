@@ -144,25 +144,25 @@ COMMENT ON COLUMN hzrdi.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
-COMMENT ON TABLE uiapi.hazard_map_data IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN uiapi.hazard_map_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard map.';
+COMMENT ON TABLE hzrdo.hazard_map_data IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN hzrdo.hazard_map_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard map.';
 
-COMMENT ON TABLE uiapi.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
-COMMENT ON COLUMN uiapi.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN uiapi.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
-COMMENT ON COLUMN uiapi.hazard_curve_data.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdo.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
+COMMENT ON COLUMN hzrdo.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdo.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
+COMMENT ON COLUMN hzrdo.hazard_curve_data.statistic_type IS 'Statistic type, one of:
     - Mean     (mean)
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN uiapi.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdo.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
 
-COMMENT ON TABLE uiapi.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN uiapi.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN uiapi.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
+COMMENT ON TABLE hzrdo.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdo.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdo.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
 
-COMMENT ON TABLE uiapi.gmf_data IS 'Holds data for the ground motion field';
-COMMENT ON COLUMN uiapi.gmf_data.ground_motion IS 'Ground motion for a specific site';
-COMMENT ON COLUMN uiapi.gmf_data.location IS 'Site coordinates';
+COMMENT ON TABLE hzrdo.gmf_data IS 'Holds data for the ground motion field';
+COMMENT ON COLUMN hzrdo.gmf_data.ground_motion IS 'Ground motion for a specific site';
+COMMENT ON COLUMN hzrdo.gmf_data.location IS 'Site coordinates';
 
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
@@ -174,34 +174,34 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
-COMMENT ON TABLE uiapi.loss_map IS 'Holds metadata for loss maps.';
-COMMENT ON COLUMN uiapi.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN uiapi.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
-COMMENT ON COLUMN uiapi.loss_map.loss_map_ref IS 'A simple identifier';
-COMMENT ON COLUMN uiapi.loss_map.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN uiapi.loss_map.category IS 'Loss category (e.g. economic_loss).';
-COMMENT ON COLUMN uiapi.loss_map.unit IS 'Unit of measurement';
-COMMENT ON COLUMN uiapi.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
+COMMENT ON TABLE risko.loss_map IS 'Holds metadata for loss maps.';
+COMMENT ON COLUMN risko.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN risko.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
+COMMENT ON COLUMN risko.loss_map.loss_map_ref IS 'A simple identifier';
+COMMENT ON COLUMN risko.loss_map.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN risko.loss_map.category IS 'Loss category (e.g. economic_loss).';
+COMMENT ON COLUMN risko.loss_map.unit IS 'Unit of measurement';
+COMMENT ON COLUMN risko.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
-COMMENT ON TABLE uiapi.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
-COMMENT ON COLUMN uiapi.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
-COMMENT ON COLUMN uiapi.loss_map_data.asset_ref IS 'The asset reference';
-COMMENT ON COLUMN uiapi.loss_map_data.location IS 'The position of the asset';
-COMMENT ON COLUMN uiapi.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN uiapi.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
+COMMENT ON TABLE risko.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
+COMMENT ON COLUMN risko.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
+COMMENT ON COLUMN risko.loss_map_data.asset_ref IS 'The asset reference';
+COMMENT ON COLUMN risko.loss_map_data.location IS 'The position of the asset';
+COMMENT ON COLUMN risko.loss_map_data.value IS 'The value of the loss';
+COMMENT ON COLUMN risko.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
 
-COMMENT ON TABLE uiapi.loss_curve IS 'Holds the parameters common to a set of loss curves.';
-COMMENT ON COLUMN uiapi.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
-COMMENT ON COLUMN uiapi.loss_curve.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN uiapi.loss_curve.category IS 'The category of the losses';
-COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
+COMMENT ON TABLE risko.loss_curve IS 'Holds the parameters common to a set of loss curves.';
+COMMENT ON COLUMN risko.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN risko.loss_curve.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN risko.loss_curve.category IS 'The category of the losses';
+COMMENT ON COLUMN risko.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
-COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
-COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
-COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN uiapi.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN uiapi.loss_curve_data.losses IS 'Losses';
-COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';
+COMMENT ON TABLE risko.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
+COMMENT ON COLUMN risko.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN risko.loss_curve_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN risko.loss_curve_data.location IS 'The position of the asset';
+COMMENT ON COLUMN risko.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN risko.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
