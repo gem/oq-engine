@@ -39,9 +39,6 @@ from openquake.utils import round_float
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('distance_precision', 12,
-    "Points within this geohash precision will be considered the same point")
-
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
 
@@ -364,8 +361,7 @@ class Site(object):
 
     def _geohash(self):
         """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x,
-            precision=FLAGS.distance_precision)
+        return geohash.encode(self.point.y, self.point.x, precision=12)
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
