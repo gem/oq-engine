@@ -7,7 +7,7 @@
 It receives its inputs through a configuration file plus input data in .xml
 format and stores the results in .xml format.
 
-Avalable Hazard Analysis
+Available Hazard Analysis
 
   Classical PSHA
     Input   Source Model Logic Tree
