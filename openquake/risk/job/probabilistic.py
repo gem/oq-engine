@@ -94,7 +94,7 @@ class ProbabilisticEventMixin():
 
     def _get_db_gmf(self, gmf_id):
         """Returns a field for the given GMF"""
-        session = get_uiapi_reader_session()
+        session = get_db_session("hzrdo", "reader")
         grid = self.region.grid
         field = zeros((grid.rows, grid.columns))
 
