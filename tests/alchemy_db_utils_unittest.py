@@ -250,22 +250,21 @@ class SessionCacheGetTestCase(unittest.TestCase):
         self.assertTrue(sc.__sessions__.get("usr3") is None)
 
 
-class GetSessionTestCase(unittest.TestCase):
+class GetDbSessionTestCase(unittest.TestCase):
     """
-    Tests the various alchemy.db_utils.get_xxxxx_xxxx_session() functions.
+    Tests the alchemy.db_utils.get_db_session() function.
     """
-
     test_data = (
-        ("OQ_DB_EQCAT_WRITER", "OQ_DB_EQCAT_WRITER_PWD",
-         get_eqcat_writer_session),
-        ("OQ_DB_PSHAI_WRITER", "OQ_DB_PSHAI_WRITER_PWD",
-         get_hzrdi_writer_session),
-        ("OQ_DB_UIAPI_WRITER", "OQ_DB_UIAPI_WRITER_PWD",
-         get_uiapi_writer_session),
-        ("OQ_DB_EQCAT_ETL", "OQ_DB_EQCAT_ETL_PWD",
-         get_eqcat_etl_session),
-        ("OQ_DB_PSHAI_ETL", "OQ_DB_PSHAI_ETL_PWD",
-         get_hzrdi_etl_session))
+        (("hzrdi", "reader"), ("oq_hzrdi_reader", "openquake")),
+        (("hzrdi", "writer"), ("oq_hzrdi_writer", "openquake")),
+        (("riski", "reader"), ("oq_riski_reader", "openquake")),
+        (("riski", "writer"), ("oq_riski_writer", "openquake")),
+        (("hzrdo", "reader"), ("oq_hzrdo_reader", "openquake")),
+        (("hzrdo", "writer"), ("oq_hzrdo_writer", "openquake")),
+        (("risko", "reader"), ("oq_risko_reader", "openquake")),
+        (("risko", "writer"), ("oq_risko_writer", "openquake")),
+        (("eqcat", "reader"), ("oq_eqcat_reader", "openquake")),
+        (("eqcat", "writer"), ("oq_eqcat_writer", "openquake")))
 
     def setUp(self):
         # Save the original get() method.
@@ -280,43 +279,37 @@ class GetSessionTestCase(unittest.TestCase):
         # Restore the original get() method.
         SessionCache().get = self.original_method
 
-    def test_get_session_with_no_env(self):
+    def test_get_db_session_with_no_env(self):
         """
-        An `AssertionError` is raised if the `OQ_DB_<ns>_<access>` environment
-        variable is not set.
+        The default user/passwords will be used.
         """
-        for env_user, _, function in self.test_data:
-            if os.environ.get(env_user):
-                del os.environ[env_user]
-            self.assertRaises(AssertionError, function)
+        for ((schema, role), (user, password)) in self.test_data:
+            usr_var = "OQ_DB_%s_%s" % (schema, role)
+            usr_var = usr_var.upper()
+            if os.environ.get(usr_var) is not None:
+                del os.environ[usr_var]
+            pwd_var = usr_var + "_PWD"
+            if os.environ.get(pwd_var) is not None:
+                del os.environ[pwd_var]
+            session = get_db_session(schema, role)
+            self.assertTrue(session is self.expected_session)
+            (actual_user, actual_password), _ = self.mock_method.call_args
+            self.assertEqual(user, actual_user)
+            self.assertEqual(password, actual_password)
 
-    def test_get_session(self):
+    def test_get_db_session(self):
         """
         SessionCache.get() is called with the appropriate environment
         variables.
         """
-        for env_user, env_passwd, function in self.test_data:
-            os.environ[env_user] = "usr1"
-            os.environ[env_passwd] = "pwd1"
+        for ((schema, role), (user, password)) in self.test_data:
+            env_var = "OQ_DB_%s_%s" % (schema, role)
+            env_var = env_var.upper()
+            os.environ[env_var] = "usr1"
+            os.environ[env_var + "_PWD"] = "pwd1"
 
-            session = function()
+            session = get_db_session(schema, role)
             self.assertTrue(session is self.expected_session)
             (user, passwd), _ = self.mock_method.call_args
             self.assertEqual("usr1", user)
             self.assertEqual("pwd1", passwd)
-
-    def test_get_session_with_none_passwd(self):
-        """
-        SessionCache.get() is called with the appropriate environment
-        variables.
-        """
-        for env_user, env_passwd, function in self.test_data:
-            os.environ[env_user] = "usr2"
-            if os.environ.get(env_passwd):
-                del os.environ[env_passwd]
-
-            session = function()
-            self.assertTrue(session is self.expected_session)
-            (user, passwd), _ = self.mock_method.call_args
-            self.assertEqual("usr2", user)
-            self.assertTrue(passwd is None)

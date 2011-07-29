@@ -198,10 +198,10 @@ class HazardMap(Base):
 
 class HazardMapData(Base):
     __tablename__ = "hazard_map_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "hzrdo"}
 
     id = sa.Column(sa.Integer, primary_key=True)
-    hazard_map_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.hazard_map.id"),
+    hazard_map_id = sa.Column(sa.Integer, sa.ForeignKey("hzrdo.hazard_map.id"),
                               nullable=False)
     hazard_map = relationship("HazardMap", backref="hazardmapdata_set")
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
