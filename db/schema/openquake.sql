@@ -666,7 +666,7 @@ CREATE TABLE uiapi.output (
 
 
 -- Hazard map header
-CREATE TABLE uiapi.hazard_map (
+CREATE TABLE hzrdo.hazard_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     poe float NOT NULL,
@@ -680,7 +680,7 @@ CREATE TABLE uiapi.hazard_map (
         CHECK(
             ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
             OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
-) TABLESPACE uiapi_ts;
+) TABLESPACE hzrdo_ts;
 
 
 -- Hazard map data.
