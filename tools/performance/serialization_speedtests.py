@@ -141,6 +141,26 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         session.commit()
 
+    @test_helpers.timeit
+    def test_deserialize_small(self):
+        data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
+
+        self.job = self.setup_classic_job()
+        session = get_uiapi_writer_session()
+        output_path = self.generate_output_path(self.job)
+
+        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+        hcw.serialize(data)
+
+        session.commit()
+
+        # deserialize
+        hcr = HazardCurveDBReader(session)
+
+        for i in xrange(0, 10):
+            # Call the function under test.
+            hcr.deserialize(hcw.output.id)
+
 
 class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def tearDown(self):

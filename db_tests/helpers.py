@@ -35,6 +35,9 @@ from tests.helpers import TestMixin
 class DbTestMixin(TestMixin):
     """Mixin class with various helper methods."""
 
+    IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
+            0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
+
     def setup_upload(self, dbkey=None):
         """Create an upload with associated inputs.
 
@@ -93,9 +96,7 @@ class DbTestMixin(TestMixin):
         oqp.truncation_type = "twosided"
         oqp.truncation_level = 3
         oqp.reference_vs30_value = 760
-        oqp.imls = [
-            0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
-            0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
+        oqp.imls = self.IMLS
         oqp.poes = [0.01, 0.10]
         oqp.realizations = 1
         oqp.region = (
