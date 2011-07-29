@@ -63,6 +63,8 @@ ENUM_MAP = {
     '2 Sided': 'twosided',
 }
 
+REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
+
 
 def run_job(job_file, output_type):
     """Given a job_file, run the job."""
