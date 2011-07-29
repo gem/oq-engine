@@ -178,14 +178,32 @@ class Output(Base):
             self.id, self.output_type, self.path, self.size))
 
 
-class HazardMapData(Base):
-    __tablename__ = "hazard_map_data"
+class HazardMap(Base):
+    __tablename__ = "hazard_map"
     __table_args__ = {"schema": "uiapi"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
                           nullable=False)
-    output = relationship("Output", backref="hazardmapdata_set")
+    output = relationship("Output", backref="hazardmap_set")
+    poe = sa.Column(sa.Float, nullable=False)
+    statistic_type = sa.Column(
+        sa.Enum("mean", "quantile", native_enum=False))
+    quantile = sa.Column(sa.Float)
+
+    def __repr__(self):
+        return(":hazard_map: %s, %s" % (
+            self.id, self.poe))
+
+
+class HazardMapData(Base):
+    __tablename__ = "hazard_map_data"
+    __table_args__ = {"schema": "uiapi"}
+
+    id = sa.Column(sa.Integer, primary_key=True)
+    hazard_map_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.hazard_map.id"),
+                              nullable=False)
+    hazard_map = relationship("HazardMap", backref="hazardmapdata_set")
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
     value = sa.Column(sa.Float, nullable=False)
 
