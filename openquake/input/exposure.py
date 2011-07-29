@@ -29,16 +29,35 @@ class ExposureDBWriter(object):
     """
 
     def __init__(self, session):
+        """Create a new serializer using the specific session"""
         self.session = session
         self.model = None
 
     def serialize(self, iterator):
+        """
+        Serialize a list of values produced by
+        :class:`openquake.parser.exposure.ExposurePortfolioFile`
+
+        :type iterator: any iterable
+        """
         for point, values in iterator:
             self.insert_datum(point, values)
 
         self.session.commit()
 
     def insert_datum(self, point, values):
+        """
+        Insert a single asset entry.
+
+        :param point: asset location
+        :type point: :class:`openquake.shapes.Site`
+
+        :param values: dictionary of values (see
+            :class:`openquake.parser.exposure.ExposurePortfolioFile`)
+
+        it also inserts the main exposure model entry if not already
+        present,
+        """
         if not self.model:
             self.model = models.ExposureModel(
                 description=values.get('listDescription'),
