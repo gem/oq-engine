@@ -33,6 +33,7 @@ import unittest
 
 from osgeo import gdal, gdalconst
 
+from openquake import writer
 from openquake import shapes
 from tests.utils import helpers
 from openquake.output import geotiff, curve, cpt
@@ -987,3 +988,26 @@ class OutputTestCase(unittest.TestCase):
         hm_writer = geotiff.HazardMapGeoTiffFile(
             test_file_path, test_region.grid, TEST_COLORMAP)
         self.assertEqual('relative', hm_writer.scaling)
+
+
+class WriterTestCase(unittest.TestCase):
+    def test_composite_accepts_null_writer(self):
+        w = writer.CompositeWriter(None)
+        w.serialize([1, 20, 300])
+
+    def test_composite_writer(self):
+        class Writer(object):
+            def __init__(self):
+                self.serialized = []
+
+            def serialize(self, iterable):
+                for item in iterable:
+                    self.serialized.append(item)
+
+        w_a = Writer()
+        w_b = Writer()
+        w = writer.CompositeWriter(w_a, w_b)
+        data = [1, 20, 300]
+        w.serialize(data)
+        self.assertEqual(w_a.serialized, data)
+        self.assertEqual(w_b.serialized, data)
