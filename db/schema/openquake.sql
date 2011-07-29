@@ -665,10 +665,28 @@ CREATE TABLE uiapi.output (
 ) TABLESPACE uiapi_ts;
 
 
+-- Hazard map header
+CREATE TABLE uiapi.hazard_map (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,
+    poe float NOT NULL,
+    -- Statistic type, one of:
+    --      mean
+    --      quantile
+    statistic_type VARCHAR CONSTRAINT statistic_type_value
+        CHECK(statistic_type IN ('mean', 'quantile')),
+    -- Quantile value (only for "quantile" statistics)
+    quantile float CONSTRAINT quantile_value
+        CHECK(
+            ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
+) TABLESPACE uiapi_ts;
+
+
 -- Hazard map data.
 CREATE TABLE hzrdo.hazard_map_data (
     id SERIAL PRIMARY KEY,
-    output_id INTEGER NOT NULL,
+    hazard_map_id INTEGER NOT NULL,
     value float NOT NULL
 ) TABLESPACE hzrdo_ts;
 SELECT AddGeometryColumn('hzrdo', 'hazard_map_data', 'location', 4326, 'POINT', 2);
@@ -946,9 +964,13 @@ FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE hzrdo.hazard_map
+ADD CONSTRAINT hzrdo_hazard_map_output_fk
+FOREIGN KEY (output_id) REFERENCES hzrdo.output(id) ON DELETE CASCADE;
+
 ALTER TABLE hzrdo.hazard_map_data
-ADD CONSTRAINT hzrdo_hazard_map_data_output_fk
-FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+ADD CONSTRAINT hzrdo_hazard_map_data_hazard_map_fk
+FOREIGN KEY (hazard_map_id) REFERENCES hzrdo.hazard_map(id) ON DELETE CASCADE;
 
 ALTER TABLE hzrdo.hazard_curve_data
 ADD CONSTRAINT hzrdo_hazard_curve_data_output_fk
