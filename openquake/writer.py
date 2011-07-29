@@ -173,6 +173,42 @@ class DBWriter(object):
         LOGGER.info("< serialize")
 
 
+class CompositeWriter(object):
+    """A writer that outputs to multiple writers"""
+
+    def __init__(self, *writers):
+        self.writers = writers
+
+    def serialize(self, iterable):
+        """Implementation of the "serialize" interface."""
+
+        for writer in self.writers:
+            if writer:
+                writer.serialize(iterable)
+
+
+def compose_writers(writers):
+    """
+    Takes a list of writers (the list can be empty or contain None items) and
+    returns a single writer or None if the list didn't contain any writer.
+    """
+
+    if all(writer == None for writer in writers):  # True if the list is empty
+        return None
+    elif len(writers) == 1:
+        return writers[0]
+    else:
+        return CompositeWriter(*writers)
+
+
+def get_job_db_key(params):
+    """Extracts the database id for the job params"""
+
+    job_db_key = params.get("OPENQUAKE_JOB_ID")
+    assert job_db_key, "No job db key in the configuration parameters"
+    return int(job_db_key)
+
+
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
