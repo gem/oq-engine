@@ -106,11 +106,11 @@ GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
 
 -- oqmif.exposure_model
 GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON oqmif.exposure_model TO oq_ged4gem;
+GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_model TO oq_ged4gem;
 
 -- oqmif.exposure_data
 GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON oqmif.exposure_data TO oq_ged4gem;
+GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_data TO oq_ged4gem;
 
 -- hzrdi.complex_fault
 GRANT SELECT ON hzrdi.complex_fault TO GROUP openquake;
