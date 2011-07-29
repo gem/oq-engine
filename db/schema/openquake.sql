@@ -966,7 +966,7 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdo.hazard_map
 ADD CONSTRAINT hzrdo_hazard_map_output_fk
-FOREIGN KEY (output_id) REFERENCES hzrdo.output(id) ON DELETE CASCADE;
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE hzrdo.hazard_map_data
 ADD CONSTRAINT hzrdo_hazard_map_data_hazard_map_fk
