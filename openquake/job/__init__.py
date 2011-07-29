@@ -249,8 +249,9 @@ class Job(object):
         if output_type == 'xml_without_db':
             params['SERIALIZE_RESULTS_TO'] = 'xml'
         else:
-            # create the database record for this job
-            params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+            if 'OPENQUAKE_JOB_ID' not in params:
+                # create the database record for this job
+                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
 
             if output_type == 'db':
                 params['SERIALIZE_RESULTS_TO'] = 'db'
