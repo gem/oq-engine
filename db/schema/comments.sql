@@ -144,8 +144,18 @@ COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
+COMMENT ON TABLE uiapi.hazard_map IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN uiapi.hazard_map.output_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON COLUMN uiapi.hazard_map.poe IS 'Probability of exceedence';
+COMMENT ON COLUMN uiapi.hazard_map.statistic_type IS 'Statistic type, one of:
+    - Median   (median)
+    - Quantile (quantile)';
+COMMENT ON COLUMN uiapi.hazard_map.quantile IS 'The quantile for quantile statistical data.';
+
 COMMENT ON TABLE uiapi.hazard_map_data IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN uiapi.hazard_map_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard map.';
+COMMENT ON COLUMN uiapi.hazard_map_data.hazard_map_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON COLUMN uiapi.hazard_map_data.location IS 'Position in the hazard map';
+COMMENT ON COLUMN uiapi.hazard_map_data.value IS 'IML value for this location';
 
 COMMENT ON TABLE uiapi.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
 COMMENT ON COLUMN uiapi.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
