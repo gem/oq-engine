@@ -44,7 +44,7 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 import logging
 from lxml import etree
 
-from db.alchemy.models import HazardMapData, HazardCurveData, \
+from db.alchemy.models import HazardMap, HazardMapData, HazardCurveData, \
     HazardCurveNodeData, GMFData
 
 from openquake import shapes
@@ -554,18 +554,33 @@ class HazardMapDBWriter(writer.DBWriter):
           'poE': 0.01,
           'statistics': 'mean',
           'vs30': 760.0})]
+
+    with the assumption that the poE, statistic and quantile value is
+    the same for all items.
     """
 
     def __init__(self, session, nrml_path, oq_job_id):
         super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.bulk_inserter = writer.BulkInserter(HazardMapData)
+        self.hazard_map = None
 
     def get_output_type(self):
         return "hazard_map"
 
     def serialize(self, iterable):
         self.insert_output(self.get_output_type())
+
+        # get the value for HazardMap from the first value
+        header = iterable[0][1]
+        self.hazard_map = HazardMap(
+            output=self.output, poe=header['poE'],
+            statistic_type=header['statistics'])
+        if header['statistics'] == 'quantile':
+            self.hazard_map.quantile = header['quantileValue']
+
+        self.session.add(self.hazard_map)
+        self.session.flush()
 
         # Update the output record with the minimum/maximum values.
         self.output.min_value = round_float(min(
@@ -596,7 +611,7 @@ class HazardMapDBWriter(writer.DBWriter):
                 "No IML value for position: [%s, %s]" % (point.x, point.y))
         else:
             self.bulk_inserter.add_entry(
-                output_id=self.output.id,
+                hazard_map_id=self.hazard_map.id,
                 value=round_float(value),
                 location="POINT(%s %s)" % (point.x, point.y))
 
