@@ -19,14 +19,21 @@
 
 
 import unittest
+import os
 
 from db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
+from openquake.input.exposure import ExposureDBWriter
+from openquake.parser.exposure import ExposurePortfolioFile
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.shapes import Site, Region
 
+from tests.utils import helpers as testhelpers
+
 from db_tests import helpers
+
+TEST_FILE = 'exposure-portfolio.xml'
 
 
 # See data in output_hazard_unittest.py
@@ -170,3 +177,66 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
                 '2!0': [0.0, 0.0, 1.0],
                 '2!1': [0.0, 0.0, 1.1],
                 }, gmfs)
+
+
+class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """
+    Test the code to serialize exposure model to DB.
+    """
+    def setUp(self):
+        self.session = get_db_session('ged4gem', 'writer')
+        self.writer = ExposureDBWriter(self.session)
+
+    def tearDown(self):
+        if self.writer.model:
+            # can't do that at the moment
+            # self.session.delete(self.writer.model)
+            self.session.commit()
+
+    def test_read_exposure(self):
+        path = os.path.join(testhelpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
+        parser = ExposurePortfolioFile(path)
+
+        # call tested function
+        self.writer.serialize(parser)
+
+        # test results
+        model = self.writer.model
+
+        self.assertFalse(model is None)
+
+        # check model fields
+        self.assertEquals('Collection of existing building in downtown Pavia',
+                          model.description)
+        self.assertEquals('buildings', model.category)
+        self.assertEquals('EUR', model.unit)
+
+        # check asset instances
+        assets = sorted(model.exposuremodeldata_set,
+                        key=lambda e: e.value)
+
+        def _to_site(pg_point):
+            coords = pg_point.coords(self.session)
+
+            return shapes.Site(coords[0], coords[1])
+
+        self.assertEquals('asset_01', assets[0].asset_ref)
+        self.assertEquals(150000, assets[0].value)
+        self.assertEquals('RC/DMRF-D/LR', assets[0].vf_ref)
+        self.assertEquals('RC-LR-PC', assets[0].structure_type)
+        self.assertEquals(shapes.Site(9.15000, 45.16667),
+                          _to_site(assets[0].site))
+
+        self.assertEquals('asset_02', assets[1].asset_ref)
+        self.assertEquals(250000, assets[1].value)
+        self.assertEquals('RC/DMRF-D/LR', assets[1].vf_ref)
+        self.assertEquals('RC-HR-PC', assets[1].structure_type)
+        self.assertEquals(shapes.Site(9.15333, 45.12200),
+                          _to_site(assets[1].site))
+
+        self.assertEquals('asset_03', assets[2].asset_ref)
+        self.assertEquals(500000, assets[2].value)
+        self.assertEquals('RC/DMRF-D/LR', assets[2].vf_ref)
+        self.assertEquals('RC-LR-PC', assets[2].structure_type)
+        self.assertEquals(shapes.Site(9.14777, 45.17999),
+                          _to_site(assets[2].site))
