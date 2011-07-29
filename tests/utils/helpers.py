@@ -81,9 +81,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    # Passing an OPENQUAKE_JOB_ID prevents the creation of a database record
-    # for the job
-    return Job.from_file(config_file_path, 'xml', {'OPENQUAKE_JOB_ID': '1'})
+    return Job.from_file(config_file_path, 'xml_without_db')
 
 
 class WordProducer(producer.FileProducer):
