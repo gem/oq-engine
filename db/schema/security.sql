@@ -56,10 +56,12 @@ GRANT ALL ON SEQUENCE hzrdi.source_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE risko.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE risko.loss_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdo.hazard_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdo.hazard_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdo.hazard_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdo.hazard_curve_node_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdo.gmf_data_id_seq to GROUP openquake;
+
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE risko.loss_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE risko.loss_map_data_id_seq to GROUP openquake;
@@ -112,63 +114,57 @@ GRANT SELECT,INSERT,UPDATE ON oqmif.exposure_data TO oq_ged4gem;
 
 -- hzrdi.complex_fault
 GRANT SELECT ON hzrdi.complex_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.complex_fault TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.complex_fault TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.complex_fault TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.complex_fault TO oq_uiapi_writer;
 
 -- hzrdi.fault_edge
 GRANT SELECT ON hzrdi.fault_edge TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.fault_edge TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.fault_edge TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.fault_edge TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.fault_edge TO oq_uiapi_writer;
 
 -- hzrdi.focal_mechanism
 GRANT SELECT ON hzrdi.focal_mechanism TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.focal_mechanism TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.focal_mechanism TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.focal_mechanism TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.focal_mechanism TO oq_uiapi_writer;
 
 -- hzrdi.mfd_evd
 GRANT SELECT ON hzrdi.mfd_evd TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.mfd_evd TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.mfd_evd TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_uiapi_writer;
 
 -- hzrdi.mfd_tgr
 GRANT SELECT ON hzrdi.mfd_tgr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.mfd_tgr TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.mfd_tgr TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_uiapi_writer;
 
 -- hzrdi.r_depth_distr
 GRANT SELECT ON hzrdi.r_depth_distr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.r_depth_distr TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.r_depth_distr TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_depth_distr TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_depth_distr TO oq_uiapi_writer;
 
 -- hzrdi.r_rate_mdl
 GRANT SELECT ON hzrdi.r_rate_mdl TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.r_rate_mdl TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.r_rate_mdl TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_rate_mdl TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_rate_mdl TO oq_uiapi_writer;
 
 -- hzrdi.rupture
 GRANT SELECT ON hzrdi.rupture TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.rupture TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.rupture TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_uiapi_writer;
 
 -- hzrdi.simple_fault
 GRANT SELECT ON hzrdi.simple_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.simple_fault TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.simple_fault TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.simple_fault TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.simple_fault TO oq_uiapi_writer;
 
 -- hzrdi.source
 GRANT SELECT ON hzrdi.source TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON hzrdi.source TO oq_hzrdi_writer;
+GRANT SELECT,INSERT,UPDATE ON hzrdi.source TO oq_hzrdi_etl;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_hzrdi_writer;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_uiapi_writer;
+
+-- hzrdo.hazard_map
+GRANT SELECT ON hzrdo.hazard_map TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map TO oq_hzrdo_writer;
 
 -- hzrdo.hazard_map_data
 GRANT SELECT ON hzrdo.hazard_map_data TO GROUP openquake;
@@ -193,6 +189,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve TO oq_risko_writer;
 -- risko.loss_curve_data
 GRANT SELECT ON risko.loss_curve_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve_data TO oq_risko_writer;
+>>>>>>> master
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
