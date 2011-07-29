@@ -247,3 +247,26 @@ class JobTestCase(unittest.TestCase):
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+
+    def test_get_db_job(self):
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_uiapi_writer_session()
+
+        expected_job = session.query(OqJob)\
+            .filter(OqJob.id == self.job.get_db_job_id()).one()
+
+        self.assertEqual(expected_job, self.job.get_db_job(session))
+
+    def test_set_status(self):
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_uiapi_writer_session()
+
+        status = 'running'
+        self.job.set_status(status)
+
+        job = session.query(OqJob)\
+            .filter(OqJob.id == self.job.get_db_job_id()).one()
+
+        self.assertEqual(status, job.status)
