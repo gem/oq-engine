@@ -74,6 +74,8 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         self.job.params[NUMBER_OF_CALC_KEY] = "1"
 
+        self.job.params['SERIALIZE_RESULTS_TO'] = 'xml'
+
         # saving the default java implementation
         self.default = \
             det.DeterministicEventBasedMixin.compute_ground_motion_field
