@@ -44,7 +44,7 @@ class DbTestMixin(TestMixin):
         :param integer dbkey: if set use the upload record with given db key.
         :returns: a :py:class:`db.alchemy.models.Upload` instance
         """
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
         if dbkey:
             upload = session.query(Upload).filter(Upload.id == dbkey).one()
             return upload
@@ -71,7 +71,7 @@ class DbTestMixin(TestMixin):
         shutil.rmtree(upload.path, ignore_errors=True)
         if filesystem_only:
             return
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
         session.delete(upload)
         session.commit()
 
@@ -83,7 +83,7 @@ class DbTestMixin(TestMixin):
             created and captured in the job record
         :returns: a :py:class:`db.alchemy.models.OqJob` instance
         """
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
         upload = self.setup_upload(upload_id)
         oqp = OqParams()
         oqp.job_type = "classical"
@@ -130,7 +130,7 @@ class DbTestMixin(TestMixin):
             self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
         if filesystem_only:
             return
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
         session.delete(job)
         session.delete(oqp)
         session.commit()
@@ -152,7 +152,7 @@ class DbTestMixin(TestMixin):
                         db_backed=db_backed)
         output.path = self.generate_output_path(job, output_type)
         output.display_name = os.path.basename(output.path)
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
         session.add(output)
         session.commit()
         return output
@@ -179,7 +179,7 @@ class DbTestMixin(TestMixin):
         """
         job = output.oq_job
         if not filesystem_only:
-            session = get_db_session("hzrdo", "writer")
+            session = get_db_session("uiapi", "writer")
             session.delete(output)
             session.commit()
         if teardown_job:
