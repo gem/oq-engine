@@ -24,8 +24,13 @@ import sys
 
 import jpype
 
+from celery.decorators import task as celery_task
+
+from functools import wraps
+
 from openquake.logs import LOG
 from openquake import flags
+
 FLAGS = flags.FLAGS
 
 # Settings this flag to true pipes Java stderr and stdout to python stderr and
@@ -179,3 +184,54 @@ def get_jvm_max_mem(max_mem):
     if os.environ.get("OQ_JVM_MAXMEM"):
         return int(os.environ.get("OQ_JVM_MAXMEM"))
     return DEFAULT_JVM_MAX_MEM
+
+
+class JavaException(Exception):
+    pass
+
+
+# Java-exception-aware task decorator for celery)
+def jtask(f, *args, **kwargs):
+    task = celery_task(f, *args, **kwargs)
+    run = task.run
+
+    @wraps(run)
+    def call_task(*targs, **tkwargs):
+        jpype = jvm()
+
+        try:
+            return run(*targs, **tkwargs)
+        except jpype.JavaException, e:
+            java_exception = e.__javaobject__
+
+            # TODO preserve Java + Python stack
+            trace = sys.exc_info()[2]
+
+            raise JavaException, JavaException(str(java_exception)), trace
+
+    # overwrite the run method of the instance with our wrapper; we
+    # can't just pass call_task to celery_task because it does not
+    # have the right signature (we would need the decorator module as
+    # in the example below)
+    task.run = call_task
+
+    return task
+
+# alternative implementation using the decorator module
+# import decorator
+#
+# def jtask(f, *args, **kwargs):
+#     @wraps(f)
+#     def call_task(f, *targs, **tkwargs):
+#         jpype = jvm()
+#
+#         try:
+#             return f(*targs, **tkwargs)
+#         except jpype.JavaException, e:
+#             java_exception = e.__javaobject__
+#
+#             # TODO preserve Java + Python stack
+#             trace = sys.exc_info()[2]
+#             raise Exception, Exception(str(java_exception)), trace
+#
+#    return celery_task(decorator.decorator(call_task, f), *args, **kwargs)

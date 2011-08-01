@@ -28,6 +28,8 @@ import unittest
 
 from openquake import java
 
+from tests.utils.tasks import jtask_task, failing_jtask_task
+
 
 class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
@@ -81,3 +83,38 @@ class JvmMaxMemTestCase(unittest.TestCase):
         """
         os.environ["OQ_JVM_MAXMEM"] = "I hate numbers!"
         self.assertRaises(ValueError, java.get_jvm_max_mem, None)
+
+
+class CeleryJavaExceptionTestCase(unittest.TestCase):
+    """Tests the behaviour of Java exceptions in Celery jobs."""
+
+    def test_failing_java_subtask(self):
+        """Java exception is propagated correctly."""
+        try:
+            result = jtask_task.apply_async(args=['foo'])
+
+            result.wait()
+        except java.JavaException, exc:
+            self.assertEqual('java.lang.NumberFormatException',
+                             exc.args[0].split(':')[0])
+        else:
+            raise Exception("Exception not raised.")
+
+    def test_failing_python_subtask(self):
+        """Java exception is propagated correctly."""
+        try:
+            result = failing_jtask_task.apply_async(args=['foo'])
+
+            result.wait()
+        except Exception, exc:
+            self.assertEqual('test exception',
+                             exc.args[0].split(':')[0])
+        else:
+            raise Exception("Exception not raised.")
+
+    def test_successful_java_subtask(self):
+        """Task result is correctly propagated"""
+        result = jtask_task.apply_async(args=['123'])
+
+        res = result.wait()
+        self.assertEqual('123', res)
