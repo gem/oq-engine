@@ -35,6 +35,14 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
 
     def setUp(self):
         SessionCache().__sessions__.clear()
+        # run with a clean environment
+        self.orig_env = os.environ.copy()
+        os.environ.pop("OQ_ENGINE_DB_NAME", None)
+        os.environ.pop("OQ_ENGINE_DB_HOST", None)
+
+    def tearDown(self):
+        os.environ = self.orig_env
+        SessionCache().__sessions__.clear()
 
     def test_init_session_with_empty_user(self):
         """
@@ -153,12 +161,15 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
     def setUp(self):
         # Save the original _init_session() method.
+        self.orig_env = os.environ.copy()
         self.original_method = SessionCache()._init_session
         SessionCache().__sessions__.clear()
 
     def tearDown(self):
         # Restore the original _init_session() method.
         SessionCache()._init_session = self.original_method
+        SessionCache().__sessions__.clear()
+        os.environ = self.orig_env
 
     def test_get_with_no_session_for_user(self):
         """
@@ -273,6 +284,7 @@ class GetDbSessionTestCase(unittest.TestCase):
          ("oq_eqcat_writer", "openquake")))
 
     def setUp(self):
+        self.orig_env = os.environ.copy()
         # Save the original get() method.
         self.original_method = SessionCache().get
         # Prepare mock.
@@ -284,6 +296,8 @@ class GetDbSessionTestCase(unittest.TestCase):
     def tearDown(self):
         # Restore the original get() method.
         SessionCache().get = self.original_method
+        SessionCache().__sessions__.clear()
+        os.environ = self.orig_env
 
     def test_get_db_session_with_no_env(self):
         """
