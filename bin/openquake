@@ -53,6 +53,11 @@ Available Risk Analysis
 import os
 import sys
 
+try:
+    import celeryconfig
+except ImportError:
+    sys.path.append('/usr/openquake')
+
 import oqpath
 oqpath.set_oq_path()
 
@@ -103,6 +108,7 @@ if __name__ == '__main__':
         print "Flags:"
         print flags.get_flags_help()
         sys.exit(1)
+
 
     logs.init_logs()
 
