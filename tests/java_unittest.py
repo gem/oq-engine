@@ -23,7 +23,9 @@
 Tests for the Python-Java code layer.
 """
 
+import cPickle
 import os
+import traceback
 import unittest
 
 from openquake import java
@@ -96,7 +98,7 @@ class CeleryJavaExceptionTestCase(unittest.TestCase):
             result.wait()
         except java.JavaException, exc:
             self.assertEqual('java.lang.NumberFormatException',
-                             exc.args[0].split(':')[0])
+                             exc.message.split(':')[0])
         else:
             raise Exception("Exception not raised.")
 
@@ -118,3 +120,61 @@ class CeleryJavaExceptionTestCase(unittest.TestCase):
 
         res = result.wait()
         self.assertEqual('123', res)
+
+
+class JavaExceptionTestCase(unittest.TestCase):
+    """Test that java stack trace is retrieved correctly"""
+
+    def _get_exception(self):
+        jpype = java.jvm()
+
+        try:
+            jpype.java.lang.Integer('foo')
+        except jpype.JavaException, e:
+            return e
+
+        raise Exception("Can't get there")
+
+    def _get_trace(self):
+        return java.JavaException.get_java_stacktrace(self._get_exception())
+
+    def test_get_stack_trace(self):
+        trace = self._get_trace()
+
+        # this is a basic sanity test; only Sun^H^H^HOracle knows the
+        # correct stack trace...
+        self.assertTrue(len(trace) > 2)
+
+        # the stack trace must start in NumberFromatException and
+        # finish in Integer.java; order (same as Python traceback)
+        # is outer frame first
+        self.assertEquals(trace[0][0], 'Integer.java')
+        self.assertEquals(trace[-1][0], 'NumberFormatException.java')
+
+        # the stack trace must start in NumberFromatException and
+        # finish in Integer constructor
+        self.assertEquals(trace[0][2], 'java.lang.Integer.<init>')
+        self.assertTrue(trace[-1][2].startswith(
+                'java.lang.NumberFormatException'))
+
+    def test_stack_trace_sane(self):
+        trace = self._get_trace()
+
+        for frame in trace:
+            self.assertTrue(frame[0].endswith(".java"))
+            self.assertEquals(int, type(frame[1]))
+            self.assertEquals(None, frame[3])
+
+    def test_java_exception_pickleable(self):
+        e = self._get_exception()
+        exception = java.JavaException(e)
+
+        self.assertRaises(cPickle.PicklingError, cPickle.dumps, e)
+
+        pickled = cPickle.dumps(exception)
+        unpickled = cPickle.loads(pickled)
+
+        self.assertTrue(isinstance(unpickled, java.JavaException))
+        self.assertTrue(len(unpickled.trace) > 2)
+        self.assertTrue(unpickled.message.startswith(
+                'java.lang.NumberFormatException'))

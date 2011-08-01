@@ -186,8 +186,57 @@ def get_jvm_max_mem(max_mem):
     return DEFAULT_JVM_MAX_MEM
 
 
+def _unpickle_javaexception(message, trace):
+    e = JavaException()
+    e.message = message
+    e.trace = trace
+
+    return e
+
+
 class JavaException(Exception):
-    pass
+    def __init__(self, java_exception=None):
+        # we don't store the Java exception object to keep the Python
+        # object pickleable
+        Exception.__init__(self, str(java_exception))
+
+        if java_exception:
+            self.trace = self.get_java_stacktrace(java_exception)
+
+    def __reduce__(self):
+        # Exceptions are treated as 'unknown' objects by pickle unless
+        # there is a custom serialization handler
+        return (_unpickle_javaexception, (self.message, self.trace))
+
+    @classmethod
+    def _get_exception(cls, java_exception):
+        if hasattr(java_exception, '__javaobject__'):
+            return java_exception.__javaobject__
+        else:
+            return java_exception
+
+    @classmethod
+    def get_java_stacktrace(cls, java_exception):
+        """
+        Returns a Python list representing a Java stacktrace
+
+        Returns a list of `(filename, line number, function name, None)`
+        tuples (the same format used by the Python `traceback` module,
+        except there is no source code.
+        """
+        java_exception = cls._get_exception(java_exception)
+        trace = []
+
+        # traceback module returns inner frame first, Java uses
+        # reverse order
+        for frame in reversed(java_exception.getStackTrace()):
+            trace.append((frame.getFileName(),
+                          frame.getLineNumber(),
+                          '%s.%s' % (frame.getClassName(),
+                                     frame.getMethodName()),
+                          None))
+
+        return trace
 
 
 # Java-exception-aware task decorator for celery)
@@ -202,12 +251,9 @@ def jtask(f, *args, **kwargs):
         try:
             return run(*targs, **tkwargs)
         except jpype.JavaException, e:
-            java_exception = e.__javaobject__
-
-            # TODO preserve Java + Python stack
             trace = sys.exc_info()[2]
 
-            raise JavaException, JavaException(str(java_exception)), trace
+            raise JavaException, JavaException(e), trace
 
     # overwrite the run method of the instance with our wrapper; we
     # can't just pass call_task to celery_task because it does not
