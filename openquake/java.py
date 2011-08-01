@@ -21,8 +21,8 @@ Includes classpath arguments, and heap size."""
 import logging
 import os
 import sys
-
 import jpype
+import traceback
 
 from celery.decorators import task as celery_task
 
@@ -202,6 +202,11 @@ class JavaException(Exception):
 
         if java_exception:
             self.trace = self.get_java_stacktrace(java_exception)
+
+    def __str__(self):
+        return ('Java traceback (most recent call last):\n' +
+                ''.join(traceback.format_list(self.trace)) +
+                self.message)
 
     def __reduce__(self):
         # Exceptions are treated as 'unknown' objects by pickle unless
