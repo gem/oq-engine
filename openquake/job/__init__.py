@@ -73,11 +73,22 @@ def run_job(job_file, output_type):
     is_job_valid = a_job.is_valid()
 
     if is_job_valid[0]:
-        results = a_job.launch()
+        a_job.set_status('running')
 
-        for filepath in results:
-            print filepath
+        try:
+            results = a_job.launch()
+        except Exception as e:
+            a_job.set_status('failed')
+
+            raise e
+        else:
+            a_job.set_status('succeeded')
+
+            for filepath in results:
+                print filepath
     else:
+        a_job.set_status('failed')
+
         LOG.critical("The job configuration is inconsistent:")
 
         for error_message in is_job_valid[1]:
@@ -303,6 +314,35 @@ class Job(object):
     def key(self):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
+
+    def get_db_job_id(self):
+        """
+        Get the id of the database record belonging to this job.
+        """
+        return int(self['OPENQUAKE_JOB_ID'])
+
+    def get_db_job(self, session):
+        """
+        Get the database record belonging to this job.
+
+        :param session: the SQLAlchemy database session
+        """
+        return session.query(OqJob)\
+               .filter(OqJob.id == self.get_db_job_id()).one()
+
+    def set_status(self, status):
+        """
+        Set the status of the database record belonging to this job.
+
+        :param status: one of 'pending', 'running', 'succeeded', 'failed'
+        :type status: string
+        """
+
+        session = get_uiapi_writer_session()
+        db_job = self.get_db_job(session)
+        db_job.status = status
+        session.add(db_job)
+        session.commit()
 
     @property
     def region(self):

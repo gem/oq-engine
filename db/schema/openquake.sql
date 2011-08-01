@@ -530,17 +530,15 @@ CREATE TABLE uiapi.input (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 
-
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     description VARCHAR NOT NULL,
     -- The full path of the location where the input files for the calculation
-    -- engine reside. It is optional as long as the job has not been started.
-    path VARCHAR UNIQUE CONSTRAINT job_path_value CHECK(
-        ((status IN ('running', 'failed', 'succeeded') AND (path IS NOT NULL))
-        OR (status = 'pending'))),
+    -- engine reside. This is used internally by openquake-server, can probably
+    -- be removed (see https://github.com/gem/openquake-server/issues/55)
+    path VARCHAR UNIQUE,
     -- One of:
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
