@@ -183,16 +183,16 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We don't have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr1") is None)
+        self.assertTrue(sc.__sessions__.get("usr9") is None)
 
         # The actual method under test is called.
-        self.assertEqual(expected_session, sc.get("usr1", ""))
+        self.assertEqual(expected_session, sc.get("usr9", ""))
 
         # The method under test called the mock once and with the parameters
         # we passed.
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
-        self.assertEqual("usr1", user)
+        self.assertEqual("usr9", user)
         self.assertEqual("", passwd)
 
     def test_get_with_cached_session(self):
@@ -202,7 +202,7 @@ class SessionCacheGetTestCase(unittest.TestCase):
         """
         sc = SessionCache()
         expected_session = object()
-        sc.__sessions__["usr2"] = expected_session
+        sc.__sessions__["usr10"] = expected_session
 
         # Prepare mock.
         mock_method = mock.Mock()
@@ -211,10 +211,10 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We do have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr2") is expected_session)
+        self.assertTrue(sc.__sessions__.get("usr10") is expected_session)
 
         # The actual method under test is called.
-        self.assertTrue(sc.get("usr2", "") is expected_session)
+        self.assertTrue(sc.get("usr10", "") is expected_session)
 
         # The method under test did *not* call the mock.
         self.assertEqual(0, mock_method.call_count)
@@ -235,19 +235,19 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We do not have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr3") is None)
+        self.assertTrue(sc.__sessions__.get("usr11") is None)
 
         # The _init_session() mock will get called but fail to add a session to
         # the cache,
-        self.assertRaises(AssertionError, sc.get, "usr3", "")
+        self.assertRaises(AssertionError, sc.get, "usr11", "")
 
         # The method under test did call the mock..
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
-        self.assertEqual("usr3", user)
+        self.assertEqual("usr11", user)
         self.assertEqual("", passwd)
         # ..but no session was added to the cache.
-        self.assertTrue(sc.__sessions__.get("usr3") is None)
+        self.assertTrue(sc.__sessions__.get("usr11") is None)
 
 
 class GetDbSessionTestCase(unittest.TestCase):
@@ -307,11 +307,11 @@ class GetDbSessionTestCase(unittest.TestCase):
         variables.
         """
         for (usr_var, (schema, role), (user, password)) in self.test_data:
-            os.environ[usr_var] = "usr1"
-            os.environ[usr_var + "_PWD"] = "pwd1"
+            os.environ[usr_var] = "usr12"
+            os.environ[usr_var + "_PWD"] = "pwd12"
 
             session = get_db_session(schema, role)
             self.assertTrue(session is self.expected_session)
             (user, passwd), _ = self.mock_method.call_args
-            self.assertEqual("usr1", user)
-            self.assertEqual("pwd1", passwd)
+            self.assertEqual("usr12", user)
+            self.assertEqual("pwd12", passwd)
