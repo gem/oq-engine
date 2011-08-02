@@ -41,7 +41,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         os.environ.pop("OQ_ENGINE_DB_HOST", None)
 
     def tearDown(self):
-        os.environ = self.orig_env
+        os.environ.clear()
+        os.environ.update(self.orig_env)
         SessionCache().__sessions__.clear()
 
     def test_init_session_with_empty_user(self):
@@ -169,7 +170,8 @@ class SessionCacheGetTestCase(unittest.TestCase):
         # Restore the original _init_session() method.
         SessionCache()._init_session = self.original_method
         SessionCache().__sessions__.clear()
-        os.environ = self.orig_env
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_get_with_no_session_for_user(self):
         """
@@ -297,7 +299,8 @@ class GetDbSessionTestCase(unittest.TestCase):
         # Restore the original get() method.
         SessionCache().get = self.original_method
         SessionCache().__sessions__.clear()
-        os.environ = self.orig_env
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_get_db_session_with_no_env(self):
         """
