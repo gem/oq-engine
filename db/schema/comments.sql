@@ -144,35 +144,35 @@ COMMENT ON COLUMN hzrdi.source.tectonic_region IS 'Tectonic region type i.e. one
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
-COMMENT ON TABLE hzrdo.hazard_map IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN hzrdo.hazard_map.output_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
-COMMENT ON COLUMN hzrdo.hazard_map.poe IS 'Probability of exceedence';
-COMMENT ON COLUMN hzrdo.hazard_map.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdr.hazard_map IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN hzrdr.hazard_map.output_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
+COMMENT ON COLUMN hzrdr.hazard_map.statistic_type IS 'Statistic type, one of:
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN hzrdo.hazard_map.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile for quantile statistical data.';
 
-COMMENT ON TABLE hzrdo.hazard_map_data IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN hzrdo.hazard_map_data.hazard_map_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
-COMMENT ON COLUMN hzrdo.hazard_map_data.location IS 'Position in the hazard map';
-COMMENT ON COLUMN hzrdo.hazard_map_data.value IS 'IML value for this location';
+COMMENT ON TABLE hzrdr.hazard_map_data IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN hzrdr.hazard_map_data.hazard_map_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON COLUMN hzrdr.hazard_map_data.location IS 'Position in the hazard map';
+COMMENT ON COLUMN hzrdr.hazard_map_data.value IS 'IML value for this location';
 
-COMMENT ON TABLE hzrdo.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
-COMMENT ON COLUMN hzrdo.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN hzrdo.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
-COMMENT ON COLUMN hzrdo.hazard_curve_data.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.statistic_type IS 'Statistic type, one of:
     - Mean     (mean)
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN hzrdo.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
 
-COMMENT ON TABLE hzrdo.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN hzrdo.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN hzrdo.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
+COMMENT ON TABLE hzrdr.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
 
-COMMENT ON TABLE hzrdo.gmf_data IS 'Holds data for the ground motion field';
-COMMENT ON COLUMN hzrdo.gmf_data.ground_motion IS 'Ground motion for a specific site';
-COMMENT ON COLUMN hzrdo.gmf_data.location IS 'Site coordinates';
+COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
+COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
+COMMENT ON COLUMN hzrdr.gmf_data.location IS 'Site coordinates';
 
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
