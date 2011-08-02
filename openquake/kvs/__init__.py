@@ -140,15 +140,24 @@ def get_list_json_decoded(key):
     return [json.loads(x) for x in get_client().lrange(key, 0, -1)]
 
 
+class NumpyAwareJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        import numpy
+
+        if isinstance(obj, numpy.ndarray) and obj.ndim == 1:
+            return [x for x in obj]
+
+        return json.JSONEncoder.default(self, obj)
+
 def set_value_json_encoded(key, value):
     """ Encode value and set in kvs """
-    encoder = json.JSONEncoder()
+    encoder = NumpyAwareJSONEncoder()
 
     try:
         encoded_value = encoder.encode(value)
         get_client(binary=False).set(key, encoded_value)
     except (TypeError, ValueError):
-        raise ValueError("cannot encode value %s to JSON" % value)
+        raise ValueError("cannot encode value %s of type %s to JSON" % (value, type(value)))
 
     return True
 
