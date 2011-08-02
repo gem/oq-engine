@@ -244,7 +244,42 @@ class JavaException(Exception):
         return trace
 
 
-# Java-exception-aware task decorator for celery)
+# Decorator to extract the stack trace from java exceptions
+def jexception(f, *args, **kwargs):
+    @wraps(f)
+    def unwrap_exception(*targs, **tkwargs):
+        jpype = jvm()
+
+        try:
+            return f(*targs, **tkwargs)
+        except jpype.JavaException, e:
+            trace = sys.exc_info()[2]
+
+            raise JavaException, JavaException(e), trace
+
+    return unwrap_exception
+
+
+# alternative implementation using the decorator module; this can be composed
+# with the Celery task decorator
+# import decorator
+#
+# def jexception(f, *args, **kwargs):
+#     @wraps(f)
+#     def unwrap_exception(f, *targs, **tkwargs):
+#         jpype = jvm()
+#
+#         try:
+#             return f(*targs, **tkwargs)
+#         except jpype.JavaException, e:
+#             trace = sys.exc_info()[2]
+#
+#             raise JavaException, JavaException(e), trace
+#
+#     return decorator.decorator(unwrap_exception, f)
+
+
+# Java-exception-aware task decorator for celery
 def jtask(f, *args, **kwargs):
     task = celery_task(f, *args, **kwargs)
     run = task.run
@@ -267,22 +302,3 @@ def jtask(f, *args, **kwargs):
     task.run = call_task
 
     return task
-
-# alternative implementation using the decorator module
-# import decorator
-#
-# def jtask(f, *args, **kwargs):
-#     @wraps(f)
-#     def call_task(f, *targs, **tkwargs):
-#         jpype = jvm()
-#
-#         try:
-#             return f(*targs, **tkwargs)
-#         except jpype.JavaException, e:
-#             java_exception = e.__javaobject__
-#
-#             # TODO preserve Java + Python stack
-#             trace = sys.exc_info()[2]
-#             raise Exception, Exception(str(java_exception)), trace
-#
-#    return celery_task(decorator.decorator(call_task, f), *args, **kwargs)
