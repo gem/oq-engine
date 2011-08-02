@@ -67,10 +67,10 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
     def test_init_session_without_oq_engine_db_name(self):
         """
         In the absence of the `OQ_ENGINE_DB_NAME` environment variable
-        the session will be established for the "geonode" database.
+        the session will be established for the "openquake" database.
         """
         self._perform_test(
-            "usr2", "", ("postgresql+psycopg2://usr2:@localhost/geonode",))
+            "usr2", "", ("postgresql+psycopg2://usr2:@localhost/openquake",))
 
     def test_init_session_with_oq_engine_db_host(self):
         """
@@ -78,7 +78,7 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         os.environ["OQ_ENGINE_DB_HOST"] = "bcd234"
         self._perform_test(
-            "usr3", "", ("postgresql+psycopg2://usr3:@bcd234/geonode",))
+            "usr3", "", ("postgresql+psycopg2://usr3:@bcd234/openquake",))
         del os.environ["OQ_ENGINE_DB_HOST"]
 
     def test_init_session_without_oq_engine_db_host(self):
@@ -87,21 +87,21 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         the session will be established for the `localhost`.
         """
         self._perform_test(
-            "usr4", "", ("postgresql+psycopg2://usr4:@localhost/geonode",))
+            "usr4", "", ("postgresql+psycopg2://usr4:@localhost/openquake",))
 
     def test_init_session_with_none_password(self):
         """
         _init_session() will use an empty string for `None` passwords.
         """
         self._perform_test(
-            "usr5", None, ("postgresql+psycopg2://usr5:@localhost/geonode",))
+            "usr5", None, ("postgresql+psycopg2://usr5:@localhost/openquake",))
 
     def test_init_session_with_empty_password(self):
         """
         _init_session() will use an empty password properly.
         """
         self._perform_test(
-            "usr6", "", ("postgresql+psycopg2://usr6:@localhost/geonode",))
+            "usr6", "", ("postgresql+psycopg2://usr6:@localhost/openquake",))
 
     def test_init_session_with_non_empty_password(self):
         """
@@ -109,7 +109,7 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         self._perform_test(
             "usr7", "s3cr3t",
-            ("postgresql+psycopg2://usr7:s3cr3t@localhost/geonode",))
+            ("postgresql+psycopg2://usr7:s3cr3t@localhost/openquake",))
 
     def test_init_session_updates_internal_dict(self):
         """
