@@ -77,10 +77,10 @@ def run_job(job_file, output_type):
 
         try:
             results = a_job.launch()
-        except Exception as e:
+        except:
             a_job.set_status('failed')
 
-            raise e
+            raise
         else:
             a_job.set_status('succeeded')
 
