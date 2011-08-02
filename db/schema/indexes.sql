@@ -39,6 +39,7 @@ CREATE INDEX hzrdi_rupture_point_idx ON hzrdi.rupture USING gist(point);
 
 -- hzrdi.simple_fault
 CREATE INDEX hzrdi_simple_fault_edge_idx ON hzrdi.simple_fault USING gist(edge);
+CREATE INDEX hzrdi_simple_fault_outline_idx ON hzrdi.simple_fault USING gist(outline);
 
 -- hzrdi.source
 CREATE INDEX hzrdi_source_area_idx ON hzrdi.source USING gist(area);
