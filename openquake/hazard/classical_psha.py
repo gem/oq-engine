@@ -60,33 +60,6 @@ def compute_quantile_curve(curves, quantile):
     return result
 
 
-def _extract_y_values_from(curve):
-    """Extract from a serialized hazard curve (in json format)
-    the y values (PoEs) used to compute the mean hazard curve.
-
-    The serialized hazard curve has this format:
-    {"site_lon": 1.0, "site_lat": 1.0, "curve": [{"x": 0.1, "y": 0.2}, ...]}
-    """
-    y_values = []
-
-    for point in curve:
-        y_values.append(float(point["y"]))
-
-    return y_values
-
-
-def _reconstruct_curve_list_from(poes, imls=None):
-    """Reconstruct the x,y hazard curve list from numpy array"""
-
-    curve = [{'y': poe} for poe in poes]
-
-    if imls:
-        for values in curve:
-            values.update(x=imls.pop(0))
-
-    return curve
-
-
 def _acceptable(value):
     """Return true if the value taken from the configuration
     file is valid, false otherwise."""
@@ -98,7 +71,7 @@ def _acceptable(value):
         return False
 
 
-def curves_at(job_id, site):
+def poes_at(job_id, site):
     """Return all the json deserialized hazard curves for
     a single site (different realizations).
 
@@ -116,7 +89,7 @@ def curves_at(job_id, site):
     """
 
     pattern = "%s*%s*%s" % (
-        kvs.tokens.HAZARD_CURVE_KEY_TOKEN, job_id, site.hash())
+        kvs.tokens.HAZARD_CURVE_POES_KEY_TOKEN, job_id, site.hash())
 
     curves = []
     raw_curves = kvs.mget_decoded(pattern)
@@ -128,7 +101,7 @@ def curves_at(job_id, site):
 
 
 def hazard_curve_keys_for(job_id, sites,
-                              hc_token=kvs.tokens.HAZARD_CURVE_KEY_TOKEN):
+                          hc_token=kvs.tokens.HAZARD_CURVE_POES_KEY_TOKEN):
     """Return the KVS keys of hazard curves for a given job_id
     and for a given list of sites.
     """
@@ -176,17 +149,12 @@ def compute_mean_hazard_curves(job_id, sites):
 
     keys = []
     for site in sites:
-        hazard_curves = curves_at(job_id, site)
+        poes = poes_at(job_id, site)
 
-        poes = [_extract_y_values_from(curve) for curve in hazard_curves]
         mean_poes = compute_mean_curve(poes)
 
-        hazard_curve = hazard_curves.pop()
-        x_values = [values["x"] for values in hazard_curve]
-
-        full_curve = _reconstruct_curve_list_from(mean_poes, x_values)
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-            "curve": full_curve}
+            "curve": mean_poes}
 
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
         keys.append(key)
@@ -211,14 +179,13 @@ def compute_quantile_hazard_curves(job, sites):
 
     for site in sites:
         for quantile in quantiles:
-            hazard_curves = curves_at(job.id, site)
+            poes = poes_at(job.id, site)
 
-            poes = [_extract_y_values_from(curve) for curve in hazard_curves]
             quantile_poes = compute_quantile_curve(poes, quantile)
 
             quantile_curve = {"site_lat": site.latitude,
                 "site_lon": site.longitude,
-                "curve": _reconstruct_curve_list_from(quantile_poes)}
+                "curve": quantile_poes}
 
             key = kvs.tokens.quantile_hazard_curve_key(
                     job.id, site, quantile)
@@ -249,7 +216,7 @@ def _get_iml_from(curve, job, poe):
     """
 
     # reverse arrays
-    poes = numpy.array(_extract_y_values_from(curve["curve"]))[::-1]
+    poes = numpy.array(curve["curve"])[::-1]
     imls = numpy.log(numpy.array(_extract_imls_from_config(job))[::-1])
 
     site = shapes.Site(curve["site_lon"], curve["site_lat"])
@@ -309,8 +276,8 @@ def compute_quantile_hazard_maps(job):
                 "quantile curves for quantile %s"
                 % (len(quantile_curves), quantile))
 
-        for poe in poes:
-            for quantile_curve in quantile_curves:
+        for quantile_curve in quantile_curves:
+            for poe in poes:
                 site = shapes.Site(quantile_curve["site_lon"],
                                    quantile_curve["site_lat"])
 
@@ -343,8 +310,8 @@ def compute_mean_hazard_maps(job):
             % len(mean_curves))
 
     keys = []
-    for poe in poes:
-        for mean_curve in mean_curves:
+    for mean_curve in mean_curves:
+        for poe in poes:
             site = shapes.Site(mean_curve["site_lon"],
                                mean_curve["site_lat"])
 

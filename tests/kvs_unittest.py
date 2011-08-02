@@ -150,7 +150,7 @@ class TokensTestCase(unittest.TestCase):
         products = [
             tokens.ERF_KEY_TOKEN,
             tokens.MGM_KEY_TOKEN,
-            tokens.HAZARD_CURVE_KEY_TOKEN,
+            tokens.HAZARD_CURVE_POES_KEY_TOKEN,
             tokens.EXPOSURE_KEY_TOKEN,
             tokens.GMF_KEY_TOKEN,
             tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
