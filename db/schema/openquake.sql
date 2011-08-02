@@ -28,7 +28,7 @@ CREATE SCHEMA hzrdi;
 CREATE SCHEMA hzrdr;
 CREATE SCHEMA oqmif;
 CREATE SCHEMA riski;
-CREATE SCHEMA risko;
+CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
 
 
@@ -739,7 +739,7 @@ ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 
 -- Loss map data.
 
-CREATE TABLE risko.loss_map (
+CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
     deterministic BOOLEAN NOT NULL,
@@ -751,34 +751,34 @@ CREATE TABLE risko.loss_map (
     poe float CONSTRAINT valid_poe
         CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
                OR (deterministic AND poe IS NULL))
-) TABLESPACE risko_ts;
+) TABLESPACE riskr_ts;
 
-CREATE TABLE risko.loss_map_data (
+CREATE TABLE riskr.loss_map_data (
     id SERIAL PRIMARY KEY,
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- for non-deterministic calculations std_dev is 0
     std_dev float NOT NULL DEFAULT 0.0
-) TABLESPACE risko_ts;
-SELECT AddGeometryColumn('risko', 'loss_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE risko.loss_map_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss curve.
-CREATE TABLE risko.loss_curve (
+CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
 
     end_branch_label VARCHAR,
     category VARCHAR,
     unit VARCHAR -- e.g. EUR, USD
-) TABLESPACE risko_ts;
+) TABLESPACE riskr_ts;
 
 
 -- Loss curve data. Holds the asset, its position and value plus the calculated
 -- curve.
-CREATE TABLE risko.loss_curve_data (
+CREATE TABLE riskr.loss_curve_data (
     id SERIAL PRIMARY KEY,
     loss_curve_id INTEGER NOT NULL,
 
@@ -787,10 +787,10 @@ CREATE TABLE risko.loss_curve_data (
         CHECK (0 <= ALL(losses)),
     -- Probabilities of exceedence
     poes float[] NOT NULL
-) TABLESPACE risko_ts;
-SELECT AddGeometryColumn('risko', 'loss_curve_data', 'location', 4326, 'POINT',
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
-ALTER TABLE risko.loss_curve_data ALTER COLUMN location SET NOT NULL;
+ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Exposure model
@@ -982,21 +982,21 @@ ALTER TABLE hzrdr.gmf_data
 ADD CONSTRAINT hzrdr_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE risko.loss_map
-ADD CONSTRAINT risko_loss_map_output_fk
+ALTER TABLE riskr.loss_map
+ADD CONSTRAINT riskr_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE risko.loss_curve
-ADD CONSTRAINT risko_loss_curve_output_fk
+ALTER TABLE riskr.loss_curve
+ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE risko.loss_curve_data
-ADD CONSTRAINT risko_loss_curve_data_loss_curve_fk
-FOREIGN KEY (loss_curve_id) REFERENCES risko.loss_curve(id) ON DELETE CASCADE;
+ALTER TABLE riskr.loss_curve_data
+ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
+FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 
-ALTER TABLE risko.loss_map_data
-ADD CONSTRAINT risko_loss_map_data_loss_map_fk
-FOREIGN KEY (loss_map_id) REFERENCES risko.loss_map(id) ON DELETE CASCADE;
+ALTER TABLE riskr.loss_map_data
+ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
+FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_data
 ADD CONSTRAINT oqmif_exposure_data_exposure_model_fk

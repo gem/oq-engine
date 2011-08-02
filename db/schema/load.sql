@@ -28,5 +28,5 @@ INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/oqmi
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/hzrdi', '0.4.2', 0);
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/hzrdr', '0.4.2', 0);
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/riski', '0.4.2', 0);
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/risko', '0.4.2', 0);
+INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/riskr', '0.4.2', 0);
 INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/uiapi', '0.4.2', 2);
