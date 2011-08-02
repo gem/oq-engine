@@ -194,6 +194,8 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         # Call the function under test.
         self.writer.insert_output("hazard_map")
 
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
@@ -213,6 +215,8 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
@@ -236,6 +240,8 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
 
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
@@ -361,6 +367,8 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.writer.serialize(HAZARD_CURVE_DATA())
 
         # After calling the function under test we see the expected output.
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         self.assertEqual(1, len(self.job.output_set))
 
         # After calling the function under test we see the expected map data.
@@ -452,6 +460,9 @@ class GMFDBWriterTestCase(GMFDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(GMF_DATA())
 
+        # Reload job row.
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
