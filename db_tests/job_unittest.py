@@ -31,7 +31,7 @@ from tests.utils import helpers as test_helpers
 
 
 def _toCoordList(polygon):
-    session = get_db_session("hzrdo", "writer")
+    session = get_db_session("reslt", "writer")
 
     pts = []
 
