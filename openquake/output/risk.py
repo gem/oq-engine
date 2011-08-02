@@ -491,7 +491,7 @@ def create_loss_map_writer(deterministic, nrml_path, params):
     writers = []
 
     if 'db' in serialize_to:
-        writers.append(LossMapDBWriter(get_db_session("risko", "writer"),
+        writers.append(LossMapDBWriter(get_db_session("reslt", "writer"),
                                        nrml_path,
                                        writer.get_job_db_key(params)))
 
@@ -799,7 +799,7 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
 
     if 'db' in serialize_to:
         if curve_mode == 'loss':
-            writers.append(LossCurveDBWriter(get_db_session("risko", "writer"),
+            writers.append(LossCurveDBWriter(get_db_session("reslt", "writer"),
                                              nrml_path,
                                              writer.get_job_db_key(params)))
         elif curve_mode == 'loss_ratio':
