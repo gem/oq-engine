@@ -42,15 +42,12 @@ class RunCmdTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.run_cmd()."""
 
     def setUp(self):
-        self.lang = ("LANG" in os.environ, os.environ.get("LANG"))
-
+        self.orig_env = os.environ.copy()
         os.environ["LANG"] = 'C'
 
     def tearDown(self):
-        if self.lang[0]:
-            os.environ["LANG"] = self.lang[1]
-        else:
-            del os.environ["LANG"]
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_run_cmd_with_success(self):
         """Invoke a command without errors."""
