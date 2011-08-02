@@ -82,7 +82,7 @@ if __name__ == '__main__':
                                   password=FLAGS.dbpassword)
 
         # TODO: make CSV_PATH a parameter
-        CSV_PATH = "tests/data/ISC_sampledata1.csv"
+        CSV_PATH = "tests/data/ISC_snippet.csv"
         csv_loader = db_loader.CsvModelLoader(CSV_PATH, engine, FLAGS.dbschema)
         csv_loader.serialize()
         print "Import of %s done." % CSV_PATH
