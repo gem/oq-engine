@@ -184,34 +184,34 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
-COMMENT ON TABLE risko.loss_map IS 'Holds metadata for loss maps.';
-COMMENT ON COLUMN risko.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN risko.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
-COMMENT ON COLUMN risko.loss_map.loss_map_ref IS 'A simple identifier';
-COMMENT ON COLUMN risko.loss_map.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN risko.loss_map.category IS 'Loss category (e.g. economic_loss).';
-COMMENT ON COLUMN risko.loss_map.unit IS 'Unit of measurement';
-COMMENT ON COLUMN risko.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
+COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
+COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN riskr.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
+COMMENT ON COLUMN riskr.loss_map.loss_map_ref IS 'A simple identifier';
+COMMENT ON COLUMN riskr.loss_map.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN riskr.loss_map.category IS 'Loss category (e.g. economic_loss).';
+COMMENT ON COLUMN riskr.loss_map.unit IS 'Unit of measurement';
+COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
-COMMENT ON TABLE risko.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
-COMMENT ON COLUMN risko.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
-COMMENT ON COLUMN risko.loss_map_data.asset_ref IS 'The asset reference';
-COMMENT ON COLUMN risko.loss_map_data.location IS 'The position of the asset';
-COMMENT ON COLUMN risko.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN risko.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
+COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
+COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
+COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
+COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
+COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
 
-COMMENT ON TABLE risko.loss_curve IS 'Holds the parameters common to a set of loss curves.';
-COMMENT ON COLUMN risko.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
-COMMENT ON COLUMN risko.loss_curve.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN risko.loss_curve.category IS 'The category of the losses';
-COMMENT ON COLUMN risko.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
+COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
+COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN riskr.loss_curve.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN riskr.loss_curve.category IS 'The category of the losses';
+COMMENT ON COLUMN riskr.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
-COMMENT ON TABLE risko.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
-COMMENT ON COLUMN risko.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
-COMMENT ON COLUMN risko.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN risko.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN risko.loss_curve_data.losses IS 'Losses';
-COMMENT ON COLUMN risko.loss_curve_data.poes IS 'Probabilities of exceedence';
+COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';

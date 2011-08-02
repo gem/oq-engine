@@ -69,7 +69,7 @@ CREATE INDEX hzrdr_hazard_curve_data_output_id_idx on hzrdr.hazard_curve_data(ou
 CREATE INDEX hzrdr_hazard_curve_node_data_hazard_curve_data_id_idx on hzrdr.hazard_curve_node_data(hazard_curve_data_id);
 CREATE INDEX hzrdr_gmf_data_output_id_idx on hzrdr.gmf_data(output_id);
 CREATE INDEX uiapi_oq_params_upload_id_idx on uiapi.oq_params(upload_id);
-CREATE INDEX risko_loss_map_output_id_idx on risko.loss_map(output_id);
-CREATE INDEX risko_loss_map_data_loss_map_id_idx on risko.loss_map_data(loss_map_id);
-CREATE INDEX risko_loss_curve_output_id_idx on risko.loss_curve(output_id);
-CREATE INDEX risko_loss_curve_data_loss_curve_id_idx on risko.loss_curve_data(loss_curve_id);
+CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
+CREATE INDEX riskr_loss_map_data_loss_map_id_idx on riskr.loss_map_data(loss_map_id);
+CREATE INDEX riskr_loss_curve_output_id_idx on riskr.loss_curve(output_id);
+CREATE INDEX riskr_loss_curve_data_loss_curve_id_idx on riskr.loss_curve_data(loss_curve_id);
