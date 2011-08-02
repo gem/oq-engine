@@ -26,6 +26,8 @@ import multiprocessing
 import numpy
 import random
 
+from itertools import izip
+
 from db.alchemy.db_utils import get_db_session
 
 from openquake import java
@@ -624,7 +626,7 @@ class ClassicalMixin(BasePSHAMixin):
         jpype = java.jvm()
         try:
             calc = java.jclass("HazardCalculator")
-            hazard_curves = calc.getHazardCurvesAsJson(
+            curves = calc.getHazardCurvesAsJson(
                 self.parameterize_sites(sites),
                 self.generate_erf(),
                 self.generate_gmpe_map(),
@@ -633,48 +635,14 @@ class ClassicalMixin(BasePSHAMixin):
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
 
-        ######
-
-        import json
-        from itertools import izip
-        from openquake.utils import round_float
-
-        def extract(x_or_y, curve_string):
-            return [float(point[x_or_y]) for point in curve['curve']]
-
-        imls = None
-        curves = []
-        for site, curve in izip(sites, hazard_curves):
-            curve = json.loads(curve)
-
-            assert round_float(site.longitude) == round_float(curve['site_lon']), 'lon %s != %s' % (site.longitude, curve['site_lon'])
-            assert round_float(site.latitude) == round_float(curve['site_lat']), 'lat %s != %s' % (site.latitude, curve['site_lat'])
-
-            if imls is None:
-                imls = extract('x', curve)
-            else:
-                assert imls == extract('x', curve)
-
-            curves.append({
-                'site_lon': curve['site_lon'],
-                'site_lat': curve['site_lat'],
-                'curve': extract('y', curve)})
-
-        ######
-
         # write the curves to the KVS and return a list of the keys
-
-        # FIXME overwrite with same values. Do we care?
-        kvs.set_value_json_encoded(
-            kvs.tokens.hazard_curve_imls_key(self.id),
-            imls)
 
         curve_keys = []
         for site, curve in izip(sites, curves):
             curve_key = kvs.tokens.hazard_curve_poes_key(
                 self.id, realization, site)
 
-            kvs.set_value_json_encoded(curve_key, curve)
+            kvs.set(curve_key, curve)
 
             curve_keys.append(curve_key)
 
