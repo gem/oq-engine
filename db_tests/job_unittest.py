@@ -235,7 +235,7 @@ class JobTestCase(unittest.TestCase):
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
@@ -244,7 +244,7 @@ class JobTestCase(unittest.TestCase):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
                                  'xml')
 
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("uiapi", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
