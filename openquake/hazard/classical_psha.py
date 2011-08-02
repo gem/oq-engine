@@ -277,10 +277,10 @@ def compute_quantile_hazard_maps(job):
                 % (len(quantile_curves), quantile))
 
         for quantile_curve in quantile_curves:
-            for poe in poes:
-                site = shapes.Site(quantile_curve["site_lon"],
-                                   quantile_curve["site_lat"])
+            site = shapes.Site(quantile_curve["site_lon"],
+                               quantile_curve["site_lat"])
 
+            for poe in poes:
                 key = kvs.tokens.quantile_hazard_map_key(
                         job.id, site, poe, quantile)
                 keys.append(key)
@@ -311,12 +311,11 @@ def compute_mean_hazard_maps(job):
 
     keys = []
     for mean_curve in mean_curves:
-        for poe in poes:
-            site = shapes.Site(mean_curve["site_lon"],
-                               mean_curve["site_lat"])
+        site = shapes.Site(mean_curve["site_lon"],
+                           mean_curve["site_lat"])
 
-            key = kvs.tokens.mean_hazard_map_key(
-                    job.id, site, poe)
+        for poe in poes:
+            key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
             keys.append(key)
 
             _store_iml_for(mean_curve, key, job, poe)
