@@ -36,7 +36,7 @@ from openquake.job.mixins import Mixin
 from openquake.kvs.tokens import alloc_job_key
 
 from db.alchemy.models import OqJob, OqUser, OqParams
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 import geoalchemy as ga
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -140,7 +140,7 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_uiapi_writer_session()
+    session = get_db_session("reslt", "writer")
 
     # TODO specify the owner as a command line parameter
     owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
@@ -338,7 +338,7 @@ class Job(object):
         :type status: string
         """
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("reslt", "writer")
         db_job = self.get_db_job(session)
         db_job.status = status
         session.add(db_job)

@@ -21,7 +21,7 @@
 import os
 import unittest
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
@@ -167,7 +167,7 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -194,6 +194,8 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         # Call the function under test.
         self.writer.insert_output("hazard_map")
 
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
@@ -213,6 +215,8 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
@@ -236,6 +240,8 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
 
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
@@ -286,8 +292,9 @@ class HazardMapDBReaderTestCase(HazardCurveDBBaseTestCase):
 
         data = self.reader.deserialize(self.writer.output.id)
 
-        self.assertEquals(self.sort(self.normalize(HAZARD_MAP_QUANTILE_DATA())),
-                          self.sort(self.normalize(data)))
+        self.assertEquals(
+                self.sort(self.normalize(HAZARD_MAP_QUANTILE_DATA())),
+                self.sort(self.normalize(data)))
 
     def sort(self, values):
         def sort_key(v):
@@ -320,7 +327,7 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -361,6 +368,8 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.writer.serialize(HAZARD_CURVE_DATA())
 
         # After calling the function under test we see the expected output.
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         self.assertEqual(1, len(self.job.output_set))
 
         # After calling the function under test we see the expected map data.
@@ -425,7 +434,7 @@ class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -452,6 +461,9 @@ class GMFDBWriterTestCase(GMFDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(GMF_DATA())
 
+        # Reload job row.
+        self.job = self.session.query(
+            OqJob).filter(OqJob.id == self.job.id).one()
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set))
 
