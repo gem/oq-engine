@@ -27,7 +27,7 @@
 GRANT USAGE ON SCHEMA admin TO GROUP openquake;
 GRANT USAGE ON SCHEMA eqcat TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
-GRANT USAGE ON SCHEMA hzrdo TO GROUP openquake;
+GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
 GRANT USAGE ON SCHEMA oqmif TO GROUP openquake;
 GRANT USAGE ON SCHEMA riski TO GROUP openquake;
 GRANT USAGE ON SCHEMA risko TO GROUP openquake;
@@ -56,11 +56,11 @@ GRANT ALL ON SEQUENCE hzrdi.source_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE risko.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE risko.loss_curve_data_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdo.hazard_map_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdo.hazard_map_data_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdo.hazard_curve_data_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdo.hazard_curve_node_data_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdo.gmf_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.hazard_map_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.hazard_map_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.hazard_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.hazard_curve_node_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE risko.loss_map_id_seq to GROUP openquake;
@@ -162,25 +162,25 @@ GRANT SELECT ON hzrdi.source TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON hzrdi.source TO oq_hzrdi_writer;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_hzrdi_writer;
 
--- hzrdo.hazard_map
-GRANT SELECT ON hzrdo.hazard_map TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map TO oq_reslt_writer;
+-- hzrdr.hazard_map
+GRANT SELECT ON hzrdr.hazard_map TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_map TO oq_reslt_writer;
 
--- hzrdo.hazard_map_data
-GRANT SELECT ON hzrdo.hazard_map_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map_data TO oq_reslt_writer;
+-- hzrdr.hazard_map_data
+GRANT SELECT ON hzrdr.hazard_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_map_data TO oq_reslt_writer;
 
--- hzrdo.hazard_curve_data
-GRANT SELECT ON hzrdo.hazard_curve_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_data TO oq_reslt_writer;
+-- hzrdr.hazard_curve_data
+GRANT SELECT ON hzrdr.hazard_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_curve_data TO oq_reslt_writer;
 
--- hzrdo.hazard_curve_node_data
-GRANT SELECT ON hzrdo.hazard_curve_node_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_node_data TO oq_reslt_writer;
+-- hzrdr.hazard_curve_node_data
+GRANT SELECT ON hzrdr.hazard_curve_node_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_curve_node_data TO oq_reslt_writer;
 
--- hzrdo.gmf_data
-GRANT SELECT ON hzrdo.gmf_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.gmf_data TO oq_reslt_writer;
+-- hzrdr.gmf_data
+GRANT SELECT ON hzrdr.gmf_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.gmf_data TO oq_reslt_writer;
 
 -- risko.loss_curve
 GRANT SELECT ON risko.loss_curve TO GROUP openquake;
