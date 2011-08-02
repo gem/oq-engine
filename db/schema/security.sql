@@ -30,7 +30,7 @@ GRANT USAGE ON SCHEMA hzrdi TO GROUP openquake;
 GRANT USAGE ON SCHEMA hzrdr TO GROUP openquake;
 GRANT USAGE ON SCHEMA oqmif TO GROUP openquake;
 GRANT USAGE ON SCHEMA riski TO GROUP openquake;
-GRANT USAGE ON SCHEMA risko TO GROUP openquake;
+GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
 
 GRANT ALL ON SEQUENCE admin.oq_user_id_seq TO oq_admin;
@@ -54,8 +54,8 @@ GRANT ALL ON SEQUENCE hzrdi.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.source_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE risko.loss_curve_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE risko.loss_curve_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.loss_curve_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_curve_data_id_seq to GROUP openquake;
@@ -63,8 +63,8 @@ GRANT ALL ON SEQUENCE hzrdr.hazard_curve_node_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE risko.loss_map_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE risko.loss_map_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.loss_map_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
@@ -182,25 +182,25 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.hazard_curve_node_data TO oq_reslt_wr
 GRANT SELECT ON hzrdr.gmf_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.gmf_data TO oq_reslt_writer;
 
--- risko.loss_curve
-GRANT SELECT ON risko.loss_curve TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve TO oq_reslt_writer;
+-- riskr.loss_curve
+GRANT SELECT ON riskr.loss_curve TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_curve TO oq_reslt_writer;
 
--- risko.loss_curve_data
-GRANT SELECT ON risko.loss_curve_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve_data TO oq_reslt_writer;
+-- riskr.loss_curve_data
+GRANT SELECT ON riskr.loss_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_curve_data TO oq_reslt_writer;
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_uiapi_writer;
 
--- risko.loss_map
-GRANT SELECT ON risko.loss_map TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map TO oq_reslt_writer;
+-- riskr.loss_map
+GRANT SELECT ON riskr.loss_map TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map TO oq_reslt_writer;
 
--- risko.loss_map_data
-GRANT SELECT ON risko.loss_map_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map_data TO oq_reslt_writer;
+-- riskr.loss_map_data
+GRANT SELECT ON riskr.loss_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map_data TO oq_reslt_writer;
 
 -- uiapi.oq_job
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
