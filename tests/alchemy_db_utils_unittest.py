@@ -259,10 +259,8 @@ class GetDbSessionTestCase(unittest.TestCase):
         (("hzrdi", "writer"), ("oq_hzrdi_writer", "openquake")),
         (("riski", "reader"), ("oq_riski_reader", "openquake")),
         (("riski", "writer"), ("oq_riski_writer", "openquake")),
-        (("hzrdo", "reader"), ("oq_hzrdo_reader", "openquake")),
-        (("hzrdo", "writer"), ("oq_hzrdo_writer", "openquake")),
-        (("risko", "reader"), ("oq_risko_reader", "openquake")),
-        (("risko", "writer"), ("oq_risko_writer", "openquake")),
+        (("reslt", "reader"), ("oq_reslt_reader", "openquake")),
+        (("reslt", "writer"), ("oq_reslt_writer", "openquake")),
         (("eqcat", "reader"), ("oq_eqcat_reader", "openquake")),
         (("eqcat", "writer"), ("oq_eqcat_writer", "openquake")))
 
