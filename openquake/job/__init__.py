@@ -129,7 +129,7 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_db_session("hzrdo", "writer")
+    session = get_db_session("reslt", "writer")
 
     # TODO specify the owner as a command line parameter
     owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()

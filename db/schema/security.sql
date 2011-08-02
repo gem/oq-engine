@@ -164,31 +164,31 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_hzrdi_writer;
 
 -- hzrdo.hazard_map
 GRANT SELECT ON hzrdo.hazard_map TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map TO oq_reslt_writer;
 
 -- hzrdo.hazard_map_data
 GRANT SELECT ON hzrdo.hazard_map_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map_data TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_map_data TO oq_reslt_writer;
 
 -- hzrdo.hazard_curve_data
 GRANT SELECT ON hzrdo.hazard_curve_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_data TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_data TO oq_reslt_writer;
 
 -- hzrdo.hazard_curve_node_data
 GRANT SELECT ON hzrdo.hazard_curve_node_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_node_data TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.hazard_curve_node_data TO oq_reslt_writer;
 
 -- hzrdo.gmf_data
 GRANT SELECT ON hzrdo.gmf_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.gmf_data TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdo.gmf_data TO oq_reslt_writer;
 
 -- risko.loss_curve
 GRANT SELECT ON risko.loss_curve TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve TO oq_reslt_writer;
 
 -- risko.loss_curve_data
 GRANT SELECT ON risko.loss_curve_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve_data TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_curve_data TO oq_reslt_writer;
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
@@ -196,29 +196,26 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_uiapi_writer;
 
 -- risko.loss_map
 GRANT SELECT ON risko.loss_map TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map TO oq_reslt_writer;
 
 -- risko.loss_map_data
 GRANT SELECT ON risko.loss_map_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map_data TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map_data TO oq_reslt_writer;
 
 -- uiapi.oq_job
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_hzrdo_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_reslt_writer;
 
 -- uiapi.oq_params
 GRANT SELECT ON uiapi.oq_params TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_params TO oq_uiapi_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_hzrdo_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_reslt_writer;
 
 -- uiapi.output
 GRANT SELECT ON uiapi.output TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.output TO oq_uiapi_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_hzrdo_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_risko_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_reslt_writer;
 
 -- uiapi.upload
 GRANT SELECT ON uiapi.upload TO GROUP openquake;

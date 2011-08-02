@@ -858,7 +858,7 @@ def _create_writer(params, nrml_path, create_xml_writer, create_db_writer):
     writers = []
 
     if 'db' in serialize_to:
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("reslt", "writer")
         writers.append(create_db_writer(session, nrml_path,
                                         writer.get_job_db_key(params)))
 
