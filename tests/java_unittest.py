@@ -178,3 +178,17 @@ class JavaExceptionTestCase(unittest.TestCase):
         self.assertTrue(len(unpickled.trace) > 2)
         self.assertTrue(unpickled.message.startswith(
                 'java.lang.NumberFormatException'))
+
+    def test_jexception_decorator(self):
+        @java.jexception
+        def test():
+            jpype = java.jvm()
+
+            jpype.java.lang.Integer('foo')
+
+        try:
+            test()
+        except java.JavaException, e:
+            self.assertTrue(e.message.startswith(
+                    'java.lang.NumberFormatException'))
+            self.assertTrue(len(e.trace) > 2)
