@@ -38,7 +38,7 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
     """
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        engine = db_utils.get_pshai_etl_session().connection().engine
+        engine = db_utils.get_db_session("hzrdi", "writer").connection().engine
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
                                                 xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file, engine)
@@ -85,7 +85,7 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
         Evenly-Discretized MFD.
         """
         expected_tables = \
-            ['pshai.mfd_evd', 'pshai.simple_fault', 'pshai.source']
+            ['hzrdi.mfd_evd', 'hzrdi.simple_fault', 'hzrdi.source']
         self._serialize_test_helper(TEST_SRC_FILE, expected_tables)
 
     def test_serialize_with_tgr_mfd(self):
@@ -95,7 +95,7 @@ class NrmlModelLoaderDBTestCase(unittest.TestCase):
         loader code).
         """
         expected_tables = \
-            ['pshai.mfd_tgr', 'pshai.simple_fault', 'pshai.source']
+            ['hzrdi.mfd_tgr', 'hzrdi.simple_fault', 'hzrdi.source']
         self._serialize_test_helper(TGR_MFD_TEST_FILE, expected_tables)
 
 
@@ -197,7 +197,7 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
                 self.assertEqual(db_val, convert_val(csv_val))
 
     def _writer_soup(self):
-        engine = db_utils.get_eqcat_writer_session().connection().engine
+        engine = db_utils.get_db_session("eqcat", "writer").connection().engine
 
         csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
         return csv_loader._sql_soup_init('eqcat')
@@ -219,7 +219,7 @@ class CsvModelLoaderDBTestCase(unittest.TestCase):
             * Deletes the inserted records from the database
         """
 
-        engine = db_utils.get_eqcat_etl_session().connection().engine
+        engine = db_utils.get_db_session("eqcat", "writer").connection().engine
 
         csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
         csv_loader.serialize()

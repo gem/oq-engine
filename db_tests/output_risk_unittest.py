@@ -21,9 +21,9 @@
 import os
 import unittest
 
-from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter, \
-    LossCurveDBReader, LossMapDBReader
+from db.alchemy.db_utils import get_db_session
+from openquake.output.risk import (
+    LossCurveDBWriter, LossMapDBWriter, LossCurveDBReader, LossMapDBReader)
 from openquake.shapes import Site, Curve
 
 from db_tests import helpers
@@ -87,7 +87,7 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -228,7 +228,7 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 

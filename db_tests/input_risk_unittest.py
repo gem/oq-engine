@@ -20,12 +20,11 @@
 
 import unittest
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.shapes import Site, Grid, Region
-from openquake.utils import round_float
+from openquake.shapes import Site, Region
 
 from db_tests import helpers
 
@@ -77,7 +76,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         hcw = HazardCurveDBWriter(session, output_path, self.job.id)
         hcw.serialize(HAZARD_CURVE_DATA())
@@ -112,7 +111,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("reslt", "writer")
         for gmf in GMF_DATA():
             output_path = self.generate_output_path(self.job)
             hcw = GMFDBWriter(session, output_path, self.job.id)
