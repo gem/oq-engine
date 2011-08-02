@@ -25,7 +25,7 @@
 CREATE SCHEMA admin;
 CREATE SCHEMA eqcat;
 CREATE SCHEMA hzrdi;
-CREATE SCHEMA hzrdo;
+CREATE SCHEMA hzrdr;
 CREATE SCHEMA oqmif;
 CREATE SCHEMA riski;
 CREATE SCHEMA risko;
@@ -664,7 +664,7 @@ CREATE TABLE uiapi.output (
 
 
 -- Hazard map header
-CREATE TABLE hzrdo.hazard_map (
+CREATE TABLE hzrdr.hazard_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     poe float NOT NULL,
@@ -678,21 +678,21 @@ CREATE TABLE hzrdo.hazard_map (
         CHECK(
             ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
             OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
-) TABLESPACE hzrdo_ts;
+) TABLESPACE hzrdr_ts;
 
 
 -- Hazard map data.
-CREATE TABLE hzrdo.hazard_map_data (
+CREATE TABLE hzrdr.hazard_map_data (
     id SERIAL PRIMARY KEY,
     hazard_map_id INTEGER NOT NULL,
     value float NOT NULL
-) TABLESPACE hzrdo_ts;
-SELECT AddGeometryColumn('hzrdo', 'hazard_map_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdo.hazard_map_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'hazard_map_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Hazard curve data.
-CREATE TABLE hzrdo.hazard_curve_data (
+CREATE TABLE hzrdr.hazard_curve_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     -- Realization reference string
@@ -712,29 +712,29 @@ CREATE TABLE hzrdo.hazard_curve_data (
         CHECK(
             ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
             OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
-) TABLESPACE hzrdo_ts;
+) TABLESPACE hzrdr_ts;
 
 
 -- Hazard curve node data.
-CREATE TABLE hzrdo.hazard_curve_node_data (
+CREATE TABLE hzrdr.hazard_curve_node_data (
     id SERIAL PRIMARY KEY,
     hazard_curve_data_id INTEGER NOT NULL,
     -- Probabilities of exceedence
     poes float[] NOT NULL
-) TABLESPACE hzrdo_ts;
-SELECT AddGeometryColumn('hzrdo', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdo.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
-CREATE TABLE hzrdo.gmf_data (
+CREATE TABLE hzrdr.gmf_data (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     -- Ground motion value
     ground_motion float NOT NULL
-) TABLESPACE hzrdo_ts;
-SELECT AddGeometryColumn('hzrdo', 'gmf_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdo.gmf_data ALTER COLUMN location SET NOT NULL;
+) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'gmf_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Loss map data.
@@ -962,24 +962,24 @@ FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE hzrdo.hazard_map
-ADD CONSTRAINT hzrdo_hazard_map_output_fk
+ALTER TABLE hzrdr.hazard_map
+ADD CONSTRAINT hzrdr_hazard_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdo.hazard_map_data
-ADD CONSTRAINT hzrdo_hazard_map_data_hazard_map_fk
-FOREIGN KEY (hazard_map_id) REFERENCES hzrdo.hazard_map(id) ON DELETE CASCADE;
+ALTER TABLE hzrdr.hazard_map_data
+ADD CONSTRAINT hzrdr_hazard_map_data_hazard_map_fk
+FOREIGN KEY (hazard_map_id) REFERENCES hzrdr.hazard_map(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdo.hazard_curve_data
-ADD CONSTRAINT hzrdo_hazard_curve_data_output_fk
+ALTER TABLE hzrdr.hazard_curve_data
+ADD CONSTRAINT hzrdr_hazard_curve_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdo.hazard_curve_node_data
-ADD CONSTRAINT hzrdo_hazard_curve_node_data_output_fk
-FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdo.hazard_curve_data(id) ON DELETE CASCADE;
+ALTER TABLE hzrdr.hazard_curve_node_data
+ADD CONSTRAINT hzrdr_hazard_curve_node_data_output_fk
+FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdr.hazard_curve_data(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdo.gmf_data
-ADD CONSTRAINT hzrdo_gmf_data_output_fk
+ALTER TABLE hzrdr.gmf_data
+ADD CONSTRAINT hzrdr_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE risko.loss_map
