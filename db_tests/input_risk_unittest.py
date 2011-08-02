@@ -76,7 +76,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         hcw = HazardCurveDBWriter(session, output_path, self.job.id)
         hcw.serialize(HAZARD_CURVE_DATA())
@@ -111,7 +111,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdo", "writer")
+        session = get_db_session("reslt", "writer")
         for gmf in GMF_DATA():
             output_path = self.generate_output_path(self.job)
             hcw = GMFDBWriter(session, output_path, self.job.id)
