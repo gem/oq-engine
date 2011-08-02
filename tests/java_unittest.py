@@ -33,11 +33,13 @@ class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
 
     def setUp(self):
-        try:
-            del os.environ["OQ_JVM_MAXMEM"]
-        except KeyError:
-            # Make sure all tests start with a clean environment
-            pass
+        self.orig_env = os.environ.copy()
+        # Make sure all tests start with a clean environment
+        os.environ.pop("OQ_JVM_MAXMEM", None)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_jvm_maxmem_with_no_environ_var_and_no_param(self):
         """
