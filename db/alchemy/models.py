@@ -180,7 +180,7 @@ class Output(Base):
 
 class HazardMap(Base):
     __tablename__ = "hazard_map"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
@@ -198,10 +198,10 @@ class HazardMap(Base):
 
 class HazardMapData(Base):
     __tablename__ = "hazard_map_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
-    hazard_map_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.hazard_map.id"),
+    hazard_map_id = sa.Column(sa.Integer, sa.ForeignKey("hzrdr.hazard_map.id"),
                               nullable=False)
     hazard_map = relationship("HazardMap", backref="hazardmapdata_set")
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
@@ -214,7 +214,7 @@ class HazardMapData(Base):
 
 class HazardCurveData(Base):
     __tablename__ = "hazard_curve_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
@@ -232,11 +232,11 @@ class HazardCurveData(Base):
 
 class HazardCurveNodeData(Base):
     __tablename__ = "hazard_curve_node_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     hazard_curve_data_id = sa.Column(
-        sa.Integer, sa.ForeignKey("uiapi.hazard_curve_data.id"),
+        sa.Integer, sa.ForeignKey("hzrdr.hazard_curve_data.id"),
         nullable=False)
     hazard_curve_data = relationship("HazardCurveData",
                                      backref="hazardcurvenodedata_set")
@@ -251,7 +251,7 @@ class HazardCurveNodeData(Base):
 
 class GMFData(Base):
     __tablename__ = "gmf_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
@@ -267,7 +267,7 @@ class GMFData(Base):
 
 class LossMap(Base):
     __tablename__ = "loss_map"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -288,12 +288,12 @@ class LossMap(Base):
 
 class LossMapData(Base):
     __tablename__ = "loss_map_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
 
     loss_map_id = sa.Column(sa.Integer,
-                            sa.ForeignKey("uiapi.loss_map.id"),
+                            sa.ForeignKey("riskr.loss_map.id"),
                             nullable=False)
     loss_map = relationship("LossMap",
                             backref="lossmapdata_set")
@@ -309,7 +309,7 @@ class LossMapData(Base):
 
 class LossCurve(Base):
     __tablename__ = "loss_curve"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
@@ -326,11 +326,11 @@ class LossCurve(Base):
 
 class LossCurveData(Base):
     __tablename__ = "loss_curve_data"
-    __table_args__ = {"schema": "uiapi"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     loss_curve_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("uiapi.loss_curve.id"),
+                              sa.ForeignKey("riskr.loss_curve.id"),
                               nullable=False)
     loss_curve = relationship("LossCurve", backref="losscurvedata_set")
 

@@ -28,7 +28,7 @@ from collections import defaultdict
 
 from lxml import etree
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
 from db.alchemy.models import LossCurve, LossCurveData
 from db.alchemy.models import LossMap, LossMapData
 
@@ -491,7 +491,8 @@ def create_loss_map_writer(deterministic, nrml_path, params):
     writers = []
 
     if 'db' in serialize_to:
-        writers.append(LossMapDBWriter(get_uiapi_writer_session(), nrml_path,
+        writers.append(LossMapDBWriter(get_db_session("reslt", "writer"),
+                                       nrml_path,
                                        writer.get_job_db_key(params)))
 
     if 'xml' in serialize_to:
@@ -798,7 +799,7 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
 
     if 'db' in serialize_to:
         if curve_mode == 'loss':
-            writers.append(LossCurveDBWriter(get_uiapi_writer_session(),
+            writers.append(LossCurveDBWriter(get_db_session("reslt", "writer"),
                                              nrml_path,
                                              writer.get_job_db_key(params)))
         elif curve_mode == 'loss_ratio':
