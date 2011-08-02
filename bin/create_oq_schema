@@ -33,7 +33,7 @@ psql_batch_options='--set ON_ERROR_STOP=1'
 # Where do the table spaces live?
 tspace_path='/var/lib/postgresql/8.4/main/ts'
 # What table spaces should be created?
-tspace_list="admin eqcat hzrdi hzrdo oqmif riski risko uiapi"
+tspace_list="admin eqcat hzrdi hzrdr oqmif riski riskr uiapi"
 
 schema_path=""
 db_name=""
