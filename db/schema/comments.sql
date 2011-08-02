@@ -22,7 +22,7 @@
 COMMENT ON SCHEMA admin IS 'Administrative data';
 COMMENT ON SCHEMA eqcat IS 'Earthquake catalog';
 COMMENT ON SCHEMA oqmif IS 'OpenQuake tables for interfacing with external parties';
-COMMENT ON SCHEMA pshai IS 'PSHA input model';
+COMMENT ON SCHEMA hzrdi IS 'PSHA input model';
 COMMENT ON SCHEMA uiapi IS 'Data required by the API presented to the various OpenQuake UIs';
 
 COMMENT ON TABLE admin.organization IS 'An organization that is utilising the OpenQuake database';
@@ -66,113 +66,113 @@ COMMENT ON COLUMN oqmif.exposure_model.unit IS 'The unit of measurement for the 
 COMMENT ON COLUMN oqmif.exposure_model.last_update IS 'Date/time of the last change of the model at hand';
 
 
-COMMENT ON TABLE pshai.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
-COMMENT ON COLUMN pshai.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
-COMMENT ON COLUMN pshai.complex_fault.mfd_tgr_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
-COMMENT ON COLUMN pshai.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
-COMMENT ON COLUMN pshai.complex_fault.fault_edge_id IS 'Foreign key to a fault edge.';
-COMMENT ON COLUMN pshai.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
+COMMENT ON TABLE hzrdi.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
+COMMENT ON COLUMN hzrdi.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
+COMMENT ON COLUMN hzrdi.complex_fault.mfd_tgr_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
+COMMENT ON COLUMN hzrdi.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
+COMMENT ON COLUMN hzrdi.complex_fault.fault_edge_id IS 'Foreign key to a fault edge.';
+COMMENT ON COLUMN hzrdi.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
 
-COMMENT ON VIEW pshai.complex_rupture IS 'A complex rupture view, needed for opengeo server integration.';
-COMMENT ON VIEW pshai.complex_source IS 'A complex source view, needed for opengeo server integration.';
+COMMENT ON VIEW hzrdi.complex_rupture IS 'A complex rupture view, needed for opengeo server integration.';
+COMMENT ON VIEW hzrdi.complex_source IS 'A complex source view, needed for opengeo server integration.';
 
-COMMENT ON TABLE pshai.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
-COMMENT ON COLUMN pshai.fault_edge.bottom IS 'Bottom fault edge.';
-COMMENT ON COLUMN pshai.fault_edge.top IS 'Top fault edge.';
+COMMENT ON TABLE hzrdi.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
+COMMENT ON COLUMN hzrdi.fault_edge.bottom IS 'Bottom fault edge.';
+COMMENT ON COLUMN hzrdi.fault_edge.top IS 'Top fault edge.';
 
-COMMENT ON TABLE pshai.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
+COMMENT ON TABLE hzrdi.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
 
-COMMENT ON TABLE pshai.mfd_evd IS 'Magnitude frequency distribution, evenly discretized.';
-COMMENT ON COLUMN pshai.mfd_evd.magnitude_type IS 'Magnitude type i.e. one of:
+COMMENT ON TABLE hzrdi.mfd_evd IS 'Magnitude frequency distribution, evenly discretized.';
+COMMENT ON COLUMN hzrdi.mfd_evd.magnitude_type IS 'Magnitude type i.e. one of:
     - body wave magnitude (Mb)
     - duration magnitude (Md)
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
-COMMENT ON COLUMN pshai.mfd_evd.min_val IS 'Minimum magnitude value.';
-COMMENT ON COLUMN pshai.mfd_evd.max_val IS 'Maximum magnitude value (will be derived/calculated for evenly discretized magnitude frequency distributions).';
+COMMENT ON COLUMN hzrdi.mfd_evd.min_val IS 'Minimum magnitude value.';
+COMMENT ON COLUMN hzrdi.mfd_evd.max_val IS 'Maximum magnitude value (will be derived/calculated for evenly discretized magnitude frequency distributions).';
 
-COMMENT ON TABLE pshai.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
-COMMENT ON COLUMN pshai.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
+COMMENT ON TABLE hzrdi.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
+COMMENT ON COLUMN hzrdi.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
     - body wave magnitude (Mb)
     - duration magnitude (Md)
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
-COMMENT ON COLUMN pshai.mfd_tgr.min_val IS 'Minimum magnitude value.';
-COMMENT ON COLUMN pshai.mfd_tgr.max_val IS 'Maximum magnitude value.';
+COMMENT ON COLUMN hzrdi.mfd_tgr.min_val IS 'Minimum magnitude value.';
+COMMENT ON COLUMN hzrdi.mfd_tgr.max_val IS 'Maximum magnitude value.';
 
-COMMENT ON TABLE pshai.r_depth_distr IS 'Rupture depth distribution.';
-COMMENT ON COLUMN pshai.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
+COMMENT ON TABLE hzrdi.r_depth_distr IS 'Rupture depth distribution.';
+COMMENT ON COLUMN hzrdi.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
     - body wave magnitude (Mb)
     - duration magnitude (Md)
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
 
-COMMENT ON TABLE pshai.r_rate_mdl IS 'Rupture rate model.';
+COMMENT ON TABLE hzrdi.r_rate_mdl IS 'Rupture rate model.';
 
-COMMENT ON TABLE pshai.rupture IS 'A rupture, can be based on a point or a complex or simple fault.';
-COMMENT ON COLUMN pshai.rupture.si_type IS 'The rupture''s seismic input type: can be one of: point, complex or simple.';
-COMMENT ON COLUMN pshai.rupture.magnitude_type IS 'Magnitude type i.e. one of:
+COMMENT ON TABLE hzrdi.rupture IS 'A rupture, can be based on a point or a complex or simple fault.';
+COMMENT ON COLUMN hzrdi.rupture.si_type IS 'The rupture''s seismic input type: can be one of: point, complex or simple.';
+COMMENT ON COLUMN hzrdi.rupture.magnitude_type IS 'Magnitude type i.e. one of:
     - body wave magnitude (Mb)
     - duration magnitude (Md)
     - local magnitude (Ml)
     - surface wave magnitude (Ms)
     - moment magnitude (Mw)';
-COMMENT ON COLUMN pshai.rupture.tectonic_region IS 'Tectonic region type i.e. one of:
+COMMENT ON COLUMN hzrdi.rupture.tectonic_region IS 'Tectonic region type i.e. one of:
     - Active Shallow Crust (active)
     - Stable Shallow Crust (stable)
     - Subduction Interface (interface)
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
-COMMENT ON TABLE pshai.simple_fault IS 'A simple fault geometry.';
-COMMENT ON COLUMN pshai.simple_fault.dip IS 'The fault''s inclination angle with respect to the plane.';
-COMMENT ON COLUMN pshai.simple_fault.upper_depth IS 'The upper seismogenic depth.';
-COMMENT ON COLUMN pshai.simple_fault.lower_depth IS 'The lower seismogenic depth.';
-COMMENT ON COLUMN pshai.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
+COMMENT ON TABLE hzrdi.simple_fault IS 'A simple fault geometry.';
+COMMENT ON COLUMN hzrdi.simple_fault.dip IS 'The fault''s inclination angle with respect to the plane.';
+COMMENT ON COLUMN hzrdi.simple_fault.upper_depth IS 'The upper seismogenic depth.';
+COMMENT ON COLUMN hzrdi.simple_fault.lower_depth IS 'The lower seismogenic depth.';
+COMMENT ON COLUMN hzrdi.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
 
-COMMENT ON VIEW pshai.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
-COMMENT ON VIEW pshai.simple_source IS 'A simple source view, needed for opengeo server integration.';
-COMMENT ON TABLE pshai.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
-COMMENT ON COLUMN pshai.source.si_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-COMMENT ON COLUMN pshai.source.tectonic_region IS 'Tectonic region type i.e. one of:
+COMMENT ON VIEW hzrdi.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
+COMMENT ON VIEW hzrdi.simple_source IS 'A simple source view, needed for opengeo server integration.';
+COMMENT ON TABLE hzrdi.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
+COMMENT ON COLUMN hzrdi.source.si_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
+COMMENT ON COLUMN hzrdi.source.tectonic_region IS 'Tectonic region type i.e. one of:
     - Active Shallow Crust (active)
     - Stable Shallow Crust (stable)
     - Subduction Interface (interface)
     - Subduction IntraSlab (intraslab)
     - Volcanic             (volcanic)';
 
-COMMENT ON TABLE uiapi.hazard_map IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN uiapi.hazard_map.output_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
-COMMENT ON COLUMN uiapi.hazard_map.poe IS 'Probability of exceedence';
-COMMENT ON COLUMN uiapi.hazard_map.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdr.hazard_map IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN hzrdr.hazard_map.output_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON COLUMN hzrdr.hazard_map.poe IS 'Probability of exceedence';
+COMMENT ON COLUMN hzrdr.hazard_map.statistic_type IS 'Statistic type, one of:
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN uiapi.hazard_map.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_map.quantile IS 'The quantile for quantile statistical data.';
 
-COMMENT ON TABLE uiapi.hazard_map_data IS 'Holds location/IML data for hazard maps';
-COMMENT ON COLUMN uiapi.hazard_map_data.hazard_map_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
-COMMENT ON COLUMN uiapi.hazard_map_data.location IS 'Position in the hazard map';
-COMMENT ON COLUMN uiapi.hazard_map_data.value IS 'IML value for this location';
+COMMENT ON TABLE hzrdr.hazard_map_data IS 'Holds location/IML data for hazard maps';
+COMMENT ON COLUMN hzrdr.hazard_map_data.hazard_map_id IS 'The foreign key to the hazard map record that represents the corresponding hazard map.';
+COMMENT ON COLUMN hzrdr.hazard_map_data.location IS 'Position in the hazard map';
+COMMENT ON COLUMN hzrdr.hazard_map_data.value IS 'IML value for this location';
 
-COMMENT ON TABLE uiapi.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
-COMMENT ON COLUMN uiapi.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN uiapi.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
-COMMENT ON COLUMN uiapi.hazard_curve_data.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.statistic_type IS 'Statistic type, one of:
     - Mean     (mean)
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN uiapi.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
 
-COMMENT ON TABLE uiapi.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN uiapi.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN uiapi.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
+COMMENT ON TABLE hzrdr.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
 
-COMMENT ON TABLE uiapi.gmf_data IS 'Holds data for the ground motion field';
-COMMENT ON COLUMN uiapi.gmf_data.ground_motion IS 'Ground motion for a specific site';
-COMMENT ON COLUMN uiapi.gmf_data.location IS 'Site coordinates';
+COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
+COMMENT ON COLUMN hzrdr.gmf_data.ground_motion IS 'Ground motion for a specific site';
+COMMENT ON COLUMN hzrdr.gmf_data.location IS 'Site coordinates';
 
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
@@ -184,34 +184,34 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
-COMMENT ON TABLE uiapi.loss_map IS 'Holds metadata for loss maps.';
-COMMENT ON COLUMN uiapi.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN uiapi.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
-COMMENT ON COLUMN uiapi.loss_map.loss_map_ref IS 'A simple identifier';
-COMMENT ON COLUMN uiapi.loss_map.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN uiapi.loss_map.category IS 'Loss category (e.g. economic_loss).';
-COMMENT ON COLUMN uiapi.loss_map.unit IS 'Unit of measurement';
-COMMENT ON COLUMN uiapi.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
+COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
+COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
+COMMENT ON COLUMN riskr.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
+COMMENT ON COLUMN riskr.loss_map.loss_map_ref IS 'A simple identifier';
+COMMENT ON COLUMN riskr.loss_map.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN riskr.loss_map.category IS 'Loss category (e.g. economic_loss).';
+COMMENT ON COLUMN riskr.loss_map.unit IS 'Unit of measurement';
+COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
-COMMENT ON TABLE uiapi.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
-COMMENT ON COLUMN uiapi.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
-COMMENT ON COLUMN uiapi.loss_map_data.asset_ref IS 'The asset reference';
-COMMENT ON COLUMN uiapi.loss_map_data.location IS 'The position of the asset';
-COMMENT ON COLUMN uiapi.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN uiapi.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
+COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
+COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
+COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
+COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
+COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
 
-COMMENT ON TABLE uiapi.loss_curve IS 'Holds the parameters common to a set of loss curves.';
-COMMENT ON COLUMN uiapi.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
-COMMENT ON COLUMN uiapi.loss_curve.end_branch_label IS 'End branch label';
-COMMENT ON COLUMN uiapi.loss_curve.category IS 'The category of the losses';
-COMMENT ON COLUMN uiapi.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
+COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
+COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN riskr.loss_curve.end_branch_label IS 'End branch label';
+COMMENT ON COLUMN riskr.loss_curve.category IS 'The category of the losses';
+COMMENT ON COLUMN riskr.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
 
-COMMENT ON TABLE uiapi.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
-COMMENT ON COLUMN uiapi.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
-COMMENT ON COLUMN uiapi.loss_curve_data.asset_ref IS 'The asset id';
-COMMENT ON COLUMN uiapi.loss_curve_data.location IS 'The position of the asset';
-COMMENT ON COLUMN uiapi.loss_curve_data.losses IS 'Losses';
-COMMENT ON COLUMN uiapi.loss_curve_data.poes IS 'Probabilities of exceedence';
+COMMENT ON TABLE riskr.loss_curve_data IS 'Holds the probabilities of exceedance for a given loss curve.';
+COMMENT ON COLUMN riskr.loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
+COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
