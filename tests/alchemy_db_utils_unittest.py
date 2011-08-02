@@ -255,14 +255,22 @@ class GetDbSessionTestCase(unittest.TestCase):
     Tests the alchemy.db_utils.get_db_session() function.
     """
     test_data = (
-        (("hzrdi", "reader"), ("oq_hzrdi_reader", "openquake")),
-        (("hzrdi", "writer"), ("oq_hzrdi_writer", "openquake")),
-        (("riski", "reader"), ("oq_riski_reader", "openquake")),
-        (("riski", "writer"), ("oq_riski_writer", "openquake")),
-        (("reslt", "reader"), ("oq_reslt_reader", "openquake")),
-        (("reslt", "writer"), ("oq_reslt_writer", "openquake")),
-        (("eqcat", "reader"), ("oq_eqcat_reader", "openquake")),
-        (("eqcat", "writer"), ("oq_eqcat_writer", "openquake")))
+        ("OQ_DB_HZRDI_READER", ("hzrdi", "reader"),
+         ("oq_hzrdi_reader", "openquake")),
+        ("OQ_DB_HZRDI_WRITER", ("hzrdi", "writer"),
+         ("oq_hzrdi_writer", "openquake")),
+        ("OQ_DB_RISKI_READER", ("riski", "reader"),
+         ("oq_riski_reader", "openquake")),
+        ("OQ_DB_RISKI_WRITER", ("riski", "writer"),
+         ("oq_riski_writer", "openquake")),
+        ("OQ_DB_RESLT_READER", ("reslt", "reader"),
+         ("oq_reslt_reader", "openquake")),
+        ("OQ_DB_RESLT_WRITER", ("reslt", "writer"),
+         ("oq_reslt_writer", "openquake")),
+        ("OQ_DB_EQCAT_READER", ("eqcat", "reader"),
+         ("oq_eqcat_reader", "openquake")),
+        ("OQ_DB_EQCAT_WRITER", ("eqcat", "writer"),
+         ("oq_eqcat_writer", "openquake")))
 
     def setUp(self):
         # Save the original get() method.
@@ -281,9 +289,7 @@ class GetDbSessionTestCase(unittest.TestCase):
         """
         The default user/passwords will be used.
         """
-        for ((schema, role), (user, password)) in self.test_data:
-            usr_var = "OQ_DB_%s_%s" % (schema, role)
-            usr_var = usr_var.upper()
+        for (usr_var, (schema, role), (user, password)) in self.test_data:
             if os.environ.get(usr_var) is not None:
                 del os.environ[usr_var]
             pwd_var = usr_var + "_PWD"
@@ -300,11 +306,9 @@ class GetDbSessionTestCase(unittest.TestCase):
         SessionCache.get() is called with the appropriate environment
         variables.
         """
-        for ((schema, role), (user, password)) in self.test_data:
-            env_var = "OQ_DB_%s_%s" % (schema, role)
-            env_var = env_var.upper()
-            os.environ[env_var] = "usr1"
-            os.environ[env_var + "_PWD"] = "pwd1"
+        for (usr_var, (schema, role), (user, password)) in self.test_data:
+            os.environ[usr_var] = "usr1"
+            os.environ[usr_var + "_PWD"] = "pwd1"
 
             session = get_db_session(schema, role)
             self.assertTrue(session is self.expected_session)
