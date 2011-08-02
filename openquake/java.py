@@ -142,8 +142,8 @@ def jvm(max_mem=None):
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # force the default Xerces parser configuration, otherwise
             # some random system-installed JAR might override it
-            "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration="\
-                           "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
+            "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
+                "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
             # "-Dlog4j.debug", # turn on log4j internal debugging
             "-Dlog4j.configuration=file://%s" % log4j_properties_path,
             "-Xmx%sM" % max_mem)
@@ -187,6 +187,11 @@ def get_jvm_max_mem(max_mem):
 
 
 def _unpickle_javaexception(message, trace):
+    """
+    Helper function for unpickling :class:`JavaException` objects;
+    required because :module:`pickle` treats exceptions as opaque
+    objects.
+    """
     e = JavaException()
     e.message = message
     e.trace = trace
@@ -195,6 +200,11 @@ def _unpickle_javaexception(message, trace):
 
 
 class JavaException(Exception):
+    """
+    Stores the Java exception description and Java stacktrace in a
+    pickleable object.
+    """
+
     def __init__(self, java_exception=None):
         # we don't store the Java exception object to keep the Python
         # object pickleable
@@ -215,6 +225,7 @@ class JavaException(Exception):
 
     @classmethod
     def _get_exception(cls, java_exception):
+        """Get the Java object wrapper for the exception."""
         if hasattr(java_exception, '__javaobject__'):
             return java_exception.__javaobject__
         else:
@@ -223,11 +234,14 @@ class JavaException(Exception):
     @classmethod
     def get_java_stacktrace(cls, java_exception):
         """
-        Returns a Python list representing a Java stacktrace
+        Extracts the stacktrace from a Java exception
 
-        Returns a list of `(filename, line number, function name, None)`
-        tuples (the same format used by the Python `traceback` module,
-        except there is no source code.
+        :param java_exception: Java exception object
+        :type java_exception: :class:`jpype.JavaException`
+
+        :returns: a list of `(filename, line number, function name, None)`
+            tuples (the same format used by the Python `traceback` module,
+            except there is no source code).
         """
         java_exception = cls._get_exception(java_exception)
         trace = []
@@ -244,18 +258,23 @@ class JavaException(Exception):
         return trace
 
 
-# Decorator to extract the stack trace from java exceptions
-def jexception(f, *args, **kwargs):
-    @wraps(f)
-    def unwrap_exception(*targs, **tkwargs):
-        jpype = jvm()
+def jexception(func):
+    """
+    Decorator to extract the stack trace from a Java exception.
+
+    Re-throws a pickleable :class:`JavaException` object containing the
+    exception message and Java stack trace.
+    """
+    @wraps(func)
+    def unwrap_exception(*targs, **tkwargs):  # pylint: disable=C0111
+        jvm_instance = jvm()
 
         try:
-            return f(*targs, **tkwargs)
-        except jpype.JavaException, e:
+            return func(*targs, **tkwargs)
+        except jvm_instance.JavaException, e:
             trace = sys.exc_info()[2]
 
-            raise JavaException, JavaException(e), trace
+            raise JavaException(e), None, trace
 
     return unwrap_exception
 
@@ -264,36 +283,41 @@ def jexception(f, *args, **kwargs):
 # with the Celery task decorator
 # import decorator
 #
-# def jexception(f, *args, **kwargs):
-#     @wraps(f)
-#     def unwrap_exception(f, *targs, **tkwargs):
-#         jpype = jvm()
+# def jexception(func):
+#     @wraps(func)
+#     def unwrap_exception(func, *targs, **tkwargs):
+#         jvm_instance = jvm()
 #
 #         try:
-#             return f(*targs, **tkwargs)
-#         except jpype.JavaException, e:
+#             return func(*targs, **tkwargs)
+#         except jvm_instance.JavaException, e:
 #             trace = sys.exc_info()[2]
 #
-#             raise JavaException, JavaException(e), trace
+#             raise JavaException(e), None, trace
 #
-#     return decorator.decorator(unwrap_exception, f)
+#     return decorator.decorator(unwrap_exception, func)
 
 
 # Java-exception-aware task decorator for celery
-def jtask(f, *args, **kwargs):
-    task = celery_task(f, *args, **kwargs)
+def jtask(func, *args, **kwargs):
+    """
+    Java-exception aware task decorator for Celery.
+
+    Re-throws the exception as a pickleable :class:`JavaException` object.
+    """
+    task = celery_task(func, *args, **kwargs)
     run = task.run
 
     @wraps(run)
-    def call_task(*targs, **tkwargs):
-        jpype = jvm()
+    def call_task(*targs, **tkwargs):  # pylint: disable=C0111
+        jvm_instance = jvm()
 
         try:
             return run(*targs, **tkwargs)
-        except jpype.JavaException, e:
+        except jvm_instance.JavaException, e:
             trace = sys.exc_info()[2]
 
-            raise JavaException, JavaException(e), trace
+            raise JavaException(e), None, trace
 
     # overwrite the run method of the instance with our wrapper; we
     # can't just pass call_task to celery_task because it does not
