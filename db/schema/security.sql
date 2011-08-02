@@ -205,14 +205,20 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON risko.loss_map_data TO oq_risko_writer;
 -- uiapi.oq_job
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_uiapi_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_risko_writer;
 
 -- uiapi.oq_params
 GRANT SELECT ON uiapi.oq_params TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_params TO oq_uiapi_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_risko_writer;
 
 -- uiapi.output
 GRANT SELECT ON uiapi.output TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.output TO oq_uiapi_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_hzrdo_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_risko_writer;
 
 -- uiapi.upload
 GRANT SELECT ON uiapi.upload TO GROUP openquake;
