@@ -338,7 +338,7 @@ class Job(object):
         :type status: string
         """
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("reslt", "writer")
         db_job = self.get_db_job(session)
         db_job.status = status
         session.add(db_job)
