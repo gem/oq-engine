@@ -267,7 +267,7 @@ class GMFData(Base):
 
 class LossMap(Base):
     __tablename__ = "loss_map"
-    __table_args__ = {"schema": "risko"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
 
@@ -288,12 +288,12 @@ class LossMap(Base):
 
 class LossMapData(Base):
     __tablename__ = "loss_map_data"
-    __table_args__ = {"schema": "risko"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
 
     loss_map_id = sa.Column(sa.Integer,
-                            sa.ForeignKey("risko.loss_map.id"),
+                            sa.ForeignKey("riskr.loss_map.id"),
                             nullable=False)
     loss_map = relationship("LossMap",
                             backref="lossmapdata_set")
@@ -309,7 +309,7 @@ class LossMapData(Base):
 
 class LossCurve(Base):
     __tablename__ = "loss_curve"
-    __table_args__ = {"schema": "risko"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
@@ -326,11 +326,11 @@ class LossCurve(Base):
 
 class LossCurveData(Base):
     __tablename__ = "loss_curve_data"
-    __table_args__ = {"schema": "risko"}
+    __table_args__ = {"schema": "riskr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     loss_curve_id = sa.Column(sa.Integer,
-                              sa.ForeignKey("risko.loss_curve.id"),
+                              sa.ForeignKey("riskr.loss_curve.id"),
                               nullable=False)
     loss_curve = relationship("LossCurve", backref="losscurvedata_set")
 
