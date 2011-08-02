@@ -23,14 +23,15 @@ import mock
 
 from openquake.job import Job, prepare_job, run_job
 
-from db.alchemy.db_utils import get_uiapi_writer_session
+from db.alchemy.db_utils import get_db_session
+
 from db.alchemy.models import OqJob
 from db_tests import helpers
 from tests.utils import helpers as test_helpers
 
 
 def _toCoordList(polygon):
-    session = get_uiapi_writer_session()
+    session = get_db_session("reslt", "writer")
 
     pts = []
 
@@ -234,7 +235,7 @@ class JobTestCase(unittest.TestCase):
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("uiapi", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
@@ -243,7 +244,7 @@ class JobTestCase(unittest.TestCase):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
                                  'xml')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("uiapi", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
@@ -251,7 +252,7 @@ class JobTestCase(unittest.TestCase):
     def test_get_db_job(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("reslt", "writer")
 
         expected_job = session.query(OqJob)\
             .filter(OqJob.id == self.job.get_db_job_id()).one()
@@ -261,7 +262,7 @@ class JobTestCase(unittest.TestCase):
     def test_set_status(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("reslt", "writer")
 
         status = 'running'
         self.job.set_status(status)
@@ -275,7 +276,7 @@ class JobTestCase(unittest.TestCase):
 class RunJobTestCase(unittest.TestCase):
     def setUp(self):
         self.job = None
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         self.job_from_file = Job.from_file
 
     def tearDown(self):
