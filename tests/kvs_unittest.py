@@ -20,6 +20,7 @@
 
 import json
 import mock
+import numpy
 import os
 
 import unittest
@@ -56,6 +57,14 @@ def read_one_line(path):
 
 
 ONE_CURVE_MODEL = read_one_line(helpers.get_data_path('one-curve-model.json'))
+
+
+class JSONEncoderTestCase(unittest.TestCase):
+    def test_numpy_1_dimensional_array(self):
+        encoder = kvs.NumpyAwareJSONEncoder()
+
+        self.assertEqual('[1.0, 2.0, 3.0]',
+                         encoder.encode(numpy.array([1.0, 2.0, 3.0])))
 
 
 class KVSTestCase(unittest.TestCase):
