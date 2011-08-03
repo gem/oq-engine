@@ -30,7 +30,7 @@ public class JsonSerializer {
      * Type definition for converting a hazard curve to JSON.
      */
     private static final Type CURVE_TYPE =
-            new TypeToken<List<Map<String, String>>>() {
+            new TypeToken<List<Double>>() {
             }.getType();
 
     /**
@@ -43,13 +43,13 @@ public class JsonSerializer {
     private static final String SITE_LAT = "site_lat";
     private static final String X = "x";
     private static final String Y = "y";
-    private static final String CURVE = "curve";
+    private static final String POES = "poes";
 
     /* End Hazard Curve to JSON stuff */
 
     /**
      * Serializes and array list of GEMSourceData
-     * 
+     *
      * @param sourceList
      * @return
      */
@@ -102,12 +102,12 @@ public class JsonSerializer {
 
     /**
      * Convert the input Map into a List of JSON Strings.
-     * 
+     *
      * <p>
      * <b>The order in which the results are returned is based on the order of
      * the site list.</b>
      * </p>
-     * 
+     *
      * @param hazCurves
      * @return List of JSON Strings
      */
@@ -125,30 +125,26 @@ public class JsonSerializer {
             JsonObject hazardCurve =
                     gson.toJsonTree(siteMap, SITE_TYPE).getAsJsonObject();
             JsonElement curveElement =
-                    curveToJsonElement(hazCurves.get(site), gson);
-            hazardCurve.add(CURVE, curveElement);
+                    ordinatesToJsonElement(hazCurves.get(site), gson);
+            hazardCurve.add(POES, curveElement);
             json.add(hazardCurve.toString());
         }
         return json;
     }
 
     /**
-     * Convert a hazard curve to a JSON list of x,y pairs (as dicts). Example:
-     * [{"x": "-5.2983174", "y": "0.0"}, ... , {"x": "0.756122", "y": "0.0"}]
-     * 
+     * Convert a hazard curve to a JSON list of ordinates.
+     *
      * @param func
      * @return
      */
-    public static JsonElement curveToJsonElement(DiscretizedFuncAPI func,
+    public static JsonElement ordinatesToJsonElement(DiscretizedFuncAPI func,
             Gson gson) {
-        List<Map<String, String>> curve = new ArrayList<Map<String, String>>();
+        List<Double> curve = new ArrayList<Double>();
         Iterator<DataPoint2D> ptIter = func.getPointsIterator();
         while (ptIter.hasNext()) {
             DataPoint2D point = ptIter.next();
-            Map<String, String> xy = new HashMap<String, String>();
-            xy.put(X, Double.toString(point.getX()));
-            xy.put(Y, Double.toString(point.getY()));
-            curve.add(xy);
+            curve.add(point.getY());
         }
         return gson.toJsonTree(curve, CURVE_TYPE);
     }
