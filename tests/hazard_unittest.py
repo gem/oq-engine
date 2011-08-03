@@ -470,7 +470,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 6.7449200e-03, 2.1658200e-03, 5.3878600e-04, 9.4369400e-05,
                 8.9830380e-06])
 
-        self.empty_curve = {"curve": []}
+        self.empty_curve = {"poes": []}
 
         # deleting server side cached data
         kvs.flush()
@@ -540,7 +540,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 self.expected_mean_curve, mean_hazard_curve))
 
     def test_an_empty_hazard_curve_produces_an_empty_mean_curve(self):
-        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "curve": []}
+        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "poes": []}
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve)
 
         self._run([shapes.Site(2.0, 5.0)])
@@ -554,36 +554,36 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         self.assertEqual(5.0, result["site_lat"])
 
         # no values
-        self.assertTrue(numpy.allclose([], numpy.array(result['curve'])))
+        self.assertTrue(numpy.allclose([], numpy.array(result['poes'])))
 
     def test_reads_and_stores_the_mean_curve_in_kvs(self):
         hazard_curve_1 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.98161, 0.97837, 0.95579, 0.92555, 0.87052, 0.78214, 0.65708,
             0.50526, 0.37044, 0.3474, 0.20502, 0.10506, 0.046531, 0.017548,
             0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]}
         hazard_curve_2 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.97309, 0.96857, 0.93853, 0.90089, 0.83673, 0.74057, 0.61272,
             0.46467, 0.33694, 0.31536, 0.1834, 0.092412, 0.040202, 0.0149,
             0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]}
         hazard_curve_3 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
             0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
         hazard_curve_4 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.98885, 0.98505, 0.95972, 0.92494, 0.8603, 0.75574, 0.61009,
             0.44217, 0.30543, 0.28345, 0.1576, 0.080225, 0.038681, 0.017637,
             0.0072685, 0.0025474, 0.00068347, 0.00012596, 1.2853e-05, ]}
         hazard_curve_5 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
             0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
@@ -605,7 +605,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         self.assertEqual(5.0, result["site_lat"])
 
         # values are correct
-        self.assertTrue(numpy.allclose(self.expected_mean_curve, result['curve']))
+        self.assertTrue(numpy.allclose(self.expected_mean_curve, result['poes']))
 
     def _run(self, sites):
         classical_psha.compute_mean_hazard_curves(
@@ -756,7 +756,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 self.expected_curve, quantile_hazard_curve, atol=0.005))
 
     def test_an_empty_hazard_curve_produces_an_empty_quantile_curve(self):
-        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "curve": []}
+        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "poes": []}
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve)
 
         self.params[self.quantiles_levels] = "0.75"
@@ -772,38 +772,38 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self.assertEqual(5.0, result["site_lat"])
 
         # no values
-        self.assertTrue(numpy.allclose([], numpy.array(result["curve"])))
+        self.assertTrue(numpy.allclose([], numpy.array(result["poes"])))
 
     def test_reads_and_stores_the_quantile_curve_in_kvs(self):
         self.params[self.quantiles_levels] = "0.75"
 
         hazard_curve_1 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.98161, 0.97837, 0.95579, 0.92555, 0.87052, 0.78214, 0.65708,
             0.50526, 0.37044, 0.3474, 0.20502, 0.10506, 0.046531, 0.017548,
             0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]}
         hazard_curve_2 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.97309, 0.96857, 0.93853, 0.90089, 0.83673, 0.74057, 0.61272,
             0.46467, 0.33694, 0.31536, 0.1834, 0.092412, 0.040202, 0.0149,
             0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]}
         hazard_curve_3 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
             0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
         hazard_curve_4 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.98885, 0.98505, 0.95972, 0.92494, 0.8603, 0.75574, 0.61009,
             0.44217, 0.30543, 0.28345, 0.1576, 0.080225, 0.038681, 0.017637,
             0.0072685, 0.0025474, 0.00068347, 0.00012596, 1.2853e-05, ]}
         hazard_curve_5 = {
             "site_lon": 2.0, "site_lat": 5.0,
-            "curve": [
+            "poes": [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
             0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
@@ -825,7 +825,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self.assertEqual(5.0, result["site_lat"])
 
         # values are correct
-        self.assertTrue(numpy.allclose(self.expected_curve, result['curve'],
+        self.assertTrue(numpy.allclose(self.expected_curve, result['poes'],
                                        atol=0.005))
 
     def _run(self, sites):
@@ -869,13 +869,13 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.job_id = self.job.job_id
 
         self.empty_mean_curve = {"site_lon": 2.0,
-                "site_lat": 5.0, "curve": []}
+                "site_lat": 5.0, "poes": []}
 
         # deleting server side cached data
         kvs.flush()
 
         mean_curve = {"site_lon": 2.0, "site_lat": 5.0,
-                "curve": [9.8728e-01, 9.8266e-01, 9.4957e-01,
+                "poes": [9.8728e-01, 9.8266e-01, 9.4957e-01,
                 9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01, 3.6143e-01,
                 2.4231e-01, 2.2452e-01, 1.2831e-01, 7.0352e-02, 3.6060e-02,
                 1.6579e-02, 6.4213e-03, 2.0244e-03, 4.8605e-04, 8.1752e-05,
@@ -918,7 +918,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.params[self.poes_levels] = "0.10"
 
         mean_curve = {"site_lon": 3.0, "site_lat": 3.0,
-                "curve":
+                "poes":
                 [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
@@ -969,14 +969,14 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.params[self.quantiles_levels] = "0.25 0.50 0.75"
 
         curve_1 = {"site_lon": 3.0, "site_lat": 3.0,
-                "curve":
+                "poes":
                 [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
                 7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
 
         curve_2 = {"site_lon": 3.5, "site_lat": 3.5,
-                "curve":
+                "poes":
                 [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,

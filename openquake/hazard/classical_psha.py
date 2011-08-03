@@ -95,7 +95,7 @@ def poes_at(job_id, site):
     raw_curves = kvs.mget_decoded(pattern)
 
     for raw_curve in raw_curves:
-        curves.append(raw_curve["curve"])
+        curves.append(raw_curve["poes"])
 
     return curves
 
@@ -154,7 +154,7 @@ def compute_mean_hazard_curves(job_id, sites):
         mean_poes = compute_mean_curve(poes)
 
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
-            "curve": mean_poes}
+            "poes": mean_poes}
 
         key = kvs.tokens.mean_hazard_curve_key(job_id, site)
         keys.append(key)
@@ -185,7 +185,7 @@ def compute_quantile_hazard_curves(job, sites):
 
             quantile_curve = {"site_lat": site.latitude,
                 "site_lon": site.longitude,
-                "curve": quantile_poes}
+                "poes": quantile_poes}
 
             key = kvs.tokens.quantile_hazard_curve_key(
                     job.id, site, quantile)
@@ -216,7 +216,7 @@ def _get_iml_from(curve, job, poe):
     """
 
     # reverse arrays
-    poes = numpy.array(curve["curve"])[::-1]
+    poes = numpy.array(curve["poes"])[::-1]
     imls = numpy.log(numpy.array(_extract_imls_from_config(job))[::-1])
 
     site = shapes.Site(curve["site_lon"], curve["site_lat"])
