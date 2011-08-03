@@ -88,7 +88,8 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
     if config['host'] in ["localhost", "127.0.0.1"]:
         psql_cmd = "psql --set ON_ERROR_STOP=1 -d %(db)s -U %(user)s" % config
     else:
-        psql_cmd = "psql --set ON_ERROR_STOP=1 -d %(db)s -U %(user)s -h %(host)s" % config
+        psql_cmd =\
+        "psql --set ON_ERROR_STOP=1 -d %(db)s -U %(user)s -h %(host)s" % config
 
     cmds = psql_cmd.split()
 
