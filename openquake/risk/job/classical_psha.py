@@ -20,7 +20,6 @@
 """ Mixin for Classical PSHA Risk Calculation """
 
 from celery.exceptions import TimeoutError
-from math import exp
 
 from openquake import kvs
 from openquake import logs
@@ -64,16 +63,6 @@ class ClassicalPSHABasedMixin:
                 return []
         return True
 
-    def _get_kvs_curve(self, site):
-        """Read hazard curve data from the KVS"""
-        curve_token = kvs.tokens.mean_hazard_curve_key(self.job_id, site)
-        decoded_curve = kvs.get_value_json_decoded(curve_token)
-
-        hazard_curve = Curve([(exp(float(el['x'])), el['y'])
-                        for el in decoded_curve['curve']])
-
-        return hazard_curve
-
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         session = get_db_session("reslt", "reader")
@@ -111,10 +100,7 @@ class ClassicalPSHABasedMixin:
                 vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         for point in block.grid(self.region):
-            if self.params.get("OPENQUAKE_JOB_ID"):
-                hazard_curve = self._get_db_curve(point.site)
-            else:
-                hazard_curve = self._get_kvs_curve(point.site)
+            hazard_curve = self._get_db_curve(point.site)
 
             asset_key = kvs.tokens.asset_key(self.id,
                             point.row, point.column)
