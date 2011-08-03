@@ -70,7 +70,7 @@ class ClassicalPSHABasedMixin:
         decoded_curve = kvs.get_value_json_decoded(curve_token)
 
         hazard_curve = Curve([(exp(float(el['x'])), el['y'])
-                        for el in decoded_curve['curve']])
+                        for el in decoded_curve['poes']])
 
         return hazard_curve
 
