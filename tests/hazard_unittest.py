@@ -605,7 +605,8 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         self.assertEqual(5.0, result["site_lat"])
 
         # values are correct
-        self.assertTrue(numpy.allclose(self.expected_mean_curve, result['poes']))
+        self.assertTrue(numpy.allclose(self.expected_mean_curve,
+                                       result['poes']))
 
     def _run(self, sites):
         classical_psha.compute_mean_hazard_curves(
