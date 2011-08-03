@@ -22,6 +22,7 @@ import hashlib
 import os
 import re
 import subprocess
+import sqlalchemy
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
@@ -77,6 +78,14 @@ def run_job(job_file, output_type):
 
         try:
             results = a_job.launch()
+        except sqlalchemy.exc.SQLAlchemyError:
+            session = get_db_session("reslt", "writer")
+            if session.is_active:
+                session.rollback()
+
+            a_job.set_status('failed')
+
+            raise
         except:
             a_job.set_status('failed')
 
