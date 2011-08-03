@@ -35,6 +35,15 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
 
     def setUp(self):
         SessionCache().__sessions__.clear()
+        # run with a clean environment
+        self.orig_env = os.environ.copy()
+        os.environ.pop("OQ_ENGINE_DB_NAME", None)
+        os.environ.pop("OQ_ENGINE_DB_HOST", None)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+        SessionCache().__sessions__.clear()
 
     def test_init_session_with_empty_user(self):
         """
@@ -153,12 +162,16 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
     def setUp(self):
         # Save the original _init_session() method.
+        self.orig_env = os.environ.copy()
         self.original_method = SessionCache()._init_session
         SessionCache().__sessions__.clear()
 
     def tearDown(self):
         # Restore the original _init_session() method.
         SessionCache()._init_session = self.original_method
+        SessionCache().__sessions__.clear()
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_get_with_no_session_for_user(self):
         """
@@ -183,16 +196,16 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We don't have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr1") is None)
+        self.assertTrue(sc.__sessions__.get("usr9") is None)
 
         # The actual method under test is called.
-        self.assertEqual(expected_session, sc.get("usr1", ""))
+        self.assertEqual(expected_session, sc.get("usr9", ""))
 
         # The method under test called the mock once and with the parameters
         # we passed.
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
-        self.assertEqual("usr1", user)
+        self.assertEqual("usr9", user)
         self.assertEqual("", passwd)
 
     def test_get_with_cached_session(self):
@@ -202,7 +215,7 @@ class SessionCacheGetTestCase(unittest.TestCase):
         """
         sc = SessionCache()
         expected_session = object()
-        sc.__sessions__["usr2"] = expected_session
+        sc.__sessions__["usr10"] = expected_session
 
         # Prepare mock.
         mock_method = mock.Mock()
@@ -211,10 +224,10 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We do have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr2") is expected_session)
+        self.assertTrue(sc.__sessions__.get("usr10") is expected_session)
 
         # The actual method under test is called.
-        self.assertTrue(sc.get("usr2", "") is expected_session)
+        self.assertTrue(sc.get("usr10", "") is expected_session)
 
         # The method under test did *not* call the mock.
         self.assertEqual(0, mock_method.call_count)
@@ -235,19 +248,19 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We do not have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr3") is None)
+        self.assertTrue(sc.__sessions__.get("usr11") is None)
 
         # The _init_session() mock will get called but fail to add a session to
         # the cache,
-        self.assertRaises(AssertionError, sc.get, "usr3", "")
+        self.assertRaises(AssertionError, sc.get, "usr11", "")
 
         # The method under test did call the mock..
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
-        self.assertEqual("usr3", user)
+        self.assertEqual("usr11", user)
         self.assertEqual("", passwd)
         # ..but no session was added to the cache.
-        self.assertTrue(sc.__sessions__.get("usr3") is None)
+        self.assertTrue(sc.__sessions__.get("usr11") is None)
 
 
 class GetDbSessionTestCase(unittest.TestCase):
@@ -273,6 +286,7 @@ class GetDbSessionTestCase(unittest.TestCase):
          ("oq_eqcat_writer", "openquake")))
 
     def setUp(self):
+        self.orig_env = os.environ.copy()
         # Save the original get() method.
         self.original_method = SessionCache().get
         # Prepare mock.
@@ -284,6 +298,9 @@ class GetDbSessionTestCase(unittest.TestCase):
     def tearDown(self):
         # Restore the original get() method.
         SessionCache().get = self.original_method
+        SessionCache().__sessions__.clear()
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_get_db_session_with_no_env(self):
         """
@@ -307,11 +324,11 @@ class GetDbSessionTestCase(unittest.TestCase):
         variables.
         """
         for (usr_var, (schema, role), (user, password)) in self.test_data:
-            os.environ[usr_var] = "usr1"
-            os.environ[usr_var + "_PWD"] = "pwd1"
+            os.environ[usr_var] = "usr12"
+            os.environ[usr_var + "_PWD"] = "pwd12"
 
             session = get_db_session(schema, role)
             self.assertTrue(session is self.expected_session)
             (user, passwd), _ = self.mock_method.call_args
-            self.assertEqual("usr1", user)
-            self.assertEqual("pwd1", passwd)
+            self.assertEqual("usr12", user)
+            self.assertEqual("pwd12", passwd)
