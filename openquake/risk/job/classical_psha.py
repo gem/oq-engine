@@ -20,7 +20,6 @@
 """ Mixin for Classical PSHA Risk Calculation """
 
 from celery.exceptions import TimeoutError
-from math import exp
 
 from openquake import kvs
 from openquake import logs
