@@ -27,7 +27,6 @@ The following tasks are defined in the hazard engine:
 
 import json
 
-from celery.decorators import task
 from celery.task.sets import subtask
 
 from openquake import job
@@ -35,6 +34,7 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
+from openquake.java import jtask as task
 from openquake.job import mixins
 
 
