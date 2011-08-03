@@ -135,5 +135,5 @@ class BulkInserterTestCase(unittest.TestCase):
         else:
             values = 'GeomFromText(%s, 4326), %s'
 
-        self.assertEquals('INSERT INTO uiapi.gmf_data (%s) VALUES (%s)' %
+        self.assertEquals('INSERT INTO hzrdr.gmf_data (%s) VALUES (%s)' %
                           (", ".join(fields), values), session.sql)
