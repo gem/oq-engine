@@ -796,6 +796,8 @@ ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
 -- Exposure model
 CREATE TABLE oqmif.exposure_model (
     id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
     description VARCHAR,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
@@ -960,6 +962,9 @@ ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
