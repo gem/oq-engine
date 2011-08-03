@@ -226,9 +226,13 @@ CONFIG_FILE = "config.gem"
 
 class JobTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.job = None
+
     def tearDown(self):
         try:
-            os.remove(self.job.super_config_path)
+            if self.job:
+                os.remove(self.job.super_config_path)
         except OSError:
             pass
 
