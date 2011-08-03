@@ -43,7 +43,7 @@ public class JsonSerializer {
     private static final String SITE_LAT = "site_lat";
     private static final String X = "x";
     private static final String Y = "y";
-    private static final String CURVE = "curve";
+    private static final String POES = "poes";
 
     /* End Hazard Curve to JSON stuff */
 
@@ -126,7 +126,7 @@ public class JsonSerializer {
                     gson.toJsonTree(siteMap, SITE_TYPE).getAsJsonObject();
             JsonElement curveElement =
                     ordinatesToJsonElement(hazCurves.get(site), gson);
-            hazardCurve.add(CURVE, curveElement);
+            hazardCurve.add(POES, curveElement);
             json.add(hazardCurve.toString());
         }
         return json;
