@@ -79,6 +79,8 @@ def run_job(job_file, output_type):
         try:
             results = a_job.launch()
         except sqlalchemy.exc.SQLAlchemyError:
+            # Try to cleanup the session status to have a chance to update the
+            # job record without further errors.
             session = get_db_session("reslt", "writer")
             if session.is_active:
                 session.rollback()
