@@ -374,7 +374,7 @@ class ClassicalMixin(BasePSHAMixin):
         quantiles = _collect_curve_keys_per_quantile(curve_keys)
 
         LOG.info("Serializing quantile curves for %s values" % len(quantiles))
-        for quantile_value, curve_keys_per_quantile in quantiles.items():
+        for curve_keys_per_quantile in quantiles.values():
             curve_serializer(curve_keys_per_quantile)
 
         # compute quantile hazard maps
