@@ -80,12 +80,8 @@ def poes_at(job_id, site):
     :param site: site where the curves are computed.
     :type site: :py:class:`shapes.Site` object
     :returns: the hazard curves.
-    :rtype: list of :py:class:`dict` with the following keys:
-        ***site_lat***: latitude of the site
-        ***site_lon***: longitude of the site
-        ***curve***: list of :py:class:`dict` with the following keys:
-            ***x***: the x value (Intensity Measure Level) of the curve
-            ***y***: the y value (Probability of Exceedance) of the curve
+    :rtype: list of :py:class:`list` of :py:class:`float`
+        containing the probability of exceedence for each realization
     """
 
     pattern = "%s*%s*%s" % (
