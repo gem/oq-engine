@@ -114,7 +114,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.databrowse',
     'django.contrib.gis',
-    'openquake.seismicsources',
 )
 
 LOSS_CURVES_OUTPUT_FILE = 'loss-curves-jobber.xml'

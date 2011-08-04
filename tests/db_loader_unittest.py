@@ -160,7 +160,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
     def test_parse_mfd_simple_fault(self):
 
         expected = {
-            'table': 'pshai.mfd_evd',
+            'table': 'hzrdi.mfd_evd',
             'data': {
                 'max_val': 6.9500000000000002,
                 'total_cumulative_rate': 1.8988435199999998e-05,
@@ -191,7 +191,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
     def test_parse_mfd_complex_fault(self):
         expected = {
-            'table': 'pshai.mfd_tgr',
+            'table': 'hzrdi.mfd_tgr',
             'data': {
                 'b_val': 0.80000000000000004,
                 'total_cumulative_rate': 4.933442096397671e-10,
@@ -214,7 +214,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
     def test_parse_simple_fault_src(self):
 
         expected = (
-            {'table': 'pshai.mfd_evd', 'data': {
+            {'table': 'hzrdi.mfd_evd', 'data': {
                 'max_val': 6.9500000000000002,
                 'total_cumulative_rate': 1.8988435199999998e-05,
                 'min_val': 6.5499999999999998,
@@ -225,7 +225,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                     0.00050806530000000003],
                 'total_moment_rate': 281889786038447.25,
                 'owner_id': None}},
-            {'table': 'pshai.simple_fault', 'data': {
+            {'table': 'hzrdi.simple_fault', 'data': {
                 'name': u'Mount Diablo Thrust',
                 'upper_depth': 8.0,
                 'mgf_evd_id': None,
@@ -238,7 +238,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                 'owner_id': None,
                 'dip': 38.0,
                 'description': None}},
-            {'table': 'pshai.source', 'data': {
+            {'table': 'hzrdi.source', 'data': {
                 'r_depth_distr_id': None,
                 'name': u'Mount Diablo Thrust',
                 'tectonic_region': 'active',
@@ -279,15 +279,15 @@ class CsvLoaderTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        csv_file = "ISC_sampledata1.csv"
+        csv_file = "ISC_snippet.csv"
         self.csv_path = helpers.get_data_path(csv_file)
         self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
         self.db_loader._read_model()
         self.csv_reader = self.db_loader.csv_reader
 
     def test_input_csv_is_of_the_right_len(self):
-        # without the header line is 8892
-        expected_len = 8892
+        # without the header line is 100
+        expected_len = 100
 
         self.assertEqual(len(list(self.csv_reader)), expected_len)
 
