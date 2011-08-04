@@ -26,6 +26,8 @@ import multiprocessing
 import numpy
 import random
 
+from itertools import izip
+
 from openquake.db.alchemy.db_utils import get_db_session
 
 from openquake import java
@@ -255,14 +257,15 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            results_per_realization = utils_tasks.distribute(
+            curve_keys = utils_tasks.distribute(
                 self.number_of_tasks(), the_task, ("site_list", sites),
                 dict(job_id=self.id, realization=realization),
                 flatten_results=True)
 
             if serializer:
-                serializer(results_per_realization)
-            results.extend(results_per_realization)
+                serializer(curve_keys)
+
+            results.extend(curve_keys)
 
         return results
 
@@ -312,13 +315,14 @@ class ClassicalMixin(BasePSHAMixin):
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
-        results = utils_tasks.distribute(
+        curve_keys = utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.id), flatten_results=True)
 
         if curve_serializer:
             LOG.info("Serializing mean hazard curves")
-            curve_serializer(results)
+
+            curve_serializer(curve_keys)
 
         if not self.param_set(classical_psha.POES_PARAM_NAME):
             return
@@ -362,16 +366,16 @@ class ClassicalMixin(BasePSHAMixin):
         # compute and serialize quantile hazard curves
         LOG.info("Computing quantile hazard curves")
 
-        results = utils_tasks.distribute(
+        curve_keys = utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.id), flatten_results=True)
 
         # collect hazard curve keys per quantile value
-        quantiles = _collect_curve_keys_per_quantile(results)
+        quantiles = _collect_curve_keys_per_quantile(curve_keys)
 
         LOG.info("Serializing quantile curves for %s values" % len(quantiles))
-        for curves in quantiles.values():
-            curve_serializer(curves)
+        for curve_keys_per_quantile in quantiles.values():
+            curve_serializer(curve_keys_per_quantile)
 
         # compute quantile hazard maps
         if (not self.param_set(classical_psha.POES_PARAM_NAME) or
@@ -389,6 +393,7 @@ class ClassicalMixin(BasePSHAMixin):
         for maps in quantiles.values():
             map_serializer(maps)
 
+    @java.jexception
     @preload
     def execute(self):
         """
@@ -501,23 +506,13 @@ class ClassicalMixin(BasePSHAMixin):
             site_obj = shapes.Site(float(hc['site_lon']),
                                    float(hc['site_lat']))
 
-            # use hazard curve ordinate values (PoE) from KVS
-            # NOTE(fab): At the moment, the IMLs are stored along with the
-            # PoEs in KVS. However, we are using the IML list from config.
-            # The IMLs from KVS are ignored. Note that IMLs from KVS are
-            # in logarithmic form, but the ones from config are not.
-            # The way of storing the HC data in KVS is not very
-            # efficient, we should store the abscissae and ordinates
-            # separately as lists and not make pairs of them
-            curve_poe = []
-            for curve_pair in hc['curve']:
-                curve_poe.append(float(curve_pair['y']))
-
+            # Use hazard curve ordinate values (PoE) from KVS and abscissae
+            # from the IML list in config.
             hc_attrib = {'investigationTimeSpan':
                             self.params['INVESTIGATION_TIME'],
                          'IMLValues': iml_list,
                          'IMT': self.params['INTENSITY_MEASURE_TYPE'],
-                         'PoEValues': curve_poe}
+                         'PoEValues': hc['poes']}
 
             hc_attrib.update(hc_attrib_update)
             hc_data.append((site_obj, hc_attrib))
@@ -626,15 +621,14 @@ class ClassicalMixin(BasePSHAMixin):
         return files
 
     @preload
-    def compute_hazard_curve(self, site_list, realization):
+    def compute_hazard_curve(self, sites, realization):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """
-        jsite_list = self.parameterize_sites(site_list)
         jpype = java.jvm()
         try:
             calc = java.jclass("HazardCalculator")
-            hazard_curves = calc.getHazardCurvesAsJson(
-                jsite_list,
+            curves = calc.getHazardCurvesAsJson(
+                self.parameterize_sites(sites),
                 self.generate_erf(),
                 self.generate_gmpe_map(),
                 self.get_iml_list(),
@@ -643,16 +637,16 @@ class ClassicalMixin(BasePSHAMixin):
             unwrap_validation_error(jpype, ex)
 
         # write the curves to the KVS and return a list of the keys
-        kvs_client = kvs.get_client()
+
         curve_keys = []
-        for i in xrange(0, len(hazard_curves)):
-            curve = hazard_curves[i]
-            site = site_list[i]
-            curve_key = kvs.tokens.hazard_curve_key(
+        for site, curve in izip(sites, curves):
+            curve_key = kvs.tokens.hazard_curve_poes_key(
                 self.id, realization, site)
 
-            kvs_client.set(curve_key, curve)
+            kvs.set(curve_key, curve)
+
             curve_keys.append(curve_key)
+
         return curve_keys
 
 
@@ -666,6 +660,7 @@ class EventBasedMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
+    @java.jexception
     @preload
     def execute(self):
         """Main hazard processing block.
@@ -772,7 +767,7 @@ def gmf_id(history_idx, realization_idx, rupture_idx):
 
 def _is_realization_hazard_curve_key(kvs_key):
     return (tokens.product_type_from_kvs_key(kvs_key) == \
-                tokens.HAZARD_CURVE_KEY_TOKEN)
+                tokens.HAZARD_CURVE_POES_KEY_TOKEN)
 
 
 def _is_mean_hazard_curve_key(kvs_key):
