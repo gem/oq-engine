@@ -49,6 +49,16 @@ def get_keys(regexp):
     return get_client().keys(regexp)
 
 
+def mget(keys):
+    return get_client().mget(keys)
+
+
+def mget_decoded(keys):
+    decoder = json.JSONDecoder()
+
+    return [decoder.decode(value) for value in get_client().mget(keys)]
+
+
 def get_pattern(regexp):
     """Get all the values whose keys satisfy the given regexp.
 
