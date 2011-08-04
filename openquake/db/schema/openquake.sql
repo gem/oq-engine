@@ -820,7 +820,7 @@ ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
 
 
 -- Vulnerability model
-CREATE TABLE riski.vunerability_model (
+CREATE TABLE riski.vulnerability_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
