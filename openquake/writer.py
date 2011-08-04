@@ -23,7 +23,7 @@ Base classes for the output methods of the various codecs.
 import logging
 from os.path import basename
 
-from db.alchemy.models import OqJob, Output
+from openquake.db.alchemy.models import OqJob, Output
 
 LOGGER = logging.getLogger('serializer')
 LOGGER.setLevel(logging.DEBUG)

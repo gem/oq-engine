@@ -20,7 +20,7 @@
 
 import unittest
 
-from db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.output.risk import *
 from openquake.shapes import Site, Curve

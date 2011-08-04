@@ -20,7 +20,7 @@
 
 import unittest
 
-from db.alchemy.models import OqUser, GMFData
+from openquake.db.alchemy.models import OqUser, GMFData
 from openquake.writer import BulkInserter
 
 
