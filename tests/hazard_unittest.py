@@ -103,7 +103,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def setUp(self):
         self.generated_files = []
-        self.kvs_client = kvs.get_client(binary=False)
+        self.kvs_client = kvs.get_client()
 
     def tearDown(self):
         for cfg in self.generated_files:
