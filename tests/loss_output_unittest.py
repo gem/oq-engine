@@ -181,8 +181,8 @@ class LossOutputTestCase(unittest.TestCase):
 
         loss_ratio_el_txt = loaded_xml.findtext(
             ".//%s" % xml.RISK_LOSS_RATIO_ABSCISSA_TAG)
-        loss_ratio_values = [float(x) \
-            for x in loss_ratio_el_txt.strip().split()]
+        loss_ratio_values = [
+            float(x) for x in loss_ratio_el_txt.strip().split()]
 
         self.assertEqual(len(loss_ratio_values),
             len(TEST_LOSS_RATIO_CURVE.abscissae),
