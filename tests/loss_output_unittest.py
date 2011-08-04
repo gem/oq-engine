@@ -160,7 +160,6 @@ class LossOutputTestCase(unittest.TestCase):
         for idx, val in enumerate(TEST_LOSS_CURVE.ordinates):
             self.assertAlmostEqual(val, float(poe_values[idx]), 6)
 
-
     # TODO(jmc): Test that the lat and lon are correct for each curve
     # Optionally, compare it to another XML file.
     def test_loss_ratio_xml_is_correct(self):
