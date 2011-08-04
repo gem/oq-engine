@@ -129,7 +129,7 @@ def jvm(max_mem=None):
                 '/usr/share/java')
     log4j_properties_path = os.path.abspath(
                                 os.path.join(os.path.dirname(__file__),
-                                "../log4j.properties"))
+                                "config/log4j.properties"))
     if not jpype.isJVMStarted():
         max_mem = get_jvm_max_mem(max_mem)
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
