@@ -20,12 +20,12 @@ import org.opensha.sha.util.TectonicRegionType;
 public class RuptureReaderTest
 {
 
-    private static final String POINT_RUPTURE_FILE = "docs/schema/examples/point-rupture.xml";
-    private static final String SIMPLE_FAULT_RUPTURE_FILE = "docs/schema/examples/simple-fault-rupture.xml";
-    private static final String COMPLEX_FAULT_RUPTURE_FILE = "docs/schema/examples/complex-fault-rupture.xml";
+    private static final String POINT_RUPTURE_FILE = "openquake/nrml/schema/examples/point-rupture.xml";
+    private static final String SIMPLE_FAULT_RUPTURE_FILE = "openquake/nrml/schema/examples/simple-fault-rupture.xml";
+    private static final String COMPLEX_FAULT_RUPTURE_FILE = "openquake/nrml/schema/examples/complex-fault-rupture.xml";
 
-    private static final String SIMPLE_FAULT_RUPTURE_FILE_NO_DEPTH = "docs/schema/examples/failures/simple-fault-rupture-no-depth.xml";
-    private static final String COMPLEX_FAULT_RUPTURE_FILE_NO_DEPTH = "docs/schema/examples/failures/complex-fault-rupture-no-depth.xml";
+    private static final String SIMPLE_FAULT_RUPTURE_FILE_NO_DEPTH = "openquake/nrml/schema/examples/failures/simple-fault-rupture-no-depth.xml";
+    private static final String COMPLEX_FAULT_RUPTURE_FILE_NO_DEPTH = "openquake/nrml/schema/examples/failures/complex-fault-rupture-no-depth.xml";
 
     private RuptureReader reader;
 
