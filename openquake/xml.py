@@ -127,7 +127,7 @@ class XMLMismatchError(Exception):
 def nrml_schema_file():
     """Returns the absolute path to the NRML schema file"""
     return os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'openquake', 'nrml',
+        os.path.abspath(os.path.dirname(__file__)), 'nrml',
         'schema', NRML_SCHEMA_FILE)
 
 

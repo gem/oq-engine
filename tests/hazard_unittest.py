@@ -69,8 +69,6 @@ with open(
     TEST_GMPE_MODEL = f.read()
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = \
-    os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 
 class LogicTreeValidationTestCase(unittest.TestCase):
