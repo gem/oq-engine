@@ -40,8 +40,9 @@ public class LogicTreeReaderTest {
 
     @Before
     public void setUp() {
-        System.setProperty("openquake.nrml.schema",
-                           new File("docs/schema/nrml.xsd").getAbsolutePath());
+        System.setProperty(
+            "openquake.nrml.schema",
+            new File("openquake/nrml/schema/nrml.xsd").getAbsolutePath());
     }
 
     /**
