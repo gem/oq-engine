@@ -50,10 +50,25 @@ def get_keys(regexp):
 
 
 def mget(keys):
+    """
+    Retrieve multiple keys from the KVS.
+
+    :param keys: keys to retrieve
+    :type keys: list
+    :returns: one value for each key in the list
+    """
     return get_client().mget(keys)
 
 
 def mget_decoded(keys):
+    """
+    Retrieve multiple JSON values from the KVS
+
+    :param keys: keys to retrieve (the corresponding value must be a
+        JSON string)
+    :type keys: list
+    :returns: one value for each key in the list
+    """
     decoder = json.JSONDecoder()
 
     return [decoder.decode(value) for value in get_client().mget(keys)]
