@@ -48,7 +48,7 @@ OUTPUT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../data/output'))
 
 SCHEMA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../../docs/schema'))
+    os.path.dirname(__file__), '../../openquake/nrml/schema'))
 
 SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
     SCHEMA_DIR, 'examples'))
@@ -81,9 +81,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    # Passing an OPENQUAKE_JOB_ID prevents the creation of a database record
-    # for the job
-    return Job.from_file(config_file_path, 'xml', {'OPENQUAKE_JOB_ID': '1'})
+    return Job.from_file(config_file_path, 'xml_without_db')
 
 
 class WordProducer(producer.FileProducer):

@@ -21,8 +21,9 @@
 import os
 import unittest
 
-from db.alchemy.db_utils import get_uiapi_writer_session
-from openquake.output.risk import LossCurveDBWriter, LossMapDBWriter
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.output.risk import (
+    LossCurveDBWriter, LossMapDBWriter, LossCurveDBReader, LossMapDBReader)
 from openquake.shapes import Site, Curve
 
 from db_tests import helpers
@@ -76,11 +77,8 @@ RISK_LOSS_CURVE_DATA = [
 ]
 
 
-class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
-    """
-    Unit tests for the LossCurveDBWriter class, which serializes
-    loss curves to the database.
-    """
+class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for loss curve db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -89,12 +87,28 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
         self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
+        self.reader = LossCurveDBReader(self.session)
 
+    def normalize(self, values):
+        result = []
+        for site, (curve, asset) in values:
+            result.append((site,
+                           (curve,
+                            {'assetID': asset['assetID']})))
+
+        return sorted(result, key=lambda v: v[1][1]['assetID'])
+
+
+class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
+    """
+    Unit tests for the LossCurveDBWriter class, which serializes
+    loss curves to the database.
+    """
     def test_serialize(self):
         """All the records are inserted correctly."""
         output = self.writer.output
@@ -135,17 +149,26 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
             inserted_data.append(data)
 
-        def normalize(values):
-            result = []
-            for site, (curve, asset) in values:
-                result.append((site,
-                               (curve,
-                                {'assetID': asset['assetID']})))
+        self.assertEquals(self.normalize(RISK_LOSS_CURVE_DATA),
+                          self.normalize(inserted_data))
 
-            return sorted(result, key=lambda v: v[1][1]['assetID'])
 
-        self.assertEquals(normalize(RISK_LOSS_CURVE_DATA),
-                          normalize(inserted_data))
+class LossCurveDBReaderTestCase(LossCurveDBBaseTestCase):
+    """
+    Unit tests for the LossCurveDBReader class, which deserializes
+    loss curves from the database.
+    """
+    def test_deserialize(self):
+        """
+        Loss curve is read back correctly
+        """
+        self.writer.serialize(RISK_LOSS_CURVE_DATA)
+
+        # Call the function under test.
+        data = self.reader.deserialize(self.writer.output.id)
+
+        self.assertEquals(self.normalize(RISK_LOSS_CURVE_DATA),
+                          self.normalize(data))
 
 
 SITE_A = Site(-117.0, 38.0)
@@ -195,11 +218,8 @@ SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA = [
     (SITE_B, [(SITE_B_NONDETERMINISTIC_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
 
-class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
-    """
-    Unit tests for the LossMapDBWriter class, which serializes
-    loss maps to the database.
-    """
+class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+    """Common code for loss map DB reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -208,12 +228,19 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_uiapi_writer_session()
+        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
         self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
+        self.reader = LossMapDBReader(self.session)
 
+
+class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
+    """
+    Unit tests for the LossMapDBWriter class, which serializes
+    loss maps to the database.
+    """
     def test_serialize_deterministic(self):
         """
         All the records for deterministic loss maps are inserted correctly.
@@ -326,3 +353,69 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
         self.assertEqual(SITE_B_NONDETERMINISTIC_LOSS_ONE['value'],
                          data_c.value)
+
+
+class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
+    """
+    Unit tests for the LossMapDBReader class, which deserializes
+    loss maps from the database.
+    """
+    def test_deserialize_deterministic(self):
+        """
+        Deterministic loss map is read back correctly
+        """
+        self.writer.serialize(SAMPLE_DETERMINISTIC_LOSS_MAP_DATA)
+
+        # Call the function under test.
+        data = self.reader.deserialize(self.writer.output.id)
+        got_metadata = data.pop(0)
+        data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
+
+        # compare metadata, ignoring fields that we know aren't saved
+        result_metadata = dict(DETERMINISTIC_LOSS_MAP_METADATA)
+        result_metadata.pop('nrmlID')
+        result_metadata.pop('riskResultID')
+
+        # before overwriting, check the value is not set
+        assert 'poe' not in result_metadata
+        result_metadata['poe'] = None
+
+        self.assertEquals(result_metadata, result_metadata)
+
+        # compare sites ad losses
+        self.assertEquals(
+            self.normalize(SAMPLE_DETERMINISTIC_LOSS_MAP_DATA[1:]),
+            self.normalize(data))
+
+    def test_deserialize_nondeterministic(self):
+        """
+        Deterministic loss map is read back correctly
+        """
+        self.writer.serialize(SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA)
+
+        # Call the function under test.
+        data = self.reader.deserialize(self.writer.output.id)
+        got_metadata = data.pop(0)
+        data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
+
+        # compare metadata, ignoring fields that we know aren't saved
+        result_metadata = dict(NONDETERMINISTIC_LOSS_MAP_METADATA)
+        result_metadata.pop('nrmlID')
+        result_metadata.pop('riskResultID')
+
+        self.assertEquals(result_metadata, result_metadata)
+
+        # compare sites ad losses
+        self.assertEquals(
+            self.normalize(SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA[1:]),
+            self.normalize(data))
+
+    def normalize(self, data):
+        data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
+        result = []
+
+        for site, losses in data:
+            result.append((site, sorted(losses,
+                                        key=lambda e: e[1]['assetID'])))
+
+        return result

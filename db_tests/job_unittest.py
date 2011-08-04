@@ -17,20 +17,22 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+import mock
 import os
+import sqlalchemy
 import unittest
 
-from openquake.job import Job
-from openquake.job import prepare_job
+from openquake.job import Job, prepare_job, run_job
 
-from db.alchemy.db_utils import get_uiapi_writer_session
-from db.alchemy.models import OqJob
+from openquake.db.alchemy.db_utils import get_db_session
+
+from openquake.db.alchemy.models import OqJob
 from db_tests import helpers
 from tests.utils import helpers as test_helpers
 
 
 def _toCoordList(polygon):
-    session = get_uiapi_writer_session()
+    session = get_db_session("reslt", "writer")
 
     pts = []
 
@@ -225,16 +227,20 @@ CONFIG_FILE = "config.gem"
 
 class JobTestCase(unittest.TestCase):
 
+    def setUp(self):
+        self.job = None
+
     def tearDown(self):
         try:
-            os.remove(self.job.super_config_path)
+            if self.job:
+                os.remove(self.job.super_config_path)
         except OSError:
             pass
 
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("uiapi", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
@@ -243,7 +249,141 @@ class JobTestCase(unittest.TestCase):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
                                  'xml')
 
-        session = get_uiapi_writer_session()
+        session = get_db_session("uiapi", "writer")
 
         session.query(OqJob)\
             .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+
+    def test_get_db_job(self):
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_db_session("reslt", "writer")
+
+        expected_job = session.query(OqJob)\
+            .filter(OqJob.id == self.job.get_db_job_id()).one()
+
+        self.assertEqual(expected_job, self.job.get_db_job(session))
+
+    def test_set_status(self):
+        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_db_session("reslt", "writer")
+
+        status = 'running'
+        self.job.set_status(status)
+
+        job = session.query(OqJob)\
+            .filter(OqJob.id == self.job.get_db_job_id()).one()
+
+        self.assertEqual(status, job.status)
+
+
+class RunJobTestCase(unittest.TestCase):
+    def setUp(self):
+        self.job = None
+        self.session = get_db_session("reslt", "writer")
+        self.job_from_file = Job.from_file
+
+    def tearDown(self):
+        self.job = None
+
+    def _job_status(self):
+        return self.job.get_db_job(self.session).status
+
+    def test_successful_job_lifecycle(self):
+        with mock.patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_succeed():
+                self.assertEquals('running', self._job_status())
+
+                return []
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_succeed)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            run_job(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('succeeded', self._job_status())
+
+    def test_failed_job_lifecycle(self):
+        with mock.patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_fail():
+                self.assertEquals('running', self._job_status())
+
+                raise Exception('OMG!')
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_fail)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            self.assertRaises(Exception, run_job,
+                              test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_failed_db_job_lifecycle(self):
+        with mock.patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_fail():
+                self.assertEquals('running', self._job_status())
+
+                session = get_db_session("uiapi", "writer")
+
+                session.query(OqJob).filter(OqJob.id == -1).one()
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_fail)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
+                              test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_invalid_job_lifecycle(self):
+        with mock.patch('openquake.job.Job.from_file') as from_file:
+
+            # replaces Job.is_valid with a mock
+            def patch_job_is_valid(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.is_valid = mock.Mock(
+                    return_value=(False, ["OMG!"]))
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_is_valid
+            run_job(test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+            self.assertEquals(1, self.job.is_valid.call_count)
+            self.assertEquals('failed', self._job_status())
