@@ -21,7 +21,7 @@
 import os
 import unittest
 
-from db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.risk import (
     LossCurveDBWriter, LossMapDBWriter, LossCurveDBReader, LossMapDBReader)
 from openquake.shapes import Site, Curve

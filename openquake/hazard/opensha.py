@@ -28,7 +28,7 @@ import random
 
 from itertools import izip
 
-from db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.db_utils import get_db_session
 
 from openquake import java
 from openquake import kvs

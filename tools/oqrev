@@ -317,7 +317,7 @@ if [ $skip_pep8 -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
 fi
 
 if [ $use_colordiff -ne 0 ]; then
-    git diff $other_branch...$branch_branch | colordiff | less -R
+    git diff -M $other_branch...$branch_branch | colordiff | less -R
 else
-    git diff $other_branch...$branch_branch --color=auto
+    git diff -M $other_branch...$branch_branch --color=auto
 fi
