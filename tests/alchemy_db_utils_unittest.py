@@ -27,7 +27,7 @@ import mock
 import os
 import unittest
 
-from db.alchemy.db_utils import SessionCache, get_db_session
+from openquake.db.alchemy.db_utils import SessionCache, get_db_session
 
 
 class SessionCacheInitSessionTestCase(unittest.TestCase):
