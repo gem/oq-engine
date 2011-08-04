@@ -844,7 +844,8 @@ CREATE TABLE riski.vulnerability_data (
     vf_ref VARCHAR NOT NULL,
     -- Please note: there must be one loss ratio and coefficient of variation
     -- per IML value defined in the referenced vulnerability model.
-    loss_ratios float[] NOT NULL,
+    loss_ratios float[] NOT NULL CONSTRAINT loss_ratio_values
+        CHECK (0.0 <= ALL(loss_ratios) AND 1.0 >= ALL(loss_ratios)),
     -- Coefficients of variation
     covs float[] NOT NULL,
     last_update timestamp without time zone
