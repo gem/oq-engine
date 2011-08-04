@@ -23,7 +23,7 @@ from openquake import xml
 from openquake import java
 from openquake.utils.db import loader as db_loader
 from tests.utils import helpers
-from db.alchemy import db_utils
+from openquake.db.alchemy import db_utils
 
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
