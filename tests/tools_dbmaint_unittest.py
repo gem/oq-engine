@@ -42,15 +42,12 @@ class RunCmdTestCase(unittest.TestCase):
     """Tests the behaviour of dbmaint.run_cmd()."""
 
     def setUp(self):
-        self.lang = ("LANG" in os.environ, os.environ.get("LANG"))
-
+        self.orig_env = os.environ.copy()
         os.environ["LANG"] = 'C'
 
     def tearDown(self):
-        if self.lang[0]:
-            os.environ["LANG"] = self.lang[1]
-        else:
-            del os.environ["LANG"]
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_run_cmd_with_success(self):
         """Invoke a command without errors."""
@@ -94,7 +91,8 @@ class PsqlTestCase(unittest.TestCase):
                   "db": "0penquark", "user": "postgres"}
         psql(config, script="xxx", runner=fake_runner)
         self.assertEqual(
-            ["psql", "-d", "0penquark", "-U", "postgres", "-f", "/tmp/xxx"],
+            ["psql", "--set", "ON_ERROR_STOP=1", "-d", "0penquark", "-U",
+             "postgres", "-f", "/tmp/xxx"],
             fake_runner.args)
 
     def test_psql_cmd_with_command(self):
@@ -109,8 +107,9 @@ class PsqlTestCase(unittest.TestCase):
         psql(config, cmd="SELECT * from admin.revision_info",
              runner=fake_runner)
         self.assertEqual(
-            ["psql", "-d", "openquake", "-U", "chuckn", "-c",
-             "SELECT * from admin.revision_info"], fake_runner.args)
+            ["psql", "--set", "ON_ERROR_STOP=1", "-d", "openquake", "-U",
+             "chuckn", "-c", "SELECT * from admin.revision_info"],
+            fake_runner.args)
 
     def test_psql_with_non_local_host(self):
         """
