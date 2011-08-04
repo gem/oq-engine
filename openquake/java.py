@@ -48,7 +48,7 @@ JAVA_CLASSES = {
     'JsonSerializer': "org.gem.JsonSerializer",
     "EventSetGen": "org.gem.calc.StochasticEventSetGenerator",
     "Random": "java.util.Random",
-    "GEM1ERF": "org.gem.engine.hazard.GEM1ERF",
+    "GEM1ERF": "org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF",
     "HazardCalculator": "org.gem.calc.HazardCalculator",
     "Properties": "java.util.Properties",
     "CalculatorConfigHelper": "org.gem.engine.CalculatorConfigHelper",
