@@ -186,7 +186,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 "assetValue": 178.47}
 
         # deleting keys in kvs
-        kvs.get_client(binary=False).flushall()
+        kvs.get_client().flushall()
 
         kvs.set_value_json_encoded(
                 kvs.tokens.vuln_key(self.job_id),
@@ -872,7 +872,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
     def _compute_risk_classical_psha_setup(self):
         SITE = shapes.Site(1.0, 1.0)
         # deletes all keys from kvs
-        kvs.get_client(binary=False).flushall()
+        kvs.get_client().flushall()
 
         # at the moment the hazard part doesn't do exp on the 'x'
         # so it's done on the risk part. To adapt the calculation
