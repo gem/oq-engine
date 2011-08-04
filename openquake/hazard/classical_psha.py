@@ -92,7 +92,7 @@ def poes_at(job_id, site):
         kvs.tokens.HAZARD_CURVE_POES_KEY_TOKEN, job_id, site.hash())
 
     curves = []
-    raw_curves = kvs.mget_decoded(pattern)
+    raw_curves = kvs.get_pattern_decoded(pattern)
 
     for raw_curve in raw_curves:
         curves.append(raw_curve["poes"])
@@ -270,7 +270,7 @@ def compute_quantile_hazard_maps(job):
         pattern = "%s*%s*%s" % (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
                 job.id, quantile)
 
-        quantile_curves = kvs.mget_decoded(pattern)
+        quantile_curves = kvs.get_pattern_decoded(pattern)
 
         LOG.debug("[QUANTILE_HAZARD_MAPS] Found %s pre computed " \
                 "quantile curves for quantile %s"
@@ -304,7 +304,7 @@ def compute_mean_hazard_maps(job):
 
     # get all the pre computed mean curves
     pattern = "%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, job.id)
-    mean_curves = kvs.mget_decoded(pattern)
+    mean_curves = kvs.get_pattern_decoded(pattern)
 
     LOG.debug("[MEAN_HAZARD_MAPS] Found %s pre computed mean curves"
             % len(mean_curves))
