@@ -286,8 +286,9 @@ def main(cargs):
     def strip_dashes(arg):
         return arg.split('-')[-1]
 
-    config = dict(db="openquake", user="postgres", path="db/schema/upgrades",
-                  host="localhost", dryrun=False)
+    config = dict(
+        db="openquake", user="postgres", path="openquake/db/schema/upgrades",
+        host="localhost", dryrun=False)
     longopts = ["%s" % k if isinstance(v, bool) else "%s=" % k
                 for k, v in config.iteritems()] + ["help"]
     s2l = dict(d="db", p="path", n="dryrun", U="user")
