@@ -20,7 +20,6 @@ import org.apache.commons.logging.LogFactory;
 import org.gem.JsonSerializer;
 import org.gem.ScalarIMRJsonAdapter;
 import org.gem.engine.CalculatorConfigHelper.ConfigItems;
-import org.gem.engine.hazard.GEM1ERF;
 import org.gem.engine.hazard.parsers.SourceModelReader;
 import org.gem.engine.hazard.redis.Cache;
 import org.gem.engine.logictree.LogicTree;
@@ -30,6 +29,7 @@ import org.gem.engine.logictree.LogicTreeRuleParam;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMPointSourceData;
@@ -78,7 +78,7 @@ public class LogicTreeProcessor {
     /**
      * Create LogicTreeProcessor by loading a job configuration from the
      * available KVS. The configuration file is serialized as JSON.
-     * 
+     *
      * @param cache
      *            - KVS connection
      * @param key
@@ -103,7 +103,7 @@ public class LogicTreeProcessor {
 
     /**
      * Two calculators are equal when have the same configuration.
-     * 
+     *
      * @param obj
      *            the calculator to compare on
      * @return true if the calculators are equal, false otherwise
@@ -128,7 +128,7 @@ public class LogicTreeProcessor {
      * Extracts from an EqkRupture object all data to be contained by a NRML
      * instance. This is then converted to json format, and saved in the KVS
      * with the passed key.
-     * 
+     *
      * @param rup
      * @param key
      * @param cache
@@ -209,7 +209,7 @@ public class LogicTreeProcessor {
 
     /**
      * Creates an ERF tree and writes it to the KVS, serialized as JSON.
-     * 
+     *
      * @param cache
      *            - KVS
      * @param key
@@ -248,7 +248,7 @@ public class LogicTreeProcessor {
     /**
      * Generate N source models (each represented by an array list of
      * GEMSourceData objects), by randomly sampling the source model logic tree.
-     * 
+     *
      * @param lt
      *            : source model logic tree
      * @param N
@@ -358,7 +358,7 @@ public class LogicTreeProcessor {
 
     /**
      * This method applies an "uncertainty" rule to an area source data object
-     * 
+     *
      * @param areaSrc
      *            : source data object subject to uncertainty
      * @param rule
@@ -420,7 +420,7 @@ public class LogicTreeProcessor {
 
     /**
      * This method applies an "uncertainty" rule to a point source data object
-     * 
+     *
      * @param pntSrc
      *            : source data object subject to uncertainty
      * @param rule
@@ -479,7 +479,7 @@ public class LogicTreeProcessor {
 
     /**
      * This method applies an "uncertainty" rule to a fault source data object
-     * 
+     *
      * @param faultSrc
      *            : source data object subject to uncertainty
      * @param rule
@@ -538,7 +538,7 @@ public class LogicTreeProcessor {
     /**
      * This method applies an "uncertainty" rule to a subduction source data
      * object
-     * 
+     *
      * @param subFaultSrc
      *            : source data object subject to uncertainty
      * @param rule
@@ -602,7 +602,7 @@ public class LogicTreeProcessor {
     } // applyRuleToSubductionFaultSource()
 
     /**
-     * 
+     *
      * @param mfdGR
      *            : original magnitude frequency distribution
      * @param deltaMmax
@@ -714,7 +714,7 @@ public class LogicTreeProcessor {
 
     /**
      * Set the GEM1ERF params given the parameters defined in
-     * 
+     *
      * @param erf
      *            : erf for which parameters have to be set
      * @param calcConfig

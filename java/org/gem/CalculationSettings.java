@@ -3,7 +3,6 @@ package org.gem;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-import org.gem.engine.hazard.GEM1ERF;
 import org.gem.params.CpuParams;
 import org.gem.params.DistanceParams;
 import org.gem.params.IMLListParams;
@@ -25,6 +24,7 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 
 public class CalculationSettings {
 
