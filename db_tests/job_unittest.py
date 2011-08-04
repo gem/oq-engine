@@ -23,9 +23,9 @@ import mock
 
 from openquake.job import Job, prepare_job, run_job
 
-from db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.db_utils import get_db_session
 
-from db.alchemy.models import OqJob
+from openquake.db.alchemy.models import OqJob
 from db_tests import helpers
 from tests.utils import helpers as test_helpers
 

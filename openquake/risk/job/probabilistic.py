@@ -38,8 +38,8 @@ from openquake.parser import vulnerability
 from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
-from db.alchemy.db_utils import get_db_session
-from db.alchemy import models
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy import models
 from sqlalchemy import func as sqlfunc
 
 LOGGER = logs.LOG
