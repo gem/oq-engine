@@ -27,8 +27,8 @@ import os
 import shutil
 import tempfile
 
-from db.alchemy.db_utils import get_db_session
-from db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
 from tests.helpers import TestMixin
 
 
