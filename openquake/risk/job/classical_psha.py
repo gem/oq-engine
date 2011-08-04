@@ -24,8 +24,8 @@ from celery.exceptions import TimeoutError
 from openquake import kvs
 from openquake import logs
 
-from db.alchemy.db_utils import get_db_session
-from db.alchemy import models
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy import models
 from sqlalchemy import func as sqlfunc
 
 from openquake.parser import vulnerability

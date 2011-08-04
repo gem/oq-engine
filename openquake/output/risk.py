@@ -28,9 +28,9 @@ from collections import defaultdict
 
 from lxml import etree
 
-from db.alchemy.db_utils import get_db_session
-from db.alchemy.models import LossCurve, LossCurveData
-from db.alchemy.models import LossMap, LossMapData
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import LossCurve, LossCurveData
+from openquake.db.alchemy.models import LossMap, LossMapData
 
 from openquake import logs
 from openquake import shapes
