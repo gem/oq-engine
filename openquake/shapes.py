@@ -39,9 +39,6 @@ from openquake.utils import round_float
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_integer('distance_precision', 12,
-    "Points within this geohash precision will be considered the same point")
-
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
 
@@ -330,14 +327,21 @@ class Site(object):
         return self.point.y
 
     def __eq__(self, other):
-        return self.hash() == other.hash()
+        """
+        Compare lat and lon values to determine equality.
+
+        :param other: another Site
+        :type other: :py:class:`openquake.shapes.Site`
+        """
+        return self.longitude == other.longitude \
+            and self.latitude == other.latitude
 
     def __ne__(self, other):
         return not self == other
 
     def equals(self, other):
         """Verbose wrapper around =="""
-        return self.point.equals(other)
+        return self == other
 
     def hash(self):
         """Ugly geohashing function, get rid of this!
@@ -345,16 +349,7 @@ class Site(object):
         return self._geohash()
 
     def __hash__(self):
-        if not self:
-            return 0  # empty
-        geohash_val = self._geohash()
-        value = ord(geohash_val[0]) << 7
-        for char in geohash_val:
-            value = c_mul(1000003, value) ^ ord(char)
-        value = value ^ len(geohash_val)
-        if value == -1:
-            value = -2
-        return value
+        return hash((self.longitude, self.latitude))
 
     def to_java(self):
         """Converts to a Java Site object"""
@@ -366,8 +361,7 @@ class Site(object):
 
     def _geohash(self):
         """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x,
-            precision=FLAGS.distance_precision)
+        return geohash.encode(self.point.y, self.point.x, precision=12)
 
     def __cmp__(self, other):
         return self.hash() == other.hash()

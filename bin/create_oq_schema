@@ -14,6 +14,7 @@ The command line arguments are as follows:
     --db-user=user      Run all commands as this database user [postgres].
     --no-tab-spaces     Don't check/create table spaces and their paths
     --schema-path=path  Absolute path to directory with the schema files.
+    --tab-spaces-only   Check/create table spaces and their paths and exit
     --yes               Don't pause for user input, assume yes on all questions
 HSD
 exit 0
@@ -23,18 +24,22 @@ if [ $# -eq 0 ]; then
     help
 fi
 
+# Openquake version
+oq_version="0.4.2"
+
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
 
 # Where do the table spaces live?
 tspace_path='/var/lib/postgresql/8.4/main/ts'
 # What table spaces should be created?
-tspace_list="admin pshai eqcat uiapi"
+tspace_list="admin eqcat hzrdi hzrdr oqmif riski riskr uiapi"
 
 schema_path=""
 db_name=""
 user_interaction="on"
 check_table_spaces="on"
+table_spaces_only="off"
 
 db_admin_user="postgres"
 
@@ -49,8 +54,25 @@ fi
 
 # What is the name of the db group that all OpenQuake db users belong to?
 db_group_name="openquake"
-# What OpenQuake db users should be created?
-db_roles="oq_admin oq_pshai_etl oq_pshai_reader oq_pshai_writer oq_eqcat_etl oq_eqcat_reader oq_eqcat_writer opengeo_reader opengeo_writer oq_uiapi_reader oq_uiapi_writer"
+
+# What OpenQuake db users should be created? The construct below is the bash
+# way to assign a heredoc value to a variable BTW.
+read -r -d '' db_roles <<'EOF'
+opengeo_reader
+opengeo_writer
+oq_admin
+oq_eqcat_reader
+oq_eqcat_writer
+oq_ged4gem
+oq_hzrdi_reader
+oq_hzrdi_writer
+oq_reslt_reader
+oq_reslt_writer
+oq_riski_reader
+oq_riski_writer
+oq_uiapi_reader
+oq_uiapi_writer
+EOF
 
 for i in $*
 do
@@ -72,6 +94,9 @@ do
     --no-tab-spaces)
         check_table_spaces="off"
         ;;
+    --tab-spaces-only)
+        table_spaces_only="on"
+        ;;
     -y|--yes)
         user_interaction="off"
         ;;
@@ -86,33 +111,39 @@ do
 done
 
 schema_file="$schema_path/openquake.sql"
-if [ ! -r $schema_file ]; then
-    echo "!! Could not find/read schema file: $schema_file"
-    exit 3
-fi
 
 if [ -z "$db_name" ]; then
     echo "!! Please specify a database name."
-    exit 4
+    exit 3
 fi
 
+if [ "$table_spaces_only" == "off" ]; then
+    # None of this is relevant if we only want to check table spaces.
+    if [ ! -r $schema_file ]; then
+        echo "!! Could not find/read schema file: $schema_file"
+        exit 4
+    fi
 
-if [ "$user_interaction" = "on" ]; then
-    # Last chance to abort.
-    echo '!! This will destroy *ALL* data in the OpenQuake database !!'
-    echo 'Press <enter> to continue'
-    read
-fi
+    if [ "$user_interaction" = "on" ]; then
+        # Last chance to abort.
+        echo '!! This will destroy *ALL* data in the OpenQuake database !!'
+        echo 'Press <enter> to continue'
+        read
+    fi
 
-# Drop database and table spaces..
-echo ".. Dropping database $db_name .."
-psql -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name"
-if [ "$check_table_spaces" == "on" ]; then
-    for tspace in $tspace_list; do
-        full_ts_name="${tspace}_ts"
-        echo ".. Dropping table space $full_ts_name .."
-        psql -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name"
-    done
+    # Drop database
+    echo ".. Dropping database $db_name .."
+    psql -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name"
+    # Drop table spaces..
+    if [ "$check_table_spaces" == "on" ]; then
+        for tspace in $tspace_list; do
+            full_ts_name="${tspace}_ts"
+            echo ".. Dropping table space $full_ts_name .."
+            psql -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name"
+        done
+    fi
+else
+    check_table_spaces="on"
 fi
 
 echo -n ".. Current table spaces: "
@@ -140,8 +171,16 @@ if [ "$check_table_spaces" == "on" ]; then
         ts_found=`psql -c '\db' -d postgres -U $db_admin_user | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
             psql -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
+            if [ "$table_spaces_only" == "on" ]; then
+                psql -d $db_name -U $db_admin_user -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
+                psql -d $db_name -U $db_admin_user -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
+            fi
         fi
     done
+fi
+
+if [ "$table_spaces_only" == "on" ]; then
+    exit 0
 fi
 
 # Starting from here this script is executing many batches

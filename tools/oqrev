@@ -309,14 +309,15 @@ fi
 if [ $skip_pep8 -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
     echo "Running pep8 on $branch_name.."
     echo ""
-    git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | xargs pep8 --repeat
+    # the SQL in the .py files in db/schema/upgrades confuses pep8
+    git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | grep -v db/schema/upgrades | xargs pep8 --repeat
     echo ""
     echo "Press <enter> to continue"
     read
 fi
 
 if [ $use_colordiff -ne 0 ]; then
-    git diff $other_branch...$branch_branch | colordiff | less -R
+    git diff -M $other_branch...$branch_branch | colordiff | less -R
 else
-    git diff $other_branch...$branch_branch --color=auto
+    git diff -M $other_branch...$branch_branch --color=auto
 fi
