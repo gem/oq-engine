@@ -199,6 +199,7 @@ def run_scripts(artefact, rev_info, scripts, config):
     :param list scripts: a sorted list of SQL script paths (relative to the
         path in `config`)
     :param dict config: the configuration to use: database, host, user, path.
+    :returns: True for success, False for failure
     """
     max_step = 0
     max_revision = '0.0.0'
@@ -226,6 +227,8 @@ def run_scripts(artefact, rev_info, scripts, config):
         cmd %= (max_step, max_revision, artefact, rev_info['revision'])
         code, out, err = psql(config, cmd=cmd)
 
+    return max_step != -1
+
 
 def script_failed((code, out, err), script, config):
     """Log SQL script output and return `True` in case of errors."""
@@ -246,6 +249,7 @@ def perform_upgrade(config):
     """Perform the upgrades for all artefacts in the database.
 
     :param dict config: the configuration to use: database, host, user, path.
+    :returns: True for success, False for failure
     """
     # Get the revision information from the database.
     cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
@@ -274,7 +278,7 @@ def perform_upgrade(config):
         scripts = scripts_to_run(artefact, rev_info, config)
         if scripts:
             logging.debug("%s: %s" % (artefact, scripts))
-            run_scripts(artefact, rev_info, scripts, config)
+            return run_scripts(artefact, rev_info, scripts, config)
 
 
 def main(cargs):
@@ -303,7 +307,9 @@ def main(cargs):
         if opt not in config:
             opt = s2l[opt]
         config[opt] = arg if arg else not config[opt]
-    perform_upgrade(config)
+
+    success = perform_upgrade(config)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == '__main__':
