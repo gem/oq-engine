@@ -17,9 +17,10 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-import os
-import unittest
 import mock
+import os
+import sqlalchemy
+import unittest
 
 from openquake.job import Job, prepare_job, run_job
 
@@ -335,6 +336,34 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
             self.assertRaises(Exception, run_job,
+                              test_helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_failed_db_job_lifecycle(self):
+        with mock.patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_fail():
+                self.assertEquals('running', self._job_status())
+
+                session = get_db_session("uiapi", "writer")
+
+                session.query(OqJob).filter(OqJob.id == -1).one()
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_fail)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
                               test_helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
