@@ -112,7 +112,9 @@ def compute_mean_curves(job_id, sites):
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    return classical_psha.compute_mean_hazard_curves(job_id, sites)
+    engine = job.Job.from_kvs(job_id)
+
+    return classical_psha.compute_mean_hazard_curves(engine, sites)
 
 
 @task

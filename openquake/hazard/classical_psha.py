@@ -71,7 +71,7 @@ def _acceptable(value):
         return False
 
 
-def poes_at(job_id, site):
+def poes_at(job_id, site, realizations):
     """Return all the json deserialized hazard curves for
     a single site (different realizations).
 
@@ -79,19 +79,16 @@ def poes_at(job_id, site):
     :type job_id: integer
     :param site: site where the curves are computed.
     :type site: :py:class:`shapes.Site` object
+    :param realizations: number of realizations.
+    :type realizations: integer
     :returns: the hazard curves.
     :rtype: list of :py:class:`list` of :py:class:`float`
         containing the probability of exceedence for each realization
     """
-
-    pattern = "%s*%s*%s" % (
-        kvs.tokens.HAZARD_CURVE_POES_KEY_TOKEN, job_id, site.hash())
-
-    curves = []
-    raw_curves = kvs.get_pattern_decoded(pattern)
-
-    for raw_curve in raw_curves:
-        curves.append(raw_curve["poes"])
+    keys = [kvs.tokens.hazard_curve_poes_key(job_id, realization, site)
+                for realization in xrange(realizations)]
+    # get the probablity of exceedence for each curve in the site
+    curves = [curve["poes"] for curve in kvs.mget_decoded(keys)]
 
     return curves
 
@@ -107,20 +104,21 @@ def _extract_values_from_config(job, param_name):
     return values
 
 
-def compute_mean_hazard_curves(job_id, sites):
+def compute_mean_hazard_curves(job, sites):
     """Compute a mean hazard curve for each site in the list
     using as input all the pre-computed curves for different realizations."""
+    realizations = int(job.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
 
     keys = []
     for site in sites:
-        poes = poes_at(job_id, site)
+        poes = poes_at(job.id, site, realizations)
 
         mean_poes = compute_mean_curve(poes)
 
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
             "poes": mean_poes}
 
-        key = kvs.tokens.mean_hazard_curve_key(job_id, site)
+        key = kvs.tokens.mean_hazard_curve_key(job.id, site)
         keys.append(key)
 
         kvs.set_value_json_encoded(key, mean_curve)
@@ -138,12 +136,13 @@ def compute_quantile_hazard_curves(job, sites):
 
     keys = []
     quantiles = _extract_values_from_config(job, QUANTILE_PARAM_NAME)
+    realizations = int(job.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
 
     LOG.debug("[QUANTILE_HAZARD_CURVES] List of quantiles is %s" % quantiles)
 
     for site in sites:
         for quantile in quantiles:
-            poes = poes_at(job.id, site)
+            poes = poes_at(job.id, site, realizations)
 
             quantile_poes = compute_quantile_curve(poes, quantile)
 

@@ -612,7 +612,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
     def _run(self, sites):
         classical_psha.compute_mean_hazard_curves(
-                self.job.id, sites)
+                self.job, sites)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
         kvs.set_value_json_encoded(
