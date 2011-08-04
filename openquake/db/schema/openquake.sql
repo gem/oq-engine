@@ -819,6 +819,22 @@ SELECT AddGeometryColumn('oqmif', 'exposure_data', 'site', 4326, 'POINT', 2);
 ALTER TABLE oqmif.exposure_data ALTER COLUMN site SET NOT NULL;
 
 
+-- Vulnerability model
+CREATE TABLE riski.vunerability_model (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    name VARCHAR NOT NULL,
+    description VARCHAR,
+    imt VARCHAR NOT NULL CONSTRAINT imt_value
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+    imls float[] NOT NULL,
+    -- e.g. "buildings", "bridges" etc.
+    category VARCHAR NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE riski_ts;
+
+
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
@@ -959,6 +975,10 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
+riski_vulnerability_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
+admin.oq_user(id) ON DELETE RESTRICT;
+
 ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
@@ -1025,3 +1045,5 @@ CREATE TRIGGER hzrdi_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON h
 CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
