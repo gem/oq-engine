@@ -141,9 +141,9 @@ def compute_quantile_hazard_curves(job, sites):
     LOG.debug("[QUANTILE_HAZARD_CURVES] List of quantiles is %s" % quantiles)
 
     for site in sites:
-        for quantile in quantiles:
-            poes = poes_at(job.id, site, realizations)
+        poes = poes_at(job.id, site, realizations)
 
+        for quantile in quantiles:
             quantile_poes = compute_quantile_curve(poes, quantile)
 
             quantile_curve = {"site_lat": site.latitude,
