@@ -22,6 +22,7 @@ import hashlib
 import os
 import re
 import subprocess
+import sqlalchemy
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
@@ -33,11 +34,10 @@ from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
-from openquake.parser import exposure
 from openquake.kvs.tokens import alloc_job_key
 
-from db.alchemy.models import OqJob, OqUser, OqParams
-from db.alchemy.db_utils import get_uiapi_writer_session
+from openquake.db.alchemy.models import OqJob, OqUser, OqParams
+from openquake.db.alchemy.db_utils import get_db_session
 import geoalchemy as ga
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -64,6 +64,8 @@ ENUM_MAP = {
     '2 Sided': 'twosided',
 }
 
+REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
+
 
 def run_job(job_file, output_type):
     """Given a job_file, run the job."""
@@ -72,11 +74,32 @@ def run_job(job_file, output_type):
     is_job_valid = a_job.is_valid()
 
     if is_job_valid[0]:
-        results = a_job.launch()
+        a_job.set_status('running')
 
-        for filepath in results:
-            print filepath
+        try:
+            results = a_job.launch()
+        except sqlalchemy.exc.SQLAlchemyError:
+            # Try to cleanup the session status to have a chance to update the
+            # job record without further errors.
+            session = get_db_session("reslt", "writer")
+            if session.is_active:
+                session.rollback()
+
+            a_job.set_status('failed')
+
+            raise
+        except:
+            a_job.set_status('failed')
+
+            raise
+        else:
+            a_job.set_status('succeeded')
+
+            for filepath in results:
+                print filepath
     else:
+        a_job.set_status('failed')
+
         LOG.critical("The job configuration is inconsistent:")
 
         for error_message in is_job_valid[1]:
@@ -128,7 +151,7 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_uiapi_writer_session()
+    session = get_db_session("reslt", "writer")
 
     # TODO specify the owner as a command line parameter
     owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
@@ -212,7 +235,7 @@ class Job(object):
         return job
 
     @staticmethod
-    def from_file(config_file, output_type, params=None):
+    def from_file(config_file, output_type):
         """
         Create a job from external configuration files.
 
@@ -224,13 +247,21 @@ class Job(object):
             the ones read from the config file
         :type params: :py:class:`dict`
         """
+
+        # output_type can be set, in addition to 'db' and 'xml', also to
+        # 'xml_without_db', which has the effect of serializing only to xml
+        # without requiring a database at all.
+        # This allows to run tests without requiring a database.
+        # This is not documented in the public interface because it is
+        # essentially a detail of our current tests and ci infrastructure.
+        assert output_type in ('db', 'xml', 'xml_without_db')
+
         config_file = os.path.abspath(config_file)
         LOG.debug("Loading Job from %s" % (config_file))
 
         base_path = os.path.abspath(os.path.dirname(config_file))
 
-        if params is None:
-            params = {}
+        params = {}
 
         sections = []
         for each_config_file in Job.default_configs() + [config_file]:
@@ -239,13 +270,18 @@ class Job(object):
             params.update(new_params)
         params['BASE_PATH'] = base_path
 
-        if 'OPENQUAKE_JOB_ID' not in params:
-            params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
-
-        if output_type == 'db':
-            params['SERIALIZE_RESULTS_TO_DB'] = 'True'
+        if output_type == 'xml_without_db':
+            params['SERIALIZE_RESULTS_TO'] = 'xml'
         else:
-            params['SERIALIZE_RESULTS_TO_DB'] = 'False'
+            if 'OPENQUAKE_JOB_ID' not in params:
+                # create the database record for this job
+                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+
+            if output_type == 'db':
+                params['SERIALIZE_RESULTS_TO'] = 'db'
+            else:
+                params['SERIALIZE_RESULTS_TO'] = 'db,xml'
+
         job = Job(params, sections=sections, base_path=base_path)
         job.config_file = config_file  # pylint: disable=W0201
         return job
@@ -289,6 +325,35 @@ class Job(object):
     def key(self):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
+
+    def get_db_job_id(self):
+        """
+        Get the id of the database record belonging to this job.
+        """
+        return int(self['OPENQUAKE_JOB_ID'])
+
+    def get_db_job(self, session):
+        """
+        Get the database record belonging to this job.
+
+        :param session: the SQLAlchemy database session
+        """
+        return session.query(OqJob)\
+               .filter(OqJob.id == self.get_db_job_id()).one()
+
+    def set_status(self, status):
+        """
+        Set the status of the database record belonging to this job.
+
+        :param status: one of 'pending', 'running', 'succeeded', 'failed'
+        :type status: string
+        """
+
+        session = get_db_session("reslt", "writer")
+        db_job = self.get_db_job(session)
+        db_job.status = status
+        session.add(db_job)
+        session.commit()
 
     @property
     def region(self):

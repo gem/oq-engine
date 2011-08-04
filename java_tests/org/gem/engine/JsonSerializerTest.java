@@ -49,16 +49,16 @@ public class JsonSerializerTest {
 
     private ArrayList<GEMSourceData> sourceList;
     private static final String TEST_CURVE_JSON =
-            "[{\"y\":\"0.0\",\"x\":\"-5.2983174\"},{\"y\":\"1.0\",\"x\":\"0.756122\"}]";
+            "[0.0,1.0]";
     private static final String TEST_HAZARD_CURVE_JSON_1 =
             String
                     .format(
-                            "{\"site_lon\":\"-118.3\",\"site_lat\":\"34.12\",\"curve\":%s}",
+                            "{\"site_lon\":\"-118.3\",\"site_lat\":\"34.12\",\"poes\":%s}",
                             TEST_CURVE_JSON);
     private static final String TEST_HAZARD_CURVE_JSON_2 =
             String
                     .format(
-                            "{\"site_lon\":\"-118.16\",\"site_lat\":\"33.88\",\"curve\":%s}",
+                            "{\"site_lon\":\"-118.16\",\"site_lat\":\"33.88\",\"poes\":%s}",
                             TEST_CURVE_JSON);
 
     @Before
@@ -102,7 +102,7 @@ public class JsonSerializerTest {
     /**
      * Returns false of the two lists don't match (taking into account order).
      * Returns false if the test loop is not entered.
-     * 
+     *
      * @param expected
      * @param actual
      * @return
@@ -117,10 +117,10 @@ public class JsonSerializerTest {
     }
 
     @Test
-    public void testCurveToJsonElement() {
+    public void testOrdinatesToJsonElement() {
         DiscretizedFuncAPI curve = new TestCurve();
         Gson gson = new Gson();
-        JsonElement json = JsonSerializer.curveToJsonElement(curve, gson);
+        JsonElement json = JsonSerializer.ordinatesToJsonElement(curve, gson);
         assertEquals(TEST_CURVE_JSON, json.toString());
     }
 
@@ -609,9 +609,9 @@ public class JsonSerializerTest {
     /**
      * Test implementation of Discretized FuncAPI. This is a partial
      * implementation including only what we need for tests.
-     * 
+     *
      * @author larsbutler
-     * 
+     *
      */
     static class TestCurve extends ArbitrarilyDiscretizedFunc {
 

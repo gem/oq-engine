@@ -96,8 +96,7 @@ class JobTestCase(unittest.TestCase):
         self.assertFalse(LOG.warning.called)
         Job.default_configs()
         self.assertTrue(LOG.warning.called)
-        good_defaults = Job._Job__defaults
-        Job.__defaults = good_defaults
+        Job._Job__defaults = good_defaults
 
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
