@@ -26,7 +26,7 @@ import multiprocessing
 import numpy
 import random
 
-from db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.db_utils import get_db_session
 
 from openquake import java
 from openquake import kvs

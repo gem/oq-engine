@@ -44,7 +44,7 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 import logging
 from lxml import etree
 
-from db.alchemy.models import HazardMap, HazardMapData, HazardCurveData, \
+from openquake.db.alchemy.models import HazardMap, HazardMapData, HazardCurveData, \
     HazardCurveNodeData, GMFData, Output, OqParams, OqJob
 
 from openquake import job
