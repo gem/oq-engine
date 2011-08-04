@@ -49,7 +49,7 @@ def get_keys(regexp):
     return get_client().keys(regexp)
 
 
-def mget(regexp):
+def get_pattern(regexp):
     """Get all the values whose keys satisfy the given regexp.
 
     Return an empty list if there are no keys satisfying the given regxep.
@@ -65,14 +65,14 @@ def mget(regexp):
     return values
 
 
-def mget_decoded(regexp):
+def get_pattern_decoded(regexp):
     """Get and decode (from json format) all the values whose keys
     satisfy the given regexp."""
 
     decoded_values = []
     decoder = json.JSONDecoder()
 
-    for value in mget(regexp):
+    for value in get_pattern(regexp):
         decoded_values.append(decoder.decode(value))
 
     return decoded_values
