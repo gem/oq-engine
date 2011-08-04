@@ -24,10 +24,10 @@ public class LogicTreeReaderTest {
      * Logic Tree Source Model test file.
      */
     public static final String LT_SRC_MODEL_TEST_FILE =
-            "docs/schema/examples/logic-tree-source-model.xml";
+            "openquake/nrml/schema/examples/logic-tree-source-model.xml";
 
     public static final String LT_GMPE_TEST_FILE =
-            "docs/schema/examples/logic-tree-gmpe.xml";
+            "openquake/nrml/schema/examples/logic-tree-gmpe.xml";
 
     public static final String LT_INVALID_SRC_MODEL_TEST_FILE =
             "tests/data/invalid/source_model_logic_tree.xml";
@@ -36,7 +36,7 @@ public class LogicTreeReaderTest {
             "tests/data/invalid/gmpe_logic_tree.xml";
 
     public static final String LT_MISMATCHED_TEST_FILE =
-            "docs/schema/examples/source-model.xml";
+            "openquake/nrml/schema/examples/source-model.xml";
 
     @Before
     public void setUp() {
