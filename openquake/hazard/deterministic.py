@@ -48,7 +48,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             "Random")(int(self.params["GMF_RANDOM_SEED"]))
 
         encoder = json.JSONEncoder()
-        kvs_client = kvs.get_client(binary=False)
+        kvs_client = kvs.get_client()
 
         grid = self.region.grid
 

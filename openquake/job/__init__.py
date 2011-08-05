@@ -439,7 +439,7 @@ class Job(object):
             the file in production or a random job in dev.
         """
 
-        kvs_client = kvs.get_client(binary=False)
+        kvs_client = kvs.get_client()
         config = RawConfigParser()
 
         section = 'openquake'
@@ -457,7 +457,7 @@ class Job(object):
     def _slurp_files(self):
         """Read referenced files and write them into kvs, keyed on their
         sha1s."""
-        kvs_client = kvs.get_client(binary=False)
+        kvs_client = kvs.get_client()
         if self.base_path is None:
             LOG.debug("Can't slurp files without a base path, homie...")
             return
