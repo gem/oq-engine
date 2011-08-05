@@ -41,15 +41,40 @@ SITES_KEY_TOKEN = "sites"
 
 def flush():
     """Flush (delete) all the values stored in the underlying kvs system."""
-    get_client(binary=False).flushall()
+    get_client().flushall()
 
 
 def get_keys(regexp):
     """Get all KVS keys that match a given regexp pattern."""
-    return get_client(binary=False).keys(regexp)
+    return get_client().keys(regexp)
 
 
-def mget(regexp):
+def mget(keys):
+    """
+    Retrieve multiple keys from the KVS.
+
+    :param keys: keys to retrieve
+    :type keys: list
+    :returns: one value for each key in the list
+    """
+    return get_client().mget(keys)
+
+
+def mget_decoded(keys):
+    """
+    Retrieve multiple JSON values from the KVS
+
+    :param keys: keys to retrieve (the corresponding value must be a
+        JSON string)
+    :type keys: list
+    :returns: one value for each key in the list
+    """
+    decoder = json.JSONDecoder()
+
+    return [decoder.decode(value) for value in get_client().mget(keys)]
+
+
+def get_pattern(regexp):
     """Get all the values whose keys satisfy the given regexp.
 
     Return an empty list if there are no keys satisfying the given regxep.
@@ -57,22 +82,22 @@ def mget(regexp):
 
     values = []
 
-    keys = get_client(binary=False).keys(regexp)
+    keys = get_client().keys(regexp)
 
     if keys:
-        values = get_client(binary=False).mget(keys)
+        values = get_client().mget(keys)
 
     return values
 
 
-def mget_decoded(regexp):
+def get_pattern_decoded(regexp):
     """Get and decode (from json format) all the values whose keys
     satisfy the given regexp."""
 
     decoded_values = []
     decoder = json.JSONDecoder()
 
-    for value in mget(regexp):
+    for value in get_pattern(regexp):
         decoded_values.append(decoder.decode(value))
 
     return decoded_values
@@ -80,12 +105,12 @@ def mget_decoded(regexp):
 
 def get(key):
     """Get value from kvs for external decoding"""
-    return get_client(binary=False).get(key)
+    return get_client().get(key)
 
 
 def get_client(**kwargs):
     """possible kwargs:
-        binary
+        db: database identifier
     """
     return Redis(**kwargs)
 
@@ -116,7 +141,7 @@ def generate_product_key(job_id, product, block_id="", site=""):
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
     try:
-        value = get_client(binary=False).get(key)
+        value = get_client().get(key)
         decoder = json.JSONDecoder()
         return decoder.decode(value)
     except (TypeError, ValueError), e:
@@ -158,7 +183,7 @@ def set_value_json_encoded(key, value):
 
     try:
         encoded_value = encoder.encode(value)
-        get_client(binary=False).set(key, encoded_value)
+        get_client().set(key, encoded_value)
     except (TypeError, ValueError):
         raise ValueError("cannot encode value %s of type %s to JSON"
                          % (value, type(value)))
@@ -169,7 +194,7 @@ def set_value_json_encoded(key, value):
 def set(key, encoded_value):  # pylint: disable=W0622
     """ Set value in kvs, for objects that have their own encoding method. """
 
-    get_client(binary=False).set(key, encoded_value)
+    get_client().set(key, encoded_value)
     return True
 
 

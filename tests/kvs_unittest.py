@@ -80,7 +80,7 @@ class KVSTestCase(unittest.TestCase):
         print "Not dead yet, and found the class..."
         self.java_client = java_class(settings.KVS_HOST, settings.KVS_PORT)
 
-        self.python_client = kvs.get_client(binary=False)
+        self.python_client = kvs.get_client()
 
         self._delete_test_file()
 
