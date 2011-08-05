@@ -209,12 +209,12 @@ COMMENT ON COLUMN oqmif.exposure_model.last_update IS 'Date/time of the last cha
 
 
 -- riski schema tables ------------------------------------------
-COMMENT ON TABLE riski.vulnerability_data IS 'A risk vulnerability function';
-COMMENT ON COLUMN riski.vulnerability_data.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
-COMMENT ON COLUMN riski.vulnerability_data.vf_ref IS 'The vulnerability function reference, unique within the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_data.loss_ratios IS 'Loss ratio values, one per IML value in the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_data.covs IS 'Coefficient of variation values, one per IML value in the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_data.last_update IS 'Date/time of the last change of the data at hand';
+COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
+COMMENT ON COLUMN riski.vulnerability_function.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
+COMMENT ON COLUMN riski.vulnerability_function.vf_ref IS 'The vulnerability function reference, unique within the vulnerability model.';
+COMMENT ON COLUMN riski.vulnerability_function.loss_ratios IS 'Loss ratio values, one per IML value in the vulnerability model.';
+COMMENT ON COLUMN riski.vulnerability_function.covs IS 'Coefficient of variation values, one per IML value in the vulnerability model.';
+COMMENT ON COLUMN riski.vulnerability_function.last_update IS 'Date/time of the last change of the data at hand';
 
 
 COMMENT ON TABLE riski.vulnerability_model IS 'A risk vulnerability model';

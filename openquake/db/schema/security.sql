@@ -51,7 +51,7 @@ GRANT ALL ON SEQUENCE hzrdr.hazard_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE riski.vulnerability_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riski.vulnerability_function_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riski.vulnerability_model_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE riskr.loss_curve_data_id_seq to GROUP openquake;
@@ -164,9 +164,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_data TO oq_ged4gem;
 GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_model TO oq_ged4gem;
 
--- riski.vulnerability_data
-GRANT SELECT ON riski.vulnerability_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riski.vulnerability_data TO oq_riski_writer;
+-- riski.vulnerability_function
+GRANT SELECT ON riski.vulnerability_function TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riski.vulnerability_function TO oq_riski_writer;
 
 -- riski.vulnerability_model
 GRANT SELECT ON riski.vulnerability_model TO GROUP openquake;
