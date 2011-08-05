@@ -66,7 +66,7 @@ class HazardMapTestCase(unittest.TestCase):
         pattern = "%s*%s*%s*" % (
             kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN, self.engine.id, POE)
 
-        map_values = kvs.mget_decoded(pattern)
+        map_values = kvs.get_pattern_decoded(pattern)
 
         self.assertEqual(len(self.expected_results), len(map_values))
 
