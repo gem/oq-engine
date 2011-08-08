@@ -461,18 +461,3 @@ public class DummyChannel implements Channel {
         unimplemented();
     }
 }
-
-class DummyAppender extends AMQPAppender {
-    @Override
-    protected Channel getChannel() {
-        if (channel == null)
-            channel = new DummyChannel();
-
-        return channel;
-    }
-
-    @Override
-    protected Connection getConnection() {
-        return null;
-    }
-}
