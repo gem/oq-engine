@@ -68,9 +68,13 @@ public class JsonSerializer {
         GsonBuilder gson = new GsonBuilder();
         gson.registerTypeAdapter(GEMSourceData.class,
                 new SourceDataDeserializer());
-        Type listType = new TypeToken<List<GEMSourceData>>() {
+        Type listType = new TypeToken<ArrayList<GEMSourceData>>() {
         }.getType();
-        return gson.create().fromJson((String) cache.get(key), listType);
+        // At least up to gson 1.6 what we get is a LinkedList<GEMSourceData>
+        // while GEM1ERF.GEM1ERF is expecting ArrayList<GEMSourceData>.
+        List<GEMSourceData> result =
+            gson.create().fromJson((String) cache.get(key), listType);
+        return new ArrayList<GEMSourceData>(result);
     }
 
     public static HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> getGmpeMapFromCache(
