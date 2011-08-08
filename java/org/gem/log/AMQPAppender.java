@@ -1,5 +1,7 @@
 package org.gem.log;
 
+// uses the AMQP Java client from http://www.rabbitmq.com/java-client.html
+
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
@@ -16,6 +18,9 @@ import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
 
 public class AMQPAppender extends AppenderSkeleton {
+    private static final int DELIVERY_NONPERSISTENT = 1;
+    private static final int DELIVERY_PERSISTENT = 2;
+
     protected class Event {
         public Event(LoggingEvent event) {
             this.event = event;
@@ -97,12 +102,6 @@ public class AMQPAppender extends AppenderSkeleton {
         this.virtualHost = virtualHost;
     }
 
-    // TODO auto-declare exchange?
-    // TODO set content type/content encoding/delivery mode/expiration
-    //      headers/priority/durable?
-    // TODO async connect/delivery?
-    // TODO retry sending?
-
     // override/implement Appender methods
 
     @Override
@@ -118,6 +117,8 @@ public class AMQPAppender extends AppenderSkeleton {
         close();
     }
 
+    // as per discussion on IRC, we do all the sending synchronously,
+    // assuming RabbitMQ is available and fast in handling messages
     @Override
     protected void append(LoggingEvent event) {
         try {
@@ -176,6 +177,8 @@ public class AMQPAppender extends AppenderSkeleton {
 
         props.type(event.event.getLevel().toString());
         props.timestamp(event.timeStamp);
+        props.contentType("text/plain");
+        props.deliveryMode(DELIVERY_PERSISTENT);
 
         String routingKey;
         if (routingKeyPattern != null)
