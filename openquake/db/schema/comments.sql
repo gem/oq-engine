@@ -245,6 +245,7 @@ COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the 
 
 COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
 COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN riskr.loss_curve.aggregate IS 'Is the curve an aggregate curve?';
 COMMENT ON COLUMN riskr.loss_curve.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN riskr.loss_curve.category IS 'The category of the losses';
 COMMENT ON COLUMN riskr.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
@@ -256,6 +257,12 @@ COMMENT ON COLUMN riskr.loss_curve_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.loss_curve_data.location IS 'The position of the asset';
 COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
+
+
+COMMENT ON TABLE riskr.aggregate_loss_curve_data IS 'Holds the probabilities of exceedance for the whole exposure model.';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
 
 
 
