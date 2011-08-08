@@ -28,6 +28,7 @@ import urlparse
 from ConfigParser import ConfigParser, RawConfigParser
 
 from openquake import flags
+from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
@@ -299,6 +300,11 @@ class Job(object):
             self._job_id = alloc_job_id()
         else:
             self._job_id = job_id
+
+        # Make the job_id available to the java logging context.
+        mdc = java.jclass('MDC')
+        mdc.put('job_id', self.job_id)
+
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
@@ -415,17 +421,7 @@ class Job(object):
         """
         LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
 
-        match = re.match(r'^::JOB::(\d+)::$', str(self.job_id))
-        if match:
-            job_number = match.group(1)
-        else:
-            # invalid job_id; something is horribly wrong
-            msg = "KVS garbage collection failed: job ID '%s' is invalid."
-            msg %= self.job_id
-            LOG.critical(msg)
-            raise RuntimeError(msg)
-
-        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
+        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
 
         # run KVS garbage collection aynchronously
         # stdout goes to /dev/null to silence any output from the GC
