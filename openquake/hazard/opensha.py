@@ -107,7 +107,8 @@ class BasePSHAMixin(Mixin):
         other files."""
 
         LOG.info("Storing source model from job config")
-        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
+        key = kvs.generate_product_key(
+            self.job_id, kvs.tokens.SOURCE_MODEL_TOKEN)
         print "source model key is", key
         jpype = java.jvm()
         try:
@@ -120,7 +121,7 @@ class BasePSHAMixin(Mixin):
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
-        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.job_id, kvs.tokens.GMPE_TOKEN)
         print "GMPE map key is", key
         jpype = java.jvm()
         try:
@@ -132,7 +133,8 @@ class BasePSHAMixin(Mixin):
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
-        key = kvs.generate_product_key(self.id, kvs.tokens.SOURCE_MODEL_TOKEN)
+        key = kvs.generate_product_key(
+            self.job_id, kvs.tokens.SOURCE_MODEL_TOKEN)
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
         erf = java.jclass("GEM1ERF")(sources)
@@ -158,7 +160,7 @@ class BasePSHAMixin(Mixin):
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.generate_product_key(self.id, kvs.tokens.GMPE_TOKEN)
+        key = kvs.generate_product_key(self.job_id, kvs.tokens.GMPE_TOKEN)
         gmpe_map = java.jclass(
             "JsonSerializer").getGmpeMapFromCache(self.cache, key)
         self.set_gmpe_params(gmpe_map)
@@ -259,7 +261,7 @@ class ClassicalMixin(BasePSHAMixin):
 
             curve_keys = utils_tasks.distribute(
                 self.number_of_tasks(), the_task, ("site_list", sites),
-                dict(job_id=self.id, realization=realization),
+                dict(job_id=self.job_id, realization=realization),
                 flatten_results=True)
 
             if serializer:
@@ -317,7 +319,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         curve_keys = utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.id), flatten_results=True)
+            dict(job_id=self.job_id), flatten_results=True)
 
         if curve_serializer:
             LOG.info("Serializing mean hazard curves")
@@ -368,7 +370,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         curve_keys = utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.id), flatten_results=True)
+            dict(job_id=self.job_id), flatten_results=True)
 
         # collect hazard curve keys per quantile value
         quantiles = _collect_curve_keys_per_quantile(curve_keys)
@@ -641,7 +643,7 @@ class ClassicalMixin(BasePSHAMixin):
         curve_keys = []
         for site, curve in izip(sites, curves):
             curve_key = kvs.tokens.hazard_curve_poes_key(
-                self.id, realization, site)
+                self.job_id, realization, site)
 
             kvs.set(curve_key, curve)
 
@@ -693,8 +695,8 @@ class EventBasedMixin(BasePSHAMixin):
                 stochastic_set_id = "%s!%s" % (i, j)
                 pending_tasks.append(
                     tasks.compute_ground_motion_fields.delay(
-                        self.id, self.sites_for_region(), stochastic_set_id,
-                        gmf_generator.getrandbits(32)))
+                        self.job_id, self.sites_for_region(),
+                        stochastic_set_id, gmf_generator.getrandbits(32)))
 
             for task in pending_tasks:
                 task.wait()
@@ -704,7 +706,7 @@ class EventBasedMixin(BasePSHAMixin):
             for j in range(0, realizations):
                 stochastic_set_id = "%s!%s" % (i, j)
                 stochastic_set_key = kvs.generate_product_key(
-                    self.id, kvs.tokens.STOCHASTIC_SET_TOKEN,
+                    self.job_id, kvs.tokens.STOCHASTIC_SET_TOKEN,
                     stochastic_set_id)
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
@@ -749,7 +751,7 @@ class EventBasedMixin(BasePSHAMixin):
 
         jsite_list = self.parameterize_sites(site_list)
         key = kvs.generate_product_key(
-            self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+            self.job_id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
         gmc = self.params['GROUND_MOTION_CORRELATION']
         correlate = (gmc == "true" and True or False)
         java.jclass("HazardCalculator").generateAndSaveGMFs(

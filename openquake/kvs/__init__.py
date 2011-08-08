@@ -120,10 +120,16 @@ def generate_key(key_list):
     key_list = [str(x).replace(" ", "") for x in key_list]
     return KVS_KEY_SEPARATOR.join(key_list)
 
+JOB_KEY_FMT = '::JOB::%s::'
 
 def generate_job_key(job_id):
-    """ Return a job key """
-    return generate_key(("JOB", str(job_id)))
+    """
+    Return a job key if the following format:
+    ::JOB::<job_id>::
+
+    :param int job_id: job ID
+    """
+    return JOB_KEY_FMT % job_id
 
 
 def generate_sites_key(job_id, block_id):
@@ -224,7 +230,7 @@ def cache_gc(job_key):
     function will do nothing and simply return None.
 
     :param job_key: specially formatted job key;
-        see :py:function:`openquake.kvs.tokens.alloc_job_key` for more info
+        see :py:function:`openquake.kvs.generate_job_key` for more info
 
     :returns: the number of deleted keys (int), or None if the job doesn't
         exist in CURRENT_JOBS

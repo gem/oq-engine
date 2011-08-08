@@ -42,7 +42,7 @@ class CacheGCTestCase(unittest.TestCase):
         # create 3 jobs
         # this will add job keys to CURRENT_JOBS
         for _ in range(1, 4):
-            tokens.alloc_job_key()
+            tokens.alloc_job_id()
 
     @classmethod
     def tearDownClass(cls):
