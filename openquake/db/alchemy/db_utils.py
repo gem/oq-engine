@@ -70,16 +70,20 @@ class SessionCache(object):
         self.__sessions__[user] = session_class()
 
 
-def get_db_session(schema, role):
+def get_db_session(schema, role=None):
     """Return the session for the db 'schema' and 'role' in question.
 
     :param str schema: the database schema e.g. "hzrdi"
     :param str role: the role desired e.g. "writer"
     :return: a SQLAlchemy session object
     """
-    env_var = "OQ_DB_%s_%s" % (schema, role)
+    if role is None:
+        role_suffix = ''
+    else:
+        role_suffix = '_%s' % role
+    env_var = "OQ_DB_%s%s" % (schema, role_suffix)
     env_var = env_var.upper()
     pwd_var = env_var + "_PWD"
-    user_name = "oq_%s_%s" % (schema, role)
+    user_name = "oq_%s%s" % (schema, role_suffix)
     db_user = os.environ.get(env_var, user_name)
     return SessionCache().get(db_user, os.environ.get(pwd_var, "openquake"))
