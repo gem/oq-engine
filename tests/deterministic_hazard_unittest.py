@@ -63,7 +63,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.kvs_client = kvs.get_client(binary=False)
+        cls.kvs_client = kvs.get_client()
 
     def setUp(self):
         kvs.flush()
