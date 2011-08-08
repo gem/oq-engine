@@ -761,6 +761,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
+    aggregate BOOLEAN NOT NULL DEFAULT false,
 
     end_branch_label VARCHAR,
     category VARCHAR,
@@ -783,6 +784,19 @@ CREATE TABLE riskr.loss_curve_data (
 SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
 ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Aggregate loss curve data.  Holds the probability of exceedence of certain
+-- levels of losses for the whole exposure model.
+CREATE TABLE riskr.aggregate_loss_curve_data (
+    id SERIAL PRIMARY KEY,
+    loss_curve_id INTEGER NOT NULL,
+
+    losses float[] NOT NULL CONSTRAINT non_negative_losses
+        CHECK (0 <= ALL(losses)),
+    -- Probabilities of exceedence
+    poes float[] NOT NULL
+) TABLESPACE riskr_ts;
 
 
 -- Exposure model
@@ -1028,6 +1042,10 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
+FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.aggregate_loss_curve_data
+ADD CONSTRAINT riskr_aggregate_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map_data
