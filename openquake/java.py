@@ -81,6 +81,7 @@ JAVA_CLASSES = {
     "ApproxEvenlyGriddedSurface":
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
+    "MDC": "org.apache.log4j.MDC",
 }
 
 logging.getLogger('jpype').setLevel(logging.ERROR)

@@ -219,8 +219,8 @@ class JobTokensTestCase(unittest.TestCase):
         :py:function:`openquake.kvs.tokens.alloc_job_id`.
         """
 
-        job_id_1 = tokens.JOB_KEY_FMT % 1
-        job_id_2 = tokens.JOB_KEY_FMT % 2
+        job_id_1 = 1
+        job_id_2 = 2
 
         kvs.get_client().delete(tokens.NEXT_JOB_ID)
 
@@ -243,7 +243,7 @@ class JobTokensTestCase(unittest.TestCase):
         """
         self.assertEqual(0, len(self.client.smembers(tokens.CURRENT_JOBS)))
 
-        self.client.sadd(tokens.CURRENT_JOBS, tokens.JOB_KEY_FMT % 1)
+        self.client.sadd(tokens.CURRENT_JOBS, 1)
 
         self.assertRaises(RuntimeError, tokens.alloc_job_id)
 
@@ -255,7 +255,7 @@ class JobTokensTestCase(unittest.TestCase):
         self.assertFalse(self.client.exists(tokens.CURRENT_JOBS))
 
         # load some sample jobs into the CURRENT_JOBS set
-        jobs = [tokens.JOB_KEY_FMT % x for x in range(1, 4)]
+        jobs = range(1,4)
 
         for job in jobs:
             self.client.sadd(tokens.CURRENT_JOBS, job)
@@ -336,7 +336,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         If we try to run garbage collection on a nonexistent job, the result of
         :py:function:`openquake.kvs.cache_gc` should be None.
         """
-        nonexist_job = tokens.JOB_KEY_FMT % '1234nonexistent'
+        nonexist_job = '1234nonexistent'
 
         result = kvs.cache_gc(nonexist_job)
 
