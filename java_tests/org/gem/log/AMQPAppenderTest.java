@@ -2,7 +2,11 @@ package org.gem.log;
 
 import com.rabbitmq.client.ConnectionFactory;
 
+import java.util.Arrays;
 import java.util.Properties;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.Predicate;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Layout;
@@ -17,6 +21,13 @@ import static org.junit.Assert.assertThat;
 import static org.junit.matchers.JUnitMatchers.*;
 
 import static org.hamcrest.CoreMatchers.*;
+
+class ThrowablePatternLayout extends PatternLayout {
+    @Override
+    public boolean ignoresThrowable() {
+        return false;
+    }
+}
 
 public class AMQPAppenderTest {
     private DummyChannel dummyChannel;
@@ -107,6 +118,63 @@ public class AMQPAppenderTest {
         DummyChannel.Entry entry2 = dummyChannel.entries.get(1);
 
         assertThat(entry2.routingKey, is(equalTo("log.WARN")));
+    }
+
+    @Test
+    public void layoutHandlesThrowable() {
+        setUpDummyAppender();
+
+        dummyAppender.setLayout(new ThrowablePatternLayout());
+
+        Exception cause = new RuntimeException("Ouch");
+        Exception exception = new Exception("Error", cause);
+
+        cause.fillInStackTrace();
+        exception.fillInStackTrace();
+
+        logger.info("Test1", exception);
+
+        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+
+        assertThat(dummyChannel.entries.size(), is(equalTo(1)));
+
+        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
+
+        assertThat(entry1.body, is(equalTo("Test1\n")));
+    }
+
+    @Test
+    public void layoutIgnoresThrowable() {
+        setUpDummyAppender();
+
+        Exception cause = new RuntimeException("Ouch");
+        Exception exception = new Exception("Error", cause);
+
+        cause.fillInStackTrace();
+        exception.fillInStackTrace();
+
+        logger.info("Test1", exception);
+
+        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+
+        assertThat(dummyChannel.entries.size(), is(equalTo(1)));
+
+        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
+
+        assertThat(entry1.body, is(not(equalTo("Test1\n"))));
+
+        String[] lines = entry1.body.split("\n");
+
+        assertThat(lines[0], is(equalTo("Test1")));
+        // stack trace sanity check
+        assertThat(lines[1], is(equalTo("java.lang.Exception: Error")));
+        // check the message contains the cause exception
+        assertThat(CollectionUtils.find(Arrays.asList(lines), new Predicate() {
+                public boolean evaluate(Object input) {
+                    return input.equals(
+                        "Caused by: java.lang.RuntimeException: Ouch");
+                }
+            }), is(not(equalTo(null))));
     }
 
     @Test

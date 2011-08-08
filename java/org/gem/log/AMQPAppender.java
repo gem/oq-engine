@@ -11,6 +11,7 @@ import java.util.Calendar;
 import java.util.Date;
 
 import org.apache.log4j.AppenderSkeleton;
+import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
 
@@ -19,7 +20,21 @@ public class AMQPAppender extends AppenderSkeleton {
         public Event(LoggingEvent event) {
             this.event = event;
             this.timeStamp = Calendar.getInstance().getTime();
-            this.message = layout.format(event);
+
+            // Handle stack trace if required
+            if (layout.ignoresThrowable()) {
+                StringBuffer buffer = new StringBuffer(layout.format(event));
+                String[] stackTrace = event.getThrowableStrRep();
+
+                if (stackTrace != null)
+                    for (String frame : stackTrace)
+                        buffer.append(frame).append(Layout.LINE_SEP);
+
+                this.message = buffer.toString();
+            }
+            else {
+                this.message = layout.format(event);
+            }
         }
 
         public String message;
@@ -86,7 +101,6 @@ public class AMQPAppender extends AppenderSkeleton {
     // TODO set content type/content encoding/delivery mode/expiration
     //      headers/priority/durable?
     // TODO async connect/delivery?
-    // TODO test format exception
     // TODO retry sending?
 
     // override/implement Appender methods
