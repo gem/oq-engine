@@ -85,7 +85,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     Compute mean ground intensity for a specific site.
     """
 
-    kvs_client = kvs.get_client(binary=False)
+    kvs_client = kvs.get_client()
 
     mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN,
         block_id, site_id)
@@ -112,7 +112,9 @@ def compute_mean_curves(job_id, sites):
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    return classical_psha.compute_mean_hazard_curves(job_id, sites)
+    engine = job.Job.from_kvs(job_id)
+
+    return classical_psha.compute_mean_hazard_curves(engine, sites)
 
 
 @task
