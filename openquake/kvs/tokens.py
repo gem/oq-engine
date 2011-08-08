@@ -281,7 +281,6 @@ def ground_motion_values_key(job_id, point):
 
 NEXT_JOB_ID = 'NEXT_JOB_ID'
 CURRENT_JOBS = 'CURRENT_JOBS'
-JOB_KEY_FMT = '::JOB::%s::'
 
 
 def alloc_job_id():
@@ -293,7 +292,7 @@ def alloc_job_id():
     """
     client = openquake.kvs.get_client()
 
-    job_id = JOB_KEY_FMT % client.incr(NEXT_JOB_ID)
+    job_id = client.incr(NEXT_JOB_ID)
 
     # Add this key to set of current jobs.
     # This set can be queried to perform garbage collection.
@@ -316,4 +315,4 @@ def current_jobs():
     :returns: list of job keys (as strings), or an empty list if there are no
         current jobs
     """
-    return sorted(list(openquake.kvs.get_client().smembers(CURRENT_JOBS)))
+    return sorted([int(x) for x in openquake.kvs.get_client().smembers(CURRENT_JOBS)])

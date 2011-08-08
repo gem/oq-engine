@@ -170,7 +170,7 @@ class JobTestCase(unittest.TestCase):
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
 
-        self.assertEqual(tokens.JOB_KEY_FMT % 1, Job({}).job_id)
+        self.assertEqual(1, Job({}).job_id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = helpers.job_from_file(
@@ -227,15 +227,6 @@ class JobTestCase(unittest.TestCase):
             self.assertEqual('w', popen_stdout.mode)
 
             self.assertEqual(os.environ, actual_kwargs['env'])
-
-    def test_cleanup_raises_on_bad_job_id(self):
-        """
-        If the ID of a job is somehow corrupted, verify that a RuntimeError is
-        raised by :py:method:`openquake.job.Job.cleanup`.
-        """
-        self.job._job_id = 'this-is-invalid'
-
-        self.assertRaises(RuntimeError, self.job.cleanup)
 
     def test_job_init_assigns_unique_id(self):
         """
