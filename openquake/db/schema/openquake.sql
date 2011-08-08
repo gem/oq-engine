@@ -808,7 +808,7 @@ CREATE TABLE oqmif.exposure_data (
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- Vulnerability function reference
-    vf_ref VARCHAR NOT NULL,
+    vulnerability_function_id INTEGER NOT NULL,
     structure_type VARCHAR,
     retrofitting_cost float,
     last_update timestamp without time zone
@@ -836,7 +836,7 @@ CREATE TABLE riski.vulnerability_model (
 
 
 -- Vulnerability function
-CREATE TABLE riski.vulnerability_data (
+CREATE TABLE riski.vulnerability_function (
     id SERIAL PRIMARY KEY,
     vulnerability_model_id INTEGER NOT NULL,
     -- The vulnerability function reference is unique within an vulnerability
@@ -1038,8 +1038,12 @@ ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
 REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 
-ALTER TABLE riski.vulnerability_data ADD CONSTRAINT
-riski_vulnerability_data_vulnerability_model_fk FOREIGN KEY
+ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
+oqmif_exposure_data_vulnerability_function_fk FOREIGN KEY (vulnerability_function_id)
+REFERENCES riski.vulnerability_function(id) ON DELETE RESTRICT;
+
+ALTER TABLE riski.vulnerability_function ADD CONSTRAINT
+riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY
 (vulnerability_model_id) REFERENCES riski.vulnerability_model(id) ON DELETE
 CASCADE;
 
@@ -1069,6 +1073,6 @@ CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oq
 
 CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER riski_vulnerability_data_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
