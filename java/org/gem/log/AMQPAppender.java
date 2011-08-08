@@ -171,7 +171,7 @@ public class AMQPAppender extends AppenderSkeleton {
     }
 
     protected void sendMessage(Channel channel, Event event)
-        throws IOException {
+            throws IOException {
         AMQP.BasicProperties.Builder props = new AMQP.BasicProperties.Builder();
 
         props.type(event.event.getLevel().toString());
