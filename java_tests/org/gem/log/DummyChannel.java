@@ -101,7 +101,8 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public AMQP.Channel.FlowOk flow(boolean active) throws java.io.IOException {
+    public AMQP.Channel.FlowOk flow(boolean active)
+        throws java.io.IOException {
         unimplemented();
 
         return null;
@@ -143,17 +144,20 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public void basicNack(long deliveryTag, boolean multiple, boolean requeue) {
+    public void basicNack(long deliveryTag,
+            boolean multiple, boolean requeue) {
         unimplemented();
     }
 
     @Override
-    public void basicReject(long deliveryTag, boolean requeue) throws java.io.IOException {
+    public void basicReject(long deliveryTag, boolean requeue)
+            throws java.io.IOException {
         unimplemented();
     }
 
     @Override
-    public void basicQos(int prefetchSize, int prefetchCount, boolean global) throws IOException {
+    public void basicQos(int prefetchSize, int prefetchCount, boolean global)
+            throws IOException {
         unimplemented();
     }
 
@@ -182,7 +186,9 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, AMQP.BasicProperties props, byte[] body) throws IOException {
+    public void basicPublish(
+            String exchange, String routingKey, AMQP.BasicProperties props,
+            byte[] body) throws IOException {
         Entry entry = new Entry();
 
         entry.exchange = exchange;
@@ -194,85 +200,100 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public void basicPublish(String exchange, String routingKey, boolean mandatory, boolean immediate, AMQP.BasicProperties props, byte[] body)
+    public void basicPublish(String exchange, String routingKey,
+            boolean mandatory, boolean immediate, AMQP.BasicProperties props,
+            byte[] body) throws IOException {
+        unimplemented();
+    }
+
+    @Override
+    public AMQP.Exchange.DeleteOk exchangeDelete(String exchange)
             throws IOException {
         unimplemented();
+
+        return null;
     }
 
     @Override
-    public AMQP.Exchange.DeleteOk exchangeDelete(String exchange) throws IOException {
+    public AMQP.Exchange.DeclareOk exchangeDeclare(
+            String exchange, String type) throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.DeclareOk exchangeDeclare(String exchange, String type) throws IOException {
+    public AMQP.Exchange.DeleteOk exchangeDelete(
+            String exchange, boolean ifUnused) throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.DeleteOk exchangeDelete(String exchange, boolean ifUnused) throws IOException {
+    public AMQP.Exchange.DeclareOk exchangeDeclare(
+            String exchange, String type, boolean durable) throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.DeclareOk exchangeDeclare(String exchange, String type, boolean durable) throws IOException {
+    public AMQP.Exchange.DeclareOk exchangeDeclare(
+            String exchange, String type, boolean passive, boolean durable,
+            boolean autoDelete, Map<String, Object> arguments)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.DeclareOk exchangeDeclare(String exchange, String type, boolean passive, boolean durable, boolean autoDelete,
-                                       Map<String, Object> arguments) throws IOException {
+    public AMQP.Exchange.DeclareOk exchangeDeclare(
+            String exchange, String type, boolean durable, boolean autoDelete,
+            Map<String, Object> arguments) throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.DeclareOk exchangeDeclare(String exchange, String type, boolean durable, boolean autoDelete,
-                                       Map<String, Object> arguments) throws IOException {
+    public AMQP.Exchange.DeclareOk exchangeDeclarePassive(String exchange)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.DeclareOk exchangeDeclarePassive(String exchange) throws IOException {
+    public AMQP.Exchange.BindOk exchangeBind(
+            String destination, String source, String routingKey) {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.BindOk exchangeBind(java.lang.String destination, java.lang.String source, java.lang.String routingKey) {
+    public AMQP.Exchange.BindOk exchangeBind(
+            String destination, String source, String routingKey,
+            Map<String, Object> arguments) {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.BindOk exchangeBind(java.lang.String destination, java.lang.String source, java.lang.String routingKey, java.util.Map<java.lang.String,java.lang.Object> arguments) {
+    public AMQP.Exchange.UnbindOk exchangeUnbind(
+            String destination, String source, String routingKey) {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Exchange.UnbindOk exchangeUnbind(java.lang.String destination, java.lang.String source, java.lang.String routingKey) {
-        unimplemented();
-
-        return null;
-    }
-
-    @Override
-    public AMQP.Exchange.UnbindOk exchangeUnbind(java.lang.String destination, java.lang.String source, java.lang.String routingKey, java.util.Map<java.lang.String,java.lang.Object> arguments) {
+    public AMQP.Exchange.UnbindOk exchangeUnbind(
+            String destination, String source, String routingKey,
+            Map<String, Object> arguments) {
         unimplemented();
 
         return null;
@@ -286,15 +307,18 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public AMQP.Queue.DeclareOk queueDeclare(String queue, boolean durable, boolean exclusive, boolean autoDelete,
-                                 Map<String, Object> arguments) throws IOException {
+    public AMQP.Queue.DeclareOk queueDeclare(
+            String queue, boolean durable, boolean exclusive,
+            boolean autoDelete, Map<String, Object> arguments)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Queue.DeclareOk queueDeclarePassive(String queue) throws IOException {
+    public AMQP.Queue.DeclareOk queueDeclarePassive(String queue)
+            throws IOException {
         unimplemented();
 
         return null;
@@ -308,35 +332,45 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public AMQP.Queue.DeleteOk queueDelete(String queue, boolean ifUnused, boolean ifEmpty) throws IOException {
+    public AMQP.Queue.DeleteOk queueDelete(
+            String queue, boolean ifUnused, boolean ifEmpty)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Queue.BindOk queueBind(String queue, String exchange, String routingKey) throws IOException {
+    public AMQP.Queue.BindOk queueBind(
+            String queue, String exchange, String routingKey)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Queue.BindOk queueBind(String queue, String exchange, String routingKey, Map<String, Object> arguments) throws IOException {
+    public AMQP.Queue.BindOk queueBind(
+            String queue, String exchange, String routingKey,
+            Map<String, Object> arguments) throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Queue.UnbindOk queueUnbind(String queue, String exchange, String routingKey) throws IOException {
+    public AMQP.Queue.UnbindOk queueUnbind(
+            String queue, String exchange, String routingKey)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public AMQP.Queue.UnbindOk queueUnbind(String queue, String exchange, String routingKey, Map<String, Object> arguments) throws IOException {
+    public AMQP.Queue.UnbindOk queueUnbind(
+            String queue, String exchange, String routingKey,
+            Map<String, Object> arguments) throws IOException {
         unimplemented();
 
         return null;
@@ -350,40 +384,49 @@ public class DummyChannel implements Channel {
     }
 
     @Override
-    public GetResponse basicGet(String queue, boolean noAck) throws IOException {
+    public GetResponse basicGet(String queue, boolean noAck)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public void basicAck(long deliveryTag, boolean multiple) throws IOException {
+    public void basicAck(long deliveryTag, boolean multiple)
+            throws IOException {
         unimplemented();
     }
 
     @Override
-    public String basicConsume(String queue, Consumer callback) throws IOException {
-        unimplemented();
-
-        return null;
-    }
-
-    @Override
-    public String basicConsume(String queue, boolean noAck, Consumer callback) throws IOException {
+    public String basicConsume(String queue, Consumer callback)
+            throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public String basicConsume(String queue, boolean noAck, String consumerTag, Consumer callback) throws IOException {
+    public String basicConsume(
+            String queue, boolean noAck, Consumer callback) throws IOException {
         unimplemented();
 
         return null;
     }
 
     @Override
-    public String basicConsume(String queue, boolean noAck, String consumerTag, boolean noLocal, boolean exclusive, Map<String, Object> arguments, Consumer callback) throws IOException {
+    public String basicConsume(
+            String queue, boolean noAck, String consumerTag,
+            Consumer callback) throws IOException {
+        unimplemented();
+
+        return null;
+    }
+
+    @Override
+    public String basicConsume(
+            String queue, boolean noAck, String consumerTag,
+            boolean noLocal, boolean exclusive, Map<String, Object> arguments,
+            Consumer callback) throws IOException {
         unimplemented();
 
         return null;
