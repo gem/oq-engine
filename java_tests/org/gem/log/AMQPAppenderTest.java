@@ -50,6 +50,10 @@ public class AMQPAppenderTest {
         BasicConfigurator.configure(dummyAppender);
     }
 
+    private DummyChannel.Entry entry(int index) {
+        return dummyChannel.entries.get(0);
+    }
+
     @Test
     public void basicLogging() {
         setUpDummyAppender();
@@ -61,19 +65,15 @@ public class AMQPAppenderTest {
 
         assertThat(dummyChannel.entries.size(), is(equalTo(2)));
 
-        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
+        assertThat(entry(0).exchange, is(equalTo("")));
+        assertThat(entry(0).routingKey, is(equalTo("")));
+        assertThat(entry(0).properties.getType(), is(equalTo("INFO")));
+        assertThat(entry(0).body, is(equalTo("Test1\n")));
 
-        assertThat(entry1.exchange, is(equalTo("")));
-        assertThat(entry1.routingKey, is(equalTo("")));
-        assertThat(entry1.properties.getType(), is(equalTo("INFO")));
-        assertThat(entry1.body, is(equalTo("Test1\n")));
-
-        DummyChannel.Entry entry2 = dummyChannel.entries.get(1);
-
-        assertThat(entry2.exchange, is(equalTo("")));
-        assertThat(entry2.routingKey, is(equalTo("")));
-        assertThat(entry2.properties.getType(), is(equalTo("WARN")));
-        assertThat(entry2.body, is(equalTo("Test2\n")));
+        assertThat(entry(1).exchange, is(equalTo("")));
+        assertThat(entry(1).routingKey, is(equalTo("")));
+        assertThat(entry(1).properties.getType(), is(equalTo("WARN")));
+        assertThat(entry(1).body, is(equalTo("Test2\n")));
     }
 
     @Test
@@ -88,14 +88,8 @@ public class AMQPAppenderTest {
         dummyChannel = (DummyChannel) dummyAppender.getChannel();
 
         assertThat(dummyChannel.entries.size(), is(equalTo(2)));
-
-        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
-
-        assertThat(entry1.routingKey, is(equalTo("rk")));
-
-        DummyChannel.Entry entry2 = dummyChannel.entries.get(1);
-
-        assertThat(entry2.routingKey, is(equalTo("rk")));
+        assertThat(entry(0).routingKey, is(equalTo("rk")));
+        assertThat(entry(1).routingKey, is(equalTo("rk")));
     }
 
     @Test
@@ -110,14 +104,8 @@ public class AMQPAppenderTest {
         dummyChannel = (DummyChannel) dummyAppender.getChannel();
 
         assertThat(dummyChannel.entries.size(), is(equalTo(2)));
-
-        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
-
-        assertThat(entry1.routingKey, is(equalTo("log.INFO")));
-
-        DummyChannel.Entry entry2 = dummyChannel.entries.get(1);
-
-        assertThat(entry2.routingKey, is(equalTo("log.WARN")));
+        assertThat(entry(0).routingKey, is(equalTo("log.INFO")));
+        assertThat(entry(1).routingKey, is(equalTo("log.WARN")));
     }
 
     @Test
@@ -137,10 +125,7 @@ public class AMQPAppenderTest {
         dummyChannel = (DummyChannel) dummyAppender.getChannel();
 
         assertThat(dummyChannel.entries.size(), is(equalTo(1)));
-
-        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
-
-        assertThat(entry1.body, is(equalTo("Test1\n")));
+        assertThat(entry(0).body, is(equalTo("Test1\n")));
     }
 
     @Test
@@ -159,11 +144,9 @@ public class AMQPAppenderTest {
 
         assertThat(dummyChannel.entries.size(), is(equalTo(1)));
 
-        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
+        assertThat(entry(0).body, is(not(equalTo("Test1\n"))));
 
-        assertThat(entry1.body, is(not(equalTo("Test1\n"))));
-
-        String[] lines = entry1.body.split("\n");
+        String[] lines = entry(0).body.split("\n");
 
         assertThat(lines[0], is(equalTo("Test1")));
         // stack trace sanity check
@@ -229,10 +212,7 @@ public class AMQPAppenderTest {
 
         // check message properties
         assertThat(dummyChannel.entries.size(), is(equalTo(1)));
-
-        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
-
-        assertThat(entry1.exchange, is(equalTo("amq.topic")));
+        assertThat(entry(0).exchange, is(equalTo("amq.topic")));
 
         // check factory configuration
         ConnectionFactory factory = dummyAppender.getFactory();
