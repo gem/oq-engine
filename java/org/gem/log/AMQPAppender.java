@@ -17,10 +17,32 @@ import org.apache.log4j.Layout;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.spi.LoggingEvent;
 
+/**
+ * Log4J appender class that sends log messages through RabbitMQ
+ *
+ * Example configuration:
+ *
+ * <pre><code>
+ *   log4j.appender.rabbit=org.gem.log.AMQPAppender
+ *   log4j.appender.rabbit.host=amqp.openquake.org
+ *   log4j.appender.rabbit.port=4004
+ *   log4j.appender.rabbit.username=looser
+ *   log4j.appender.rabbit.password=s3krit
+ *   log4j.appender.rabbit.virtualhost=job.oq.org/test
+ *   log4j.appender.rabbit.routingKeyPattern=log.%p
+ *   log4j.appender.rabbit.exchange=amq.topic
+ *   log4j.appender.rabbit.layout=org.apache.log4j.PatternLayout
+ *   log4j.appender.rabbit.layout.ConversionPattern=%d %-5p [%c] - %m%n
+ * </code></pre>
+ */
 public class AMQPAppender extends AppenderSkeleton {
+    /* Named constants for RabbitMQ delivery modes */
     private static final int DELIVERY_NONPERSISTENT = 1;
     private static final int DELIVERY_PERSISTENT = 2;
 
+    /**
+     * Collects all the data for a logging event
+     */
     protected class Event {
         public Event(LoggingEvent event) {
             this.event = event;
@@ -42,8 +64,11 @@ public class AMQPAppender extends AppenderSkeleton {
             }
         }
 
+        /// The log message (including stack trace if present)
         public String message;
+        /// Timestamp when the message has been added to the logger
         public Date timeStamp;
+        /// The original logging event
         public LoggingEvent event;
     }
 
@@ -74,30 +99,37 @@ public class AMQPAppender extends AppenderSkeleton {
 
     // configuration
 
+    /// Set the exchange name
     public void setExchange(String exchange) {
         this.exchange = exchange;
     }
 
+    /// Set the pattern (in PatternLayout format) used to create the routing key
     public void setRoutingKeyPattern(String routingKeyPattern) {
         this.routingKeyPattern = new PatternLayout(routingKeyPattern);
     }
 
+    /// Set the AMQP host
     public void setHost(String host) {
         this.host = host;
     }
 
+    /// Set the AMQP port
     public void setPort(int port) {
         this.port = port;
     }
 
+    /// Set the AMQP user name
     public void setUsername(String username) {
         this.username= username;
     }
 
+    /// Set the AMQP password
     public void setPassword(String password) {
         this.password = password;
     }
 
+    /// Set the AMQP virtualhosy
     public void setVirtualHost(String virtualHost) {
         this.virtualHost = virtualHost;
     }
@@ -153,6 +185,7 @@ public class AMQPAppender extends AppenderSkeleton {
 
     // implementation
 
+    /// Return the current AMQP channel or create a new one
     protected Channel getChannel() throws IOException {
         if (channel != null && channel.isOpen())
             return channel;
@@ -162,6 +195,7 @@ public class AMQPAppender extends AppenderSkeleton {
         return channel;
     }
 
+    /// Return the current AMQP connection or creates a new one
     protected Connection getConnection() throws IOException {
         if (connection != null && connection.isOpen())
             return connection;
@@ -171,6 +205,7 @@ public class AMQPAppender extends AppenderSkeleton {
         return connection;
     }
 
+    /// Send the log message to the AMQP server
     protected void sendMessage(Channel channel, Event event)
             throws IOException {
         AMQP.BasicProperties.Builder props = new AMQP.BasicProperties.Builder();

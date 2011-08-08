@@ -22,6 +22,7 @@ import static org.junit.matchers.JUnitMatchers.*;
 
 import static org.hamcrest.CoreMatchers.*;
 
+// A Layout that (pretends to) handle throwables
 class ThrowablePatternLayout extends PatternLayout {
     @Override
     public boolean ignoresThrowable() {
@@ -54,6 +55,7 @@ public class AMQPAppenderTest {
         return dummyChannel.entries.get(0);
     }
 
+    // logging sanity test
     @Test
     public void basicLogging() {
         setUpDummyAppender();
@@ -82,6 +84,7 @@ public class AMQPAppenderTest {
         assertThat(entry(1).body, is(equalTo("Test2\n")));
     }
 
+    // test the routing key is used
     @Test
     public void routingKey() {
         setUpDummyAppender();
@@ -98,6 +101,7 @@ public class AMQPAppenderTest {
         assertThat(entry(1).routingKey, is(equalTo("rk")));
     }
 
+    // test the routing key is used as a pattern
     @Test
     public void routingKeyPattern() {
         setUpDummyAppender();
@@ -114,6 +118,7 @@ public class AMQPAppenderTest {
         assertThat(entry(1).routingKey, is(equalTo("log.WARN")));
     }
 
+    // test that throwable handling is left to the layout if required
     @Test
     public void layoutHandlesThrowable() {
         setUpDummyAppender();
@@ -134,6 +139,7 @@ public class AMQPAppenderTest {
         assertThat(entry(0).body, is(equalTo("Test1\n")));
     }
 
+    // test that throwable handling is done by the logger if required
     @Test
     public void layoutIgnoresThrowable() {
         setUpDummyAppender();
@@ -166,6 +172,7 @@ public class AMQPAppenderTest {
             }), is(not(equalTo(null))));
     }
 
+    // test that the logger handles all the documented properties
     @Test
     public void log4jSetup() {
         Properties props = new Properties();
