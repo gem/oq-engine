@@ -111,14 +111,14 @@ def compute_mean_hazard_curves(job, sites):
 
     keys = []
     for site in sites:
-        poes = poes_at(job.id, site, realizations)
+        poes = poes_at(job.job_id, site, realizations)
 
         mean_poes = compute_mean_curve(poes)
 
         mean_curve = {"site_lon": site.longitude, "site_lat": site.latitude,
             "poes": mean_poes}
 
-        key = kvs.tokens.mean_hazard_curve_key(job.id, site)
+        key = kvs.tokens.mean_hazard_curve_key(job.job_id, site)
         keys.append(key)
 
         kvs.set_value_json_encoded(key, mean_curve)
@@ -141,7 +141,7 @@ def compute_quantile_hazard_curves(job, sites):
     LOG.debug("[QUANTILE_HAZARD_CURVES] List of quantiles is %s" % quantiles)
 
     for site in sites:
-        poes = poes_at(job.id, site, realizations)
+        poes = poes_at(job.job_id, site, realizations)
 
         for quantile in quantiles:
             quantile_poes = compute_quantile_curve(poes, quantile)
@@ -151,7 +151,7 @@ def compute_quantile_hazard_curves(job, sites):
                 "poes": quantile_poes}
 
             key = kvs.tokens.quantile_hazard_curve_key(
-                    job.id, site, quantile)
+                    job.job_id, site, quantile)
             keys.append(key)
 
             kvs.set_value_json_encoded(key, quantile_curve)
@@ -231,7 +231,7 @@ def compute_quantile_hazard_maps(job):
     for quantile in quantiles:
         # get all the pre computed quantile curves
         pattern = "%s*%s*%s" % (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                job.id, quantile)
+                job.job_id, quantile)
 
         quantile_curves = kvs.get_pattern_decoded(pattern)
 
@@ -245,7 +245,7 @@ def compute_quantile_hazard_maps(job):
 
             for poe in poes:
                 key = kvs.tokens.quantile_hazard_map_key(
-                        job.id, site, poe, quantile)
+                        job.job_id, site, poe, quantile)
                 keys.append(key)
 
                 _store_iml_for(quantile_curve, key, job, poe)
@@ -266,7 +266,7 @@ def compute_mean_hazard_maps(job):
     LOG.debug("[MEAN_HAZARD_MAPS] List of POEs is %s" % poes)
 
     # get all the pre computed mean curves
-    pattern = "%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, job.id)
+    pattern = "%s*%s*" % (kvs.tokens.MEAN_HAZARD_CURVE_KEY_TOKEN, job.job_id)
     mean_curves = kvs.get_pattern_decoded(pattern)
 
     LOG.debug("[MEAN_HAZARD_MAPS] Found %s pre computed mean curves"
@@ -278,7 +278,7 @@ def compute_mean_hazard_maps(job):
                            mean_curve["site_lat"])
 
         for poe in poes:
-            key = kvs.tokens.mean_hazard_map_key(job.id, site, poe)
+            key = kvs.tokens.mean_hazard_map_key(job.job_id, site, poe)
             keys.append(key)
 
             _store_iml_for(mean_curve, key, job, poe)

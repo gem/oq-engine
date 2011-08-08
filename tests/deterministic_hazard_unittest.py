@@ -129,7 +129,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             for site in self.job.sites_for_region():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job.id, point)
+                    self.job.job_id, point)
 
                 # just one calculation is triggered in this test case
                 print "key is %s" % key
@@ -168,7 +168,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             for site in self.job.sites_for_region():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job.id, point)
+                    self.job.job_id, point)
 
                 self.assertEqual(3, self.kvs_client.llen(key))
                 gmv = decoder.decode(self.kvs_client.lpop(key))
@@ -222,7 +222,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             for site in self.job.sites_for_region():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job.id, point)
+                    self.job.job_id, point)
 
                 self.assertTrue(kvs.get_keys(key))
 

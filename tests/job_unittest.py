@@ -176,7 +176,7 @@ class JobTestCase(unittest.TestCase):
         self.job = helpers.job_from_file(
             os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
-        self.assertEqual(self.job, Job.from_kvs(self.job.id))
+        self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
 
     def test_job_calls_cleanup(self):
         """
@@ -233,7 +233,7 @@ class JobTestCase(unittest.TestCase):
         If the ID of a job is somehow corrupted, verify that a RuntimeError is
         raised by :py:method:`openquake.job.Job.cleanup`.
         """
-        self.job.job_id = 'this-is-invalid'
+        self.job._job_id = 'this-is-invalid'
 
         self.assertRaises(RuntimeError, self.job.cleanup)
 
