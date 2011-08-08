@@ -283,7 +283,10 @@ class GetDbSessionTestCase(unittest.TestCase):
         ("OQ_DB_EQCAT_READER", ("eqcat", "reader"),
          ("oq_eqcat_reader", "openquake")),
         ("OQ_DB_EQCAT_WRITER", ("eqcat", "writer"),
-         ("oq_eqcat_writer", "openquake")))
+         ("oq_eqcat_writer", "openquake")),
+        ("OQ_DB_GED4GEM", ("ged4gem", None),
+         ("oq_ged4gem", "openquake")),
+    )
 
     def setUp(self):
         self.orig_env = os.environ.copy()
