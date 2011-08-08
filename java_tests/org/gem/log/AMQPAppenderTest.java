@@ -68,11 +68,17 @@ public class AMQPAppenderTest {
         assertThat(entry(0).exchange, is(equalTo("")));
         assertThat(entry(0).routingKey, is(equalTo("")));
         assertThat(entry(0).properties.getType(), is(equalTo("INFO")));
+        assertThat(entry(0).properties.getContentType(),
+                   is(equalTo("text/plain")));
+        assertThat(entry(0).properties.getDeliveryMode(), is(equalTo(2)));
         assertThat(entry(0).body, is(equalTo("Test1\n")));
 
         assertThat(entry(1).exchange, is(equalTo("")));
         assertThat(entry(1).routingKey, is(equalTo("")));
         assertThat(entry(1).properties.getType(), is(equalTo("WARN")));
+        assertThat(entry(1).properties.getContentType(),
+                   is(equalTo("text/plain")));
+        assertThat(entry(1).properties.getDeliveryMode(), is(equalTo(2)));
         assertThat(entry(1).body, is(equalTo("Test2\n")));
     }
 
