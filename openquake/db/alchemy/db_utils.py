@@ -23,6 +23,7 @@
 
 import os
 import sqlalchemy
+import sqlalchemy.orm
 
 from openquake.utils import general
 
