@@ -57,4 +57,48 @@ public class AMQPAppenderTest {
         assertThat(entry2.properties.getType(), is(equalTo("WARN")));
         assertThat(entry2.body, is(equalTo("Test2\n")));
     }
+
+    @Test
+    public void routingKey() {
+        setUpDummyAppender();
+
+        dummyAppender.setRoutingKeyPattern("rk");
+
+        logger.info("Test1");
+        logger.warn("Test2");
+
+        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+
+        assertThat(dummyChannel.entries.size(), is(equalTo(2)));
+
+        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
+
+        assertThat(entry1.routingKey, is(equalTo("rk")));
+
+        DummyChannel.Entry entry2 = dummyChannel.entries.get(1);
+
+        assertThat(entry2.routingKey, is(equalTo("rk")));
+    }
+
+    @Test
+    public void routingKeyPattern() {
+        setUpDummyAppender();
+
+        dummyAppender.setRoutingKeyPattern("log.%p");
+
+        logger.info("Test1");
+        logger.warn("Test2");
+
+        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+
+        assertThat(dummyChannel.entries.size(), is(equalTo(2)));
+
+        DummyChannel.Entry entry1 = dummyChannel.entries.get(0);
+
+        assertThat(entry1.routingKey, is(equalTo("log.INFO")));
+
+        DummyChannel.Entry entry2 = dummyChannel.entries.get(1);
+
+        assertThat(entry2.routingKey, is(equalTo("log.WARN")));
+    }
 }
