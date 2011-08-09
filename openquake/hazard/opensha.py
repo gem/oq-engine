@@ -391,15 +391,13 @@ class ClassicalMixin(BasePSHAMixin):
             # mean maps
             if self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
                 LOG.info("Computing/serializing mean hazard maps")
-                results = classical_psha.compute_mean_hazard_maps(self.id, sites, self.imls, desired_poes)
-                LOG.debug("results = '%s'" % results)
+                classical_psha.compute_mean_hazard_maps(self.id, sites, self.imls, desired_poes)
                 self.serialize_mean_hazard_map(sites, desired_poes)
 
             # quantile maps
-
             if len(quantiles):
                 LOG.info("Computing quantile hazard maps")
-                results = classical_psha.compute_quantile_hazard_maps(self.id, sites, quantiles, self.imls, desired_poes)
+                classical_psha.compute_quantile_hazard_maps(self.id, sites, quantiles, self.imls, desired_poes)
 
                 LOG.info("Serializing quantile maps for %s values" % len(quantiles))
                 for quantile in quantiles:
