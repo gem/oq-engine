@@ -194,7 +194,7 @@ class AMQPConnection(object):
                                           port=self.port,
                                           userid=self.username,
                                           password=self.password,
-                                          virtualhost=self.virtualhost,
+                                          virtual_host=self.virtualhost,
                                           insist=False)
         self.channel = self.connection.channel()
 
