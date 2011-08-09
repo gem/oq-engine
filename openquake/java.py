@@ -190,8 +190,8 @@ class AMQPConnection(object):
         if self.channel:
             return self.channel
 
-        self.connection = amqp.Connection(host=self.host,
-                                          port=self.port,
+        host_port = '%s:%d' % (self.host, self.port or 5672)
+        self.connection = amqp.Connection(host=host_port,
                                           userid=self.username,
                                           password=self.password,
                                           virtual_host=self.virtualhost,
