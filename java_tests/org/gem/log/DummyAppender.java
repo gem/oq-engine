@@ -1,9 +1,5 @@
 package org.gem.log;
 
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-
 import org.junit.Ignore;
 
 @Ignore
@@ -14,22 +10,10 @@ public class DummyAppender extends AMQPAppender {
         super();
 
         lastAppender = this;
+        connection = new DummyConnection();
     }
 
-    public ConnectionFactory getFactory() {
-        return factory;
-    }
-
-    @Override
-    protected Channel getChannel() {
-        if (channel == null)
-            channel = new DummyChannel();
-
-        return channel;
-    }
-
-    @Override
-    protected Connection getConnection() {
-        return null;
+    public DummyConnection getConnection() {
+        return (DummyConnection) connection;
     }
 }
