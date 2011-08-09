@@ -136,6 +136,8 @@ public class AMQPAppender extends AppenderSkeleton {
         connection.setPassword(password);
         connection.setVirtualHost(virtualHost);
 
+        // force the connection close (so it will be reopened with the
+        // new parameters the next time a message is sent)
         connection.close();
     }
 
