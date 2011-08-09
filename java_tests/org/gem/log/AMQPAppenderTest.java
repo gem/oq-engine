@@ -40,7 +40,8 @@ public class AMQPAppenderTest {
         dummyAppender = null;
         DummyAppender.lastAppender = null;
 
-        // this closes the RabbitMQ connections
+        // this calls close on the appenders (and so il closes the
+        // (fake) RabbitMQ connections)
         BasicConfigurator.resetConfiguration();
     }
 
