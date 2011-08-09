@@ -25,6 +25,7 @@ import jpype
 from openquake import flags
 from openquake import java
 from openquake import logs
+from openquake import settings
 
 LOG_FILE_PATH = os.path.join(os.getcwd(), 'test_file_for_the_logs_module.log')
 
@@ -155,8 +156,13 @@ class JavaAMQPLogTestCase(unittest.TestCase):
 
         for key, value in [
             ('', 'org.gem.log.AMQPAppender'),
+            ('.host', settings.AMQP_HOST),
+            ('.port', str(settings.AMQP_PORT)),
+            ('.username', settings.AMQP_USER),
+            ('.password', settings.AMQP_PASSWORD),
+            ('.virtualHost', settings.AMQP_VHOST),
             ('.routingKeyPattern', 'oq-unittest-log.%p'),
-            ('.exchange', 'amq.topic'),
+            ('.exchange', 'oq-unittest.topic'),
             ('.layout', 'org.apache.log4j.PatternLayout'),
             ('.layout.ConversionPattern', '%p - %m'),]:
             props.setProperty('log4j.appender.rabbit' + key, value)
@@ -166,12 +172,16 @@ class JavaAMQPLogTestCase(unittest.TestCase):
 
     def setup_queue(self):
         # connect to localhost and bind to a queue
-        conn = amqp.Connection('localhost')
+        conn = amqp.Connection(host=settings.AMQP_HOST,
+                               userid=settings.AMQP_USER,
+                               password=settings.AMQP_PASSWORD,
+                               virtual_host=settings.AMQP_VHOST)
         ch = conn.channel()
-        ch.access_request('/', active=False, read=True)
-        ch.exchange_declare('amq.topic', 'topic', passive=True)
+        ch.access_request(settings.AMQP_VHOST, active=False, read=True)
+        ch.exchange_declare('oq-unittest.topic', 'topic', auto_delete=True)
         qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, 'amq.topic', routing_key='oq-unittest-log.*')
+        ch.queue_bind(qname, 'oq-unittest.topic',
+                      routing_key='oq-unittest-log.*')
 
         return conn, ch, qname
 
@@ -190,12 +200,12 @@ class JavaAMQPLogTestCase(unittest.TestCase):
 
         # now there is a queue, send a test message
         sender = java.AMQPConnection()
-        sender.setHost('localhost')
-        sender.setPort(5672)
-        sender.setUsername('guest')
-        sender.setPassword('guest')
-        sender.setVirtualHost('/')
-        sender.publish('amq.topic', 'oq-unittest-log.FOO', 0, 'WARN',
+        sender.setHost(settings.AMQP_HOST)
+        sender.setPort(settings.AMQP_PORT)
+        sender.setUsername(settings.AMQP_USER)
+        sender.setPassword(settings.AMQP_PASSWORD)
+        sender.setVirtualHost(settings.AMQP_VHOST)
+        sender.publish('oq-unittest.topic', 'oq-unittest-log.FOO', 0, 'WARN',
                        'Hi there')
         sender.close()
 
