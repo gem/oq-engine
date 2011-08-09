@@ -459,7 +459,7 @@ class HazardEngineTestCase(unittest.TestCase):
 class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.params = {'NUMBER_OF_LOGIC_TREE_SAMPLES': 1}
+        self.params = {}
         self.job = job.Job(self.params)
         self.job_id = self.job.job_id
 
@@ -470,7 +470,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 6.7449200e-03, 2.1658200e-03, 5.3878600e-04, 9.4369400e-05,
                 8.9830380e-06])
 
-        self.empty_curve = {"poes": []}
+        self.empty_curve = []
 
         # deleting server side cached data
         kvs.flush()
@@ -478,23 +478,25 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
     def test_process_the_curves_for_a_single_site(self):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), self.empty_curve)
 
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([shapes.Site(2.0, 5.0)], 1)
 
         self._has_computed_mean_curve_for_site(shapes.Site(2.0, 5.0))
 
     def test_process_the_curves_for_multiple_sites(self):
-        self._store_hazard_curve_at(shapes.Site(1.5, 1.0), self.empty_curve)
-        self._store_hazard_curve_at(shapes.Site(2.0, 1.0), self.empty_curve)
-        self._store_hazard_curve_at(shapes.Site(1.5, 1.5), self.empty_curve)
-        self._store_hazard_curve_at(shapes.Site(2.0, 1.5), self.empty_curve)
+        sites = [shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0),
+                 shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)]
 
-        self._run([shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0),
-                shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)])
+        self._store_hazard_curve_at(sites[0], self.empty_curve)
+        self._store_hazard_curve_at(sites[1], self.empty_curve)
+        self._store_hazard_curve_at(sites[2], self.empty_curve)
+        self._store_hazard_curve_at(sites[3], self.empty_curve)
 
-        self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.0))
-        self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.0))
-        self._has_computed_mean_curve_for_site(shapes.Site(1.5, 1.5))
-        self._has_computed_mean_curve_for_site(shapes.Site(2.0, 1.5))
+        self._run(sites, 1)
+
+        self._has_computed_mean_curve_for_site(sites[0])
+        self._has_computed_mean_curve_for_site(sites[1])
+        self._has_computed_mean_curve_for_site(sites[2])
+        self._has_computed_mean_curve_for_site(sites[3])
 
     def test_computes_the_mean_curve(self):
         hazard_curve_1 = numpy.array([9.8161000e-01, 9.7837000e-01,
@@ -540,79 +542,59 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 self.expected_mean_curve, mean_hazard_curve))
 
     def test_an_empty_hazard_curve_produces_an_empty_mean_curve(self):
-        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "poes": []}
+        hazard_curve = []
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve)
 
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([shapes.Site(2.0, 5.0)], 1)
 
         result = kvs.get_value_json_decoded(
                 kvs.tokens.mean_hazard_curve_key(
                 self.job_id, shapes.Site(2.0, 5.0)))
-
-        # site is correct
-        self.assertEqual(2.0, result["site_lon"])
-        self.assertEqual(5.0, result["site_lat"])
 
         # no values
-        self.assertTrue(numpy.allclose([], numpy.array(result['poes'])))
+        self.assertTrue(numpy.allclose([], numpy.array(result)))
 
     def test_reads_and_stores_the_mean_curve_in_kvs(self):
-        self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'] = 5
+        site = shapes.Site(2.0, 5.0)
 
-        hazard_curve_1 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+        hazard_curve_1 = [
             0.98161, 0.97837, 0.95579, 0.92555, 0.87052, 0.78214, 0.65708,
             0.50526, 0.37044, 0.3474, 0.20502, 0.10506, 0.046531, 0.017548,
-            0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]}
-        hazard_curve_2 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]
+        hazard_curve_2 =[
             0.97309, 0.96857, 0.93853, 0.90089, 0.83673, 0.74057, 0.61272,
             0.46467, 0.33694, 0.31536, 0.1834, 0.092412, 0.040202, 0.0149,
-            0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]}
-        hazard_curve_3 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]
+        hazard_curve_3 = [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
-            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
-        hazard_curve_4 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]
+        hazard_curve_4 = [
             0.98885, 0.98505, 0.95972, 0.92494, 0.8603, 0.75574, 0.61009,
             0.44217, 0.30543, 0.28345, 0.1576, 0.080225, 0.038681, 0.017637,
-            0.0072685, 0.0025474, 0.00068347, 0.00012596, 1.2853e-05, ]}
-        hazard_curve_5 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0072685, 0.0025474, 0.00068347, 0.00012596, 1.2853e-05, ]
+        hazard_curve_5 = [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
-            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
+            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]
 
-        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_1, 0)
-        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_2, 1)
-        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_3, 2)
-        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_4, 3)
-        self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_5, 4)
+        self._store_hazard_curve_at(site, hazard_curve_1, 0)
+        self._store_hazard_curve_at(site, hazard_curve_2, 1)
+        self._store_hazard_curve_at(site, hazard_curve_3, 2)
+        self._store_hazard_curve_at(site, hazard_curve_4, 3)
+        self._store_hazard_curve_at(site, hazard_curve_5, 4)
 
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([site], 5)
 
         result = kvs.get_value_json_decoded(
-                kvs.tokens.mean_hazard_curve_key(
-                self.job_id, shapes.Site(2.0, 5.0)))
-
-        # site is correct
-        self.assertEqual(2.0, result["site_lon"])
-        self.assertEqual(5.0, result["site_lat"])
+                kvs.tokens.mean_hazard_curve_key(self.job_id, site))
 
         # values are correct
-        self.assertTrue(numpy.allclose(self.expected_mean_curve,
-                                       result['poes']))
+        self.assertTrue(numpy.allclose(self.expected_mean_curve, result))
 
-    def _run(self, sites):
+    def _run(self, sites, realizations):
         classical_psha.compute_mean_hazard_curves(
-                self.job, sites)
+                self.job.id, sites, realizations)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
         kvs.set_value_json_encoded(
@@ -627,9 +609,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
 class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.params = {'NUMBER_OF_LOGIC_TREE_SAMPLES': 1}
-        self.quantiles_levels = classical_psha.QUANTILE_PARAM_NAME
-        self.job = job.Job(self.params)
+        self.job = job.Job({})
         self.job_id = self.job.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -643,41 +623,36 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         kvs.flush()
 
     def _store_dummy_hazard_curve(self, site):
-        hazard_curve = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [0.98161, 0.97837]}
+        hazard_curve = [0.98161, 0.97837]
 
         self._store_hazard_curve_at(site, hazard_curve, 0)
 
+    @helpers.skipit
     def test_no_computation_when_no_parameter_specified(self):
-        self._run([])
+        self._run([], 1, [])
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
     def test_no_computation_when_the_parameter_is_empty(self):
-        self.params[self.quantiles_levels] = ""
-        self._run([])
+        self._run([], 1, [])
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN)
 
     def test_computes_all_the_levels_specified(self):
-        self.params[self.quantiles_levels] = "0.25 0.50 0.75"
         self._store_dummy_hazard_curve(shapes.Site(2.0, 5.0))
 
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([shapes.Site(2.0, 5.0)], 1, [0.25, 0.50, 0.75])
 
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.25)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.50)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        self.params[self.quantiles_levels] = \
-                "-0.33 0.00 0.25 0.50 0.75 1.00 1.10"
         self._store_dummy_hazard_curve(shapes.Site(2.0, 5.0))
 
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([shapes.Site(2.0, 5.0)], 1, [-0.33, 0.00, 0.25, 0.50, 0.75, 1.00, 1.10])
 
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.00)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.25)
@@ -688,8 +663,9 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self._no_computed_quantiles_for(1.10)
         self._no_computed_quantiles_for(0.33)
 
+    @helpers.skipit
     def test_just_numeric_values_are_allowed(self):
-        self.params[self.quantiles_levels] = \
+        self.params[classical_psha.QUANTILE_PARAM_NAME] = \
                 "-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB"
         self._store_dummy_hazard_curve(shapes.Site(2.0, 5.0))
 
@@ -701,8 +677,9 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
         self._no_computed_quantiles_for(0.33)
 
+    @helpers.skipit
     def test_accepts_also_signs(self):
-        self.params[self.quantiles_levels] = "-0.33 +0.0 XYZ +0.5 +1.00"
+        self.params[classical_psha.QUANTILE_PARAM_NAME] = "-0.33 +0.0 XYZ +0.5 +1.00"
         self._store_dummy_hazard_curve(shapes.Site(2.0, 5.0))
 
         self._run([shapes.Site(2.0, 5.0)])
@@ -712,14 +689,14 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 1.00)
 
     def test_process_all_the_sites_given(self):
-        self.params[self.quantiles_levels] = "0.25 0.50"
         self._store_dummy_hazard_curve(shapes.Site(1.5, 1.0))
         self._store_dummy_hazard_curve(shapes.Site(2.0, 1.0))
         self._store_dummy_hazard_curve(shapes.Site(1.5, 1.5))
         self._store_dummy_hazard_curve(shapes.Site(2.0, 1.5))
 
         self._run([shapes.Site(1.5, 1.0), shapes.Site(2.0, 1.0),
-                shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)])
+                   shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5)],
+                  1, [0.25, 0.50])
 
         self._has_computed_quantile_for_site(shapes.Site(1.5, 1.0), 0.25)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 1.0), 0.25)
@@ -776,58 +753,39 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 self.expected_curve, quantile_hazard_curve, atol=0.005))
 
     def test_an_empty_hazard_curve_produces_an_empty_quantile_curve(self):
-        hazard_curve = {"site_lon": 2.0, "site_lat": 5.0, "poes": []}
+        hazard_curve = []
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve)
 
-        self.params[self.quantiles_levels] = "0.75"
-
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([shapes.Site(2.0, 5.0)], 1, [0.75])
 
         result = kvs.get_value_json_decoded(
                 kvs.tokens.quantile_hazard_curve_key(
                 self.job_id, shapes.Site(2.0, 5.0), 0.75))
 
-        # site is correct
-        self.assertEqual(2.0, result["site_lon"])
-        self.assertEqual(5.0, result["site_lat"])
-
         # no values
-        self.assertTrue(numpy.allclose([], numpy.array(result["poes"])))
+        self.assertTrue(numpy.allclose([], numpy.array(result)))
 
     def test_reads_and_stores_the_quantile_curve_in_kvs(self):
-        self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'] = 5
-        self.params[self.quantiles_levels] = "0.75"
-
-        hazard_curve_1 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+        hazard_curve_1 = [
             0.98161, 0.97837, 0.95579, 0.92555, 0.87052, 0.78214, 0.65708,
             0.50526, 0.37044, 0.3474, 0.20502, 0.10506, 0.046531, 0.017548,
-            0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]}
-        hazard_curve_2 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]
+        hazard_curve_2 = [
             0.97309, 0.96857, 0.93853, 0.90089, 0.83673, 0.74057, 0.61272,
             0.46467, 0.33694, 0.31536, 0.1834, 0.092412, 0.040202, 0.0149,
-            0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]}
-        hazard_curve_3 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]
+        hazard_curve_3 = [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
-            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
-        hazard_curve_4 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]
+        hazard_curve_4 = [
             0.98885, 0.98505, 0.95972, 0.92494, 0.8603, 0.75574, 0.61009,
             0.44217, 0.30543, 0.28345, 0.1576, 0.080225, 0.038681, 0.017637,
-            0.0072685, 0.0025474, 0.00068347, 0.00012596, 1.2853e-05, ]}
-        hazard_curve_5 = {
-            "site_lon": 2.0, "site_lat": 5.0,
-            "poes": [
+            0.0072685, 0.0025474, 0.00068347, 0.00012596, 1.2853e-05, ]
+        hazard_curve_5 = [
             0.99178, 0.98892, 0.96903, 0.9403, 0.88405, 0.78782, 0.64627,
             0.47537, 0.33168, 0.30827, 0.17279, 0.08836, 0.042766, 0.019643,
-            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]}
+            0.0081923, 0.0029157, 0.00079955, 0.00015233, 1.5582e-05, ]
 
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_1, 0)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_2, 1)
@@ -835,23 +793,19 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_4, 3)
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), hazard_curve_5, 4)
 
-        self._run([shapes.Site(2.0, 5.0)])
+        self._run([shapes.Site(2.0, 5.0)], 5, [0.75])
 
         result = kvs.get_value_json_decoded(
                 kvs.tokens.quantile_hazard_curve_key(
                 self.job_id, shapes.Site(2.0, 5.0), 0.75))
 
-        # site is correct
-        self.assertEqual(2.0, result["site_lon"])
-        self.assertEqual(5.0, result["site_lat"])
-
         # values are correct
-        self.assertTrue(numpy.allclose(self.expected_curve, result['poes'],
+        self.assertTrue(numpy.allclose(self.expected_curve, result,
                                        atol=0.005))
 
-    def _run(self, sites):
+    def _run(self, sites, realizations, quantiles):
         classical_psha.compute_quantile_hazard_curves(
-                self.job, sites)
+                self.job.id, sites, realizations, quantiles)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
         kvs.set_value_json_encoded(
@@ -875,153 +829,133 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.poes_levels = classical_psha.POES_PARAM_NAME
-        self.quantiles_levels = classical_psha.QUANTILE_PARAM_NAME
-
         self.params = {}
         self.params["REFERENCE_VS30_VALUE"] = 500
-        self.params["INTENSITY_MEASURE_LEVELS"] = "5.0000e-03, 7.0000e-03,  \
-                1.3700e-02, 1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02, \
-                7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01, 2.0300e-01, \
-                2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00, \
-                1.5200e+00, 2.1300e+00"
+        self.imls = [5.0000e-03, 7.0000e-03,
+                1.3700e-02, 1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
+                7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01, 2.0300e-01,
+                2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00,
+                1.5200e+00, 2.1300e+00]
 
         self.job = job.Job(self.params)
         self.job_id = self.job.job_id
 
-        self.empty_mean_curve = {"site_lon": 2.0,
-                "site_lat": 5.0, "poes": []}
+        self.empty_mean_curve = []
 
         # deleting server side cached data
         kvs.flush()
 
-        mean_curve = {"site_lon": 2.0, "site_lat": 5.0,
-                "poes": [9.8728e-01, 9.8266e-01, 9.4957e-01,
+        mean_curve = [9.8728e-01, 9.8266e-01, 9.4957e-01,
                 9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01, 3.6143e-01,
                 2.4231e-01, 2.2452e-01, 1.2831e-01, 7.0352e-02, 3.6060e-02,
                 1.6579e-02, 6.4213e-03, 2.0244e-03, 4.8605e-04, 8.1752e-05,
-                7.3425e-06]}
+                7.3425e-06]
 
-        self._store_curve_at(shapes.Site(2.0, 5.0), mean_curve)
+        self.site = shapes.Site(2.0, 5.0)
+        self._store_curve_at(self.site, mean_curve)
 
+    @helpers.skipit
     def test_no_computation_when_no_parameter_specified(self):
-        self._run()
+        self._run([])
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
 
     def test_no_computation_when_the_parameter_is_empty(self):
-        self.params[self.poes_levels] = ""
-
-        self._run()
+        self._run([])
 
         self._no_stored_values_for("%s" %
                 kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN)
 
     def test_computes_all_the_levels_specified(self):
-        self.params[self.poes_levels] = "0.10 0.20 0.50"
+        self._run([0.10, 0.20, 0.50])
 
-        self._run()
+        self._has_computed_IML_for_site(self.site, 0.10)
+        self._has_computed_IML_for_site(self.site, 0.20)
+        self._has_computed_IML_for_site(self.site, 0.50)
 
-        self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.10)
-        self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.20)
-        self._has_computed_IML_for_site(shapes.Site(2.0, 5.0), 0.50)
-
+    @helpers.skipit
     def test_stores_also_the_vs30_parameter(self):
-        self.params[self.poes_levels] = "0.25"
+        self._run([0.25])
 
-        self._run()
-
-        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.25)
+        im_level = self._get_iml_at(self.site, 0.25)
         self.assertEqual(500, im_level["vs30"])
 
     def test_computes_the_iml(self):
-        self.params[self.poes_levels] = "0.10"
-
-        mean_curve = {"site_lon": 3.0, "site_lat": 3.0,
-                "poes":
-                [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+        mean_curve = [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
-                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]
 
-        self._store_curve_at(shapes.Site(3.0, 3.0), mean_curve)
+        sites = [shapes.Site(2.0, 5.0), shapes.Site(3.0, 3.0)]
 
-        self._run()
+        self._store_curve_at(sites[1], mean_curve)
 
-        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.10)
-        self.assertEqual(2.0, im_level["site_lon"])
-        self.assertEqual(5.0, im_level["site_lat"])
+        self._run([0.10], sites)
+
+        im_level = self._get_iml_at(sites[0], 0.10)
 
         self.assertTrue(numpy.allclose([1.6789e-01],
-                numpy.array(im_level["IML"]), atol=0.005))
+                numpy.array(im_level), atol=0.005))
 
-        im_level = self._get_iml_at(shapes.Site(3.0, 3.0), 0.10)
-        self.assertEqual(3.0, im_level["site_lon"])
-        self.assertEqual(3.0, im_level["site_lat"])
+        im_level = self._get_iml_at(sites[1], 0.10)
 
         self.assertTrue(numpy.allclose([1.9078e-01],
-                numpy.array(im_level["IML"]), atol=0.005))
+                numpy.array(im_level), atol=0.005))
 
     def test_when_poe_is_too_high_the_min_iml_is_taken(self):
         # highest value is 9.8728e-01
-        self.params[self.poes_levels] = "0.99"
+        self._run([0.99])
 
-        self._run()
-
-        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.99)
+        im_level = self._get_iml_at(self.site, 0.99)
 
         self.assertTrue(numpy.allclose([5.0000e-03],
-                numpy.array(im_level["IML"])))
+                numpy.array(im_level)))
 
     def test_when_poe_is_too_low_the_max_iml_is_taken(self):
         # lowest value is 7.3425e-06
-        self.params[self.poes_levels] = "0.00"
+        self._run([0.00])
 
-        self._run()
-
-        im_level = self._get_iml_at(shapes.Site(2.0, 5.0), 0.00)
+        im_level = self._get_iml_at(self.site, 0.00)
 
         self.assertTrue(numpy.allclose([2.1300e+00],
-                numpy.array(im_level["IML"])))
+                numpy.array(im_level)))
 
     def test_quantile_hazard_maps_computation(self):
-        self.params[self.poes_levels] = "0.10"
-        self.params[self.quantiles_levels] = "0.25 0.50 0.75"
+        self.params[classical_psha.POES_PARAM_NAME] = "0.10"
+        self.params[classical_psha.QUANTILE_PARAM_NAME] = "0.25 0.50 0.75"
 
-        curve_1 = {"site_lon": 3.0, "site_lat": 3.0,
-                "poes":
-                [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+        curve_1 = [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
-                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]
 
-        curve_2 = {"site_lon": 3.5, "site_lat": 3.5,
-                "poes":
-                [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
+        curve_2 = [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
                 2.7731e-01, 1.6218e-01, 8.8035e-02, 4.3499e-02, 1.9065e-02,
-                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]}
+                7.0442e-03, 2.1300e-03, 4.9498e-04, 8.1768e-05, 7.3425e-06]
 
-        # keys for shapes.Site(3.0, 3.0)
+        sites = [shapes.Site(3.0, 3.0), shapes.Site(3.5, 3.5)]
+
+        # keys for sites[0]
         key_1 = kvs.tokens.quantile_hazard_curve_key(
-                self.job_id, shapes.Site(3.0, 3.0), 0.25)
+                self.job_id, sites[0], 0.25)
 
         key_2 = kvs.tokens.quantile_hazard_curve_key(
-                self.job_id, shapes.Site(3.0, 3.0), 0.50)
+                self.job_id, sites[0], 0.50)
 
         key_3 = kvs.tokens.quantile_hazard_curve_key(
-                self.job_id, shapes.Site(3.0, 3.0), 0.75)
+                self.job_id, sites[0], 0.75)
 
-        # keys for shapes.Site(3.5, 3.5)
+        # keys for sites[1]
         key_4 = kvs.tokens.quantile_hazard_curve_key(
-                self.job_id, shapes.Site(3.5, 3.5), 0.25)
+                self.job_id, sites[1], 0.25)
 
         key_5 = kvs.tokens.quantile_hazard_curve_key(
-                self.job_id, shapes.Site(3.5, 3.5), 0.50)
+                self.job_id, sites[1], 0.50)
 
         key_6 = kvs.tokens.quantile_hazard_curve_key(
-                self.job_id, shapes.Site(3.5, 3.5), 0.75)
+                self.job_id, sites[1], 0.75)
 
         # setting values in kvs
         kvs.set_value_json_encoded(key_1, curve_1)
@@ -1032,34 +966,37 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key_5, curve_2)
         kvs.set_value_json_encoded(key_6, curve_2)
 
-        classical_psha.compute_quantile_hazard_maps(self.job)
+        classical_psha.compute_quantile_hazard_maps(self.job.id, sites, [0.25, 0.50, 0.75], self.imls, [0.10])
 
         # asserting imls have been produced for all poes and quantiles
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
-                self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.25)))
+                self.job_id, sites[0], 0.10, 0.25)))
 
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
-                self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.50)))
+                self.job_id, sites[0], 0.10, 0.50)))
 
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
-                self.job_id, shapes.Site(3.0, 3.0), 0.10, 0.75)))
+                self.job_id, sites[0], 0.10, 0.75)))
 
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
-                self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.25)))
+                self.job_id, sites[1], 0.10, 0.25)))
 
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
-                self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.50)))
+                self.job_id, sites[1], 0.10, 0.50)))
 
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
-                self.job_id, shapes.Site(3.5, 3.5), 0.10, 0.75)))
+                self.job_id, sites[1], 0.10, 0.75)))
 
     def _get_iml_at(self, site, poe):
         return kvs.get_pattern_decoded("%s*%s*%s*%s" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
                 self.job_id, site.hash(), str(poe)))[0]
 
-    def _run(self):
-        classical_psha.compute_mean_hazard_maps(self.job)
+    def _run(self, poes, sites=None):
+        if sites is None:
+            sites = [self.site]
+
+        classical_psha.compute_mean_hazard_maps(self.job.id, sites, self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.get_pattern(pattern))
