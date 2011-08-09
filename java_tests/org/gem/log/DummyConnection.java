@@ -7,6 +7,14 @@ import java.util.Date;
 import java.util.List;
 
 @Ignore
+class DummyConnectionFactory implements AMQPConnectionFactory {
+    @Override
+    public AMQPConnection getConnection() {
+        return new DummyConnection();
+    }
+}
+
+@Ignore
 public class DummyConnection implements AMQPConnection {
     public class Entry {
         String exchange;

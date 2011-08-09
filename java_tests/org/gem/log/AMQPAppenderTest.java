@@ -46,6 +46,8 @@ public class AMQPAppenderTest {
     }
 
     private void setUpDummyAppender() {
+        AMQPAppender.setConnectionFactory(new DummyConnectionFactory());
+
         dummyAppender = new DummyAppender();
         dummyAppender.setLayout(new PatternLayout());
 
