@@ -545,7 +545,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         values = []
 
-        if self.has(param_name):
+        if param_name in self.params:
             raw_values = self.params[param_name].split()
             values = [float(x) for x in raw_values if _acceptable(x)]
 
