@@ -59,17 +59,6 @@ def compute_quantile_curve(curves, quantile):
     return result
 
 
-def _acceptable(value):
-    """Return true if the value taken from the configuration
-    file is valid, false otherwise."""
-    try:
-        value = float(value)
-        return value >= 0.0 and value <= 1.0
-
-    except ValueError:
-        return False
-
-
 def poes_at(job_id, site, realizations):
     """Return all the json deserialized hazard curves for
     a single site (different realizations).
@@ -88,17 +77,6 @@ def poes_at(job_id, site, realizations):
                 for realization in xrange(realizations)]
     # get the probablity of exceedence for each curve in the site
     return kvs.mget_decoded(keys)
-
-
-def _extract_values_from_config(job, param_name):
-    """Extract the set of valid values from the configuration file."""
-    values = []
-
-    if job.has(param_name):
-        raw_values = job.params[param_name].split()
-        values = [float(x) for x in raw_values if _acceptable(x)]
-
-    return values
 
 
 def compute_mean_hazard_curves(job_id, sites, realizations):
