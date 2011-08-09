@@ -10,7 +10,6 @@ public class DummyAppender extends AMQPAppender {
         super();
 
         lastAppender = this;
-        connection = new DummyConnection();
     }
 
     public DummyConnection getConnection() {
