@@ -315,4 +315,5 @@ def current_jobs():
     :returns: list of job keys (as strings), or an empty list if there are no
         current jobs
     """
-    return sorted([int(x) for x in openquake.kvs.get_client().smembers(CURRENT_JOBS)])
+    client = openquake.kvs.get_client()
+    return sorted([int(x) for x in client.smembers(CURRENT_JOBS)])

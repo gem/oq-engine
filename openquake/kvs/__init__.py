@@ -122,6 +122,7 @@ def generate_key(key_list):
 
 JOB_KEY_FMT = '::JOB::%s::'
 
+
 def generate_job_key(job_id):
     """
     Return a job key if the following format:
