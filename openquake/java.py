@@ -18,10 +18,11 @@
 """Wrapper around our use of jpype.
 Includes classpath arguments, and heap size."""
 
+from amqplib import client_0_8 as amqp
+import jpype
 import logging
 import os
 import sys
-import jpype
 import traceback
 
 from celery.decorators import task as celery_task
@@ -83,6 +84,10 @@ JAVA_CLASSES = {
     "LocationListFormatter": "org.gem.LocationListFormatter",
 }
 
+LOG4J_PROPERTIES_PATH = os.path.abspath(
+                            os.path.join(os.path.dirname(__file__),
+                            "config/log4j.properties"))
+
 logging.getLogger('jpype').setLevel(logging.ERROR)
 
 
@@ -126,15 +131,101 @@ def _setup_java_capture(out, err):
     jpype.java.lang.System.setErr(ps(err_stream))
 
 
+class AMQPConnection(object):
+    """Implement the Java `org.gem.log.AMQPConnection` interface"""
+    # pylint: disable=C0103
+
+    def __init__(self):
+        self.host = None
+        self.port = None
+        self.username = None
+        self.password = None
+        self.virtualhost = None
+        self.connection = None
+        self.channel = None
+
+    def setHost(self, host):
+        """Set the AMQP host"""
+        self.host = host
+
+    def setPort(self, port):
+        """Set the AMQP port"""
+        self.port = port
+
+    def setUsername(self, username):
+        """Set the AMQP user name"""
+        self.username = username
+
+    def setPassword(self, password):
+        """Set the AMQP password"""
+        self.password = password
+
+    def setVirtualHost(self, virtualhost):
+        """Set the AMQP virtualhost"""
+        self.virtualhost = virtualhost
+
+    def close(self):
+        """Close the AMQP connection"""
+        channel = self.channel
+        connection = self.connection
+
+        self.channel = self.connection = None
+
+        if channel:
+            channel.close()
+        if connection:
+            connection.close()
+
+    def publish(self, exchange, routing_key, _timestamp,
+                _level, message):
+        """Send a new message to the queue"""
+        channel = self.getChannel()
+        msg = amqp.Message(body=message)
+
+        channel.basic_publish(msg, exchange=exchange,
+                              routing_key=routing_key)
+
+    def getChannel(self):
+        """Return the existing connection or create a new one"""
+        if self.channel:
+            return self.channel
+
+        self.connection = amqp.Connection(host=self.host,
+                                          port=self.port,
+                                          userid=self.username,
+                                          password=self.password,
+                                          virtualhost=self.virtualhost,
+                                          insist=False)
+        self.channel = self.connection.channel()
+
+        return self.channel
+
+
+class AMQPFactory(object):
+    """Implement the Java org.gem.log.AMQPConnectionFactory interface"""
+    # pylint: disable=C0103
+
+    def getConnection(self):  # pylint: disable=R0201
+        """Return a new `org.gem.log.AMQPConnection` instance"""
+        return jvm().JProxy("org.gem.log.AMQPConnection",
+                            inst=AMQPConnection())
+
+
+def _setup_java_amqp():
+    """Set the connection factory for the Log4j AMQP log appender"""
+    amqpfactory = jpype.JProxy("org.gem.log.AMQPConnectionFactory",
+                               inst=AMQPFactory())
+    amqpappender = jpype.JClass("org.gem.log.AMQPAppender")
+    amqpappender.setConnectionFactory(amqpfactory)
+
+
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")),
                 '/usr/share/java')
-    log4j_properties_path = os.path.abspath(
-                                os.path.join(os.path.dirname(__file__),
-                                "config/log4j.properties"))
+
     if not jpype.isJVMStarted():
         max_mem = get_jvm_max_mem(max_mem)
         LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
@@ -145,7 +236,7 @@ def jvm(max_mem=None):
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
                 "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
             # "-Dlog4j.debug", # turn on log4j internal debugging
-            "-Dlog4j.configuration=file://%s" % log4j_properties_path,
+            "-Dlog4j.configuration=file://%s" % LOG4J_PROPERTIES_PATH,
             "-Xmx%sM" % max_mem)
 
         # override the log level set in log4j configuration file this can't be
@@ -155,6 +246,8 @@ def jvm(max_mem=None):
 
         if FLAGS.capture_java_debug:
             _setup_java_capture(sys.stdout, sys.stderr)
+
+        _setup_java_amqp()
 
     return jpype
 
