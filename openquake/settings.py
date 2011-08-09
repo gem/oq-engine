@@ -125,3 +125,9 @@ SOURCEGEOM_SHP = 'seismicsources/data/sourcegeometrycatalog.shp'
 WORLD_SHP = 'world/data/TM_WORLD_BORDERS-0.3.shp'
 
 TEST_KVS_DB = 3
+
+AMQP_HOST = "localhost"
+AMQP_PORT = 5672
+AMQP_USER = "guest"
+AMQP_PASSWORD = "guest"
+AMQP_VHOST = "/"
