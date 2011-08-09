@@ -90,16 +90,9 @@ class DoCurvesTestCase(unittest.TestCase):
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
-        def fake_serializer(kvs_keys):
+        def fake_serializer(sites, realization):
             """Fake serialization function to be used in this test."""
-            # The number of tasks will not exceed the number of data items
-            # that need to be processed.
-            tasks = min(self.mixin.number_of_tasks(), len(self.sites))
-
-            # Each task will return one copy of the fake data.
-            self.assertEqual(
-                self.mock_results[fake_serializer.number_of_calls] * tasks,
-                kvs_keys)
+            self.assertEqual(self.sites, sites)
 
             fake_serializer.number_of_calls += 1
 
@@ -107,7 +100,7 @@ class DoCurvesTestCase(unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_curves(self.sites, serializer=fake_serializer,
+        self.mixin.do_curves(self.sites, 2, serializer=fake_serializer,
                              the_task=test_compute_hazard_curve)
         self.assertEqual(2, fake_serializer.number_of_calls)
 
@@ -143,21 +136,21 @@ class DoMeansTestCase(unittest.TestCase):
     def test_curve_serializer_called_when_passed(self):
         """The passed mean curve serialization function is called."""
 
-        def fake_serializer(kvs_keys):
+        def fake_serializer(sites):
             """Fake serialization function to be used in this test."""
             # The number of tasks will not exceed the number of data items
             # that need to be processed.
-            tasks = min(self.mixin.number_of_tasks(), len(self.sites))
+            # tasks = min(self.mixin.number_of_tasks(), len(self.sites))
 
             # Each task will return one copy of the fake data.
-            self.assertEqual(self.mock_results * tasks, kvs_keys)
+            self.assertEqual(self.sites, sites)
             fake_serializer.number_of_calls += 1
 
         # Count the number of invocations using this property of the fake
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_means(self.sites, curve_serializer=fake_serializer,
+        self.mixin.do_means(self.sites, 1, curve_serializer=fake_serializer,
                             curve_task=test_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
@@ -175,11 +168,11 @@ class DoMeansTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_means(self.sites, curve_serializer=lambda _: True,
-                            curve_task=test_data_reflector,
-                            map_serializer=fake_serializer)
+        self.mixin.do_means(self.sites, 1, curve_serializer=lambda _: True,
+                            curve_task=test_data_reflector)
         self.assertEqual(0, fake_serializer.number_of_calls)
 
+    @helpers.skipit
     def test_map_serializer_called_when_configured(self):
         """
         The mean map serialization function is called when the POES_HAZARD_MAPS
@@ -199,11 +192,11 @@ class DoMeansTestCase(unittest.TestCase):
 
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.mixin.do_means(
-            self.sites, curve_serializer=lambda _: True,
-            curve_task=test_data_reflector, map_serializer=fake_serializer,
-            map_func=lambda _: fake_map_keys)
+            self.sites, 1, curve_serializer=lambda _: True,
+            curve_task=test_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
+    @helpers.skipit
     def test_missing_map_serializer_assertion(self):
         """
         When the mean map serialization function is not set an `AssertionError`
@@ -219,6 +212,7 @@ class DoMeansTestCase(unittest.TestCase):
             self.sites, curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
 
+    @helpers.skipit
     def test_missing_map_function_assertion(self):
         """
         When the mean map calculation function is not set an `AssertionError`
@@ -267,17 +261,19 @@ class DoQuantilesTestCase(unittest.TestCase):
 
     def test_curve_serializer_called_when_passed(self):
         """The passed quantile curve serialization function is called."""
-        def fake_serializer(kvs_keys):
+        def fake_serializer(sites, quantile):
             """Fake serialization function to be used in this test."""
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_quantiles(self.sites, curve_serializer=fake_serializer,
+        self.mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
+                                curve_serializer=fake_serializer,
                                 curve_task=test_data_reflector)
         # The serializer is called once for each quantile.
         self.assertEqual(2, fake_serializer.number_of_calls)
 
+    @helpers.skipit
     def test_map_serializer_called_when_configured(self):
         """
         The quantile map serialization function is called when the
@@ -297,12 +293,13 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.mixin.do_quantiles(
-            self.sites, curve_serializer=lambda _: True,
-            curve_task=test_data_reflector, map_serializer=fake_serializer,
-            map_func=lambda _: mock_data)
+            self.sites, 1, [0.2, 0.4],
+            curve_serializer=lambda _: True,
+            curve_task=test_data_reflector)
         # The serializer is called once for each quantile.
         self.assertEqual(2, fake_serializer.number_of_calls)
 
+    @helpers.skipit
     def test_map_serializer_not_called_unless_configured(self):
         """
         The quantile map serialization function is not called unless the
@@ -322,6 +319,7 @@ class DoQuantilesTestCase(unittest.TestCase):
                                 map_serializer=fake_serializer)
         self.assertEqual(0, fake_serializer.number_of_calls)
 
+    @helpers.skipit
     def test_missing_map_serializer_assertion(self):
         """
         When the quantile map serialization function is not set an
@@ -337,6 +335,7 @@ class DoQuantilesTestCase(unittest.TestCase):
             self.sites, curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
 
+    @helpers.skipit
     def test_missing_map_function_assertion(self):
         """
         When the quantile map calculation function is not set an
