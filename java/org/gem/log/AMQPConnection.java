@@ -3,7 +3,7 @@ package org.gem.log;
 import java.util.Date;
 
 /**
- * Abstract AMQP connection interfaca
+ * Abstract AMQP connection interface
  */
 public interface AMQPConnection {
     /// Set the AMQP host
