@@ -255,7 +255,7 @@ class JobTokensTestCase(unittest.TestCase):
         self.assertFalse(self.client.exists(tokens.CURRENT_JOBS))
 
         # load some sample jobs into the CURRENT_JOBS set
-        jobs = range(1,4)
+        jobs = range(1, 4)
 
         for job in jobs:
             self.client.sadd(tokens.CURRENT_JOBS, job)
