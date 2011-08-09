@@ -1,7 +1,5 @@
 package org.gem.log;
 
-import com.rabbitmq.client.ConnectionFactory;
-
 import java.util.Arrays;
 import java.util.Properties;
 
@@ -31,12 +29,14 @@ class ThrowablePatternLayout extends PatternLayout {
 }
 
 public class AMQPAppenderTest {
-    private DummyChannel dummyChannel;
+    private DummyConnection dummyConnection;
     private DummyAppender dummyAppender;
     private Logger logger = Logger.getLogger(AMQPAppenderTest.class);
 
     void tearDown() {
-        dummyChannel = null;
+        AMQPAppender.setConnectionFactory(null);
+
+        dummyConnection = null;
         dummyAppender = null;
         DummyAppender.lastAppender = null;
 
@@ -51,8 +51,8 @@ public class AMQPAppenderTest {
         BasicConfigurator.configure(dummyAppender);
     }
 
-    private DummyChannel.Entry entry(int index) {
-        return dummyChannel.entries.get(index);
+    private DummyConnection.Entry entry(int index) {
+        return dummyConnection.entries.get(index);
     }
 
     // logging sanity test
@@ -63,24 +63,18 @@ public class AMQPAppenderTest {
         logger.info("Test1");
         logger.warn("Test2");
 
-        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+        dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
-        assertThat(dummyChannel.entries.size(), is(equalTo(2)));
+        assertThat(dummyConnection.entries.size(), is(equalTo(2)));
 
         assertThat(entry(0).exchange, is(equalTo("")));
         assertThat(entry(0).routingKey, is(equalTo("")));
-        assertThat(entry(0).properties.getType(), is(equalTo("INFO")));
-        assertThat(entry(0).properties.getContentType(),
-                   is(equalTo("text/plain")));
-        assertThat(entry(0).properties.getDeliveryMode(), is(equalTo(2)));
+        assertThat(entry(0).level, is(equalTo("INFO")));
         assertThat(entry(0).body, is(equalTo("Test1\n")));
 
         assertThat(entry(1).exchange, is(equalTo("")));
         assertThat(entry(1).routingKey, is(equalTo("")));
-        assertThat(entry(1).properties.getType(), is(equalTo("WARN")));
-        assertThat(entry(1).properties.getContentType(),
-                   is(equalTo("text/plain")));
-        assertThat(entry(1).properties.getDeliveryMode(), is(equalTo(2)));
+        assertThat(entry(1).level, is(equalTo("WARN")));
         assertThat(entry(1).body, is(equalTo("Test2\n")));
     }
 
@@ -94,9 +88,9 @@ public class AMQPAppenderTest {
         logger.info("Test1");
         logger.warn("Test2");
 
-        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+        dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
-        assertThat(dummyChannel.entries.size(), is(equalTo(2)));
+        assertThat(dummyConnection.entries.size(), is(equalTo(2)));
         assertThat(entry(0).routingKey, is(equalTo("rk")));
         assertThat(entry(1).routingKey, is(equalTo("rk")));
     }
@@ -111,9 +105,9 @@ public class AMQPAppenderTest {
         logger.info("Test1");
         logger.warn("Test2");
 
-        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+        dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
-        assertThat(dummyChannel.entries.size(), is(equalTo(2)));
+        assertThat(dummyConnection.entries.size(), is(equalTo(2)));
         assertThat(entry(0).routingKey, is(equalTo("log.INFO")));
         assertThat(entry(1).routingKey, is(equalTo("log.WARN")));
     }
@@ -133,9 +127,9 @@ public class AMQPAppenderTest {
 
         logger.info("Test1", exception);
 
-        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+        dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
-        assertThat(dummyChannel.entries.size(), is(equalTo(1)));
+        assertThat(dummyConnection.entries.size(), is(equalTo(1)));
         assertThat(entry(0).body, is(equalTo("Test1\n")));
     }
 
@@ -152,9 +146,9 @@ public class AMQPAppenderTest {
 
         logger.info("Test1", exception);
 
-        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+        dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
-        assertThat(dummyChannel.entries.size(), is(equalTo(1)));
+        assertThat(dummyConnection.entries.size(), is(equalTo(1)));
 
         assertThat(entry(0).body, is(not(equalTo("Test1\n"))));
 
@@ -211,7 +205,7 @@ public class AMQPAppenderTest {
         logger.info("Test1");
 
         dummyAppender = DummyAppender.lastAppender;
-        dummyChannel = (DummyChannel) dummyAppender.getChannel();
+        dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
         // check layout
         Layout layout = dummyAppender.getLayout();
@@ -224,16 +218,16 @@ public class AMQPAppenderTest {
                    is(equalTo("%d %-5p [%c] - %m%n")));
 
         // check message properties
-        assertThat(dummyChannel.entries.size(), is(equalTo(1)));
+        assertThat(dummyConnection.entries.size(), is(equalTo(1)));
         assertThat(entry(0).exchange, is(equalTo("amq.topic")));
 
         // check factory configuration
-        ConnectionFactory factory = dummyAppender.getFactory();
+        DummyConnection connection = dummyAppender.getConnection();
 
-        assertThat(factory.getHost(), is(equalTo("amqp.openquake.org")));
-        assertThat(factory.getPort(), is(equalTo(4004)));
-        assertThat(factory.getUsername(), is(equalTo("looser")));
-        assertThat(factory.getPassword(), is(equalTo("s3krit")));
-        assertThat(factory.getVirtualHost(), is(equalTo("job.oq.org/test")));
+        assertThat(connection.host, is(equalTo("amqp.openquake.org")));
+        assertThat(connection.port, is(equalTo(4004)));
+        assertThat(connection.username, is(equalTo("looser")));
+        assertThat(connection.password, is(equalTo("s3krit")));
+        assertThat(connection.virtualHost, is(equalTo("job.oq.org/test")));
     }
 }
