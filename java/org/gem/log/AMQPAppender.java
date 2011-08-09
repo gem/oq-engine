@@ -72,8 +72,6 @@ public class AMQPAppender extends AppenderSkeleton {
     // constructors
 
     public AMQPAppender() {
-        connection = connectionFactory.getConnection();
-
         host = "localhost";
         port = 5672;
         username = "guest";
@@ -130,15 +128,10 @@ public class AMQPAppender extends AppenderSkeleton {
     public void activateOptions() {
         super.activateOptions();
 
-        connection.setHost(host);
-        connection.setPort(port);
-        connection.setUsername(username);
-        connection.setPassword(password);
-        connection.setVirtualHost(virtualHost);
+        if (connection == null)
+            return;
 
-        // force the connection close (so it will be reopened with the
-        // new parameters the next time a message is sent)
-        connection.close();
+        applyConnectionParameters();
     }
 
     // as per discussion on IRC, we do all the sending synchronously,
@@ -155,7 +148,8 @@ public class AMQPAppender extends AppenderSkeleton {
 
     @Override
     public void close() {
-        connection.close();
+        if (connection != null)
+            connection.close();
     }
 
     // implementation
@@ -168,8 +162,28 @@ public class AMQPAppender extends AppenderSkeleton {
         else
             routingKey = "";
 
+        if (connection == null)
+            openConnection();
+
         connection.publish(exchange, routingKey, event.timestamp,
                            event.event.getLevel().toString(),
                            event.message);
+    }
+
+    private void openConnection() {
+        connection = connectionFactory.getConnection();
+        applyConnectionParameters();
+    }
+
+    private void applyConnectionParameters() {
+        connection.setHost(host);
+        connection.setPort(port);
+        connection.setUsername(username);
+        connection.setPassword(password);
+        connection.setVirtualHost(virtualHost);
+
+        // force the connection close (so it will be reopened with the
+        // new parameters the next time a message is sent)
+        connection.close();
     }
 }
