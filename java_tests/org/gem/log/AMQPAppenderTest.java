@@ -52,7 +52,7 @@ public class AMQPAppenderTest {
     }
 
     private DummyChannel.Entry entry(int index) {
-        return dummyChannel.entries.get(0);
+        return dummyChannel.entries.get(index);
     }
 
     // logging sanity test
