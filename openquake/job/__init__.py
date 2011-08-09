@@ -493,3 +493,11 @@ class Job(object):
         region = shapes.Region.from_coordinates(coords)
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         return [site for site in region]
+
+    def build_nrml_path(self, nrml_file):
+        return os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], nrml_file)
+
+    @property
+    def imls(self):
+        return [float(x) for x in self['INTENSITY_MEASURE_LEVELS'].split(",")]
+

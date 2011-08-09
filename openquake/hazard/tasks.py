@@ -104,7 +104,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 
 @task
-def compute_mean_curves(job_id, sites):
+def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
     logger = compute_mean_curves.get_logger()
@@ -112,13 +112,12 @@ def compute_mean_curves(job_id, sites):
     logger.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    engine = job.Job.from_kvs(job_id)
-
-    return classical_psha.compute_mean_hazard_curves(engine, sites)
+    return classical_psha.compute_mean_hazard_curves(job_id, sites,
+        realizations)
 
 
 @task
-def compute_quantile_curves(job_id, sites):
+def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
     logger = compute_quantile_curves.get_logger()
@@ -126,6 +125,5 @@ def compute_quantile_curves(job_id, sites):
     logger.info("Computing QUANTILE curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
-    engine = job.Job.from_kvs(job_id)
-
-    return classical_psha.compute_quantile_hazard_curves(engine, sites)
+    return classical_psha.compute_quantile_hazard_curves(job_id, sites,
+        realizations, quantiles)
