@@ -193,10 +193,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("verifying KVS entries for mean hazard maps")
 
-                poes = classical_psha._extract_values_from_config(hazengine,
-                    classical_psha.POES_PARAM_NAME)
-
-                for poe in poes:
+                for poe in hazengine.desired_poes:
                     for site in hazengine.sites_for_region():
                         key = tokens.mean_hazard_map_key(
                             hazengine.job_id, site, poe)
@@ -208,8 +205,7 @@ class HazardEngineTestCase(unittest.TestCase):
             """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
-            quantiles = classical_psha._extract_values_from_config(hazengine,
-                classical_psha.QUANTILE_PARAM_NAME)
+            quantiles = hazengine.quantiles
 
             LOG.debug("verifying KVS entries for quantile hazard curves, "\
                 "%s quantile values" % len(quantiles))
@@ -226,14 +222,12 @@ class HazardEngineTestCase(unittest.TestCase):
             """ Make sure that the keys and non-empty values for quantile
             hazard maps have been written to KVS."""
 
-            quantiles = classical_psha._extract_values_from_config(hazengine,
-                classical_psha.QUANTILE_PARAM_NAME)
+            quantiles = hazengine.quantiles
 
             if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                poes = classical_psha._extract_values_from_config(hazengine,
-                    classical_psha.POES_PARAM_NAME)
+                poes = hazengine.desired_poes
 
                 LOG.debug("verifying KVS entries for quantile hazard maps, "\
                     "%s quantile values, %s PoEs" % (
@@ -260,7 +254,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 nrml_path = os.path.join(
                     "smoketests/classical_psha_simple/computed_output",
-                    opensha.realization_hc_filename(realization))
+                    hazengine.hazard_curve_filename(realization))
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
@@ -278,7 +272,7 @@ class HazardEngineTestCase(unittest.TestCase):
             if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
                 nrml_path = os.path.join(
                     "smoketests/classical_psha_simple/computed_output",
-                    opensha.mean_hc_filename())
+                    hazengine.hazard_curve_filename('mean'))
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
@@ -296,13 +290,10 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
-                poes = classical_psha._extract_values_from_config(hazengine,
-                    classical_psha.POES_PARAM_NAME)
-
-                for poe in poes:
+                for poe in hazengine.desired_poes:
                     nrml_path = os.path.join(
                         "smoketests/classical_psha_simple/computed_output",
-                        opensha.mean_hm_filename(poe))
+                        hazengine.hazard_map_filename('%s-mean' % poe))
 
                     LOG.debug("validating NRML file for mean hazard map %s" \
                         % nrml_path)
@@ -318,14 +309,11 @@ class HazardEngineTestCase(unittest.TestCase):
             Does NOT test if results in NRML files are correct.
             """
 
-            quantiles = classical_psha._extract_values_from_config(hazengine,
-                classical_psha.QUANTILE_PARAM_NAME)
-
-            for quantile in quantiles:
+            for quantile in hazengine.quantiles:
 
                 nrml_path = os.path.join(
                     "smoketests/classical_psha_simple/computed_output",
-                    opensha.quantile_hc_filename(quantile))
+                    hazengine.hazard_curve_filename("quantile-%.2f" % quantile))
 
                 LOG.debug("validating NRML file for quantile hazard curve: "\
                     "%s" % nrml_path)
@@ -341,20 +329,16 @@ class HazardEngineTestCase(unittest.TestCase):
             Does NOT test if results in NRML files are correct.
             """
 
-            quantiles = classical_psha._extract_values_from_config(hazengine,
-                classical_psha.QUANTILE_PARAM_NAME)
+            quantiles = hazengine.quantiles
 
             if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                poes = classical_psha._extract_values_from_config(hazengine,
-                    classical_psha.POES_PARAM_NAME)
-
-                for quantile in quantiles:
-                    for poe in poes:
+                for poe in hazengine.desired_poes:
+                    for quantile in quantiles:
                         nrml_path = os.path.join(
                             "smoketests/classical_psha_simple/computed_output",
-                            opensha.quantile_hm_filename(quantile, poe))
+                            hazengine.hazard_map_filename('%s-quantile-%.2f' % (poe, quantile)))
 
                         LOG.debug("validating NRML file for quantile hazard "\
                             "map: %s" % nrml_path)
@@ -649,6 +633,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.50)
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
+    @helpers.skipit
     def test_computes_just_the_quantiles_in_range(self):
         self._store_dummy_hazard_curve(shapes.Site(2.0, 5.0))
 
