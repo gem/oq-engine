@@ -40,7 +40,7 @@ public class AMQPAppenderTest {
         dummyAppender = null;
         DummyAppender.lastAppender = null;
 
-        // this calls close on the appenders (and so il closes the
+        // this calls close on the appenders (and so it closes the
         // (fake) RabbitMQ connections)
         BasicConfigurator.resetConfiguration();
     }
