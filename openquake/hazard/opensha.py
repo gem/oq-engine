@@ -305,10 +305,6 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
-
-        if not self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
-            return
-
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
@@ -379,8 +375,9 @@ class ClassicalMixin(BasePSHAMixin):
             serializer=self.serialize_hazard_curve_of_realization)
 
         # mean curves
-        self.do_means(sites, realizations,
-            curve_serializer=self.serialize_mean_hazard_curves)
+        if self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+            self.do_means(sites, realizations,
+                curve_serializer=self.serialize_mean_hazard_curves)
 
         # quantile curves
         quantiles = self.quantiles
@@ -392,11 +389,11 @@ class ClassicalMixin(BasePSHAMixin):
         desired_poes = self.desired_poes
         if desired_poes:
             # mean maps
-
-            LOG.info("Computing/serializing mean hazard maps")
-            results = classical_psha.compute_mean_hazard_maps(self.id, sites, self.imls, desired_poes)
-            LOG.debug("results = '%s'" % results)
-            self.serialize_mean_hazard_map(sites, desired_poes)
+            if self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+                LOG.info("Computing/serializing mean hazard maps")
+                results = classical_psha.compute_mean_hazard_maps(self.id, sites, self.imls, desired_poes)
+                LOG.debug("results = '%s'" % results)
+                self.serialize_mean_hazard_map(sites, desired_poes)
 
             # quantile maps
 
