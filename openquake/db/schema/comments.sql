@@ -163,9 +163,9 @@ COMMENT ON COLUMN hzrdr.hazard_curve.statistic_type IS 'Statistic type, one of:
 COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
 
 
-COMMENT ON TABLE hzrdr.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN hzrdr.hazard_curve_node_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN hzrdr.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
 
 COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';

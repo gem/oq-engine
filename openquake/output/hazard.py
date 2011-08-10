@@ -45,7 +45,7 @@ import logging
 from lxml import etree
 
 from openquake.db.alchemy.models import (
-    HazardMap, HazardMapData, HazardCurve, HazardCurveNodeData, GMFData,
+    HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData,
     Output, OqParams, OqJob)
 
 from openquake import job
@@ -694,11 +694,11 @@ class HazardCurveDBReader(object):
         points = []
 
         for hazard_curve_datum in hazard_curve:
-            hazard_curve_node_data = self.session.query(
-                sqlfunc.ST_X(HazardCurveNodeData.location),
-                sqlfunc.ST_Y(HazardCurveNodeData.location),
-                HazardCurveNodeData) \
-                .filter(HazardCurveNodeData.hazard_curve ==
+            hazard_curve_data = self.session.query(
+                sqlfunc.ST_X(HazardCurveData.location),
+                sqlfunc.ST_Y(HazardCurveData.location),
+                HazardCurveData) \
+                .filter(HazardCurveData.hazard_curve ==
                         hazard_curve_datum).all()
 
             common = {
@@ -714,7 +714,7 @@ class HazardCurveDBReader(object):
             else:
                 common['endBranchLabel'] = hazard_curve_datum.end_branch_label
 
-            for lon, lat, datum in hazard_curve_node_data:
+            for lon, lat, datum in hazard_curve_data:
                 attrs = common.copy()
                 attrs['PoEValues'] = datum.poes
 
@@ -751,7 +751,7 @@ class HazardCurveDBWriter(writer.DBWriter):
                                                   oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(HazardCurveNodeData)
+        self.bulk_inserter = writer.BulkInserter(HazardCurveData)
 
     def get_output_type(self):
         return "hazard_curve"

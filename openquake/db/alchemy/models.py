@@ -230,8 +230,8 @@ class HazardCurve(Base):
             self.id, self.statistic_type or self.end_branch_label))
 
 
-class HazardCurveNodeData(Base):
-    __tablename__ = "hazard_curve_node_data"
+class HazardCurveData(Base):
+    __tablename__ = "hazard_curve_data"
     __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
@@ -245,7 +245,7 @@ class HazardCurveNodeData(Base):
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
 
     def __repr__(self):
-        return(":hazard_curve_node_data: %s, %s" % (
+        return(":hazard_curve_data: %s, %s" % (
             self.id, self.poes))
 
 
