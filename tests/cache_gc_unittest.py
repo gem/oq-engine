@@ -39,11 +39,6 @@ class CacheGCTestCase(unittest.TestCase):
         cls.client.delete(tokens.CURRENT_JOBS)
         cls.client.delete(tokens.NEXT_JOB_ID)
 
-        # create 3 jobs
-        # this will add job keys to CURRENT_JOBS
-        for _ in range(1, 4):
-            tokens.alloc_job_key()
-
     @classmethod
     def tearDownClass(cls):
         cls.client.delete(tokens.NEXT_JOB_ID)
@@ -55,6 +50,11 @@ class CacheGCTestCase(unittest.TestCase):
         :py:function:`bin.cache_gc._get_current_job_ids` returns the correct
         IDs.
         """
+        # create 3 jobs
+        # this will add job keys to CURRENT_JOBS
+        for _ in range(1, 4):
+            tokens.alloc_job_id()
+
         job_ids = cache_gc._get_current_job_ids()
         self.assertEqual([1, 2, 3], job_ids)
 
@@ -80,10 +80,10 @@ class CacheGCTestCase(unittest.TestCase):
             cache_gc.clear_job_data(1)
             self.assertEqual(1, gc_mock.call_count)
             self.assertEqual(
-                ((tokens.JOB_KEY_FMT % 1, ), {}), gc_mock.call_args)
+                ((kvs.JOB_KEY_FMT % 1, ), {}), gc_mock.call_args)
 
             # same thing, but this time with a str for the ID
             cache_gc.clear_job_data('2')
             self.assertEqual(2, gc_mock.call_count)
             self.assertEqual(
-                ((tokens.JOB_KEY_FMT % 2, ), {}), gc_mock.call_args)
+                ((kvs.JOB_KEY_FMT % 2, ), {}), gc_mock.call_args)

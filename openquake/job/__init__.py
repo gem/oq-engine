@@ -28,13 +28,14 @@ import urlparse
 from ConfigParser import ConfigParser, RawConfigParser
 
 from openquake import flags
+from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
-from openquake.kvs.tokens import alloc_job_key
+from openquake.kvs.tokens import alloc_job_id
 
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.alchemy.db_utils import get_db_session
@@ -288,10 +289,22 @@ class Job(object):
 
     def __init__(self, params, job_id=None, sections=list(),
         base_path=None):
+        """
+        :param dict params: Dict of job config params.
+        :param int job_id: ID of the corresponding oq_job db record.
+        :param list sections: List of config file sections. Example::
+            ['HAZARD', 'RISK']
+        :param str base_path: base directory containing job input files
+        """
         if job_id is None:
-            self.job_id = alloc_job_key()
+            self._job_id = alloc_job_id()
         else:
-            self.job_id = job_id
+            self._job_id = job_id
+
+        # Make the job_id available to the java logging context.
+        mdc = java.jclass('MDC')
+        mdc.put('job_id', self.job_id)
+
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
@@ -317,9 +330,9 @@ class Job(object):
         return conf.default_validators(self.sections, self.params).is_valid()
 
     @property
-    def id(self):  # pylint: disable=C0103
+    def job_id(self):
         """Return the id of this job."""
-        return self.job_id
+        return self._job_id
 
     @property
     def key(self):
@@ -392,7 +405,8 @@ class Job(object):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                LOG.debug("Job %s Launching %s for %s" % (self.id, mixin, key))
+                LOG.debug(
+                    "Job %s Launching %s for %s" % (self.job_id, mixin, key))
                 results.extend(self.execute())
 
         self.cleanup()
@@ -407,17 +421,7 @@ class Job(object):
         """
         LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
 
-        match = re.match(r'^::JOB::(\d+)::$', str(self.job_id))
-        if match:
-            job_number = match.group(1)
-        else:
-            # invalid job_id; something is horribly wrong
-            msg = "KVS garbage collection failed: job ID '%s' is invalid."
-            msg %= self.job_id
-            LOG.critical(msg)
-            raise RuntimeError(msg)
-
-        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % job_number]
+        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
 
         # run KVS garbage collection aynchronously
         # stdout goes to /dev/null to silence any output from the GC
