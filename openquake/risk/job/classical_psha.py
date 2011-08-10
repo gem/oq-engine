@@ -71,12 +71,12 @@ class ClassicalPSHABasedMixin:
         iml_query = session.query(models.OqParams.imls) \
             .join(models.OqJob) \
             .filter(models.OqJob.id == job_id)
-        curve_query = session.query(models.HazardCurveNodeData.poes) \
+        curve_query = session.query(models.HazardCurveData.poes) \
             .join(models.HazardCurve) \
             .join(models.Output) \
             .filter(models.Output.oq_job_id == job_id) \
             .filter(models.HazardCurve.statistic_type == 'mean') \
-            .filter(sqlfunc.ST_GeoHash(models.HazardCurveNodeData.location, 12)
+            .filter(sqlfunc.ST_GeoHash(models.HazardCurveData.location, 12)
                         == site.hash())
 
         hc = curve_query.one()
