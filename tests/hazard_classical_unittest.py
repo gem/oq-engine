@@ -114,19 +114,23 @@ class DoMeansTestCase(unittest.TestCase):
         self.sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
                       shapes.Site(-122.9, 38.0), shapes.Site(-122.8, 38.0)]
 
+        self.mixin = None
+
     mock_results = [
         "mean_hazard_curve!38cdc377!1!-121.9!38.0",
         "mean_hazard_curve!38cdc377!1!-121.8!38.0",
         "mean_hazard_curve!38cdc377!1!-121.7!38.0"]
 
     def setUp(self):
+        params = {
+            'CALCULATION_MODE': 'Hazard',
+            'COMPUTE_MEAN_HAZARD_CURVE': 'True',
+        }
+
         self.mixin = opensha.ClassicalMixin(
-            job.Job(dict()), opensha.ClassicalMixin)
-        # Store the canned result data in the KVS.
-        key = self.mixin.id = helpers.TestStore.add(self.mock_results)
-        self.keys.append(key)
+            job.Job(params), opensha.ClassicalMixin)
         # Initialize the mixin instance.
-        self.mixin.params = dict(COMPUTE_MEAN_HAZARD_CURVE="True")
+        #self.mixin.params = dict(COMPUTE_MEAN_HAZARD_CURVE="True")
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -150,8 +154,12 @@ class DoMeansTestCase(unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_means(self.sites, 1, curve_serializer=fake_serializer,
-                            curve_task=test_data_reflector)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.do_means(self.sites, 1,
+                         curve_serializer=fake_serializer,
+                         curve_task=test_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_map_serializer_not_called_unless_configured(self):
@@ -168,35 +176,46 @@ class DoMeansTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_means(self.sites, 1, curve_serializer=lambda _: True,
-                            curve_task=test_data_reflector)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.do_means(self.sites, 1,
+                         curve_serializer=lambda _: True,
+                         curve_task=test_data_reflector)
         self.assertEqual(0, fake_serializer.number_of_calls)
 
-    @helpers.skipit
     def test_map_serializer_called_when_configured(self):
         """
         The mean map serialization function is called when the POES_HAZARD_MAPS
         parameter is specified in the configuration file.
         """
 
-        fake_map_keys = list(xrange(3))
-
-        def fake_serializer(kvs_keys):
+        def fake_serializer(sites, poes):
             """Fake serialization function to be used in this test."""
             # Check that the data returned is the one we expect for the current
             # realization.
-            self.assertEqual(fake_map_keys, kvs_keys)
+            print 'sites', repr(sites)
+            print 'poes', repr(poes)
+
             fake_serializer.number_of_calls += 1
+
+        def fake_map_func(*args):
+            print 'args', args
+            return list(xrange(3))
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
-        self.mixin.do_means(
-            self.sites, 1, curve_serializer=lambda _: True,
-            curve_task=test_data_reflector)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+            job.do_means(self.sites, 1,
+                curve_serializer=lambda _: True,
+                curve_task=test_data_reflector,
+                map_func=fake_map_func,
+                map_serializer=fake_serializer)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
-    @helpers.skipit
     def test_missing_map_serializer_assertion(self):
         """
         When the mean map serialization function is not set an `AssertionError`
@@ -206,13 +225,16 @@ class DoMeansTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
-        self.assertRaises(
-            AssertionError, self.mixin.do_means,
-            self.sites, curve_serializer=lambda _: True,
-            curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+            self.assertRaises(
+                AssertionError, job.do_means,
+                self.sites, 1,
+                curve_serializer=lambda _: True,
+                curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
 
-    @helpers.skipit
     def test_missing_map_function_assertion(self):
         """
         When the mean map calculation function is not set an `AssertionError`
@@ -222,11 +244,15 @@ class DoMeansTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
-        self.assertRaises(
-            AssertionError, self.mixin.do_means, self.sites,
-            curve_serializer=lambda _: True, curve_task=test_data_reflector,
-            map_serializer=lambda _: True, map_func=None)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+            self.assertRaises(
+                AssertionError, job.do_means,
+                self.sites, 1,
+                curve_serializer=lambda _: True, curve_task=test_data_reflector,
+                map_serializer=lambda _: True, map_func=None)
 
 
 class DoQuantilesTestCase(unittest.TestCase):
@@ -246,13 +272,7 @@ class DoQuantilesTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mixin = opensha.ClassicalMixin(
-            job.Job(dict()), opensha.ClassicalMixin)
-        # Store the canned result data in the KVS.
-        key = self.mixin.id = helpers.TestStore.nextkey()
-        helpers.TestStore.put(key, self.mock_results)
-        self.keys.append(key)
-        # Initialize the mixin instance.
-        self.mixin.params = dict()
+            job.Job(dict(CALCULATION_MODE='Hazard')), opensha.ClassicalMixin)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -267,39 +287,45 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
-                                curve_serializer=fake_serializer,
-                                curve_task=test_data_reflector)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.do_quantiles(self.sites, 1, [0.2, 0.4],
+                             curve_serializer=fake_serializer,
+                             curve_task=test_data_reflector)
         # The serializer is called once for each quantile.
         self.assertEqual(2, fake_serializer.number_of_calls)
 
-    @helpers.skipit
     def test_map_serializer_called_when_configured(self):
         """
         The quantile map serialization function is called when the
         POES_HAZARD_MAPS parameter is specified in the configuration file.
         """
-        mock_data = [
-            "quantile_hazard_map!10!-122.9!38.0!0.2",
-            "quantile_hazard_map!10!-121.9!38.0!0.2",
-            "quantile_hazard_map!10!-122.8!38.0!0.4",
-            "quantile_hazard_map!10!-121.8!38.0!0.4"]
-
-        def fake_serializer(kvs_keys):
+        def fake_serializer(*args):
             """Fake serialization function to be used in this test."""
             fake_serializer.number_of_calls += 1
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
-        self.mixin.do_quantiles(
-            self.sites, 1, [0.2, 0.4],
-            curve_serializer=lambda _: True,
-            curve_task=test_data_reflector)
+        def fake_map_func(*args):
+            return ["quantile_hazard_map!10!-122.9!38.0!0.2",
+                    "quantile_hazard_map!10!-121.9!38.0!0.2",
+                    "quantile_hazard_map!10!-122.8!38.0!0.4",
+                    "quantile_hazard_map!10!-121.8!38.0!0.4"]
+
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+            job.do_quantiles(
+                self.sites, 1, [0.2, 0.4],
+                curve_serializer=lambda _, __: True,
+                curve_task=test_data_reflector,
+                map_func=fake_map_func,
+                map_serializer=fake_serializer)
         # The serializer is called once for each quantile.
         self.assertEqual(2, fake_serializer.number_of_calls)
 
-    @helpers.skipit
     def test_map_serializer_not_called_unless_configured(self):
         """
         The quantile map serialization function is not called unless the
@@ -314,12 +340,15 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_quantiles(self.sites, curve_serializer=lambda _: True,
-                                curve_task=test_data_reflector,
-                                map_serializer=fake_serializer)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.do_quantiles(self.sites, 1, [],
+                             curve_serializer=lambda _: True,
+                             curve_task=test_data_reflector,
+                             map_serializer=fake_serializer)
         self.assertEqual(0, fake_serializer.number_of_calls)
 
-    @helpers.skipit
     def test_missing_map_serializer_assertion(self):
         """
         When the quantile map serialization function is not set an
@@ -329,13 +358,16 @@ class DoQuantilesTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
-        self.assertRaises(
-            AssertionError, self.mixin.do_quantiles,
-            self.sites, curve_serializer=lambda _: True,
-            curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+            self.assertRaises(
+                AssertionError, job.do_quantiles,
+                self.sites, 1, [0.5],
+                curve_serializer=lambda _, __: True,
+                curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
 
-    @helpers.skipit
     def test_missing_map_function_assertion(self):
         """
         When the quantile map calculation function is not set an
@@ -345,11 +377,16 @@ class DoQuantilesTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
-        self.assertRaises(
-            AssertionError, self.mixin.do_quantiles, self.sites,
-            curve_serializer=lambda _: True, curve_task=test_data_reflector,
-            map_serializer=lambda _: True, map_func=None)
+        with self.mixin as job:
+            key = helpers.TestStore.put(job.id, self.mock_results)
+            self.keys.append(key)
+            job.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+            self.assertRaises(
+                AssertionError, job.do_quantiles,
+                self.sites, 1, [0.5],
+                curve_serializer=lambda _, __: True,
+                curve_task=test_data_reflector,
+                map_serializer=lambda _, __, ___: True, map_func=None)
 
 
 class NumberOfTasksTestCase(unittest.TestCase):
