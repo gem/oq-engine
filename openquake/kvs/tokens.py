@@ -281,43 +281,31 @@ def ground_motion_values_key(job_id, point):
 
 NEXT_JOB_ID = 'NEXT_JOB_ID'
 CURRENT_JOBS = 'CURRENT_JOBS'
-JOB_KEY_FMT = '::JOB::%s::'
 
 
-def alloc_job_key():
+def alloc_job_id():
     """
     The KVS used by the OpenQuake engine maintains a 'NEXT_JOB_ID' key whose
     value is an integer.
 
-    When this function is called, the value of this key will be used to
-    generate a unique job id; the value will be subsequently incremented.
-
-    :returns: a (presumably) unique string in the follwing format:
-        ::JOB::<id>::, where <id> is the value of the 'NEXT_JOB_ID' key
-
-        This is not guaranteed to be free of collisions, but is safe as long as
-        developers reserve this string formatting pattern for this purpose
-        only.
-
-        NOTE(LB): I wanted to use UUIDs, but millions of keys at 36 bytes per
-        key consumes a lot more storage space in the KVS.
+    :returns: Increment and get the value of the 'NEXT_JOB_ID' key.
     """
     client = openquake.kvs.get_client()
 
-    job_key = JOB_KEY_FMT % client.incr(NEXT_JOB_ID)
+    job_id = client.incr(NEXT_JOB_ID)
 
     # Add this key to set of current jobs.
     # This set can be queried to perform garbage collection.
-    duplicate = not client.sadd(CURRENT_JOBS, job_key)
+    duplicate = not client.sadd(CURRENT_JOBS, job_id)
     # We need to make this returns True, otherwise there is a duplication;
     # this is bad.
     if duplicate:
-        msg = "Cannot allocate job key '%s': this key already exists in " \
-            "'CURRENT_JOBS'. This is probably a bug." % job_key
+        msg = "Cannot allocate job ID '%s': this ID already exists in " \
+            "'CURRENT_JOBS'. This is probably a bug." % job_id
         LOG.error(msg)
         raise RuntimeError(msg)
 
-    return job_key
+    return job_id
 
 
 def current_jobs():
@@ -327,4 +315,5 @@ def current_jobs():
     :returns: list of job keys (as strings), or an empty list if there are no
         current jobs
     """
-    return sorted(list(openquake.kvs.get_client().smembers(CURRENT_JOBS)))
+    client = openquake.kvs.get_client()
+    return sorted([int(x) for x in client.smembers(CURRENT_JOBS)])

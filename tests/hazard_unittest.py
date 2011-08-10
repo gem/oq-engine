@@ -121,14 +121,14 @@ class HazardEngineTestCase(unittest.TestCase):
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 
-            source_model_key = kvs.generate_product_key(hazengine.id,
+            source_model_key = kvs.generate_product_key(hazengine.job_id,
                                 kvs.tokens.SOURCE_MODEL_TOKEN)
             self.kvs_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
 
-            gmpe_key = kvs.generate_product_key(hazengine.id,
+            gmpe_key = kvs.generate_product_key(hazengine.job_id,
                                 kvs.tokens.GMPE_TOKEN)
             self.kvs_client.get(gmpe_key)
             # TODO(JMC): Add this back in
@@ -148,7 +148,7 @@ class HazardEngineTestCase(unittest.TestCase):
             for realization in xrange(0, realizations):
                 for site in hazengine.sites_for_region():
                     key = tokens.hazard_curve_poes_key(
-                        hazengine.id, realization, site)
+                        hazengine.job_id, realization, site)
                     expected_keys.append(key)
             self.assertEqual(expected_keys, result_keys,
                 "computation didn't yield hazard curve keys in "\
@@ -178,7 +178,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("verifying KVS entries for mean hazard curves")
                 for site in hazengine.sites_for_region():
-                    key = tokens.mean_hazard_curve_key(hazengine.id, site)
+                    key = tokens.mean_hazard_curve_key(hazengine.job_id, site)
                     value = self.kvs_client.get(key)
                     self.assertTrue(
                         value is not None, "no value found at KVS key")
@@ -199,7 +199,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 for poe in poes:
                     for site in hazengine.sites_for_region():
                         key = tokens.mean_hazard_map_key(
-                            hazengine.id, site, poe)
+                            hazengine.job_id, site, poe)
                         value = self.kvs_client.get(key)
                         self.assertTrue(
                             value is not None, "no value found at KVS key")
@@ -217,7 +217,7 @@ class HazardEngineTestCase(unittest.TestCase):
             for quantile in quantiles:
                 for site in hazengine.sites_for_region():
                     key = tokens.quantile_hazard_curve_key(
-                        hazengine.id, site, quantile)
+                        hazengine.job_id, site, quantile)
                     value = self.kvs_client.get(key)
                     self.assertTrue(
                         value is not None, "no value found at KVS key")
@@ -243,7 +243,7 @@ class HazardEngineTestCase(unittest.TestCase):
                     for poe in poes:
                         for site in hazengine.sites_for_region():
                             key = tokens.quantile_hazard_map_key(
-                                hazengine.id, site, poe, quantile)
+                                hazengine.job_id, site, poe, quantile)
                             value = self.kvs_client.get(key)
                             self.assertTrue(
                                 value is not None,

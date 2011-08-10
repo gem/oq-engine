@@ -29,7 +29,6 @@ data.
 """
 
 import getopt
-import re
 import sys
 
 import oqpath
@@ -95,18 +94,9 @@ def _get_current_job_ids():
 
     :returns: list of ints
     """
-    jobs = tokens.current_jobs()
+    jobs = [int(x) for x in tokens.current_jobs()]
 
-    # parse out the job IDs
-    job_ids = []
-    job_re = re.compile(r'^::JOB::(\d+)::$')
-
-    for job in jobs:
-        match = job_re.match(job)
-        if match:
-            job_ids.append(int(match.group(1)))
-
-    return sorted(job_ids)
+    return sorted(jobs)
 
 
 def list_cached_jobs():
@@ -147,7 +137,7 @@ def clear_job_data(job_id):
 
     print 'Attempting to clear cache data for job %s...' % job_id
 
-    result = kvs.cache_gc(tokens.JOB_KEY_FMT % job_id)
+    result = kvs.cache_gc(kvs.JOB_KEY_FMT % job_id)
 
     if result is None:
         print 'Job %s not found.' % job_id
