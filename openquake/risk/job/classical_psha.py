@@ -72,10 +72,10 @@ class ClassicalPSHABasedMixin:
             .join(models.OqJob) \
             .filter(models.OqJob.id == job_id)
         curve_query = session.query(models.HazardCurveNodeData.poes) \
-            .join(models.HazardCurveData) \
+            .join(models.HazardCurve) \
             .join(models.Output) \
             .filter(models.Output.oq_job_id == job_id) \
-            .filter(models.HazardCurveData.statistic_type == 'mean') \
+            .filter(models.HazardCurve.statistic_type == 'mean') \
             .filter(sqlfunc.ST_GeoHash(models.HazardCurveNodeData.location, 12)
                         == site.hash())
 

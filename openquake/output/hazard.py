@@ -45,7 +45,7 @@ import logging
 from lxml import etree
 
 from openquake.db.alchemy.models import (
-    HazardMap, HazardMapData, HazardCurveData, HazardCurveNodeData, GMFData,
+    HazardMap, HazardMapData, HazardCurve, HazardCurveNodeData, GMFData,
     Output, OqParams, OqJob)
 
 from openquake import job
@@ -685,20 +685,20 @@ class HazardCurveDBReader(object):
         The structure of the result is documented in
         :class:`HazardCurveDBWriter`.
         """
-        hazard_curve_data = self.session.query(HazardCurveData) \
-            .filter(HazardCurveData.output_id == output_id).all()
+        hazard_curve = self.session.query(HazardCurve) \
+            .filter(HazardCurve.output_id == output_id).all()
         params = self.session.query(OqParams) \
             .join(OqJob) \
             .join(Output) \
             .filter(Output.id == output_id).one()
         points = []
 
-        for hazard_curve_datum in hazard_curve_data:
+        for hazard_curve_datum in hazard_curve:
             hazard_curve_node_data = self.session.query(
                 sqlfunc.ST_X(HazardCurveNodeData.location),
                 sqlfunc.ST_Y(HazardCurveNodeData.location),
                 HazardCurveNodeData) \
-                .filter(HazardCurveNodeData.hazard_curve_data ==
+                .filter(HazardCurveNodeData.hazard_curve ==
                         hazard_curve_datum).all()
 
             common = {
@@ -725,7 +725,7 @@ class HazardCurveDBReader(object):
 
 class HazardCurveDBWriter(writer.DBWriter):
     """
-    Serialize the location/IML data to the `uiapi.hazard_curve_data` database
+    Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
 
     The data passed to :func:`serialize()` will look something like this::
@@ -784,10 +784,10 @@ class HazardCurveDBWriter(writer.DBWriter):
             hazard_curve_item = self.curves_per_branch_label[curve_label]
         else:
             if 'endBranchLabel' in values:
-                hazard_curve_item = HazardCurveData(
+                hazard_curve_item = HazardCurve(
                     output=self.output, end_branch_label=curve_label)
             else:
-                hazard_curve_item = HazardCurveData(
+                hazard_curve_item = HazardCurve(
                     output=self.output, statistic_type=curve_label)
 
                 if 'quantileValue' in values:
@@ -797,7 +797,7 @@ class HazardCurveDBWriter(writer.DBWriter):
             self.session.flush()
 
         self.bulk_inserter.add_entry(
-            hazard_curve_data_id=hazard_curve_item.id,
+            hazard_curve_id=hazard_curve_item.id,
             poes=values['PoEValues'],
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
@@ -835,7 +835,7 @@ class GMFDBReader(object):
 
 class GMFDBWriter(writer.DBWriter):
     """
-    Serialize the location/IML data to the `uiapi.hazard_curve_data` database
+    Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
 
     The data passed to :func:`serialize()` will look something like this::
