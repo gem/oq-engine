@@ -227,6 +227,8 @@ class ClassicalMixin(BasePSHAMixin):
 
         :param sites: The sites for which to calculate hazard curves.
         :type sites: list of :py:class:`openquake.shapes.Site`
+        :param realizations: The number of realizations to calculate
+        :type realizations: :py:class:`int`
         :param serializer: A serializer for the calculated hazard curves,
             receives the KVS keys of the calculated hazard curves in
             its single parameter.
@@ -292,6 +294,8 @@ class ClassicalMixin(BasePSHAMixin):
 
         :param sites: The sites for which to calculate mean curves/maps.
         :type sites: list of :py:class:`openquake.shapes.Site`
+        :param realizations: The number of realizations that were calculated
+        :type realizations: :py:class:`int`
         :param curve_serializer: A serializer for the calculated curves,
             receives the KVS keys of the calculated curves in
             its single parameter.
@@ -346,6 +350,10 @@ class ClassicalMixin(BasePSHAMixin):
 
         :param sites: The sites for which to calculate quantile curves/maps.
         :type sites: list of :py:class:`openquake.shapes.Site`
+        :param realizations: The number of realizations that were calculated
+        :type realizations: :py:class:`int`
+        :param quantiles: The quantiles to calculate
+        :param quantiles: list of float
         :param curve_serializer: A serializer for the calculated curves,
             receives the KVS keys of the calculated curves in
             its single parameter.
