@@ -56,6 +56,7 @@ GRANT ALL ON SEQUENCE riski.vulnerability_model_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE riskr.loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_curve_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.aggregate_loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_id_seq to GROUP openquake;
 
@@ -179,6 +180,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_curve TO oq_reslt_writer;
 -- riskr.loss_curve_data
 GRANT SELECT ON riskr.loss_curve_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_curve_data TO oq_reslt_writer;
+
+-- riskr.aggregate_loss_curve_data
+GRANT SELECT ON riskr.aggregate_loss_curve_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.aggregate_loss_curve_data TO oq_reslt_writer;
 
 -- riskr.loss_map
 GRANT SELECT ON riskr.loss_map TO GROUP openquake;
