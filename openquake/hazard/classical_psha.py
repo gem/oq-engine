@@ -120,6 +120,16 @@ def compute_quantile_hazard_curves(job_id, sites, realizations, quantiles):
 
 
 def build_interpolator(poes, imls):
+    """
+    Return a function interpolating the specified points.
+
+    :param poes: the PoEs (abscissae)
+    :type poes: list of :py:class:`float`
+    :param imls: the IMLs (ordinates)
+    :type imls: list of :py:class:`float`
+    :return: the interpolating function
+    :rtype: a function fn(poe, site=None), that given a PoE will return the IML
+    """
     # In our interpolation, PoE becomes the x axis, IML the y axis, therefore
     # the arrays have to be reversed (x axis has to be monotonically
     # increasing).
@@ -129,6 +139,12 @@ def build_interpolator(poes, imls):
     interpolator = interp1d(poes, numpy.log(imls), kind='linear')
 
     def safe_interpolator(poe, site=None):
+        """
+        Return the interpolated IML, limiting the value between the minimum and
+        maximum IMLs of the original points describing the curve.
+        The optional site is used to give more informative messages in case the
+        limiting has taken place.
+        """
         if poe > poes[-1]:
             LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
                 "using maximum PoE value pair, PoE: %s, IML: %s, at site %s"
