@@ -326,8 +326,8 @@ class ClassicalMixin(BasePSHAMixin):
             curve_serializer(sites)
 
         if self.poes_hazard_maps:
-            assert map_func, "No calculation function for mean hazard maps set."
-            assert map_serializer, "No serializer for the mean hazard maps set."
+            assert map_func, "No calculation function for mean hazard maps set"
+            assert map_serializer, "No serializer for the mean hazard maps set"
 
             LOG.info("Computing/serializing mean hazard maps")
             map_func(self.job_id, sites, self.imls, self.poes_hazard_maps)
@@ -390,7 +390,8 @@ class ClassicalMixin(BasePSHAMixin):
             map_func(self.job_id, sites, quantiles, self.imls,
                      self.poes_hazard_maps)
 
-            LOG.info("Serializing quantile maps for %s values" % len(quantiles))
+            LOG.info("Serializing quantile maps for %s values"
+                     % len(quantiles))
             for quantile in quantiles:
                 map_serializer(sites, self.poes_hazard_maps, quantile)
 

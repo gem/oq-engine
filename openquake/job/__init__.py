@@ -526,4 +526,3 @@ class Job(object):
         "Return the intensity measure levels as specified in the config file"
         return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS',
                                                separator=',')
-
