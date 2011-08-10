@@ -193,7 +193,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 LOG.debug("verifying KVS entries for mean hazard maps")
 
-                for poe in hazengine.desired_poes:
+                for poe in hazengine.poes_hazard_maps:
                     for site in hazengine.sites_for_region():
                         key = tokens.mean_hazard_map_key(
                             hazengine.job_id, site, poe)
@@ -205,7 +205,7 @@ class HazardEngineTestCase(unittest.TestCase):
             """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
-            quantiles = hazengine.quantiles
+            quantiles = hazengine.quantile_levels
 
             LOG.debug("verifying KVS entries for quantile hazard curves, "\
                 "%s quantile values" % len(quantiles))
@@ -222,12 +222,12 @@ class HazardEngineTestCase(unittest.TestCase):
             """ Make sure that the keys and non-empty values for quantile
             hazard maps have been written to KVS."""
 
-            quantiles = hazengine.quantiles
+            quantiles = hazengine.quantile_levels
 
             if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                poes = hazengine.desired_poes
+                poes = hazengine.poes_hazard_maps
 
                 LOG.debug("verifying KVS entries for quantile hazard maps, "\
                     "%s quantile values, %s PoEs" % (
@@ -290,7 +290,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
-                for poe in hazengine.desired_poes:
+                for poe in hazengine.poes_hazard_maps:
                     nrml_path = os.path.join(
                         "smoketests/classical_psha_simple/computed_output",
                         hazengine.hazard_map_filename('%s-mean' % poe))
@@ -309,7 +309,7 @@ class HazardEngineTestCase(unittest.TestCase):
             Does NOT test if results in NRML files are correct.
             """
 
-            for quantile in hazengine.quantiles:
+            for quantile in hazengine.quantile_levels:
 
                 nrml_path = os.path.join(
                     "smoketests/classical_psha_simple/computed_output",
@@ -329,12 +329,12 @@ class HazardEngineTestCase(unittest.TestCase):
             Does NOT test if results in NRML files are correct.
             """
 
-            quantiles = hazengine.quantiles
+            quantiles = hazengine.quantile_levels
 
             if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                for poe in hazengine.desired_poes:
+                for poe in hazengine.poes_hazard_maps:
                     for quantile in quantiles:
                         nrml_path = os.path.join(
                             "smoketests/classical_psha_simple/computed_output",
@@ -616,7 +616,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
             'CALCULATION_MODE': 'Hazard'}
 
         with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([], job_.quantiles)
+            self.assertEqual([], job_.quantile_levels)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([], 1, [])
@@ -636,26 +636,26 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
     def test_computes_just_the_quantiles_in_range(self):
         params = {
             'CALCULATION_MODE': 'Hazard',
-            'QUANTILE_LEVELS': '-0.33 0.00 0.25 0.50 0.75 1.00 1.10'}
+            classical_psha.QUANTILE_PARAM_NAME: '-0.33 0.00 0.25 0.50 0.75 1.00 1.10'}
 
         with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00], job_.quantiles)
+            self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00], job_.quantile_levels)
 
     def test_just_numeric_values_are_allowed(self):
         params = {
             'CALCULATION_MODE': 'Hazard',
-            'QUANTILE_LEVELS': '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB'}
+            classical_psha.QUANTILE_PARAM_NAME: '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB'}
 
         with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([0.00, 0.50, 1.00], job_.quantiles)
+            self.assertEqual([0.00, 0.50, 1.00], job_.quantile_levels)
 
     def test_accepts_also_signs(self):
         params = {
             'CALCULATION_MODE': 'Hazard',
-            'QUANTILE_LEVELS': '-0.33 +0.0 XYZ +0.5 +1.00'}
+            classical_psha.QUANTILE_PARAM_NAME: '-0.33 +0.0 XYZ +0.5 +1.00'}
 
         with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([0.00, 0.50, 1.00], job_.quantiles)
+            self.assertEqual([0.00, 0.50, 1.00], job_.quantile_levels)
 
     def test_process_all_the_sites_given(self):
         self._store_dummy_hazard_curve(shapes.Site(1.5, 1.0))
@@ -828,7 +828,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
             'CALCULATION_MODE': 'Hazard'}
 
         with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([], job_.desired_poes)
+            self.assertEqual([], job_.poes_hazard_maps)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([])
