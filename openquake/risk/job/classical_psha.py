@@ -77,7 +77,7 @@ class ClassicalPSHABasedMixin:
             .filter(models.Output.oq_job_id == job_id) \
             .filter(models.HazardCurve.statistic_type == 'mean') \
             .filter(sqlfunc.ST_GeoHash(models.HazardCurveData.location, 12)
-                        == site.hash())
+                        == hash(site))
 
         hc = curve_query.one()
         pms = iml_query.one()
