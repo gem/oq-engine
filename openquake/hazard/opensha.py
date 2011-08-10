@@ -426,7 +426,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def serialize_mean_hazard_curves(self, sites):
         hc_attrib_update = {'statistics': 'mean'}
-        nrml_file = self.hazard_curve_filename('mean')
+        nrml_file = self.mean_hazard_curve_filename()
         key_template = kvs.tokens.mean_hazard_curve_key(self.id, '%s')
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
 
@@ -434,7 +434,7 @@ class ClassicalMixin(BasePSHAMixin):
         hc_attrib_update = {
             'statistics': 'quantile',
             'quantileValue': quantile}
-        nrml_file = self.hazard_curve_filename("quantile-%.2f" % quantile)
+        nrml_file = self.quantile_hazard_curve_filename(quantile)
         key_template = kvs.tokens.quantile_hazard_curve_key(self.id, '%s', str(quantile))
 
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
@@ -464,7 +464,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def serialize_mean_hazard_map(self, sites, poes):
         for poe in poes:
-            nrml_file = self.hazard_map_filename('%s-mean' % poe)
+            nrml_file = self.mean_hazard_map_filename(poe)
 
             hm_attrib_update = {'statistics': 'mean'}
             key_template = kvs.tokens.mean_hazard_map_key(self.id, '%s', poe)
@@ -473,7 +473,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def serialize_quantile_hazard_map(self, sites, poes, quantile):
         for poe in poes:
-            nrml_file = self.hazard_map_filename('%s-quantile-%.2f' % (poe, quantile))
+            nrml_file = self.quantile_hazard_map_filename(quantile, poe)
 
             key_template = kvs.tokens.quantile_hazard_map_key(self.id, '%s', poe, quantile)
 
@@ -537,11 +537,26 @@ class ClassicalMixin(BasePSHAMixin):
 
         return curve_keys
 
-    def hazard_curve_filename(self, filename_part):
-        return self.build_nrml_path("%s-%s.xml" % (HAZARD_CURVE_FILENAME_PREFIX, filename_part))
+    def _hazard_curve_filename(self, filename_part):
+        return self.build_nrml_path('%s-%s.xml' % (HAZARD_CURVE_FILENAME_PREFIX, filename_part))
 
-    def hazard_map_filename(self, filename_part):
-        return self.build_nrml_path("%s-%s.xml" % (HAZARD_MAP_FILENAME_PREFIX, filename_part))
+    def hazard_curve_filename(self, realization):
+        return self._hazard_curve_filename(realization)
+
+    def mean_hazard_curve_filename(self):
+        return self._hazard_curve_filename('mean')
+
+    def quantile_hazard_curve_filename(self, quantile):
+        return self._hazard_curve_filename('quantile-%.2f' % quantile)
+
+    def _hazard_map_filename(self, filename_part):
+        return self.build_nrml_path('%s-%s.xml' % (HAZARD_MAP_FILENAME_PREFIX, filename_part))
+
+    def mean_hazard_map_filename(self, poe):
+        return self._hazard_map_filename('%s-mean' % poe)
+
+    def quantile_hazard_map_filename(self, quantile, poe):
+        return self._hazard_map_filename('%s-quantile-%.2f' % (poe, quantile))
 
     @property
     def quantile_levels(self):

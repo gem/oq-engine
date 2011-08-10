@@ -273,7 +273,7 @@ class HazardEngineTestCase(unittest.TestCase):
             if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
                 nrml_path = os.path.join(
                     "smoketests/classical_psha_simple/computed_output",
-                    hazengine.hazard_curve_filename('mean'))
+                    hazengine.mean_hazard_curve_filename())
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
@@ -294,7 +294,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 for poe in hazengine.poes_hazard_maps:
                     nrml_path = os.path.join(
                         "smoketests/classical_psha_simple/computed_output",
-                        hazengine.hazard_map_filename('%s-mean' % poe))
+                        hazengine.mean_hazard_map_filename(poe))
 
                     LOG.debug("validating NRML file for mean hazard map %s" \
                         % nrml_path)
@@ -314,7 +314,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 nrml_path = os.path.join(
                     "smoketests/classical_psha_simple/computed_output",
-                    hazengine.hazard_curve_filename("quantile-%.2f" % quantile))
+                    hazengine.quantile_hazard_curve_filename(quantile))
 
                 LOG.debug("validating NRML file for quantile hazard curve: "\
                     "%s" % nrml_path)
@@ -339,7 +339,7 @@ class HazardEngineTestCase(unittest.TestCase):
                     for quantile in quantiles:
                         nrml_path = os.path.join(
                             "smoketests/classical_psha_simple/computed_output",
-                            hazengine.hazard_map_filename('%s-quantile-%.2f' % (poe, quantile)))
+                            hazengine.quantile_hazard_map_filename(quantile, poe))
 
                         LOG.debug("validating NRML file for quantile hazard "\
                             "map: %s" % nrml_path)
