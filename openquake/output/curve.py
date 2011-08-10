@@ -23,7 +23,6 @@ This module plots curves (hazard/loss/loss ratio) as read from an NRML file.
 As plotting engine, matplotlib is used. The plots are in SVG format.
 """
 
-import geohash
 import matplotlib
 matplotlib.use('SVG')
 import pylab
