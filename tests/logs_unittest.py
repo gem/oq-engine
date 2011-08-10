@@ -164,7 +164,7 @@ class JavaAMQPLogTestCase(unittest.TestCase):
             ('.routingKeyPattern', 'oq-unittest-log.%p'),
             ('.exchange', 'oq-unittest.topic'),
             ('.layout', 'org.apache.log4j.PatternLayout'),
-            ('.layout.ConversionPattern', '%p - %m'),]:
+            ('.layout.ConversionPattern', '%p - %m')]:
             props.setProperty('log4j.appender.rabbit' + key, value)
 
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
