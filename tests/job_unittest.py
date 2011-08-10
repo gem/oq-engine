@@ -20,7 +20,7 @@ import mock
 import os
 import unittest
 
-from tests.utils import helpers
+from openquake import java
 from openquake import kvs
 from openquake import flags
 from openquake.job import Job, LOG
@@ -29,6 +29,7 @@ from openquake.risk.job import general
 from openquake.kvs import tokens
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+from tests.utils import helpers
 
 
 CONFIG_FILE = "config.gem"
@@ -170,13 +171,13 @@ class JobTestCase(unittest.TestCase):
         client.delete(tokens.CURRENT_JOBS)
         client.delete(tokens.NEXT_JOB_ID)
 
-        self.assertEqual(tokens.JOB_KEY_FMT % 1, Job({}).job_id)
+        self.assertEqual(1, Job({}).job_id)
 
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = helpers.job_from_file(
             os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
-        self.assertEqual(self.job, Job.from_kvs(self.job.id))
+        self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
 
     def test_job_calls_cleanup(self):
         """
@@ -228,15 +229,6 @@ class JobTestCase(unittest.TestCase):
 
             self.assertEqual(os.environ, actual_kwargs['env'])
 
-    def test_cleanup_raises_on_bad_job_id(self):
-        """
-        If the ID of a job is somehow corrupted, verify that a RuntimeError is
-        raised by :py:method:`openquake.job.Job.cleanup`.
-        """
-        self.job.job_id = 'this-is-invalid'
-
-        self.assertRaises(RuntimeError, self.job.cleanup)
-
     def test_job_init_assigns_unique_id(self):
         """
         This test ensures that unique job IDs are assigned to each Job object.
@@ -248,3 +240,22 @@ class JobTestCase(unittest.TestCase):
         self.assertTrue(job2.job_id is not None)
 
         self.assertNotEqual(job1.job_id, job2.job_id)
+
+    def test_job_sets_job_id_in_java_logging(self):
+        """
+        When a Job is instantiated, a 'job_id' parameter should be set in
+        'org.apache.log4j.MDC'. This is used by the java logging system to
+        tag log messages with the job_id.
+        """
+        mdc = java.jclass('MDC')
+
+        # allocate a job_id for us:
+        test_job_1 = Job({})
+
+        self.assertEqual(test_job_1.job_id, mdc.get('job_id'))
+
+        # specify a job ID:
+        job_id = 7
+        test_job_2 = Job({}, job_id=job_id)
+
+        self.assertEqual(job_id, mdc.get('job_id'))

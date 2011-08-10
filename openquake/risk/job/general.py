@@ -190,13 +190,13 @@ class RiskJobMixin(mixins.Mixin):
             gridpoint = self.region.grid.point_at(site)
 
             asset_key = kvs.tokens.asset_key(
-                self.id, gridpoint.row, gridpoint.column)
+                self.job_id, gridpoint.row, gridpoint.column)
 
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
-        vulnerability.load_vulnerability_model(self.id,
+        vulnerability.load_vulnerability_model(self.job_id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
     def _serialize(self, block_id, **kwargs):
@@ -242,7 +242,8 @@ class RiskJobMixin(mixins.Mixin):
         """
 
         for point in grid:
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            asset_key = kvs.tokens.asset_key(
+                self.job_id, point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 yield point, asset
 
@@ -311,7 +312,7 @@ class RiskJobMixin(mixins.Mixin):
         result = defaultdict(list)
 
         for point, asset in assets_iterator:
-            key = kvs.tokens.loss_key(self.id, point.row, point.column,
+            key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
                     asset["assetID"], loss_poe)
             loss_value = kvs.get(key)
             LOG.debug("Loss for asset %s at %s %s is %s" %
