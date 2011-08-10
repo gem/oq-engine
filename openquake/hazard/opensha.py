@@ -323,13 +323,13 @@ class ClassicalMixin(BasePSHAMixin):
 
             curve_serializer(sites)
 
-        if self.desired_poes:
+        if self.poes_hazard_maps:
             assert map_func, "No calculation function for mean hazard maps set."
             assert map_serializer, "No serializer for the mean hazard maps set."
 
             LOG.info("Computing/serializing mean hazard maps")
-            map_func(self.id, sites, self.imls, self.desired_poes)
-            map_serializer(sites, self.desired_poes)
+            map_func(self.id, sites, self.imls, self.poes_hazard_maps)
+            map_serializer(sites, self.poes_hazard_maps)
 
     def do_quantiles(self, sites, realizations, quantiles,
                      curve_serializer=None,
@@ -376,17 +376,17 @@ class ClassicalMixin(BasePSHAMixin):
             for quantile in quantiles:
                 curve_serializer(sites, quantile)
 
-        if self.desired_poes:
+        if self.poes_hazard_maps:
             assert map_func, "No calculation function for quantile maps set."
             assert map_serializer, "No serializer for the quantile maps set."
 
             # quantile maps
             LOG.info("Computing quantile hazard maps")
-            map_func(self.id, sites, quantiles, self.imls, self.desired_poes)
+            map_func(self.id, sites, quantiles, self.imls, self.poes_hazard_maps)
 
             LOG.info("Serializing quantile maps for %s values" % len(quantiles))
             for quantile in quantiles:
-                map_serializer(sites, self.desired_poes, quantile)
+                map_serializer(sites, self.poes_hazard_maps, quantile)
 
     @java.jexception
     @preload
@@ -411,7 +411,7 @@ class ClassicalMixin(BasePSHAMixin):
             map_serializer=self.serialize_mean_hazard_map)
 
         # quantile curves
-        self.do_quantiles(sites, realizations, self.quantiles,
+        self.do_quantiles(sites, realizations, self.quantile_levels,
             curve_serializer=self.serialize_quantile_hazard_curves,
             map_func=classical_psha.compute_quantile_hazard_maps,
             map_serializer=self.serialize_quantile_hazard_map)
@@ -544,12 +544,16 @@ class ClassicalMixin(BasePSHAMixin):
         return self.build_nrml_path("%s-%s.xml" % (HAZARD_MAP_FILENAME_PREFIX, filename_part))
 
     @property
-    def quantiles(self):
-        return self.extract_values_from_config('QUANTILE_LEVELS', check_value=lambda v: v >= 0.0 and v <= 1.0)
+    def quantile_levels(self):
+        return self.extract_values_from_config(
+            classical_psha.QUANTILE_PARAM_NAME,
+            check_value=lambda v: v >= 0.0 and v <= 1.0)
 
     @property
-    def desired_poes(self):
-        return self.extract_values_from_config('POES_HAZARD_MAPS', check_value=lambda v: v >= 0.0 and v <= 1.0)
+    def poes_hazard_maps(self):
+        return self.extract_values_from_config(
+            classical_psha.POES_PARAM_NAME,
+            check_value=lambda v: v >= 0.0 and v <= 1.0)
 
 
 class EventBasedMixin(BasePSHAMixin):
