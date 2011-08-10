@@ -339,7 +339,8 @@ class HazardEngineTestCase(unittest.TestCase):
                     for quantile in quantiles:
                         nrml_path = os.path.join(
                             "smoketests/classical_psha_simple/computed_output",
-                            hazengine.quantile_hazard_map_filename(quantile, poe))
+                            hazengine.quantile_hazard_map_filename(quantile,
+                                                                   poe))
 
                         LOG.debug("validating NRML file for quantile hazard "\
                             "map: %s" % nrml_path)
@@ -546,7 +547,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
             0.98161, 0.97837, 0.95579, 0.92555, 0.87052, 0.78214, 0.65708,
             0.50526, 0.37044, 0.3474, 0.20502, 0.10506, 0.046531, 0.017548,
             0.0054791, 0.0013377, 0.00022489, 2.2345e-05, 4.2696e-07, ]
-        hazard_curve_2 =[
+        hazard_curve_2 = [
             0.97309, 0.96857, 0.93853, 0.90089, 0.83673, 0.74057, 0.61272,
             0.46467, 0.33694, 0.31536, 0.1834, 0.092412, 0.040202, 0.0149,
             0.0045924, 0.0011126, 0.00018647, 1.8882e-05, 4.7123e-07, ]
@@ -805,7 +806,6 @@ class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
                 2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00,
                 1.5200e+00, 2.1300e+00]
 
-
         self.job = self.create_job_with_mixin(self.params,
                                               opensha.ClassicalMixin)
         self.job_id = self.job.job_id
@@ -928,7 +928,8 @@ class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
         kvs.set_value_json_encoded(key_5, curve_2)
         kvs.set_value_json_encoded(key_6, curve_2)
 
-        classical_psha.compute_quantile_hazard_maps(self.job.job_id, sites, [0.25, 0.50, 0.75], self.imls, [0.10])
+        classical_psha.compute_quantile_hazard_maps(self.job.job_id, sites,
+            [0.25, 0.50, 0.75], self.imls, [0.10])
 
         # asserting imls have been produced for all poes and quantiles
         self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
@@ -958,7 +959,8 @@ class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
         if sites is None:
             sites = [self.site]
 
-        classical_psha.compute_mean_hazard_maps(self.job.job_id, sites, self.imls, poes)
+        classical_psha.compute_mean_hazard_maps(self.job.job_id, sites,
+                                                self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.get_pattern(pattern))
