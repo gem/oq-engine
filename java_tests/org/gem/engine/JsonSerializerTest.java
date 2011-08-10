@@ -86,7 +86,6 @@ public class JsonSerializerTest {
         List<String> actualResults =
                 JsonSerializer.hazardCurvesToJson(testMap, siteList);
 
-        // assertTrue(hazCurvesJsonResultsAreEqual(expectedResults, actualResults));
         assertEquals(expectedResults, actualResults);
     }
 
