@@ -70,9 +70,9 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
         self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
                                                 opensha.ClassicalMixin)
         # Store the canned result data in the KVS.
-        key = self.mixin.id
+        key = self.mixin.job_id
         for realization in xrange(2):
-            key = "%s/%s" % (self.mixin.id, realization + 1)
+            key = "%s/%s" % (self.mixin.job_id, realization + 1)
             helpers.TestStore.put(key, self.mock_results[realization])
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
@@ -149,7 +149,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_means(self.sites, 1,
                         curve_serializer=fake_serializer,
@@ -170,7 +170,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_means(self.sites, 1,
                         curve_serializer=lambda _: True,
@@ -194,7 +194,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.mixin.do_means(self.sites, 1,
@@ -213,7 +213,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
@@ -231,7 +231,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
@@ -275,7 +275,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
                             curve_serializer=fake_serializer,
@@ -300,7 +300,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
                     "quantile_hazard_map!10!-122.8!38.0!0.4",
                     "quantile_hazard_map!10!-121.8!38.0!0.4"]
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.mixin.do_quantiles(
@@ -326,7 +326,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_quantiles(self.sites, 1, [],
                             curve_serializer=lambda _: True,
@@ -343,7 +343,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(
@@ -361,7 +361,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.id, self.mock_results)
+        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
         self.assertRaises(

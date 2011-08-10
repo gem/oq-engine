@@ -328,7 +328,7 @@ class ClassicalMixin(BasePSHAMixin):
             assert map_serializer, "No serializer for the mean hazard maps set."
 
             LOG.info("Computing/serializing mean hazard maps")
-            map_func(self.id, sites, self.imls, self.poes_hazard_maps)
+            map_func(self.job_id, sites, self.imls, self.poes_hazard_maps)
             map_serializer(sites, self.poes_hazard_maps)
 
     def do_quantiles(self, sites, realizations, quantiles,
@@ -382,7 +382,7 @@ class ClassicalMixin(BasePSHAMixin):
 
             # quantile maps
             LOG.info("Computing quantile hazard maps")
-            map_func(self.id, sites, quantiles, self.imls, self.poes_hazard_maps)
+            map_func(self.job_id, sites, quantiles, self.imls, self.poes_hazard_maps)
 
             LOG.info("Serializing quantile maps for %s values" % len(quantiles))
             for quantile in quantiles:
@@ -421,13 +421,13 @@ class ClassicalMixin(BasePSHAMixin):
     def serialize_hazard_curve_of_realization(self, sites, realization):
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
-        key_template = kvs.tokens.hazard_curve_poes_key(self.id, realization, '%s')
+        key_template = kvs.tokens.hazard_curve_poes_key(self.job_id, realization, '%s')
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
 
     def serialize_mean_hazard_curves(self, sites):
         hc_attrib_update = {'statistics': 'mean'}
         nrml_file = self.mean_hazard_curve_filename()
-        key_template = kvs.tokens.mean_hazard_curve_key(self.id, '%s')
+        key_template = kvs.tokens.mean_hazard_curve_key(self.job_id, '%s')
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
 
     def serialize_quantile_hazard_curves(self, sites, quantile):
@@ -435,7 +435,7 @@ class ClassicalMixin(BasePSHAMixin):
             'statistics': 'quantile',
             'quantileValue': quantile}
         nrml_file = self.quantile_hazard_curve_filename(quantile)
-        key_template = kvs.tokens.quantile_hazard_curve_key(self.id, '%s', str(quantile))
+        key_template = kvs.tokens.quantile_hazard_curve_key(self.job_id, '%s', str(quantile))
 
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
 
@@ -467,7 +467,7 @@ class ClassicalMixin(BasePSHAMixin):
             nrml_file = self.mean_hazard_map_filename(poe)
 
             hm_attrib_update = {'statistics': 'mean'}
-            key_template = kvs.tokens.mean_hazard_map_key(self.id, '%s', poe)
+            key_template = kvs.tokens.mean_hazard_map_key(self.job_id, '%s', poe)
 
             self.serialize_hazard_map_at_poe(sites, poe, key_template, hm_attrib_update, nrml_file)
 
@@ -475,7 +475,7 @@ class ClassicalMixin(BasePSHAMixin):
         for poe in poes:
             nrml_file = self.quantile_hazard_map_filename(quantile, poe)
 
-            key_template = kvs.tokens.quantile_hazard_map_key(self.id, '%s', poe, quantile)
+            key_template = kvs.tokens.quantile_hazard_map_key(self.job_id, '%s', poe, quantile)
 
             hm_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile}
