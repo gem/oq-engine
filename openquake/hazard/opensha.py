@@ -280,7 +280,9 @@ class ClassicalMixin(BasePSHAMixin):
 
     def do_means(self, sites, realizations,
                  curve_serializer=None,
-                 curve_task=tasks.compute_mean_curves):
+                 curve_task=tasks.compute_mean_curves,
+                 map_func=None,
+                 map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
@@ -305,6 +307,9 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
+        if not self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+            return
+
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
@@ -318,9 +323,19 @@ class ClassicalMixin(BasePSHAMixin):
 
             curve_serializer(sites)
 
+        if self.desired_poes:
+            assert map_func, "No calculation function for mean hazard maps set."
+            assert map_serializer, "No serializer for the mean hazard maps set."
+
+            LOG.info("Computing/serializing mean hazard maps")
+            map_func(self.id, sites, self.imls, self.desired_poes)
+            map_serializer(sites, self.desired_poes)
+
     def do_quantiles(self, sites, realizations, quantiles,
                      curve_serializer=None,
-                     curve_task=tasks.compute_quantile_curves):
+                     curve_task=tasks.compute_quantile_curves,
+                     map_func=None,
+                     map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
 
         The calculated quantile curves/maps will only be serialized if the
@@ -345,6 +360,9 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
+        if not quantiles:
+            return
+
         # compute and serialize quantile hazard curves
         LOG.info("Computing quantile hazard curves")
 
@@ -357,6 +375,18 @@ class ClassicalMixin(BasePSHAMixin):
             LOG.info("Serializing quantile curves for %s values" % len(quantiles))
             for quantile in quantiles:
                 curve_serializer(sites, quantile)
+
+        if self.desired_poes:
+            assert map_func, "No calculation function for quantile maps set."
+            assert map_serializer, "No serializer for the quantile maps set."
+
+            # quantile maps
+            LOG.info("Computing quantile hazard maps")
+            map_func(self.id, sites, quantiles, self.imls, self.desired_poes)
+
+            LOG.info("Serializing quantile maps for %s values" % len(quantiles))
+            for quantile in quantiles:
+                map_serializer(sites, self.desired_poes, quantile)
 
     @java.jexception
     @preload
@@ -375,33 +405,16 @@ class ClassicalMixin(BasePSHAMixin):
             serializer=self.serialize_hazard_curve_of_realization)
 
         # mean curves
-        if self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
-            self.do_means(sites, realizations,
-                curve_serializer=self.serialize_mean_hazard_curves)
+        self.do_means(sites, realizations,
+            curve_serializer=self.serialize_mean_hazard_curves,
+            map_func=classical_psha.compute_mean_hazard_maps,
+            map_serializer=self.serialize_mean_hazard_map)
 
         # quantile curves
-        quantiles = self.quantiles
-
-        self.do_quantiles(sites, realizations, quantiles,
-            curve_serializer=self.serialize_quantile_hazard_curves)
-
-        # maps
-        desired_poes = self.desired_poes
-        if desired_poes:
-            # mean maps
-            if self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
-                LOG.info("Computing/serializing mean hazard maps")
-                classical_psha.compute_mean_hazard_maps(self.id, sites, self.imls, desired_poes)
-                self.serialize_mean_hazard_map(sites, desired_poes)
-
-            # quantile maps
-            if len(quantiles):
-                LOG.info("Computing quantile hazard maps")
-                classical_psha.compute_quantile_hazard_maps(self.id, sites, quantiles, self.imls, desired_poes)
-
-                LOG.info("Serializing quantile maps for %s values" % len(quantiles))
-                for quantile in quantiles:
-                    self.serialize_quantile_hazard_map(sites, desired_poes, quantile)
+        self.do_quantiles(sites, realizations, self.quantiles,
+            curve_serializer=self.serialize_quantile_hazard_curves,
+            map_func=classical_psha.compute_quantile_hazard_maps,
+            map_serializer=self.serialize_quantile_hazard_map)
 
         return results
 
