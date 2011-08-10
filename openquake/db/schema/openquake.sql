@@ -684,7 +684,7 @@ ALTER TABLE hzrdr.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Hazard curve data.
-CREATE TABLE hzrdr.hazard_curve_data (
+CREATE TABLE hzrdr.hazard_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     -- Realization reference string
@@ -710,7 +710,7 @@ CREATE TABLE hzrdr.hazard_curve_data (
 -- Hazard curve node data.
 CREATE TABLE hzrdr.hazard_curve_node_data (
     id SERIAL PRIMARY KEY,
-    hazard_curve_data_id INTEGER NOT NULL,
+    hazard_curve_id INTEGER NOT NULL,
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
@@ -1020,13 +1020,13 @@ ALTER TABLE hzrdr.hazard_map_data
 ADD CONSTRAINT hzrdr_hazard_map_data_hazard_map_fk
 FOREIGN KEY (hazard_map_id) REFERENCES hzrdr.hazard_map(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.hazard_curve_data
-ADD CONSTRAINT hzrdr_hazard_curve_data_output_fk
+ALTER TABLE hzrdr.hazard_curve
+ADD CONSTRAINT hzrdr_hazard_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.hazard_curve_node_data
 ADD CONSTRAINT hzrdr_hazard_curve_node_data_output_fk
-FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdr.hazard_curve_data(id) ON DELETE CASCADE;
+FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.gmf_data
 ADD CONSTRAINT hzrdr_gmf_data_output_fk
