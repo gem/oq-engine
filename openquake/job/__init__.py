@@ -497,7 +497,29 @@ class Job(object):
     def build_nrml_path(self, nrml_file):
         return os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], nrml_file)
 
+    def extract_values_from_config(self, param_name, separator=' ', check_value=lambda _: True):
+        """Extract the set of valid values from the configuration file."""
+
+        def _acceptable(value):
+            """Return true if the value taken from the configuration
+            file is valid, false otherwise."""
+            try:
+                value = float(value)
+            except ValueError:
+                return False
+            else:
+                # return value >= 0.0 and value <= 1.0
+                return check_value(value)
+
+        values = []
+
+        if param_name in self.params:
+            raw_values = self.params[param_name].split(separator)
+            values = [float(x) for x in raw_values if _acceptable(x)]
+
+        return values
+
     @property
     def imls(self):
-        return [float(x) for x in self['INTENSITY_MEASURE_LEVELS'].split(",")]
+        return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS', separator=',')
 
