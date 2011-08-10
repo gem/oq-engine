@@ -44,6 +44,7 @@ from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 import openquake.hazard.job
 
+from tests.helpers import TestMixin
 from tests.utils import helpers
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
@@ -590,10 +591,12 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 self.job_id, site)) != None)
 
 
-class QuantileHazardCurveComputationTestCase(unittest.TestCase):
+class QuantileHazardCurveComputationTestCase(TestMixin, unittest.TestCase):
 
     def setUp(self):
-        self.job = job.Job({})
+        self.params = {'CALCULATION_MODE': 'Hazard'}
+        self.job = self.create_job_with_mixin(self.params,
+                                              opensha.ClassicalMixin)
         self.job_id = self.job.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -606,17 +609,16 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         # deleting server side cached data
         kvs.flush()
 
+    def tearDown(self):
+        self.unload_job_mixin()
+
     def _store_dummy_hazard_curve(self, site):
         hazard_curve = [0.98161, 0.97837]
 
         self._store_hazard_curve_at(site, hazard_curve, 0)
 
     def test_no_quantiles_when_no_parameter_specified(self):
-        params = {
-            'CALCULATION_MODE': 'Hazard'}
-
-        with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([], job_.quantile_levels)
+        self.assertEqual([], self.job.quantile_levels)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([], 1, [])
@@ -634,28 +636,23 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        params = {
-            'CALCULATION_MODE': 'Hazard',
-            classical_psha.QUANTILE_PARAM_NAME: '-0.33 0.00 0.25 0.50 0.75 1.00 1.10'}
+        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
+            '-0.33 0.00 0.25 0.50 0.75 1.00 1.10'
 
-        with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00], job_.quantile_levels)
+        self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00],
+            self.job.quantile_levels)
 
     def test_just_numeric_values_are_allowed(self):
-        params = {
-            'CALCULATION_MODE': 'Hazard',
-            classical_psha.QUANTILE_PARAM_NAME: '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB'}
+        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
+            '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB'
 
-        with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([0.00, 0.50, 1.00], job_.quantile_levels)
+        self.assertEqual([0.00, 0.50, 1.00], self.job.quantile_levels)
 
     def test_accepts_also_signs(self):
-        params = {
-            'CALCULATION_MODE': 'Hazard',
-            classical_psha.QUANTILE_PARAM_NAME: '-0.33 +0.0 XYZ +0.5 +1.00'}
+        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
+            '-0.33 +0.0 XYZ +0.5 +1.00'
 
-        with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([0.00, 0.50, 1.00], job_.quantile_levels)
+        self.assertEqual([0.00, 0.50, 1.00], self.job.quantile_levels)
 
     def test_process_all_the_sites_given(self):
         self._store_dummy_hazard_curve(shapes.Site(1.5, 1.0))
@@ -795,18 +792,22 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
                 self.job_id, hash(site), str(value))))
 
 
-class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
+class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
 
     def setUp(self):
-        self.params = {}
-        self.params["REFERENCE_VS30_VALUE"] = 500
+        self.params = {
+            'CALCULATION_MODE': 'Hazard',
+            'REFERENCE_VS30_VALUE': 500}
+
         self.imls = [5.0000e-03, 7.0000e-03,
                 1.3700e-02, 1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
                 7.3800e-02, 9.8000e-02, 1.0300e-01, 1.4500e-01, 2.0300e-01,
                 2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00,
                 1.5200e+00, 2.1300e+00]
 
-        self.job = job.Job(self.params)
+
+        self.job = self.create_job_with_mixin(self.params,
+                                              opensha.ClassicalMixin)
         self.job_id = self.job.job_id
 
         self.empty_mean_curve = []
@@ -823,12 +824,11 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self.site = shapes.Site(2.0, 5.0)
         self._store_curve_at(self.site, mean_curve)
 
-    def test_no_poes_when_no_parameter_specified(self):
-        params = {
-            'CALCULATION_MODE': 'Hazard'}
+    def tearDown(self):
+        self.unload_job_mixin()
 
-        with opensha.ClassicalMixin(job.Job(params), opensha.ClassicalMixin) as job_:
-            self.assertEqual([], job_.poes_hazard_maps)
+    def test_no_poes_when_no_parameter_specified(self):
+        self.assertEqual([], self.job.poes_hazard_maps)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([])
@@ -842,13 +842,6 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         self._has_computed_IML_for_site(self.site, 0.10)
         self._has_computed_IML_for_site(self.site, 0.20)
         self._has_computed_IML_for_site(self.site, 0.50)
-
-    @helpers.skipit
-    def test_stores_also_the_vs30_parameter(self):
-        self._run([0.25])
-
-        im_level = self._get_iml_at(self.site, 0.25)
-        self.assertEqual(500, im_level["vs30"])
 
     def test_computes_the_iml(self):
         mean_curve = [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,

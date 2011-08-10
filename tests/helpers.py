@@ -26,6 +26,8 @@ Helper classes/functions needed across multiple unit tests.
 import os
 import tempfile
 
+from openquake import job
+
 
 class TestMixin(object):
     """Mixin class with various helper methods."""
@@ -50,3 +52,29 @@ class TestMixin(object):
             fh.write(content)
             fh.close()
         return path
+
+    def create_job_with_mixin(self, params, mixin_class):
+        """
+        Create a Job and mixes in a Mixin.
+
+        :param params: Job parameters
+        :type params: :py:class:`dict`
+        :param mixin_class: the mixin that will be mixed in the job
+        :type mixin_class: :py:class:`openquake.job.Mixin`
+        :returns: a Job
+        :rtype: :py:class:`openquake.job.Job`
+        """
+        # preserve some status to be used by unload
+        self._calculation_mode = params.get('CALCULATION_MODE')
+        self._job = job.Job(params)
+        self._mixin = mixin_class(self._job, mixin_class)
+        return self._mixin._load()
+
+    def unload_job_mixin(self):
+        """
+        Remove from the job the Mixin mixed in by create_job_with_mixin.
+
+        Call this during the tearDown.
+        """
+        self._job.params['CALCULATION_MODE'] = self._calculation_mode
+        self._mixin._unload()
