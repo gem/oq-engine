@@ -117,7 +117,7 @@ def mean_hazard_curve_key(job_id, site):
     """
 
     if isinstance(site, shapes.Site):
-        site = site.hash()
+        site = hash(site)
 
     return openquake.kvs.generate_key(
         [MEAN_HAZARD_CURVE_KEY_TOKEN, job_id, site])
@@ -137,7 +137,7 @@ def quantile_hazard_curve_key(job_id, site, quantile):
     """
 
     if isinstance(site, shapes.Site):
-        site = site.hash()
+        site = hash(site)
 
     return openquake.kvs.generate_key(
         [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site, str(quantile)])
@@ -158,7 +158,7 @@ def mean_hazard_map_key(job_id, site, poe):
     """
 
     if isinstance(site, shapes.Site):
-        site = site.hash()
+        site = hash(site)
 
     return openquake.kvs.generate_key(
         [MEAN_HAZARD_MAP_KEY_TOKEN, job_id, site, str(poe)])
@@ -181,7 +181,7 @@ def quantile_hazard_map_key(job_id, site, poe, quantile):
     """
 
     if isinstance(site, shapes.Site):
-        site = site.hash()
+        site = hash(site)
 
     return openquake.kvs.generate_key([QUANTILE_HAZARD_MAP_KEY_TOKEN,
                                       job_id, site, str(poe),
@@ -230,7 +230,7 @@ def hazard_curve_poes_key(job_id, realization_num, site):
 
 
     if isinstance(site, shapes.Site):
-        site = site.hash()
+        site = hash(site)
 
     return openquake.kvs.generate_key([HAZARD_CURVE_POES_KEY_TOKEN,
                                        job_id,

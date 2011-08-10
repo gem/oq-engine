@@ -453,7 +453,7 @@ class ClassicalMixin(BasePSHAMixin):
                 'IMLValues': self.imls,
                 'IMT': self['INTENSITY_MEASURE_TYPE'],
 
-                'PoEValues': kvs.get_value_json_decoded(key_template % site.hash())}
+                'PoEValues': kvs.get_value_json_decoded(key_template % hash(site))}
 
             hc_attrib.update(hc_attrib_update)
             hc_data.append((site, hc_attrib))
@@ -498,7 +498,7 @@ class ClassicalMixin(BasePSHAMixin):
                 'investigationTimeSpan': self.params['INVESTIGATION_TIME'],
                 'IMT': self.params['INTENSITY_MEASURE_TYPE'],
                 'vs30': self.params['REFERENCE_VS30_VALUE'],
-                'IML': kvs.get_value_json_decoded(key_template % site.hash()),
+                'IML': kvs.get_value_json_decoded(key_template % hash(site)),
                 'poE': poe}
 
             hm_attrib.update(hm_attrib_update)
