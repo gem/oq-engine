@@ -185,6 +185,15 @@ class TokensTestCase(unittest.TestCase):
         ev = "%s!ATestProduct!!Testville,TestLand" % self.job_id
         self.assertEqual(key, ev)
 
+    def test_generate_job_key(self):
+        """
+        Exercise the creation/formatting of job keys.
+        """
+        job_id = 7
+        expected_key = '::JOB::7::'
+
+        self.assertEqual(expected_key, kvs.generate_job_key(job_id))
+
 
 class JobTokensTestCase(unittest.TestCase):
     """
@@ -204,39 +213,39 @@ class JobTokensTestCase(unittest.TestCase):
         self.client.delete(tokens.CURRENT_JOBS)
         self.client.delete(tokens.NEXT_JOB_ID)
 
-    def test_alloc_job_key(self):
+    def test_alloc_job_id(self):
         """
         Test the generation of job keys using
-        :py:function:`openquake.kvs.tokens.alloc_job_key`.
+        :py:function:`openquake.kvs.tokens.alloc_job_id`.
         """
 
-        job_key_1 = tokens.JOB_KEY_FMT % 1
-        job_key_2 = tokens.JOB_KEY_FMT % 2
+        job_id_1 = 1
+        job_id_2 = 2
 
         kvs.get_client().delete(tokens.NEXT_JOB_ID)
 
         # it should be empty to start with
         self.assertTrue(kvs.get(tokens.NEXT_JOB_ID) is None)
 
-        self.assertEqual(job_key_1, tokens.alloc_job_key())
+        self.assertEqual(job_id_1, tokens.alloc_job_id())
 
         # verify that the IDs are incrementing properly
-        self.assertEqual(job_key_2, tokens.alloc_job_key())
+        self.assertEqual(job_id_2, tokens.alloc_job_id())
 
         # now verify that these keys have been added to the CURRENT_JOBS set
-        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_key_1))
-        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_key_2))
+        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_id_1))
+        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_id_2))
 
-    def test_alloc_job_key_raises_on_duplicate(self):
+    def test_alloc_job_id_raises_on_duplicate(self):
         """
-        Test that :py:function:`openquake.kvs.tokens.alloc_job_key` raises an
+        Test that :py:function:`openquake.kvs.tokens.alloc_job_id` raises an
         RuntimeError if there is somehow a duplicate job key.
         """
         self.assertEqual(0, len(self.client.smembers(tokens.CURRENT_JOBS)))
 
-        self.client.sadd(tokens.CURRENT_JOBS, tokens.JOB_KEY_FMT % 1)
+        self.client.sadd(tokens.CURRENT_JOBS, 1)
 
-        self.assertRaises(RuntimeError, tokens.alloc_job_key)
+        self.assertRaises(RuntimeError, tokens.alloc_job_id)
 
     def test_current_jobs(self):
         """
@@ -246,7 +255,7 @@ class JobTokensTestCase(unittest.TestCase):
         self.assertFalse(self.client.exists(tokens.CURRENT_JOBS))
 
         # load some sample jobs into the CURRENT_JOBS set
-        jobs = [tokens.JOB_KEY_FMT % x for x in range(1, 4)]
+        jobs = range(1, 4)
 
         for job in jobs:
             self.client.sadd(tokens.CURRENT_JOBS, job)
@@ -267,7 +276,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client.delete(tokens.CURRENT_JOBS)
         self.client.delete(tokens.NEXT_JOB_ID)
 
-        self.test_job = tokens.alloc_job_key()
+        self.test_job = tokens.alloc_job_id()
 
         # create some keys to hold fake data for test_job
         self.gmf1_key = tokens.gmfs_key(self.test_job, 0, 0)
@@ -280,7 +289,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client.set(self.vuln_key, 'fake vuln curve data')
 
         # this job will have no data
-        self.dataless_job = tokens.alloc_job_key()
+        self.dataless_job = tokens.alloc_job_id()
 
     def tearDown(self):
         self.client.delete(tokens.CURRENT_JOBS)
@@ -327,7 +336,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         If we try to run garbage collection on a nonexistent job, the result of
         :py:function:`openquake.kvs.cache_gc` should be None.
         """
-        nonexist_job = tokens.JOB_KEY_FMT % '1234nonexistent'
+        nonexist_job = '1234nonexistent'
 
         result = kvs.cache_gc(nonexist_job)
 

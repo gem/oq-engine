@@ -64,7 +64,7 @@ class ProbabilisticEventMixin():
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            tasks.append(general.compute_risk.delay(self.id, block_id))
+            tasks.append(general.compute_risk.delay(self.job_id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs)
@@ -146,7 +146,7 @@ class ProbabilisticEventMixin():
         for i in range(0, histories):
             for j in range(0, realizations):
                 key = kvs.generate_product_key(
-                        self.id, kvs.tokens.STOCHASTIC_SET_TOKEN, "%s!%s" %
+                        self.job_id, kvs.tokens.STOCHASTIC_SET_TOKEN, "%s!%s" %
                             (i, j))
                 fieldset = shapes.FieldSet.from_json(kvs.get(key),
                     self.region.grid)
@@ -175,7 +175,7 @@ class ProbabilisticEventMixin():
 
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
-            key_gmf = kvs.tokens.gmfs_key(self.id, col, row)
+            key_gmf = kvs.tokens.gmfs_key(self.job_id, col, row)
             LOGGER.debug("GMF_SLICE for %s X %s : \n\t%s" % (
                     col, row, gmf_slice))
             timespan = float(self['INVESTIGATION_TIME'])
@@ -212,7 +212,8 @@ class ProbabilisticEventMixin():
                 kvs.tokens.GMF_KEY_TOKEN, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
+            asset_key = kvs.tokens.asset_key(
+                self.job_id, point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))
                 loss_ratio_curve = self.compute_loss_ratio_curve(
@@ -238,7 +239,7 @@ class ProbabilisticEventMixin():
                 loss_curve, loss_poe)
 
         key = kvs.tokens.loss_key(
-                self.id, row, col, asset["assetID"], loss_poe)
+                self.job_id, row, col, asset["assetID"], loss_poe)
 
         LOGGER.debug("RESULT: conditional loss is %s, write to key %s" % (
             loss_conditional, key))
@@ -267,7 +268,8 @@ class ProbabilisticEventMixin():
         if not False in (loss_ratio_curve.ordinates == 0.0):
             return None
 
-        key = kvs.tokens.loss_ratio_key(self.id, row, col, asset["assetID"])
+        key = kvs.tokens.loss_ratio_key(
+            self.job_id, row, col, asset["assetID"])
         kvs.set(key, loss_ratio_curve.to_json())
 
         LOGGER.warn("RESULT: loss ratio curve is %s, write to key %s" % (
@@ -301,7 +303,8 @@ class ProbabilisticEventMixin():
             return None
 
         loss_curve = loss_ratio_curve.rescale_abscissae(asset["assetValue"])
-        key = kvs.tokens.loss_curve_key(self.id, row, column, asset["assetID"])
+        key = kvs.tokens.loss_curve_key(
+            self.job_id, row, column, asset["assetID"])
 
         LOGGER.warn("RESULT: loss curve is %s, write to key %s" % (
                 loss_curve, key))
