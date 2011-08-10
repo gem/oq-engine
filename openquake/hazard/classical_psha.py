@@ -99,9 +99,6 @@ def compute_mean_hazard_curves(job_id, sites, realizations):
 def compute_quantile_hazard_curves(job_id, sites, realizations, quantiles):
     """Compute a quantile hazard curve for each site in the list
     using as input all the pre-computed curves for different realizations.
-
-    The QUANTILE_LEVELS parameter in the configuration file specifies
-    all the values used in the computation.
     """
 
     LOG.debug("[QUANTILE_HAZARD_CURVES] List of quantiles is %s" % quantiles)
@@ -123,52 +120,49 @@ def compute_quantile_hazard_curves(job_id, sites, realizations, quantiles):
 
 
 def build_interpolator(poes, imls):
+    # In our interpolation, PoE becomes the x axis, IML the y axis, therefore
+    # the arrays have to be reversed (x axis has to be monotonically
+    # increasing).
     poes = numpy.array(poes)[::-1]
-    imls = numpy.log(numpy.array(imls)[::-1])
+    imls = numpy.array(imls)[::-1]
 
-    interpolator = interp1d(poes, imls, kind='linear')
+    interpolator = interp1d(poes, numpy.log(imls), kind='linear')
 
     def safe_interpolator(poe, site=None):
         if poe > poes[-1]:
             LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
-                "using maximum PoE value pair, PoE: %s, IML: %s, at site %s" % (
-                poe, poes[-1], math.exp(imls[-1]), site))
-            return math.exp(imls[-1])
+                "using maximum PoE value pair, PoE: %s, IML: %s, at site %s"
+                % (poe, poes[-1], imls[-1], site))
+            return imls[-1]
 
         if poe < poes[0]:
             LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
-                "using minimum PoE value pair, PoE: %s, IML: %s, at site %s" % (
-                poe, poes[0], math.exp(imls[0]), site))
-            return math.exp(imls[0])
+                "using minimum PoE value pair, PoE: %s, IML: %s, at site %s"
+                % (poe, poes[0], imls[0], site))
+            return imls[0]
 
         return math.exp(interpolator(poe))
 
     return safe_interpolator
 
 
-def compute_quantile_hazard_maps(job_id, sites, quantiles, imls, desired_poes):
+def compute_quantile_hazard_maps(job_id, sites, quantiles, imls, poes):
     """Compute quantile hazard maps using as input all the
     pre computed quantile hazard curves.
-
-    The POES_HAZARD_MAPS parameter in the configuration file specifies
-    all the values used in the computation.
     """
 
-    LOG.debug("[QUANTILE_HAZARD_MAPS] List of POEs is %s" % desired_poes)
+    LOG.debug("[QUANTILE_HAZARD_MAPS] List of POEs is %s" % poes)
     LOG.debug("[QUANTILE_HAZARD_MAPS] List of quantiles is %s" % quantiles)
 
     keys = []
     for quantile in quantiles:
-        LOG.debug("[QUANTILE_HAZARD_MAPS] Found %s pre computed " \
-                "quantile curves for quantile %s"
-                % (len(sites), quantile))
-
         for site in sites:
-            quantile_poes = kvs.get_value_json_decoded(kvs.tokens.quantile_hazard_curve_key(job_id, site, quantile))
+            quantile_poes = kvs.get_value_json_decoded(
+                kvs.tokens.quantile_hazard_curve_key(job_id, site, quantile))
 
             interpolate = build_interpolator(quantile_poes, imls)
 
-            for poe in desired_poes:
+            for poe in poes:
                 key = kvs.tokens.quantile_hazard_map_key(
                         job_id, site, poe, quantile)
                 keys.append(key)
@@ -178,23 +172,20 @@ def compute_quantile_hazard_maps(job_id, sites, quantiles, imls, desired_poes):
     return keys
 
 
-def compute_mean_hazard_maps(job_id, sites, imls, desired_poes):
+def compute_mean_hazard_maps(job_id, sites, imls, poes):
     """Compute mean hazard maps using as input all the
     pre computed mean hazard curves.
-
-    The POES_HAZARD_MAPS parameter in the configuration file specifies
-    all the values used in the computation.
     """
 
-    LOG.debug("[MEAN_HAZARD_MAPS] List of POEs is %s" % desired_poes)
-    LOG.debug("[MEAN_HAZARD_MAPS] Found %s pre computed mean curves" % len(sites))
+    LOG.debug("[MEAN_HAZARD_MAPS] List of POEs is %s" % poes)
 
     keys = []
     for site in sites:
-        mean_poes = kvs.get_value_json_decoded(kvs.tokens.mean_hazard_curve_key(job_id, site))
+        mean_poes = kvs.get_value_json_decoded(
+            kvs.tokens.mean_hazard_curve_key(job_id, site))
         interpolate = build_interpolator(mean_poes, imls)
 
-        for poe in desired_poes:
+        for poe in poes:
             key = kvs.tokens.mean_hazard_map_key(job_id, site, poe)
             keys.append(key)
 
