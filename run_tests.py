@@ -22,8 +22,11 @@ This is our basic test running framework.
 
 Usage Examples:
 
-    # to run all the tests
+    # to run the unit tests
     python run_tests.py
+
+    # to run all the unit tests (including the ones requiring a database)
+    python run_tests.py --all_tests
 
     # to run a specific test suite imported here
     python run_tests.py tests:ExampleTestCase
@@ -42,6 +45,7 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('speed_tests', False, "Run performance tests?")
 flags.DEFINE_boolean('bb_suite', False, "Run black box tests suite?")
+flags.DEFINE_boolean('all_tests', False, "Run all tests")
 
 if __name__ == '__main__':
     sys.argv = FLAGS(sys.argv)
@@ -60,6 +64,14 @@ if __name__ == '__main__':
             args = args + ["--testmatch", "bb_.+"]
             print "Running the black box tests suite..."
             nose.run(defaultTest="tests", argv=args)
+        elif FLAGS.all_tests:
+            import glob
+
+            args += glob.glob('tests/*_unittest.py')
+            args += glob.glob('db_tests/*_unittest.py')
+
+            print "Running the complete tests suite..."
+            nose.run(argv=args)
         else:
             nose.run(defaultTest='tests', argv=args)
 
