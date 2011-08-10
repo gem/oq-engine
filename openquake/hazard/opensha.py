@@ -200,6 +200,7 @@ class BasePSHAMixin(Mixin):
         return jsite_list
 
 
+# pylint: disable=R0904
 class ClassicalMixin(BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
 
@@ -278,6 +279,7 @@ class ClassicalMixin(BasePSHAMixin):
         value = self.params.get(name)
         return value is not None and value.strip()
 
+    # pylint: disable=R0913
     def do_means(self, sites, realizations,
                  curve_serializer=None,
                  curve_task=tasks.compute_mean_curves,
@@ -313,7 +315,7 @@ class ClassicalMixin(BasePSHAMixin):
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
-        curve_keys = utils_tasks.distribute(
+        utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations),
             flatten_results=True)
@@ -331,6 +333,7 @@ class ClassicalMixin(BasePSHAMixin):
             map_func(self.job_id, sites, self.imls, self.poes_hazard_maps)
             map_serializer(sites, self.poes_hazard_maps)
 
+    # pylint: disable=R0913
     def do_quantiles(self, sites, realizations, quantiles,
                      curve_serializer=None,
                      curve_task=tasks.compute_quantile_curves,
@@ -366,13 +369,15 @@ class ClassicalMixin(BasePSHAMixin):
         # compute and serialize quantile hazard curves
         LOG.info("Computing quantile hazard curves")
 
-        curve_keys = utils_tasks.distribute(
+        utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.job_id, realizations=realizations, quantiles=quantiles),
+            dict(job_id=self.job_id, realizations=realizations,
+                 quantiles=quantiles),
             flatten_results=True)
 
         if curve_serializer:
-            LOG.info("Serializing quantile curves for %s values" % len(quantiles))
+            LOG.info("Serializing quantile curves for %s values"
+                     % len(quantiles))
             for quantile in quantiles:
                 curve_serializer(sites, quantile)
 
@@ -382,7 +387,8 @@ class ClassicalMixin(BasePSHAMixin):
 
             # quantile maps
             LOG.info("Computing quantile hazard maps")
-            map_func(self.job_id, sites, quantiles, self.imls, self.poes_hazard_maps)
+            map_func(self.job_id, sites, quantiles, self.imls,
+                     self.poes_hazard_maps)
 
             LOG.info("Serializing quantile maps for %s values" % len(quantiles))
             for quantile in quantiles:
@@ -419,27 +425,73 @@ class ClassicalMixin(BasePSHAMixin):
         return results
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
+        """
+        Serialize the hazard curves of a set of sites for a given realization.
+
+        :param sites: the sites of which the curves will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param realization: the realization to be serialized
+        :type realization: :py:class:`int`
+        """
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
-        key_template = kvs.tokens.hazard_curve_poes_key(self.job_id, realization, '%s')
-        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
+        key_template = kvs.tokens.hazard_curve_poes_key(self.job_id,
+                                                        realization, '%s')
+        self.serialize_hazard_curve(nrml_file, key_template,
+                                    hc_attrib_update, sites)
 
     def serialize_mean_hazard_curves(self, sites):
+        """
+        Serialize the mean hazard curves of a set of sites.
+
+        :param sites: the sites of which the curves will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        """
         hc_attrib_update = {'statistics': 'mean'}
         nrml_file = self.mean_hazard_curve_filename()
         key_template = kvs.tokens.mean_hazard_curve_key(self.job_id, '%s')
-        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
+        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
+                                    sites)
 
     def serialize_quantile_hazard_curves(self, sites, quantile):
+        """
+        Serialize the quantile hazard curves of a set of sites for a given
+        quantile.
+
+        :param sites: the sites of which the curves will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param quantile: the quantile to be serialized
+        :type quantile: :py:class:`float`
+        """
         hc_attrib_update = {
             'statistics': 'quantile',
             'quantileValue': quantile}
         nrml_file = self.quantile_hazard_curve_filename(quantile)
-        key_template = kvs.tokens.quantile_hazard_curve_key(self.job_id, '%s', str(quantile))
+        key_template = kvs.tokens.quantile_hazard_curve_key(self.job_id, '%s',
+                                                            str(quantile))
 
-        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update, sites)
+        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
+                                    sites)
 
-    def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update, sites):
+    def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
+                               sites):
+        """
+        Serialize the hazard curves of a set of sites.
+
+        Depending on the parameters the serialized curve will be a plain, mean
+        or quantile hazard curve.
+
+        :param nrml_file: the output filename
+        :type nrml_file: :py:class:`string`
+        :param key_template: a template for constructing the key to get, for
+                             each site, its curve from the KVS
+        :type key_template: :py:class:`string`
+        :param hc_attrib_update: a dictionary containing metadata for the set
+                                 of curves that will be serialized
+        :type hc_attrib_update: :py:class:`dict`
+        :param sites: the sites of which the curve will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        """
         nrml_path = self.build_nrml_path(nrml_file)
 
         curve_writer = create_hazardcurve_writer(self.params, nrml_path)
@@ -453,7 +505,8 @@ class ClassicalMixin(BasePSHAMixin):
                 'IMLValues': self.imls,
                 'IMT': self['INTENSITY_MEASURE_TYPE'],
 
-                'PoEValues': kvs.get_value_json_decoded(key_template % hash(site))}
+                'PoEValues': kvs.get_value_json_decoded(key_template
+                                                        % hash(site))}
 
             hc_attrib.update(hc_attrib_update)
             hc_data.append((site, hc_attrib))
@@ -463,26 +516,70 @@ class ClassicalMixin(BasePSHAMixin):
         return nrml_path
 
     def serialize_mean_hazard_map(self, sites, poes):
+        """
+        Serialize the mean hazard map for a set of sites, one map for each
+        given PoE.
+
+        :param sites: the sites of which the map will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param poes: the PoEs at which the map will be serialized
+        :type poes: list of :py:class:`float`
+        """
         for poe in poes:
             nrml_file = self.mean_hazard_map_filename(poe)
 
             hm_attrib_update = {'statistics': 'mean'}
-            key_template = kvs.tokens.mean_hazard_map_key(self.job_id, '%s', poe)
+            key_template = kvs.tokens.mean_hazard_map_key(self.job_id, '%s',
+                                                          poe)
 
-            self.serialize_hazard_map_at_poe(sites, poe, key_template, hm_attrib_update, nrml_file)
+            self.serialize_hazard_map_at_poe(sites, poe, key_template,
+                                             hm_attrib_update, nrml_file)
 
     def serialize_quantile_hazard_map(self, sites, poes, quantile):
+        """
+        Serialize the quantile hazard map for a set of sites, one map for each
+        given PoE and quantile.
+
+        :param sites: the sites of which the map will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param poes: the PoEs at which the maps will be serialized
+        :type poes: list of :py:class:`float`
+        :param quantile: the quantile at which the maps will be serialized
+        :type quantile: :py:class:`float`
+        """
         for poe in poes:
             nrml_file = self.quantile_hazard_map_filename(quantile, poe)
 
-            key_template = kvs.tokens.quantile_hazard_map_key(self.job_id, '%s', poe, quantile)
+            key_template = kvs.tokens.quantile_hazard_map_key(
+                                             self.job_id, '%s', poe, quantile)
 
             hm_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile}
 
-            self.serialize_hazard_map_at_poe(sites, poe, key_template, hm_attrib_update, nrml_file)
+            self.serialize_hazard_map_at_poe(sites, poe, key_template,
+                                             hm_attrib_update, nrml_file)
 
-    def serialize_hazard_map_at_poe(self, sites, poe, key_template, hm_attrib_update, nrml_file):
+    def serialize_hazard_map_at_poe(self, sites, poe, key_template,
+                                    hm_attrib_update, nrml_file):
+        """
+        Serialize the hazard map for a set of sites at a given PoE.
+
+        Depending on the parameters the serialized map will be a mean or
+        quantile hazard map.
+
+        :param sites: the sites of which the map will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param poe: the PoE at which the map will be serialized
+        :type poe: :py:class:`float`
+        :param key_template: a template for constructing the key used to get,
+                             for each site, its map from the KVS
+        :type key_template: :py:class:`string`
+        :param hc_attrib_update: a dictionary containing metadata for the set
+                                 of maps that will be serialized
+        :type hc_attrib_update: :py:class:`dict`
+        :param nrml_file: the output filename
+        :type nrml_file: :py:class:`string`
+        """
         nrml_path = self.build_nrml_path(nrml_file)
 
         LOG.debug("Generating NRML hazard map file for PoE %s, "\
@@ -538,34 +635,65 @@ class ClassicalMixin(BasePSHAMixin):
         return curve_keys
 
     def _hazard_curve_filename(self, filename_part):
-        return self.build_nrml_path('%s-%s.xml' % (HAZARD_CURVE_FILENAME_PREFIX, filename_part))
+        "Helper to build the filenames of hazard curves"
+        return self.build_nrml_path('%s-%s.xml'
+                                    % (HAZARD_CURVE_FILENAME_PREFIX,
+                                       filename_part))
 
     def hazard_curve_filename(self, realization):
+        """
+        Build the name of a file that will contain an hazard curve for a given
+        realization.
+        """
         return self._hazard_curve_filename(realization)
 
     def mean_hazard_curve_filename(self):
+        """
+        Build the name of a file that will contain the mean hazard curve for
+        this job.
+        """
         return self._hazard_curve_filename('mean')
 
     def quantile_hazard_curve_filename(self, quantile):
+        """
+        Build the name of a file that will contain the quantile hazard curve
+        for this job and the given quantile.
+        """
         return self._hazard_curve_filename('quantile-%.2f' % quantile)
 
     def _hazard_map_filename(self, filename_part):
-        return self.build_nrml_path('%s-%s.xml' % (HAZARD_MAP_FILENAME_PREFIX, filename_part))
+        "Helper to build the filenames of hazard maps"
+        return self.build_nrml_path('%s-%s.xml'
+                                    % (HAZARD_MAP_FILENAME_PREFIX,
+                                       filename_part))
 
     def mean_hazard_map_filename(self, poe):
+        """
+        Build the name of a file that will contain the mean hazard map for this
+        job and the given PoE.
+        """
         return self._hazard_map_filename('%s-mean' % poe)
 
     def quantile_hazard_map_filename(self, quantile, poe):
+        """
+        Build the name of a file that will contain the quantile hazard map for
+        this job and the given PoE and quantile.
+        """
         return self._hazard_map_filename('%s-quantile-%.2f' % (poe, quantile))
 
     @property
     def quantile_levels(self):
+        "Returns the quantile levels specified in the config file of this job"
         return self.extract_values_from_config(
             classical_psha.QUANTILE_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
     @property
     def poes_hazard_maps(self):
+        """
+        Returns the PoEs at which the hazard maps will be calculated, as
+        specified in the config file of this job.
+        """
         return self.extract_values_from_config(
             classical_psha.POES_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
