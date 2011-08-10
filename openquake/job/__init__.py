@@ -495,9 +495,11 @@ class Job(object):
         return [site for site in region]
 
     def build_nrml_path(self, nrml_file):
+        """Return the complete output path for the given nrml_file"""
         return os.path.join(self['BASE_PATH'], self['OUTPUT_DIR'], nrml_file)
 
-    def extract_values_from_config(self, param_name, separator=' ', check_value=lambda _: True):
+    def extract_values_from_config(self, param_name, separator=' ',
+                                   check_value=lambda _: True):
         """Extract the set of valid values from the configuration file."""
 
         def _acceptable(value):
@@ -521,5 +523,7 @@ class Job(object):
 
     @property
     def imls(self):
-        return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS', separator=',')
+        "Return the intensity measure levels as specified in the config file"
+        return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS',
+                                               separator=',')
 
