@@ -376,7 +376,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
 
     def setUp(self):
-        params = { 'CALCULATION_MODE': 'Hazard' }
+        params = {'CALCULATION_MODE': 'Hazard'}
 
         self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
 
