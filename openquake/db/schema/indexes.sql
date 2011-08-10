@@ -59,7 +59,7 @@ CREATE INDEX uiapi_upload_owner_id_idx on uiapi.upload(owner_id);
 CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
 CREATE INDEX hzrdr_hazard_map_data_hazard_map_id_idx on hzrdr.hazard_map_data(hazard_map_id);
 CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
-CREATE INDEX hzrdr_hazard_curve_node_data_hazard_curve_id_idx on hzrdr.hazard_curve_node_data(hazard_curve_id);
+CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
 CREATE INDEX hzrdr_gmf_data_output_id_idx on hzrdr.gmf_data(output_id);
 CREATE INDEX uiapi_oq_params_upload_id_idx on uiapi.oq_params(upload_id);
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
