@@ -792,7 +792,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
     def _has_computed_quantile_for_site(self, site, value):
         self.assertTrue(kvs.get_pattern("%s*%s*%s*%s" %
                 (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                self.job_id, site.hash(), str(value))))
+                self.job_id, hash(site), str(value))))
 
 
 class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
@@ -959,7 +959,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
     def _get_iml_at(self, site, poe):
         return kvs.get_pattern_decoded("%s*%s*%s*%s" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
-                self.job_id, site.hash(), str(poe)))[0]
+                self.job_id, hash(site), str(poe)))[0]
 
     def _run(self, poes, sites=None):
         if sites is None:
@@ -978,4 +978,4 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
     def _has_computed_IML_for_site(self, site, poe):
         self.assertTrue(kvs.get_pattern("%s*%s*%s*%s" %
                 (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
-                self.job_id, site.hash(), str(poe))))
+                self.job_id, hash(site), str(poe))))
