@@ -530,34 +530,13 @@ class ClassicalMixin(BasePSHAMixin):
     def hazard_map_filename(self, filename_part):
         return self.build_nrml_path("%s-%s.xml" % (HAZARD_MAP_FILENAME_PREFIX, filename_part))
 
-    def extract_values_from_config(self, param_name):
-        """Extract the set of valid values from the configuration file."""
-
-        def _acceptable(value):
-            """Return true if the value taken from the configuration
-            file is valid, false otherwise."""
-            try:
-                value = float(value)
-                return value >= 0.0 and value <= 1.0
-
-            except ValueError:
-                return False
-
-        values = []
-
-        if param_name in self.params:
-            raw_values = self.params[param_name].split()
-            values = [float(x) for x in raw_values if _acceptable(x)]
-
-        return values
-
     @property
     def quantiles(self):
-        return self.extract_values_from_config('QUANTILE_LEVELS')
+        return self.extract_values_from_config('QUANTILE_LEVELS', check_value=lambda v: v >= 0.0 and v <= 1.0)
 
     @property
     def desired_poes(self):
-        return self.extract_values_from_config('POES_HAZARD_MAPS')
+        return self.extract_values_from_config('POES_HAZARD_MAPS', check_value=lambda v: v >= 0.0 and v <= 1.0)
 
 
 class EventBasedMixin(BasePSHAMixin):
