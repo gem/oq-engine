@@ -260,7 +260,7 @@ class JobTestCase(unittest.TestCase):
         session = get_db_session("reslt", "writer")
 
         expected_job = session.query(OqJob)\
-            .filter(OqJob.id == self.job.get_db_job_id()).one()
+            .filter(OqJob.id == self.job.job_id).one()
 
         self.assertEqual(expected_job, self.job.get_db_job(session))
 
@@ -272,8 +272,7 @@ class JobTestCase(unittest.TestCase):
         status = 'running'
         self.job.set_status(status)
 
-        job = session.query(OqJob)\
-            .filter(OqJob.id == self.job.get_db_job_id()).one()
+        job = session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
         self.assertEqual(status, job.status)
 
