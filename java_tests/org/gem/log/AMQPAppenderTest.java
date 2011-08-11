@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.PropertyConfigurator;
 
+import org.junit.After;
 import org.junit.Test;
 
 import static org.junit.Assert.assertThat;
@@ -33,7 +34,8 @@ public class AMQPAppenderTest {
     private DummyAppender dummyAppender;
     private Logger logger = Logger.getLogger(AMQPAppenderTest.class);
 
-    void tearDown() {
+    @After
+    public void tearDown() {
         AMQPAppender.setConnectionFactory(null);
 
         dummyConnection = null;
@@ -177,6 +179,8 @@ public class AMQPAppenderTest {
     // test that the logger handles all the documented properties
     @Test
     public void log4jSetup() {
+        AMQPAppender.setConnectionFactory(new DummyConnectionFactory());
+
         Properties props = new Properties();
 
         props.setProperty("log4j.rootLogger", "DEBUG, rabbit");
