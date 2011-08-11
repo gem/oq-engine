@@ -20,7 +20,6 @@ Includes classpath arguments, and heap size."""
 
 from amqplib import client_0_8 as amqp
 import jpype
-import logging
 import os
 import sys
 import traceback
@@ -29,7 +28,6 @@ from celery.decorators import task as celery_task
 
 from functools import wraps
 
-from openquake.logs import LOG
 from openquake import flags
 
 FLAGS = flags.FLAGS
@@ -88,8 +86,6 @@ JAVA_CLASSES = {
 LOG4J_PROPERTIES_PATH = os.path.abspath(
                             os.path.join(os.path.dirname(__file__),
                             "config/log4j.properties"))
-
-logging.getLogger('jpype').setLevel(logging.ERROR)
 
 
 def jclass(class_key):
@@ -229,7 +225,6 @@ def jvm(max_mem=None):
 
     if not jpype.isJVMStarted():
         max_mem = get_jvm_max_mem(max_mem)
-        LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # force the default Xerces parser configuration, otherwise
