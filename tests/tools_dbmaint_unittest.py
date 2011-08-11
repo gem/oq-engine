@@ -26,6 +26,7 @@ from distutils import version
 import mock
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from tools.dbmaint import (
@@ -58,6 +59,13 @@ class RunCmdTestCase(unittest.TestCase):
 
     def test_run_cmd_with_errors(self):
         """Invoke a command with errors."""
+        if sys.platform == 'darwin':
+            expected_error = ('ls terminated with exit code: 1\nls: '
+                '/this/does/not/exist: No such file or directory\n')
+        else:
+            expected_error = ('ls terminated with exit code: 2\nls: cannot '
+                'access /this/does/not/exist: No such file or directory\n')
+
         try:
             code, out, err = run_cmd(["ls", "-AF", "/this/does/not/exist"])
         except Exception, e:
@@ -69,9 +77,11 @@ class RunCmdTestCase(unittest.TestCase):
 
     def test_run_cmd_with_errors_and_ignore_exit_code(self):
         """Invoke a command with errors but ignore the exit code."""
+        expected_code = 1 if sys.platform == 'darwin' else 2
+
         code, out, err = run_cmd(
             ["ls", "-AF", "/this/does/not/exist"], ignore_exit_code=True)
-        self.assertEqual(2, code)
+        self.assertEqual(expected_code, code)
         self.assertEqual("", out)
         self.assertEqual("ls: cannot access /this/does/not/exist: No such "
                          "file or directory\n", err)
