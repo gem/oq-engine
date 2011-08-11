@@ -153,19 +153,19 @@ COMMENT ON COLUMN hzrdi.source.tectonic_region IS 'Tectonic region type i.e. one
 
 
 -- hzrdr schema tables ------------------------------------------
-COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdr.hazard_curve IS 'Holds data for hazard curves associated with a branch label';
+COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve.end_branch_label IS 'End branch label for this curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve.statistic_type IS 'Statistic type, one of:
     - Mean     (mean)
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
 
 
-COMMENT ON TABLE hzrdr.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN hzrdr.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN hzrdr.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
 
 COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
