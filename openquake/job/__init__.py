@@ -339,20 +339,13 @@ class Job(object):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
 
-    def get_db_job_id(self):
-        """
-        Get the id of the database record belonging to this job.
-        """
-        return int(self['OPENQUAKE_JOB_ID'])
-
     def get_db_job(self, session):
         """
         Get the database record belonging to this job.
 
         :param session: the SQLAlchemy database session
         """
-        return session.query(OqJob)\
-               .filter(OqJob.id == self.get_db_job_id()).one()
+        return session.query(OqJob).filter(OqJob.id == self.job_id).one()
 
     def set_status(self, status):
         """
