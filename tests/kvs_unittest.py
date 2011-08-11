@@ -81,6 +81,7 @@ class KVSTestCase(unittest.TestCase):
         self.java_client = java_class(settings.KVS_HOST, settings.KVS_PORT)
 
         self.python_client = kvs.get_client()
+        self.python_client.flushdb()
 
         self._delete_test_file()
 
@@ -204,14 +205,11 @@ class JobTokensTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.client = kvs.get_client()
 
-    @classmethod
-    def tearDownClass(cls):
-        cls.client.delete(tokens.CURRENT_JOBS)
-        cls.client.delete(tokens.NEXT_JOB_ID)
-
     def setUp(self):
-        self.client.delete(tokens.CURRENT_JOBS)
-        self.client.delete(tokens.NEXT_JOB_ID)
+        self.client.flushdb()
+
+    def tearDown(self):
+        self.client.flushdb()
 
     def test_alloc_job_id(self):
         """
@@ -272,9 +270,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.client = kvs.get_client()
-
-        self.client.delete(tokens.CURRENT_JOBS)
-        self.client.delete(tokens.NEXT_JOB_ID)
+        self.client.flushdb()
 
         self.test_job = tokens.alloc_job_id()
 
@@ -292,8 +288,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.dataless_job = tokens.alloc_job_id()
 
     def tearDown(self):
-        self.client.delete(tokens.CURRENT_JOBS)
-        self.client.delete(tokens.NEXT_JOB_ID)
+        self.client.flushdb()
 
     def test_gc_some_job_data(self):
         """
