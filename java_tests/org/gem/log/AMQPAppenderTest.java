@@ -68,6 +68,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
 
         assertThat(entry(0).exchange, is(equalTo("")));
@@ -93,6 +94,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
         assertThat(entry(0).routingKey, is(equalTo("rk")));
         assertThat(entry(1).routingKey, is(equalTo("rk")));
@@ -110,6 +112,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
         assertThat(entry(0).routingKey, is(equalTo("log.INFO")));
         assertThat(entry(1).routingKey, is(equalTo("log.WARN")));
@@ -132,6 +135,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(1)));
         assertThat(entry(0).body, is(equalTo("Test1\n")));
     }
@@ -151,6 +155,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(1)));
 
         assertThat(entry(0).body, is(not(equalTo("Test1\n"))));
@@ -221,6 +226,7 @@ public class AMQPAppenderTest {
                    is(equalTo("%d %-5p [%c] - %m%n")));
 
         // check message properties
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(1)));
         assertThat(entry(0).exchange, is(equalTo("amq.topic")));
 
