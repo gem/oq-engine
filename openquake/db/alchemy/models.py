@@ -219,7 +219,7 @@ class HazardCurve(Base):
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
                           nullable=False)
-    output = relationship("Output", backref="hazardcurvedata_set")
+    output = relationship("Output", backref="hazardcurve_set")
     end_branch_label = sa.Column(sa.String)
     statistic_type = sa.Column(
         sa.Enum("mean", "median", "quantile", native_enum=False))
@@ -239,7 +239,7 @@ class HazardCurveData(Base):
         sa.Integer, sa.ForeignKey("hzrdr.hazard_curve.id"),
         nullable=False)
     hazard_curve = relationship("HazardCurve",
-                                backref="hazardcurvenodedata_set")
+                                backref="hazardcurvedata_set")
     poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
                      doc="Probabilities of exceedence")
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
