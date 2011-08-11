@@ -77,7 +77,7 @@ class ClassicalPSHABasedMixin:
             .join(models.HazardCurve) \
             .join(models.Output) \
             .filter(models.Output.oq_job_id == job_id) \
-            .filter(models.HazardCurveData.statistic_type == 'mean') \
+            .filter(models.HazardCurve.statistic_type == 'mean') \
             .filter(sqlfunc.ST_GeoHash(models.HazardCurveData.location, 12)
                         == geohash.encode(site.latitude, site.longitude,
                                           precision=12))
