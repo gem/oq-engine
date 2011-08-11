@@ -20,7 +20,6 @@
 
 """Collection of base classes for processing spatially-related data."""
 
-import geohash
 import json
 import math
 import numpy
@@ -343,11 +342,6 @@ class Site(object):
         """Verbose wrapper around =="""
         return self == other
 
-    def hash(self):
-        """Ugly geohashing function, get rid of this!
-        TODO(jmc): Dont use sites as dict keys"""
-        return self._geohash()
-
     def __hash__(self):
         return hash((self.longitude, self.latitude))
 
@@ -358,10 +352,6 @@ class Site(object):
         site_class = jpype.JClass("org.opensha.commons.data.Site")
         # TODO(JMC): Support named sites?
         return site_class(loc_class(self.latitude, self.longitude))
-
-    def _geohash(self):
-        """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x, precision=12)
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
