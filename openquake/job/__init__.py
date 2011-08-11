@@ -510,7 +510,6 @@ class Job(object):
             except ValueError:
                 return False
             else:
-                # return value >= 0.0 and value <= 1.0
                 return check_value(value)
 
         values = []
