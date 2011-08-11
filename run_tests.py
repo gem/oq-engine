@@ -18,7 +18,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 """
-This is our basic test running framework.
+This utility is deprecated.
 
 Usage Examples:
 
