@@ -21,6 +21,7 @@
 import openquake.kvs
 
 from openquake import logs
+from openquake import shapes
 
 
 LOG = logs.LOG
@@ -104,6 +105,12 @@ def loss_key(job_id, row, col, asset_id, poe):
             asset_id])
 
 
+def _mean_hazard_curve_key(job_id, site_fragment):
+    "Common code for the key functions below"
+    return openquake.kvs.generate_key(
+        [MEAN_HAZARD_CURVE_KEY_TOKEN, job_id, site_fragment])
+
+
 def mean_hazard_curve_key(job_id, site):
     """Return the key used to store a mean hazard curve for a single site.
 
@@ -114,9 +121,28 @@ def mean_hazard_curve_key(job_id, site):
     :returns: the key.
     :rtype: string
     """
+    return _mean_hazard_curve_key(job_id, hash(site))
 
+
+def mean_hazard_curve_key_template(job_id):
+    """Return a template for a key used to store a mean hazard curve for a
+    single site.
+
+    The template must be specialized before use with something similar to:
+    `template_key % hash(site)`
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :returns: the key.
+    :rtype: string
+    """
+    return _mean_hazard_curve_key(job_id, '%s')
+
+
+def _quantile_hazard_curve_key(job_id, site_fragment, quantile):
+    "Common code for the key functions below"
     return openquake.kvs.generate_key(
-        [MEAN_HAZARD_CURVE_KEY_TOKEN, job_id, site.hash()])
+        [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site_fragment, str(quantile)])
 
 
 def quantile_hazard_curve_key(job_id, site, quantile):
@@ -132,8 +158,31 @@ def quantile_hazard_curve_key(job_id, site, quantile):
     :rtype: string
     """
 
+    return _quantile_hazard_curve_key(job_id, hash(site), quantile)
+
+
+def quantile_hazard_curve_key_template(job_id, quantile):
+    """Return a template for a key used to store a quantile hazard curve for a
+    single site.
+
+    The template must be specialized before use with something similar to:
+    `template_key % hash(site)`
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :param quantile: quantile used to compute the curve.
+    :type quantile: float
+    :returns: the key.
+    :rtype: string
+    """
+
+    return _quantile_hazard_curve_key(job_id, '%s', quantile)
+
+
+def _mean_hazard_map_key(job_id, site_fragment, poe):
+    "Common code for the key functions below"
     return openquake.kvs.generate_key(
-        [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site.hash(), str(quantile)])
+        [MEAN_HAZARD_MAP_KEY_TOKEN, job_id, site_fragment, str(poe)])
 
 
 def mean_hazard_map_key(job_id, site, poe):
@@ -150,8 +199,32 @@ def mean_hazard_map_key(job_id, site, poe):
     :rtype: string
     """
 
-    return openquake.kvs.generate_key(
-        [MEAN_HAZARD_MAP_KEY_TOKEN, job_id, site.hash(), str(poe)])
+    return _mean_hazard_map_key(job_id, hash(site), poe)
+
+
+def mean_hazard_map_key_template(job_id, poe):
+    """Return a template key used to store the interpolated IML (Intensity
+    Measure Level) used in mean hazard maps for a single site.
+
+    The template must be specialized before use with something similar to:
+    `template_key % hash(site)`
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :param poe: probability of exceedance used to compute the value.
+    :type poe: float
+    :returns: the key.
+    :rtype: string
+    """
+
+    return _mean_hazard_map_key(job_id, '%s', poe)
+
+
+def _quantile_hazard_map_key(job_id, site_fragment, poe, quantile):
+    "Common code for the key functions below"
+    return openquake.kvs.generate_key([QUANTILE_HAZARD_MAP_KEY_TOKEN,
+                                      job_id, site_fragment, str(poe),
+                                      str(quantile)])
 
 
 def quantile_hazard_map_key(job_id, site, poe, quantile):
@@ -169,10 +242,27 @@ def quantile_hazard_map_key(job_id, site, poe, quantile):
     :returns: the key.
     :rtype: string
     """
+    return _quantile_hazard_map_key(job_id, hash(site), poe, quantile)
 
-    return openquake.kvs.generate_key([QUANTILE_HAZARD_MAP_KEY_TOKEN,
-                                      job_id, site.hash(), str(poe),
-                                      str(quantile)])
+
+
+def quantile_hazard_map_key_template(job_id, poe, quantile):
+    """Return a template key used to store the interpolated IML (Intensity
+    Measure Level) used in quantile hazard maps for a single site.
+
+    The template must be specialized before use with something similar to:
+    `template_key % hash(site)`
+
+    :param job_id: the id of the job.
+    :type job_id: integer
+    :param poe: probability of exceedance used to compute the value.
+    :type poe: float
+    :param quantile: quantile used to compute the curve.
+    :type quantile: float
+    :returns: the key.
+    :rtype: string
+    """
+    return _quantile_hazard_map_key(job_id, '%s', poe, quantile)
 
 
 def quantile_from_haz_curve_key(kvs_key):
@@ -211,13 +301,25 @@ def poe_value_from_hazard_map_key(kvs_key):
         return None
 
 
-def hazard_curve_poes_key(job_id, realization_num, site):
-    """ Result a hazard curve key (for a single site) generated by
-    openquake.kvs.generate_key """
+def _hazard_curve_poes_key(job_id, realization_num, site_fragment):
+    "Common code for the key functions below"
     return openquake.kvs.generate_key([HAZARD_CURVE_POES_KEY_TOKEN,
                                        job_id,
                                        realization_num,
-                                       site.hash()])
+                                       site_fragment])
+
+
+def hazard_curve_poes_key(job_id, realization_num, site):
+    """ Result a hazard curve key (for a single site) generated by
+    openquake.kvs.generate_key """
+
+    return _hazard_curve_poes_key(job_id, realization_num, hash(site))
+
+
+def hazard_curve_poes_key_template(job_id, realization_num):
+    """ Result a template for a hazard curve key (for a single site) generated
+    by openquake.kvs.generate_key """
+    return _hazard_curve_poes_key(job_id, realization_num, '%s')
 
 
 def realization_from_haz_curve_key(kvs_key):
