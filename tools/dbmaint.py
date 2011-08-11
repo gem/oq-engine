@@ -278,7 +278,10 @@ def perform_upgrade(config):
         scripts = scripts_to_run(artefact, rev_info, config)
         if scripts:
             logging.debug("%s: %s" % (artefact, scripts))
-            return run_scripts(artefact, rev_info, scripts, config)
+            if not run_scripts(artefact, rev_info, scripts, config):
+                return False
+
+    return True
 
 
 def main(cargs):
