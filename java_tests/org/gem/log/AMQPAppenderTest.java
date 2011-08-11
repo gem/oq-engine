@@ -8,11 +8,13 @@ import org.apache.commons.collections.Predicate;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Layout;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.PropertyConfigurator;
 
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertThat;
@@ -32,7 +34,13 @@ class ThrowablePatternLayout extends PatternLayout {
 public class AMQPAppenderTest {
     private DummyConnection dummyConnection;
     private DummyAppender dummyAppender;
-    private Logger logger = Logger.getLogger(AMQPAppenderTest.class);
+    private Logger logger;
+
+    @Before
+    public void setUp() {
+        logger = Logger.getLogger(AMQPAppenderTest.class);
+        logger.setLevel(Level.INFO);
+    }
 
     @After
     public void tearDown() {
@@ -41,6 +49,7 @@ public class AMQPAppenderTest {
         dummyConnection = null;
         dummyAppender = null;
         DummyAppender.lastAppender = null;
+        logger = null;
 
         // this calls close on the appenders (and so it closes the
         // (fake) RabbitMQ connections)
