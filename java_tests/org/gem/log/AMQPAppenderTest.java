@@ -8,10 +8,13 @@ import org.apache.commons.collections.Predicate;
 
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.Layout;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 import org.apache.log4j.PropertyConfigurator;
 
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertThat;
@@ -31,14 +34,22 @@ class ThrowablePatternLayout extends PatternLayout {
 public class AMQPAppenderTest {
     private DummyConnection dummyConnection;
     private DummyAppender dummyAppender;
-    private Logger logger = Logger.getLogger(AMQPAppenderTest.class);
+    private Logger logger;
 
-    void tearDown() {
+    @Before
+    public void setUp() {
+        logger = Logger.getLogger(AMQPAppenderTest.class);
+        logger.setLevel(Level.INFO);
+    }
+
+    @After
+    public void tearDown() {
         AMQPAppender.setConnectionFactory(null);
 
         dummyConnection = null;
         dummyAppender = null;
         DummyAppender.lastAppender = null;
+        logger = null;
 
         // this calls close on the appenders (and so it closes the
         // (fake) RabbitMQ connections)
@@ -68,6 +79,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
 
         assertThat(entry(0).exchange, is(equalTo("")));
@@ -93,6 +105,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
         assertThat(entry(0).routingKey, is(equalTo("rk")));
         assertThat(entry(1).routingKey, is(equalTo("rk")));
@@ -110,6 +123,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
         assertThat(entry(0).routingKey, is(equalTo("log.INFO")));
         assertThat(entry(1).routingKey, is(equalTo("log.WARN")));
@@ -132,6 +146,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(1)));
         assertThat(entry(0).body, is(equalTo("Test1\n")));
     }
@@ -151,6 +166,7 @@ public class AMQPAppenderTest {
 
         dummyConnection = (DummyConnection) dummyAppender.getConnection();
 
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(1)));
 
         assertThat(entry(0).body, is(not(equalTo("Test1\n"))));
@@ -172,6 +188,8 @@ public class AMQPAppenderTest {
     // test that the logger handles all the documented properties
     @Test
     public void log4jSetup() {
+        AMQPAppender.setConnectionFactory(new DummyConnectionFactory());
+
         Properties props = new Properties();
 
         props.setProperty("log4j.rootLogger", "DEBUG, rabbit");
@@ -221,6 +239,7 @@ public class AMQPAppenderTest {
                    is(equalTo("%d %-5p [%c] - %m%n")));
 
         // check message properties
+        assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(1)));
         assertThat(entry(0).exchange, is(equalTo("amq.topic")));
 
