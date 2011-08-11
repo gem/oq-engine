@@ -212,40 +212,40 @@ class HazardMapData(Base):
             self.id, self.value))
 
 
-class HazardCurveData(Base):
-    __tablename__ = "hazard_curve_data"
+class HazardCurve(Base):
+    __tablename__ = "hazard_curve"
     __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
     output_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.output.id"),
                           nullable=False)
-    output = relationship("Output", backref="hazardcurvedata_set")
+    output = relationship("Output", backref="hazardcurve_set")
     end_branch_label = sa.Column(sa.String)
     statistic_type = sa.Column(
         sa.Enum("mean", "median", "quantile", native_enum=False))
     quantile = sa.Column(sa.Float)
 
     def __repr__(self):
-        return(":hazard_curve_data: %s, %s" % (
+        return(":hazard_curve: %s, %s" % (
             self.id, self.statistic_type or self.end_branch_label))
 
 
-class HazardCurveNodeData(Base):
-    __tablename__ = "hazard_curve_node_data"
+class HazardCurveData(Base):
+    __tablename__ = "hazard_curve_data"
     __table_args__ = {"schema": "hzrdr"}
 
     id = sa.Column(sa.Integer, primary_key=True)
-    hazard_curve_data_id = sa.Column(
-        sa.Integer, sa.ForeignKey("hzrdr.hazard_curve_data.id"),
+    hazard_curve_id = sa.Column(
+        sa.Integer, sa.ForeignKey("hzrdr.hazard_curve.id"),
         nullable=False)
-    hazard_curve_data = relationship("HazardCurveData",
-                                     backref="hazardcurvenodedata_set")
+    hazard_curve = relationship("HazardCurve",
+                                backref="hazardcurvedata_set")
     poes = sa.Column(postgresql.ARRAY(sa.Float), nullable=False,
                      doc="Probabilities of exceedence")
     location = ga.GeometryColumn(ga.Point(2), nullable=False)
 
     def __repr__(self):
-        return(":hazard_curve_node_data: %s, %s" % (
+        return(":hazard_curve_data: %s, %s" % (
             self.id, self.poes))
 
 
