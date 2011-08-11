@@ -117,23 +117,12 @@ public class JsonSerializer {
      */
     public static List<String> hazardCurvesToJson(
             Map<Site, DiscretizedFuncAPI> hazCurves, List<Site> siteList) {
-        List<String> json = new ArrayList<String>();
+        List<String> result = new ArrayList<String>();
         Gson gson = new Gson();
         for (Site site : siteList) {
-            Double lon = site.getLocation().getLongitude();
-            Double lat = site.getLocation().getLatitude();
-            Map<String, String> siteMap = new HashMap<String, String>();
-            siteMap.put(SITE_LON, lon.toString());
-            siteMap.put(SITE_LAT, lat.toString());
-
-            JsonObject hazardCurve =
-                    gson.toJsonTree(siteMap, SITE_TYPE).getAsJsonObject();
-            JsonElement curveElement =
-                    ordinatesToJsonElement(hazCurves.get(site), gson);
-            hazardCurve.add(POES, curveElement);
-            json.add(hazardCurve.toString());
+            result.add(ordinatesToJsonElement(hazCurves.get(site), gson).toString());
         }
-        return json;
+        return result;
     }
 
     /**
