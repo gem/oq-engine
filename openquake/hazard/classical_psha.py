@@ -119,10 +119,13 @@ def compute_quantile_hazard_curves(job_id, sites, realizations, quantiles):
     return keys
 
 
-def build_interpolator(poes, imls):
+def build_interpolator(poes, imls, site=None):
     """
     Return a function interpolating the specified points.
 
+    :param site: the site to which the points belong (used only for debugging
+                 purposes)
+    :type site: :py:class:`shapes.Site` or None
     :param poes: the PoEs (abscissae)
     :type poes: list of :py:class:`float`
     :param imls: the IMLs (ordinates)
@@ -138,12 +141,10 @@ def build_interpolator(poes, imls):
 
     interpolator = interp1d(poes, numpy.log(imls), kind='linear')
 
-    def safe_interpolator(poe, site=None):
+    def safe_interpolator(poe):
         """
         Return the interpolated IML, limiting the value between the minimum and
         maximum IMLs of the original points describing the curve.
-        The optional site is used to give more informative messages in case the
-        limiting has taken place.
         """
         if poe > poes[-1]:
             LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
@@ -176,14 +177,14 @@ def compute_quantile_hazard_maps(job_id, sites, quantiles, imls, poes):
             quantile_poes = kvs.get_value_json_decoded(
                 kvs.tokens.quantile_hazard_curve_key(job_id, site, quantile))
 
-            interpolate = build_interpolator(quantile_poes, imls)
+            interpolate = build_interpolator(quantile_poes, imls, site)
 
             for poe in poes:
                 key = kvs.tokens.quantile_hazard_map_key(
                         job_id, site, poe, quantile)
                 keys.append(key)
 
-                kvs.set_value_json_encoded(key, interpolate(poe, site))
+                kvs.set_value_json_encoded(key, interpolate(poe))
 
     return keys
 
@@ -199,12 +200,12 @@ def compute_mean_hazard_maps(job_id, sites, imls, poes):
     for site in sites:
         mean_poes = kvs.get_value_json_decoded(
             kvs.tokens.mean_hazard_curve_key(job_id, site))
-        interpolate = build_interpolator(mean_poes, imls)
+        interpolate = build_interpolator(mean_poes, imls, site)
 
         for poe in poes:
             key = kvs.tokens.mean_hazard_map_key(job_id, site, poe)
             keys.append(key)
 
-            kvs.set_value_json_encoded(key, interpolate(poe, site))
+            kvs.set_value_json_encoded(key, interpolate(poe))
 
     return keys
