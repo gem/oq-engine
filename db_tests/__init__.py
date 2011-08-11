@@ -16,3 +16,13 @@
 # You should have received a copy of the GNU Lesser General Public License
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+from bulk_insert_unittest import *
+from db_loader_unittest import *
+from helpers import *
+from input_risk_unittest import *
+from job_unittest import *
+from output_hazard_unittest import *
+from output_risk_unittest import *
+from output_writers_unittest import *
