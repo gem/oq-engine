@@ -350,7 +350,9 @@ class HazardEngineTestCase(unittest.TestCase):
                             "NRML instance file %s does not validate against "\
                             "schema" % nrml_path)
 
-        test_file_path = "smoketests/classical_psha_simple/config.gem"
+        test_file_path = helpers.smoketest_file(
+            "classical_psha_simple/config.gem")
+
         hazengine = helpers.job_from_file(test_file_path)
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
