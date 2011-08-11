@@ -374,23 +374,23 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
 
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
-        self.assertEqual(4, len(output.hazardcurvedata_set))
+        self.assertEqual(4, len(output.hazardcurve_set))
         self.assertEqual(0, len(output.lossmap_set))
 
         # read data from the DB and check that it's equal to the original data
         inserted_data = []
 
-        for hcd in output.hazardcurvedata_set:
-            for hcdn in hcd.hazardcurvenodedata_set:
-                location = hcdn.location.coords(self.session)
+        for hc in output.hazardcurve_set:
+            for hcd in hc.hazardcurvedata_set:
+                location = hcd.location.coords(self.session)
                 node = (Site(location[0], location[1]),
-                        {'PoEValues': hcdn.poes})
-                if hcd.end_branch_label:
-                    node[1]['endBranchLabel'] = hcd.end_branch_label
+                        {'PoEValues': hcd.poes})
+                if hc.end_branch_label:
+                    node[1]['endBranchLabel'] = hc.end_branch_label
                 else:
-                    node[1]['statistics'] = hcd.statistic_type
-                    if hcd.quantile is not None:
-                        node[1]['quantileValue'] = hcd.quantile
+                    node[1]['statistics'] = hc.statistic_type
+                    if hc.quantile is not None:
+                        node[1]['quantileValue'] = hc.quantile
 
                 inserted_data.append(node)
 
@@ -469,7 +469,7 @@ class GMFDBWriterTestCase(GMFDBBaseTestCase):
 
         # After calling the function under test we see the expected map data.
         [output] = self.job.output_set
-        self.assertEqual(0, len(output.hazardcurvedata_set))
+        self.assertEqual(0, len(output.hazardcurve_set))
         self.assertEqual(0, len(output.lossmap_set))
         self.assertEqual(4, len(output.gmfdata_set))
 

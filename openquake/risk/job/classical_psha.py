@@ -19,6 +19,8 @@
 
 """ Mixin for Classical PSHA Risk Calculation """
 
+import geohash
+
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
@@ -71,13 +73,14 @@ class ClassicalPSHABasedMixin:
         iml_query = session.query(models.OqParams.imls) \
             .join(models.OqJob) \
             .filter(models.OqJob.id == job_id)
-        curve_query = session.query(models.HazardCurveNodeData.poes) \
-            .join(models.HazardCurveData) \
+        curve_query = session.query(models.HazardCurveData.poes) \
+            .join(models.HazardCurve) \
             .join(models.Output) \
             .filter(models.Output.oq_job_id == job_id) \
-            .filter(models.HazardCurveData.statistic_type == 'mean') \
-            .filter(sqlfunc.ST_GeoHash(models.HazardCurveNodeData.location, 12)
-                        == site.hash())
+            .filter(models.HazardCurve.statistic_type == 'mean') \
+            .filter(sqlfunc.ST_GeoHash(models.HazardCurveData.location, 12)
+                        == geohash.encode(site.latitude, site.longitude,
+                                          precision=12))
 
         hc = curve_query.one()
         pms = iml_query.one()
