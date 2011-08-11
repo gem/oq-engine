@@ -57,6 +57,10 @@ class TestMixin(object):
         """
         Create a Job and mixes in a Mixin.
 
+        This method, and its double `unload_job_mixin`, when called in the
+        setUp and tearDown of a TestCase respectively, have the effect of a
+        `with mixin_class` spanning a single test.
+
         :param params: Job parameters
         :type params: :py:class:`dict`
         :param mixin_class: the mixin that will be mixed in the job
@@ -73,8 +77,6 @@ class TestMixin(object):
     def unload_job_mixin(self):
         """
         Remove from the job the Mixin mixed in by create_job_with_mixin.
-
-        Call this during the tearDown.
         """
         self._job.params['CALCULATION_MODE'] = self._calculation_mode
         self._mixin._unload()
