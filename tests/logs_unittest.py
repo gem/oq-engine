@@ -29,6 +29,8 @@ from openquake import logs
 from openquake import job
 from openquake import settings
 
+from tests.utils.helpers import cleanup_loggers
+
 LOG_FILE_PATH = os.path.join(os.getcwd(), 'test_file_for_the_logs_module.log')
 
 
@@ -79,9 +81,7 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
         # sys.stdout and removes all the handlers from the rootLogger
 
         # reset logging config (otherwise will ignore logfile flag)
-        root = logging.getLogger()
-        for h in list(root.handlers):
-            root.removeHandler(h)
+        cleanup_loggers()
 
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
@@ -90,9 +90,7 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
 
     def tearDown(self):
         # reset logging config
-        root = logging.getLogger()
-        for h in list(root.handlers):
-            root.removeHandler(h)
+        cleanup_loggers()
 
     def _slurp_file(self):
         # Flush all the logs into the logging file.  This is a little bit
@@ -336,9 +334,7 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
 
         # reset logging config
-        root = logging.getLogger()
-        for h in list(root.handlers):
-            root.removeHandler(h)
+        cleanup_loggers()
 
         # setup AMQP logging
         logs.init_logs('amqp', 'debug')
@@ -352,9 +348,7 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         jvm.JClass("org.apache.log4j.BasicConfigurator").configure()
 
         # reset logging config
-        root = logging.getLogger()
-        for h in list(root.handlers):
-            root.removeHandler(h)
+        cleanup_loggers()
 
     def test_log_configuration(self):
         """Test that the AMQP log configuration is consistent"""
