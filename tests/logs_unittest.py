@@ -84,7 +84,7 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
 
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
-        logs.init_logs()
+        logs.init_logs('warn')
         java.init_logs('warn')
 
     def tearDown(self):

@@ -48,8 +48,10 @@ HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
 
 
-def init_logs():
+def init_logs(level='warn'):
     """Load logging config, and set log levels based on flags"""
+
+    logging_level = LEVELS.get(level, 'warn')
 
     # Add the logging handler to the root logger.  This will be a file or
     # stdout depending on the presence of the logfile parameter.
@@ -77,12 +79,11 @@ def init_logs():
         hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
         LOG.addHandler(hdlr)
 
-    level = LEVELS.get(FLAGS.debug, 'warn')
     logging.getLogger("amqplib").setLevel(logging.ERROR)
 
-    LOG.setLevel(level)
-    RISK_LOG.setLevel(level)
-    HAZARD_LOG.setLevel(level)
+    LOG.setLevel(logging_level)
+    RISK_LOG.setLevel(logging_level)
+    HAZARD_LOG.setLevel(logging_level)
 
     # capture java logging (this is what celeryd does with the workers, we use
     # exactly the same system for bin/openquakes and the likes)
