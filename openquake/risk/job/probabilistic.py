@@ -167,11 +167,7 @@ class ProbabilisticEventMixin():
 
         block = general.Block.from_kvs(block_id)
 
-        if self.params.get("OPENQUAKE_JOB_ID"):
-            gmfs = self._get_db_gmfs(block.sites,
-                                     self.params['OPENQUAKE_JOB_ID'])
-        else:
-            gmfs = self._get_kvs_gmfs(block.sites, histories, realizations)
+        gmfs = self._get_db_gmfs(block.sites, self.job_id)
 
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
