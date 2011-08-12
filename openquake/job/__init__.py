@@ -32,6 +32,7 @@ from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
+from openquake import settings
 from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
@@ -240,6 +241,8 @@ class Job(object):
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
+
+        logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
 
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
         job = Job(params, job_id=job_id)
