@@ -85,7 +85,9 @@ def job_from_file(config_file_path):
 
 
 def create_job(params, **kwargs):
-    return Job(params, 0, **kwargs)
+    job_id = kwargs.pop('job_id', 0)
+
+    return Job(params, job_id, **kwargs)
 
 
 class WordProducer(producer.FileProducer):
