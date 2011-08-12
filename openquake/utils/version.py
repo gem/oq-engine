@@ -64,6 +64,6 @@ def info(version_data):
     if end > seconds_since_epoch > start:
         release_date = datetime.utcfromtimestamp(
             seconds_since_epoch).isoformat()
-        result += ", released %s UTC" % release_date
+        result += ", released %sZ" % release_date
 
     return result
