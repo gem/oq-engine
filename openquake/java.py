@@ -241,7 +241,7 @@ def jvm(max_mem=None):
             # "-Dlog4j.debug", # turn on log4j internal debugging
             "-Xmx%sM" % max_mem)
 
-        init_logs(level=FLAGS.debug, log_type='console')
+        init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
 
     return jpype
 
