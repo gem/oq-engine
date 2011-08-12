@@ -55,7 +55,7 @@ class VersionInfoTestCase(unittest.TestCase):
     def test_info_with_all_data_in_place(self):
         """All the version information is in place."""
         self.assertEqual(
-            "OpenQuake version 0.3.2, released 2011-04-08T06:04:11",
+            "OpenQuake version 0.3.2, released 2011-04-08T06:04:11 UTC",
             version.info((0, 3, 2, 1302242651)))
 
     def test_info_with_malformed_version_information(self):
