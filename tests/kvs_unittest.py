@@ -211,39 +211,21 @@ class JobTokensTestCase(unittest.TestCase):
     def tearDown(self):
         self.client.flushdb()
 
-    def test_alloc_job_id(self):
+    def test_mark_job_as_current(self):
         """
         Test the generation of job keys using
-        :py:function:`openquake.kvs.tokens.alloc_job_id`.
+        :py:function:`openquake.kvs.tokens.mark_job_as_current`.
         """
 
         job_id_1 = 1
         job_id_2 = 2
 
-        kvs.get_client().delete(tokens.NEXT_JOB_ID)
-
-        # it should be empty to start with
-        self.assertTrue(kvs.get(tokens.NEXT_JOB_ID) is None)
-
-        self.assertEqual(job_id_1, tokens.alloc_job_id())
-
-        # verify that the IDs are incrementing properly
-        self.assertEqual(job_id_2, tokens.alloc_job_id())
+        tokens.mark_job_as_current(job_id_1)
+        tokens.mark_job_as_current(job_id_2)
 
         # now verify that these keys have been added to the CURRENT_JOBS set
         self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_id_1))
         self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_id_2))
-
-    def test_alloc_job_id_raises_on_duplicate(self):
-        """
-        Test that :py:function:`openquake.kvs.tokens.alloc_job_id` raises an
-        RuntimeError if there is somehow a duplicate job key.
-        """
-        self.assertEqual(0, len(self.client.smembers(tokens.CURRENT_JOBS)))
-
-        self.client.sadd(tokens.CURRENT_JOBS, 1)
-
-        self.assertRaises(RuntimeError, tokens.alloc_job_id)
 
     def test_current_jobs(self):
         """
@@ -272,7 +254,8 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client = kvs.get_client()
         self.client.flushdb()
 
-        self.test_job = tokens.alloc_job_id()
+        self.test_job = 1
+        tokens.mark_job_as_current(self.test_job)
 
         # create some keys to hold fake data for test_job
         self.gmf1_key = tokens.gmfs_key(self.test_job, 0, 0)
@@ -285,7 +268,8 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client.set(self.vuln_key, 'fake vuln curve data')
 
         # this job will have no data
-        self.dataless_job = tokens.alloc_job_id()
+        self.dataless_job = 2
+        tokens.mark_job_as_current(self.dataless_job)
 
     def tearDown(self):
         self.client.flushdb()
