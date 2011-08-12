@@ -655,6 +655,22 @@ CREATE TABLE uiapi.output (
 ) TABLESPACE uiapi_ts;
 
 
+-- Persistent storage for job log messages
+CREATE TABLE uiapi.log_msg (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    -- Short log message summary.
+    brief VARCHAR NOT NULL,
+    -- Full log message.
+    detailed VARCHAR NOT NULL,
+    log_level VARCHAR NOT NULL CONSTRAINT log_msg_levels
+        CHECK(log_level IN ('debug', 'info', 'warning', 'error', 'critical',
+            'fatal')),
+    log_date timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 -- Hazard map header
 CREATE TABLE hzrdr.hazard_map (
     id SERIAL PRIMARY KEY,
@@ -1004,6 +1020,9 @@ FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.log_msg ADD CONSTRAINT uiapi_log_msg_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
