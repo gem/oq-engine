@@ -148,10 +148,9 @@ class AMQPLogTestBase(unittest.TestCase):
                                virtual_host=settings.AMQP_VHOST)
         ch = conn.channel()
         ch.access_request(settings.AMQP_VHOST, active=False, read=True)
-        ch.exchange_declare('oq-unittest.topic', 'topic', auto_delete=True)
+        ch.exchange_declare(self.TOPIC, 'topic', auto_delete=True)
         qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, 'oq-unittest.topic',
-                      routing_key='oq-unittest-log.*')
+        ch.queue_bind(qname, self.TOPIC, routing_key=self.ROUTING_KEY)
 
         return conn, ch, qname
 
@@ -166,6 +165,8 @@ class AMQPLogTestBase(unittest.TestCase):
 
 
 class JavaAMQPLogTestCase(AMQPLogTestBase):
+    TOPIC = 'oq-unittest.topic'
+    ROUTING_KEY = 'oq-unittest-log.*'
 
     def tearDown(self):
         # reconfigure Log4j with the default settings
@@ -256,6 +257,9 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
 
 
 class PythonAMQPLogTestCase(AMQPLogTestBase):
+    TOPIC = 'oq-unittest.topic'
+    ROUTING_KEY = 'oq-unittest-log.*'
+
     def setUp(self):
         self.amqp = logs.AMQPHandler(
             host=settings.AMQP_HOST,
