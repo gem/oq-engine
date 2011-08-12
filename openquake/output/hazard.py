@@ -892,10 +892,10 @@ def _create_writer(job_id, serialize_to, nrml_path,
 def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     """Create a hazard curve writer observing the settings in the config file.
 
-    :param job_id: FIMXE
-    :param serialize_to: FIXME
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
+    :param job_id: the id of the job the curve belongs to.
+    :type job_id: int
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
     :param str nrml_path: the full path of the XML/NRML representation of the
         hazard curve.
     :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
@@ -909,10 +909,10 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     """Create a hazard map writer observing the settings in the config file.
 
-    :param job_id: FIMXE
-    :param serialize_to: FIXME
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
+    :param job_id: the id of the job the curve belongs to.
+    :type job_id: int
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
     :param str nrml_path: the full path of the XML/NRML representation of the
         hazard map.
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
@@ -926,10 +926,10 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
 def create_gmf_writer(job_id, serialize_to, nrml_path):
     """Create a GMF writer using the settings in the config file.
 
-    :param job_id: FIMXE
-    :param serialize_to: FIXME
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
+    :param job_id: the id of the job the curve belongs to.
+    :type job_id: int
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
     :param str nrml_path: the full path of the XML/NRML representation of the
         ground motion field.
     :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
