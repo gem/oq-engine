@@ -938,5 +938,3 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     return _create_writer(job_id, serialize_to, nrml_path,
                           GMFXMLWriter,
                           GMFDBWriter)
-
-

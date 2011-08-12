@@ -31,6 +31,7 @@ from openquake.shapes import Site, Region
 from db_tests import helpers
 from tests.utils.helpers import create_job
 
+
 # See data in output_hazard_unittest.py
 def HAZARD_CURVE_DATA():
     return [
@@ -128,8 +129,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         """Verify _sites_to_gmf_keys"""
         params = {
             'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
-            'REGION_GRID_SPACING': '1.0'
-        }
+            'REGION_GRID_SPACING': '1.0'}
         with Mixin(create_job(params, job_id=self.job.id),
                    ProbabilisticEventMixin) as mixin:
             keys = mixin._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
@@ -140,8 +140,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         """Verify _get_db_gmfs."""
         params = {
             'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
-            'REGION_GRID_SPACING': '1.0'
-        }
+            'REGION_GRID_SPACING': '1.0'}
         with Mixin(create_job(params, job_id=self.job.id),
                    ProbabilisticEventMixin) as mixin:
             self.assertEquals(3, len(mixin._gmf_db_list(self.job.id)))

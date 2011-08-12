@@ -293,8 +293,7 @@ class Job(object):
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id, sections=list(),
-        base_path=None):
+    def __init__(self, params, job_id, sections=list(), base_path=None):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
@@ -303,7 +302,7 @@ class Job(object):
         :param str base_path: base directory containing job input files
         """
         self._job_id = job_id
-        mark_job_as_current(job_id) # enables KVS gc
+        mark_job_as_current(job_id)  # enables KVS gc
 
         # Make the job_id available to the java logging context.
         mdc = java.jclass('MDC')
@@ -312,6 +311,7 @@ class Job(object):
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
+        self.serialize_results_to = []
         self.base_path = base_path
         if base_path:
             self.to_kvs()
