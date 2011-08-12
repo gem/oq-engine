@@ -118,6 +118,11 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
     by using the normal `%(job_key)s` Python syntax.
     """  # pylint: disable=W0105
 
+    LEVELNAMES = {
+        'WARNING': 'WARN',
+        'CRITICAL': 'FATAL',
+    }
+
     # pylint: disable=R0913
     def __init__(self, host="localhost:5672", username="guest",
                  password="guest", virtual_host="/",
@@ -166,10 +171,13 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
             exc_info=record.exc_info, func=record.funcName)
 
         # the documentation says that formatters use .args; in reality
-        # the reach directly into __dict__
+        # they reach directly into __dict__
         for key, value in self.MDC.items():
             if key not in new_record.__dict__:
                 new_record.__dict__[key] = value
+
+        new_record.__dict__['loglevel'] = \
+            self.LEVELNAMES.get(new_record.levelname, new_record.levelname)
 
         return new_record
 
