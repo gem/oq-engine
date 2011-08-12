@@ -52,7 +52,8 @@ class ClassicalPSHABasedMixin:
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            celery_tasks.append(general.compute_risk.delay(self.job_id, block_id))
+            celery_tasks.append(
+                general.compute_risk.delay(self.job_id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs).
