@@ -232,7 +232,7 @@ class Job(object):
         """Return the job in the underlying kvs system with the given id."""
 
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
-        job = Job(params, job_id=job_id)
+        job = Job(params, job_id)
         return job
 
     @staticmethod
@@ -272,7 +272,8 @@ class Job(object):
         params['BASE_PATH'] = base_path
 
         if output_type == 'xml_without_db':
-            job_id = None
+            # we are running a test
+            job_id = 0
             serialize_results_to = ['xml']
         else:
             # openquake-server creates the job record in advance and stores the
@@ -287,12 +288,12 @@ class Job(object):
             else:
                 serialize_results_to = ['db', 'xml']
 
-        job = Job(params, job_id=job_id, sections=sections, base_path=base_path)
+        job = Job(params, job_id, sections=sections, base_path=base_path)
         job.serialize_results_to = serialize_results_to
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, sections=list(),
+    def __init__(self, params, job_id, sections=list(),
         base_path=None):
         """
         :param dict params: Dict of job config params.
@@ -301,11 +302,7 @@ class Job(object):
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
         """
-        if job_id is None:
-            LOG.warn('******** Job without a job_id ********')
-            self._job_id = alloc_job_id()
-        else:
-            self._job_id = job_id
+        self._job_id = job_id
 
         # Make the job_id available to the java logging context.
         mdc = java.jclass('MDC')
