@@ -44,6 +44,7 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 import logging
 from lxml import etree
 
+from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import (
     HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData,
     Output, OqParams, OqJob)
@@ -868,3 +869,74 @@ class GMFDBWriter(writer.DBWriter):
             output_id=self.output.id,
             ground_motion=values['groundMotion'],
             location="POINT(%s %s)" % (point.point.x, point.point.y))
+
+
+def _create_writer(job_id, serialize_to, nrml_path,
+                   create_xml_writer, create_db_writer):
+    """Common code for the functions below"""
+
+    writers = []
+
+    if 'db' in serialize_to:
+        assert job_id, "No job_id supplied"
+        job_id = int(job_id)
+        session = get_db_session("reslt", "writer")
+        writers.append(create_db_writer(session, nrml_path, job_id))
+
+    if 'xml' in serialize_to:
+        writers.append(create_xml_writer(nrml_path))
+
+    return writer.compose_writers(writers)
+
+
+def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
+    """Create a hazard curve writer observing the settings in the config file.
+
+    :param job_id: FIMXE
+    :param serialize_to: FIXME
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard curve.
+    :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
+        :py:class:`output.hazard.HazardCurveDBWriter` instance.
+    """
+    return _create_writer(job_id, serialize_to, nrml_path,
+                          HazardCurveXMLWriter,
+                          HazardCurveDBWriter)
+
+
+def create_hazardmap_writer(job_id, serialize_to, nrml_path):
+    """Create a hazard map writer observing the settings in the config file.
+
+    :param job_id: FIMXE
+    :param serialize_to: FIXME
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        hazard map.
+    :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
+        :py:class:`output.hazard.HazardMapDBWriter` instance.
+    """
+    return _create_writer(job_id, serialize_to, nrml_path,
+                          HazardMapXMLWriter,
+                          HazardMapDBWriter)
+
+
+def create_gmf_writer(job_id, serialize_to, nrml_path):
+    """Create a GMF writer using the settings in the config file.
+
+    :param job_id: FIMXE
+    :param serialize_to: FIXME
+    :param dict params: the settings from the OpenQuake engine configuration
+        file.
+    :param str nrml_path: the full path of the XML/NRML representation of the
+        ground motion field.
+    :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
+        :py:class:`output.hazard.GMFDBWriter` instance.
+    """
+    return _create_writer(job_id, serialize_to, nrml_path,
+                          GMFXMLWriter,
+                          GMFDBWriter)
+
+
