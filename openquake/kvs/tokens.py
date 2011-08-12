@@ -142,7 +142,8 @@ def mean_hazard_curve_key_template(job_id):
 def _quantile_hazard_curve_key(job_id, site_fragment, quantile):
     "Common code for the key functions below"
     return openquake.kvs.generate_key(
-        [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site_fragment, str(quantile)])
+        [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site_fragment,
+         str(quantile)])
 
 
 def quantile_hazard_curve_key(job_id, site, quantile):
@@ -243,7 +244,6 @@ def quantile_hazard_map_key(job_id, site, poe, quantile):
     :rtype: string
     """
     return _quantile_hazard_map_key(job_id, hash(site), poe, quantile)
-
 
 
 def quantile_hazard_map_key_template(job_id, poe, quantile):
@@ -386,6 +386,10 @@ CURRENT_JOBS = 'CURRENT_JOBS'
 
 def mark_job_as_current(job_id):
     """
+    Add a job to the set of current jobs, to be later garbage collected.
+
+    :param job_id: the job id
+    :type job_id: int
     """
     client = openquake.kvs.get_client()
 
