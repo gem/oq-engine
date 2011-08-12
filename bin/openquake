@@ -106,7 +106,7 @@ if __name__ == '__main__':
         print flags.get_flags_help()
         sys.exit(1)
 
-    logs.init_logs(level=FLAGS.debug)
+    logs.init_logs(level=FLAGS.debug, log_type='console')
 
     # Collect inputs
     # Determine Processing type

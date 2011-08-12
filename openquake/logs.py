@@ -29,6 +29,9 @@ import logging
 from celery.log import redirect_stdouts_to_logger
 
 from openquake import flags
+from openquake import settings
+from openquake import java
+
 FLAGS = flags.FLAGS
 
 LEVELS = {'debug': logging.DEBUG,
@@ -48,7 +51,20 @@ HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
 
 
-def init_logs(level='warn'):
+def init_logs(log_type='console', level='warn'):
+    """
+    Initialize Python logging.
+
+    The function might be called multiple times with different log levels.
+    """
+
+    if log_type == 'console':
+        init_logs_stdout(level)
+    else:
+        init_logs_amqp(level)
+
+
+def init_logs_stdout(level):
     """Load logging config, and set log levels based on flags"""
 
     logging_level = LEVELS.get(level, 'warn')
@@ -88,6 +104,34 @@ def init_logs(level='warn'):
     # capture java logging (this is what celeryd does with the workers, we use
     # exactly the same system for bin/openquakes and the likes)
     redirect_stdouts_to_logger(LOG)
+
+
+def init_logs_amqp(level):
+    """Init Python and Java logging to log to AMQP"""
+
+    logging_level = LEVELS.get(level, 'warn')
+
+    # initialize Python logging
+    found = any(isinstance(hdlr, AMQPHandler) for hdlr in LOG.handlers)
+
+    if not found:
+        hdlr = AMQPHandler(
+            host=settings.AMQP_HOST,
+            username=settings.AMQP_USER,
+            password=settings.AMQP_PASSWORD,
+            virtual_host=settings.AMQP_VHOST,
+            exchange=settings.AMQP_EXCHANGE,
+            routing_key='log.%(loglevel)s.%(job_id)s',
+            level=logging.DEBUG)
+
+        hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
+        LOG.addHandler(hdlr)
+
+    logging.getLogger("amqplib").setLevel(logging.ERROR)
+
+    LOG.setLevel(logging_level)
+    RISK_LOG.setLevel(logging_level)
+    HAZARD_LOG.setLevel(logging_level)
 
 
 class AMQPHandler(logging.Handler):  # pylint: disable=R0902
