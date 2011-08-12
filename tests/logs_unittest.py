@@ -31,8 +31,7 @@ from openquake import settings
 LOG_FILE_PATH = os.path.join(os.getcwd(), 'test_file_for_the_logs_module.log')
 
 
-class LogsTestCase(unittest.TestCase):
-
+class PreserveJavaIO(object):
     @classmethod
     def setUpClass(cls):
         # This is safe to call even if the jvm was already running from a
@@ -47,6 +46,19 @@ class LogsTestCase(unittest.TestCase):
         cls.old_java_out = jpype.java.lang.System.out
         cls.old_java_err = jpype.java.lang.System.err
 
+    @classmethod
+    def tearDownClass(cls):
+        # restore the java stdout and stderr that were trashed during this test
+        jpype.java.lang.System.setOut(cls.old_java_out)
+        jpype.java.lang.System.setErr(cls.old_java_err)
+
+
+class LogsTestCase(PreserveJavaIO, unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(LogsTestCase, cls).setUpClass()
+
         try:
             os.remove(LOG_FILE_PATH)
         except OSError:
@@ -54,9 +66,7 @@ class LogsTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # restore the java stdout and stderr that were trashed during this test
-        jpype.java.lang.System.setOut(cls.old_java_out)
-        jpype.java.lang.System.setErr(cls.old_java_err)
+        super(LogsTestCase, cls).tearDownClass()
 
         try:
             os.remove(LOG_FILE_PATH)
