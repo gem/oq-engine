@@ -131,3 +131,13 @@ AMQP_PORT = 5672
 AMQP_USER = "guest"
 AMQP_PASSWORD = "guest"
 AMQP_VHOST = "/"
+
+LOG4J_STDOUT_SETTINGS = {
+    'log4j.rootLogger': '%(level)s, stdout',
+
+    'log4j.appender.stdout': 'org.apache.log4j.ConsoleAppender',
+    'log4j.appender.stdout.follow': 'true',
+    'log4j.appender.stdout.layout': 'org.apache.log4j.PatternLayout',
+    'log4j.appender.stdout.layout.ConversionPattern':
+        '%d %-5p [%c] - Job %X{job_id} - %m%n',
+}

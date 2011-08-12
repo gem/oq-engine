@@ -75,9 +75,7 @@ class LogsTestCase(unittest.TestCase):
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
         logs.init_logs()
-
-        java._set_java_log_level('WARN')
-        java._setup_java_capture(sys.stdout, sys.stderr)
+        java.init_logs('warn')
 
     def tearDown(self):
         # reset logging config
@@ -185,8 +183,7 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
         jvm = java.jvm()
 
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        jvm.JClass("org.apache.log4j.PropertyConfigurator") \
-            .configure(java.LOG4J_PROPERTIES_PATH)
+        java.init_logs('warn')
 
     def setUp(self):
         jvm = java.jvm()
