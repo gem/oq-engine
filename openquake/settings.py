@@ -131,6 +131,7 @@ AMQP_PORT = 5672
 AMQP_USER = "guest"
 AMQP_PASSWORD = "guest"
 AMQP_VHOST = "/"
+AMQP_EXCHANGE = 'oq.signalling'
 
 LOG4J_STDOUT_SETTINGS = {
     'log4j.rootLogger': '%(level)s, stdout',
@@ -140,4 +141,20 @@ LOG4J_STDOUT_SETTINGS = {
     'log4j.appender.stdout.layout': 'org.apache.log4j.PatternLayout',
     'log4j.appender.stdout.layout.ConversionPattern':
         '%d %-5p [%c] - Job %X{job_id} - %m%n',
+}
+
+LOG4J_AMQP_SETTINGS = {
+    'log4j.rootLogger': '%(level)s, amqp',
+
+    'log4j.appender.amqp': 'org.gem.log.AMQPAppender',
+    'log4j.appender.amqp.host': AMQP_HOST,
+    'log4j.appender.amqp.port': str(AMQP_PORT),
+    'log4j.appender.amqp.username': AMQP_USER,
+    'log4j.appender.amqp.password': AMQP_PASSWORD,
+    'log4j.appender.amqp.virtualHost': AMQP_VHOST,
+    'log4j.appender.amqp.routingKeyPattern': 'log.%p.%X{job_id}',
+    'log4j.appender.amqp.exchange': AMQP_EXCHANGE,
+    'log4j.appender.amqp.layout': 'org.apache.log4j.PatternLayout',
+    'log4j.appender.amqp.layout.ConversionPattern':
+        '%d %-5p [%c] - Job %X{job_id} - %m',
 }
