@@ -198,11 +198,16 @@ def _setup_java_amqp():
     amqpappender.setConnectionFactory(amqpfactory)
 
 
-def init_logs(level='warn'):
-    if FLAGS.capture_java_debug:
-        _setup_java_capture(sys.stdout, sys.stderr)
+def init_logs(log_type='console', level='warn'):
+    if log_type == 'console':
+        if FLAGS.capture_java_debug:
+            _setup_java_capture(sys.stdout, sys.stderr)
 
-    properties = settings.LOG4J_STDOUT_SETTINGS.copy()
+        properties = settings.LOG4J_STDOUT_SETTINGS.copy()
+    else:
+        _setup_java_amqp()
+
+        properties = settings.LOG4J_AMQP_SETTINGS.copy()
 
     level = level.upper()
     if level == 'CRITICAL':
@@ -236,8 +241,7 @@ def jvm(max_mem=None):
             # "-Dlog4j.debug", # turn on log4j internal debugging
             "-Xmx%sM" % max_mem)
 
-        _setup_java_amqp()
-        init_logs(level=FLAGS.debug)
+        init_logs(level=FLAGS.debug, log_type='console')
 
     return jpype
 
