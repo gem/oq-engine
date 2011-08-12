@@ -472,12 +472,16 @@ class LossMapDBWriter(writer.DBWriter):
 def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
     """Create a loss map writer observing the settings in the config file.
 
-    :param deterministic: Whether the loss map is deterministic (True) or
-        non-deterministic (False)
-    :type deterministic: boolean
+    :param job_id: the id of the job the curve belongs to.
+    :type job_id: int
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
     :param nrml_path: the full path of the XML/NRML representation of the
         loss map.
     :type nrml_path: string
+    :param deterministic: Whether the loss map is deterministic (True) or
+        non-deterministic (False)
+    :type deterministic: boolean
     :returns: None or an instance of
         :py:class:`output.risk.LossMapXMLWriter` or
         :py:class:`output.risk.LossMapDBWriter`
@@ -774,11 +778,13 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
     If no writer is available for the given curve_mode and settings, returns
     None.
 
-    :param str curve_mode: one of 'loss', 'loss_ratio'
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
+    :param job_id: the id of the job the curve belongs to.
+    :type job_id: int
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
     :param str nrml_path: the full path of the XML/NRML representation of the
         hazard map.
+    :param str curve_mode: one of 'loss', 'loss_ratio'
     :returns: None or an instance of
         :py:class:`output.risk.LossCurveXMLWriter`,
         :py:class:`output.risk.LossCurveDBWriter`,
