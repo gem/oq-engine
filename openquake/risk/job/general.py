@@ -80,7 +80,7 @@ def output(fn):
                                 self['OUTPUT_DIR'],
                                 "losses_at-%s.xml" % loss_poe)
             writer = risk_output.create_loss_map_writer(
-                self.job_id, self.serialize_results_to, False, path)
+                self.job_id, self.serialize_results_to, path, False)
 
             if writer:
                 metadata = {
@@ -222,7 +222,7 @@ class RiskJobMixin(mixins.Mixin):
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
         writer = risk_output.create_loss_curve_writer(self.job_id,
-            self.serialize_results_to, kwargs['curve_mode'], serialize_path)
+            self.serialize_results_to, serialize_path, kwargs['curve_mode'])
         if writer:
             writer.serialize(kwargs['curves'])
 
