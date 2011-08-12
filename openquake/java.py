@@ -199,6 +199,12 @@ def _setup_java_amqp():
 
 
 def init_logs(log_type='console', level='warn'):
+    """
+    Initialize Java logging.
+
+    The function might be called multiple times with different log levels.
+    """
+
     if log_type == 'console':
         if FLAGS.capture_java_debug:
             _setup_java_capture(sys.stdout, sys.stderr)

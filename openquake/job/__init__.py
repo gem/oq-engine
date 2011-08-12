@@ -207,6 +207,8 @@ def prepare_job(params):
 
 
 def set_job_id(job_id):
+    """Make the job id available to the Java and Python loggers"""
+
     # Make the job_id available to the java logging context.
     mdc = java.jclass('MDC')
     mdc.put('job_id', job_id)

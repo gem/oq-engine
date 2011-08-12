@@ -30,7 +30,6 @@ from celery.log import redirect_stdouts_to_logger
 
 from openquake import flags
 from openquake import settings
-from openquake import java
 
 FLAGS = flags.FLAGS
 
