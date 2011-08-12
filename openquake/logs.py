@@ -23,6 +23,7 @@ TODO(jmc): init_logs should take filename, or sysout
 TODO(jmc): support debug level per logger.
 
 """
+from amqplib import client_0_8 as amqp
 import logging
 
 from celery.log import redirect_stdouts_to_logger
@@ -86,3 +87,96 @@ def init_logs():
     # capture java logging (this is what celeryd does with the workers, we use
     # exactly the same system for bin/openquakes and the likes)
     redirect_stdouts_to_logger(LOG)
+
+
+class AMQPHandler(logging.Handler):  # pylint: disable=R0902
+    """
+    Logging handler that sends log messages to AMQP
+
+    :param host: AMQP `host:port` pair (port defaults to 5672)
+    :param username: AMQP username
+    :param password: AMQP password
+    :param virtual_host: AMQP virtual host
+    :param exchange: AMQP exchange name
+    :param routing_key: AMQP routing key (can use the same interpolation
+        values valid for a `logging` message format string)
+    :param level: logging level
+    """
+
+    # mimic Log4j MDC
+    MDC = dict()
+    """
+    A dictionary containing additional values that can be used for log message
+    and routing key formatting.
+
+    After doing::
+
+        AMQPHandler.MDC['job_key'] = some_value
+
+    the value can be interpolated in the log message and the routing key
+    by using the normal `%(job_key)s` Python syntax.
+    """  # pylint: disable=W0105
+
+    # pylint: disable=R0913
+    def __init__(self, host="localhost:5672", username="guest",
+                 password="guest", virtual_host="/",
+                 exchange="", routing_key="", level=logging.NOTSET):
+        logging.Handler.__init__(self, level=level)
+        self.host = host
+        self.username = username
+        self.password = password
+        self.virtual_host = virtual_host
+        self.exchange = exchange
+        self.routing_key = logging.Formatter(routing_key)
+        self.connection = None
+        self.channel = None
+
+    def _connect(self):
+        """Create a new connection to the AMQP server"""
+        if self.connection and self.channel:
+            return self.channel
+
+        self.connection = amqp.Connection(host=self.host,
+                                          userid=self.username,
+                                          password=self.password,
+                                          virtual_host=self.virtual_host,
+                                          insist=False)
+        self.channel = self.connection.channel()
+
+        return self.channel
+
+    def _update_record(self, record):
+        """
+        If the user set some values in the `AMQPHandler.MDC` attribute,
+        return a new :class:`logging.LogRecord` objects containing the
+        original values plus the values contained in the `MDC`.
+        """
+        if not self.MDC:
+            return record
+
+        # create a new LogRecord object containing the custom keys in the
+        # MDC class field
+        args = self.MDC.copy()
+        args.update(record.args)
+
+        new_record = logging.LogRecord(
+            name=record.name, level=record.levelno, pathname=record.pathname,
+            lineno=record.lineno, msg=record.msg, args=[args],
+            exc_info=record.exc_info, func=record.funcName)
+
+        # the documentation says that formatters use .args; in reality
+        # the reach directly into __dict__
+        for key, value in self.MDC.items():
+            if key not in new_record.__dict__:
+                new_record.__dict__[key] = value
+
+        return new_record
+
+    def emit(self, record):
+        channel = self._connect()
+        full_record = self._update_record(record)
+        msg = amqp.Message(body=self.format(full_record))
+        routing_key = self.routing_key.format(full_record)
+
+        channel.basic_publish(msg, exchange=self.exchange,
+                              routing_key=routing_key)
