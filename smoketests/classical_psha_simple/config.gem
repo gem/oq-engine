@@ -7,9 +7,9 @@ CALCULATION_MODE = Classical
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 #REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
 #
-#REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
+REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
 #REGION_VERTEX = 38.5, -122.50, 38.5, -121.5, 37.0, -121.5, 37.0, -122.50
-REGION_VERTEX = 38.0, -122.2, 38.0, -121.7, 37.5, -121.7, 37.5, -122.2
+#REGION_VERTEX = 38.0, -122.2, 38.0, -121.7, 37.5, -121.7, 37.5, -122.2
 # degrees
 #REGION_GRID_SPACING = 0.1
 REGION_GRID_SPACING = 0.1
