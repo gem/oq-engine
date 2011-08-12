@@ -66,12 +66,24 @@ class LogsTestCase(unittest.TestCase):
     def setUp(self):
         # we init the logs before each test because nosetest redefines
         # sys.stdout and removes all the handlers from the rootLogger
+
+        # reset logging config (otherwise will ignore logfile flag)
+        root = logging.getLogger()
+        for h in list(root.handlers):
+            root.removeHandler(h)
+
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
         logs.init_logs()
 
         java._set_java_log_level('WARN')
         java._setup_java_capture(sys.stdout, sys.stderr)
+
+    def tearDown(self):
+        # reset logging config
+        root = logging.getLogger()
+        for h in list(root.handlers):
+            root.removeHandler(h)
 
     def _slurp_file(self):
         # Flush all the logs into the logging file.  This is a little bit
