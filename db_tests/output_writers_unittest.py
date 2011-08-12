@@ -58,48 +58,42 @@ class ComposeWritersTest(unittest.TestCase):
 class CreateWriterTestBase(object):
     def test_create_writer_with_xml(self):
         """
-        A `*XMLWriter` instance is returned when the
-        SERIALIZE_RESULTS_TO parameter is set to 'xml'.
+        A `*XMLWriter` instance is returned when the serialize_to parameter is
+        set to 'xml'.
         """
-        writer = self.create_function(
-            dict(SERIALIZE_RESULTS_TO='xml'), "/tmp/b.xml")
+        writer = self.create_function(None, ['xml'], "/tmp/b.xml")
         self.assertTrue(isinstance(writer, self.xml_writer_class))
 
     def test_create_writer_with_db(self):
         """
-        A `*DBWriter` instance is returned when the
-        SERIALIZE_RESULTS_TO  parameter is set to 'db'.
+        A `*DBWriter` instance is returned when the serialize_to  parameter is
+        set to 'db'.
         """
-        writer = self.create_function(
-            dict(SERIALIZE_RESULTS_TO='db', OPENQUAKE_JOB_ID='11'),
-            "/tmp/c.xml")
+        writer = self.create_function(11, ['db'], "/tmp/c.xml")
         self.assertTrue(isinstance(writer, self.db_writer_class))
 
     def test_create_writer_with_db_and_no_job_id(self):
         """
-        An AssertionError is raised when the SERIALIZE_RESULTS_TO  parameter
-        is set to 'db'. but the OPENQUAKE_JOB_ID parameter is absent.
+        An AssertionError is raised when the serialize_to  parameter is set to
+        'db'. but the job_id parameter is absent.
         """
-        config = dict(SERIALIZE_RESULTS_TO='db')
         self.assertRaises(
-            AssertionError, self.create_function, config, "/tmp")
+            AssertionError, self.create_function, None, ['db'], "/tmp")
 
     def test_create_writer_with_db_and_invalid_job_id(self):
         """
-        An exception is raised when the SERIALIZE_RESULTS_TO  parameter is
-        set to 'True'. but the OPENQUAKE_JOB_ID parameter could not be
-        converted to an integer
+        An exception is raised when the serialize_to parameter is set to 'db'
+        but the job_id parameter could not be converted to an integer
         """
-        config = dict(SERIALIZE_RESULTS_TO='db',
-                      OPENQUAKE_JOB_ID="number")
         self.assertRaises(
-            ValueError, self.create_function, config, "/tmp")
+            ValueError, self.create_function, 'should_be_a_number', ['db'],
+            "/tmp")
 
 
 class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for hazard.opensha.create_hazardmap_writer()."""
 
-    create_function = staticmethod(opensha.create_hazardmap_writer)
+    create_function = staticmethod(hazard_output.create_hazardmap_writer)
     xml_writer_class = hazard_output.HazardMapXMLWriter
     db_writer_class = hazard_output.HazardMapDBWriter
 
@@ -107,7 +101,7 @@ class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for hazard.opensha.create_hazardcurve_writer()."""
 
-    create_function = staticmethod(opensha.create_hazardcurve_writer)
+    create_function = staticmethod(hazard_output.create_hazardcurve_writer)
     xml_writer_class = hazard_output.HazardCurveXMLWriter
     db_writer_class = hazard_output.HazardCurveDBWriter
 
@@ -115,7 +109,7 @@ class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for hazard.opensha.create_gmf_writer()."""
 
-    create_function = staticmethod(opensha.create_gmf_writer)
+    create_function = staticmethod(hazard_output.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter
     db_writer_class = hazard_output.GMFDBWriter
 
@@ -123,51 +117,39 @@ class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 class CreateRiskWriterTest(unittest.TestCase):
     def test_loss_curve_writer_creation(self):
         # XML writers
-        params = {"SERIALIZE_RESULTS_TO": "xml"}
-        writer = risk_output.create_loss_curve_writer("loss_ratio",
-                                                      "fakepath.xml", params)
+        writer = risk_output.create_loss_curve_writer(
+            None, ['xml'], "fakepath.xml", "loss_ratio")
         self.assertEqual(type(writer), risk_output.LossRatioCurveXMLWriter)
-        writer = risk_output.create_loss_curve_writer("loss", "fakepath.xml",
-                                                      params)
+        writer = risk_output.create_loss_curve_writer(
+            None, ['xml'], "fakepath.xml", "loss")
         self.assertEqual(type(writer), risk_output.LossCurveXMLWriter)
 
         # database writers
-        params = {
-            "SERIALIZE_RESULTS_TO": "db",
-            "OPENQUAKE_JOB_ID": 1}
-        writer = risk_output.create_loss_curve_writer("loss_ratio",
-                                                      "fakepath.xml", params)
+        writer = risk_output.create_loss_curve_writer(
+            1, ['db'], "fakepath.xml", "loss_ratio")
         self.assertEqual(writer, None)
-        writer = risk_output.create_loss_curve_writer("loss", "fakepath.xml",
-                                                      params)
+        writer = risk_output.create_loss_curve_writer(
+            1, ['db'], "fakepath.xml", "loss")
         self.assertEqual(type(writer), risk_output.LossCurveDBWriter)
 
     def test_deterministic_loss_map_writer_creation(self):
         # XML writer
-        params = {"SERIALIZE_RESULTS_TO": "xml"}
-        writer = risk_output.create_loss_map_writer(True, "fakepath.xml",
-                                                    params)
+        writer = risk_output.create_loss_map_writer(
+            None, ['xml'], "fakepath.xml", True)
         self.assertEqual(type(writer), risk_output.LossMapXMLWriter)
 
         # database writer
-        params = {
-            "SERIALIZE_RESULTS_TO": "db",
-            "OPENQUAKE_JOB_ID": 1}
-        writer = risk_output.create_loss_map_writer(True, "fakepath.xml",
-                                                    params)
+        writer = risk_output.create_loss_map_writer(
+            1, ['db'], "fakepath.xml", True)
         self.assertEqual(type(writer), risk_output.LossMapDBWriter)
 
     def test_nondeterministic_loss_map_writer_creation(self):
         # XML writer
-        params = {"SERIALIZE_RESULTS_TO": "xml"}
-        writer = risk_output.create_loss_map_writer(False, "fakepath.xml",
-                                                    params)
+        writer = risk_output.create_loss_map_writer(
+            None, ['xml'], "fakepath.xml", False)
         self.assertEqual(writer, None)
 
         # database writer
-        params = {
-            "SERIALIZE_RESULTS_TO": "db",
-            "OPENQUAKE_JOB_ID": 1}
-        writer = risk_output.create_loss_map_writer(False, "fakepath.xml",
-                                                    params)
+        writer = risk_output.create_loss_map_writer(
+            1, ['db'], "fakepath.xml", False)
         self.assertEqual(type(writer), risk_output.LossMapDBWriter)

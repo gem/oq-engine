@@ -469,7 +469,7 @@ class LossMapDBWriter(writer.DBWriter):
         self.session.flush()
 
 
-def create_loss_map_writer(deterministic, nrml_path, params):
+def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
     """Create a loss map writer observing the settings in the config file.
 
     :param deterministic: Whether the loss map is deterministic (True) or
@@ -478,22 +478,16 @@ def create_loss_map_writer(deterministic, nrml_path, params):
     :param nrml_path: the full path of the XML/NRML representation of the
         loss map.
     :type nrml_path: string
-    :param params: the settings from the OpenQuake engine configuration
-        file.
-    :type params: :py:class:`dict`
     :returns: None or an instance of
         :py:class:`output.risk.LossMapXMLWriter` or
         :py:class:`output.risk.LossMapDBWriter`
     """
-
-    serialize_to = params["SERIALIZE_RESULTS_TO"].split(',')
-
     writers = []
 
     if 'db' in serialize_to:
         writers.append(LossMapDBWriter(get_db_session("reslt", "writer"),
                                        nrml_path,
-                                       writer.get_job_db_key(params)))
+                                       job_id))
 
     if 'xml' in serialize_to:
         if deterministic:
@@ -774,7 +768,7 @@ def _curve_poe_as_gmldoublelist(curve_object):
     return " ".join([str(ordinate) for ordinate in curve_object.ordinates])
 
 
-def create_loss_curve_writer(curve_mode, nrml_path, params):
+def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
     """Create a loss curve writer observing the settings in the config file.
 
     If no writer is available for the given curve_mode and settings, returns
@@ -793,15 +787,16 @@ def create_loss_curve_writer(curve_mode, nrml_path, params):
 
     assert curve_mode in ('loss', 'loss_ratio')
 
-    serialize_to = params["SERIALIZE_RESULTS_TO"].split(',')
-
     writers = []
 
     if 'db' in serialize_to:
+        assert job_id, "No job_id supplied"
+        job_id = int(job_id)
+
         if curve_mode == 'loss':
             writers.append(LossCurveDBWriter(get_db_session("reslt", "writer"),
                                              nrml_path,
-                                             writer.get_job_db_key(params)))
+                                             job_id))
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             pass

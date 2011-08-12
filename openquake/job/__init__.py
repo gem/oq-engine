@@ -272,18 +272,23 @@ class Job(object):
         params['BASE_PATH'] = base_path
 
         if output_type == 'xml_without_db':
-            params['SERIALIZE_RESULTS_TO'] = 'xml'
+            job_id = None
+            serialize_results_to = ['xml']
         else:
-            if 'OPENQUAKE_JOB_ID' not in params:
+            # openquake-server creates the job record in advance and stores the
+            # job id in the config file
+            job_id = params.get('OPENQUAKE_JOB_ID')
+            if not job_id:
                 # create the database record for this job
-                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+                job_id = prepare_job(params).id
 
             if output_type == 'db':
-                params['SERIALIZE_RESULTS_TO'] = 'db'
+                serialize_results_to = ['db']
             else:
-                params['SERIALIZE_RESULTS_TO'] = 'db,xml'
+                serialize_results_to = ['db', 'xml']
 
-        job = Job(params, sections=sections, base_path=base_path)
+        job = Job(params, job_id=job_id, sections=sections, base_path=base_path)
+        job.serialize_results_to = serialize_results_to
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
@@ -297,6 +302,7 @@ class Job(object):
         :param str base_path: base directory containing job input files
         """
         if job_id is None:
+            LOG.warn('******** Job without a job_id ********')
             self._job_id = alloc_job_id()
         else:
             self._job_id = job_id

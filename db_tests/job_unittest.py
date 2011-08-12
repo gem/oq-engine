@@ -237,22 +237,20 @@ class JobTestCase(unittest.TestCase):
         except OSError:
             pass
 
-    def test_job_db_record_for_output_type_db(self):
+    def test_job_db_record_for_output_type_db(self): # FIMXE needed?
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
 
         session = get_db_session("uiapi", "writer")
 
-        session.query(OqJob)\
-            .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
-    def test_job_db_record_for_output_type_xml(self):
+    def test_job_db_record_for_output_type_xml(self): # FIXME needed?
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
                                  'xml')
 
         session = get_db_session("uiapi", "writer")
 
-        session.query(OqJob)\
-            .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_get_db_job(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
