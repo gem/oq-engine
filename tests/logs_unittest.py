@@ -16,6 +16,7 @@
 
 
 from amqplib import client_0_8 as amqp
+import logging
 import os
 import sys
 import unittest
@@ -138,7 +139,33 @@ class LogsTestCase(unittest.TestCase):
         self.assert_file_last_line_ends_with(msg)
 
 
-class JavaAMQPLogTestCase(unittest.TestCase):
+class AMQPLogTestBase(unittest.TestCase):
+    def setup_queue(self):
+        # connect to localhost and bind to a queue
+        conn = amqp.Connection(host=settings.AMQP_HOST,
+                               userid=settings.AMQP_USER,
+                               password=settings.AMQP_PASSWORD,
+                               virtual_host=settings.AMQP_VHOST)
+        ch = conn.channel()
+        ch.access_request(settings.AMQP_VHOST, active=False, read=True)
+        ch.exchange_declare('oq-unittest.topic', 'topic', auto_delete=True)
+        qname, _, _ = ch.queue_declare()
+        ch.queue_bind(qname, 'oq-unittest.topic',
+                      routing_key='oq-unittest-log.*')
+
+        return conn, ch, qname
+
+    def consume_messages(self, conn, ch, qname, callback):
+        ch.basic_consume(qname, callback=callback)
+
+        while ch.callbacks:
+            ch.wait()
+
+        ch.close()
+        conn.close()
+
+
+class JavaAMQPLogTestCase(AMQPLogTestBase):
 
     def tearDown(self):
         # reconfigure Log4j with the default settings
@@ -169,30 +196,6 @@ class JavaAMQPLogTestCase(unittest.TestCase):
 
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
         jvm.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
-
-    def setup_queue(self):
-        # connect to localhost and bind to a queue
-        conn = amqp.Connection(host=settings.AMQP_HOST,
-                               userid=settings.AMQP_USER,
-                               password=settings.AMQP_PASSWORD,
-                               virtual_host=settings.AMQP_VHOST)
-        ch = conn.channel()
-        ch.access_request(settings.AMQP_VHOST, active=False, read=True)
-        ch.exchange_declare('oq-unittest.topic', 'topic', auto_delete=True)
-        qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, 'oq-unittest.topic',
-                      routing_key='oq-unittest-log.*')
-
-        return conn, ch, qname
-
-    def consume_messages(self, conn, ch, qname, callback):
-        ch.basic_consume(qname, callback=callback)
-
-        while ch.callbacks:
-            ch.wait()
-
-        ch.close()
-        conn.close()
 
     def test_amqp_sanity(self):
         """We can talk to ourselves from Python using RabbitMQ"""
@@ -249,4 +252,51 @@ class JavaAMQPLogTestCase(unittest.TestCase):
 
         self.assertEquals('WARN - Warn message', messages[1].body)
         self.assertEquals('oq-unittest-log.WARN',
+                          messages[1].delivery_info['routing_key'])
+
+
+class PythonAMQPLogTestCase(AMQPLogTestBase):
+    def setUp(self):
+        self.amqp = logs.AMQPHandler(
+            host=settings.AMQP_HOST,
+            username=settings.AMQP_USER,
+            password=settings.AMQP_PASSWORD,
+            virtual_host=settings.AMQP_VHOST,
+            exchange='oq-unittest.topic',
+            routing_key='oq-unittest-log.%(levelname)s',
+            level=logging.DEBUG)
+
+        self.log = logging.getLogger('tests.PythonAMQPLogTestCase')
+        self.log.setLevel(logging.DEBUG)
+        self.log.addHandler(self.amqp)
+
+    def tearDown(self):
+        self.log.removeHandler(self.amqp)
+
+    def test_amqp_logging(self):
+        """We can talk to ourselves from Python using RabbitMQ"""
+        conn, ch, qname = self.setup_queue()
+
+        self.log.info('Info message')
+        self.log.warn('Warn message')
+
+        # process the messages
+        messages = []
+
+        def consume(msg):
+            messages.append(msg)
+
+            if msg.body == 'Warn message':
+                ch.basic_cancel(msg.consumer_tag)
+
+        self.consume_messages(conn, ch, qname, consume)
+
+        self.assertEquals(2, len(messages))
+
+        self.assertEquals('Info message', messages[0].body)
+        self.assertEquals('oq-unittest-log.INFO',
+                          messages[0].delivery_info['routing_key'])
+
+        self.assertEquals('Warn message', messages[1].body)
+        self.assertEquals('oq-unittest-log.WARNING',
                           messages[1].delivery_info['routing_key'])
