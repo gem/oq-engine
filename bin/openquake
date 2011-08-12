@@ -69,7 +69,8 @@ from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configuration file')
+flags.DEFINE_string('config_file', 'openquake-config.gem',
+                    'OpenQuake configuration file')
 flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
                   'Computation result output type')
 
