@@ -62,7 +62,8 @@ def info(version_data):
     end = int((datetime.today() + timedelta(days=30)).strftime("%s"))
 
     if end > seconds_since_epoch > start:
-        release_date = datetime.fromtimestamp(seconds_since_epoch).isoformat()
+        release_date = datetime.utcfromtimestamp(
+            seconds_since_epoch).isoformat()
         result += ", released %s" % release_date
 
     return result
