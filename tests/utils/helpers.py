@@ -23,6 +23,7 @@ Helper functions for our unit and smoke tests.
 """
 
 
+import logging
 import os
 import redis
 import time
@@ -31,8 +32,8 @@ import subprocess
 import guppy
 
 from openquake import flags
+from openquake import logs
 from openquake.job import Job
-from openquake.logs import LOG
 from openquake import producer
 from openquake import settings
 
@@ -98,7 +99,7 @@ def guarantee_file(path, url):
     if not os.path.isfile(path):
         if not FLAGS.download_test_data:
             raise Exception("Test data does not exist")
-        LOG.info("Downloading test data for %s", path)
+        logs.LOG.info("Downloading test data for %s", path)
         retcode = subprocess.call(["curl", url, "-o", path])
         if retcode:
             raise Exception(
@@ -210,6 +211,16 @@ def wait_for_celery_tasks(celery_results,
             raise RuntimeError("wait too long for celery worker threads")
 
         time.sleep(wait_time)
+
+
+def cleanup_loggers():
+    root = logging.getLogger()
+
+    for h in list(root.handlers):
+        if (isinstance(h, logging.FileHandler) or
+            isinstance(h, logging.StreamHandler) or
+            isinstance(h, logs.AMQPHandler)):
+            root.removeHandler(h)
 
 
 class TestStore(object):
