@@ -178,6 +178,7 @@ class JobTestCase(unittest.TestCase):
             os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
+        helpers.cleanup_loggers()
 
     def test_job_calls_cleanup(self):
         """
