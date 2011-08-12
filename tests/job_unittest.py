@@ -30,6 +30,7 @@ from openquake.kvs import tokens
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from tests.utils import helpers
+from tests.utils.helpers import patch
 
 
 CONFIG_FILE = "config.gem"
@@ -192,13 +193,13 @@ class JobTestCase(unittest.TestCase):
         risk_exec_path = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
 
-        with mock.patch(haz_exec_path) as haz_exec:
+        with patch(haz_exec_path) as haz_exec:
             haz_exec.return_value = []
 
-            with mock.patch(risk_exec_path) as risk_exec:
+            with patch(risk_exec_path) as risk_exec:
                 risk_exec.return_value = []
 
-                with mock.patch('openquake.job.Job.cleanup') as clean_mock:
+                with patch('openquake.job.Job.cleanup') as clean_mock:
                     self.job.launch()
 
                     self.assertEqual(1, clean_mock.call_count)
@@ -211,7 +212,7 @@ class JobTestCase(unittest.TestCase):
         """
         expected_args = (['python', 'bin/cache_gc.py', '--job=1'], )
 
-        with mock.patch('subprocess.Popen') as popen_mock:
+        with patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
 
             self.assertEqual(1, popen_mock.call_count)
