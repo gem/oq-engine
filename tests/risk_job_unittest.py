@@ -216,7 +216,7 @@ class RiskJobMixinTestCase(unittest.TestCase):
                 # the calculation mode is filled to let the mixin runs
                 config.CALCULATION_MODE: "Event Based"}
 
-        a_job = job.Job(params)
+        a_job = helpers.create_job(params)
 
         expected_block = general.Block(
             (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)))
