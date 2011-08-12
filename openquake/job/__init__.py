@@ -35,7 +35,7 @@ from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
-from openquake.kvs.tokens import alloc_job_id
+from openquake.kvs.tokens import mark_job_as_current
 
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.alchemy.db_utils import get_db_session
@@ -303,6 +303,7 @@ class Job(object):
         :param str base_path: base directory containing job input files
         """
         self._job_id = job_id
+        mark_job_as_current(job_id) # enables KVS gc
 
         # Make the job_id available to the java logging context.
         mdc = java.jclass('MDC')
