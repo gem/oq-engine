@@ -161,18 +161,6 @@ class JobTestCase(unittest.TestCase):
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
-    def test_a_job_has_an_identifier(self):
-        """
-        Test that the :py:class:`openquake.job.Job` constructor automatically
-        assigns a proper job ID.
-        """
-        client = kvs.get_client()
-
-        client.delete(tokens.CURRENT_JOBS)
-        client.delete(tokens.NEXT_JOB_ID)
-
-        self.assertEqual(1, Job({}).job_id)
-
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = helpers.job_from_file(
             os.path.join(helpers.DATA_DIR, CONFIG_FILE))
@@ -209,7 +197,7 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=1'], )
+        expected_args = (['python', 'bin/cache_gc.py', '--job=0'], )
 
         with mock.patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
@@ -229,18 +217,6 @@ class JobTestCase(unittest.TestCase):
 
             self.assertEqual(os.environ, actual_kwargs['env'])
 
-    def test_job_init_assigns_unique_id(self):
-        """
-        This test ensures that unique job IDs are assigned to each Job object.
-        """
-        job1 = Job({})
-        job2 = Job({})
-
-        self.assertTrue(job1.job_id is not None)
-        self.assertTrue(job2.job_id is not None)
-
-        self.assertNotEqual(job1.job_id, job2.job_id)
-
     def test_job_sets_job_id_in_java_logging(self):
         """
         When a Job is instantiated, a 'job_id' parameter should be set in
@@ -249,13 +225,6 @@ class JobTestCase(unittest.TestCase):
         """
         mdc = java.jclass('MDC')
 
-        # allocate a job_id for us:
-        test_job_1 = Job({})
+        test_job = helpers.create_job({})
 
-        self.assertEqual(test_job_1.job_id, mdc.get('job_id'))
-
-        # specify a job ID:
-        job_id = 7
-        test_job_2 = Job({}, job_id=job_id)
-
-        self.assertEqual(job_id, mdc.get('job_id'))
+        self.assertEqual(test_job.job_id, mdc.get('job_id'))

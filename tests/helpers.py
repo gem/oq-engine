@@ -26,7 +26,7 @@ Helper classes/functions needed across multiple unit tests.
 import os
 import tempfile
 
-from openquake import job
+from tests.utils.helpers import create_job
 
 
 class TestMixin(object):
@@ -70,7 +70,7 @@ class TestMixin(object):
         """
         # preserve some status to be used by unload
         self._calculation_mode = params.get('CALCULATION_MODE')
-        self._job = job.Job(params)
+        self._job = create_job(params)
         self._mixin = mixin_class(self._job, mixin_class)
         return self._mixin._load()
 
