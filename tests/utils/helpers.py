@@ -62,6 +62,7 @@ MAX_WAIT_LOOPS = 10
 #: Wraps mock.patch() to make mocksignature=True by default.
 patch = functools.partial(mock_module.patch, mocksignature=True)
 
+
 def _patched_mocksignature(func, mock=None, skipfirst=False):
     """
     Fixes arguments order and support of staticmethods in mock.mocksignature.
@@ -77,10 +78,16 @@ def _patched_mocksignature(func, mock=None, skipfirst=False):
 
     checker = eval("lambda %s: None" % signature)
     mock_module._copy_func_details(func, checker)
+
     def funcopy(*args, **kwargs):
         checker(*args, **kwargs)
         return mock(*args, **kwargs)
-    mock_module._setup_func(funcopy, mock)
+
+    if not hasattr(mock_module, '_setup_func'):
+        # compatibility with mock < 0.8
+        funcopy.mock = mock
+    else:
+        mock_module._setup_func(funcopy, mock)
     if static:
         funcopy = staticmethod(funcopy)
     return funcopy
