@@ -141,14 +141,14 @@ def clear_job_data(job_id):
     logs.init_logs(level='info', log_type=settings.LOGGING_BACKEND)
     job.setup_job_logging(job_id=job_id)
 
-    print 'Attempting to clear cache data for job %s...' % job_id
+    LOG.info('Attempting to clear cache data for job %s...' % job_id)
 
     result = kvs.cache_gc(kvs.JOB_KEY_FMT % job_id)
 
     if result is None:
-        print 'Job %s not found.' % job_id
+        LOG.info('Job %s not found.' % job_id)
     else:
-        print 'Removed %s keys.' % result
+        LOG.info('Removed %s keys.' % result)
 
 
 def show_help():
