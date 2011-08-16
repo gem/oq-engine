@@ -29,14 +29,22 @@ AMQP_PASSWORD = "guest"
 AMQP_VHOST = "/"
 AMQP_EXCHANGE = 'oq.signalling'
 
+# Keep the Python and Java formats in sync!
+LOGGING_AMQP_FORMAT   = '%(asctime)s %(loglevel)-5s %(processName)s' \
+    ' [%(name)s] - Job %(job_id)s - %(message)s'
+LOG4J_AMQP_FORMAT     = '%d %-5p %X{processName} [%c] - Job %X{job_id} - %m'
+
+LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
+    ' [%(name)s] - %(message)s'
+LOG4J_STDOUT_FORMAT   = '%-5p %X{processName} [%c] - Job %X{job_id} - %m%n'
+
 LOG4J_STDOUT_SETTINGS = {
     'log4j.rootLogger': '%(level)s, stdout',
 
     'log4j.appender.stdout': 'org.apache.log4j.ConsoleAppender',
     'log4j.appender.stdout.follow': 'true',
     'log4j.appender.stdout.layout': 'org.apache.log4j.PatternLayout',
-    'log4j.appender.stdout.layout.ConversionPattern':
-        '%d %-5p [%c] - Job %X{job_id} - %m%n',
+    'log4j.appender.stdout.layout.ConversionPattern': LOG4J_STDOUT_FORMAT,
 }
 
 LOG4J_AMQP_SETTINGS = {
@@ -51,8 +59,7 @@ LOG4J_AMQP_SETTINGS = {
     'log4j.appender.amqp.routingKeyPattern': 'log.%p.%X{job_id}',
     'log4j.appender.amqp.exchange': AMQP_EXCHANGE,
     'log4j.appender.amqp.layout': 'org.apache.log4j.PatternLayout',
-    'log4j.appender.amqp.layout.ConversionPattern':
-        '%d %-5p [%c] - Job %X{job_id} - %m',
+    'log4j.appender.amqp.layout.ConversionPattern': LOG4J_AMQP_FORMAT,
 }
 
 LOGGING_BACKEND = 'console'
