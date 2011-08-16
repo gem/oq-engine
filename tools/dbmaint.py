@@ -273,12 +273,30 @@ def perform_upgrade(config):
         rev_data[info[0]] = dict(zip(columns, info[1:]))
     logging.debug(rev_data)
 
+    # one-time only upgrade step (can't be a normal upgrade step)
+    if not 'openquake' in rev_data:
+        # this code works because we don't support upgrades from 0.3.9; the
+        # +1 is for the missing upgrade step for the big schema rename
+        cmd = "INSERT INTO admin.revision_info (artefact, revision, step)" \
+              "    VALUES ('openquake', '0.4.2', " \
+              "            (SELECT SUM(step) FROM admin.revision_info" \
+              "                 WHERE revision = '0.4.2') + 1)"
+        code, out, err = psql(config, cmd=cmd)
+        step = sum(int(r['step']) for r in rev_data.values()
+                       if r['revision'] == '0.4.2')
+        cmd = "DELETE FROM INTO admin.revision_info" \
+              "    WHERE artefact <> 'openquake'"
+        rev_data = dict(openquake=dict(revision='0.4.2', step=step))
+
     # Run upgrade scripts (if any) for all artefacts.
     for artefact, rev_info in rev_data.iteritems():
         scripts = scripts_to_run(artefact, rev_info, config)
         if scripts:
             logging.debug("%s: %s" % (artefact, scripts))
-            return run_scripts(artefact, rev_info, scripts, config)
+            if not run_scripts(artefact, rev_info, scripts, config):
+                return False
+
+    return True
 
 
 def main(cargs):

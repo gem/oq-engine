@@ -19,7 +19,6 @@
 
 
 import mock
-import sys
 import unittest
 
 from bin import cache_gc
@@ -38,11 +37,9 @@ class CacheGCTestCase(unittest.TestCase):
         cls.client = kvs.get_client()
 
         cls.client.delete(tokens.CURRENT_JOBS)
-        cls.client.delete(tokens.NEXT_JOB_ID)
 
     @classmethod
     def tearDownClass(cls):
-        cls.client.delete(tokens.NEXT_JOB_ID)
         cls.client.delete(tokens.CURRENT_JOBS)
 
     def test_get_current_job_ids(self):
@@ -53,8 +50,8 @@ class CacheGCTestCase(unittest.TestCase):
         """
         # create 3 jobs
         # this will add job keys to CURRENT_JOBS
-        for _ in range(1, 4):
-            tokens.alloc_job_id()
+        for job_id in range(1, 4):
+            tokens.mark_job_as_current(job_id)
 
         job_ids = cache_gc._get_current_job_ids()
         self.assertEqual([1, 2, 3], job_ids)

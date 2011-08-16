@@ -201,14 +201,6 @@ def compose_writers(writers):
         return CompositeWriter(*writers)
 
 
-def get_job_db_key(params):
-    """Extracts the database id for the job params"""
-
-    job_db_key = params.get("OPENQUAKE_JOB_ID")
-    assert job_db_key, "No job db key in the configuration parameters"
-    return int(job_db_key)
-
-
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
