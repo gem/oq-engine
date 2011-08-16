@@ -22,12 +22,11 @@ This module contains generic functions to access
 the underlying kvs systems.
 """
 
-import hashlib
 import json
 import numpy
-import openquake.kvs.tokens
 
 from openquake import logs
+from openquake.kvs import tokens
 from openquake.kvs.redis import Redis
 
 
@@ -36,7 +35,6 @@ LOG = logs.LOG
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
 MAX_LENGTH_RANDOM_ID = 36
-KVS_KEY_SEPARATOR = '!'
 SITES_KEY_TOKEN = "sites"
 
 
@@ -116,36 +114,6 @@ def get_client(**kwargs):
     return Redis(**kwargs)
 
 
-def generate_key(*parts):
-    """ Create a kvs key """
-    parts = [str(x).replace(" ", "") for x in parts]
-    return KVS_KEY_SEPARATOR.join(parts)
-
-JOB_KEY_FMT = '::JOB::%s::'
-
-
-def generate_job_key(job_id):
-    """
-    Return a job key if the following format:
-    ::JOB::<job_id>::
-
-    :param int job_id: job ID
-    """
-    return JOB_KEY_FMT % job_id
-
-
-def generate_sites_key(job_id, block_id):
-    """ Return sites key """
-
-    return generate_key(job_id, 'sites', block_id)
-
-
-def generate_blob_key(job_id, blob):
-    """ Return the KVS key for a binary blob """
-    return generate_key(generate_job_key(job_id),
-                        hashlib.sha1(blob).hexdigest())
-
-
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
     try:
@@ -223,9 +191,6 @@ def generate_block_id():
     return BLOCK_ID_GENERATOR.next()
 
 
-CURRENT_JOBS = 'CURRENT_JOBS'
-
-
 def mark_job_as_current(job_id):
     """
     Add a job to the set of current jobs, to be later garbage collected.
@@ -233,11 +198,11 @@ def mark_job_as_current(job_id):
     :param job_id: the job id
     :type job_id: int
     """
-    client = openquake.kvs.get_client()
+    client = get_client()
 
     # Add this key to set of current jobs.
     # This set can be queried to perform garbage collection.
-    client.sadd(CURRENT_JOBS, job_id)
+    client.sadd(tokens.CURRENT_JOBS, job_id)
 
 
 def current_jobs():
@@ -247,8 +212,8 @@ def current_jobs():
     :returns: list of job keys (as strings), or an empty list if there are no
         current jobs
     """
-    client = openquake.kvs.get_client()
-    return sorted([int(x) for x in client.smembers(CURRENT_JOBS)])
+    client = get_client()
+    return sorted([int(x) for x in client.smembers(tokens.CURRENT_JOBS)])
 
 
 def cache_gc(job_id):
@@ -267,10 +232,10 @@ def cache_gc(job_id):
     """
     client = get_client()
 
-    if client.sismember(openquake.kvs.tokens.CURRENT_JOBS, job_id):
+    if client.sismember(tokens.CURRENT_JOBS, job_id):
         # matches a current job
         # do the garbage collection
-        keys = client.keys('*%s*' % generate_job_key(job_id))
+        keys = client.keys('*%s*' % tokens.generate_job_key(job_id))
 
         if len(keys) > 0:
 
@@ -282,7 +247,7 @@ def cache_gc(job_id):
                 raise RuntimeError(msg)
 
         # finally, remove the job key from CURRENT_JOBS
-        client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_id)
+        client.srem(tokens.CURRENT_JOBS, job_id)
 
         msg = 'KVS garbage collection removed %s keys for job %s'
         msg %= (len(keys), job_id)

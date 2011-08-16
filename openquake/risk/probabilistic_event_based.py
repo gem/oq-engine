@@ -278,8 +278,8 @@ def _generate_curve(losses, probs_of_exceedance):
 def _assets_keys_for_gmfs(job_id, gmfs_key):
     """Return the asset related to the GMFs given."""
 
-    row = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[3]
-    column = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[2]
+    row = lambda key: key.split(kvs.tokens.KVS_KEY_SEPARATOR)[3]
+    column = lambda key: key.split(kvs.tokens.KVS_KEY_SEPARATOR)[2]
 
     key = kvs.tokens.asset_key(
             job_id, row(gmfs_key), column(gmfs_key))
@@ -299,7 +299,7 @@ class AggregateLossCurve(object):
         aggregate_curve = AggregateLossCurve(vuln_model, epsilon_provider)
 
         gmfs_keys = kvs.get_keys("%s*%s*" % (
-                kvs.generate_job_key(job_id), kvs.tokens.GMF_KEY_TOKEN))
+                kvs.tokens.generate_job_key(job_id), kvs.tokens.GMF_KEY_TOKEN))
 
         LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
         asset_counter = 0

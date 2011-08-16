@@ -38,7 +38,6 @@ from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import settings
-from openquake.kvs import tokens
 
 LOG = logs.LOG
 
@@ -96,7 +95,7 @@ def _get_current_job_ids():
 
     :returns: list of ints
     """
-    jobs = [int(x) for x in tokens.current_jobs()]
+    jobs = [int(x) for x in kvs.current_jobs()]
 
     return sorted(jobs)
 

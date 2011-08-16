@@ -37,7 +37,7 @@ from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
-from openquake.kvs.tokens import mark_job_as_current
+from openquake.kvs import mark_job_as_current
 
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.alchemy.db_utils import get_db_session
@@ -247,7 +247,8 @@ class Job(object):
 
         logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
 
-        params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
+        params = kvs.get_value_json_decoded(
+            kvs.tokens.generate_job_key(job_id))
         job = Job(params, job_id)
         return job
 
@@ -355,7 +356,7 @@ class Job(object):
     @property
     def key(self):
         """Returns the kvs key for this job."""
-        return kvs.generate_job_key(self.job_id)
+        return kvs.tokens.generate_job_key(self.job_id)
 
     def get_db_job(self, session):
         """
@@ -479,7 +480,7 @@ class Job(object):
                 with open(path) as data_file:
                     LOG.debug("Slurping %s" % path)
                     blob = data_file.read()
-                    file_key = kvs.generate_blob_key(self.job_id, blob)
+                    file_key = kvs.tokens.generate_blob_key(self.job_id, blob)
                     kvs_client.set(file_key, blob)
                     self.params[key] = file_key
                     self.params[key + "_PATH"] = path
@@ -489,7 +490,7 @@ class Job(object):
         self._slurp_files()
         if write_cfg:
             self._write_super_config()
-        key = kvs.generate_job_key(self.job_id)
+        key = kvs.tokens.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
     def sites_for_region(self):

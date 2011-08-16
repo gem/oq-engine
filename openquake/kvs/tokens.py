@@ -18,11 +18,14 @@
 
 """Tokens for KVS keys."""
 
-from openquake.kvs import generate_key, generate_job_key, KVS_KEY_SEPARATOR
+import hashlib
+
 from openquake import logs
 
 
 LOG = logs.LOG
+
+KVS_KEY_SEPARATOR = '!'
 
 # hazard tokens
 SOURCE_MODEL_TOKEN = 'sources'
@@ -47,6 +50,39 @@ GMF_KEY_TOKEN = 'GMF'
 LOSS_RATIO_CURVE_KEY_TOKEN = 'LOSS_RATIO_CURVE'
 LOSS_CURVE_KEY_TOKEN = 'LOSS_CURVE'
 VULNERABILITY_CURVE_KEY_TOKEN = 'VULNERABILITY_CURVE'
+
+
+CURRENT_JOBS = 'CURRENT_JOBS'
+
+
+def generate_key(*parts):
+    """ Create a kvs key """
+    parts = [str(x).replace(" ", "") for x in parts]
+    return KVS_KEY_SEPARATOR.join(parts)
+
+JOB_KEY_FMT = '::JOB::%s::'
+
+
+def generate_job_key(job_id):
+    """
+    Return a job key if the following format:
+    ::JOB::<job_id>::
+
+    :param int job_id: job ID
+    """
+    return JOB_KEY_FMT % job_id
+
+
+def generate_sites_key(job_id, block_id):
+    """ Return sites key """
+
+    return generate_key(job_id, 'sites', block_id)
+
+
+def generate_blob_key(job_id, blob):
+    """ Return the KVS key for a binary blob """
+    return generate_key(generate_job_key(job_id),
+                        hashlib.sha1(blob).hexdigest())
 
 
 def loss_token(poe):
