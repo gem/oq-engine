@@ -28,14 +28,11 @@ import random
 
 from itertools import izip
 
-from openquake.db.alchemy.db_utils import get_db_session
-
 from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import settings
 from openquake import shapes
-from openquake import writer
 from openquake import xml
 
 from openquake.hazard import classical_psha
@@ -504,7 +501,8 @@ class ClassicalMixin(BasePSHAMixin):
         """
         nrml_path = self.build_nrml_path(nrml_file)
 
-        curve_writer = create_hazardcurve_writer(self.params, nrml_path)
+        curve_writer = hazard_output.create_hazardcurve_writer(
+            self.job_id, self.serialize_results_to, nrml_path)
         hc_data = []
 
         for site in sites:
@@ -596,7 +594,8 @@ class ClassicalMixin(BasePSHAMixin):
             "%s nodes in hazard map: %s" % (
             poe, len(sites), nrml_file))
 
-        map_writer = create_hazardmap_writer(self.params, nrml_path)
+        map_writer = hazard_output.create_hazardmap_writer(
+            self.job_id, self.serialize_results_to, nrml_path)
         hm_data = []
 
         for site in sites:
@@ -788,7 +787,8 @@ class EventBasedMixin(BasePSHAMixin):
                         "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                        str(rupture.replace("!", "_"))))
                 nrml_path = "%s.xml" % common_path
-                gmf_writer = create_gmf_writer(self.params, nrml_path)
+                gmf_writer = hazard_output.create_gmf_writer(
+                    self.job_id, self.serialize_results_to, nrml_path)
                 gmf_data = {}
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
@@ -822,69 +822,6 @@ class EventBasedMixin(BasePSHAMixin):
 def gmf_id(history_idx, realization_idx, rupture_idx):
     """ Return a GMF id suitable for use as a KVS key """
     return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
-
-
-def _create_writer(params, nrml_path, create_xml_writer, create_db_writer):
-    """Common code for the functions below"""
-
-    serialize_to = params["SERIALIZE_RESULTS_TO"].split(',')
-
-    writers = []
-
-    if 'db' in serialize_to:
-        session = get_db_session("reslt", "writer")
-        writers.append(create_db_writer(session, nrml_path,
-                                        writer.get_job_db_key(params)))
-
-    if 'xml' in serialize_to:
-        writers.append(create_xml_writer(nrml_path))
-
-    return writer.compose_writers(writers)
-
-
-def create_hazardcurve_writer(params, nrml_path):
-    """Create a hazard curve writer observing the settings in the config file.
-
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
-    :param str nrml_path: the full path of the XML/NRML representation of the
-        hazard curve.
-    :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
-        :py:class:`output.hazard.HazardCurveDBWriter` instance.
-    """
-    return _create_writer(params, nrml_path,
-                          hazard_output.HazardCurveXMLWriter,
-                          hazard_output.HazardCurveDBWriter)
-
-
-def create_hazardmap_writer(params, nrml_path):
-    """Create a hazard map writer observing the settings in the config file.
-
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
-    :param str nrml_path: the full path of the XML/NRML representation of the
-        hazard map.
-    :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
-        :py:class:`output.hazard.HazardMapDBWriter` instance.
-    """
-    return _create_writer(params, nrml_path,
-                          hazard_output.HazardMapXMLWriter,
-                          hazard_output.HazardMapDBWriter)
-
-
-def create_gmf_writer(params, nrml_path):
-    """Create a GMF writer using the settings in the config file.
-
-    :param dict params: the settings from the OpenQuake engine configuration
-        file.
-    :param str nrml_path: the full path of the XML/NRML representation of the
-        ground motion field.
-    :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
-        :py:class:`output.hazard.GMFDBWriter` instance.
-    """
-    return _create_writer(params, nrml_path,
-                          hazard_output.GMFXMLWriter,
-                          hazard_output.GMFDBWriter)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)

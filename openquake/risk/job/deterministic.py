@@ -98,9 +98,8 @@ class DeterministicEventBasedMixin:
             self['BASE_PATH'],
             self['OUTPUT_DIR'],
             'loss-map-%s.xml' % self.job_id)
-        loss_map_writer = risk_output.create_loss_map_writer(True,
-                                                             loss_map_path,
-                                                             self.params)
+        loss_map_writer = risk_output.create_loss_map_writer(
+            self.job_id, self.serialize_results_to, loss_map_path, True)
 
         if loss_map_writer:
             LOGGER.debug("Starting serialization of the loss map...")
