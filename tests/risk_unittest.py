@@ -214,7 +214,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 
-        self.job = job.Job(self.params, base_path=".")
+        self.job = helpers.create_job(self.params, base_path=".")
         self.job.to_kvs()
 
         # deleting old file
@@ -695,7 +695,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         del self.params["AGGREGATE_LOSS_CURVE"]
 
         # storing a new job definition in kvs
-        self.job = job.Job(self.params, base_path=".")
+        self.job = helpers.create_job(self.params, base_path=".")
         self.job.to_kvs()
 
         with mock.patch(

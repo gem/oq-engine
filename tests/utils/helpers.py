@@ -84,6 +84,12 @@ def job_from_file(config_file_path):
     return Job.from_file(config_file_path, 'xml_without_db')
 
 
+def create_job(params, **kwargs):
+    job_id = kwargs.pop('job_id', 0)
+
+    return Job(params, job_id, **kwargs)
+
+
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three
     space-separated values on each line - lat, long and value"""

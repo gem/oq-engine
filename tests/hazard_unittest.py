@@ -448,7 +448,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.params = {}
-        self.job = job.Job(self.params)
+        self.job = helpers.create_job(self.params)
         self.job_id = self.job.job_id
 
         self.expected_mean_curve = numpy.array([9.8542200e-01, 9.8196600e-01,
