@@ -30,13 +30,13 @@ AMQP_VHOST = "/"
 AMQP_EXCHANGE = 'oq.signalling'
 
 # Keep the Python and Java formats in sync!
-LOGGING_AMQP_FORMAT   = '%(asctime)s %(loglevel)-5s %(processName)s' \
+LOGGING_AMQP_FORMAT = '%(asctime)s %(loglevel)-5s %(processName)s' \
     ' [%(name)s] - Job %(job_id)s - %(message)s'
-LOG4J_AMQP_FORMAT     = '%d %-5p %X{processName} [%c] - Job %X{job_id} - %m'
+LOG4J_AMQP_FORMAT = '%d %-5p %X{processName} [%c] - Job %X{job_id} - %m'
 
 LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
     ' [%(name)s] - %(message)s'
-LOG4J_STDOUT_FORMAT   = '%-5p %X{processName} [%c] - Job %X{job_id} - %m%n'
+LOG4J_STDOUT_FORMAT = '%-5p %X{processName} [%c] - Job %X{job_id} - %m%n'
 
 LOG4J_STDOUT_SETTINGS = {
     'log4j.rootLogger': '%(level)s, stdout',
