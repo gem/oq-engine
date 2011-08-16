@@ -387,31 +387,3 @@ def ground_motion_values_key(job_id, point):
     return openquake.kvs.generate_key(
         [openquake.kvs.generate_job_key(job_id),
          GMFS_KEY_TOKEN, point.column, point.row])
-
-
-CURRENT_JOBS = 'CURRENT_JOBS'
-
-
-def mark_job_as_current(job_id):
-    """
-    Add a job to the set of current jobs, to be later garbage collected.
-
-    :param job_id: the job id
-    :type job_id: int
-    """
-    client = openquake.kvs.get_client()
-
-    # Add this key to set of current jobs.
-    # This set can be queried to perform garbage collection.
-    client.sadd(CURRENT_JOBS, job_id)
-
-
-def current_jobs():
-    """
-    Get all current job keys, sorted in ascending order.
-
-    :returns: list of job keys (as strings), or an empty list if there are no
-        current jobs
-    """
-    client = openquake.kvs.get_client()
-    return sorted([int(x) for x in client.smembers(CURRENT_JOBS)])
