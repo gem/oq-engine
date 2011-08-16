@@ -339,7 +339,7 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         # setup AMQP logging
         logs.init_logs('amqp', 'debug')
         java.init_logs('amqp', 'debug')
-        job.set_job_id('123')
+        job.setup_job_logging('123')
 
     def tearDown(self):
         # reset Log4j config
