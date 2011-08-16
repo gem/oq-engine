@@ -77,10 +77,10 @@ class CacheGCTestCase(unittest.TestCase):
             cache_gc.clear_job_data(1)
             self.assertEqual(1, gc_mock.call_count)
             self.assertEqual(
-                ((kvs.JOB_KEY_FMT % 1, ), {}), gc_mock.call_args)
+                ((1, ), {}), gc_mock.call_args)
 
             # same thing, but this time with a str for the ID
             cache_gc.clear_job_data('2')
             self.assertEqual(2, gc_mock.call_count)
             self.assertEqual(
-                ((kvs.JOB_KEY_FMT % 2, ), {}), gc_mock.call_args)
+                ((2, ), {}), gc_mock.call_args)
