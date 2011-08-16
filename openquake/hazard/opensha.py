@@ -808,10 +808,5 @@ class EventBasedMixin(BasePSHAMixin):
                 jpype.JBoolean(correlate))
 
 
-def gmf_id(history_idx, realization_idx, rupture_idx):
-    """ Return a GMF id suitable for use as a KVS key """
-    return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
-
-
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
 job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
