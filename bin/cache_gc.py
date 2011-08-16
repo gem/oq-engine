@@ -34,6 +34,7 @@ import sys
 import oqpath
 oqpath.set_oq_path()
 
+from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import settings
@@ -138,6 +139,7 @@ def clear_job_data(job_id):
         raise
 
     logs.init_logs(level='info', log_type=settings.LOGGING_BACKEND)
+    job.setup_job_logging(job_id=job_id)
 
     print 'Attempting to clear cache data for job %s...' % job_id
 
