@@ -52,7 +52,7 @@ def generate_erf(job_id):
 
     # TODO(JM): implement real ERF computation
 
-    kvs.get_client().set(kvs.erf_key(job_id),
+    kvs.get_client().set(kvs.tokens.erf_key(job_id),
                          json.JSONEncoder().encode([job_id]))
 
     return job_id
@@ -90,7 +90,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     kvs_client = kvs.get_client()
 
-    mgm_key = kvs.mgm_key(job_id, block_id, site_id)
+    mgm_key = kvs.tokens.mgm_key(job_id, block_id, site_id)
     mgm = kvs_client.get(mgm_key)
 
     if not mgm:
