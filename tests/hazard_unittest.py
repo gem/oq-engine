@@ -408,18 +408,6 @@ class HazardEngineTestCase(unittest.TestCase):
         for result in results:
             self.assertEqual(mgm_intensity, result.get())
 
-    def _prepopulate_sites_for_block(self, job_id, block_id):
-        sites = ["Testville,TestLand", "Provaville,TestdiTerra",
-                 "Teststadt,Landtesten", "villed'essai,paystest"]
-        sites_key = tokens.generate_sites_key(job_id, block_id)
-
-        self.kvs_client.set(sites_key, json.JSONEncoder().encode(sites))
-
-        for site in sites:
-            site_key = tokens.hazard_curve_poes_key(job_id, block_id, site)
-
-            self.kvs_client.set(site_key, ONE_CURVE_MODEL)
-
 
 class MeanHazardCurveComputationTestCase(unittest.TestCase):
 
