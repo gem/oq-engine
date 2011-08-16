@@ -312,6 +312,11 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
 
+COMMENT ON TABLE uiapi.log_msg IS 'Persistent storage for job log messages.';
+COMMENT ON COLUMN uiapi.log_msg.brief IS 'Short log message summary.';
+COMMENT ON COLUMN uiapi.log_msg.detailed IS 'Full log message.';
+
+
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
 COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
