@@ -73,12 +73,6 @@ def generate_job_key(job_id):
     return JOB_KEY_FMT % job_id
 
 
-def generate_sites_key(job_id, block_id):
-    """ Return sites key """
-
-    return generate_key(job_id, 'sites', block_id)
-
-
 def generate_blob_key(job_id, blob):
     """ Return the KVS key for a binary blob """
     return generate_key(generate_job_key(job_id),
