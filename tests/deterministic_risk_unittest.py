@@ -150,8 +150,4 @@ class DeterministicRiskTestCase(unittest.TestCase):
         # job. We don't actually want that to happen.
         with mock.patch('subprocess.Popen'):
 
-            results = risk_job.launch()
-
-            # for results, we should a list of True values
-            # one for hazard, one for risk
-            self.assertEqual([True, True], results)
+            risk_job.launch()

@@ -114,7 +114,6 @@ class DeterministicEventBasedMixin:
         # These are not debug statements; please don't remove them!
         print "Mean region loss value: %s" % sum_per_gmf.mean
         print "Standard deviation region loss value: %s" % sum_per_gmf.stddev
-        return [True]
 
     def compute_risk(self, block_id, **kwargs):
         """
