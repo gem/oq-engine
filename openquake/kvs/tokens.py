@@ -142,7 +142,8 @@ def mean_hazard_curve_key_template(job_id):
 def _quantile_hazard_curve_key(job_id, site_fragment, quantile):
     "Common code for the key functions below"
     return openquake.kvs.generate_key(
-        [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site_fragment, str(quantile)])
+        [QUANTILE_HAZARD_CURVE_KEY_TOKEN, job_id, site_fragment,
+         str(quantile)])
 
 
 def quantile_hazard_curve_key(job_id, site, quantile):
@@ -243,7 +244,6 @@ def quantile_hazard_map_key(job_id, site, poe, quantile):
     :rtype: string
     """
     return _quantile_hazard_map_key(job_id, hash(site), poe, quantile)
-
 
 
 def quantile_hazard_map_key_template(job_id, poe, quantile):
@@ -381,33 +381,21 @@ def ground_motion_values_key(job_id, point):
         [job_id, GMFS_KEY_TOKEN, point.column, point.row])
 
 
-NEXT_JOB_ID = 'NEXT_JOB_ID'
 CURRENT_JOBS = 'CURRENT_JOBS'
 
 
-def alloc_job_id():
+def mark_job_as_current(job_id):
     """
-    The KVS used by the OpenQuake engine maintains a 'NEXT_JOB_ID' key whose
-    value is an integer.
+    Add a job to the set of current jobs, to be later garbage collected.
 
-    :returns: Increment and get the value of the 'NEXT_JOB_ID' key.
+    :param job_id: the job id
+    :type job_id: int
     """
     client = openquake.kvs.get_client()
 
-    job_id = client.incr(NEXT_JOB_ID)
-
     # Add this key to set of current jobs.
     # This set can be queried to perform garbage collection.
-    duplicate = not client.sadd(CURRENT_JOBS, job_id)
-    # We need to make this returns True, otherwise there is a duplication;
-    # this is bad.
-    if duplicate:
-        msg = "Cannot allocate job ID '%s': this ID already exists in " \
-            "'CURRENT_JOBS'. This is probably a bug." % job_id
-        LOG.error(msg)
-        raise RuntimeError(msg)
-
-    return job_id
+    client.sadd(CURRENT_JOBS, job_id)
 
 
 def current_jobs():

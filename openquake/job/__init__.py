@@ -30,12 +30,14 @@ from ConfigParser import ConfigParser, RawConfigParser
 from openquake import flags
 from openquake import java
 from openquake import kvs
+from openquake import logs
 from openquake import shapes
+from openquake import settings
 from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
 from openquake.job.mixins import Mixin
-from openquake.kvs.tokens import alloc_job_id
+from openquake.kvs.tokens import mark_job_as_current
 
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.alchemy.db_utils import get_db_session
@@ -204,6 +206,17 @@ def prepare_job(params):
     return job
 
 
+def set_job_id(job_id):
+    """Make the job id available to the Java and Python loggers"""
+
+    # Make the job_id available to the java logging context.
+    mdc = java.jclass('MDC')
+    mdc.put('job_id', job_id)
+
+    # make the job_id available to the Python logging context
+    logs.AMQPHandler.MDC['job_id'] = job_id
+
+
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
@@ -231,8 +244,10 @@ class Job(object):
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
 
+        logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
+
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
-        job = Job(params, job_id=job_id)
+        job = Job(params, job_id)
         return job
 
     @staticmethod
@@ -272,23 +287,28 @@ class Job(object):
         params['BASE_PATH'] = base_path
 
         if output_type == 'xml_without_db':
-            params['SERIALIZE_RESULTS_TO'] = 'xml'
+            # we are running a test
+            job_id = 0
+            serialize_results_to = ['xml']
         else:
-            if 'OPENQUAKE_JOB_ID' not in params:
+            # openquake-server creates the job record in advance and stores the
+            # job id in the config file
+            job_id = params.get('OPENQUAKE_JOB_ID')
+            if not job_id:
                 # create the database record for this job
-                params['OPENQUAKE_JOB_ID'] = str(prepare_job(params).id)
+                job_id = prepare_job(params).id
 
             if output_type == 'db':
-                params['SERIALIZE_RESULTS_TO'] = 'db'
+                serialize_results_to = ['db']
             else:
-                params['SERIALIZE_RESULTS_TO'] = 'db,xml'
+                serialize_results_to = ['db', 'xml']
 
-        job = Job(params, sections=sections, base_path=base_path)
+        job = Job(params, job_id, sections=sections, base_path=base_path)
+        job.serialize_results_to = serialize_results_to
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
-    def __init__(self, params, job_id=None, sections=list(),
-        base_path=None):
+    def __init__(self, params, job_id, sections=list(), base_path=None):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
@@ -296,18 +316,15 @@ class Job(object):
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
         """
-        if job_id is None:
-            self._job_id = alloc_job_id()
-        else:
-            self._job_id = job_id
+        self._job_id = job_id
+        mark_job_as_current(job_id)  # enables KVS gc
 
-        # Make the job_id available to the java logging context.
-        mdc = java.jclass('MDC')
-        mdc.put('job_id', self.job_id)
+        set_job_id(self.job_id)
 
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
+        self.serialize_results_to = []
         self.base_path = base_path
         if base_path:
             self.to_kvs()
@@ -339,20 +356,13 @@ class Job(object):
         """Returns the kvs key for this job."""
         return kvs.generate_job_key(self.job_id)
 
-    def get_db_job_id(self):
-        """
-        Get the id of the database record belonging to this job.
-        """
-        return int(self['OPENQUAKE_JOB_ID'])
-
     def get_db_job(self, session):
         """
         Get the database record belonging to this job.
 
         :param session: the SQLAlchemy database session
         """
-        return session.query(OqJob)\
-               .filter(OqJob.id == self.get_db_job_id()).one()
+        return session.query(OqJob).filter(OqJob.id == self.job_id).one()
 
     def set_status(self, status):
         """
