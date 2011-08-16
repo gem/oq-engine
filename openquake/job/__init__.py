@@ -80,7 +80,7 @@ def run_job(job_file, output_type):
         a_job.set_status('running')
 
         try:
-            results = a_job.launch()
+            a_job.launch()
         except sqlalchemy.exc.SQLAlchemyError:
             # Try to cleanup the session status to have a chance to update the
             # job record without further errors.
@@ -97,9 +97,6 @@ def run_job(job_file, output_type):
             raise
         else:
             a_job.set_status('succeeded')
-
-            for filepath in results:
-                print filepath
     else:
         a_job.set_status('failed')
 
