@@ -26,13 +26,15 @@ import jpype
 from openquake import flags
 from openquake import java
 from openquake import logs
+from openquake import job
 from openquake import settings
+
+from tests.utils.helpers import cleanup_loggers
 
 LOG_FILE_PATH = os.path.join(os.getcwd(), 'test_file_for_the_logs_module.log')
 
 
-class LogsTestCase(unittest.TestCase):
-
+class PreserveJavaIO(object):
     @classmethod
     def setUpClass(cls):
         # This is safe to call even if the jvm was already running from a
@@ -47,6 +49,19 @@ class LogsTestCase(unittest.TestCase):
         cls.old_java_out = jpype.java.lang.System.out
         cls.old_java_err = jpype.java.lang.System.err
 
+    @classmethod
+    def tearDownClass(cls):
+        # restore the java stdout and stderr that were trashed during this test
+        jpype.java.lang.System.setOut(cls.old_java_out)
+        jpype.java.lang.System.setErr(cls.old_java_err)
+
+
+class LogsTestCase(PreserveJavaIO, unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(LogsTestCase, cls).setUpClass()
+
         try:
             os.remove(LOG_FILE_PATH)
         except OSError:
@@ -54,9 +69,7 @@ class LogsTestCase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        # restore the java stdout and stderr that were trashed during this test
-        jpype.java.lang.System.setOut(cls.old_java_out)
-        jpype.java.lang.System.setErr(cls.old_java_err)
+        super(LogsTestCase, cls).tearDownClass()
 
         try:
             os.remove(LOG_FILE_PATH)
@@ -66,12 +79,18 @@ class LogsTestCase(unittest.TestCase):
     def setUp(self):
         # we init the logs before each test because nosetest redefines
         # sys.stdout and removes all the handlers from the rootLogger
+
+        # reset logging config (otherwise will ignore logfile flag)
+        cleanup_loggers()
+
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
-        logs.init_logs()
+        logs.init_logs('console', 'warn')
+        java.init_logs('console', 'warn')
 
-        java._set_java_log_level('WARN')
-        java._setup_java_capture(sys.stdout, sys.stderr)
+    def tearDown(self):
+        # reset logging config
+        cleanup_loggers()
 
     def _slurp_file(self):
         # Flush all the logs into the logging file.  This is a little bit
@@ -148,10 +167,9 @@ class AMQPLogTestBase(unittest.TestCase):
                                virtual_host=settings.AMQP_VHOST)
         ch = conn.channel()
         ch.access_request(settings.AMQP_VHOST, active=False, read=True)
-        ch.exchange_declare('oq-unittest.topic', 'topic', auto_delete=True)
+        ch.exchange_declare(self.TOPIC, 'topic', auto_delete=True)
         qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, 'oq-unittest.topic',
-                      routing_key='oq-unittest-log.*')
+        ch.queue_bind(qname, self.TOPIC, routing_key=self.ROUTING_KEY)
 
         return conn, ch, qname
 
@@ -166,14 +184,15 @@ class AMQPLogTestBase(unittest.TestCase):
 
 
 class JavaAMQPLogTestCase(AMQPLogTestBase):
+    TOPIC = 'oq-unittest.topic'
+    ROUTING_KEY = 'oq-unittest-log.*'
 
     def tearDown(self):
         # reconfigure Log4j with the default settings
         jvm = java.jvm()
 
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        jvm.JClass("org.apache.log4j.PropertyConfigurator") \
-            .configure(java.LOG4J_PROPERTIES_PATH)
+        java.init_logs('warn')
 
     def setUp(self):
         jvm = java.jvm()
@@ -256,6 +275,9 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
 
 
 class PythonAMQPLogTestCase(AMQPLogTestBase):
+    TOPIC = 'oq-unittest.topic'
+    ROUTING_KEY = 'oq-unittest-log.*'
+
     def setUp(self):
         self.amqp = logs.AMQPHandler(
             host=settings.AMQP_HOST,
@@ -300,3 +322,87 @@ class PythonAMQPLogTestCase(AMQPLogTestBase):
         self.assertEquals('Warn message', messages[1].body)
         self.assertEquals('oq-unittest-log.WARNING',
                           messages[1].delivery_info['routing_key'])
+
+
+class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
+    TOPIC = settings.AMQP_EXCHANGE
+    ROUTING_KEY = 'log.*.*'
+
+    def setUp(self):
+        # reset Log4j config
+        jvm = java.jvm()
+        jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
+
+        # reset logging config
+        cleanup_loggers()
+
+        # setup AMQP logging
+        logs.init_logs('amqp', 'debug')
+        java.init_logs('amqp', 'debug')
+        job.set_job_id('123')
+
+    def tearDown(self):
+        # reset Log4j config
+        jvm = java.jvm()
+        jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
+        jvm.JClass("org.apache.log4j.BasicConfigurator").configure()
+
+        # reset logging config
+        cleanup_loggers()
+
+    def test_log_configuration(self):
+        """Test that the AMQP log configuration is consistent"""
+        conn, ch, qname = self.setup_queue()
+
+        # now there is a queue, send the log messages from Java
+        root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
+        root_logger.debug('Java debug message')
+        root_logger.info('Java info message')
+        root_logger.warn('Java warn message')
+        root_logger.error('Java error message')
+        root_logger.fatal('Java fatal message')
+
+        # and from Python
+        root_log = logging.getLogger()
+        root_log.debug('Python debug message')
+        root_log.info('Python info message')
+        root_log.warning('Python warn message')
+        root_log.error('Python error message')
+        root_log.critical('Python fatal message')
+
+        # process the messages
+        messages = []
+
+        def consume(msg):
+            messages.append(msg)
+
+            if len(messages) == 10:
+                ch.basic_cancel(msg.consumer_tag)
+
+        self.consume_messages(conn, ch, qname, consume)
+
+        self.assertEquals(10, len(messages))
+
+        # check message order
+        index = 0
+        for i, source in enumerate(['Java', 'Python']):
+            for j, level in enumerate(['debug', 'info', 'warn',
+                                       'error', 'fatal']):
+                msg = '%s %s message' % (source, level)
+                log = messages[i * 5 + j].body
+
+                self.assertTrue(msg in log,
+                                '"%s" contained in "%s"' % (msg, log))
+
+        # check topic
+        index = 0
+        for i, source in enumerate(['Java', 'Python']):
+            for j, level in enumerate(['debug', 'info', 'warn',
+                                       'error', 'fatal']):
+                expected = 'log.%s.123' % level.upper()
+                got = messages[i * 5 + j].delivery_info['routing_key']
+
+                self.assertEquals(
+                    expected, got,
+                    '%s %s routing key: expected %s got %s' % (
+                        source, level, expected, got))

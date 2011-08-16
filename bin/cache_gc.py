@@ -36,6 +36,7 @@ oqpath.set_oq_path()
 
 from openquake import kvs
 from openquake import logs
+from openquake import settings
 from openquake.kvs import tokens
 
 LOG = logs.LOG
@@ -128,6 +129,8 @@ def clear_job_data(job_id):
 
     :param job_id: job ID as an integer
     """
+    logs.init_logs(level='warn', log_type=settings.LOGGING_BACKEND)
+
     try:
         job_id = int(job_id)
     except ValueError:
