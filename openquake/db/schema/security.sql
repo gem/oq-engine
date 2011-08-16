@@ -215,3 +215,7 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_reslt_writer;
 -- uiapi.upload
 GRANT SELECT ON uiapi.upload TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_uiapi_writer;
+
+-- uiapi.error_msg
+GRANT SELECT ON uiapi.error_msg TO oq_uiapi_reader;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_uiapi_writer;
