@@ -222,7 +222,7 @@ def generate_block_id():
     return BLOCK_ID_GENERATOR.next()
 
 
-def cache_gc(job_key):
+def cache_gc(job_id):
     """
     Garbage collection for the KVS. This works by simply removing all keys
     which contain the input job key.
@@ -230,39 +230,39 @@ def cache_gc(job_key):
     The job key must be a member of the 'CURRENT_JOBS' set. If it isn't, this
     function will do nothing and simply return None.
 
-    :param job_key: specially formatted job key;
-        see :py:function:`openquake.kvs.generate_job_key` for more info
+    :param job_id: the id of the job
+    :type job_id: int
 
     :returns: the number of deleted keys (int), or None if the job doesn't
         exist in CURRENT_JOBS
     """
     client = get_client()
 
-    if client.sismember(openquake.kvs.tokens.CURRENT_JOBS, job_key):
+    if client.sismember(openquake.kvs.tokens.CURRENT_JOBS, job_id):
         # matches a current job
         # do the garbage collection
-        keys = client.keys('*%s*' % job_key)
+        keys = client.keys('*%s*' % generate_job_key(job_id))
 
         if len(keys) > 0:
 
             success = client.delete(*keys)
             # delete should return True
             if not success:
-                msg = 'Redis failed to delete data for job %s' % job_key
+                msg = 'Redis failed to delete data for job %s' % job_id
                 LOG.error(msg)
                 raise RuntimeError(msg)
 
         # finally, remove the job key from CURRENT_JOBS
-        client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_key)
+        client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_id)
 
         msg = 'KVS garbage collection removed %s keys for job %s'
-        msg %= (len(keys), job_key)
+        msg %= (len(keys), job_id)
         LOG.info(msg)
 
         return len(keys)
     else:
         # does not match a current job
         msg = 'KVS garbage collection was called with an invalid job key: ' \
-            '%s is not recognized as a current job.'
+            '%s is not recognized as a current job.' % job_id
         LOG.error(msg)
         return None
