@@ -27,7 +27,8 @@ def pg_dump(to_file):
             if line.startswith('--') or line == '\n':
                 continue
 
-            # normalize conditions
+            # normalize conditions (for some reason pg_dump dumps them
+            # differently before and after an upgrade)
             if line.startswith('    CONSTRAINT'):
                 line = re.sub(r"\('(\w+)'::character varying\)::text",
                               r"'\1'::character varying", line)
