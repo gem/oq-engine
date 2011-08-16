@@ -299,7 +299,7 @@ class AggregateLossCurve(object):
         aggregate_curve = AggregateLossCurve(vuln_model, epsilon_provider)
 
         gmfs_keys = kvs.get_keys("%s*%s*" % (
-                job_id, kvs.tokens.GMF_KEY_TOKEN))
+                kvs.generate_job_key(job_id), kvs.tokens.GMF_KEY_TOKEN))
 
         LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
         asset_counter = 0
