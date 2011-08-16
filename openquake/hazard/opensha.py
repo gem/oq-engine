@@ -103,7 +103,7 @@ class BasePSHAMixin(Mixin):
         other files."""
 
         LOG.info("Storing source model from job config")
-        key = kvs.source_model_key(self.job_id)
+        key = kvs.tokens.source_model_key(self.job_id)
         print "source model key is", key
         jpype = java.jvm()
         try:
@@ -116,7 +116,7 @@ class BasePSHAMixin(Mixin):
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
-        key = kvs.gmpe_key(self.job_id)
+        key = kvs.tokens.gmpe_key(self.job_id)
         print "GMPE map key is", key
         jpype = java.jvm()
         try:
@@ -128,7 +128,7 @@ class BasePSHAMixin(Mixin):
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
-        key = kvs.source_model_key(self.job_id)
+        key = kvs.tokens.source_model_key(self.job_id)
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
         erf = java.jclass("GEM1ERF")(sources)
@@ -154,7 +154,7 @@ class BasePSHAMixin(Mixin):
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.gmpe_key(self.job_id)
+        key = kvs.tokens.gmpe_key(self.job_id)
         gmpe_map = java.jclass(
             "JsonSerializer").getGmpeMapFromCache(self.cache, key)
         self.set_gmpe_params(gmpe_map)
@@ -747,7 +747,8 @@ class EventBasedMixin(BasePSHAMixin):
                     raise Exception(task.result)
 
             for j in range(0, realizations):
-                stochastic_set_key = kvs.stochastic_set_key(self.job_id, i, j)
+                stochastic_set_key = kvs.tokens.stochastic_set_key(self.job_id,
+                                                                   i, j)
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -791,7 +792,7 @@ class EventBasedMixin(BasePSHAMixin):
         jpype = java.jvm()
 
         jsite_list = self.parameterize_sites(site_list)
-        key = kvs.stochastic_set_key(self.job_id, history, realization)
+        key = kvs.tokens.stochastic_set_key(self.job_id, history, realization)
         gmc = self.params['GROUND_MOTION_CORRELATION']
         correlate = (gmc == "true" and True or False)
         stochastic_set_id = "%s!%s" % (history, realization)
