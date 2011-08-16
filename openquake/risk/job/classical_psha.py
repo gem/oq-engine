@@ -69,15 +69,14 @@ class ClassicalPSHABasedMixin:
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         session = get_db_session("reslt", "reader")
-        job_id = int(self.params["OPENQUAKE_JOB_ID"])
 
         iml_query = session.query(models.OqParams.imls) \
             .join(models.OqJob) \
-            .filter(models.OqJob.id == job_id)
+            .filter(models.OqJob.id == self.job_id)
         curve_query = session.query(models.HazardCurveData.poes) \
             .join(models.HazardCurve) \
             .join(models.Output) \
-            .filter(models.Output.oq_job_id == job_id) \
+            .filter(models.Output.oq_job_id == self.job_id) \
             .filter(models.HazardCurve.statistic_type == 'mean') \
             .filter(sqlfunc.ST_GeoHash(models.HazardCurveData.location, 12)
                         == geohash.encode(site.latitude, site.longitude,
