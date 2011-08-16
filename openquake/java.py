@@ -20,7 +20,6 @@ Includes classpath arguments, and heap size."""
 
 from amqplib import client_0_8 as amqp
 import jpype
-import logging
 import os
 import sys
 import traceback
@@ -29,8 +28,8 @@ from celery.decorators import task as celery_task
 
 from functools import wraps
 
-from openquake.logs import LOG
 from openquake import flags
+from openquake import settings
 
 FLAGS = flags.FLAGS
 
@@ -85,32 +84,11 @@ JAVA_CLASSES = {
     "MDC": "org.apache.log4j.MDC",
 }
 
-LOG4J_PROPERTIES_PATH = os.path.abspath(
-                            os.path.join(os.path.dirname(__file__),
-                            "config/log4j.properties"))
-
-logging.getLogger('jpype').setLevel(logging.ERROR)
-
 
 def jclass(class_key):
     """Wrapper around jpype.JClass for short class names"""
     jvm()
     return jpype.JClass(JAVA_CLASSES[class_key])
-
-
-def _set_java_log_level(level):
-    """Sets the log level of the java logger.
-
-    :param level: a string, one of the logging levels defined in
-    :file:`logs.py`
-    """
-
-    if level == 'CRITICAL':
-        level = 'FATAL'
-
-    root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
-    jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
-    root_logger.setLevel(jlevel)
 
 
 def _setup_java_capture(out, err):
@@ -220,6 +198,37 @@ def _setup_java_amqp():
     amqpappender.setConnectionFactory(amqpfactory)
 
 
+def init_logs(log_type='console', level='warn'):
+    """
+    Initialize Java logging.
+
+    The function might be called multiple times with different log levels.
+    """
+
+    if log_type == 'console':
+        if FLAGS.capture_java_debug:
+            _setup_java_capture(sys.stdout, sys.stderr)
+
+        properties = settings.LOG4J_STDOUT_SETTINGS.copy()
+    else:
+        _setup_java_amqp()
+
+        properties = settings.LOG4J_AMQP_SETTINGS.copy()
+
+    level = level.upper()
+    if level == 'CRITICAL':
+        level = 'FATAL'
+
+    properties['log4j.rootLogger'] %= dict(level=level)
+
+    log4j_properties = jpype.JClass("java.util.Properties")()
+    for key, value in properties.iteritems():
+        log4j_properties.setProperty(key, value)
+
+    jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(
+        log4j_properties)
+
+
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
@@ -229,7 +238,6 @@ def jvm(max_mem=None):
 
     if not jpype.isJVMStarted():
         max_mem = get_jvm_max_mem(max_mem)
-        LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # force the default Xerces parser configuration, otherwise
@@ -237,18 +245,9 @@ def jvm(max_mem=None):
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
                 "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
             # "-Dlog4j.debug", # turn on log4j internal debugging
-            "-Dlog4j.configuration=file://%s" % LOG4J_PROPERTIES_PATH,
             "-Xmx%sM" % max_mem)
 
-        # override the log level set in log4j configuration file this can't be
-        # done on the JVM command line (i.e. -Dlog4j.rootLogger= is not
-        # supported by log4j)
-        _set_java_log_level(FLAGS.debug.upper())
-
-        if FLAGS.capture_java_debug:
-            _setup_java_capture(sys.stdout, sys.stderr)
-
-        _setup_java_amqp()
+        init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
 
     return jpype
 
