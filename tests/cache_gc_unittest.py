@@ -25,6 +25,8 @@ from bin import cache_gc
 from openquake import kvs
 from openquake.kvs import tokens
 
+from tests.utils.helpers import cleanup_loggers
+
 
 class CacheGCTestCase(unittest.TestCase):
     """
@@ -40,6 +42,12 @@ class CacheGCTestCase(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.client.delete(tokens.CURRENT_JOBS)
+
+    def setUp(self):
+        cleanup_loggers()
+
+    def tearDown(self):
+        cleanup_loggers()
 
     def test_get_current_job_ids(self):
         """
