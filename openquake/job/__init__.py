@@ -30,7 +30,9 @@ from ConfigParser import ConfigParser, RawConfigParser
 from openquake import flags
 from openquake import java
 from openquake import kvs
+from openquake import logs
 from openquake import shapes
+from openquake import settings
 from openquake.logs import LOG
 from openquake.job import config as conf
 from openquake.job.handlers import resolve_handler
@@ -204,6 +206,17 @@ def prepare_job(params):
     return job
 
 
+def set_job_id(job_id):
+    """Make the job id available to the Java and Python loggers"""
+
+    # Make the job_id available to the java logging context.
+    mdc = java.jclass('MDC')
+    mdc.put('job_id', job_id)
+
+    # make the job_id available to the Python logging context
+    logs.AMQPHandler.MDC['job_id'] = job_id
+
+
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
@@ -230,6 +243,8 @@ class Job(object):
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
+
+        logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
 
         params = kvs.get_value_json_decoded(kvs.generate_job_key(job_id))
         job = Job(params, job_id)
@@ -304,9 +319,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
-        # Make the job_id available to the java logging context.
-        mdc = java.jclass('MDC')
-        mdc.put('job_id', self.job_id)
+        set_job_id(self.job_id)
 
         self.blocks_keys = []
         self.params = params

@@ -65,11 +65,13 @@ from openquake import logs
 from openquake import __version__
 
 from openquake import job
+from openquake import settings
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configuration file')
+flags.DEFINE_string('config_file', 'openquake-config.gem',
+                    'OpenQuake configuration file')
 flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
                   'Computation result output type')
 
@@ -105,8 +107,7 @@ if __name__ == '__main__':
         print flags.get_flags_help()
         sys.exit(1)
 
-
-    logs.init_logs()
+    logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
 
     # Collect inputs
     # Determine Processing type
