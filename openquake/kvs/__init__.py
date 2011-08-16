@@ -22,6 +22,7 @@ This module contains generic functions to access
 the underlying kvs systems.
 """
 
+import hashlib
 import json
 import numpy
 import openquake.kvs.tokens
@@ -115,10 +116,10 @@ def get_client(**kwargs):
     return Redis(**kwargs)
 
 
-def generate_key(key_list):
+def generate_key(*parts):
     """ Create a kvs key """
-    key_list = [str(x).replace(" ", "") for x in key_list]
-    return KVS_KEY_SEPARATOR.join(key_list)
+    parts = [str(x).replace(" ", "") for x in parts]
+    return KVS_KEY_SEPARATOR.join(parts)
 
 JOB_KEY_FMT = '::JOB::%s::'
 
@@ -136,13 +137,13 @@ def generate_job_key(job_id):
 def generate_sites_key(job_id, block_id):
     """ Return sites key """
 
-    sites_key_token = 'sites'
-    return generate_product_key(job_id, sites_key_token, block_id)
+    return generate_key(job_id, 'sites', block_id)
 
 
-def generate_product_key(job_id, product, block_id="", site=""):
-    """construct kvs key from several part IDs"""
-    return generate_key([job_id, product, block_id, site])
+def generate_blob_key(job_id, blob):
+    """ Return the KVS key for a binary blob """
+    return generate_key(generate_job_key(job_id),
+                        hashlib.sha1(blob).hexdigest())
 
 
 def get_value_json_decoded(key):

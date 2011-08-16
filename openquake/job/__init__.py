@@ -18,7 +18,6 @@
 
 """A single hazard/risk job."""
 
-import hashlib
 import multiprocessing
 import os
 import re
@@ -479,11 +478,9 @@ class Job(object):
                 path = os.path.join(self.base_path, val)
                 with open(path) as data_file:
                     LOG.debug("Slurping %s" % path)
-                    sha1 = hashlib.sha1(data_file.read()).hexdigest()
-                    data_file.seek(0)
-
-                    file_key = kvs.generate_key([self.job_id, sha1])
-                    kvs_client.set(file_key, data_file.read())
+                    blob = data_file.read()
+                    file_key = kvs.generate_blob_key(self.job_id, blob)
+                    kvs_client.set(file_key, blob)
                     self.params[key] = file_key
                     self.params[key + "_PATH"] = path
 
