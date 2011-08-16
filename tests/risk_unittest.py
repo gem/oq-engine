@@ -136,7 +136,15 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
             loss_ratios_2, covs_2)
 
-        self.job_id = 1234
+        self.params = {}
+        self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
+        self.params["AGGREGATE_LOSS_CURVE"] = 1
+        self.params["BASE_PATH"] = "."
+        self.params["INVESTIGATION_TIME"] = 50.0
+
+        self.job = helpers.create_job(self.params, base_path=".")
+        self.job_id = self.job.job_id
+        self.job.to_kvs()
 
         self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
                 0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
@@ -208,15 +216,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self._store_asset(self.asset_4, 1, 4)
         self._store_asset(self.asset_5, 1, 5)
         self._store_asset(self.asset_6, 1, 6)
-
-        self.params = {}
-        self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
-        self.params["AGGREGATE_LOSS_CURVE"] = 1
-        self.params["BASE_PATH"] = "."
-        self.params["INVESTIGATION_TIME"] = 50.0
-
-        self.job = helpers.create_job(self.params, base_path=".")
-        self.job.to_kvs()
 
         # deleting old file
         self._delete_test_file()
