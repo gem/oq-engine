@@ -51,10 +51,7 @@ class JobTestCase(unittest.TestCase):
 
         # Delete managed job id info so we can predict the job key
         # which will be allocated for us
-        # Playing with NEXT_JOB_ID can lead to unexpected behaviour in other
-        # tests, see comment in tearDown
         client.delete(tokens.CURRENT_JOBS)
-        client.delete(tokens.NEXT_JOB_ID)
 
         self.generated_files = []
         self.job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
@@ -71,10 +68,6 @@ class JobTestCase(unittest.TestCase):
             except OSError:
                 pass
 
-        # Playing with NEXT_JOB_ID breaks the uniqueness of the job_ids,
-        # causing failures of tests in kvs_unittest.py, if they run after this
-        # To avoid this we garbage collect job we know we used in this test
-        # case.
         kvs.cache_gc('::JOB::1::')
         kvs.cache_gc('::JOB::2::')
 
@@ -162,23 +155,12 @@ class JobTestCase(unittest.TestCase):
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
-    def test_a_job_has_an_identifier(self):
-        """
-        Test that the :py:class:`openquake.job.Job` constructor automatically
-        assigns a proper job ID.
-        """
-        client = kvs.get_client()
-
-        client.delete(tokens.CURRENT_JOBS)
-        client.delete(tokens.NEXT_JOB_ID)
-
-        self.assertEqual(1, Job({}).job_id)
-
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = helpers.job_from_file(
             os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
+        helpers.cleanup_loggers()
 
     def test_job_calls_cleanup(self):
         """
@@ -210,7 +192,7 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=1'], )
+        expected_args = (['python', 'bin/cache_gc.py', '--job=0'], )
 
         with patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
@@ -230,18 +212,6 @@ class JobTestCase(unittest.TestCase):
 
             self.assertEqual(os.environ, actual_kwargs['env'])
 
-    def test_job_init_assigns_unique_id(self):
-        """
-        This test ensures that unique job IDs are assigned to each Job object.
-        """
-        job1 = Job({})
-        job2 = Job({})
-
-        self.assertTrue(job1.job_id is not None)
-        self.assertTrue(job2.job_id is not None)
-
-        self.assertNotEqual(job1.job_id, job2.job_id)
-
     def test_job_sets_job_id_in_java_logging(self):
         """
         When a Job is instantiated, a 'job_id' parameter should be set in
@@ -250,13 +220,6 @@ class JobTestCase(unittest.TestCase):
         """
         mdc = java.jclass('MDC')
 
-        # allocate a job_id for us:
-        test_job_1 = Job({})
+        test_job = helpers.create_job({})
 
-        self.assertEqual(test_job_1.job_id, mdc.get('job_id'))
-
-        # specify a job ID:
-        job_id = 7
-        test_job_2 = Job({}, job_id=job_id)
-
-        self.assertEqual(job_id, mdc.get('job_id'))
+        self.assertEqual(test_job.job_id, mdc.get('job_id'))

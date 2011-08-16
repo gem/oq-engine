@@ -36,6 +36,7 @@ from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
 from openquake.java import jtask as task
 from openquake.job import mixins
+from openquake.logs import HAZARD_LOG
 
 
 @task
@@ -107,9 +108,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
-    logger = compute_mean_curves.get_logger()
-
-    logger.info("Computing MEAN curves for %s sites (job_id %s)"
+    HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
     return classical_psha.compute_mean_hazard_curves(job_id, sites,
@@ -120,9 +119,7 @@ def compute_mean_curves(job_id, sites, realizations):
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
-    logger = compute_quantile_curves.get_logger()
-
-    logger.info("Computing QUANTILE curves for %s sites (job_id %s)"
+    HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
             % (len(sites), job_id))
 
     return classical_psha.compute_quantile_hazard_curves(job_id, sites,
