@@ -402,7 +402,6 @@ class Job(object):
         output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        results = []
 
         for (key, mixin) in Mixin.ordered_mixins():
             if key.upper() not in self.sections:
@@ -414,11 +413,9 @@ class Job(object):
                 # _execute() method calls the expected tasks.
                 LOG.debug(
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
-                results.extend(self.execute())
+                self.execute()
 
         self.cleanup()
-
-        return results
 
     def cleanup(self):
         """
