@@ -96,7 +96,6 @@ def init_logs_stdout(level):
 
     amqp_log = logging.getLogger("amqplib")
     amqp_log.setLevel(logging.ERROR)
-    amqp_log.propagate = False
 
     LOG.setLevel(logging_level)
     RISK_LOG.setLevel(logging_level)
@@ -128,7 +127,9 @@ def init_logs_amqp(level):
         hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
         LOG.addHandler(hdlr)
 
-    logging.getLogger("amqplib").setLevel(logging.ERROR)
+    amqp_log = logging.getLogger("amqplib")
+    amqp_log.setLevel(logging.ERROR)
+    amqp_log.propagate = False
 
     LOG.setLevel(logging_level)
     RISK_LOG.setLevel(logging_level)
