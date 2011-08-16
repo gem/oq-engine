@@ -129,7 +129,6 @@ def clear_job_data(job_id):
 
     :param job_id: job ID as an integer
     """
-    logs.init_logs(level='warn', log_type=settings.LOGGING_BACKEND)
 
     try:
         job_id = int(job_id)
@@ -137,6 +136,8 @@ def clear_job_data(job_id):
         print 'Job ID should be an integer.'
         print 'Use the --list option to show current jobs.'
         raise
+
+    logs.init_logs(level='info', log_type=settings.LOGGING_BACKEND)
 
     print 'Attempting to clear cache data for job %s...' % job_id
 
