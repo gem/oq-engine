@@ -157,10 +157,10 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
 
     After doing::
 
-        AMQPHandler.MDC['job_key'] = some_value
+        AMQPHandler.MDC['job_id'] = some_value
 
     the value can be interpolated in the log message and the routing key
-    by using the normal `%(job_key)s` Python syntax.
+    by using the normal `%(job_id)s` Python syntax.
     """  # pylint: disable=W0105
 
     LEVELNAMES = {
