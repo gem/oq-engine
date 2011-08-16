@@ -242,8 +242,7 @@ class JobTestCase(unittest.TestCase):
 
         session = get_db_session("uiapi", "writer")
 
-        session.query(OqJob)\
-            .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
+        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
@@ -251,18 +250,7 @@ class JobTestCase(unittest.TestCase):
 
         session = get_db_session("uiapi", "writer")
 
-        session.query(OqJob)\
-            .filter(OqJob.id == self.job['OPENQUAKE_JOB_ID']).one()
-
-    def test_get_db_job(self):
-        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
-
-        session = get_db_session("reslt", "writer")
-
-        expected_job = session.query(OqJob)\
-            .filter(OqJob.id == self.job.get_db_job_id()).one()
-
-        self.assertEqual(expected_job, self.job.get_db_job(session))
+        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_set_status(self):
         self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
@@ -272,8 +260,7 @@ class JobTestCase(unittest.TestCase):
         status = 'running'
         self.job.set_status(status)
 
-        job = session.query(OqJob)\
-            .filter(OqJob.id == self.job.get_db_job_id()).one()
+        job = session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
         self.assertEqual(status, job.status)
 
