@@ -25,7 +25,7 @@ from openquake import logs
 
 LOG = logs.LOG
 
-KVS_KEY_SEPARATOR = '!'
+_KVS_KEY_SEPARATOR = '!'
 
 # hazard tokens
 SOURCE_MODEL_TOKEN = 'sources'
@@ -63,7 +63,7 @@ def _generate_key(job_id, type_, *parts):
     :rtype: string
     """
     parts = [generate_job_key(job_id), type_] + [str(p) for p in parts]
-    return KVS_KEY_SEPARATOR.join(parts).replace(' ', '')
+    return _KVS_KEY_SEPARATOR.join(parts).replace(' ', '')
 
 
 def _kvs_key_type(kvs_key):
@@ -76,7 +76,7 @@ def _kvs_key_type(kvs_key):
 
     :returns: type portion of the key
     """
-    return kvs_key.split(KVS_KEY_SEPARATOR, 2)[1]
+    return kvs_key.split(_KVS_KEY_SEPARATOR, 2)[1]
 
 
 JOB_KEY_FMT = '::JOB::%s::'
@@ -142,7 +142,7 @@ def asset_row_col_from_kvs_key(kvs_key):
     """
     assert _kvs_key_type(kvs_key) == EXPOSURE_KEY_TOKEN
 
-    row, col = kvs_key.rsplit('!', 2)[-2:]
+    row, col = kvs_key.rsplit(_KVS_KEY_SEPARATOR, 2)[-2:]
 
     return int(row), int(col)
 
@@ -348,7 +348,7 @@ def column_row_from_gmf_set_key(kvs_key):
     """Extract column and row from a KVS key of a ground motion field set."""
     assert _kvs_key_type(kvs_key) == GMF_KEY_TOKEN
 
-    return kvs_key.split(KVS_KEY_SEPARATOR)[2:]
+    return kvs_key.split(_KVS_KEY_SEPARATOR)[2:]
 
 
 def ground_motion_values_key(job_id, point):
