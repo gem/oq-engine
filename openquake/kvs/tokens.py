@@ -97,12 +97,6 @@ def generate_blob_key(job_id, blob):
     return _generate_key(job_id, 'blob', hashlib.sha1(blob).hexdigest())
 
 
-def loss_token(poe):
-    """ Return a loss token made up of the CONDITIONAL_LOSS_KEY_TOKEN and
-    the poe cast to a string """
-    return "%s%s" % (CONDITIONAL_LOSS_KEY_TOKEN, str(poe))
-
-
 def vuln_key(job_id):
     """Generate the key used to store vulnerability curves."""
     return _generate_key(job_id, "VULN_CURVES")
@@ -166,7 +160,8 @@ def loss_curve_key(job_id, row, col, asset_id):
 
 def loss_key(job_id, row, col, asset_id, poe):
     """ Return a loss key """
-    return _generate_key(job_id, loss_token(poe), asset_id, row, col)
+    return _generate_key(job_id, CONDITIONAL_LOSS_KEY_TOKEN, asset_id, poe,
+                         row, col)
 
 
 def _mean_hazard_curve_key(job_id, site_fragment):
