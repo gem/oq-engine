@@ -119,7 +119,10 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    return Job.from_file(config_file_path, 'xml_without_db')
+    job = Job.from_file(config_file_path, 'xml_without_db')
+    cleanup_loggers()
+
+    return job
 
 
 def create_job(params, **kwargs):
