@@ -24,9 +24,9 @@ the underlying kvs systems.
 
 import json
 import numpy
-import openquake.kvs.tokens
 
 from openquake import logs
+from openquake.kvs import tokens
 from openquake.kvs.redis import Redis
 
 
@@ -35,7 +35,6 @@ LOG = logs.LOG
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
 MAX_LENGTH_RANDOM_ID = 36
-KVS_KEY_SEPARATOR = '!'
 SITES_KEY_TOKEN = "sites"
 
 
@@ -115,36 +114,6 @@ def get_client(**kwargs):
     return Redis(**kwargs)
 
 
-def generate_key(key_list):
-    """ Create a kvs key """
-    key_list = [str(x).replace(" ", "") for x in key_list]
-    return KVS_KEY_SEPARATOR.join(key_list)
-
-JOB_KEY_FMT = '::JOB::%s::'
-
-
-def generate_job_key(job_id):
-    """
-    Return a job key if the following format:
-    ::JOB::<job_id>::
-
-    :param int job_id: job ID
-    """
-    return JOB_KEY_FMT % job_id
-
-
-def generate_sites_key(job_id, block_id):
-    """ Return sites key """
-
-    sites_key_token = 'sites'
-    return generate_product_key(job_id, sites_key_token, block_id)
-
-
-def generate_product_key(job_id, product, block_id="", site=""):
-    """construct kvs key from several part IDs"""
-    return generate_key([job_id, product, block_id, site])
-
-
 def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
     try:
@@ -222,7 +191,32 @@ def generate_block_id():
     return BLOCK_ID_GENERATOR.next()
 
 
-def cache_gc(job_key):
+def mark_job_as_current(job_id):
+    """
+    Add a job to the set of current jobs, to be later garbage collected.
+
+    :param job_id: the job id
+    :type job_id: int
+    """
+    client = get_client()
+
+    # Add this key to set of current jobs.
+    # This set can be queried to perform garbage collection.
+    client.sadd(tokens.CURRENT_JOBS, job_id)
+
+
+def current_jobs():
+    """
+    Get all current job keys, sorted in ascending order.
+
+    :returns: list of job keys (as strings), or an empty list if there are no
+        current jobs
+    """
+    client = get_client()
+    return sorted([int(x) for x in client.smembers(tokens.CURRENT_JOBS)])
+
+
+def cache_gc(job_id):
     """
     Garbage collection for the KVS. This works by simply removing all keys
     which contain the input job key.
@@ -230,39 +224,39 @@ def cache_gc(job_key):
     The job key must be a member of the 'CURRENT_JOBS' set. If it isn't, this
     function will do nothing and simply return None.
 
-    :param job_key: specially formatted job key;
-        see :py:function:`openquake.kvs.generate_job_key` for more info
+    :param job_id: the id of the job
+    :type job_id: int
 
     :returns: the number of deleted keys (int), or None if the job doesn't
         exist in CURRENT_JOBS
     """
     client = get_client()
 
-    if client.sismember(openquake.kvs.tokens.CURRENT_JOBS, job_key):
+    if client.sismember(tokens.CURRENT_JOBS, job_id):
         # matches a current job
         # do the garbage collection
-        keys = client.keys('*%s*' % job_key)
+        keys = client.keys('*%s*' % tokens.generate_job_key(job_id))
 
         if len(keys) > 0:
 
             success = client.delete(*keys)
             # delete should return True
             if not success:
-                msg = 'Redis failed to delete data for job %s' % job_key
+                msg = 'Redis failed to delete data for job %s' % job_id
                 LOG.error(msg)
                 raise RuntimeError(msg)
 
         # finally, remove the job key from CURRENT_JOBS
-        client.srem(openquake.kvs.tokens.CURRENT_JOBS, job_key)
+        client.srem(tokens.CURRENT_JOBS, job_id)
 
         msg = 'KVS garbage collection removed %s keys for job %s'
-        msg %= (len(keys), job_key)
+        msg %= (len(keys), job_id)
         LOG.info(msg)
 
         return len(keys)
     else:
         # does not match a current job
         msg = 'KVS garbage collection was called with an invalid job key: ' \
-            '%s is not recognized as a current job.'
+            '%s is not recognized as a current job.' % job_id
         LOG.error(msg)
         return None
