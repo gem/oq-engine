@@ -26,7 +26,7 @@ from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
 
-from db_tests import helpers
+from tests.utils import helpers
 
 
 # The data below was captured (and subsequently modified for testing purposes)
