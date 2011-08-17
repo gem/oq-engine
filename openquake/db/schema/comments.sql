@@ -316,3 +316,9 @@ COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by t
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
 COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
 COMMENT ON COLUMN uiapi.upload.status IS 'One of: pending, running, failed or succeeded.';
+
+
+-- uiapi.error_msg
+COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure.';
+COMMENT ON COLUMN uiapi.error_msg.brief IS 'Summary of the error message.';
+COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';
