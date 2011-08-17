@@ -26,7 +26,9 @@ Test related to code in db/alchemy/db_utils.py
 import mock
 import os
 import unittest
+import sqlalchemy
 
+from tests.utils.helpers import patch
 from openquake.db.alchemy.db_utils import SessionCache, get_db_session
 
 
@@ -127,8 +129,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         session = object()
         sc = SessionCache()
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
+        with patch('sqlalchemy.create_engine') as ce_mock:
+            with patch('sqlalchemy.orm.sessionmaker') as sm_mock:
                 sm_mock.return_value = lambda: session
                 self.assertTrue(sc.__sessions__.get("usr8") is None)
                 sc._init_session("usr8", "t0ps3cr3t")
@@ -147,8 +149,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         :param dict expected_kwargs: a dictionary with keyword parameters that
             we expect will be passed to `sqlalchemy.create_engine()`
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
+        with patch('sqlalchemy.create_engine') as ce_mock:
+            with patch('sqlalchemy.orm.sessionmaker') as sm_mock:
                 sm_mock.return_value = object
                 SessionCache()._init_session(user, password)
                 self.assertEqual(1, ce_mock.call_count)

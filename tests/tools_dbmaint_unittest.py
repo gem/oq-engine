@@ -29,6 +29,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from tests.utils.helpers import patch
 from tools.dbmaint import (
     error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run,
     version_key, script_sort_key)
@@ -377,7 +378,7 @@ class RunScriptsTestCase(unittest.TestCase):
                   "db": "openquake", "user": "postgres"}
         scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
                    "0.4.2/2/01-a.sql"]
-        with mock.patch('tools.dbmaint.psql') as mock_psql:
+        with patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.return_value = (0, "", "")
 
@@ -419,7 +420,7 @@ class RunScriptsTestCase(unittest.TestCase):
                   "db": "openquake", "user": "postgres"}
         scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
                    "0.4.2/1/01-a.sql"]
-        with mock.patch('tools.dbmaint.psql') as mock_psql:
+        with patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.side_effect = fail_on_first_even_script
 
