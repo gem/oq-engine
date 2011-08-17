@@ -190,5 +190,8 @@ def oq_task(func):
     def decorated(job_id, *args, **kwargs):
         logger = logging.getLogger('task.%s' % func.__name__)
         logger = logging.LoggerAdapter(logger, {'job_id': job_id})
+        if Job.is_job_completed(job_id):
+            logger.warning('the job is already completed, skipping task')
+            return None
         return func(job_id, logger, *args, **kwargs)
     return decorated
