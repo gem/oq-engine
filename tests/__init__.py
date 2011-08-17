@@ -18,7 +18,9 @@
 
 from alchemy_db_utils_unittest import *
 from black_box_tests import *
+from bulk_insert_unittest import *
 from cache_gc_unittest import *
+from db_loader_unittest import *
 from db_loader_unittest import *
 from deterministic_hazard_unittest import *
 from deterministic_risk_unittest import *
@@ -33,7 +35,10 @@ from kvs_unittest import *
 from logs_unittest import *
 from loss_map_output_unittest import *
 from loss_output_unittest import *
+from output_hazard_unittest import *
+from output_risk_unittest import *
 from output_unittest import *
+from output_writers_unittest import *
 from parser_exposure_portfolio_unittest import *
 from parser_hazard_curve_unittest import *
 from parser_hazard_map_unittest import *
