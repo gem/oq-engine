@@ -392,7 +392,6 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         self.assertEquals(10, len(messages))
 
         # check message order
-        index = 0
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
@@ -403,7 +402,6 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
                                 '"%s" contained in "%s"' % (msg, log))
 
         # check topic
-        index = 0
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
