@@ -29,6 +29,7 @@ from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob
 from db_tests import helpers
 from tests.utils import helpers as test_helpers
+from tests.utils.helpers import patch
 
 
 def _toCoordList(polygon):
@@ -278,7 +279,7 @@ class RunJobTestCase(unittest.TestCase):
         return self.job.get_db_job(self.session).status
 
     def test_successful_job_lifecycle(self):
-        with mock.patch('openquake.job.Job.from_file') as from_file:
+        with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
             def test_status_running_and_succeed():
@@ -303,7 +304,7 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals('succeeded', self._job_status())
 
     def test_failed_job_lifecycle(self):
-        with mock.patch('openquake.job.Job.from_file') as from_file:
+        with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
             def test_status_running_and_fail():
@@ -329,7 +330,7 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals('failed', self._job_status())
 
     def test_failed_db_job_lifecycle(self):
-        with mock.patch('openquake.job.Job.from_file') as from_file:
+        with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
             def test_status_running_and_fail():
@@ -357,7 +358,7 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals('failed', self._job_status())
 
     def test_invalid_job_lifecycle(self):
-        with mock.patch('openquake.job.Job.from_file') as from_file:
+        with patch('openquake.job.Job.from_file') as from_file:
 
             # replaces Job.is_valid with a mock
             def patch_job_is_valid(*args, **kwargs):

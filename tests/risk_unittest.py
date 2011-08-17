@@ -28,6 +28,7 @@ from openquake import job
 from openquake import kvs
 from openquake import shapes
 from tests.utils import helpers
+from tests.utils.helpers import patch
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk.job.general import Block
@@ -671,10 +672,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
         this test.
         """
-        with mock.patch(
-            'openquake.output.curve.CurvePlot.write') as write_mock:
-            with mock.patch(
-                'openquake.output.curve.CurvePlot.close') as close_mock:
+        with patch('openquake.output.curve.CurvePlot.write') as write_mock:
+            with patch('openquake.output.curve.CurvePlot.close') as close_mock:
                 aggregate.compute_aggregate_curve(self.job)
 
                 # make sure write() and close() were both called
@@ -698,10 +697,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.job = helpers.create_job(self.params, base_path=".")
         self.job.to_kvs()
 
-        with mock.patch(
-            'openquake.output.curve.CurvePlot.write') as write_mock:
-            with mock.patch(
-                'openquake.output.curve.CurvePlot.close') as close_mock:
+        with patch('openquake.output.curve.CurvePlot.write') as write_mock:
+            with patch('openquake.output.curve.CurvePlot.close') as close_mock:
                 aggregate.compute_aggregate_curve(self.job)
 
                 # the plotter should not be called
