@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests tests db_tests $*
+nosetests tests $*
