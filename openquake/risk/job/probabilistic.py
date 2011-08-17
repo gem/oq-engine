@@ -144,9 +144,7 @@ class ProbabilisticEventMixin():
 
         for i in range(0, histories):
             for j in range(0, realizations):
-                key = kvs.generate_product_key(
-                        self.job_id, kvs.tokens.STOCHASTIC_SET_TOKEN, "%s!%s" %
-                            (i, j))
+                key = kvs.tokens.stochastic_set_key(self.job_id, i, j)
                 fieldset = shapes.FieldSet.from_json(kvs.get(key),
                     self.region.grid)
 
@@ -170,7 +168,7 @@ class ProbabilisticEventMixin():
 
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
-            key_gmf = kvs.tokens.gmfs_key(self.job_id, col, row)
+            key_gmf = kvs.tokens.gmf_set_key(self.job_id, col, row)
             LOGGER.debug("GMF_SLICE for %s X %s : \n\t%s" % (
                     col, row, gmf_slice))
             timespan = float(self['INVESTIGATION_TIME'])
@@ -203,8 +201,7 @@ class ProbabilisticEventMixin():
         block = general.Block.from_kvs(block_id)
 
         for point in block.grid(self.region):
-            key = kvs.generate_product_key(self.job_id,
-                kvs.tokens.GMF_KEY_TOKEN, point.column, point.row)
+            key = kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
             asset_key = kvs.tokens.asset_key(

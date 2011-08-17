@@ -26,7 +26,7 @@ from openquake.output.risk import (
     LossCurveDBWriter, LossMapDBWriter, LossCurveDBReader, LossMapDBReader)
 from openquake.shapes import Site, Curve
 
-from db_tests import helpers
+from tests.utils import helpers
 
 # The data below was captured (and subsequently modified for testing purposes)
 # by running
