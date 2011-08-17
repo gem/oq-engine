@@ -43,7 +43,6 @@ from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 import openquake.hazard.job
 
-from tests.helpers import TestMixin
 from tests.utils import helpers
 from tests.kvs_unittest import ONE_CURVE_MODEL
 
@@ -559,7 +558,8 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 self.job_id, site)) != None)
 
 
-class QuantileHazardCurveComputationTestCase(TestMixin, unittest.TestCase):
+class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
+                                             unittest.TestCase):
 
     def setUp(self):
         self.params = {'CALCULATION_MODE': 'Hazard'}
@@ -754,7 +754,8 @@ class QuantileHazardCurveComputationTestCase(TestMixin, unittest.TestCase):
             self.job_id, site, value)))
 
 
-class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
+class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
+                                                unittest.TestCase):
 
     def setUp(self):
         self.params = {
