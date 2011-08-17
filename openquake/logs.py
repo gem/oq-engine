@@ -91,7 +91,8 @@ def init_logs_stdout(level):
         else:
             hdlr = logging.StreamHandler()
 
-        hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
+        hdlr.setFormatter(
+            logging.Formatter(settings.LOGGING_STDOUT_FORMAT, None))
         LOG.addHandler(hdlr)
 
     LOG.setLevel(logging_level)
@@ -121,7 +122,8 @@ def init_logs_amqp(level):
             routing_key='log.%(loglevel)s.%(job_id)s',
             level=logging.DEBUG)
 
-        hdlr.setFormatter(logging.Formatter(logging.BASIC_FORMAT, None))
+        hdlr.setFormatter(
+            logging.Formatter(settings.LOGGING_AMQP_FORMAT, None))
         LOG.addHandler(hdlr)
 
     amqp_log = logging.getLogger("amqplib")
