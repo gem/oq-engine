@@ -319,38 +319,6 @@ def quantile_hazard_map_key_template(job_id, poe, quantile):
     return _quantile_hazard_map_key(job_id, '%s', poe, quantile)
 
 
-def quantile_from_haz_curve_key(kvs_key):
-    """Extract quantile value from a KVS key for a quantile hazard curve."""
-    if product_type_from_kvs_key(kvs_key) == QUANTILE_HAZARD_CURVE_KEY_TOKEN:
-        _, _sep, quantile_str = kvs_key.rpartition(KVS_KEY_SEPARATOR)
-        return float(quantile_str)
-    else:
-        return None
-
-
-def quantile_from_haz_map_key(kvs_key):
-    """Extract quantile value from a KVS key for a quantile hazard map node."""
-    if product_type_from_kvs_key(kvs_key) == QUANTILE_HAZARD_MAP_KEY_TOKEN:
-        _, _sep, quantile_str = kvs_key.rpartition(KVS_KEY_SEPARATOR)
-        return float(quantile_str)
-    else:
-        return None
-
-
-def poe_value_from_hazard_map_key(kvs_key):
-    """Extract PoE value (as float) from a KVS key for a hazard map.
-    """
-
-    if product_type_from_kvs_key(kvs_key) in (
-        MEAN_HAZARD_MAP_KEY_TOKEN, QUANTILE_HAZARD_MAP_KEY_TOKEN):
-
-        # the PoE is the fourth component of the key, after product
-        # token, job ID, site hash
-        return float(kvs_key.split(KVS_KEY_SEPARATOR)[3])
-    else:
-        return None
-
-
 def _hazard_curve_poes_key(job_id, realization_num, site_fragment):
     "Common code for the key functions below"
     return generate_key(HAZARD_CURVE_POES_KEY_TOKEN, generate_job_key(job_id),
@@ -366,18 +334,6 @@ def hazard_curve_poes_key(job_id, realization_num, site):
 def hazard_curve_poes_key_template(job_id, realization_num):
     """ Result a template for a hazard curve key (for a single site) """
     return _hazard_curve_poes_key(job_id, realization_num, '%s')
-
-
-def realization_from_haz_curve_key(kvs_key):
-    """Extract realization value (as string) from a KVS key
-    for a hazard curve."""
-    if product_type_from_kvs_key(kvs_key) == HAZARD_CURVE_POES_KEY_TOKEN:
-
-        # the realization is the third component of the key, after product
-        # token and job ID
-        return kvs_key.split(KVS_KEY_SEPARATOR)[2]
-    else:
-        return None
 
 
 def hazard_curve_imls_key(job_id):
