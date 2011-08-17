@@ -342,25 +342,30 @@ def hazard_curve_imls_key(job_id):
     return generate_key(HAZARD_CURVE_IMLS_KEY_TOKEN, generate_job_key(job_id))
 
 
-def product_type_from_kvs_key(kvs_key):
+def _kvs_key_type(kvs_key):
     """
-    Given a KVS key, extract the type of product from the key.
-    For example, given a key for a mean hazard map, the string
-    'mean_hazard_map' will be returned.
+    Given a KVS key, extract its type.  For example, given a key for a mean
+    hazard map, the string 'mean_hazard_map' will be returned.
 
     :param kvs_key: kvs product key
     :type kvs_key: str
 
-    :returns: product type portion of the key
+    :returns: type portion of the key
     """
-    product_type, _sep, _part_after = kvs_key.partition(KVS_KEY_SEPARATOR)
-    return product_type
+    return kvs_key.split(KVS_KEY_SEPARATOR, 2)[1]
 
 
 def gmfs_key(job_id, column, row):
     """Return the key used to store a ground motion field set
     for a single site."""
     return generate_key(generate_job_key(job_id), GMF_KEY_TOKEN, column, row)
+
+
+def column_row_from_gmfs_key(kvs_key):
+    """Extract column and row from a KVS key of a ground motion field set."""
+    assert _kvs_key_type(kvs_key) == GMF_KEY_TOKEN
+
+    return kvs_key.split(KVS_KEY_SEPARATOR)[2:]
 
 
 def ground_motion_values_key(job_id, point):
