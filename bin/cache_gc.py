@@ -34,6 +34,7 @@ import sys
 import oqpath
 oqpath.set_oq_path()
 
+from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import settings
@@ -129,7 +130,6 @@ def clear_job_data(job_id):
 
     :param job_id: job ID as an integer
     """
-    logs.init_logs(level='warn', log_type=settings.LOGGING_BACKEND)
 
     try:
         job_id = int(job_id)
@@ -138,14 +138,17 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    print 'Attempting to clear cache data for job %s...' % job_id
+    logs.init_logs(level='info', log_type=settings.LOGGING_BACKEND)
+    job.setup_job_logging(job_id=job_id)
+
+    LOG.info('Attempting to clear cache data for job %s...' % job_id)
 
     result = kvs.cache_gc(kvs.JOB_KEY_FMT % job_id)
 
     if result is None:
-        print 'Job %s not found.' % job_id
+        LOG.info('Job %s not found.' % job_id)
     else:
-        print 'Removed %s keys.' % result
+        LOG.info('Removed %s keys.' % result)
 
 
 def show_help():
