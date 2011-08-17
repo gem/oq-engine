@@ -239,8 +239,6 @@ class ClassicalMixin(BasePSHAMixin):
         :returns: KVS keys of the calculated hazard curves.
         :rtype: list of string
         """
-        results = []
-
         source_model_generator = random.Random()
         source_model_generator.seed(
                 self.params.get("SOURCE_MODEL_LT_RANDOM_SEED", None))
@@ -254,17 +252,13 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            curve_keys = utils_tasks.distribute(
+            utils_tasks.distribute(
                 self.number_of_tasks(), the_task, ("site_list", sites),
                 dict(job_id=self.job_id, realization=realization),
                 flatten_results=True)
 
             if serializer:
                 serializer(sites, realization)
-
-            results.extend(curve_keys)
-
-        return results
 
     def param_set(self, name):
         """Is the parameter with the given `name` set and non-empty?
@@ -413,7 +407,7 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        results = self.do_curves(sites, realizations,
+        self.do_curves(sites, realizations,
             serializer=self.serialize_hazard_curve_of_realization)
 
         # mean curves
@@ -427,8 +421,6 @@ class ClassicalMixin(BasePSHAMixin):
             curve_serializer=self.serialize_quantile_hazard_curves,
             map_func=classical_psha.compute_quantile_hazard_maps,
             map_serializer=self.serialize_quantile_hazard_map)
-
-        return results
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
@@ -725,8 +717,6 @@ class EventBasedMixin(BasePSHAMixin):
 
         Loops through various random realizations, spawning tasks to compute
         GMFs."""
-        results = []
-
         source_model_generator = random.Random()
         source_model_generator.seed(
                 self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
@@ -767,8 +757,7 @@ class EventBasedMixin(BasePSHAMixin):
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
-                    results.extend(self.serialize_gmf(ses))
-        return results
+                    self.serialize_gmf(ses)
 
     def serialize_gmf(self, ses):
         """
