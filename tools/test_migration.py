@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import os
 import re
 import subprocess
 import sys
@@ -7,11 +8,26 @@ import sys
 db_admin_user = 'postgres'
 original_db = 'original'
 
+def quiet_check_call(*args, **kwargs):
+    try:
+        with open('/tmp/subprocess.out', 'w') as out:
+            subprocess.check_call(*args,
+                                   stderr=subprocess.STDOUT,
+                                   stdout=out,
+                                   **kwargs)
+    except:
+        with open('/tmp/subprocess.out') as fh:
+            print fh.read()
+
+        raise
+    finally:
+        os.unlink('/tmp/subprocess.out')
+
 def psql(*args):
-    subprocess.check_call(['psql', '-U', db_admin_user] + list(args))
+    quiet_check_call(['psql', '-U', db_admin_user] + list(args))
 
 def load(path):
-    subprocess.check_call('zcat %s | psql -U %s -d %s' % (
+    quiet_check_call('zcat %s | psql -U %s -d %s' % (
             path, db_admin_user, original_db), shell=True)
 
 def pg_dump(to_file):
@@ -72,10 +88,10 @@ def pg_dump(to_file):
 psql('-c', "DROP DATABASE IF EXISTS %s" % original_db)
 psql('-c', "CREATE DATABASE %s" % original_db)
 
-subprocess.check_call(['bin/create_oq_schema', '--yes',
-                       '--db-name=%s' % original_db,
-                       '--db-user=%s' % db_admin_user,
-                       '--schema-path=%s' % 'openquake/db/schema'])
+quiet_check_call(['bin/create_oq_schema', '--yes',
+                  '--db-name=%s' % original_db,
+                  '--db-user=%s' % db_admin_user,
+                  '--schema-path=%s' % 'openquake/db/schema'])
 
 pg_dump('/tmp/fresh.sql')
 
@@ -84,8 +100,8 @@ psql('-c', "DROP DATABASE IF EXISTS %s" % original_db)
 psql('-c', "CREATE DATABASE %s" % original_db)
 load('tools/test_migration_base.sql.gz')
 
-subprocess.check_call(['tools/dbmaint.py', '--db', original_db,
-                       '-U', db_admin_user])
+quiet_check_call(['tools/dbmaint.py', '--db', original_db,
+                  '-U', db_admin_user])
 
 pg_dump('/tmp/after.sql')
 
