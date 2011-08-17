@@ -66,8 +66,6 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
 
                 kvs_client.rpush(key, encoder.encode(gmv))
 
-        return [True]
-
     def _number_of_calculations(self):
         """Return the number of calculations to trigger.
 
