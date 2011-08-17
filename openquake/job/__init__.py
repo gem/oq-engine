@@ -19,6 +19,7 @@
 """A single hazard/risk job."""
 
 import hashlib
+import multiprocessing
 import os
 import re
 import subprocess
@@ -203,15 +204,19 @@ def prepare_job(params):
     return job
 
 
-def set_job_id(job_id):
-    """Make the job id available to the Java and Python loggers"""
+def setup_job_logging(job_id):
+    """Make job id and process name available to the Java and Python loggers"""
+    process_name = multiprocessing.current_process().name
 
     # Make the job_id available to the java logging context.
     mdc = java.jclass('MDC')
     mdc.put('job_id', job_id)
+    mdc.put('processName', process_name)
 
     # make the job_id available to the Python logging context
     logs.AMQPHandler.MDC['job_id'] = job_id
+    # this is only necessary for Python 2.6
+    logs.AMQPHandler.MDC['processName'] = process_name
 
 
 class Job(object):
@@ -316,7 +321,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
-        set_job_id(self.job_id)
+        setup_job_logging(self.job_id)
 
         self.blocks_keys = []
         self.params = params
