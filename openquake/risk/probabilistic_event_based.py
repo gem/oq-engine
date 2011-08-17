@@ -278,11 +278,9 @@ def _generate_curve(losses, probs_of_exceedance):
 def _assets_keys_for_gmfs(job_id, gmfs_key):
     """Return the asset related to the GMFs given."""
 
-    row = lambda key: key.split(kvs.tokens.KVS_KEY_SEPARATOR)[3]
-    column = lambda key: key.split(kvs.tokens.KVS_KEY_SEPARATOR)[2]
+    column, row = kvs.tokens.column_row_from_gmfs_key(gmfs_key)
 
-    key = kvs.tokens.asset_key(
-            job_id, row(gmfs_key), column(gmfs_key))
+    key = kvs.tokens.asset_key(job_id, row, column)
 
     return kvs.get_client().lrange(key, 0, -1)
 
