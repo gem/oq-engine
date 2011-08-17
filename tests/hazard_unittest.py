@@ -30,7 +30,6 @@ import numpy
 import os
 import unittest
 
-from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -122,15 +121,13 @@ class HazardEngineTestCase(unittest.TestCase):
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 
-            source_model_key = kvs.generate_product_key(hazengine.job_id,
-                                kvs.tokens.SOURCE_MODEL_TOKEN)
+            source_model_key = tokens.source_model_key(hazengine.job_id)
             self.kvs_client.get(source_model_key)
             # We have the random seed in the config, so this is guaranteed
             # TODO(JMC): Add this back in
             # self.assertEqual(source_model, TEST_SOURCE_MODEL)
 
-            gmpe_key = kvs.generate_product_key(hazengine.job_id,
-                                kvs.tokens.GMPE_TOKEN)
+            gmpe_key = tokens.gmpe_key(hazengine.job_id)
             self.kvs_client.get(gmpe_key)
             # TODO(JMC): Add this back in
             # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
@@ -374,11 +371,8 @@ class HazardEngineTestCase(unittest.TestCase):
         result_keys = []
         expected_values = {}
 
-        print kvs.tokens.ERF_KEY_TOKEN
-
         for job_id in TASK_JOBID_SIMPLE:
-            erf_key = kvs.generate_product_key(job_id,
-                                               kvs.tokens.ERF_KEY_TOKEN)
+            erf_key = tokens.erf_key(job_id)
 
             # Build the expected values
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
@@ -403,8 +397,7 @@ class HazardEngineTestCase(unittest.TestCase):
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
         for job_id in TASK_JOBID_SIMPLE:
-            mgm_key = kvs.generate_product_key(job_id,
-                kvs.tokens.MGM_KEY_TOKEN, block_id, site)
+            mgm_key = tokens.mgm_key(job_id, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
             results.append(tasks.compute_mgm_intensity.apply_async(
@@ -414,19 +407,6 @@ class HazardEngineTestCase(unittest.TestCase):
 
         for result in results:
             self.assertEqual(mgm_intensity, result.get())
-
-    def _prepopulate_sites_for_block(self, job_id, block_id):
-        sites = ["Testville,TestLand", "Provaville,TestdiTerra",
-                 "Teststadt,Landtesten", "villed'essai,paystest"]
-        sites_key = kvs.generate_sites_key(job_id, block_id)
-
-        self.kvs_client.set(sites_key, json.JSONEncoder().encode(sites))
-
-        for site in sites:
-            site_key = kvs.generate_product_key(job_id,
-                kvs.tokens.HAZARD_CURVE_POES_KEY_TOKEN, block_id, site)
-
-            self.kvs_client.set(site_key, ONE_CURVE_MODEL)
 
 
 class MeanHazardCurveComputationTestCase(unittest.TestCase):
@@ -769,15 +749,9 @@ class QuantileHazardCurveComputationTestCase(TestMixin, unittest.TestCase):
     def _no_stored_values_for(self, pattern):
         self.assertEqual([], kvs.get_pattern(pattern))
 
-    def _no_computed_quantiles_for(self, value):
-        self._no_stored_values_for("%s*%s*%s" %
-                (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                self.job_id, str(value)))
-
     def _has_computed_quantile_for_site(self, site, value):
-        self.assertTrue(kvs.get_pattern("%s*%s*%s*%s" %
-                (kvs.tokens.QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                self.job_id, hash(site), str(value))))
+        self.assertTrue(kvs.get_pattern(kvs.tokens.quantile_hazard_curve_key(
+            self.job_id, site, value)))
 
 
 class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
@@ -938,9 +912,8 @@ class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
                 self.job_id, sites[1], 0.10, 0.75)))
 
     def _get_iml_at(self, site, poe):
-        return kvs.get_pattern_decoded("%s*%s*%s*%s" %
-                (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
-                self.job_id, hash(site), str(poe)))[0]
+        return kvs.get_value_json_decoded(
+                kvs.tokens.mean_hazard_map_key(self.job_id, site, poe))
 
     def _run(self, poes, sites=None):
         if sites is None:
@@ -958,6 +931,5 @@ class MeanQuantileHazardMapsComputationTestCase(TestMixin, unittest.TestCase):
                 self.job_id, site), mean_curve)
 
     def _has_computed_IML_for_site(self, site, poe):
-        self.assertTrue(kvs.get_pattern("%s*%s*%s*%s" %
-                (kvs.tokens.MEAN_HAZARD_MAP_KEY_TOKEN,
-                self.job_id, hash(site), str(poe))))
+        self.assertTrue(kvs.get(kvs.tokens.mean_hazard_map_key(
+            self.job_id, site, poe)))
