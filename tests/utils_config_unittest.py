@@ -175,3 +175,25 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
                          config.Config().cfg.get("A"))
         self.assertEqual({"b": "2"}, config.Config().cfg.get("B"))
         self.assertEqual({"c": "d-1", "d": "4"}, config.Config().cfg.get("D"))
+
+    def test_get_with_unknown_section(self):
+        """
+        get() will return `None` for a section name that is not known.
+        """
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertTrue(config.Config().get("Anything") is None)
+
+    def test_get_with_known_section(self):
+        """
+        get() will correctly return configuration data for known sections.
+        """
+        content='''
+            [E]
+            f=6
+            g=h'''
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertEqual({"f": "6", "g": "h"}, config.Config().get("E"))
