@@ -29,6 +29,7 @@ from handlers_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
+from input_risk_unittest import *
 from java_unittest import *
 from job_unittest import *
 from kvs_unittest import *
