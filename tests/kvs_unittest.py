@@ -216,8 +216,8 @@ class GarbageCollectionTestCase(unittest.TestCase):
         kvs.mark_job_as_current(self.test_job)
 
         # create some keys to hold fake data for test_job
-        self.gmf1_key = kvs.tokens.gmfs_key(self.test_job, 0, 0)
-        self.gmf2_key = kvs.tokens.gmfs_key(self.test_job, 0, 1)
+        self.gmf1_key = kvs.tokens.gmf_set_key(self.test_job, 0, 0)
+        self.gmf2_key = kvs.tokens.gmf_set_key(self.test_job, 0, 1)
         self.vuln_key = kvs.tokens.vuln_key(self.test_job)
 
         # now create the fake data for test_job
