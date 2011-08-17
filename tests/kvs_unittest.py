@@ -19,16 +19,15 @@
 
 
 import json
-import mock
 import numpy
 import os
 
 import unittest
 
 from openquake import java
-from openquake import logs
 from openquake import kvs
-from openquake import settings
+from openquake import logs
+from openquake.utils import config
 from tests.utils import helpers
 from tests.utils.helpers import patch
 
@@ -76,7 +75,8 @@ class KVSTestCase(unittest.TestCase):
         jpype = java.jvm()
         java_class = jpype.JClass("org.gem.engine.hazard.redis.Cache")
         print "Not dead yet, and found the class..."
-        self.java_client = java_class(settings.KVS_HOST, settings.KVS_PORT)
+        self.java_client = java_class(
+            config.get("kvs", "host"), config.get("kvs", "port"))
 
         self.python_client = kvs.get_client()
         self.python_client.flushdb()

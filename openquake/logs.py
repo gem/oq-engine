@@ -71,12 +71,12 @@ LOG4J_AMQP_SETTINGS = {
 
     'log4j.appender.amqp': 'org.gem.log.AMQPAppender',
     'log4j.appender.amqp.host': config.get("amqp", "host"),
-    'log4j.appender.amqp.port': config.get("amqp", "host"),
-    'log4j.appender.amqp.username': config.get("amqp", "host"),
-    'log4j.appender.amqp.password': config.get("amqp", "host"),
-    'log4j.appender.amqp.virtualHost': config.get("amqp", "host"),
+    'log4j.appender.amqp.port': int(config.get("amqp", "port")),
+    'log4j.appender.amqp.username': config.get("amqp", "user"),
+    'log4j.appender.amqp.password': config.get("amqp", "password"),
+    'log4j.appender.amqp.virtualHost': config.get("amqp", "vhost"),
     'log4j.appender.amqp.routingKeyPattern': 'log.%p.%X{job_id}',
-    'log4j.appender.amqp.exchange': config.get("amqp", "host"),
+    'log4j.appender.amqp.exchange': config.get("amqp", "exchange"),
     'log4j.appender.amqp.layout': 'org.apache.log4j.PatternLayout',
     'log4j.appender.amqp.layout.ConversionPattern': LOG4J_AMQP_FORMAT,
 }
