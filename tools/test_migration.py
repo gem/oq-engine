@@ -15,6 +15,7 @@ def load(path):
 
 def pg_dump(to_file):
     pg = subprocess.Popen(['pg_dump', '--schema-only', '-U', db_admin_user,
+                           '--exclude-schema', 'public',
                            original_db], stdout=subprocess.PIPE)
 
     comments = []
