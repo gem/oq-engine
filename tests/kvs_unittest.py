@@ -30,6 +30,7 @@ from openquake import logs
 from openquake import kvs
 from openquake import settings
 from tests.utils import helpers
+from tests.utils.helpers import patch
 
 
 from openquake.kvs import tokens
@@ -329,7 +330,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         If a Redis 'delete' does not succeed, the method will return False. The
         'delete' method will be mocked in this test to produce such an error.
         """
-        with mock.patch('redis.client.Redis.delete') as delete_mock:
+        with patch('redis.client.Redis.delete') as delete_mock:
             delete_mock.return_value = False
 
             self.assertRaises(RuntimeError, kvs.cache_gc, self.test_job)
