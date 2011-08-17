@@ -235,7 +235,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
 
     def _store_gmfs(self, gmfs, row, column):
-        key = kvs.tokens.gmfs_key(self.job_id, column, row)
+        key = kvs.tokens.gmf_set_key(self.job_id, column, row)
         kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
