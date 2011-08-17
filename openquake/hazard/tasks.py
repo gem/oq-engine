@@ -34,15 +34,13 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
-from openquake.java import jtask
+from openquake.java import jtask as task
 from openquake.job import mixins
 from openquake.logs import HAZARD_LOG
-from openquake.utils.tasks import oq_task
 
 
-@jtask
-@oq_task
-def generate_erf(job, logger):
+@task
+def generate_erf(job_id):
     """
     Stubbed ERF generator
 
@@ -53,45 +51,44 @@ def generate_erf(job, logger):
     """
 
     # TODO(JM): implement real ERF computation
-    job_id = job.job_id
+
     erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
     kvs.get_client().set(erf_key, json.JSONEncoder().encode([job_id]))
 
     return job_id
 
 
-@jtask
-@oq_task
-def compute_ground_motion_fields(hazengine, logger, site_list, gmf_id, seed):
+@task
+def compute_ground_motion_fields(job_id, site_list, gmf_id, seed):
     """ Generate ground motion fields """
     # TODO(JMC): Use a block_id instead of a site_list
+    hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
         hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
 
-@jtask
-@oq_task
-def compute_hazard_curve(hazengine, logger, site_list,
-                         realization, callback=None):
+
+@task
+def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
+    hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
         keys = hazengine.compute_hazard_curve(site_list, realization)
 
         if callback:
-            subtask(callback).delay(hazengine.job_id, site_list)
+            subtask(callback).delay(job_id, site_list)
 
         return keys
 
 
-@jtask
-@oq_task
-def compute_mgm_intensity(job, logger, block_id, site_id):
+@task
+def compute_mgm_intensity(job_id, block_id, site_id):
     """
     Compute mean ground intensity for a specific site.
     """
 
     kvs_client = kvs.get_client()
 
-    mgm_key = kvs.generate_product_key(job.job_id, kvs.tokens.MGM_KEY_TOKEN,
+    mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN,
         block_id, site_id)
     mgm = kvs_client.get(mgm_key)
 
@@ -107,23 +104,23 @@ def compute_mgm_intensity(job, logger, block_id, site_id):
     return json.JSONDecoder().decode(mgm)
 
 
-@jtask
-@oq_task
-def compute_mean_curves(job, logger, sites, realizations):
+@task
+def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
-    logger.info("Computing MEAN curves for %s sites", len(sites))
+    HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
+            % (len(sites), job_id))
 
-    return classical_psha.compute_mean_hazard_curves(job.job_id, sites,
+    return classical_psha.compute_mean_hazard_curves(job_id, sites,
         realizations)
 
 
-@jtask
-@oq_task
-def compute_quantile_curves(job, logger, sites, realizations, quantiles):
+@task
+def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
-    logger.info("Computing QUANTILE curves for %s sites", len(sites))
+    HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
+            % (len(sites), job_id))
 
-    return classical_psha.compute_quantile_hazard_curves(job.job_id, sites,
+    return classical_psha.compute_quantile_hazard_curves(job_id, sites,
         realizations, quantiles)
