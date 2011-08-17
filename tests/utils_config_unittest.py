@@ -23,12 +23,15 @@ Test related to code in openquake/utils/config.py
 
 
 import os
+import textwrap
 import unittest
 
 from openquake.utils import config
 
+from tests.helpers import TestMixin
 
-class ConfigTestCase(unittest.TestCase):
+
+class ConfigTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of the utils.config.Config class."""
 
     def setUp(self):
@@ -68,3 +71,107 @@ class ConfigTestCase(unittest.TestCase):
             ["/etc/openquake/openquake.cfg",
              "%s/openquake.cfg" % os.path.abspath(os.getcwd())],
             config.Config()._get_paths())
+
+    def test_load_from_file_with_no_config_files(self):
+        """In the absence of config files the `cfg` dict will be empty."""
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertEqual([], config.Config().cfg.keys())
+
+    def test_load_from_file_with_global(self):
+        """The config data in the global file is loaded correctly."""
+        content='''
+            [A]
+            a=1
+            b=c
+
+            [B]
+            b=2'''
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertEqual(["A", "B"], sorted(config.Config().cfg.keys()))
+        self.assertEqual({"a": "1", "b": "c"}, config.Config().cfg.get("A"))
+        self.assertEqual({"b": "2"}, config.Config().cfg.get("B"))
+
+    def test_load_from_file_with_local(self):
+        """The config data in the local file is loaded correctly."""
+        content='''
+            [C]
+            c=3
+            d=e
+
+            [D]
+            d=4'''
+        local_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_LOCAL_CFG_PATH"] = local_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertEqual(["C", "D"], sorted(config.Config().cfg.keys()))
+        self.assertEqual({"c": "3", "d": "e"}, config.Config().cfg.get("C"))
+        self.assertEqual({"d": "4"}, config.Config().cfg.get("D"))
+
+    def test_load_from_file_with_local_and_global(self):
+        """
+        The config data in the local and global files is loaded correctly.
+        """
+        content='''
+            [A]
+            a=1
+            b=c
+
+            [B]
+            b=2'''
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        content='''
+            [C]
+            c=3
+            d=e
+
+            [D]
+            d=4'''
+        local_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_LOCAL_CFG_PATH"] = local_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertEqual(["A", "B", "C", "D"],
+                         sorted(config.Config().cfg.keys()))
+        self.assertEqual({"a": "1", "b": "c"}, config.Config().cfg.get("A"))
+        self.assertEqual({"b": "2"}, config.Config().cfg.get("B"))
+        self.assertEqual({"c": "3", "d": "e"}, config.Config().cfg.get("C"))
+        self.assertEqual({"d": "4"}, config.Config().cfg.get("D"))
+
+    def test_load_from_file_with_local_overriding_global(self):
+        """
+        The config data in the local and global files is loaded correctly.
+        The local data will override the global one.
+        """
+        content='''
+            [A]
+            a=1
+            b=c
+
+            [B]
+            b=2'''
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        content='''
+            [A]
+            a=2
+            d=e
+
+            [D]
+            c=d-1
+            d=4'''
+        local_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_LOCAL_CFG_PATH"] = local_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+        self.assertEqual(["A", "B", "D"],
+                         sorted(config.Config().cfg.keys()))
+        self.assertEqual({"a": "2", "b": "c", "d": "e"},
+                         config.Config().cfg.get("A"))
+        self.assertEqual({"b": "2"}, config.Config().cfg.get("B"))
+        self.assertEqual({"c": "d-1", "d": "4"}, config.Config().cfg.get("D"))
