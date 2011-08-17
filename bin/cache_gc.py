@@ -37,7 +37,7 @@ oqpath.set_oq_path()
 from openquake import job
 from openquake import kvs
 from openquake import logs
-from openquake import settings
+from openquake.utils import config
 
 LOG = logs.LOG
 
@@ -137,7 +137,7 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    logs.init_logs(level='info', log_type=settings.LOGGING_BACKEND)
+    logs.init_logs(level='info', log_type=config.get("logging", "backend"))
     job.setup_job_logging(job_id=job_id)
 
     LOG.info('Attempting to clear cache data for job %s...' % job_id)
