@@ -18,6 +18,7 @@
 from amqplib import client_0_8 as amqp
 import logging
 import os
+import multiprocessing
 import sys
 import unittest
 
@@ -136,13 +137,13 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
     def test_python_printing(self):
         msg = 'This is a test print statement'
         print msg
-        self.assert_file_last_line_equal('WARNING:root:' + msg)
+        self.assert_file_last_line_equal('WARNING MainProcess [root] - ' + msg)
 
     def test_python_logging(self):
         msg = 'This is a test log entry'
         logs.LOG.error(msg)
 
-        self.assert_file_last_line_equal('ERROR:root:' + msg)
+        self.assert_file_last_line_equal('ERROR MainProcess [root] - ' + msg)
 
     def test_java_printing(self):
         msg = 'This is a test java print statement'
@@ -329,6 +330,10 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
     ROUTING_KEY = 'log.*.*'
 
     def setUp(self):
+        # save and override process name
+        self.process_name = multiprocessing.current_process().name
+        multiprocessing.current_process().name = '->UnitTestProcess<-'
+
         # reset Log4j config
         jvm = java.jvm()
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
@@ -339,7 +344,7 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         # setup AMQP logging
         logs.init_logs('amqp', 'debug')
         java.init_logs('amqp', 'debug')
-        job.set_job_id('123')
+        job.setup_job_logging('123')
 
     def tearDown(self):
         # reset Log4j config
@@ -349,6 +354,9 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
 
         # reset logging config
         cleanup_loggers()
+
+        # restore process name
+        multiprocessing.current_process().name = self.process_name
 
     def test_log_configuration(self):
         """Test that the AMQP log configuration is consistent"""
@@ -384,7 +392,6 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         self.assertEquals(10, len(messages))
 
         # check message order
-        index = 0
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
@@ -395,7 +402,6 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
                                 '"%s" contained in "%s"' % (msg, log))
 
         # check topic
-        index = 0
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
@@ -406,3 +412,9 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
                     expected, got,
                     '%s %s routing key: expected %s got %s' % (
                         source, level, expected, got))
+
+        # check process name in messages
+        for i, msg in enumerate(messages):
+            self.assertTrue(' ->UnitTestProcess<- ' in msg.body,
+                            'process name in %d-th log entry "%s"' % (
+                    i, msg.body))
