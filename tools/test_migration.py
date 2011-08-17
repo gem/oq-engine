@@ -2,6 +2,7 @@
 
 import re
 import subprocess
+import sys
 
 db_admin_user = 'postgres'
 original_db = 'original'
@@ -88,4 +89,6 @@ subprocess.check_call(['tools/dbmaint.py', '--db', original_db,
 
 pg_dump('/tmp/after.sql')
 
-subprocess.call(['diff', '-u', '/tmp/fresh.sql', '/tmp/after.sql'])
+res = subprocess.call(['diff', '-u', '/tmp/fresh.sql', '/tmp/after.sql'])
+
+sys.exit(res)
