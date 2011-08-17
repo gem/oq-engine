@@ -88,4 +88,4 @@ subprocess.check_call(['tools/dbmaint.py', '--db', original_db,
 
 pg_dump('/tmp/after.sql')
 
-subprocess.call('diff -u /tmp/fresh.sql /tmp/after.sql | less', shell=True)
+subprocess.call(['diff', '-u', '/tmp/fresh.sql', '/tmp/after.sql'])
