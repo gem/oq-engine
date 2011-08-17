@@ -210,3 +210,16 @@ class GetSectionTestCase(TestMixin, unittest.TestCase):
         os.environ.clear()
         os.environ.update(self.orig_env)
 
+    def test_get_section_merely_calls_get_on_config_data_dict(self):
+        "config.get_section() merely makes use of Config().get()"""
+        orig_method = config.Config().get
+
+        def fake_get(section):
+            self.assertEqual("f@k3", section)
+            return {"this": "is", "so": "fake"}
+
+        config.Config().get = fake_get
+        self.assertEqual({"this": "is", "so": "fake"},
+                         config.get_section("f@k3"))
+        config.Config().get = orig_method
+
