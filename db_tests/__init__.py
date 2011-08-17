@@ -20,7 +20,6 @@
 
 from bulk_insert_unittest import *
 from db_loader_unittest import *
-from helpers import *
 from input_risk_unittest import *
 from job_unittest import *
 from output_hazard_unittest import *
