@@ -201,7 +201,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
 
 
 class GetSectionTestCase(unittest.TestCase):
-    """Tests the behaviour of the utils.config.get_section()."""
+    """Tests the behaviour of utils.config.get_section()"""
 
     def test_get_section_merely_calls_get_on_config_data_dict(self):
         "config.get_section() merely makes use of Config().get()"""
@@ -218,7 +218,7 @@ class GetSectionTestCase(unittest.TestCase):
 
 
 class GetTestCase(unittest.TestCase):
-    """Tests the behaviour of the utils.config.get()."""
+    """Tests the behaviour of utils.config.get()"""
 
     def test_get_with_empty_section_data(self):
         """config.get() returns `None` if the section data dict is empty."""
