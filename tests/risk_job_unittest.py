@@ -280,7 +280,7 @@ class RiskMixinTestCase(unittest.TestCase):
         with patch('openquake.kvs.get_list_json_decoded') as get_mock:
 
             def get_list_json_decoded(key):
-                _, row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
+                row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
 
                 return [GRID_ASSETS[(row, col)]]
 
