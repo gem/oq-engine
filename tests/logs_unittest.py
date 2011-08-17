@@ -224,7 +224,7 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
         # now there is a queue, send a test message
         sender = java.AMQPConnection()
         sender.setHost(config.get("amqp", "host"))
-        sender.setPort(config.get("amqp", "port"))
+        sender.setPort(int(config.get("amqp", "port")))
         sender.setUsername(config.get("amqp", "user"))
         sender.setPassword(config.get("amqp", "password"))
         sender.setVirtualHost(config.get("amqp", "vhost"))
