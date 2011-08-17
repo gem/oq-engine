@@ -28,8 +28,10 @@ import os
 import redis
 import time
 import subprocess
+import functools
 
 import guppy
+import mock as mock_module
 
 from openquake import flags
 from openquake import logs
@@ -56,6 +58,41 @@ SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
+
+
+#: Wraps mock.patch() to make mocksignature=True by default.
+patch = functools.partial(mock_module.patch, mocksignature=True)
+
+
+def _patched_mocksignature(func, mock=None, skipfirst=False):
+    """
+    Fixes arguments order and support of staticmethods in mock.mocksignature.
+    """
+    static = False
+    if isinstance(func, staticmethod):
+        static = True
+        func = func.__func__
+
+    if mock is None:
+        mock = Mock()
+    signature, func = mock_module._getsignature(func, skipfirst)
+
+    checker = eval("lambda %s: None" % signature)
+    mock_module._copy_func_details(func, checker)
+
+    def funcopy(*args, **kwargs):
+        checker(*args, **kwargs)
+        return mock(*args, **kwargs)
+
+    if not hasattr(mock_module, '_setup_func'):
+        # compatibility with mock < 0.8
+        funcopy.mock = mock
+    else:
+        mock_module._setup_func(funcopy, mock)
+    if static:
+        funcopy = staticmethod(funcopy)
+    return funcopy
+mock_module.mocksignature = _patched_mocksignature
 
 
 def get_data_path(file_name):
