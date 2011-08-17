@@ -197,3 +197,16 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
         config.Config().cfg.clear()
         config.Config()._load_from_file()
         self.assertEqual({"f": "6", "g": "h"}, config.Config().get("E"))
+
+
+class GetSectionTestCase(TestMixin, unittest.TestCase):
+    """Tests the behaviour of the utils.config.get_section()."""
+
+    def setUp(self):
+        self.orig_env = os.environ.copy()
+        os.environ.clear()
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+
