@@ -59,7 +59,6 @@ class ProbabilisticEventMixin():
     def execute(self):
         """ Execute a ProbabilisticLossRatio Job """
 
-        results = []
         tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
@@ -74,13 +73,13 @@ class ProbabilisticEventMixin():
                 task.wait(timeout=None)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
-                return []
+                return
 
         # the aggregation must be computed after the slicing
         # of the gmfs has been completed
         aggregate_loss_curve.compute_aggregate_curve(self)
 
-        return results  # TODO(jmc): Move output from being a decorator
+        # TODO(jmc): Move output from being a decorator
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
