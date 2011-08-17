@@ -93,7 +93,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         kvs.flush()
 
-    def test_triggered_with_deterministic_calculation_mode(self):
+    def test_deterministic_job_completes(self):
         """The deterministic calculator is triggered.
 
         When CALCULATION_MODE is set to "Deterministic" the deterministic event
@@ -107,7 +107,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         # job. We don't actually want that to happen in this test.
         with mock.patch('subprocess.Popen'):
             # True, True means that both mixins (hazard and risk) are triggered
-            self.assertEqual([True, True], self.job.launch())
+            self.job.launch()
 
     def test_the_hazard_subsystem_stores_gmfs_for_all_the_sites(self):
         """The hazard subsystem stores the computed gmfs in kvs.

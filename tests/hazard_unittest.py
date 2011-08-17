@@ -137,39 +137,25 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_generate_hazard_curves_using_classical_psha(self):
 
-        def verify_order_of_haz_curve_keys(hazengine, result_keys):
-            """ The classical PSHA execute() returns a list of keys
-            for the curves stored to the KVS. We need to make sure
-            the order is correct. """
-
-            expected_keys = []
-            realizations = int(
-                hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-            # LOG.debug("dir of hazengine is %s" % dir(hazengine))
-            for realization in xrange(0, realizations):
-                for site in hazengine.sites_for_region():
-                    key = tokens.hazard_curve_poes_key(
-                        hazengine.job_id, realization, site)
-                    expected_keys.append(key)
-            self.assertEqual(expected_keys, result_keys,
-                "computation didn't yield hazard curve keys in "\
-                "expected order")
-
-        def verify_realization_haz_curves_stored_to_kvs(result_keys):
+        def verify_realization_haz_curves_stored_to_kvs(hazengine):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
             # TODO (LB): At some point we need to test the actual
             # results to verify they are correct
 
-            LOG.debug("verifying KVS entries for %s hazard curves" % \
-                len(result_keys))
+            realizations = int(
+                hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
-            for key in result_keys:
-                value = self.kvs_client.get(key)
-                # LOG.debug("kvs value is %s" % value)
-                self.assertTrue(value is not None,
-                    "no non-empty value found at KVS key")
+            for realization in xrange(0, realizations):
+                for site in hazengine.sites_for_region():
+                    key = tokens.hazard_curve_poes_key(
+                        hazengine.job_id, realization, site)
+
+                    value = self.kvs_client.get(key)
+                    # LOG.debug("kvs value is %s" % value)
+                    self.assertTrue(value is not None,
+                        "no non-empty value found at KVS key")
 
         def verify_mean_haz_curves_stored_to_kvs(hazengine):
             """ Make sure that the keys and non-empty values for mean
@@ -356,10 +342,9 @@ class HazardEngineTestCase(unittest.TestCase):
         hazengine = helpers.job_from_file(test_file_path)
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
-            result_keys = hazengine.execute()
+            hazengine.execute()
 
-            verify_order_of_haz_curve_keys(hazengine, result_keys)
-            verify_realization_haz_curves_stored_to_kvs(result_keys)
+            verify_realization_haz_curves_stored_to_kvs(hazengine)
             verify_realization_haz_curves_stored_to_nrml(hazengine)
 
             # hazard curves: check results of mean and quantile computation
