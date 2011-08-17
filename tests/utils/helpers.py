@@ -23,12 +23,14 @@ Helper functions for our unit and smoke tests.
 """
 
 
+import functools
 import logging
 import os
 import redis
-import time
+import shutil
 import subprocess
-import functools
+import tempfile
+import time
 
 import guppy
 import mock as mock_module
@@ -38,6 +40,9 @@ from openquake import logs
 from openquake.job import Job
 from openquake import producer
 from openquake import settings
+
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
 
 FLAGS = flags.FLAGS
 
@@ -345,3 +350,210 @@ class TestStore(object):
             return TestStore._conn.lrange(oid, 0, num_of_words + 1)
         else:
             return TestStore._conn.lindex(oid, 0)
+
+
+class TestMixin(object):
+    """Mixin class with various helper methods."""
+
+    def touch(self, content=None, dir=None, prefix="tmp", suffix="tmp"):
+        """Create temporary file with the given content.
+
+        Please note: the temporary file must be deleted bu the caller.
+
+        :param string content: the content to write to the temporary file.
+        :param string dir: directory where the file should be created
+        :param string prefix: file name prefix
+        :param string suffix: file name suffix
+        :returns: a string with the path to the temporary file
+        """
+        if dir is not None:
+            if not os.path.exists(dir):
+                os.makedirs(dir)
+        fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+        if content:
+            fh = os.fdopen(fh, "w")
+            fh.write(content)
+            fh.close()
+        return path
+
+    def create_job_with_mixin(self, params, mixin_class):
+        """
+        Create a Job and mixes in a Mixin.
+
+        This method, and its double `unload_job_mixin`, when called in the
+        setUp and tearDown of a TestCase respectively, have the effect of a
+        `with mixin_class` spanning a single test.
+
+        :param params: Job parameters
+        :type params: :py:class:`dict`
+        :param mixin_class: the mixin that will be mixed in the job
+        :type mixin_class: :py:class:`openquake.job.Mixin`
+        :returns: a Job
+        :rtype: :py:class:`openquake.job.Job`
+        """
+        # preserve some status to be used by unload
+        self._calculation_mode = params.get('CALCULATION_MODE')
+        self._job = create_job(params)
+        self._mixin = mixin_class(self._job, mixin_class)
+        return self._mixin._load()
+
+    def unload_job_mixin(self):
+        """
+        Remove from the job the Mixin mixed in by create_job_with_mixin.
+        """
+        self._job.params['CALCULATION_MODE'] = self._calculation_mode
+        self._mixin._unload()
+
+
+class DbTestMixin(TestMixin):
+    """Mixin class with various helper methods."""
+
+    IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
+            0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
+
+    def setup_upload(self, dbkey=None):
+        """Create an upload with associated inputs.
+
+        :param integer dbkey: if set use the upload record with given db key.
+        :returns: a :py:class:`db.alchemy.models.Upload` instance
+        """
+        session = get_db_session("uiapi", "writer")
+        if dbkey:
+            upload = session.query(Upload).filter(Upload.id == dbkey).one()
+            return upload
+
+        user = session.query(OqUser).filter(
+            OqUser.user_name == "openquake").one()
+        upload = Upload(owner=user, path=tempfile.mkdtemp())
+        session.add(upload)
+        session.commit()
+        return upload
+
+    def teardown_upload(self, upload, filesystem_only=True):
+        """
+        Tear down the file system (and potentially db) artefacts for the
+        given upload.
+
+        :param upload: the :py:class:`db.alchemy.models.Upload` instance
+            in question
+        :param bool filesystem_only: if set the upload/input database records
+            will be left intact. This saves time and the test db will be
+            dropped/recreated prior to the next db test suite run anyway.
+        """
+        # This is like "rm -rf path"
+        shutil.rmtree(upload.path, ignore_errors=True)
+        if filesystem_only:
+            return
+        session = get_db_session("uiapi", "writer")
+        session.delete(upload)
+        session.commit()
+
+    def setup_classic_job(self, create_job_path=True, upload_id=None):
+        """Create a classic job with associated upload and inputs.
+
+        :param integer upload_id: if set use upload record with given db key.
+        :param bool create_job_path: if set the path for the job will be
+            created and captured in the job record
+        :returns: a :py:class:`db.alchemy.models.OqJob` instance
+        """
+        session = get_db_session("uiapi", "writer")
+        upload = self.setup_upload(upload_id)
+        oqp = OqParams()
+        oqp.job_type = "classical"
+        oqp.upload = upload
+        oqp.region_grid_spacing = 0.01
+        oqp.min_magnitude = 5.0
+        oqp.investigation_time = 50.0
+        oqp.component = "gmroti50"
+        oqp.imt = "pga"
+        oqp.truncation_type = "twosided"
+        oqp.truncation_level = 3
+        oqp.reference_vs30_value = 760
+        oqp.imls = self.IMLS
+        oqp.poes = [0.01, 0.10]
+        oqp.realizations = 1
+        oqp.region = (
+            "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
+        session.add(oqp)
+        job = OqJob(oq_params=oqp, owner=upload.owner, job_type="classical")
+        session.add(job)
+        session.commit()
+        if create_job_path:
+            job.path = os.path.join(upload.path, str(job.id))
+            session.add(job)
+            session.commit()
+            os.mkdir(job.path)
+            os.chmod(job.path, 0777)
+        return job
+
+    def teardown_job(self, job, filesystem_only=True):
+        """
+        Tear down the file system (and potentially db) artefacts for the
+        given job.
+
+        :param job: the :py:class:`db.alchemy.models.OqJob` instance
+            in question
+        :param bool filesystem_only: if set the oq_job/oq_param/upload/input
+            database records will be left intact. This saves time and the test
+            db will be dropped/recreated prior to the next db test suite run
+            anyway.
+        """
+        oqp = job.oq_params
+        if oqp.upload is not None:
+            self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
+        if filesystem_only:
+            return
+        session = get_db_session("uiapi", "writer")
+        session.delete(job)
+        session.delete(oqp)
+        session.commit()
+
+    def setup_output(self, job_to_use=None, output_type="hazard_map",
+                     db_backed=True):
+        """Create an output object of the given type.
+
+        :param job_to_use: if set use the passed
+            :py:class:`db.alchemy.models.OqJob` instance as opposed to
+            creating a new one.
+        :param str output_type: map type, one of "hazard_map", "loss_map"
+        :param bool db_backed: initialize the property of the newly created
+            :py:class:`db.alchemy.models.Output` instance with this value.
+        :returns: a :py:class:`db.alchemy.models.Output` instance
+        """
+        job = job_to_use if job_to_use else self.setup_classic_job()
+        output = Output(owner=job.owner, oq_job=job, output_type=output_type,
+                        db_backed=db_backed)
+        output.path = self.generate_output_path(job, output_type)
+        output.display_name = os.path.basename(output.path)
+        session = get_db_session("uiapi", "writer")
+        session.add(output)
+        session.commit()
+        return output
+
+    def generate_output_path(self, job, output_type="hazard_map"):
+        """Return a random output path for the given job."""
+        path = self.touch(
+            dir=os.path.join(job.path, "computed_output"), suffix=".xml",
+            prefix="hzrd." if output_type == "hazard_map" else "loss.")
+        return path
+
+    def teardown_output(self, output, teardown_job=True, filesystem_only=True):
+        """
+        Tear down the file system (and potentially db) artefacts for the
+        given output.
+
+        :param output: the :py:class:`db.alchemy.models.Output` instance
+            in question
+        :param bool teardown_job: the associated job and its related artefacts
+            shall be torn down as well.
+        :param bool filesystem_only: if set the various database records will
+            be left intact. This saves time and the test db will be
+            dropped/recreated prior to the next db test suite run anyway.
+        """
+        job = output.oq_job
+        if not filesystem_only:
+            session = get_db_session("uiapi", "writer")
+            session.delete(output)
+            session.commit()
+        if teardown_job:
+            self.teardown_job(job, filesystem_only=filesystem_only)
