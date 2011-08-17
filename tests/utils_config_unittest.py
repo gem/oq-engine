@@ -28,8 +28,7 @@ import unittest
 
 from openquake.utils import config
 
-from tests.helpers import TestMixin
-from tests.utils.helpers import patch
+from tests.utils.helpers import TestMixin, patch
 
 
 class ConfigTestCase(TestMixin, unittest.TestCase):
