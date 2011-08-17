@@ -63,8 +63,7 @@ class ClassicalPSHABasedMixin:
                 task.wait(timeout=None)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
-                return []
-        return True
+                return
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""

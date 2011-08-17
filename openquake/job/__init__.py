@@ -19,6 +19,7 @@
 """A single hazard/risk job."""
 
 import hashlib
+import multiprocessing
 import os
 import re
 import subprocess
@@ -80,7 +81,7 @@ def run_job(job_file, output_type):
         a_job.set_status('running')
 
         try:
-            results = a_job.launch()
+            a_job.launch()
         except sqlalchemy.exc.SQLAlchemyError:
             # Try to cleanup the session status to have a chance to update the
             # job record without further errors.
@@ -97,9 +98,6 @@ def run_job(job_file, output_type):
             raise
         else:
             a_job.set_status('succeeded')
-
-            for filepath in results:
-                print filepath
     else:
         a_job.set_status('failed')
 
@@ -206,15 +204,19 @@ def prepare_job(params):
     return job
 
 
-def set_job_id(job_id):
-    """Make the job id available to the Java and Python loggers"""
+def setup_job_logging(job_id):
+    """Make job id and process name available to the Java and Python loggers"""
+    process_name = multiprocessing.current_process().name
 
     # Make the job_id available to the java logging context.
     mdc = java.jclass('MDC')
     mdc.put('job_id', job_id)
+    mdc.put('processName', process_name)
 
     # make the job_id available to the Python logging context
     logs.AMQPHandler.MDC['job_id'] = job_id
+    # this is only necessary for Python 2.6
+    logs.AMQPHandler.MDC['processName'] = process_name
 
 
 class Job(object):
@@ -319,7 +321,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
-        set_job_id(self.job_id)
+        setup_job_logging(self.job_id)
 
         self.blocks_keys = []
         self.params = params
@@ -405,7 +407,6 @@ class Job(object):
         output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
-        results = []
 
         for (key, mixin) in Mixin.ordered_mixins():
             if key.upper() not in self.sections:
@@ -417,11 +418,9 @@ class Job(object):
                 # _execute() method calls the expected tasks.
                 LOG.debug(
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
-                results.extend(self.execute())
+                self.execute()
 
         self.cleanup()
-
-        return results
 
     def cleanup(self):
         """
