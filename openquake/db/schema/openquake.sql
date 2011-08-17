@@ -656,7 +656,6 @@ CREATE TABLE uiapi.output (
 
 
 -- A place to store error information in the case of a job failure.
--- The intention is to have at most 1 error_msg record per job.
 CREATE TABLE uiapi.error_msg (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
@@ -1018,7 +1017,7 @@ ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
