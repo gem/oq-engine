@@ -11,7 +11,6 @@
 
 
 -- A place to store error information in the case of a job failure.
--- The intention is to have at most 1 error_msg record per job.
 CREATE TABLE uiapi.error_msg (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
@@ -22,11 +21,11 @@ CREATE TABLE uiapi.error_msg (
 ) TABLESPACE uiapi_ts;
 
 ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 
 -- comments:
-COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure. The intention is to have at most 1 error_msg record per job.';
+COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure.';
 COMMENT ON COLUMN uiapi.error_msg.brief IS 'Summary of the error message.';
 COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';
 
@@ -34,4 +33,4 @@ COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';
 -- security:
 GRANT SELECT ON uiapi.error_msg TO oq_uiapi_reader;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_uiapi_writer;
-
+GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
