@@ -70,10 +70,9 @@ def output(fn):
         conditional_loss_poes = [float(x) for x in self.params.get(
                     'CONDITIONAL_LOSS_POE', "0.01").split()]
 
-        results = []
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
-            results.extend(self._write_output_for_block(self.job_id, block_id))
+            self._write_output_for_block(self.job_id, block_id)
 
         for loss_poe in conditional_loss_poes:
             path = os.path.join(self.base_path,
@@ -93,10 +92,6 @@ def output(fn):
                     + self.asset_losses_per_site(
                         loss_poe,
                         self.grid_assets_iterator(self.region.grid)))
-
-                results.append(path)
-
-        return results
 
     return output_writer
 
