@@ -355,13 +355,13 @@ def _kvs_key_type(kvs_key):
     return kvs_key.split(KVS_KEY_SEPARATOR, 2)[1]
 
 
-def gmfs_key(job_id, column, row):
-    """Return the key used to store a ground motion field set
-    for a single site."""
+def gmf_set_key(job_id, column, row):
+    """Return the key used to store a ground motion field set for a single
+    site."""
     return generate_key(generate_job_key(job_id), GMF_KEY_TOKEN, column, row)
 
 
-def column_row_from_gmfs_key(kvs_key):
+def column_row_from_gmf_set_key(kvs_key):
     """Extract column and row from a KVS key of a ground motion field set."""
     assert _kvs_key_type(kvs_key) == GMF_KEY_TOKEN
 

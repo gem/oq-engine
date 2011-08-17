@@ -278,7 +278,7 @@ def _generate_curve(losses, probs_of_exceedance):
 def _assets_keys_for_gmfs(job_id, gmfs_key):
     """Return the asset related to the GMFs given."""
 
-    column, row = kvs.tokens.column_row_from_gmfs_key(gmfs_key)
+    column, row = kvs.tokens.column_row_from_gmf_set_key(gmfs_key)
 
     key = kvs.tokens.asset_key(job_id, row, column)
 
