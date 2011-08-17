@@ -127,19 +127,20 @@ class TokensTestCase(unittest.TestCase):
         self.site = "Testville,TestLand"
 
     def test_generate_key(self):
-        key = kvs.tokens.generate_key(
+        key = kvs.tokens._generate_key(
             self.job_id, self.product, self.block_id, self.site)
 
-        ev = "%s!%s!%s!%s" % (
-                self.job_id, self.product, self.block_id, self.site)
+        ev = "%s!%s!%s!%s" % (kvs.tokens.generate_job_key(self.job_id),
+                              self.product, self.block_id, self.site)
         self.assertEqual(key, ev)
 
     def test_kvs_doesnt_support_spaces_in_keys(self):
         self.product = "A TestProduct"
         self.site = "Testville, TestLand"
-        key = kvs.tokens.generate_key(self.job_id, self.product, self.site)
+        key = kvs.tokens._generate_key(self.job_id, self.product, self.site)
 
-        ev = "%s!ATestProduct!Testville,TestLand" % self.job_id
+        ev = "%s!ATestProduct!Testville,TestLand"\
+             % kvs.tokens.generate_job_key(self.job_id)
         self.assertEqual(key, ev)
 
     def test_generate_job_key(self):
