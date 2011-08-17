@@ -81,7 +81,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
 
     def test_load_from_file_with_global(self):
         """The config data in the global file is loaded correctly."""
-        content='''
+        content = '''
             [A]
             a=1
             b=c
@@ -98,7 +98,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
 
     def test_load_from_file_with_local(self):
         """The config data in the local file is loaded correctly."""
-        content='''
+        content = '''
             [C]
             c=3
             d=e
@@ -117,7 +117,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
         """
         The config data in the local and global files is loaded correctly.
         """
-        content='''
+        content = '''
             [A]
             a=1
             b=c
@@ -126,7 +126,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
             b=2'''
         site_path = self.touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
-        content='''
+        content = '''
             [C]
             c=3
             d=e
@@ -149,7 +149,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
         The config data in the local and global files is loaded correctly.
         The local data will override the global one.
         """
-        content='''
+        content = '''
             [A]
             a=1
             b=c
@@ -158,7 +158,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
             b=2'''
         site_path = self.touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
-        content='''
+        content = '''
             [A]
             a=2
             d=e
@@ -189,7 +189,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
         """
         get() will correctly return configuration data for known sections.
         """
-        content='''
+        content = '''
             [E]
             f=6
             g=h'''
@@ -202,6 +202,7 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
 
 class GetSectionTestCase(unittest.TestCase):
     """Tests the behaviour of the utils.config.get_section()."""
+
     def test_get_section_merely_calls_get_on_config_data_dict(self):
         "config.get_section() merely makes use of Config().get()"""
         orig_method = config.Config().get
@@ -216,20 +217,38 @@ class GetSectionTestCase(unittest.TestCase):
         config.Config().get = orig_method
 
 
-
 class GetTestCase(unittest.TestCase):
-    """Tests the behaviour of the utils.config.get_section()."""
+    """Tests the behaviour of the utils.config.get()."""
 
-    def test_g3t_section_merely_calls_get_on_config_data_dict(self):
-        "config.get_section() merely makes use of Config().get()"""
-        orig_method = config.Config().get
+    def test_get_with_empty_section_data(self):
+        """config.get() returns `None` if the section data dict is empty."""
+        with patch('openquake.utils.config.get_section') as mock:
+            mock.return_value = dict()
+            self.assertTrue(config.get("whatever", "key") is None)
+            self.assertEqual(1, mock.call_count)
+            args, kwargs = mock.call_args
+            self.assertEqual(("whatever",), args)
+            self.assertEqual({}, kwargs)
 
-        def fake_get(section):
-            self.assertEqual("f@k3", section)
-            return {"this": "is", "so": "fake"}
+    def test_get_with_nonempty_section_data_and_known_key(self):
+        """
+        config.get() correctly returns the configuration datum for known
+        sections/keys.
+        """
+        with patch('openquake.utils.config.get_section') as mock:
+            mock.return_value = dict(a=11)
+            self.assertEqual(11, config.get("hmmm", "a"))
+            self.assertEqual(1, mock.call_count)
+            args, kwargs = mock.call_args
+            self.assertEqual(("hmmm",), args)
+            self.assertEqual({}, kwargs)
 
-        config.Config().get = fake_get
-        self.assertEqual({"this": "is", "so": "fake"},
-                         config.get_section("f@k3"))
-        config.Config().get = orig_method
-
+    def test_get_with_unknown_key(self):
+        """config.get() returns `None` if the `key` is not known."""
+        with patch('openquake.utils.config.get_section') as mock:
+            mock.return_value = dict(b=1)
+            self.assertTrue(config.get("arghh", "c") is None)
+            self.assertEqual(1, mock.call_count)
+            args, kwargs = mock.call_args
+            self.assertEqual(("arghh",), args)
+            self.assertEqual({}, kwargs)
