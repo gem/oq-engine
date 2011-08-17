@@ -24,6 +24,7 @@ import unittest
 from bin import cache_gc
 from openquake import kvs
 from openquake.kvs import tokens
+from tests.utils.helpers import patch
 
 from tests.utils.helpers import cleanup_loggers
 
@@ -77,7 +78,7 @@ class CacheGCTestCase(unittest.TestCase):
         :py:function:`openquake.kvs.cache_gc` will be mocked in this test
         since the actual code is exercised in a separate.
         """
-        with mock.patch('openquake.kvs.cache_gc') as gc_mock:
+        with patch('openquake.kvs.cache_gc') as gc_mock:
             # we don't really care what the return val is
             gc_mock.return_value = 3
 
