@@ -27,8 +27,8 @@ from openquake.job import Job, prepare_job, run_job
 from openquake.db.alchemy.db_utils import get_db_session
 
 from openquake.db.alchemy.models import OqJob
-from db_tests import helpers
-from tests.utils import helpers as test_helpers
+
+from tests.utils import helpers
 from tests.utils.helpers import patch
 
 
@@ -239,22 +239,21 @@ class JobTestCase(unittest.TestCase):
             pass
 
     def test_job_db_record_for_output_type_db(self):
-        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
         session = get_db_session("uiapi", "writer")
 
         session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE),
-                                 'xml')
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
 
         session = get_db_session("uiapi", "writer")
 
         session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_set_status(self):
-        self.job = Job.from_file(test_helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
         session = get_db_session("reslt", "writer")
 
@@ -298,7 +297,7 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            run_job(test_helpers.get_data_path(CONFIG_FILE), 'db')
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('succeeded', self._job_status())
@@ -324,7 +323,7 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
             self.assertRaises(Exception, run_job,
-                              test_helpers.get_data_path(CONFIG_FILE), 'db')
+                              helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -352,7 +351,7 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
             self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
-                              test_helpers.get_data_path(CONFIG_FILE), 'db')
+                              helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -371,7 +370,7 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_is_valid
-            run_job(test_helpers.get_data_path(CONFIG_FILE), 'db')
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
             self.assertEquals(1, self.job.is_valid.call_count)
             self.assertEquals('failed', self._job_status())
