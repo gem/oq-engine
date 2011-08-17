@@ -55,3 +55,14 @@ from utils_general_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
+
+import glob
+import os
+import sys
+
+for path in glob.glob(os.path.join(os.path.dirname(__file__), '*test*.py')):
+    test = os.path.splitext(os.path.basename(path))[0]
+    module = 'tests.' + test
+
+    if module not in sys.modules:
+        print >>sys.stderr, "Potential missing import of " + module
