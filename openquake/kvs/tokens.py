@@ -52,10 +52,32 @@ VULNERABILITY_CURVE_KEY_TOKEN = 'VULNERABILITY_CURVE'
 CURRENT_JOBS = 'CURRENT_JOBS'
 
 
-def generate_key(*parts):
-    """ Create a kvs key """
-    parts = [str(x).replace(" ", "") for x in parts]
-    return KVS_KEY_SEPARATOR.join(parts)
+def _generate_key(job_id, type_, *parts):
+    """
+    Create a kvs key
+    :param job_id: the job id
+    :type job_id: int
+    :param type_: the key type
+    :param type_: string
+    :returns: the KVS key
+    :rtype: string
+    """
+    parts = [generate_job_key(job_id), type_] + [str(p) for p in parts]
+    return KVS_KEY_SEPARATOR.join(parts).replace(' ', '')
+
+
+def _kvs_key_type(kvs_key):
+    """
+    Given a KVS key, extract its type.  For example, given a key for a mean
+    hazard map, the string 'mean_hazard_map' will be returned.
+
+    :param kvs_key: kvs product key
+    :type kvs_key: str
+
+    :returns: type portion of the key
+    """
+    return kvs_key.split(KVS_KEY_SEPARATOR, 2)[1]
+
 
 JOB_KEY_FMT = '::JOB::%s::'
 
@@ -72,8 +94,7 @@ def generate_job_key(job_id):
 
 def generate_blob_key(job_id, blob):
     """ Return the KVS key for a binary blob """
-    return generate_key(generate_job_key(job_id),
-                        hashlib.sha1(blob).hexdigest())
+    return _generate_key(job_id, 'blob', hashlib.sha1(blob).hexdigest())
 
 
 def loss_token(poe):
@@ -84,40 +105,37 @@ def loss_token(poe):
 
 def vuln_key(job_id):
     """Generate the key used to store vulnerability curves."""
-    return generate_key(generate_job_key(job_id), "VULN_CURVES")
+    return _generate_key(job_id, "VULN_CURVES")
 
 
 def asset_key(job_id, row, col):
     """ Return an asset key """
-    return generate_key(generate_job_key(job_id), row, col,
-                        EXPOSURE_KEY_TOKEN)
+    return _generate_key(job_id, EXPOSURE_KEY_TOKEN, row, col)
 
 
 def source_model_key(job_id):
     """ Return the KVS key for the source model of the given job"""
-    return generate_key(generate_job_key(job_id), SOURCE_MODEL_TOKEN)
+    return _generate_key(job_id, SOURCE_MODEL_TOKEN)
 
 
 def gmpe_key(job_id):
     """ Return the KVS key for the GMPE of the given job"""
-    return generate_key(generate_job_key(job_id), GMPE_TOKEN)
+    return _generate_key(job_id, GMPE_TOKEN)
 
 
 def stochastic_set_key(job_id, history, realization):
     """ Return the KVS key for the given job and stochastic set"""
-    return generate_key(generate_job_key(job_id), STOCHASTIC_SET_TOKEN,
-                        history, realization)
+    return _generate_key(job_id, STOCHASTIC_SET_TOKEN, history, realization)
 
 
 def erf_key(job_id):
     """ Return the KVS key for the ERF of the given job"""
-    return generate_key(generate_job_key(job_id), ERF_KEY_TOKEN)
+    return _generate_key(job_id, ERF_KEY_TOKEN)
 
 
 def mgm_key(job_id, block_id, site_id):
     """ Return the KVS key for the MGM of the given job, block and site"""
-    return generate_key(generate_job_key(job_id), MGM_KEY_TOKEN, block_id,
-                        site_id)
+    return _generate_key(job_id, MGM_KEY_TOKEN, block_id, site_id)
 
 
 def asset_row_col_from_kvs_key(kvs_key):
@@ -126,41 +144,34 @@ def asset_row_col_from_kvs_key(kvs_key):
     :param:kvs_key: the key
     :type:kvs_key: string
 
-    :returns: a tuple (job_id, row, col) if the key is of type
-        EXPOSURE_KEY_TOKEN, None otherwise
+    :returns: a tuple (row, col)
     """
+    assert _kvs_key_type(kvs_key) == EXPOSURE_KEY_TOKEN
 
-    payload, _sep, type_ = kvs_key.rpartition(KVS_KEY_SEPARATOR)
+    row, col = kvs_key.rsplit('!', 2)[-2:]
 
-    if type_ == EXPOSURE_KEY_TOKEN:
-        job_id, row, col = payload.split(KVS_KEY_SEPARATOR)
-        return job_id, int(row), int(col)
-    else:
-        return None
+    return int(row), int(col)
 
 
 def loss_ratio_key(job_id, row, col, asset_id):
     """ Return a loss ratio key  """
-    return generate_key(generate_job_key(job_id), row, col,
-                        LOSS_RATIO_CURVE_KEY_TOKEN, asset_id)
+    return _generate_key(job_id, LOSS_RATIO_CURVE_KEY_TOKEN, asset_id,
+                         row, col)
 
 
 def loss_curve_key(job_id, row, col, asset_id):
     """ Return a loss curve key """
-    return generate_key(generate_job_key(job_id), row, col,
-                        LOSS_CURVE_KEY_TOKEN, asset_id)
+    return _generate_key(job_id, LOSS_CURVE_KEY_TOKEN, asset_id, row, col)
 
 
 def loss_key(job_id, row, col, asset_id, poe):
     """ Return a loss key """
-    return generate_key(generate_job_key(job_id), row, col, loss_token(poe),
-                        asset_id)
+    return _generate_key(job_id, loss_token(poe), asset_id, row, col)
 
 
 def _mean_hazard_curve_key(job_id, site_fragment):
     "Common code for the key functions below"
-    return generate_key(MEAN_HAZARD_CURVE_KEY_TOKEN, generate_job_key(job_id),
-                        site_fragment)
+    return _generate_key(job_id, MEAN_HAZARD_CURVE_KEY_TOKEN, site_fragment)
 
 
 def mean_hazard_curve_key(job_id, site):
@@ -193,8 +204,8 @@ def mean_hazard_curve_key_template(job_id):
 
 def _quantile_hazard_curve_key(job_id, site_fragment, quantile):
     "Common code for the key functions below"
-    return generate_key(QUANTILE_HAZARD_CURVE_KEY_TOKEN,
-                        generate_job_key(job_id), site_fragment, str(quantile))
+    return _generate_key(job_id, QUANTILE_HAZARD_CURVE_KEY_TOKEN,
+                         site_fragment, str(quantile))
 
 
 def quantile_hazard_curve_key(job_id, site, quantile):
@@ -233,8 +244,8 @@ def quantile_hazard_curve_key_template(job_id, quantile):
 
 def _mean_hazard_map_key(job_id, site_fragment, poe):
     "Common code for the key functions below"
-    return generate_key(MEAN_HAZARD_MAP_KEY_TOKEN, generate_job_key(job_id),
-                        site_fragment, str(poe))
+    return _generate_key(job_id, MEAN_HAZARD_MAP_KEY_TOKEN, site_fragment,
+                         str(poe))
 
 
 def mean_hazard_map_key(job_id, site, poe):
@@ -274,9 +285,8 @@ def mean_hazard_map_key_template(job_id, poe):
 
 def _quantile_hazard_map_key(job_id, site_fragment, poe, quantile):
     "Common code for the key functions below"
-    return generate_key(QUANTILE_HAZARD_MAP_KEY_TOKEN,
-                        generate_job_key(job_id), site_fragment, str(poe),
-                        str(quantile))
+    return _generate_key(job_id, QUANTILE_HAZARD_MAP_KEY_TOKEN,
+                         site_fragment, str(poe), str(quantile))
 
 
 def quantile_hazard_map_key(job_id, site, poe, quantile):
@@ -318,8 +328,8 @@ def quantile_hazard_map_key_template(job_id, poe, quantile):
 
 def _hazard_curve_poes_key(job_id, realization_num, site_fragment):
     "Common code for the key functions below"
-    return generate_key(HAZARD_CURVE_POES_KEY_TOKEN, generate_job_key(job_id),
-                        realization_num, site_fragment)
+    return _generate_key(job_id, HAZARD_CURVE_POES_KEY_TOKEN, realization_num,
+                         site_fragment)
 
 
 def hazard_curve_poes_key(job_id, realization_num, site):
@@ -333,23 +343,10 @@ def hazard_curve_poes_key_template(job_id, realization_num):
     return _hazard_curve_poes_key(job_id, realization_num, '%s')
 
 
-def _kvs_key_type(kvs_key):
-    """
-    Given a KVS key, extract its type.  For example, given a key for a mean
-    hazard map, the string 'mean_hazard_map' will be returned.
-
-    :param kvs_key: kvs product key
-    :type kvs_key: str
-
-    :returns: type portion of the key
-    """
-    return kvs_key.split(KVS_KEY_SEPARATOR, 2)[1]
-
-
 def gmf_set_key(job_id, column, row):
     """Return the key used to store a ground motion field set for a single
     site."""
-    return generate_key(generate_job_key(job_id), GMF_KEY_TOKEN, column, row)
+    return _generate_key(job_id, GMF_KEY_TOKEN, column, row)
 
 
 def column_row_from_gmf_set_key(kvs_key):
@@ -372,5 +369,4 @@ def ground_motion_values_key(job_id, point):
     :rtype: string
     """
 
-    return generate_key(generate_job_key(job_id), GMFS_KEY_TOKEN,
-                        point.column, point.row)
+    return _generate_key(job_id, GMFS_KEY_TOKEN, point.column, point.row)
