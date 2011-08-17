@@ -29,6 +29,7 @@ import unittest
 from openquake.utils import config
 
 from tests.helpers import TestMixin
+from tests.utils.helpers import patch
 
 
 class ConfigTestCase(TestMixin, unittest.TestCase):
@@ -199,18 +200,27 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
         self.assertEqual({"f": "6", "g": "h"}, config.Config().get("E"))
 
 
-class GetSectionTestCase(TestMixin, unittest.TestCase):
+class GetSectionTestCase(unittest.TestCase):
+    """Tests the behaviour of the utils.config.get_section()."""
+    def test_get_section_merely_calls_get_on_config_data_dict(self):
+        "config.get_section() merely makes use of Config().get()"""
+        orig_method = config.Config().get
+
+        def fake_get(section):
+            self.assertEqual("f@k3", section)
+            return {"this": "is", "so": "fake"}
+
+        config.Config().get = fake_get
+        self.assertEqual({"this": "is", "so": "fake"},
+                         config.get_section("f@k3"))
+        config.Config().get = orig_method
+
+
+
+class GetTestCase(unittest.TestCase):
     """Tests the behaviour of the utils.config.get_section()."""
 
-    def setUp(self):
-        self.orig_env = os.environ.copy()
-        os.environ.clear()
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.orig_env)
-
-    def test_get_section_merely_calls_get_on_config_data_dict(self):
+    def test_g3t_section_merely_calls_get_on_config_data_dict(self):
         "config.get_section() merely makes use of Config().get()"""
         orig_method = config.Config().get
 
