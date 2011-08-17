@@ -27,8 +27,10 @@ from math import log
 from openquake import job
 from openquake import kvs
 from openquake import shapes
-from tests.utils import helpers
-from tests.utils.helpers import patch
+
+from openquake.db.alchemy import db_utils
+
+from openquake.output import hazard
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk.job.general import Block
@@ -37,6 +39,9 @@ from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import deterministic_event_based as det
 from openquake.risk import common
+
+from tests.utils import helpers
+from tests.utils.helpers import patch
 
 
 ASSET_VALUE = 5.0
@@ -705,14 +710,20 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.assertEqual(0, close_mock.call_count)
 
 
-class ClassicalPSHABasedTestCase(unittest.TestCase):
+class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def _store_asset(self, asset, row, column):
         key = kvs.tokens.asset_key(self.job_id, row, column)
         kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
 
+    def setUp(self):
+        self.job = None
+
     def tearDown(self):
         psha.STEPS_PER_INTERVAL = 5
+
+        if self.job:
+            self.teardown_job(self.job)
 
     def test_empty_loss_curve(self):
         self.assertEqual(common.compute_loss_curve(shapes.EMPTY_CURVE, None),
@@ -870,17 +881,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         # deletes all keys from kvs
         kvs.get_client().flushall()
 
+        self.job = self.setup_classic_job()
+
         # at the moment the hazard part doesn't do exp on the 'x'
         # so it's done on the risk part. To adapt the calculation
         # we do the reverse of the exp, i.e. log(x)
-        self.hazard_curve = {'curve': [
-            {'x': str(log(0.001)), 'y': '0.99'},
-            {'x': str(log(0.080)), 'y': '0.96'},
-            {'x': str(log(0.170)), 'y': '0.89'},
-            {'x': str(log(0.260)), 'y': '0.82'},
-            {'x': str(log(0.360)), 'y': '0.70'},
-            {'x': str(log(0.550)), 'y': '0.40'},
-            {'x': str(log(0.700)), 'y': '0.01'}]}
+        self.hazard_curve = [
+            (SITE,
+             {'IMLValues': [0.001, 0.080, 0.170, 0.260, 0.360,
+                            0.550, 0.700],
+              'PoEValues': [0.99, 0.96, 0.89, 0.82, 0.70, 0.40, 0.01],
+              'statistics': 'mean'})]
 
         # Vitor provided this Vulnerability Function
         imls_1 = [0.03, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
@@ -895,12 +906,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
             loss_ratios_2, covs_2)
 
-        self.job_id = 1234
-
-        self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
-                0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
-                0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
-                0.1756), "TSES": 200, "TimeSpan": 50}
+        self.job_id = self.job.id
 
         self.asset_1 = {"vulnerabilityFunctionReference": "ID",
                 "assetValue": 124.27}
@@ -912,24 +918,15 @@ class ClassicalPSHABasedTestCase(unittest.TestCase):
         block = Block((SITE, SITE), self.block_id)
         block.to_kvs()
 
-        self.haz_curve_key = kvs.tokens.mean_hazard_curve_key(
-            self.job_id, SITE)
-
-        kvs.set_value_json_encoded(self.haz_curve_key, self.hazard_curve)
+        session = db_utils.get_db_session('reslt', 'writer')
+        writer = hazard.HazardCurveDBWriter(session, 'test_path.xml',
+                                            self.job_id)
+        writer.serialize(self.hazard_curve)
 
         kvs.set_value_json_encoded(
                 kvs.tokens.vuln_key(self.job_id),
                 {"ID": self.vuln_function.to_json()})
 
-    # Running a complete risk calculation (i.e. invoking compute_risk) requires
-    # now a database, but the tests in this module still don't have access to
-    # the database.
-    # This test needs to be updated once the merging of tests/* and db_tests/*
-    # is complete and all the tests will have access to the database.
-    # Specifically the part to be updated is the one storing the hazard_curve
-    # in the kvs (lines 919-922 above), to store the hazard curve in the
-    # database.
-    @helpers.skipit
     def test_compute_risk_in_the_classical_psha_mixin(self):
         """
             tests ClassicalPSHABasedMixin.compute_risk by retrieving
