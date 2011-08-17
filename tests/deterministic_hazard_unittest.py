@@ -28,7 +28,8 @@ import numpy
 import unittest
 import json
 
-from utils import helpers
+from tests.utils import helpers
+from tests.utils.helpers import patch
 
 from openquake import java
 from openquake import kvs
@@ -105,7 +106,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
             # True, True means that both mixins (hazard and risk) are triggered
             self.job.launch()
 
@@ -121,7 +122,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
             self.job.launch()
             decoder = json.JSONDecoder()
@@ -160,7 +161,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
             self.job.launch()
             decoder = json.JSONDecoder()
@@ -215,7 +216,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     def test_simple_computation_using_the_java_calculator(self):
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
             self.job.launch()
 

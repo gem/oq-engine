@@ -29,6 +29,7 @@ from openquake.job.mixins import Mixin
 from openquake.risk.job import general
 from openquake.parser import exposure
 from tests.utils import helpers
+from tests.utils.helpers import patch
 
 TEST_FILE = "exposure-portfolio.xml"
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
@@ -276,7 +277,7 @@ class RiskMixinTestCase(unittest.TestCase):
             (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])]
 
     def test_grid_assets_iterator(self):
-        with mock.patch('openquake.kvs.get_list_json_decoded') as get_mock:
+        with patch('openquake.kvs.get_list_json_decoded') as get_mock:
 
             def get_list_json_decoded(key):
                 _, row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
@@ -295,7 +296,7 @@ class RiskMixinTestCase(unittest.TestCase):
                 self.assertEqual(sorted(self.grid_assets, key=row_col), got)
 
     def test_asset_losses_per_site(self):
-        with mock.patch('openquake.kvs.get') as get_mock:
+        with patch('openquake.kvs.get') as get_mock:
             get_mock.return_value = 0.123
 
             def coords(item):
