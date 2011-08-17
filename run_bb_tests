@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests tests db_tests --testmatch=bb_.+ $*
+nosetests tests --testmatch=bb_.+ $*
