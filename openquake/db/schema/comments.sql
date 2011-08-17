@@ -319,6 +319,6 @@ COMMENT ON COLUMN uiapi.upload.status IS 'One of: pending, running, failed or su
 
 
 -- uiapi.error_msg
-COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure. The intention is to have at most 1 error_msg record per job.';
+COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure.';
 COMMENT ON COLUMN uiapi.error_msg.brief IS 'Summary of the error message.';
 COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';

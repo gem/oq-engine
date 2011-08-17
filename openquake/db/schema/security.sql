@@ -65,6 +65,7 @@ GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
