@@ -30,10 +30,8 @@ KVS_KEY_SEPARATOR = '!'
 # hazard tokens
 SOURCE_MODEL_TOKEN = 'sources'
 GMPE_TOKEN = 'gmpe'
-JOB_TOKEN = 'job'
 ERF_KEY_TOKEN = 'erf'
 MGM_KEY_TOKEN = 'mgm'
-HAZARD_CURVE_IMLS_KEY_TOKEN = 'hazard_curve_imls'
 HAZARD_CURVE_POES_KEY_TOKEN = 'hazard_curve_poes'
 MEAN_HAZARD_CURVE_KEY_TOKEN = 'mean_hazard_curve'
 QUANTILE_HAZARD_CURVE_KEY_TOKEN = 'quantile_hazard_curve'
@@ -41,10 +39,9 @@ STOCHASTIC_SET_TOKEN = 'ses'
 MEAN_HAZARD_MAP_KEY_TOKEN = 'mean_hazard_map'
 QUANTILE_HAZARD_MAP_KEY_TOKEN = 'quantile_hazard_map'
 GMFS_KEY_TOKEN = 'GMFS'
-GMFS_KEYS_TOKEN = 'GMFS_KEYS'
 
 # risk tokens
-CONDITIONAL_LOSS_KEY_TOKEN = 'LOSS_AT_'
+CONDITIONAL_LOSS_KEY_TOKEN = 'LOSS_AT'
 EXPOSURE_KEY_TOKEN = 'ASSET'
 GMF_KEY_TOKEN = 'GMF'
 LOSS_RATIO_CURVE_KEY_TOKEN = 'LOSS_RATIO_CURVE'
@@ -334,12 +331,6 @@ def hazard_curve_poes_key(job_id, realization_num, site):
 def hazard_curve_poes_key_template(job_id, realization_num):
     """ Result a template for a hazard curve key (for a single site) """
     return _hazard_curve_poes_key(job_id, realization_num, '%s')
-
-
-def hazard_curve_imls_key(job_id):
-    """ Result a hazard curve abscissae key (common to multiple sites and
-    realizations) """
-    return generate_key(HAZARD_CURVE_IMLS_KEY_TOKEN, generate_job_key(job_id))
 
 
 def _kvs_key_type(kvs_key):
