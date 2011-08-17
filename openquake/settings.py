@@ -74,16 +74,45 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
-DATABASES = {
-    'default': {
+def _db_cfg(**kwargs):
+    """
+    Helper method to create db config items for the various roles and schemas.
+
+    Specify kwargs to override the defaults. For example, you can specify user
+    and password::
+        _db_cfg(USER='oq_reslt_writer', PASSWORD='s3cr3t')
+    """
+    default = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'openquake',
         'USER': 'openquake',
-        'PASSWORD': 'secret',
+        'PASSWORD': '',
         'HOST': '',
         'PORT': '',
     }
+
+    default.update(kwargs)
+    return default
+
+DATABASES = {
+    'default': _db_cfg(),
+    'admin': _db_cfg(USER='oq_admin'),
+    'eqcat_read': _db_cfg(USER='oq_eqcat_reader'),
+    'eqcat_write': _db_cfg(USER='oq_eqcat_writer'),
+    'hzrdi_read': _db_cfg(USER='oq_hzrdi_reader'),
+    'hzrdi_write': _db_cfg(USER='oq_hzrdi_writer'),
+    'hzrdr_read': _db_cfg(USER='oq_reslt_reader'),
+    'hzrdr_write': _db_cfg(USER='oq_reslt_writer'),
+    'oqmif': _db_cfg(USER='oq_ged4gem'),
+    'riski_read': _db_cfg(USER='oq_riski_reader'),
+    'riski_write': _db_cfg(USER='oq_riski_writer'),
+    'riskr_read': _db_cfg(USER='oq_reslt_reader'),
+    'riskr_write': _db_cfg(USER='oq_reslt_writer'),
+    'uiapi_read': _db_cfg(USER='oq_uiapi_reader'),
+    'uiapi_write': _db_cfg(USER='oq_uiapi_writer'),
 }
+
+DATABASE_ROUTERS = ['openquake.db.routers.OQRouter']
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
