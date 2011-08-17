@@ -226,9 +226,7 @@ class GetTestCase(unittest.TestCase):
             mock.return_value = dict()
             self.assertTrue(config.get("whatever", "key") is None)
             self.assertEqual(1, mock.call_count)
-            args, kwargs = mock.call_args
-            self.assertEqual(("whatever",), args)
-            self.assertEqual({}, kwargs)
+            self.assertEqual([("whatever",), {}], mock.call_args)
 
     def test_get_with_nonempty_section_data_and_known_key(self):
         """
@@ -239,9 +237,7 @@ class GetTestCase(unittest.TestCase):
             mock.return_value = dict(a=11)
             self.assertEqual(11, config.get("hmmm", "a"))
             self.assertEqual(1, mock.call_count)
-            args, kwargs = mock.call_args
-            self.assertEqual(("hmmm",), args)
-            self.assertEqual({}, kwargs)
+            self.assertEqual([("hmmm",), {}], mock.call_args)
 
     def test_get_with_unknown_key(self):
         """config.get() returns `None` if the `key` is not known."""
@@ -249,6 +245,4 @@ class GetTestCase(unittest.TestCase):
             mock.return_value = dict(b=1)
             self.assertTrue(config.get("arghh", "c") is None)
             self.assertEqual(1, mock.call_count)
-            args, kwargs = mock.call_args
-            self.assertEqual(("arghh",), args)
-            self.assertEqual({}, kwargs)
+            self.assertEqual([("arghh",), {}], mock.call_args)
