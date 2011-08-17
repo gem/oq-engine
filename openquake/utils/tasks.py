@@ -22,10 +22,14 @@
 Utility functions related to splitting work into tasks.
 """
 
-
-from celery.task.sets import TaskSet
 import itertools
 import time
+import logging
+import functools
+
+from celery.task.sets import TaskSet
+
+from openquake.job import Job
 
 
 class WrongTaskParameters(Exception):
@@ -172,3 +176,24 @@ def _handle_subtasks(subtasks, flatten_results):
                 the_results = list(itertools.chain(*the_results))
 
     return the_results
+
+
+def oq_task(func):
+    """
+    Decorator for celery tasks which work with jobs.
+
+    The task must get ``job_id`` as it's first positional argument. This
+    value is then used to :meth:`retrieve<openquake.job.Job.from_kvs>`
+    the job object which will be used as the first argument for wrapped
+    function instead of ``job_id``. The second argument will be logger
+    adapter instance created for the job -- it will have the ``job_id``
+    value remembered, so there will be no need to repeat it in message
+    bodies.
+    """
+    @functools.wraps(func)
+    def decorated(job_id, *args, **kwargs):
+        logger = logging.getLogger('task.%s' % func.__name__)
+        logger = logging.LoggerAdapter(logger, {'job_id': job_id})
+        job = Job.from_kvs(job_id)
+        return func(job, logger, *args, **kwargs)
+    return decorated
