@@ -26,7 +26,7 @@ import unittest
 
 from openquake import kvs
 from openquake import shapes
-from utils import helpers
+from tests.utils import helpers
 
 # the Probability of Exceedance used to build the mean hazard map
 POE = 0.1

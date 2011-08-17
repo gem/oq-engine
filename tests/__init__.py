@@ -18,7 +18,9 @@
 
 from alchemy_db_utils_unittest import *
 from black_box_tests import *
+from bulk_insert_unittest import *
 from cache_gc_unittest import *
+from db_loader_unittest import *
 from db_loader_unittest import *
 from deterministic_hazard_unittest import *
 from deterministic_risk_unittest import *
@@ -27,13 +29,17 @@ from handlers_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
+from input_risk_unittest import *
 from java_unittest import *
 from job_unittest import *
 from kvs_unittest import *
 from logs_unittest import *
 from loss_map_output_unittest import *
 from loss_output_unittest import *
+from output_hazard_unittest import *
+from output_risk_unittest import *
 from output_unittest import *
+from output_writers_unittest import *
 from parser_exposure_portfolio_unittest import *
 from parser_hazard_curve_unittest import *
 from parser_hazard_map_unittest import *
@@ -50,3 +56,14 @@ from utils_general_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
+
+import glob
+import os
+import sys
+
+for path in glob.glob(os.path.join(os.path.dirname(__file__), '*test*.py')):
+    test = os.path.splitext(os.path.basename(path))[0]
+    module = 'tests.' + test
+
+    if module not in sys.modules:
+        print >> sys.stderr, "Potential missing import of " + module
