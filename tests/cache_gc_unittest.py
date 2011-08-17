@@ -18,12 +18,10 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import mock
 import unittest
 
 from bin import cache_gc
 from openquake import kvs
-from openquake.kvs import tokens
 from tests.utils.helpers import patch
 
 from tests.utils.helpers import cleanup_loggers
@@ -38,11 +36,11 @@ class CacheGCTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.client = kvs.get_client()
 
-        cls.client.delete(tokens.CURRENT_JOBS)
+        cls.client.delete(kvs.tokens.CURRENT_JOBS)
 
     @classmethod
     def tearDownClass(cls):
-        cls.client.delete(tokens.CURRENT_JOBS)
+        cls.client.delete(kvs.tokens.CURRENT_JOBS)
 
     def setUp(self):
         cleanup_loggers()
@@ -59,7 +57,7 @@ class CacheGCTestCase(unittest.TestCase):
         # create 3 jobs
         # this will add job keys to CURRENT_JOBS
         for job_id in range(1, 4):
-            tokens.mark_job_as_current(job_id)
+            kvs.mark_job_as_current(job_id)
 
         job_ids = cache_gc._get_current_job_ids()
         self.assertEqual([1, 2, 3], job_ids)
@@ -86,10 +84,10 @@ class CacheGCTestCase(unittest.TestCase):
             cache_gc.clear_job_data(1)
             self.assertEqual(1, gc_mock.call_count)
             self.assertEqual(
-                ((kvs.JOB_KEY_FMT % 1, ), {}), gc_mock.call_args)
+                ((1, ), {}), gc_mock.call_args)
 
             # same thing, but this time with a str for the ID
             cache_gc.clear_job_data('2')
             self.assertEqual(2, gc_mock.call_count)
             self.assertEqual(
-                ((kvs.JOB_KEY_FMT % 2, ), {}), gc_mock.call_args)
+                ((2, ), {}), gc_mock.call_args)

@@ -28,8 +28,7 @@ from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.shapes import Site, Region
 
-from db_tests import helpers
-from tests.utils.helpers import create_job
+from tests.utils import helpers
 
 
 # See data in output_hazard_unittest.py
@@ -92,7 +91,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_read_curve(self):
         """Verify _get_db_curve."""
-        with Mixin(create_job({}, job_id=self.job.id),
+        with Mixin(helpers.create_job({}, job_id=self.job.id),
                    ClassicalPSHABasedMixin) as mixin:
             curve1 = mixin._get_db_curve(Site(-122.2, 37.5))
             self.assertEquals(list(curve1.abscissae),
@@ -130,7 +129,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = {
             'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
             'REGION_GRID_SPACING': '1.0'}
-        with Mixin(create_job(params, job_id=self.job.id),
+        with Mixin(helpers.create_job(params, job_id=self.job.id),
                    ProbabilisticEventMixin) as mixin:
             keys = mixin._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
 
@@ -141,7 +140,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = {
             'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
             'REGION_GRID_SPACING': '1.0'}
-        with Mixin(create_job(params, job_id=self.job.id),
+        with Mixin(helpers.create_job(params, job_id=self.job.id),
                    ProbabilisticEventMixin) as mixin:
             self.assertEquals(3, len(mixin._gmf_db_list(self.job.id)))
 
