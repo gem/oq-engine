@@ -29,7 +29,7 @@ import logging
 from celery.log import redirect_stdouts_to_logger
 
 from openquake import flags
-from openquake import settings
+from openquake.utils import config
 
 FLAGS = flags.FLAGS
 
@@ -48,6 +48,38 @@ flags.DEFINE_string('logfile', '',
 RISK_LOG = logging.getLogger("risk")
 HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
+
+LOGGING_AMQP_FORMAT = '%(asctime)s %(loglevel)-5s %(processName)s' \
+    ' [%(name)s] - Job %(job_id)s - %(message)s'
+LOG4J_AMQP_FORMAT = '%d %-5p %X{processName} [%c] - Job %X{job_id} - %m'
+
+LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
+    ' [%(name)s] - %(message)s'
+LOG4J_STDOUT_FORMAT = '%-5p %X{processName} [%c] - Job %X{job_id} - %m%n'
+
+LOG4J_STDOUT_SETTINGS = {
+    'log4j.rootLogger': '%(level)s, stdout',
+
+    'log4j.appender.stdout': 'org.apache.log4j.ConsoleAppender',
+    'log4j.appender.stdout.follow': 'true',
+    'log4j.appender.stdout.layout': 'org.apache.log4j.PatternLayout',
+    'log4j.appender.stdout.layout.ConversionPattern': LOG4J_STDOUT_FORMAT,
+}
+
+LOG4J_AMQP_SETTINGS = {
+    'log4j.rootLogger': '%(level)s, amqp',
+
+    'log4j.appender.amqp': 'org.gem.log.AMQPAppender',
+    'log4j.appender.amqp.host': config.get("amqp", "host"),
+    'log4j.appender.amqp.port': config.get("amqp", "host"),
+    'log4j.appender.amqp.username': config.get("amqp", "host"),
+    'log4j.appender.amqp.password': config.get("amqp", "host"),
+    'log4j.appender.amqp.virtualHost': config.get("amqp", "host"),
+    'log4j.appender.amqp.routingKeyPattern': 'log.%p.%X{job_id}',
+    'log4j.appender.amqp.exchange': config.get("amqp", "host"),
+    'log4j.appender.amqp.layout': 'org.apache.log4j.PatternLayout',
+    'log4j.appender.amqp.layout.ConversionPattern': LOG4J_AMQP_FORMAT,
+}
 
 
 def init_logs(log_type='console', level='warn'):
@@ -92,7 +124,7 @@ def init_logs_stdout(level):
             hdlr = logging.StreamHandler()
 
         hdlr.setFormatter(
-            logging.Formatter(settings.LOGGING_STDOUT_FORMAT, None))
+            logging.Formatter(LOGGING_STDOUT_FORMAT, None))
         LOG.addHandler(hdlr)
 
     LOG.setLevel(logging_level)
@@ -112,18 +144,20 @@ def init_logs_amqp(level):
     # initialize Python logging
     found = any(isinstance(hdlr, AMQPHandler) for hdlr in LOG.handlers)
 
+    amqp_cfg = config.get_section("amqp")
+
     if not found:
         hdlr = AMQPHandler(
-            host=settings.AMQP_HOST,
-            username=settings.AMQP_USER,
-            password=settings.AMQP_PASSWORD,
-            virtual_host=settings.AMQP_VHOST,
-            exchange=settings.AMQP_EXCHANGE,
+            host=amqp_cfg.get("host"),
+            username=amqp_cfg.get("user"),
+            password=amqp_cfg.get("password"),
+            virtual_host=amqp_cfg.get("vhost"),
+            exchange=amqp_cfg.get("exchange"),
             routing_key='log.%(loglevel)s.%(job_id)s',
             level=logging.DEBUG)
 
         hdlr.setFormatter(
-            logging.Formatter(settings.LOGGING_AMQP_FORMAT, None))
+            logging.Formatter(LOGGING_AMQP_FORMAT, None))
         LOG.addHandler(hdlr)
 
     amqp_log = logging.getLogger("amqplib")
