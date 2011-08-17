@@ -66,4 +66,4 @@ for path in glob.glob(os.path.join(os.path.dirname(__file__), '*test*.py')):
     module = 'tests.' + test
 
     if module not in sys.modules:
-        print >>sys.stderr, "Potential missing import of " + module
+        print >> sys.stderr, "Potential missing import of " + module
