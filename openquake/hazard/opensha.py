@@ -103,8 +103,7 @@ class BasePSHAMixin(Mixin):
         other files."""
 
         LOG.info("Storing source model from job config")
-        key = kvs.generate_product_key(
-            self.job_id, kvs.tokens.SOURCE_MODEL_TOKEN)
+        key = kvs.tokens.source_model_key(self.job_id)
         print "source model key is", key
         jpype = java.jvm()
         try:
@@ -117,7 +116,7 @@ class BasePSHAMixin(Mixin):
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
-        key = kvs.generate_product_key(self.job_id, kvs.tokens.GMPE_TOKEN)
+        key = kvs.tokens.gmpe_key(self.job_id)
         print "GMPE map key is", key
         jpype = java.jvm()
         try:
@@ -129,8 +128,7 @@ class BasePSHAMixin(Mixin):
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
-        key = kvs.generate_product_key(
-            self.job_id, kvs.tokens.SOURCE_MODEL_TOKEN)
+        key = kvs.tokens.source_model_key(self.job_id)
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
         erf = java.jclass("GEM1ERF")(sources)
@@ -156,7 +154,7 @@ class BasePSHAMixin(Mixin):
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.generate_product_key(self.job_id, kvs.tokens.GMPE_TOKEN)
+        key = kvs.tokens.gmpe_key(self.job_id)
         gmpe_map = java.jclass(
             "JsonSerializer").getGmpeMapFromCache(self.cache, key)
         self.set_gmpe_params(gmpe_map)
@@ -738,11 +736,10 @@ class EventBasedMixin(BasePSHAMixin):
             for j in range(0, realizations):
                 self.store_source_model(source_model_generator.getrandbits(32))
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
-                stochastic_set_id = "%s!%s" % (i, j)
                 pending_tasks.append(
                     tasks.compute_ground_motion_fields.delay(
                         self.job_id, self.sites_for_region(),
-                        stochastic_set_id, gmf_generator.getrandbits(32)))
+                        i, j, gmf_generator.getrandbits(32)))
 
             for task in pending_tasks:
                 task.wait()
@@ -750,10 +747,8 @@ class EventBasedMixin(BasePSHAMixin):
                     raise Exception(task.result)
 
             for j in range(0, realizations):
-                stochastic_set_id = "%s!%s" % (i, j)
-                stochastic_set_key = kvs.generate_product_key(
-                    self.job_id, kvs.tokens.STOCHASTIC_SET_TOKEN,
-                    stochastic_set_id)
+                stochastic_set_key = kvs.tokens.stochastic_set_key(self.job_id,
+                                                                   i, j)
                 print "Writing output for ses %s" % stochastic_set_key
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -791,26 +786,22 @@ class EventBasedMixin(BasePSHAMixin):
         return files
 
     @preload
-    def compute_ground_motion_fields(self, site_list, stochastic_set_id, seed):
+    def compute_ground_motion_fields(self, site_list, history, realization,
+                                     seed):
         """Ground motion field calculation, runs on the workers."""
         jpype = java.jvm()
 
         jsite_list = self.parameterize_sites(site_list)
-        key = kvs.generate_product_key(
-            self.job_id, kvs.tokens.STOCHASTIC_SET_TOKEN, stochastic_set_id)
+        key = kvs.tokens.stochastic_set_key(self.job_id, history, realization)
         gmc = self.params['GROUND_MOTION_CORRELATION']
         correlate = (gmc == "true" and True or False)
+        stochastic_set_id = "%s!%s" % (history, realization)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
                 self.cache, key, stochastic_set_id, jsite_list,
-                 self.generate_erf(),
+                self.generate_erf(),
                 self.generate_gmpe_map(),
                 java.jclass("Random")(seed),
                 jpype.JBoolean(correlate))
-
-
-def gmf_id(history_idx, realization_idx, rupture_idx):
-    """ Return a GMF id suitable for use as a KVS key """
-    return "%s!%s!%s" % (history_idx, realization_idx, rupture_idx)
 
 
 job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)

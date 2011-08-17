@@ -26,7 +26,6 @@ from openquake import flags
 from openquake.job import Job, LOG
 from openquake.job.mixins import Mixin
 from openquake.risk.job import general
-from openquake.kvs import tokens
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from tests.utils import helpers
@@ -51,7 +50,7 @@ class JobTestCase(unittest.TestCase):
 
         # Delete managed job id info so we can predict the job key
         # which will be allocated for us
-        client.delete(tokens.CURRENT_JOBS)
+        client.delete(kvs.tokens.CURRENT_JOBS)
 
         self.generated_files = []
         self.job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
