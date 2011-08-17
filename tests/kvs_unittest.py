@@ -76,7 +76,7 @@ class KVSTestCase(unittest.TestCase):
         java_class = jpype.JClass("org.gem.engine.hazard.redis.Cache")
         print "Not dead yet, and found the class..."
         self.java_client = java_class(
-            config.get("kvs", "host"), config.get("kvs", "port"))
+            config.get("kvs", "host"), int(config.get("kvs", "port")))
 
         self.python_client = kvs.get_client()
         self.python_client.flushdb()
