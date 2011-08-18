@@ -115,10 +115,12 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
-        job_with_only_hazard = \
-            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
-        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        FLAGS.include_defaults = True
+        try:
+            job_with_only_hazard = \
+                helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
+            self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
+        finally:
+            FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
         for each_job in [self.job, self.job_with_includes]:
@@ -208,7 +210,8 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=0'], )
+        expected_args = (['python', 'bin/cache_gc.py',
+                          '--job=%d' % self.job.job_id], )
 
         with patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
