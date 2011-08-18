@@ -36,9 +36,7 @@ class FloatArrayField(models.Field):
         return "{" + ', '.join(str(v) for v in value) + "}"
 
 
-'''
-Tables in the 'admin' schema.
-'''
+## Tables in the 'admin' schema.
 
 
 class Organization(models.Model):
@@ -75,9 +73,7 @@ class RevisionInfo(models.Model):
         db_table = 'admin\".\"revision_info'
 
 
-'''
-Tables in the 'eqcat' schema.
-'''
+## Tables in the 'eqcat' schema.
 
 
 class Catalog(models.Model):
@@ -131,9 +127,7 @@ class Surface(models.Model):
         db_table = 'eqcat\".\"surface'
 
 
-'''
-Tables in the 'hzrdi' (Hazard Input) schema.
-'''
+## Tables in the 'hzrdi' (Hazard Input) schema.
 
 
 class Rupture(models.Model):
@@ -349,9 +343,8 @@ class FocalMechanism(models.Model):
     class Meta:
         db_table = 'hzrdi\".\"focal_mechanism'
 
-'''
-Tables in the 'uiapi' schema.
-'''
+
+## Tables in the 'uiapi' schema.
 
 
 class Upload(models.Model):
@@ -508,9 +501,8 @@ class ErrorMsg(models.Model):
     class Meta:
         db_table = 'uiapi\".\"error_msg'
 
-'''
-Tables in the 'hzrdr' schema.
-'''
+
+## Tables in the 'hzrdr' schema.
 
 
 class HazardMap(models.Model):
