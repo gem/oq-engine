@@ -351,9 +351,241 @@ class RRateMdl(models.Model):
     mfd_evd = models.ForeignKey(MfdEvd)
     focal_mechanism = models.ForeignKey(FocalMechanism)
     source = models.ForeignKey(Source)
-    last_update = models.DateTimeField(editable=False)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
         db_table = 'hzrdi\".\"r_rate_mdl'
 
 
+class FocalMechanism(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    gid = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
+    strike = models.FloatField()
+    dip = models.FloatField()
+    rake = models.FloatField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'hzrdi\".\"focal_mechanism'
+
+'''
+Tables for the 'uiapi' schema.
+'''
+
+class Upload(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    description = models.TextField(default='')
+    path = models.TextField(unique=True)
+    STATUS_CHOICES = (
+        (u'pending', u'Pending'),
+        (u'running', u'Running'),
+        (u'failed', u'Failed'),
+        (u'succeeded', u'Succeeded'),
+    )
+    status = models.TextField(choices=STATUS_CHOICES, default='pending')
+    job_pid = models.IntegerField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"upload'
+
+
+class Input(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    upload = models.ForeignKey(Upload)
+    path = models.TextField(unique=True)
+    INPUT_TYPE_CHOICES = (
+        (u'unknown', u'Unknown'),
+        (u'source', u'Source Model'),
+        (u'lt_source', u'Source Model Logic Tree'),
+        (u'lt_gmpe', u'GMPE Logic Tree'),
+        (u'exposure', u'Exposure'),
+        (u'vulnerability', u'Vulnerability'),
+    )
+    input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
+    size = models.IntegerField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"input'
+
+
+class OqJob(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    description = models.TextField()
+    path = models.TextField(unique=True)
+    JOB_TYPE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
+        (u'event_based', u'Probabilistic Event-Based'),
+        (u'deterministic', u'Deterministic'),
+
+    )
+    job_type = models.TextField(choices=JOB_TYPE_CHOICES)
+    STATUS_CHOICES = (
+        (u'pending', u'Pending'),
+        (u'running', u'Running'),
+        (u'failed', u'Failed'),
+        (u'succeeded', u'Succeeded'),
+    )
+    status = models.TextField(choices=STATUS_CHOICES, default='pending')
+    duration = models.IntegerField()
+    job_pid = models.IntegerField()
+    oq_params = models.ForeignKey(OqParams)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"oq_job'
+
+
+class OqParams(models.Model):
+    id = models.IntegerField(primary_key=True)
+    JOB_TYPE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
+        (u'event_based', u'Probabilistic Event-Based'),
+        (u'deterministic', u'Deterministic'),
+
+    )
+    job_type = models.TextField(choices=JOB_TYPE_CHOICES)
+    upload = models.ForeignKey(Upload)
+    region_grid_spacing = models.FloatField()
+    min_magnitude = models.FloatField()
+    investigation_time = models.FloatField()
+    COMPONENT_CHOICES = (
+        (u'average', u'Average horizontal'),
+        (u'gmroti50', u'Average horizontal (GMRotI50)'),
+    )
+    component = models.TextField(choices=COMPONENT_CHOICES)
+    IMT_CHOICES = (
+       (u'pga', u'Peak Ground Acceleration'),
+       (u'sa', u'Spectral Acceleration'),
+       (u'pgv', u'Peak Ground Velocity'),
+       (u'pgd', u'Peak Ground Displacement'),
+    )
+    imt = models.TextField(choices=IMT_CHOICES)
+    period = models.FloatField()
+    TRUNC_TYPE_CHOICES = (
+       (u'none', u'None'),
+       (u'onesided', u'One-sided'),
+       (u'twosided', u'Two-sided'),
+    )
+    truncation_type = models.TextField(choices=TRUNC_TYPE_CHOICES)
+    # TODO(LB): We should probably find out why (from a science perspective)
+    # the default is 3.0 and document it. I definitely don't remember why it's
+    # 3.0.
+    truncation_level = models.FloatField(default=3.0)
+    reference_vs30_value = models.FloatField()
+    imls = FloatArrayField()
+    poes = FloatArrayField()
+    realizations = models.IntegerField()
+    histories = models.IntegerField()
+    gm_correlated = models.BooleanField(null=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    region = models.PolygonField(srid=4326)
+
+    class Meta:
+        db_table = 'uiapi\".\"oq_params'
+
+
+class Output(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    oq_job = models.ForeignKey(OqJob)
+    path = models.TextField(unique=True)
+    display_name = models.TextField()
+    db_backed = models.BooleanField(default=False)
+    OUTPUT_TYPE_CHOICES = (
+        (u'unknown', u'Unknown'),
+        (u'hazard_curve', u'Hazard Curve'),
+        (u'hazard_map', u'Hazard Map'),
+        (u'gmf', u'Ground Motion Field'),
+        (u'loss_curve', u'Loss Curve'),
+        (u'loss_map', u'Loss Map'),
+    )
+    output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
+    # Number of bytes in the file
+    size = models.IntegerField()
+    # TODO(LB): We should consider removing this; as far I know, it's obsolete.
+    shapefile_path = models.TextField(null=True)
+    min_value = models.FloatField()
+    max_value = models.FloatField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'uiapi\".\"output'
+
+
+class ErrorMsg(models.Model):
+    id = models.IntegerField(primary_key=True)
+    oq_job = models.ForeignKey(OqJob)
+    brief = models.TextField()
+    detailed = models.TextField()
+
+    class Meta:
+        db_table = 'uiapi\".\"error_msg'
+
+
+class HazardMap(models.Model):
+    id = models.IntegerField(primary_key=True)
+    output = models.ForeignKey(Output)
+    poe = models.FloatField()
+    STAT_CHOICES = (
+        (u'mean', u'Mean'),
+        (u'quantile', u'Quantile'),
+    )
+    statistic_type = models.TextField(choices=STAT_CHOICES)
+    quantile = models.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"hazard_map'
+
+
+class HazardMapData(models.Model):
+    id = models.IntegerField(primary_key=True)
+    hazard_map = models.ForeignKey(HazardMap)
+    value = models.FloatField()
+    location = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'hzrdr\".\"hazard_map_data'
+
+
+class HazardCurve(models.Model):
+    id = models.IntegerField(primary_key=True)
+    output = models.ForeignKey(Output)
+    end_branch_label = models.TextField()
+    STAT_CHOICES = (
+        (u'mean', u'Mean'),
+        (u'median', u'Median'),
+        (u'quantile', u'Quantile'),
+    )
+    statistic_type = models.TextField(choices=STAT_CHOICES)
+    quantile = models.FloatField()
+
+    class Meta:
+        db_table = 'hzrdr\".\"hazard_curve'
+
+
+class HazardCurveData(models.Model):
+    id = models.IntegerField(primary_key=True)
+    hazard_curve = models.ForeignKey(HazardCurve)
+    poes = FloatArrayField()
+    location = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'hzrdr\".\"hazard_curve_data'
+
+
+class GmfData(models.Model):
+    id = models.IntegerField(primary_key=True)
+    output = models.ForeignKey(Output)
+    ground_motion = models.FloatField()
+    location = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'hzrdr\".\"gmf_data'
