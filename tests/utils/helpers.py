@@ -124,7 +124,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    job = Job.from_file(config_file_path, 'xml_without_db')
+    job = Job.from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
