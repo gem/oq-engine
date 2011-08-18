@@ -1,16 +1,29 @@
-# This is an auto-generated Django model module.
-# You'll have to do the following manually to clean this up:
-#     * Rearrange models' order
-#     * Make sure each model has one field with primary_key=True
-# Feel free to rename the models, but don't rename db_table values or field names.
-#
-# Also note: You'll have to insert the output of 'django-admin.py sqlcustom [appname]'
-# into your database.
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2010-2011, GEM Foundation.
+#
+# OpenQuake is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Lesser General Public License version 3
+# only, as published by the Free Software Foundation.
+#
+# OpenQuake is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Lesser General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
+#
+# You should have received a copy of the GNU Lesser General Public License
+# version 3 along with OpenQuake.  If not, see
+# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+
+
+'''
+Model representations of the OpenQuake DB tables.
+'''
 
 from datetime import datetime
 from django.contrib.gis.db import models
-from django.utils.encoding import smart_str
 
 
 class FloatArrayField(models.Field):
@@ -27,21 +40,6 @@ class FloatArrayField(models.Field):
 Tables in the 'admin' schema.
 '''
 
-class OqUser(models.Model):
-    id = models.IntegerField(primary_key=True)
-    user_name = models.TextField()
-    full_name = models.TextField()
-    organization = models.ForeignKey(Organization)
-    data_is_open = models.BooleanField(default=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def __str__(self):
-        return smart_str(
-            ":oq_user: %s (%s)" % (self.full_name, self.user_name))
-
-    class Meta:
-        db_table = 'admin\".\"oq_user'
-
 
 class Organization(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -50,14 +48,22 @@ class Organization(models.Model):
     url = models.TextField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    def __str__(self):
-        return smart_str(":organization: %s" % self.name)
-
     class Meta:
         db_table = 'admin\".\"organization'
 
 
-# TODO: delete this model?
+class OqUser(models.Model):
+    id = models.IntegerField(primary_key=True)
+    user_name = models.TextField()
+    full_name = models.TextField()
+    organization = models.ForeignKey('Organization')
+    data_is_open = models.BooleanField(default=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'admin\".\"oq_user'
+
+
 class RevisionInfo(models.Model):
     id = models.IntegerField(primary_key=True)
     artefact = models.TextField(unique=True)
@@ -73,9 +79,10 @@ class RevisionInfo(models.Model):
 Tables in the 'eqcat' schema.
 '''
 
+
 class Catalog(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     eventid = models.IntegerField()
     agency = models.TextField()
     identifier = models.TextField()
@@ -88,13 +95,13 @@ class Catalog(models.Model):
         (u'foreshock', u'Foreshock'),
     )
     event_class = models.TextField(null=True, choices=EVENT_CLASS_CHOICES)
-    magnitude = models.ForeignKey(Magnitude)
-    surface = models.ForeignKey(Surface)
+    magnitude = models.ForeignKey('Magnitude')
+    surface = models.ForeignKey('Surface')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     point = models.PointField(srid=4326)
 
     class Meta:
-        db_table = 'eqcat\".\"catalog' 
+        db_table = 'eqcat\".\"catalog'
 
 
 class Magnitude(models.Model):
@@ -110,7 +117,7 @@ class Magnitude(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
-        db_table = 'eqcat\".\"magnitude' 
+        db_table = 'eqcat\".\"magnitude'
 
 
 class Surface(models.Model):
@@ -124,46 +131,15 @@ class Surface(models.Model):
         db_table = 'eqcat\".\"surface'
 
 
-# View
-class CatalogAllfields(models.Model):
-    id = models.IntegerField()
-    owner_id = models.IntegerField()
-    eventid = models.IntegerField()
-    agency = models.TextField()
-    identifier = models.TextField()
-    time = models.DateTimeField()
-    time_error = models.FloatField()
-    depth = models.FloatField()
-    depth_error = models.FloatField()
-    event_class = models.TextField()
-    magnitude_id = models.IntegerField()
-    surface_id = models.IntegerField()
-    last_update = models.DateTimeField()
-    point = models.PointField(srid=4326)
-    semi_minor = models.FloatField()
-    semi_major = models.FloatField()
-    strike = models.FloatField()
-    mb_val = models.FloatField()
-    mb_val_error = models.FloatField()
-    ml_val = models.FloatField()
-    ml_val_error = models.FloatField()
-    ms_val = models.FloatField()
-    ms_val_error = models.FloatField()
-    mw_val = models.FloatField()
-    mw_val_error = models.FloatField()
-
-    class Meta:
-        db_table = 'eqcat\".\"catalog_allfields'
-
-
 '''
-Tables for the 'hzrdi' (Hazard Input) schema.
+Tables in the 'hzrdi' (Hazard Input) schema.
 '''
+
 
 class Rupture(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    input = models.ForeignKey(Input)
+    owner = models.ForeignKey('OqUser')
+    input = models.ForeignKey('Input')
     gid = models.TextField()
     name = models.TextField()
     description = models.TextField()
@@ -190,9 +166,10 @@ class Rupture(models.Model):
         (u'Ms', u'Surface Wave Magnitude'),
         (u'Mw', u'Moment Magnitude'),
     )
-    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES, default='Mw')
-    simple_fault = models.ForeignKey(SimpleFault)
-    complex_fault = models.ForeignKey(ComplexFault)
+    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
+        default='Mw')
+    simple_fault = models.ForeignKey('SimpleFault')
+    complex_fault = models.ForeignKey('ComplexFault')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     point = models.PointField(srid=4326)
 
@@ -202,8 +179,8 @@ class Rupture(models.Model):
 
 class Source(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    input = models.ForeignKey(Input)
+    owner = models.ForeignKey('OqUser')
+    input = models.ForeignKey('Input')
     gid = models.TextField()
     name = models.TextField()
     description = models.TextField()
@@ -222,13 +199,11 @@ class Source(models.Model):
         (u'volcanic', u'Volcanic'),
     )
     tectonic_region = models.TextField(choices=TECT_REG_CHOICES)
-    simple_fault = models.ForeignKey(SimpleFault)
-    complex_fault = models.ForeignKey(ComplexFault)
-    # TODO(LB): Consider adding validation constraints to the model for rake.
-    # Check the database schema for more information.
-    rake = models.FloatField() 
+    simple_fault = models.ForeignKey('SimpleFault')
+    complex_fault = models.ForeignKey('ComplexFault')
+    rake = models.FloatField()
     hypocentral_depth = models.FloatField()
-    r_depth_distr = models.ForeignKey(RDepthDistr)
+    r_depth_distr = models.ForeignKey('RDepthDistr')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     point = models.PointField(srid=4326)
     area = models.PolygonField(srid=4326)
@@ -239,15 +214,15 @@ class Source(models.Model):
 
 class SimpleFault(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     gid = models.TextField()
     name = models.TextField()
     description = models.TextField()
-    dip = models.FloatField()  # TODO(LB): Add constraints to model?
-    upper_depth = models.FloatField()  # TODO(LB): Add constraints to model?
-    lower_depth = models.FloatField()  # TODO(LB): Add constraints to model?
-    mfd_tgr = models.ForeignKey(MfdTgr)
-    mfd_evd = models.ForeignKey(MfdEvd)
+    dip = models.FloatField()
+    upper_depth = models.FloatField()
+    lower_depth = models.FloatField()
+    mfd_tgr = models.ForeignKey('MfdTgr')
+    mfd_evd = models.ForeignKey('MfdEvd')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     edge = models.LineStringField(srid=4326)
     outline = models.PolygonField(srid=4326)
@@ -261,7 +236,7 @@ class MfdEvd(models.Model):
     Magnitude Frequency Distribution, Evenly Discretized.
     '''
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     MAG_TYPE_CHOICES = (
         (u'Mb', u'Body Wave Magnitude'),
         (u'Md', u'Duration Magnitude'),
@@ -269,7 +244,8 @@ class MfdEvd(models.Model):
         (u'Ms', u'Surface Wave Magnitude'),
         (u'Mw', u'Moment Magnitude'),
     )
-    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES, default='Mw')
+    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
+        default='Mw')
     min_val = models.FloatField()
     max_val = models.FloatField(default=-1.0)
     bin_size = models.FloatField()
@@ -284,7 +260,7 @@ class MfdEvd(models.Model):
 
 class MfdTgr(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     MAG_TYPE_CHOICES = (
         (u'Mb', u'Body Wave Magnitude'),
         (u'Md', u'Duration Magnitude'),
@@ -292,7 +268,8 @@ class MfdTgr(models.Model):
         (u'Ms', u'Surface Wave Magnitude'),
         (u'Mw', u'Moment Magnitude'),
     )
-    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES, default='Mw')
+    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
+        default='Mw')
     min_val = models.FloatField()
     max_val = models.FloatField()
     a_val = models.FloatField()
@@ -307,25 +284,26 @@ class MfdTgr(models.Model):
 
 class ComplexFault(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     gid = models.TextField()
     name = models.TextField()
     description = models.TextField()
-    mfd_tgr = models.ForeignKey(MfdTgr)
-    mfd_evd = models.ForeignKey(MfdEvd)
-    fault_edge = models.ForeignKey(FaultEdge)
+    mfd_tgr = models.ForeignKey('MfdTgr')
+    mfd_evd = models.ForeignKey('MfdEvd')
+    fault_edge = models.ForeignKey('FaultEdge')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     outline = models.PolygonField(srid=4326)
 
     class Meta:
         db_table = 'hzrdi\".\"complex_fault'
 
+
 class RDepthDistr(models.Model):
     '''
     Rupture Depth Distribution
     '''
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     gid = models.TextField()
     name = models.TextField()
     description = models.TextField()
@@ -343,14 +321,14 @@ class RRateMdl(models.Model):
     Rupture Rate Model
     '''
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     gid = models.TextField()
     name = models.TextField(null=True)
     description = models.TextField(null=True)
-    mfd_tgr = models.ForeignKey(MfdTgr)
-    mfd_evd = models.ForeignKey(MfdEvd)
-    focal_mechanism = models.ForeignKey(FocalMechanism)
-    source = models.ForeignKey(Source)
+    mfd_tgr = models.ForeignKey('MfdTgr')
+    mfd_evd = models.ForeignKey('MfdEvd')
+    focal_mechanism = models.ForeignKey('FocalMechanism')
+    source = models.ForeignKey('Source')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
@@ -359,7 +337,7 @@ class RRateMdl(models.Model):
 
 class FocalMechanism(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     gid = models.TextField()
     name = models.TextField(null=True)
     description = models.TextField(null=True)
@@ -372,12 +350,13 @@ class FocalMechanism(models.Model):
         db_table = 'hzrdi\".\"focal_mechanism'
 
 '''
-Tables for the 'uiapi' schema.
+Tables in the 'uiapi' schema.
 '''
+
 
 class Upload(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     description = models.TextField(default='')
     path = models.TextField(unique=True)
     STATUS_CHOICES = (
@@ -396,8 +375,8 @@ class Upload(models.Model):
 
 class Input(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    upload = models.ForeignKey(Upload)
+    owner = models.ForeignKey('OqUser')
+    upload = models.ForeignKey('Upload')
     path = models.TextField(unique=True)
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
@@ -417,7 +396,7 @@ class Input(models.Model):
 
 class OqJob(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
+    owner = models.ForeignKey('OqUser')
     description = models.TextField()
     path = models.TextField(unique=True)
     JOB_TYPE_CHOICES = (
@@ -436,7 +415,7 @@ class OqJob(models.Model):
     status = models.TextField(choices=STATUS_CHOICES, default='pending')
     duration = models.IntegerField()
     job_pid = models.IntegerField()
-    oq_params = models.ForeignKey(OqParams)
+    oq_params = models.ForeignKey('OqParams')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
@@ -452,7 +431,7 @@ class OqParams(models.Model):
 
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
-    upload = models.ForeignKey(Upload)
+    upload = models.ForeignKey('Upload')
     region_grid_spacing = models.FloatField()
     min_magnitude = models.FloatField()
     investigation_time = models.FloatField()
@@ -494,8 +473,8 @@ class OqParams(models.Model):
 
 class Output(models.Model):
     id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    oq_job = models.ForeignKey(OqJob)
+    owner = models.ForeignKey('OqUser')
+    oq_job = models.ForeignKey('OqJob')
     path = models.TextField(unique=True)
     display_name = models.TextField()
     db_backed = models.BooleanField(default=False)
@@ -522,17 +501,21 @@ class Output(models.Model):
 
 class ErrorMsg(models.Model):
     id = models.IntegerField(primary_key=True)
-    oq_job = models.ForeignKey(OqJob)
+    oq_job = models.ForeignKey('OqJob')
     brief = models.TextField()
     detailed = models.TextField()
 
     class Meta:
         db_table = 'uiapi\".\"error_msg'
 
+'''
+Tables in the 'hzrdr' schema.
+'''
+
 
 class HazardMap(models.Model):
     id = models.IntegerField(primary_key=True)
-    output = models.ForeignKey(Output)
+    output = models.ForeignKey('Output')
     poe = models.FloatField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
@@ -547,7 +530,7 @@ class HazardMap(models.Model):
 
 class HazardMapData(models.Model):
     id = models.IntegerField(primary_key=True)
-    hazard_map = models.ForeignKey(HazardMap)
+    hazard_map = models.ForeignKey('HazardMap')
     value = models.FloatField()
     location = models.PointField(srid=4326)
 
@@ -557,7 +540,7 @@ class HazardMapData(models.Model):
 
 class HazardCurve(models.Model):
     id = models.IntegerField(primary_key=True)
-    output = models.ForeignKey(Output)
+    output = models.ForeignKey('Output')
     end_branch_label = models.TextField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
@@ -573,7 +556,7 @@ class HazardCurve(models.Model):
 
 class HazardCurveData(models.Model):
     id = models.IntegerField(primary_key=True)
-    hazard_curve = models.ForeignKey(HazardCurve)
+    hazard_curve = models.ForeignKey('HazardCurve')
     poes = FloatArrayField()
     location = models.PointField(srid=4326)
 
@@ -583,7 +566,7 @@ class HazardCurveData(models.Model):
 
 class GmfData(models.Model):
     id = models.IntegerField(primary_key=True)
-    output = models.ForeignKey(Output)
+    output = models.ForeignKey('Output')
     ground_motion = models.FloatField()
     location = models.PointField(srid=4326)
 
