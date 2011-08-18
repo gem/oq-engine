@@ -284,7 +284,7 @@ class TestStore(object):
         """Initialize the test store."""
         if TestStore._conn is not None:
             return
-        TestStore._conn = redis.Redis(db=config.get("kvs", "test_db"))
+        TestStore._conn = redis.Redis(db=int(config.get("kvs", "test_db")))
 
     @staticmethod
     def close():
