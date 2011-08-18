@@ -317,7 +317,6 @@ class Job(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        # TODO: unittest
         session = get_db_session("reslt", "reader")
         [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
         return status

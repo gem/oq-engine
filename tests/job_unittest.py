@@ -270,6 +270,17 @@ class JobDbRecordTestCase(unittest.TestCase):
 
         self.assertEqual(status, job.status)
 
+    def test_get_status_from_db(self):
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_db_session("reslt", "writer")
+        session.query(OqJob).update({'status': 'failed'})
+        session.commit()
+        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
+        session.query(OqJob).update({'status': 'running'})
+        session.commit()
+        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'running')
+
 
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     maxDiff = None
