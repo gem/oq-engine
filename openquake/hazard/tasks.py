@@ -54,20 +54,22 @@ def generate_erf(job_id, logger):
 
     # TODO(JM): implement real ERF computation
 
-    erf_key = kvs.generate_product_key(job_id, kvs.tokens.ERF_KEY_TOKEN)
-    kvs.get_client().set(erf_key, json.JSONEncoder().encode([job_id]))
+    kvs.get_client().set(kvs.tokens.erf_key(job_id),
+                         json.JSONEncoder().encode([job_id]))
 
     return job_id
 
 
 @jtask
 @oq_task
-def compute_ground_motion_fields(job_id, logger, site_list, gmf_id, seed):
+def compute_ground_motion_fields(job_id, logger, site_list, history,
+                                 realization, seed):
     """ Generate ground motion fields """
     # TODO(JMC): Use a block_id instead of a site_list
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        hazengine.compute_ground_motion_fields(site_list, gmf_id, seed)
+        hazengine.compute_ground_motion_fields(site_list, history, realization,
+                                               seed)
 
 
 @jtask
@@ -94,8 +96,7 @@ def compute_mgm_intensity(job_id, logger, block_id, site_id):
 
     kvs_client = kvs.get_client()
 
-    mgm_key = kvs.generate_product_key(job_id, kvs.tokens.MGM_KEY_TOKEN,
-        block_id, site_id)
+    mgm_key = kvs.tokens.mgm_key(job_id, block_id, site_id)
     mgm = kvs_client.get(mgm_key)
 
     if not mgm:
