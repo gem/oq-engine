@@ -8,6 +8,9 @@ import sys
 db_admin_user = 'postgres'
 original_db = 'original'
 
+def info(message):
+    print message
+
 def quiet_check_call(*args, **kwargs):
     try:
         with open('/tmp/subprocess.out', 'w') as out:
@@ -108,6 +111,8 @@ def pg_dump(to_file):
 
 
 # DB from create_oq_schema
+info('Creating a fresh database using create_oq_schema...')
+
 psql('-c', "DROP DATABASE IF EXISTS %s" % original_db)
 psql('-c', "CREATE DATABASE %s" % original_db)
 
@@ -116,18 +121,23 @@ quiet_check_call(['bin/create_oq_schema', '--yes', '--no-tab-spaces',
                   '--db-user=%s' % db_admin_user,
                   '--schema-path=%s' % 'openquake/db/schema'])
 
+info('Dumping the database...')
 pg_dump('/tmp/fresh.sql')
 
 # DB from dbmaint.py
+info('Loading database from old dump...')
 psql('-c', "DROP DATABASE IF EXISTS %s" % original_db)
 psql('-c', "CREATE DATABASE %s" % original_db)
 load('tools/test_migration_base.sql.gz')
 
+info('Upgrading database using dbmaint...')
 quiet_check_call(['tools/dbmaint.py', '--db', original_db,
                   '-U', db_admin_user])
 
+info('Dumping the database...')
 pg_dump('/tmp/after.sql')
 
+info('Comparing new and upgraded version...')
 res = subprocess.call(['diff', '-u', '/tmp/fresh.sql', '/tmp/after.sql'])
 
 sys.exit(res)
