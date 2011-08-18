@@ -111,7 +111,7 @@ def pg_dump(to_file):
 psql('-c', "DROP DATABASE IF EXISTS %s" % original_db)
 psql('-c', "CREATE DATABASE %s" % original_db)
 
-quiet_check_call(['bin/create_oq_schema', '--yes',
+quiet_check_call(['bin/create_oq_schema', '--yes', '--no-tab-spaces',
                   '--db-name=%s' % original_db,
                   '--db-user=%s' % db_admin_user,
                   '--schema-path=%s' % 'openquake/db/schema'])
