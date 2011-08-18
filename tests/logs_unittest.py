@@ -391,7 +391,6 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
 
         self.assertEquals(10, len(messages))
 
-
         # check message order
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
