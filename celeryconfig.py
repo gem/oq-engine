@@ -26,13 +26,18 @@ eventually.
 
 import sys
 
+from openquake.utils import config
+
+
 sys.path.append('.')
 
-BROKER_HOST = "localhost"
-BROKER_PORT = 5672
-BROKER_USER = "celeryuser"
-BROKER_PASSWORD = "celery"
-BROKER_VHOST = "celeryvhost"
+amqp = config.get_section("amqp")
+
+BROKER_HOST = amqp.get("host")
+BROKER_PORT = int(amqp.get("port"))
+BROKER_USER = amqp.get("user")
+BROKER_PASSWORD = amqp.get("password")
+BROKER_VHOST = amqp.get("vhost")
 
 CELERY_RESULT_BACKEND = "amqp"
 
