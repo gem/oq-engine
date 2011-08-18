@@ -8,8 +8,10 @@ import sys
 db_admin_user = 'postgres'
 original_db = 'original'
 
+
 def info(message):
     print message
+
 
 def quiet_check_call(*args, **kwargs):
     try:
@@ -26,12 +28,15 @@ def quiet_check_call(*args, **kwargs):
     finally:
         os.unlink('/tmp/subprocess.out')
 
+
 def psql(*args):
     quiet_check_call(['psql', '-U', db_admin_user] + list(args))
+
 
 def load(path):
     quiet_check_call('zcat %s | psql -U %s -d %s' % (
             path, db_admin_user, original_db), shell=True)
+
 
 def pg_dump(to_file):
     pg = subprocess.Popen(['pg_dump', '--schema-only', '-U', db_admin_user,
