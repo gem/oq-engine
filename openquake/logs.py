@@ -109,7 +109,15 @@ def init_logs_amqp(level):
 
     logging_level = LEVELS.get(level, 'warn')
 
-    # do this before trying to use amqplib
+    # loggers are organized in a hierarchy with the root logger at the
+    # top; by default log messages are handled first by the logger
+    # that receives the .info/.warn/etc. call and then in turn by all
+    # its ancestor (up to the root logger)
+    #
+    # setting .propagate to False avoids log messages coming from
+    # amqplib being propagated up the logger chain up to the root
+    # logger, which then tries to use the AMQP appender to log and
+    # (potentially) causes an infinite loop
     amqp_log = logging.getLogger("amqplib")
     amqp_log.propagate = False
 
