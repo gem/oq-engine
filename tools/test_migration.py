@@ -37,6 +37,8 @@ def pg_dump(to_file):
 
     comments = []
     columns = []
+    alters = []
+    alter_start = None
     in_table = False
 
     with open(to_file, 'w') as out:
@@ -68,6 +70,23 @@ def pg_dump(to_file):
                 for column in sorted(columns):
                     out.write(column)
 
+            # ignore the name of UNIQUE keys until we start naming
+            # them explicitly
+            if alter_start:
+                if re.match(r"^    ADD CONSTRAINT \w+_key UNIQUE ", line):
+                    line = re.sub(r"    ADD CONSTRAINT (\w+)_key UNIQUE ",
+                                  r"    ADD CONSTRAINT <elided>_key UNIQUE ",
+                                  line)
+                    alters.append(alter_start + line)
+                    alter_start = None
+                    continue
+                else:
+                    line = alter_start + line
+                    alter_start = None
+            elif line.startswith('ALTER TABLE ONLY '):
+                alter_start = line;
+                continue
+
             # move comments to the end
             if line.startswith('COMMENT '):
                 comments.append(line)
@@ -78,6 +97,10 @@ def pg_dump(to_file):
                 columns = []
 
             out.write(line)
+
+        # write out alters sorted
+        for alter in sorted(alters):
+            out.write(alter)
 
         # write out comments sorted
         for comment in sorted(comments):
