@@ -25,11 +25,11 @@ import os
 from scipy.stats import norm
 
 from openquake import job
-from openquake.job import mixins
 from openquake import kvs
-from openquake.job import config
 from openquake import logs
 from openquake import shapes
+from openquake.job import config as job_config
+from openquake.job import mixins
 from openquake.output import curve
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
@@ -132,7 +132,7 @@ def read_sites_from_exposure(a_job):
     """
 
     sites = []
-    path = os.path.join(a_job.base_path, a_job.params[config.EXPOSURE])
+    path = os.path.join(a_job.base_path, a_job.params[job_config.EXPOSURE])
 
     reader = exposure.ExposurePortfolioFile(path)
     constraint = a_job.region
@@ -176,7 +176,7 @@ class RiskJobMixin(mixins.Mixin):
         """Load exposure assets and write them to KVS."""
 
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
-            (self.base_path, self.params[config.EXPOSURE]))
+            (self.base_path, self.params[job_config.EXPOSURE]))
 
         for site, asset in exposure_parser.filter(self.region):
 # TODO(ac): This is kludgey (?)
