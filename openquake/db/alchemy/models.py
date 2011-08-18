@@ -140,6 +140,7 @@ class OqJob(Base):
                        nullable=False, default="pending")
     duration = sa.Column(sa.Integer, nullable=False, default=0)
     job_pid = sa.Column(sa.Integer, nullable=False, default=0)
+    supervisor_pid = sa.Column(sa.Integer, nullable=False, default=0)
     oq_params_id = sa.Column(sa.Integer, sa.ForeignKey("uiapi.oq_params.id"),
                              nullable=False)
     oq_params = relationship("OqParams")
