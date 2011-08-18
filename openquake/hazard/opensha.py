@@ -31,7 +31,6 @@ from itertools import izip
 from openquake import java
 from openquake import kvs
 from openquake import logs
-from openquake import settings
 from openquake import shapes
 from openquake import xml
 
@@ -40,6 +39,7 @@ from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
 from openquake.output import hazard as hazard_output
+from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
@@ -63,8 +63,8 @@ def preload(fn):
     def preloader(self, *args, **kwargs):
         """Validate job"""
         self.cache = java.jclass("KVS")(
-                settings.KVS_HOST,
-                settings.KVS_PORT)
+                config.get("kvs", "host"),
+                int(config.get("kvs", "port")))
         self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
