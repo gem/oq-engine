@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests tests --testmatch=bb_.+ $*
+nosetests -s --testmatch=bb_.+ tests/*_tests.py 2>&1 | tee last_bb_test_run.log
