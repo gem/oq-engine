@@ -811,6 +811,24 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
 ) TABLESPACE riskr_ts;
 
 
+-- Collapse map data.
+CREATE TABLE riskr.collapse_map (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.collapse_map_data (
+    id SERIAL PRIMARY KEY,
+    collapse_map_id INTEGER NOT NULL, -- FK to collapse_map.id
+    asset_ref VARCHAR NOT NULL,
+    value float NOT NULL,
+    std_dev float NOT NULL
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'collapse_map_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.collapse_map_data ALTER COLUMN location SET NOT NULL;
+
+
 -- Exposure model
 CREATE TABLE oqmif.exposure_model (
     id SERIAL PRIMARY KEY,
