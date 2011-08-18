@@ -12,62 +12,80 @@ from datetime import datetime
 from django.contrib.gis.db import models
 from django.utils.encoding import smart_str
 
-class SpatialRefSys(models.Model):
-    srid = models.IntegerField(primary_key=True)
-    auth_name = models.CharField(max_length=256)
-    auth_srid = models.IntegerField()
-    srtext = models.CharField(max_length=2048)
-    proj4text = models.CharField(max_length=2048)
-    class Meta:
-        db_table = u'spatial_ref_sys'
 
-class GeometryColumns(models.Model):
-    f_table_catalog = models.CharField(max_length=256)
-    f_table_schema = models.CharField(max_length=256)
-    f_table_name = models.CharField(max_length=256)
-    f_geometry_column = models.CharField(max_length=256)
-    coord_dimension = models.IntegerField()
-    srid = models.IntegerField()
-    type = models.CharField(max_length=30)
-    class Meta:
-        db_table = u'geometry_columns'
+'''
+Tables in the 'admin' schema.
+'''
 
-class GeographyColumns(models.Model):
-    f_table_catalog = models.TextField() # This field type is a guess.
-    f_table_schema = models.TextField() # This field type is a guess.
-    f_table_name = models.TextField() # This field type is a guess.
-    f_geography_column = models.TextField() # This field type is a guess.
-    coord_dimension = models.IntegerField()
-    srid = models.IntegerField()
-    type = models.TextField()
-    class Meta:
-        db_table = u'geography_columns'
+class OqUser(models.Model):
+    id = models.IntegerField(primary_key=True)
+    user_name = models.TextField()
+    full_name = models.TextField()
+    organization = models.ForeignKey(Organization)
+    data_is_open = models.BooleanField(default=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
+    def __str__(self):
+        return smart_str(
+            ":oq_user: %s (%s)" % (self.full_name, self.user_name))
+
+    class Meta:
+        db_table = 'admin\".\"oq_user'
+
+
+class Organization(models.Model):
+    id = models.IntegerField(primary_key=True)
+    name = models.TextField()
+    address = models.TextField(null=True)
+    url = models.TextField(null=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    def __str__(self):
+        return smart_str(":organization: %s" % self.name)
+
+    class Meta:
+        db_table = 'admin\".\"organization'
+
+
+# TODO: delete this model?
 class RevisionInfo(models.Model):
     id = models.IntegerField(primary_key=True)
-    artefact = models.CharField(unique=True, max_length=-1)
-    revision = models.CharField(max_length=-1)
+    artefact = models.TextField(unique=True)
+    revision = models.TextField()
     step = models.IntegerField()
-    last_update = models.DateTimeField()
-    class Meta:
-        db_table = u'revision_info'
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-class SimpleRupture(models.Model):
-    id = models.IntegerField()
-    owner_id = models.IntegerField()
-    input_id = models.IntegerField()
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    si_type = models.CharField(max_length=-1)
-    tectonic_region = models.CharField(max_length=-1)
-    rake = models.FloatField()
-    magnitude = models.FloatField()
-    magnitude_type = models.CharField(max_length=2)
-    edge = models.TextField() # This field type is a guess.
-    fault_outline = models.TextField() # This field type is a guess.
     class Meta:
-        db_table = u'simple_rupture'
+        db_table = 'admin\".\"revision_info'
+
+
+'''
+Tables in the 'eqcat' schema.
+'''
+
+class Catalog(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    eventid = models.IntegerField()
+    agency = models.TextField()
+    identifier = models.TextField()
+    time = models.DateTimeField()
+    time_error = models.FloatField()
+    depth = models.FloatField()
+    depth_error = models.FloatField()
+    EVENT_CLASS_CHOICES = (
+        (u'aftershock', u'Aftershock'),
+        (u'foreshock', u'Foreshock'),
+    )
+    event_class = models.TextField(null=True, choices=EVENT_CLASS_CHOICES)
+    magnitude = models.ForeignKey(Magnitude)
+    surface = models.ForeignKey(Surface)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    point = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'eqcat\".\"catalog' 
+
 
 class Magnitude(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -79,25 +97,39 @@ class Magnitude(models.Model):
     ms_val_error = models.FloatField()
     mw_val = models.FloatField()
     mw_val_error = models.FloatField()
-    last_update = models.DateTimeField()
-    class Meta:
-        db_table = u'magnitude'
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
+    class Meta:
+        db_table = 'eqcat\".\"magnitude' 
+
+
+class Surface(models.Model):
+    id = models.IntegerField(primary_key=True)
+    semi_minor = models.FloatField()
+    semi_major = models.FloatField()
+    strike = models.FloatField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'eqcat\".\"surface'
+
+
+# View
 class CatalogAllfields(models.Model):
     id = models.IntegerField()
     owner_id = models.IntegerField()
     eventid = models.IntegerField()
-    agency = models.CharField(max_length=-1)
-    identifier = models.CharField(max_length=-1)
+    agency = models.TextField()
+    identifier = models.TextField()
     time = models.DateTimeField()
     time_error = models.FloatField()
     depth = models.FloatField()
     depth_error = models.FloatField()
-    event_class = models.CharField(max_length=-1)
+    event_class = models.TextField()
     magnitude_id = models.IntegerField()
     surface_id = models.IntegerField()
     last_update = models.DateTimeField()
-    point = models.TextField() # This field type is a guess.
+    point = models.PointField(srid=4326)
     semi_minor = models.FloatField()
     semi_major = models.FloatField()
     strike = models.FloatField()
@@ -109,15 +141,86 @@ class CatalogAllfields(models.Model):
     ms_val_error = models.FloatField()
     mw_val = models.FloatField()
     mw_val_error = models.FloatField()
+
     class Meta:
-        db_table = u'catalog_allfields'
+        db_table = 'eqcat\".\"catalog_allfields'
+
+
+'''
+Tables for the 'hzrdi' (Hazard Input) schema.
+'''
+
+
+class Rupture(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    input = models.ForeignKey(Input)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
+    si_type = models.TextField()
+    tectonic_region = models.TextField()
+    rake = models.FloatField()
+    magnitude = models.FloatField()
+    magnitude_type = models.CharField(max_length=2)
+    simple_fault = models.ForeignKey(SimpleFault)
+    complex_fault = models.ForeignKey(ComplexFault)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    point = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'hzrdi\".\"rupture'
+
+
+class Source(models.Model):
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey(OqUser)
+    input = models.ForeignKey(Input)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
+    si_type = models.TextField()
+    tectonic_region = models.TextField()
+    simple_fault = models.ForeignKey(SimpleFault)
+    complex_fault = models.ForeignKey(ComplexFault)
+    rake = models.FloatField()
+    hypocentral_depth = models.FloatField()
+    r_depth_distr = models.ForeignKey(RDepthDistr)
+    last_update = models.DateTimeField()
+    point = models.PointField(srid=4326)
+    area = models.PolygonField(srid=4326)
+
+    class Meta:
+        db_table = 'hzrdi.\".\"source'
+
+
+# View
+class SimpleRupture(models.Model):
+    id = models.IntegerField()
+    owner_id = models.IntegerField()
+    input_id = models.IntegerField()
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
+    si_type = models.TextField()
+    tectonic_region = models.TextField()
+    rake = models.FloatField()
+    magnitude = models.FloatField()
+    magnitude_type = models.CharField(max_length=2)
+    edge = models.TextField() # This field type is a guess.
+    fault_outline = models.TextField() # This field type is a guess.
+
+    class Meta:
+        db_table = 'hzrdi\".\"simple_rupture'
+
+
 
 class SimpleFault(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
     dip = models.FloatField()
     upper_depth = models.FloatField()
     lower_depth = models.FloatField()
@@ -129,44 +232,16 @@ class SimpleFault(models.Model):
     class Meta:
         db_table = u'simple_fault'
 
-class Source(models.Model):
-    id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    input = models.ForeignKey(Input)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    si_type = models.CharField(max_length=-1)
-    tectonic_region = models.CharField(max_length=-1)
-    simple_fault = models.ForeignKey(SimpleFault)
-    complex_fault = models.ForeignKey(ComplexFault)
-    rake = models.FloatField()
-    hypocentral_depth = models.FloatField()
-    r_depth_distr = models.ForeignKey(RDepthDistr)
-    last_update = models.DateTimeField()
-    point = models.TextField() # This field type is a guess.
-    area = models.TextField() # This field type is a guess.
-    class Meta:
-        db_table = u'source'
-
-class Surface(models.Model):
-    id = models.IntegerField(primary_key=True)
-    semi_minor = models.FloatField()
-    semi_major = models.FloatField()
-    strike = models.FloatField()
-    last_update = models.DateTimeField()
-    class Meta:
-        db_table = u'surface'
 
 class SimpleSource(models.Model):
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    si_type = models.CharField(max_length=-1)
-    tectonic_region = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
+    si_type = models.TextField()
+    tectonic_region = models.TextField()
     rake = models.FloatField()
     dip = models.FloatField()
     upper_depth = models.FloatField()
@@ -189,10 +264,10 @@ class SimpleSource(models.Model):
 class OqJob(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    description = models.CharField(max_length=-1)
-    path = models.CharField(unique=True, max_length=-1)
-    job_type = models.CharField(max_length=-1)
-    status = models.CharField(max_length=-1)
+    description = models.TextField()
+    path = models.TextField(unique=True)
+    job_type = models.TextField()
+    status = models.TextField()
     duration = models.IntegerField()
     job_pid = models.IntegerField()
     oq_params = models.ForeignKey(OqParams)
@@ -203,9 +278,9 @@ class OqJob(models.Model):
 class FaultEdge(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
     last_update = models.DateTimeField()
     top = models.TextField() # This field type is a guess.
     bottom = models.TextField() # This field type is a guess.
@@ -216,8 +291,8 @@ class Input(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
     upload = models.ForeignKey(Upload)
-    path = models.CharField(unique=True, max_length=-1)
-    input_type = models.CharField(max_length=-1)
+    path = models.TextField(unique=True)
+    input_type = models.TextField()
     size = models.IntegerField()
     last_update = models.DateTimeField()
     class Meta:
@@ -227,11 +302,11 @@ class ComplexRupture(models.Model):
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    si_type = models.CharField(max_length=-1)
-    tectonic_region = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
+    si_type = models.TextField()
+    tectonic_region = models.TextField()
     rake = models.FloatField()
     magnitude = models.FloatField()
     magnitude_type = models.CharField(max_length=2)
@@ -244,9 +319,9 @@ class ComplexRupture(models.Model):
 class FocalMechanism(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
     strike = models.FloatField()
     dip = models.FloatField()
     rake = models.FloatField()
@@ -257,9 +332,9 @@ class FocalMechanism(models.Model):
 class RDepthDistr(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
     magnitude_type = models.CharField(max_length=2)
     magnitude = models.TextField() # This field type is a guess.
     depth = models.TextField() # This field type is a guess.
@@ -271,11 +346,11 @@ class ComplexSource(models.Model):
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    si_type = models.CharField(max_length=-1)
-    tectonic_region = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
+    si_type = models.TextField()
+    tectonic_region = models.TextField()
     rake = models.FloatField()
     top_edge = models.TextField() # This field type is a guess.
     bottom_edge = models.TextField() # This field type is a guess.
@@ -301,15 +376,15 @@ class HazardMapData(models.Model):
 
 class OqParams(models.Model):
     id = models.IntegerField(primary_key=True)
-    job_type = models.CharField(max_length=-1)
+    job_type = models.TextField()
     upload = models.ForeignKey(Upload)
     region_grid_spacing = models.FloatField()
     min_magnitude = models.FloatField()
     investigation_time = models.FloatField()
-    component = models.CharField(max_length=-1)
-    imt = models.CharField(max_length=-1)
+    component = models.TextField()
+    imt = models.TextField()
     period = models.FloatField()
-    truncation_type = models.CharField(max_length=-1)
+    truncation_type = models.TextField()
     truncation_level = models.FloatField()
     reference_vs30_value = models.FloatField()
     imls = models.TextField() # This field type is a guess.
@@ -325,8 +400,8 @@ class OqParams(models.Model):
 class HazardCurve(models.Model):
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey(Output)
-    end_branch_label = models.CharField(max_length=-1)
-    statistic_type = models.CharField(max_length=-1)
+    end_branch_label = models.TextField()
+    statistic_type = models.TextField()
     quantile = models.FloatField()
     class Meta:
         db_table = u'hazard_curve'
@@ -334,8 +409,8 @@ class HazardCurve(models.Model):
 class ErrorMsg(models.Model):
     id = models.IntegerField(primary_key=True)
     oq_job = models.ForeignKey(OqJob)
-    brief = models.CharField(max_length=-1)
-    detailed = models.CharField(max_length=-1)
+    brief = models.TextField()
+    detailed = models.TextField()
     class Meta:
         db_table = u'error_msg'
 
@@ -343,28 +418,16 @@ class HazardMap(models.Model):
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey(Output)
     poe = models.FloatField()
-    statistic_type = models.CharField(max_length=-1)
+    statistic_type = models.TextField()
     quantile = models.FloatField()
     class Meta:
         db_table = u'hazard_map'
 
-class Organization(models.Model):
-    id = models.IntegerField(primary_key=True)
-    name = models.TextField()
-    address = models.TextField(null=True)
-    url = models.TextField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def _str__(self):
-        return smart_str(":organization: %s" % self.name)
-
-    class Meta:
-        db_table = 'admin\".\"organization'
 
 class VulnerabilityFunction(models.Model):
     id = models.IntegerField(primary_key=True)
     vulnerability_model = models.ForeignKey(VulnerabilityModel)
-    vf_ref = models.CharField(max_length=-1)
+    vf_ref = models.TextField()
     loss_ratios = models.TextField() # This field type is a guess.
     covs = models.TextField() # This field type is a guess.
     last_update = models.DateTimeField()
@@ -374,7 +437,7 @@ class VulnerabilityFunction(models.Model):
 class LossCurveData(models.Model):
     id = models.IntegerField(primary_key=True)
     loss_curve = models.ForeignKey(LossCurve)
-    asset_ref = models.CharField(max_length=-1)
+    asset_ref = models.TextField()
     losses = models.TextField() # This field type is a guess.
     poes = models.TextField() # This field type is a guess.
     location = models.TextField() # This field type is a guess.
@@ -392,27 +455,13 @@ class AggregateLossCurveData(models.Model):
 class LossMapData(models.Model):
     id = models.IntegerField(primary_key=True)
     loss_map = models.ForeignKey(LossMap)
-    asset_ref = models.CharField(max_length=-1)
+    asset_ref = models.TextField()
     value = models.FloatField()
     std_dev = models.FloatField()
     location = models.TextField() # This field type is a guess.
     class Meta:
         db_table = u'loss_map_data'
 
-class OqUser(models.Model):
-    id = models.IntegerField(primary_key=True)
-    user_name = models.TextField()
-    full_name = models.TextField()
-    organization = models.ForeignKey(Organization)
-    data_is_open = models.BooleanField(default=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def __str__(self):
-        return smart_str(
-            ":oq_user: %s (%s)" % (self.full_name, self.user_name))
-
-    class Meta:
-        db_table = 'admin\".\"oq_user'
 
 class MfdEvd(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -445,10 +494,10 @@ class MfdTgr(models.Model):
 class ExposureModel(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    category = models.CharField(max_length=-1)
-    unit = models.CharField(max_length=-1)
+    name = models.TextField()
+    description = models.TextField()
+    category = models.TextField()
+    unit = models.TextField()
     last_update = models.DateTimeField()
     class Meta:
         db_table = u'exposure_model'
@@ -456,39 +505,22 @@ class ExposureModel(models.Model):
 class VulnerabilityModel(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    imt = models.CharField(max_length=-1)
+    name = models.TextField()
+    description = models.TextField()
+    imt = models.TextField()
     imls = models.TextField() # This field type is a guess.
-    category = models.CharField(max_length=-1)
+    category = models.TextField()
     last_update = models.DateTimeField()
     class Meta:
         db_table = u'vulnerability_model'
 
-class Catalog(models.Model):
-    id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    eventid = models.IntegerField()
-    agency = models.CharField(max_length=-1)
-    identifier = models.CharField(max_length=-1)
-    time = models.DateTimeField()
-    time_error = models.FloatField()
-    depth = models.FloatField()
-    depth_error = models.FloatField()
-    event_class = models.CharField(max_length=-1)
-    magnitude = models.ForeignKey(Magnitude)
-    surface = models.ForeignKey(Surface)
-    last_update = models.DateTimeField()
-    point = models.TextField() # This field type is a guess.
-    class Meta:
-        db_table = u'catalog'
 
 class ComplexFault(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
     mfd_tgr = models.ForeignKey(MfdTgr)
     mfd_evd = models.ForeignKey(MfdEvd)
     fault_edge = models.ForeignKey(FaultEdge)
@@ -500,9 +532,9 @@ class ComplexFault(models.Model):
 class RRateMdl(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
+    gid = models.TextField()
+    name = models.TextField()
+    description = models.TextField()
     mfd_tgr = models.ForeignKey(MfdTgr)
     mfd_evd = models.ForeignKey(MfdEvd)
     focal_mechanism = models.ForeignKey(FocalMechanism)
@@ -511,24 +543,6 @@ class RRateMdl(models.Model):
     class Meta:
         db_table = u'r_rate_mdl'
 
-class Rupture(models.Model):
-    id = models.IntegerField(primary_key=True)
-    owner = models.ForeignKey(OqUser)
-    input = models.ForeignKey(Input)
-    gid = models.CharField(max_length=-1)
-    name = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1)
-    si_type = models.CharField(max_length=-1)
-    tectonic_region = models.CharField(max_length=-1)
-    rake = models.FloatField()
-    magnitude = models.FloatField()
-    magnitude_type = models.CharField(max_length=2)
-    simple_fault = models.ForeignKey(SimpleFault)
-    complex_fault = models.ForeignKey(ComplexFault)
-    last_update = models.DateTimeField()
-    point = models.TextField() # This field type is a guess.
-    class Meta:
-        db_table = u'rupture'
 
 class HazardCurveData(models.Model):
     id = models.IntegerField(primary_key=True)
@@ -541,10 +555,10 @@ class HazardCurveData(models.Model):
 class ExposureData(models.Model):
     id = models.IntegerField(primary_key=True)
     exposure_model = models.ForeignKey(ExposureModel)
-    asset_ref = models.CharField(max_length=-1)
+    asset_ref = models.TextField()
     value = models.FloatField()
     vulnerability_function = models.ForeignKey(VulnerabilityFunction)
-    structure_type = models.CharField(max_length=-1)
+    structure_type = models.TextField()
     retrofitting_cost = models.FloatField()
     last_update = models.DateTimeField()
     site = models.TextField() # This field type is a guess.
@@ -555,9 +569,9 @@ class LossCurve(models.Model):
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey(Output)
     aggregate = models.BooleanField()
-    end_branch_label = models.CharField(max_length=-1)
-    category = models.CharField(max_length=-1)
-    unit = models.CharField(max_length=-1)
+    end_branch_label = models.TextField()
+    category = models.TextField()
+    unit = models.TextField()
     class Meta:
         db_table = u'loss_curve'
 
@@ -565,10 +579,10 @@ class LossMap(models.Model):
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey(Output)
     deterministic = models.BooleanField()
-    loss_map_ref = models.CharField(max_length=-1)
-    end_branch_label = models.CharField(max_length=-1)
-    category = models.CharField(max_length=-1)
-    unit = models.CharField(max_length=-1)
+    loss_map_ref = models.TextField()
+    end_branch_label = models.TextField()
+    category = models.TextField()
+    unit = models.TextField()
     poe = models.FloatField()
     class Meta:
         db_table = u'loss_map'
@@ -577,12 +591,12 @@ class Output(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
     oq_job = models.ForeignKey(OqJob)
-    path = models.CharField(unique=True, max_length=-1)
-    display_name = models.CharField(max_length=-1)
+    path = models.TextField(unique=True)
+    display_name = models.TextField()
     db_backed = models.BooleanField()
-    output_type = models.CharField(max_length=-1)
+    output_type = models.TextField()
     size = models.IntegerField()
-    shapefile_path = models.CharField(max_length=-1)
+    shapefile_path = models.TextField()
     min_value = models.FloatField()
     max_value = models.FloatField()
     last_update = models.DateTimeField()
@@ -592,9 +606,9 @@ class Output(models.Model):
 class Upload(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey(OqUser)
-    description = models.CharField(max_length=-1)
-    path = models.CharField(unique=True, max_length=-1)
-    status = models.CharField(max_length=-1)
+    description = models.TextField()
+    path = models.TextField(unique=True)
+    status = models.TextField()
     job_pid = models.IntegerField()
     last_update = models.DateTimeField()
     class Meta:
