@@ -281,6 +281,16 @@ class JobDbRecordTestCase(unittest.TestCase):
         session.commit()
         self.assertEqual(Job.get_status_from_db(self.job.job_id), 'running')
 
+    def test_is_job_completed(self):
+        job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        session = get_db_session("reslt", "writer")
+        pairs = [('pending', False), ('running', False),
+                 ('succeeded', True), ('failed', True)]
+        for status, is_completed in pairs:
+            session.query(OqJob).update({'status': status})
+            session.commit()
+            self.assertEqual(Job.is_job_completed(job_id), is_completed)
+
 
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     maxDiff = None
