@@ -547,6 +547,7 @@ CREATE TABLE uiapi.oq_job (
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
+    supervisor_pid INTEGER NOT NULL DEFAULT 0,
     oq_params_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
