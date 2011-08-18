@@ -23,7 +23,6 @@ import json
 import os
 
 from scipy.stats import norm
-from celery.task import task
 
 from openquake import job
 from openquake.job import mixins
@@ -36,6 +35,8 @@ from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
 from openquake.utils.tasks import oq_task
+
+from celery.decorators import task
 
 LOG = logs.LOG
 BLOCK_SIZE = 100
