@@ -87,7 +87,7 @@ def pg_dump(to_file):
                     line = alter_start + line
                     alter_start = None
             elif line.startswith('ALTER TABLE ONLY '):
-                alter_start = line;
+                alter_start = line
                 continue
 
             # move comments to the end
@@ -96,7 +96,7 @@ def pg_dump(to_file):
                 continue
 
             if line.startswith('CREATE TABLE'):
-                in_table = True;
+                in_table = True
                 columns = []
 
             out.write(line)
