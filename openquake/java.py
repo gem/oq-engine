@@ -24,7 +24,7 @@ import os
 import sys
 import traceback
 
-from celery.task import task as celery_task
+from celery.decorators import task as celery_task
 
 from functools import wraps
 
