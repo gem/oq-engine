@@ -109,6 +109,10 @@ def init_logs_amqp(level):
 
     logging_level = LEVELS.get(level, 'warn')
 
+    # do this before trying to use amqplib
+    amqp_log = logging.getLogger("amqplib")
+    amqp_log.propagate = False
+
     # initialize Python logging
     found = any(isinstance(hdlr, AMQPHandler) for hdlr in LOG.handlers)
 
@@ -125,9 +129,6 @@ def init_logs_amqp(level):
         hdlr.setFormatter(
             logging.Formatter(settings.LOGGING_AMQP_FORMAT, None))
         LOG.addHandler(hdlr)
-
-    amqp_log = logging.getLogger("amqplib")
-    amqp_log.propagate = False
 
     LOG.setLevel(logging_level)
     RISK_LOG.setLevel(logging_level)
