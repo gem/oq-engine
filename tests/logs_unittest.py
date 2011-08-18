@@ -391,15 +391,16 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
 
         self.assertEquals(10, len(messages))
 
+
         # check message order
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
-                msg = '%s %s message' % (source, level)
-                log = messages[i * 5 + j].body
-
-                self.assertTrue(msg in log,
-                                '"%s" contained in "%s"' % (msg, log))
+                fragment = '%s %s message' % (source, level)
+                contained = filter(lambda msg: fragment in msg.body, messages)
+                self.assertEquals(
+                    1, len(contained),
+                    '"%s" contained in "%s"' % (fragment, contained))
 
         # check topic
         for i, source in enumerate(['Java', 'Python']):
