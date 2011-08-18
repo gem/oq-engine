@@ -328,7 +328,6 @@ class Job(object):
         of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
         ``False`` otherwise.
         """
-        # TODO: unittest
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
