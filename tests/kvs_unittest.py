@@ -33,9 +33,6 @@ from tests.utils import helpers
 from tests.utils.helpers import patch
 
 
-from openquake.kvs import tokens
-
-
 LOG = logs.LOG
 
 TEST_FILE = "nrml_test_result.xml"
@@ -129,62 +126,21 @@ class TokensTestCase(unittest.TestCase):
         self.block_id = 8801
         self.site = "Testville,TestLand"
 
-    def test_generate_product_key_with_only_job_id_and_product(self):
-        key = kvs.generate_product_key(self.job_id, self.product)
-
-        ev = "%s!%s!!" % (self.job_id, self.product)
-        self.assertEqual(key, ev)
-
-    def test_generate_product_key_with_job_id_product_and_block_id(self):
-        key = kvs.generate_product_key(
-            self.job_id, self.product, self.block_id)
-
-        ev = "%s!%s!%s!" % (self.job_id, self.product, self.block_id)
-        self.assertEqual(key, ev)
-
-    def test_generate_product_key_with_job_id_product_and_site(self):
-        key = kvs.generate_product_key(self.job_id, self.product,
-            site=self.site)
-
-        ev = "%s!%s!!%s" % (self.job_id, self.product, self.site)
-        self.assertEqual(key, ev)
-
-    def test_generate_product_key_with_all_test_data(self):
-        key = kvs.generate_product_key(
+    def test_generate_key(self):
+        key = kvs.tokens._generate_key(
             self.job_id, self.product, self.block_id, self.site)
 
-        ev = "%s!%s!%s!%s" % (
-                self.job_id, self.product, self.block_id, self.site)
+        ev = "%s!%s!%s!%s" % (kvs.tokens.generate_job_key(self.job_id),
+                              self.product, self.block_id, self.site)
         self.assertEqual(key, ev)
-
-    def test_generate_product_key_with_tokens_from_kvs(self):
-        products = [
-            tokens.ERF_KEY_TOKEN,
-            tokens.MGM_KEY_TOKEN,
-            tokens.HAZARD_CURVE_POES_KEY_TOKEN,
-            tokens.EXPOSURE_KEY_TOKEN,
-            tokens.GMF_KEY_TOKEN,
-            tokens.LOSS_RATIO_CURVE_KEY_TOKEN,
-            tokens.LOSS_CURVE_KEY_TOKEN,
-            tokens.loss_token(0.01),
-            tokens.VULNERABILITY_CURVE_KEY_TOKEN,
-        ]
-
-        for product in products:
-            key = kvs.generate_product_key(self.job_id, product,
-                self.block_id, self.site)
-
-            ev = "%s!%s!%s!%s" % (self.job_id, product,
-                    self.block_id, self.site)
-            self.assertEqual(key, ev)
 
     def test_kvs_doesnt_support_spaces_in_keys(self):
         self.product = "A TestProduct"
         self.site = "Testville, TestLand"
-        key = kvs.generate_product_key(self.job_id, self.product,
-            site=self.site)
+        key = kvs.tokens._generate_key(self.job_id, self.product, self.site)
 
-        ev = "%s!ATestProduct!!Testville,TestLand" % self.job_id
+        ev = "%s!ATestProduct!Testville,TestLand"\
+             % kvs.tokens.generate_job_key(self.job_id)
         self.assertEqual(key, ev)
 
     def test_generate_job_key(self):
@@ -194,7 +150,7 @@ class TokensTestCase(unittest.TestCase):
         job_id = 7
         expected_key = '::JOB::7::'
 
-        self.assertEqual(expected_key, kvs.generate_job_key(job_id))
+        self.assertEqual(expected_key, kvs.tokens.generate_job_key(job_id))
 
 
 class JobTokensTestCase(unittest.TestCase):
@@ -215,33 +171,35 @@ class JobTokensTestCase(unittest.TestCase):
     def test_mark_job_as_current(self):
         """
         Test the generation of job keys using
-        :py:function:`openquake.kvs.tokens.mark_job_as_current`.
+        :py:function:`openquake.kvs.mark_job_as_current`.
         """
 
         job_id_1 = 1
         job_id_2 = 2
 
-        tokens.mark_job_as_current(job_id_1)
-        tokens.mark_job_as_current(job_id_2)
+        kvs.mark_job_as_current(job_id_1)
+        kvs.mark_job_as_current(job_id_2)
 
         # now verify that these keys have been added to the CURRENT_JOBS set
-        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_id_1))
-        self.assertTrue(self.client.sismember(tokens.CURRENT_JOBS, job_id_2))
+        self.assertTrue(self.client.sismember(kvs.tokens.CURRENT_JOBS,
+                                              job_id_1))
+        self.assertTrue(self.client.sismember(kvs.tokens.CURRENT_JOBS,
+                                              job_id_2))
 
     def test_current_jobs(self):
         """
         Test the retrieval of the current jobs from the CURRENT_JOBS set.
         Exercises :py:function:`openquake.kvs.tokens.current_jobs`.
         """
-        self.assertFalse(self.client.exists(tokens.CURRENT_JOBS))
+        self.assertFalse(self.client.exists(kvs.tokens.CURRENT_JOBS))
 
         # load some sample jobs into the CURRENT_JOBS set
         jobs = range(1, 4)
 
         for job in jobs:
-            self.client.sadd(tokens.CURRENT_JOBS, job)
+            self.client.sadd(kvs.tokens.CURRENT_JOBS, job)
 
-        current_jobs = tokens.current_jobs()
+        current_jobs = kvs.current_jobs()
 
         self.assertEqual(jobs, current_jobs)
 
@@ -256,12 +214,12 @@ class GarbageCollectionTestCase(unittest.TestCase):
         self.client.flushdb()
 
         self.test_job = 1
-        tokens.mark_job_as_current(self.test_job)
+        kvs.mark_job_as_current(self.test_job)
 
         # create some keys to hold fake data for test_job
-        self.gmf1_key = tokens.gmfs_key(self.test_job, 0, 0)
-        self.gmf2_key = tokens.gmfs_key(self.test_job, 0, 1)
-        self.vuln_key = tokens.vuln_key(self.test_job)
+        self.gmf1_key = kvs.tokens.gmf_set_key(self.test_job, 0, 0)
+        self.gmf2_key = kvs.tokens.gmf_set_key(self.test_job, 0, 1)
+        self.vuln_key = kvs.tokens.vuln_key(self.test_job)
 
         # now create the fake data for test_job
         self.client.set(self.gmf1_key, 'fake gmf data 1')
@@ -270,7 +228,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
         # this job will have no data
         self.dataless_job = 2
-        tokens.mark_job_as_current(self.dataless_job)
+        kvs.mark_job_as_current(self.dataless_job)
 
     def tearDown(self):
         self.client.flushdb()
@@ -291,7 +249,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
         # make sure the job was deleted from CURRENT_JOBS
         self.assertFalse(
-            self.client.sismember(tokens.CURRENT_JOBS, self.test_job))
+            self.client.sismember(kvs.tokens.CURRENT_JOBS, self.test_job))
 
     def test_gc_dataless_job(self):
         """
@@ -301,7 +259,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
         The job key should key should be removed from CURRENT_JOBS.
         """
         self.assertTrue(
-            self.client.sismember(tokens.CURRENT_JOBS, self.dataless_job))
+            self.client.sismember(kvs.tokens.CURRENT_JOBS, self.dataless_job))
 
         result = kvs.cache_gc(self.dataless_job)
 
@@ -309,7 +267,7 @@ class GarbageCollectionTestCase(unittest.TestCase):
 
         # make sure the job was deleted from CURRENT_JOBS
         self.assertFalse(
-            self.client.sismember(tokens.CURRENT_JOBS, self.dataless_job))
+            self.client.sismember(kvs.tokens.CURRENT_JOBS, self.dataless_job))
 
     def test_gc_nonexistent_job(self):
         """

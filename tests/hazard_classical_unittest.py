@@ -29,14 +29,13 @@ from openquake import shapes
 
 from openquake.hazard import opensha
 
-from tests.helpers import TestMixin
 from tests.utils import helpers
 from tests.utils.tasks import test_compute_hazard_curve, test_data_reflector
 
 LOG = logs.LOG
 
 
-class DoCurvesTestCase(TestMixin, unittest.TestCase):
+class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_curves()."""
 
     def __init__(self, *args, **kwargs):
@@ -106,7 +105,7 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
         self.assertEqual(2, fake_serializer.number_of_calls)
 
 
-class DoMeansTestCase(TestMixin, unittest.TestCase):
+class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_means()."""
 
     def __init__(self, *args, **kwargs):
@@ -241,7 +240,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
             map_serializer=lambda _: True, map_func=None)
 
 
-class DoQuantilesTestCase(TestMixin, unittest.TestCase):
+class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_quantiles()."""
 
     def __init__(self, *args, **kwargs):
@@ -372,7 +371,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             map_serializer=lambda _, __, ___: True, map_func=None)
 
 
-class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
+class NumberOfTasksTestCase(helpers.TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
 
     def setUp(self):

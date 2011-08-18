@@ -25,8 +25,7 @@ from openquake.output.hazard import *
 from openquake.output.risk import *
 from openquake.shapes import Site, Curve
 
-from db_tests import helpers
-from tests.utils import helpers as test_helpers
+from tests.utils import helpers
 
 
 def HAZARD_MAP_DATA(r1, r2):
@@ -124,7 +123,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
@@ -141,7 +140,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         session.commit()
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_deserialize_small(self):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
@@ -169,7 +168,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = HAZARD_MAP_DATA(20, 4)
 
@@ -194,7 +193,7 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = GMF_DATA(20, 4)
 
@@ -218,7 +217,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = LOSS_CURVE_DATA(20, 4)
 
@@ -242,7 +241,7 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
 
