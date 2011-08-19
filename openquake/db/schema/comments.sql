@@ -201,6 +201,8 @@ COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last chan
 
 
 COMMENT ON TABLE oqmif.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN oqmif.exposure_model.owner_id IS 'The foreign key to the user who owns the exposure model in question';
+COMMENT ON COLUMN oqmif.exposure_model.name IS 'The exposure model name';
 COMMENT ON COLUMN oqmif.exposure_model.description IS 'An optional description of the risk exposure model at hand';
 COMMENT ON COLUMN oqmif.exposure_model.category IS 'The risk category modelled';
 COMMENT ON COLUMN oqmif.exposure_model.unit IS 'The unit of measurement for the exposure data in the model at hand';
