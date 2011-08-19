@@ -27,6 +27,7 @@ ADMINS = (
     # ('Your Name', 'your_email@example.com'),
 )
 
+
 def _db_cfg(**kwargs):
     """
     Helper method to create db config items for the various roles and schemas.
@@ -146,7 +147,7 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'openquake.urls'
 
 TEMPLATE_DIRS = (
-    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
+    # Put strings here, like "/home/html/django_templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
 )

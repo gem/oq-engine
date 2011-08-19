@@ -325,7 +325,6 @@ class ComplexFault(models.Model):
         db_table = 'hzrdi\".\"complex_fault'
 
 
-
 class FaultEdge(models.Model):
     '''
     Fault edge
@@ -340,7 +339,7 @@ class FaultEdge(models.Model):
     bottom = models.LineStringField(srid=4326)
 
     class Meta:
-        db_table = 'hzrdi\".\"fault_edge' 
+        db_table = 'hzrdi\".\"fault_edge'
 
 
 class RDepthDistr(models.Model):
