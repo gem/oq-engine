@@ -178,7 +178,11 @@ def _handle_subtasks(subtasks, flatten_results):
     return the_results
 
 
-def oq_task(func):
+class JobCompletedError(Exception):
+    # TODO: document
+    pass
+
+def check_job_status_and_get_logger(job_id):
     """
     Decorator for celery tasks which work with jobs.
 
@@ -186,12 +190,10 @@ def oq_task(func):
     value is then passed directly to the wrapped function along with
     the logger adapter instance created for the job.
     """
-    @functools.wraps(func)
-    def decorated(job_id, *args, **kwargs):
-        logger = logging.getLogger('task.%s' % func.__name__)
-        logger = logging.LoggerAdapter(logger, {'job_id': job_id})
-        if Job.is_job_completed(job_id):
-            logger.warning('the job is already completed, skipping task')
-            return None
-        return func(job_id, logger, *args, **kwargs)
-    return decorated
+    # TODO: unittest
+    logger = logging.getLogger('tasks')
+    logger = logging.LoggerAdapter(logger, {'job_id': job_id})
+    if Job.is_job_completed(job_id):
+        logger.warning('the job is already completed, skipping task')
+        raise JobCompletedError(job_id)
+    return logger
