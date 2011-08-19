@@ -79,7 +79,7 @@ def _patched_mocksignature(func, mock=None, skipfirst=False):
         func = func.__func__
 
     if mock is None:
-        mock = Mock()
+        mock = mock_module.Mock()
     signature, func = mock_module._getsignature(func, skipfirst)
 
     checker = eval("lambda %s: None" % signature)
