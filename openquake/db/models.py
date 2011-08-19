@@ -26,7 +26,7 @@ from datetime import datetime
 from django.contrib.gis.db import models
 
 
-class FloatArrayField(models.Field):
+class FloatArrayField(models.Field):  # pylint: disable=R0904
     """This field models a postgres `float` array."""
 
     def db_type(self, connection):
