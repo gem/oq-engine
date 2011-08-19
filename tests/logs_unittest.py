@@ -86,8 +86,8 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
 
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
-        logs.init_logs('console', 'warn')
-        java.init_logs('console', 'warn')
+        logs.init_logs(log_type='console', level='warn')
+        java.init_logs(log_type='console', level='warn')
 
     def tearDown(self):
         # reset logging config
@@ -193,7 +193,7 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
         jvm = java.jvm()
 
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        java.init_logs('warn')
+        java.init_logs(level='warn')
 
     def setUp(self):
         jvm = java.jvm()
@@ -342,8 +342,8 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         cleanup_loggers()
 
         # setup AMQP logging
-        logs.init_logs('amqp', 'debug')
-        java.init_logs('amqp', 'debug')
+        logs.init_logs(log_type='amqp', level='debug')
+        java.init_logs(log_type='amqp', level='debug')
         job.setup_job_logging('123')
 
     def tearDown(self):
