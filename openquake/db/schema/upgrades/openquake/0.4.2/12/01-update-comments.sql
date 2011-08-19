@@ -1,5 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
 
     Copyright (c) 2010-2011, GEM Foundation.
 
@@ -11,7 +10,8 @@
 */
 
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake', '0.4.2', 12);
+-- Update table comments
+COMMENT ON SCHEMA hzrdi IS 'Hazard input model';
+COMMENT ON SCHEMA hzrdr IS 'Hazard result data';
+COMMENT ON SCHEMA riski IS 'Risk input model';
+COMMENT ON SCHEMA riskr IS 'Risk result data';
