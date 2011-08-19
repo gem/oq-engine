@@ -40,6 +40,9 @@ class FloatArrayField(models.Field):
 
 
 class Organization(models.Model):
+    '''
+    Organizations for grouping users
+    '''
     id = models.IntegerField(primary_key=True)
     name = models.TextField()
     address = models.TextField(null=True)
@@ -51,6 +54,9 @@ class Organization(models.Model):
 
 
 class OqUser(models.Model):
+    '''
+    OpenQuake users
+    '''
     id = models.IntegerField(primary_key=True)
     user_name = models.TextField()
     full_name = models.TextField()
@@ -63,6 +69,9 @@ class OqUser(models.Model):
 
 
 class RevisionInfo(models.Model):
+    '''
+    Revision information
+    '''
     id = models.IntegerField(primary_key=True)
     artefact = models.TextField(unique=True)
     revision = models.TextField()
@@ -77,6 +86,9 @@ class RevisionInfo(models.Model):
 
 
 class Catalog(models.Model):
+    '''
+    Earthquake catalog
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     eventid = models.IntegerField()
@@ -101,6 +113,9 @@ class Catalog(models.Model):
 
 
 class Magnitude(models.Model):
+    '''
+    Earthquake event magnitudes
+    '''
     id = models.IntegerField(primary_key=True)
     mb_val = models.FloatField()
     mb_val_error = models.FloatField()
@@ -117,6 +132,9 @@ class Magnitude(models.Model):
 
 
 class Surface(models.Model):
+    '''
+    Earthquake event surface (ellipse with an angle)
+    '''
     id = models.IntegerField(primary_key=True)
     semi_minor = models.FloatField()
     semi_major = models.FloatField()
@@ -131,6 +149,9 @@ class Surface(models.Model):
 
 
 class Rupture(models.Model):
+    '''
+    Rupture
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     input = models.ForeignKey('Input')
@@ -172,6 +193,9 @@ class Rupture(models.Model):
 
 
 class Source(models.Model):
+    '''
+    Source
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     input = models.ForeignKey('Input')
@@ -207,6 +231,9 @@ class Source(models.Model):
 
 
 class SimpleFault(models.Model):
+    '''
+    Simple fault geometry
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     gid = models.TextField()
@@ -227,7 +254,7 @@ class SimpleFault(models.Model):
 
 class MfdEvd(models.Model):
     '''
-    Magnitude Frequency Distribution, Evenly Discretized.
+    Magnitude Frequency Distribution, evenly discretized
     '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
@@ -253,6 +280,9 @@ class MfdEvd(models.Model):
 
 
 class MfdTgr(models.Model):
+    '''
+    Magnitude Frequency Distribution, truncated Gutenberg-Richter
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     MAG_TYPE_CHOICES = (
@@ -277,6 +307,9 @@ class MfdTgr(models.Model):
 
 
 class ComplexFault(models.Model):
+    '''
+    Complex fault geometry
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     gid = models.TextField()
@@ -330,6 +363,9 @@ class RRateMdl(models.Model):
 
 
 class FocalMechanism(models.Model):
+    '''
+    Holds strike, dip and rake values with the respective constraints
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     gid = models.TextField()
@@ -348,6 +384,9 @@ class FocalMechanism(models.Model):
 
 
 class Upload(models.Model):
+    '''
+    A batch of OpenQuake input files uploaded by the user
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     description = models.TextField(default='')
@@ -367,6 +406,9 @@ class Upload(models.Model):
 
 
 class Input(models.Model):
+    '''
+    A single OpenQuake input file uploaded by the user
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     upload = models.ForeignKey('Upload')
@@ -380,6 +422,7 @@ class Input(models.Model):
         (u'vulnerability', u'Vulnerability'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
+    # Number of bytes in the file:
     size = models.IntegerField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
@@ -388,6 +431,9 @@ class Input(models.Model):
 
 
 class OqJob(models.Model):
+    '''
+    An OpenQuake engine run started by the user
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     description = models.TextField()
@@ -416,6 +462,9 @@ class OqJob(models.Model):
 
 
 class OqParams(models.Model):
+    '''
+    Parameters needed to run an OpenQuake job
+    '''
     id = models.IntegerField(primary_key=True)
     JOB_TYPE_CHOICES = (
         (u'classical', u'Classical PSHA'),
@@ -465,6 +514,10 @@ class OqParams(models.Model):
 
 
 class Output(models.Model):
+    '''
+    A single artifact which is a result of an OpenQuake calculation.
+    The data may reside in a file or in the database.
+    '''
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     oq_job = models.ForeignKey('OqJob')
@@ -480,9 +533,10 @@ class Output(models.Model):
         (u'loss_map', u'Loss Map'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
-    # Number of bytes in the file
+    # Number of bytes in the file:
     size = models.IntegerField()
-    # TODO(LB): We should consider removing this; as far I know, it's obsolete.
+    # TODO(LB): We should consider removing shapefile_path; as far I know, it's
+    # obsolete.
     shapefile_path = models.TextField(null=True)
     min_value = models.FloatField()
     max_value = models.FloatField()
@@ -493,6 +547,9 @@ class Output(models.Model):
 
 
 class ErrorMsg(models.Model):
+    '''
+    Error information associated with a job failure
+    '''
     id = models.IntegerField(primary_key=True)
     oq_job = models.ForeignKey('OqJob')
     brief = models.TextField()
@@ -506,6 +563,9 @@ class ErrorMsg(models.Model):
 
 
 class HazardMap(models.Model):
+    '''
+    Hazard Map header (information which pertains to entire map)
+    '''
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey('Output')
     poe = models.FloatField()
@@ -521,6 +581,9 @@ class HazardMap(models.Model):
 
 
 class HazardMapData(models.Model):
+    '''
+    Hazard Map data (data for a single point in the map)
+    '''
     id = models.IntegerField(primary_key=True)
     hazard_map = models.ForeignKey('HazardMap')
     value = models.FloatField()
@@ -531,6 +594,9 @@ class HazardMapData(models.Model):
 
 
 class HazardCurve(models.Model):
+    '''
+    Hazard Curve header information
+    '''
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey('Output')
     end_branch_label = models.TextField()
@@ -547,6 +613,12 @@ class HazardCurve(models.Model):
 
 
 class HazardCurveData(models.Model):
+    '''
+    Hazard Curve data
+
+    Contains an list of PoE (Probability of Exceedance)
+    values and the geographical point associated with the curve
+    '''
     id = models.IntegerField(primary_key=True)
     hazard_curve = models.ForeignKey('HazardCurve')
     poes = FloatArrayField()
@@ -557,6 +629,9 @@ class HazardCurveData(models.Model):
 
 
 class GmfData(models.Model):
+    '''
+    Ground Motion Field data
+    '''
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey('Output')
     ground_motion = models.FloatField()
@@ -564,3 +639,169 @@ class GmfData(models.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"gmf_data'
+
+
+## Tables in the 'riskr' schema.
+
+
+class LossMap(models.Model):
+    '''
+    Holds metadata for loss maps
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    output = models.ForeignKey("Output")
+    deterministic = models.BooleanField()
+    loss_map_ref = models.TextField(null=True)
+    end_branch_label = models.TextField(null=True)
+    category = models.TextField(null=True)
+    unit = models.TextField(null=True)
+    poe = models.FloatField(null=True)
+
+    class Meta:
+        db_table = 'riskr\".\"loss_map'
+
+
+class LossMapData(models.Model):
+    '''
+    Holds an asset, its position and a value plus (for
+    non-deterministic maps) the standard deviation for its loss
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    loss_map = models.ForeignKey("LossMap")
+    asset_ref = models.TextField()
+    value = models.FloatField()
+    std_dev = models.FloatField(default=0.0)
+    location = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'riskr\".\"loss_map_data'
+
+
+class LossCurve(models.Model):
+    '''
+    Holds the parameters common to a set of loss curves
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    output = models.ForeignKey("Output")
+    aggregate = models.BooleanField(default=False)
+    end_branch_label = models.TextField(null=True)
+    category = models.TextField(null=True)
+    unit = models.TextField(null=True)
+
+    class Meta:
+        db_table = 'riskr\".\"loss_curve'
+
+
+class LossCurveData(models.Model):
+    '''
+    Holds the probabilities of exceedance for a given loss curve
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    loss_curve = models.ForeignKey("LossCurve")
+    asset_ref = models.TextField()
+    losses = FloatArrayField()
+    poes = FloatArrayField()
+    location = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'riskr\".\"loss_curve_data'
+
+
+class AggregateLossCurveData(models.Model):
+    '''
+    Holds the probabilities of exceedance for the whole exposure model
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    loss_curve = models.ForeignKey("LossCurve")
+    losses = FloatArrayField()
+    poes = FloatArrayField()
+
+    class Meta:
+        db_table = 'riskr\".\"aggregate_loss_curve_data'
+
+
+## Tables in the 'oqmif' schema.
+
+
+class ExposureModel(models.Model):
+    '''
+    A risk exposure model
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey("OqUser")
+    name = models.TextField()
+    description = models.TextField(null=True)
+    category = models.TextField()
+    unit = models.TextField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'oqmif\".\"exposure_model'
+
+
+class ExposureData(models.Model):
+    '''
+    Per-asset risk exposure data
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    exposure_model = models.ForeignKey("ExposureModel")
+    asset_ref = models.TextField()
+    value = models.FloatField()
+    vulnerability_function = models.ForeignKey("VulnerabilityFunction")
+    structure_type = models.TextField(null=True)
+    retrofitting_cost = models.FloatField(null=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    site = models.PointField(srid=4326)
+
+    class Meta:
+        db_table = 'oqmif\".\"exposure_data'
+
+
+## Tables in the 'riski' schema.
+
+
+class VulnerabilityModel(models.Model):
+    '''
+    A risk vulnerability model
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey("OqUser")
+    name = models.TextField()
+    description = models.TextField(null=True)
+    IMT_CHOICES = (
+        ('pga', 'Peak Ground Acceleration'),
+        ('sa', 'Spectral Acceleration'),
+        ('pgv', 'Peak Ground Velocity'),
+        ('pgd', 'Peak Ground Displacement'),
+    )
+    imt = models.TextField(choices=IMT_CHOICES)
+    imls = FloatArrayField()
+    category = models.TextField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'riski\".\"vulnerability_model'
+
+
+class VulnerabilityFunction(models.Model):
+    '''
+    A risk vulnerability function
+    '''
+
+    id = models.IntegerField(primary_key=True)
+    vulnerability_model = models.ForeignKey("VulnerabilityModel")
+    vf_ref = models.TextField()
+    loss_ratios = FloatArrayField()
+    covs = FloatArrayField()
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:
+        db_table = 'riski\".\"vulnerability_function'
