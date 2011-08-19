@@ -1,5 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
 
     Copyright (c) 2010-2011, GEM Foundation.
 
@@ -10,8 +9,8 @@
 
 */
 
+ALTER TABLE uiapi.oq_job ADD COLUMN supervisor_pid INTEGER NOT NULL DEFAULT 0;
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake', '0.4.2', 12);
+-- comments:
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';

@@ -23,6 +23,7 @@ Test related to code in openquake/utils/config.py
 
 
 import os
+import shutil
 import textwrap
 import unittest
 
@@ -37,10 +38,20 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
     def setUp(self):
         self.orig_env = os.environ.copy()
         os.environ.clear()
+        # Move the local configuration file out of the way if it exists.
+        # Otherwise the tests that follow will break.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile(local_path):
+            shutil.move(local_path, "%s.test_bakk" % local_path)
 
     def tearDown(self):
         os.environ.clear()
         os.environ.update(self.orig_env)
+        # Move the local configuration file back into place if it was stashed
+        # away.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile("%s.test_bakk" % local_path):
+            shutil.move("%s.test_bakk" % local_path, local_path)
 
     def test_get_paths_with_global_env_var_set(self):
         """

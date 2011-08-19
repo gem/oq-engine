@@ -39,7 +39,7 @@ from openquake import flags
 from openquake import logs
 from openquake.job import Job
 from openquake import producer
-from openquake import settings
+from openquake.utils import config
 
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
@@ -284,7 +284,7 @@ class TestStore(object):
         """Initialize the test store."""
         if TestStore._conn is not None:
             return
-        TestStore._conn = redis.Redis(db=settings.TEST_KVS_DB)
+        TestStore._conn = redis.Redis(db=int(config.get("kvs", "test_db")))
 
     @staticmethod
     def close():
