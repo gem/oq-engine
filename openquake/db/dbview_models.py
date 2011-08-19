@@ -28,6 +28,9 @@ from openquake.db.models import FloatArrayField
 
 
 class CatalogAllfields(models.Model):
+    '''
+    Global catalog view, needed for GeoNode integration
+    '''
     id = models.IntegerField()
     owner_id = models.IntegerField()
     eventid = models.IntegerField()
@@ -59,6 +62,9 @@ class CatalogAllfields(models.Model):
 
 
 class SimpleSource(models.Model):
+    '''
+    Simple source view, needed for GeoNode integration
+    '''
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
@@ -89,6 +95,9 @@ class SimpleSource(models.Model):
 
 
 class SimpleRupture(models.Model):
+    '''
+    Simple rupture view, needed for GeoNode integration
+    '''
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
@@ -108,6 +117,9 @@ class SimpleRupture(models.Model):
 
 
 class ComplexSource(models.Model):
+    '''
+    Complex source view, needed for GeoNode integration
+    '''
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
@@ -126,6 +138,9 @@ class ComplexSource(models.Model):
 
 
 class ComplexRupture(models.Model):
+    '''
+    Complex rupture view, needed for GeoNode integration
+    '''
     id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
