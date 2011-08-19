@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests -s tests/*_unittest.py 2>&1 | tee last_test_run.log
+nosetests "$@" tests/*_unittest.py 2>&1 | tee last_test_run.log
