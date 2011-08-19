@@ -227,7 +227,7 @@ class Source(models.Model):
     area = models.PolygonField(srid=4326)
 
     class Meta:
-        db_table = 'hzrdi.\".\"source'
+        db_table = 'hzrdi\".\"source'
 
 
 class SimpleFault(models.Model):
