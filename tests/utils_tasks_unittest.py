@@ -23,7 +23,6 @@ Unit tests for the utils.tasks module.
 """
 
 import unittest
-import logging
 
 from openquake.utils import tasks
 
