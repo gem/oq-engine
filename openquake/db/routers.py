@@ -32,7 +32,7 @@ class OQRouter(object):
     '''
 
     # Parses the schema name from model's _meta.db_table
-    SCHEMA_RE= re.compile(r'^(\w+)"')
+    SCHEMA_RE = re.compile(r'^(\w+)"')
 
     @classmethod
     def _schema_from_model(cls, model):
@@ -40,7 +40,7 @@ class OQRouter(object):
         Get the db schema name from a given model.
 
         :param model: a Django model object
-        
+
         :returns: schema name, or None if no schema is defined
         '''
         match = cls.SCHEMA_RE.match(model._meta.db_table)
