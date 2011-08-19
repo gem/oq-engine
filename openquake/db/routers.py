@@ -49,7 +49,7 @@ class OQRouter(object):
         else:
             return None
 
-    def db_for_read(self, model, **hints):
+    def db_for_read(self, model, **_hints):
         '''
         Get the name of the correct db configuration to use for read operations
         on the given model.
@@ -64,7 +64,7 @@ class OQRouter(object):
             # 'schema_read'.
             return '%s_read' % schema
 
-    def db_for_write(self, model, **hints):
+    def db_for_write(self, model, **_hints):
         '''
         Get the name of the correct db configuration to use for write
         operations on the given model.
