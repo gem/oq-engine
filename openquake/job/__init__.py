@@ -21,27 +21,27 @@
 import multiprocessing
 import os
 import re
-import subprocess
 import sqlalchemy
+import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
+
+import geoalchemy as ga
 
 from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake import settings
-from openquake.logs import LOG
-from openquake.job import config as conf
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.job.handlers import resolve_handler
+from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.kvs import mark_job_as_current
-
-from openquake.db.alchemy.models import OqJob, OqUser, OqParams
-from openquake.db.alchemy.db_utils import get_db_session
-import geoalchemy as ga
+from openquake.logs import LOG
+from openquake.utils import config as oq_config
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
@@ -245,7 +245,8 @@ class Job(object):
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
 
-        logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
+        logs.init_logs(
+            level=FLAGS.debug, log_type=oq_config.get("logging", "backend"))
 
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
