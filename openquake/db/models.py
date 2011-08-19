@@ -49,7 +49,7 @@ class Organization(models.Model):
     url = models.TextField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"organization'
 
 
@@ -64,7 +64,7 @@ class OqUser(models.Model):
     data_is_open = models.BooleanField(default=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"oq_user'
 
 
@@ -78,7 +78,7 @@ class RevisionInfo(models.Model):
     step = models.IntegerField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"revision_info'
 
 
@@ -108,7 +108,7 @@ class Catalog(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     point = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"catalog'
 
 
@@ -127,7 +127,7 @@ class Magnitude(models.Model):
     mw_val_error = models.FloatField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"magnitude'
 
 
@@ -141,7 +141,7 @@ class Surface(models.Model):
     strike = models.FloatField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"surface'
 
 
@@ -188,7 +188,7 @@ class Rupture(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     point = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"rupture'
 
 
@@ -226,7 +226,7 @@ class Source(models.Model):
     point = models.PointField(srid=4326)
     area = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"source'
 
 
@@ -248,7 +248,7 @@ class SimpleFault(models.Model):
     edge = models.LineStringField(srid=4326)
     outline = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"simple_fault'
 
 
@@ -275,7 +275,7 @@ class MfdEvd(models.Model):
     total_moment_rate = models.FloatField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"mfd_evd'
 
 
@@ -302,7 +302,7 @@ class MfdTgr(models.Model):
     total_moment_rate = models.FloatField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"mfd_tgr'
 
 
@@ -321,7 +321,7 @@ class ComplexFault(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     outline = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"complex_fault'
 
 
@@ -338,7 +338,7 @@ class FaultEdge(models.Model):
     top = models.LineStringField(srid=4326)
     bottom = models.LineStringField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"fault_edge'
 
 
@@ -356,7 +356,7 @@ class RDepthDistr(models.Model):
     depth = FloatArrayField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"r_depth_distr'
 
 
@@ -375,7 +375,7 @@ class RRateMdl(models.Model):
     source = models.ForeignKey('Source')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"r_rate_mdl'
 
 
@@ -393,7 +393,7 @@ class FocalMechanism(models.Model):
     rake = models.FloatField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"focal_mechanism'
 
 
@@ -418,7 +418,7 @@ class Upload(models.Model):
     job_pid = models.IntegerField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"upload'
 
 
@@ -443,7 +443,7 @@ class Input(models.Model):
     size = models.IntegerField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"input'
 
 
@@ -474,7 +474,7 @@ class OqJob(models.Model):
     oq_params = models.ForeignKey('OqParams')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_job'
 
 
@@ -526,7 +526,7 @@ class OqParams(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     region = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
 
 
@@ -559,7 +559,7 @@ class Output(models.Model):
     max_value = models.FloatField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"output'
 
 
@@ -572,7 +572,7 @@ class ErrorMsg(models.Model):
     brief = models.TextField()
     detailed = models.TextField()
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"error_msg'
 
 
@@ -593,7 +593,7 @@ class HazardMap(models.Model):
     statistic_type = models.TextField(choices=STAT_CHOICES)
     quantile = models.FloatField()
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_map'
 
 
@@ -606,7 +606,7 @@ class HazardMapData(models.Model):
     value = models.FloatField()
     location = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_map_data'
 
 
@@ -625,7 +625,7 @@ class HazardCurve(models.Model):
     statistic_type = models.TextField(choices=STAT_CHOICES)
     quantile = models.FloatField()
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_curve'
 
 
@@ -641,7 +641,7 @@ class HazardCurveData(models.Model):
     poes = FloatArrayField()
     location = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_curve_data'
 
 
@@ -654,7 +654,7 @@ class GmfData(models.Model):
     ground_motion = models.FloatField()
     location = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"gmf_data'
 
 
@@ -675,7 +675,7 @@ class LossMap(models.Model):
     unit = models.TextField(null=True)
     poe = models.FloatField(null=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_map'
 
 
@@ -692,7 +692,7 @@ class LossMapData(models.Model):
     std_dev = models.FloatField(default=0.0)
     location = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_map_data'
 
 
@@ -708,7 +708,7 @@ class LossCurve(models.Model):
     category = models.TextField(null=True)
     unit = models.TextField(null=True)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_curve'
 
 
@@ -724,7 +724,7 @@ class LossCurveData(models.Model):
     poes = FloatArrayField()
     location = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_curve_data'
 
 
@@ -738,7 +738,7 @@ class AggregateLossCurveData(models.Model):
     losses = FloatArrayField()
     poes = FloatArrayField()
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"aggregate_loss_curve_data'
 
 
@@ -758,7 +758,7 @@ class ExposureModel(models.Model):
     unit = models.TextField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"exposure_model'
 
 
@@ -777,7 +777,7 @@ class ExposureData(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     site = models.PointField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"exposure_data'
 
 
@@ -804,7 +804,7 @@ class VulnerabilityModel(models.Model):
     category = models.TextField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_model'
 
 
@@ -820,5 +820,5 @@ class VulnerabilityFunction(models.Model):
     covs = FloatArrayField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_function'
