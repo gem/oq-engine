@@ -212,5 +212,3 @@ class OQRouterTestCase(unittest.TestCase):
         expected_db = 'riski_write'
 
         self._db_for_write_helper(classes, expected_db)
-
-
