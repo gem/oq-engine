@@ -31,6 +31,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import sys
 
 import guppy
 import mock as mock_module
@@ -263,6 +264,10 @@ def wait_for_celery_tasks(celery_results,
 
         time.sleep(wait_time)
 
+# preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
+# otherwise we could just use __stdout__/__stderr__)
+STDOUT = sys.stdout
+STDERR = sys.stderr
 
 def cleanup_loggers():
     root = logging.getLogger()
@@ -272,6 +277,12 @@ def cleanup_loggers():
             isinstance(h, logging.StreamHandler) or
             isinstance(h, logs.AMQPHandler)):
             root.removeHandler(h)
+
+    # restore the damage created by redirect_stdouts_to_logger; this is only
+    # necessary because tests perform multiple log initializations, sometimes
+    # for AMQP, sometimes for console
+    sys.stdout = STDOUT
+    sys.stderr = STDERR
 
 
 class TestStore(object):
