@@ -25,6 +25,7 @@ TODO(jmc): support debug level per logger.
 """
 from amqplib import client_0_8 as amqp
 import logging
+import sys
 
 from celery.log import redirect_stdouts_to_logger, LoggingProxy
 
