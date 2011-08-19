@@ -27,7 +27,7 @@ from django.contrib.gis.db import models
 from openquake.db.models import FloatArrayField
 
 
-class CatalogAllfields(models.Model):
+class CatalogAllfields(models.Model):  # pylint: disable=R0801
     '''
     Global catalog view, needed for GeoNode integration
     '''
