@@ -325,6 +325,24 @@ class ComplexFault(models.Model):
         db_table = 'hzrdi\".\"complex_fault'
 
 
+
+class FaultEdge(models.Model):
+    '''
+    Fault edge
+    '''
+    id = models.IntegerField(primary_key=True)
+    owner = models.ForeignKey('OqUser')
+    gid = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    top = models.LineStringField(srid=4326)
+    bottom = models.LineStringField(srid=4326)
+
+    class Meta:
+        db_table = 'hzrdi\".\"fault_edge' 
+
+
 class RDepthDistr(models.Model):
     '''
     Rupture Depth Distribution
