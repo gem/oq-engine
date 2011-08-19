@@ -269,6 +269,7 @@ def wait_for_celery_tasks(celery_results,
 STDOUT = sys.stdout
 STDERR = sys.stderr
 
+
 def cleanup_loggers():
     root = logging.getLogger()
 
