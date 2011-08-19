@@ -24,7 +24,6 @@ Utility functions related to splitting work into tasks.
 
 import itertools
 import time
-import logging
 import functools
 
 from celery.task.sets import TaskSet
@@ -185,20 +184,13 @@ class JobCompletedError(Exception):
     """
 
 
-def check_job_status_and_get_logger(job_id):
+def check_job_status(job_id):
     """
     Helper function which is intended to be run by celery task functions.
 
     :raises JobCompletedError:
         If :meth:`~openquake.job.Job.is_job_completed` returns ``True``
         for ``job_id``.
-    :returns:
-        Instance of logger adapter created for task.
     """
-    # TODO: unittest
-    logger = logging.getLogger('tasks')
-    logger = logging.LoggerAdapter(logger, {'job_id': job_id})
     if Job.is_job_completed(job_id):
-        logger.warning('the job is already completed, skipping task')
         raise JobCompletedError(job_id)
-    return logger
