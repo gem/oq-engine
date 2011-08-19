@@ -57,7 +57,7 @@ class CatalogAllfields(models.Model):
     mw_val = models.FloatField()
     mw_val_error = models.FloatField()
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"catalog_allfields'
 
 
@@ -90,7 +90,7 @@ class SimpleSource(models.Model):
     tgr_a_val = models.FloatField()
     tgr_b_val = models.FloatField()
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"simple_source'
 
 
@@ -112,7 +112,7 @@ class SimpleRupture(models.Model):
     edge = models.LineStringField(srid=4326)
     fault_outline = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"simple_rupture'
 
 
@@ -133,7 +133,7 @@ class ComplexSource(models.Model):
     bottom_edge = models.LineStringField(srid=4326)
     fault_outline = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"complex_source'
 
 
@@ -156,5 +156,5 @@ class ComplexRupture(models.Model):
     bottom_edge = models.LineStringField(srid=4326)
     fault_outline = models.PolygonField(srid=4326)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"complex_rupture'
