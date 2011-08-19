@@ -43,7 +43,8 @@ class OQRouter(object):
 
         :returns: schema name, or None if no schema is defined
         '''
-        match = cls.SCHEMA_RE.match(model._meta.db_table)
+        match = cls.SCHEMA_RE.match(
+            model._meta.db_table)  # pylint: disable=W0212
         if match:
             return match.group(1)
         else:
