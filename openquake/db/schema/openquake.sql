@@ -464,6 +464,7 @@ CREATE TABLE hzrdi.r_rate_mdl (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Holds strike, dip and rake values with the respective constraints.
 CREATE TABLE hzrdi.focal_mechanism (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
