@@ -314,13 +314,10 @@ class CheckJobStatusTestCase(unittest.TestCase):
     def test(self):
         with patch('openquake.job.Job.is_job_completed') as mock:
             mock.return_value = False
-            res = tasks.check_job_status_and_get_logger(42)
-            self.assertEqual(type(res), logging.LoggerAdapter)
-            self.assertEqual(res.extra, {'job_id': 42})
-            self.assertEqual(res.logger.name, 'tasks')
+            tasks.check_job_status(42)
             mock.return_value = True
             try:
-                tasks.check_job_status_and_get_logger(31)
+                tasks.check_job_status(31)
             except tasks.JobCompletedError as exc:
                 self.assertEqual(exc.message, 31)
             else:
