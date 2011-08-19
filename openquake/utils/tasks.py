@@ -179,16 +179,21 @@ def _handle_subtasks(subtasks, flatten_results):
 
 
 class JobCompletedError(Exception):
-    # TODO: document
-    pass
+    """
+    Exception to be thrown by :func:`check_job_status_and_get_logger`
+    in case of dealing with already completed job.
+    """
+
 
 def check_job_status_and_get_logger(job_id):
     """
-    Decorator for celery tasks which work with jobs.
+    Helper function which is intended to be run by celery task functions.
 
-    The task must get ``job_id`` as it's first positional argument. This
-    value is then passed directly to the wrapped function along with
-    the logger adapter instance created for the job.
+    :raises JobCompletedError:
+        If :meth:`~openquake.job.Job.is_job_completed` returns ``True``
+        for ``job_id``.
+    :returns:
+        Instance of logger adapter created for task.
     """
     # TODO: unittest
     logger = logging.getLogger('tasks')
