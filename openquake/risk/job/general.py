@@ -34,7 +34,7 @@ from openquake.output import curve
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.utils.tasks import oq_task
+from openquake.utils.tasks import check_job_status_and_get_logger
 
 from celery.decorators import task
 
@@ -114,9 +114,9 @@ def _plot(curve_path, result_path, **kwargs):
 
 
 @task
-@oq_task
-def compute_risk(job_id, logger, block_id, **kwargs):
+def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
+    logger = check_job_status_and_get_logger(job_id)
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin) as mixed:
         return mixed.compute_risk(block_id, **kwargs)
