@@ -57,7 +57,6 @@ class CatalogAllfields(models.Model):
     mb_val = models.FloatField()
     mb_val_error = models.FloatField()
 
-
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"catalog_allfields'
 
