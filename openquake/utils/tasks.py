@@ -179,7 +179,7 @@ def _handle_subtasks(subtasks, flatten_results):
 
 class JobCompletedError(Exception):
     """
-    Exception to be thrown by :func:`check_job_status_and_get_logger`
+    Exception to be thrown by :func:`check_job_status`
     in case of dealing with already completed job.
     """
 
