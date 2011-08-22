@@ -120,6 +120,7 @@ class LogMessageConsumer(object):
                 try:
                     self.chn.wait()
                 except StopIteration:
+                    # this will remove the callback from self.chn.callbacks
                     self.chn.basic_cancel(tag)
 
     def message_callback(self, msg):  # pylint: disable=W0613,R0201
