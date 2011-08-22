@@ -75,7 +75,7 @@ class RevisionInfo(models.Model):
     id = models.IntegerField(primary_key=True)
     artefact = models.TextField(unique=True)
     revision = models.TextField()
-    step = models.IntegerField()
+    step = models.IntegerField(default=0)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -117,14 +117,14 @@ class Magnitude(models.Model):
     Earthquake event magnitudes
     '''
     id = models.IntegerField(primary_key=True)
-    mb_val = models.FloatField()
-    mb_val_error = models.FloatField()
-    ml_val = models.FloatField()
-    ml_val_error = models.FloatField()
-    ms_val = models.FloatField()
-    ms_val_error = models.FloatField()
-    mw_val = models.FloatField()
-    mw_val_error = models.FloatField()
+    mb_val = models.FloatField(null=True)
+    mb_val_error = models.FloatField(null=True)
+    ml_val = models.FloatField(null=True)
+    ml_val_error = models.FloatField(null=True)
+    ms_val = models.FloatField(null=True)
+    ms_val_error = models.FloatField(null=True)
+    mw_val = models.FloatField(null=True)
+    mw_val_error = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -156,8 +156,8 @@ class Rupture(models.Model):
     owner = models.ForeignKey('OqUser')
     input = models.ForeignKey('Input')
     gid = models.TextField()
-    name = models.TextField()
-    description = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
     SI_TYPE_CHOICES = (
         (u'complex', u'Complex'),
         (u'point', u'Point'),
@@ -172,7 +172,7 @@ class Rupture(models.Model):
         (u'volcanic', u'Volcanic'),
     )
     tectonic_region = models.TextField(choices=TECT_REG_CHOICES)
-    rake = models.FloatField()
+    rake = models.FloatField(null=True)
     magnitude = models.FloatField()
     MAG_TYPE_CHOICES = (
         (u'Mb', u'Body Wave Magnitude'),
@@ -200,8 +200,8 @@ class Source(models.Model):
     owner = models.ForeignKey('OqUser')
     input = models.ForeignKey('Input')
     gid = models.TextField()
-    name = models.TextField()
-    description = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
     SI_TYPE_CHOICES = (
         (u'area', u'Area'),
         (u'point', u'Point'),
@@ -219,8 +219,8 @@ class Source(models.Model):
     tectonic_region = models.TextField(choices=TECT_REG_CHOICES)
     simple_fault = models.ForeignKey('SimpleFault')
     complex_fault = models.ForeignKey('ComplexFault')
-    rake = models.FloatField()
-    hypocentral_depth = models.FloatField()
+    rake = models.FloatField(null=True)
+    hypocentral_depth = models.FloatField(null=True)
     r_depth_distr = models.ForeignKey('RDepthDistr')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     point = models.PointField(srid=4326)
@@ -237,8 +237,8 @@ class SimpleFault(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     gid = models.TextField()
-    name = models.TextField()
-    description = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
     dip = models.FloatField()
     upper_depth = models.FloatField()
     lower_depth = models.FloatField()
@@ -271,8 +271,8 @@ class MfdEvd(models.Model):
     max_val = models.FloatField(default=-1.0)
     bin_size = models.FloatField()
     mfd_values = FloatArrayField()
-    total_cumulative_rate = models.FloatField()
-    total_moment_rate = models.FloatField()
+    total_cumulative_rate = models.FloatField(null=True)
+    total_moment_rate = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -298,8 +298,8 @@ class MfdTgr(models.Model):
     max_val = models.FloatField()
     a_val = models.FloatField()
     b_val = models.FloatField()
-    total_cumulative_rate = models.FloatField()
-    total_moment_rate = models.FloatField()
+    total_cumulative_rate = models.FloatField(null=True)
+    total_moment_rate = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -313,8 +313,8 @@ class ComplexFault(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     gid = models.TextField()
-    name = models.TextField()
-    description = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
     mfd_tgr = models.ForeignKey('MfdTgr')
     mfd_evd = models.ForeignKey('MfdEvd')
     fault_edge = models.ForeignKey('FaultEdge')
@@ -349,8 +349,8 @@ class RDepthDistr(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     gid = models.TextField()
-    name = models.TextField()
-    description = models.TextField()
+    name = models.TextField(null=True)
+    description = models.TextField(null=True)
     magnitude_type = models.CharField(max_length=2)
     magnitude = FloatArrayField()
     depth = FloatArrayField()
@@ -388,9 +388,9 @@ class FocalMechanism(models.Model):
     gid = models.TextField()
     name = models.TextField(null=True)
     description = models.TextField(null=True)
-    strike = models.FloatField()
-    dip = models.FloatField()
-    rake = models.FloatField()
+    strike = models.FloatField(null=True)
+    dip = models.FloatField(null=True)
+    rake = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -454,7 +454,7 @@ class OqJob(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     description = models.TextField()
-    path = models.TextField(unique=True)
+    path = models.TextField(null=True, unique=True)
     JOB_TYPE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
@@ -469,8 +469,9 @@ class OqJob(models.Model):
         (u'succeeded', u'Succeeded'),
     )
     status = models.TextField(choices=STATUS_CHOICES, default='pending')
-    duration = models.IntegerField()
-    job_pid = models.IntegerField()
+    duration = models.IntegerField(default=0)
+    job_pid = models.IntegerField(default=0)
+    supervisor_pid = models.IntegerField(default=0)
     oq_params = models.ForeignKey('OqParams')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
@@ -492,8 +493,8 @@ class OqParams(models.Model):
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     upload = models.ForeignKey('Upload')
     region_grid_spacing = models.FloatField()
-    min_magnitude = models.FloatField()
-    investigation_time = models.FloatField()
+    min_magnitude = models.FloatField(null=True)
+    investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
         (u'average', u'Average horizontal'),
         (u'gmroti50', u'Average horizontal (GMRotI50)'),
@@ -506,7 +507,7 @@ class OqParams(models.Model):
        (u'pgd', u'Peak Ground Displacement'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
-    period = models.FloatField()
+    period = models.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
        (u'none', u'None'),
        (u'onesided', u'One-sided'),
@@ -518,10 +519,10 @@ class OqParams(models.Model):
     # 3.0.
     truncation_level = models.FloatField(default=3.0)
     reference_vs30_value = models.FloatField()
-    imls = FloatArrayField()
-    poes = FloatArrayField()
-    realizations = models.IntegerField()
-    histories = models.IntegerField()
+    imls = FloatArrayField(null=True)
+    poes = FloatArrayField(null=True)
+    realizations = models.IntegerField(null=True)
+    histories = models.IntegerField(null=True)
     gm_correlated = models.BooleanField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     region = models.PolygonField(srid=4326)
@@ -538,7 +539,7 @@ class Output(models.Model):
     id = models.IntegerField(primary_key=True)
     owner = models.ForeignKey('OqUser')
     oq_job = models.ForeignKey('OqJob')
-    path = models.TextField(unique=True)
+    path = models.TextField(null=True, unique=True)
     display_name = models.TextField()
     db_backed = models.BooleanField(default=False)
     OUTPUT_TYPE_CHOICES = (
@@ -551,12 +552,12 @@ class Output(models.Model):
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
-    size = models.IntegerField()
+    size = models.IntegerField(default=0)
     # TODO(LB): We should consider removing shapefile_path; as far I know, it's
     # obsolete.
     shapefile_path = models.TextField(null=True)
-    min_value = models.FloatField()
-    max_value = models.FloatField()
+    min_value = models.FloatField(null=True)
+    max_value = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -591,7 +592,7 @@ class HazardMap(models.Model):
         (u'quantile', u'Quantile'),
     )
     statistic_type = models.TextField(choices=STAT_CHOICES)
-    quantile = models.FloatField()
+    quantile = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_map'
@@ -616,14 +617,14 @@ class HazardCurve(models.Model):
     '''
     id = models.IntegerField(primary_key=True)
     output = models.ForeignKey('Output')
-    end_branch_label = models.TextField()
+    end_branch_label = models.TextField(null=True)
     STAT_CHOICES = (
         (u'mean', u'Mean'),
         (u'median', u'Median'),
         (u'quantile', u'Quantile'),
     )
-    statistic_type = models.TextField(choices=STAT_CHOICES)
-    quantile = models.FloatField()
+    statistic_type = models.TextField(null=True, choices=STAT_CHOICES)
+    quantile = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_curve'
