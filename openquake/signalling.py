@@ -95,23 +95,23 @@ class LogMessageConsumer(object):
         if self.timeout:
             # Resort to polling when a timeout is specified, because of
             # limitations of the amqplib API.
-            try:
-                while True:
-                    time.sleep(self.timeout)
+            while True:
+                time.sleep(self.timeout)
 
+                try:
                     self.timeout_callback()
+                except StopIteration:
+                    break
 
-                    msg = self.chn.basic_get(self.qname)
-                    if msg:
-                        try:
-                            self.message_callback(msg)
-                        except StopIteration:
-                            self.chn.basic_ack(msg.delivery_tag)
-                            raise
-                        else:
-                            self.chn.basic_ack(msg.delivery_tag)
-            except StopIteration:
-                pass
+                msg = self.chn.basic_get(self.qname)
+                if msg:
+                    try:
+                        self.message_callback(msg)
+                    except StopIteration:
+                        self.chn.basic_ack(msg.delivery_tag)
+                        break
+                    else:
+                        self.chn.basic_ack(msg.delivery_tag)
         else:
             tag = self.chn.basic_consume(self.qname,
                                          callback=self.message_callback)
