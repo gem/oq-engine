@@ -95,59 +95,47 @@ class LogMessageConsumer(object):
         if self.timeout:
             # Resort to polling when a timeout is specified, because of
             # limitations of the amqplib API.
-            while True:
-                time.sleep(self.timeout)
+            try:
+                while True:
+                    time.sleep(self.timeout)
 
-                if self.timeout_callback():
-                    break
+                    self.timeout_callback()
 
-                msg = self.chn.basic_get(self.qname)
-                if msg:
-                    try:
-                        stop = self.message_callback(msg)
-                    except:
-                        raise
-                    else:
-                        self.chn.basic_ack(msg.delivery_tag)
-
-                    if stop:
-                        break
+                    msg = self.chn.basic_get(self.qname)
+                    if msg:
+                        try:
+                            self.message_callback(msg)
+                        except StopIteration:
+                            self.chn.basic_ack(msg.delivery_tag)
+                            raise
+                        else:
+                            self.chn.basic_ack(msg.delivery_tag)
+            except StopIteration:
+                pass
         else:
-
-            def stop_loop_on_true(fn):
-                """
-                A True returned by the wrapped callback breaks out of the
-                wait call
-                """
-                def wrapper(*args):  # pylint: disable=C0111
-                    stop = fn(*args)
-                    if stop:
-                        self.chn.basic_cancel(tag)
-
-                return wrapper
-
             tag = self.chn.basic_consume(self.qname,
-                    callback=stop_loop_on_true(self.message_callback))
+                                         callback=self.message_callback)
 
             while self.chn.callbacks:
-                self.chn.wait()
+                try:
+                    self.chn.wait()
+                except StopIteration:
+                    self.chn.basic_cancel(tag)
 
     def message_callback(self, msg):  # pylint: disable=W0613,R0201
         """
         Called by `run` when a message is received.
 
-        Return True to stop the loop inside `run` and let it return to the
-        caller.
+        Raise StopIteration to stop the loop inside `run` and let it return to
+        the caller.
         """
-
-        return False
+        pass
 
     def timeout_callback(self):  # pylint: disable=R0201
         """
         Called by `run` each time the timeout expires.
 
-        Return True to stop the loop inside `run` and let it return to the
-        caller.
+        Raise StopIteration to stop the loop inside `run` and let it return to
+        the caller.
         """
-
-        return False
+        pass
