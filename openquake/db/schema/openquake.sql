@@ -1080,7 +1080,7 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.collapse_map
 ADD CONSTRAINT riskr_collapse_map_exposure_model_fk
-FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
 
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
