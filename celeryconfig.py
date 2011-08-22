@@ -24,6 +24,7 @@ Should be installed by setup.py into /etc/openquake
 eventually.
 """
 
+import os
 import sys
 
 from openquake.utils import config
@@ -44,3 +45,5 @@ CELERY_RESULT_BACKEND = "amqp"
 
 CELERY_IMPORTS = (
     "openquake.risk.job", "openquake.hazard.tasks", "tests.utils.tasks")
+
+os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
