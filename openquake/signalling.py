@@ -123,20 +123,23 @@ class LogMessageConsumer(object):
                     # this will remove the callback from self.chn.callbacks
                     self.chn.basic_cancel(tag)
 
-    def message_callback(self, msg):  # pylint: disable=W0613,R0201
+    def message_callback(self, msg):
         """
         Called by `run` when a message is received.
 
         Can raise StopIteration to stop the loop inside `run` and let it return
         to the caller.
         """
-        pass
+        raise NotImplementedError()
 
-    def timeout_callback(self):  # pylint: disable=R0201
+    def timeout_callback(self):
         """
         Called by `run` each time the timeout expires.
+
+        You need to implement this only if you specify a timeout when creating
+        an instance of LogMessageConsumer.
 
         Can raise StopIteration to stop the loop inside `run` and let it return
         to the caller.
         """
-        pass
+        raise NotImplementedError()
