@@ -24,7 +24,6 @@ Utility functions related to splitting work into tasks.
 
 import itertools
 import time
-import functools
 
 from celery.task.sets import TaskSet
 
