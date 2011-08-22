@@ -54,7 +54,6 @@ MEAN_GROUND_INTENSITY = (
     '"site":"+35.1000 +35.0000", "intensity": 2.0320e+00,'
     '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
-TASK_JOBID_SIMPLE = ["JOB1", "JOB2", "JOB3", "JOB4"]
 TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
@@ -358,19 +357,19 @@ class HazardEngineTestCase(unittest.TestCase):
             verify_quantile_haz_maps_stored_to_nrml(hazengine)
 
     def test_basic_generate_erf_keeps_order(self):
-        results = []
-        for job_id in TASK_JOBID_SIMPLE:
-            results.append(tasks.generate_erf.delay(job_id))
-
-        self.assertEqual(TASK_JOBID_SIMPLE,
-                         [result.get() for result in results])
+        job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
+                   for _ in xrange(4)]
+        results = map(tasks.generate_erf.delay, job_ids)
+        self.assertEqual(job_ids, [result.get() for result in results])
 
     def test_generate_erf_returns_erf_via_kvs(self):
         results = []
         result_keys = []
         expected_values = {}
 
-        for job_id in TASK_JOBID_SIMPLE:
+        job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
+                   for _ in xrange(4)]
+        for job_id in job_ids:
             erf_key = tokens.erf_key(job_id)
 
             # Build the expected values
@@ -395,7 +394,9 @@ class HazardEngineTestCase(unittest.TestCase):
 
         mgm_intensity = json.JSONDecoder().decode(MEAN_GROUND_INTENSITY)
 
-        for job_id in TASK_JOBID_SIMPLE:
+        job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
+                   for _ in xrange(4)]
+        for job_id in job_ids:
             mgm_key = tokens.mgm_key(job_id, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
