@@ -89,7 +89,7 @@ class LogMessageConsumer(object):
         Run the loop waiting for messages or timeout expiration and calling the
         appropriate callback.
 
-        The callbacks can stop the loop by returning True.
+        The callbacks can stop the loop by raising StopIteration.
         """
 
         if self.timeout:
@@ -126,8 +126,8 @@ class LogMessageConsumer(object):
         """
         Called by `run` when a message is received.
 
-        Raise StopIteration to stop the loop inside `run` and let it return to
-        the caller.
+        Can raise StopIteration to stop the loop inside `run` and let it return
+        to the caller.
         """
         pass
 
@@ -135,7 +135,7 @@ class LogMessageConsumer(object):
         """
         Called by `run` each time the timeout expires.
 
-        Raise StopIteration to stop the loop inside `run` and let it return to
-        the caller.
+        Can raise StopIteration to stop the loop inside `run` and let it return
+        to the caller.
         """
         pass
