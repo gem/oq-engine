@@ -36,10 +36,10 @@ class CatalogAllfields(models.Model):
     eventid = models.IntegerField()
     agency = models.TextField()
     identifier = models.TextField()
-    time = models.DateTimeField()
-    time_error = models.FloatField()
     depth = models.FloatField()
     depth_error = models.FloatField()
+    time = models.DateTimeField()
+    time_error = models.FloatField()
     event_class = models.TextField()
     magnitude_id = models.IntegerField()
     surface_id = models.IntegerField()
@@ -48,14 +48,15 @@ class CatalogAllfields(models.Model):
     semi_minor = models.FloatField()
     semi_major = models.FloatField()
     strike = models.FloatField()
-    mb_val = models.FloatField()
-    mb_val_error = models.FloatField()
-    ml_val = models.FloatField()
-    ml_val_error = models.FloatField()
     ms_val = models.FloatField()
     ms_val_error = models.FloatField()
     mw_val = models.FloatField()
     mw_val_error = models.FloatField()
+    ml_val = models.FloatField()
+    ml_val_error = models.FloatField()
+    mb_val = models.FloatField()
+    mb_val_error = models.FloatField()
+
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"catalog_allfields'
