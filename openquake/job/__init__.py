@@ -311,6 +311,27 @@ class Job(object):
         job.config_file = config_file  # pylint: disable=W0201
         return job
 
+    @staticmethod
+    def get_status_from_db(job_id):
+        """
+        Get the status of the database record belonging to job ``job_id``.
+
+        :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
+        """
+        session = get_db_session("reslt", "reader")
+        [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
+        return status
+
+    @staticmethod
+    def is_job_completed(job_id):
+        """
+        Return ``True`` if the :meth:`current status <get_status_from_db>`
+        of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
+        ``False`` otherwise.
+        """
+        status = Job.get_status_from_db(job_id)
+        return status == 'succeeded' or status == 'failed'
+
     def __init__(self, params, job_id, sections=list(), base_path=None):
         """
         :param dict params: Dict of job config params.

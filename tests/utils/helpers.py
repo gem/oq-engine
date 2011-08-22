@@ -80,7 +80,7 @@ def _patched_mocksignature(func, mock=None, skipfirst=False):
         func = func.__func__
 
     if mock is None:
-        mock = Mock()
+        mock = mock_module.Mock()
     signature, func = mock_module._getsignature(func, skipfirst)
 
     checker = eval("lambda %s: None" % signature)
@@ -125,7 +125,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    job = Job.from_file(config_file_path, 'xml_without_db')
+    job = Job.from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
