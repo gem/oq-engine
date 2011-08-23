@@ -28,7 +28,7 @@ from openquake import flags
 from openquake import java
 from openquake import logs
 from openquake import job
-from openquake import settings
+from openquake.utils import config
 
 from tests.utils.helpers import cleanup_loggers
 
@@ -86,8 +86,8 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
 
         flags.FLAGS.debug = 'warn'
         flags.FLAGS.logfile = LOG_FILE_PATH
-        logs.init_logs('console', 'warn')
-        java.init_logs('console', 'warn')
+        logs.init_logs(log_type='console', level='warn')
+        java.init_logs(log_type='console', level='warn')
 
     def tearDown(self):
         # reset logging config
@@ -162,12 +162,12 @@ class LogsTestCase(PreserveJavaIO, unittest.TestCase):
 class AMQPLogTestBase(unittest.TestCase):
     def setup_queue(self):
         # connect to localhost and bind to a queue
-        conn = amqp.Connection(host=settings.AMQP_HOST,
-                               userid=settings.AMQP_USER,
-                               password=settings.AMQP_PASSWORD,
-                               virtual_host=settings.AMQP_VHOST)
+        conn = amqp.Connection(host=config.get("amqp", "host"),
+                               userid=config.get("amqp", "user"),
+                               password=config.get("amqp", "password"),
+                               virtual_host=config.get("amqp", "vhost"))
         ch = conn.channel()
-        ch.access_request(settings.AMQP_VHOST, active=False, read=True)
+        ch.access_request(config.get("amqp", "vhost"), active=False, read=True)
         ch.exchange_declare(self.TOPIC, 'topic', auto_delete=True)
         qname, _, _ = ch.queue_declare()
         ch.queue_bind(qname, self.TOPIC, routing_key=self.ROUTING_KEY)
@@ -193,7 +193,7 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
         jvm = java.jvm()
 
         jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        java.init_logs('warn')
+        java.init_logs(level='warn')
 
     def setUp(self):
         jvm = java.jvm()
@@ -203,11 +203,11 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
 
         for key, value in [
             ('', 'org.gem.log.AMQPAppender'),
-            ('.host', settings.AMQP_HOST),
-            ('.port', str(settings.AMQP_PORT)),
-            ('.username', settings.AMQP_USER),
-            ('.password', settings.AMQP_PASSWORD),
-            ('.virtualHost', settings.AMQP_VHOST),
+            ('.host', config.get("amqp", "host")),
+            ('.port', config.get("amqp", "port")),
+            ('.username', config.get("amqp", "user")),
+            ('.password', config.get("amqp", "password")),
+            ('.virtualHost', config.get("amqp", "vhost")),
             ('.routingKeyPattern', 'oq-unittest-log.%p'),
             ('.exchange', 'oq-unittest.topic'),
             ('.layout', 'org.apache.log4j.PatternLayout'),
@@ -223,11 +223,11 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
 
         # now there is a queue, send a test message
         sender = java.AMQPConnection()
-        sender.setHost(settings.AMQP_HOST)
-        sender.setPort(settings.AMQP_PORT)
-        sender.setUsername(settings.AMQP_USER)
-        sender.setPassword(settings.AMQP_PASSWORD)
-        sender.setVirtualHost(settings.AMQP_VHOST)
+        sender.setHost(config.get("amqp", "host"))
+        sender.setPort(int(config.get("amqp", "port")))
+        sender.setUsername(config.get("amqp", "user"))
+        sender.setPassword(config.get("amqp", "password"))
+        sender.setVirtualHost(config.get("amqp", "vhost"))
         sender.publish('oq-unittest.topic', 'oq-unittest-log.FOO', 0, 'WARN',
                        'Hi there')
         sender.close()
@@ -281,10 +281,10 @@ class PythonAMQPLogTestCase(AMQPLogTestBase):
 
     def setUp(self):
         self.amqp = logs.AMQPHandler(
-            host=settings.AMQP_HOST,
-            username=settings.AMQP_USER,
-            password=settings.AMQP_PASSWORD,
-            virtual_host=settings.AMQP_VHOST,
+            host=config.get("amqp", "host"),
+            username=config.get("amqp", "user"),
+            password=config.get("amqp", "password"),
+            virtual_host=config.get("amqp", "vhost"),
             exchange='oq-unittest.topic',
             routing_key='oq-unittest-log.%(levelname)s',
             level=logging.DEBUG)
@@ -326,7 +326,7 @@ class PythonAMQPLogTestCase(AMQPLogTestBase):
 
 
 class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
-    TOPIC = settings.AMQP_EXCHANGE
+    TOPIC = config.get("amqp", "exchange")
     ROUTING_KEY = 'log.*.*'
 
     def setUp(self):
@@ -342,8 +342,8 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         cleanup_loggers()
 
         # setup AMQP logging
-        logs.init_logs('amqp', 'debug')
-        java.init_logs('amqp', 'debug')
+        logs.init_logs(log_type='amqp', level='debug')
+        java.init_logs(log_type='amqp', level='debug')
         job.setup_job_logging('123')
 
     def tearDown(self):
@@ -395,11 +395,11 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
-                msg = '%s %s message' % (source, level)
-                log = messages[i * 5 + j].body
-
-                self.assertTrue(msg in log,
-                                '"%s" contained in "%s"' % (msg, log))
+                fragment = '%s %s message' % (source, level)
+                contained = filter(lambda msg: fragment in msg.body, messages)
+                self.assertEquals(
+                    1, len(contained),
+                    '"%s" contained in "%s"' % (fragment, contained))
 
         # check topic
         for i, source in enumerate(['Java', 'Python']):

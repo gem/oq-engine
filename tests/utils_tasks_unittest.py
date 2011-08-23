@@ -26,6 +26,7 @@ import unittest
 
 from openquake.utils import tasks
 
+from tests.utils.helpers import patch
 from tests.utils.tasks import (
     failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
     single_arg_called_a, reflect_data_with_task_index)
@@ -306,3 +307,22 @@ class ParallelizeTestCase(unittest.TestCase):
                 "Parameters must be passed in a dict.", exc.args[0])
         else:
             raise Exception("Exception not raised.")
+
+
+class CheckJobStatusTestCase(unittest.TestCase):
+    def test_not_completed(self):
+        with patch('openquake.job.Job.is_job_completed') as mock:
+            mock.return_value = False
+            tasks.check_job_status(42)
+            self.assertEqual(mock.call_args_list, [((42, ), {})])
+
+    def test_not_completed(self):
+        with patch('openquake.job.Job.is_job_completed') as mock:
+            mock.return_value = True
+            try:
+                tasks.check_job_status(31)
+            except tasks.JobCompletedError as exc:
+                self.assertEqual(exc.message, 31)
+            else:
+                self.fail('JobCompletedError wasn\'t raised')
+            self.assertEqual(mock.call_args_list, [((31, ), {})])

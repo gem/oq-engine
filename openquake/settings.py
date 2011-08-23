@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -15,51 +18,75 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-""" Settings for OpenQuake.  """
+"""Django settings for OpenQuake."""
 
-KVS_PORT = 6379
-KVS_HOST = "localhost"
+from openquake.utils import config
 
-TEST_KVS_DB = 3
 
-AMQP_HOST = "localhost"
-AMQP_PORT = 5672
-AMQP_USER = "guest"
-AMQP_PASSWORD = "guest"
-AMQP_VHOST = "/"
-AMQP_EXCHANGE = 'oq.signalling'
+def _db_cfg(db_name):
+    """
+    Helper method to create db config items for the various roles and schemas.
 
-# Keep the Python and Java formats in sync!
-LOGGING_AMQP_FORMAT = '%(asctime)s %(loglevel)-5s %(processName)s' \
-    ' [%(name)s] - Job %(job_id)s - %(message)s'
-LOG4J_AMQP_FORMAT = '%d %-5p %X{processName} [%c] - Job %X{job_id} - %m'
+    :param db_name: The name of the database configuration. Configurations for
+        this name will be loaded from the site specific config file. If an item
+        doesn't exist in the config file, a default value will be used instead.
 
-LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
-    ' [%(name)s] - %(message)s'
-LOG4J_STDOUT_FORMAT = '%-5p %X{processName} [%c] - Job %X{job_id} - %m%n'
+    :returns: Configuration dict, structured like so::
+        {'ENGINE': 'django.db.backends.postgresql_psycopg2',
+         'NAME': 'openquake',
+         'USER': 'openquake',
+         'PASSWORD': 'secret',
+         'HOST': 'localhost',
+         'PORT': '5432',
+        }
 
-LOG4J_STDOUT_SETTINGS = {
-    'log4j.rootLogger': '%(level)s, stdout',
 
-    'log4j.appender.stdout': 'org.apache.log4j.ConsoleAppender',
-    'log4j.appender.stdout.follow': 'true',
-    'log4j.appender.stdout.layout': 'org.apache.log4j.PatternLayout',
-    'log4j.appender.stdout.layout.ConversionPattern': LOG4J_STDOUT_FORMAT,
+    """
+    db_section = config.get_section('database')
+
+    return dict(
+        ENGINE='django.contrib.gis.db.backends.postgis',
+        NAME=db_section.get('name', 'openquake'),
+        USER=db_section.get('%s_user' % db_name, 'openquake'),
+        PASSWORD=db_section.get('%s_password' % db_name, ''),
+        HOST=db_section.get('host', ''),
+        PORT=db_section.get('port', ''),
+    )
+
+
+_DB_NAMES = (
+    'admin',
+    'eqcat_read', 'eqcat_write',
+    'hzrdi_read', 'hzrdi_write',
+    'hzrdr_read', 'hzrdi_write',
+    'oqmif',
+    'riski_read', 'riski_write',
+    'riskr_read', 'riskr_write',
+    'uiapi_read', 'uiapi_write',
+)
+DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
+# We need a 'default' database to make Django happy:
+DATABASES['default'] = {
+    'ENGINE': 'django.db.backends.postgresql_psycopg2',
+    'NAME': 'openquake',
+    'USER': 'openquake',
+    'PASSWORD': '',
+    'HOST': '',
+    'PORT': '',
 }
 
-LOG4J_AMQP_SETTINGS = {
-    'log4j.rootLogger': '%(level)s, amqp',
+DATABASE_ROUTERS = ['openquake.db.routers.OQRouter']
 
-    'log4j.appender.amqp': 'org.gem.log.AMQPAppender',
-    'log4j.appender.amqp.host': AMQP_HOST,
-    'log4j.appender.amqp.port': str(AMQP_PORT),
-    'log4j.appender.amqp.username': AMQP_USER,
-    'log4j.appender.amqp.password': AMQP_PASSWORD,
-    'log4j.appender.amqp.virtualHost': AMQP_VHOST,
-    'log4j.appender.amqp.routingKeyPattern': 'log.%p.%X{job_id}',
-    'log4j.appender.amqp.exchange': AMQP_EXCHANGE,
-    'log4j.appender.amqp.layout': 'org.apache.log4j.PatternLayout',
-    'log4j.appender.amqp.layout.ConversionPattern': LOG4J_AMQP_FORMAT,
-}
+# Local time zone for this installation. Choices can be found here:
+# http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
+# although not all choices may be available on all operating systems.
+# On Unix systems, a value of None will cause Django to use the same
+# timezone as the operating system.
+TIME_ZONE = 'Europe/Zurich'
 
-LOGGING_BACKEND = 'console'
+LANGUAGE_CODE = 'en-us'
+
+SITE_ID = 1
+
+# Make this unique, and don't share it with anybody.
+SECRET_KEY = 'change-me-in-production'

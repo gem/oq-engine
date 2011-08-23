@@ -21,27 +21,27 @@
 import multiprocessing
 import os
 import re
-import subprocess
 import sqlalchemy
+import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
+
+import geoalchemy as ga
 
 from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake import settings
-from openquake.logs import LOG
-from openquake.job import config as conf
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.job.handlers import resolve_handler
+from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.kvs import mark_job_as_current
-
-from openquake.db.alchemy.models import OqJob, OqUser, OqParams
-from openquake.db.alchemy.db_utils import get_db_session
-import geoalchemy as ga
+from openquake.logs import LOG
+from openquake.utils import config as oq_config
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
@@ -245,7 +245,8 @@ class Job(object):
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
 
-        logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
+        logs.init_logs(
+            level=FLAGS.debug, log_type=oq_config.get("logging", "backend"))
 
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
@@ -309,6 +310,27 @@ class Job(object):
         job.serialize_results_to = serialize_results_to
         job.config_file = config_file  # pylint: disable=W0201
         return job
+
+    @staticmethod
+    def get_status_from_db(job_id):
+        """
+        Get the status of the database record belonging to job ``job_id``.
+
+        :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
+        """
+        session = get_db_session("reslt", "reader")
+        [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
+        return status
+
+    @staticmethod
+    def is_job_completed(job_id):
+        """
+        Return ``True`` if the :meth:`current status <get_status_from_db>`
+        of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
+        ``False`` otherwise.
+        """
+        status = Job.get_status_from_db(job_id)
+        return status == 'succeeded' or status == 'failed'
 
     def __init__(self, params, job_id, sections=list(), base_path=None):
         """
