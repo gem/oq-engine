@@ -24,6 +24,8 @@ import logging
 from os.path import basename
 
 from django.db import transaction
+from django.db import connections
+from django.db import router
 
 from openquake.db import models
 from openquake.db.alchemy.models import OqJob, Output
@@ -320,6 +322,63 @@ class BulkInserterSA(object):  # SQLAlchemy
             self.table.schema, self.table.name, ", ".join(self.fields)) + \
             ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
         cursor.execute(sql, self.values)
+
+        self.fields = None
+        self.values = []
+        self.count = 0
+
+
+class BulkInserter(object):
+    """Handle bulk object insertion"""
+
+    def __init__(self, dj_model):
+        """Create a new bulk inserter for a SQLAlchemy model class"""
+        self.table = dj_model
+        self.fields = None
+        self.values = []
+        self.count = 0
+
+    def add_entry(self, **kwargs):
+        """
+        Add a new entry to be inserted
+
+        The first time the method is called the field list is stored;
+        subsequent add_entry() calls must provide the same set of
+        keyword arguments.
+
+        Handles PostGIS/GeoAlchemy types.
+        """
+        if not self.fields:
+            self.fields = kwargs.keys()
+        assert set(self.fields) == set(kwargs.keys())
+        for k in self.fields:
+            self.values.append(kwargs[k])
+        self.count += 1
+
+    def flush(self):
+        """Inserts the entries in the database using a bulk insert query"""
+        if not self.values:
+            return
+
+        cursor = connections[router.db_for_write(self.table)].cursor()
+        value_args = []
+
+        field_map = dict()
+        for f in self.table._meta.fields:
+            field_map[f.column] = f
+
+        for f in self.fields:
+            col = field_map[f]
+            if hasattr(col, 'srid'):
+                value_args.append('GeomFromText(%%s, %d)' % col.srid)
+            else:
+                value_args.append('%s')
+
+        sql = "INSERT INTO \"%s\" (%s) VALUES " % (
+            self.table._meta.db_table, ", ".join(self.fields)) + \
+            ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
+        cursor.execute(sql, self.values)
+        transaction.set_dirty()
 
         self.fields = None
         self.values = []
