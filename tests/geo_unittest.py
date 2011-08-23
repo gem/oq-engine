@@ -40,7 +40,7 @@ OUTSIDE = [(50, 9),
            (101, 101)]
 
 
-class SiteTestCase(unittest.TestCase):
+class GeoSiteTestCase(unittest.TestCase):
 
     def test_sites_can_be_keys(self):
         """ Site objects can be dictionary keys,
@@ -103,7 +103,7 @@ class GridTestCase(unittest.TestCase):
             # TODO(JMC): assert the sequence is correct
 
 
-class ShapesTestCase(unittest.TestCase):
+class GeoCurveTestCase(unittest.TestCase):
 
     def test_equals_when_have_the_same_values(self):
         curve1 = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
