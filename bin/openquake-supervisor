@@ -1,0 +1,137 @@
+#! /usr/bin/env python
+
+import errno
+import logging
+import os
+import signal
+import sys
+
+try:
+    import setproctitle
+except ImportError:
+    def set_proc_title(title):
+        pass
+else:
+    def set_proc_title(title):
+        setproctitle.setproctitle(title)
+
+from openquake.signalling import LogMessageConsumer
+from openquake import kvs
+
+
+logging.basicConfig(level=logging.INFO)
+
+
+def terminate_job(pid):
+    """
+    Terminate an openquake job by killing its process.
+
+    :param pid: the process id
+    :type pid: int
+    """
+
+    logging.info('Terminating job process %s', pid)
+    os.kill(pid, signal.SIGKILL)
+
+
+def cleanup_after_job(job_id):
+    """
+    Release the resources used by an openquake job.
+
+    :param job_id: the job id
+    :type job_id: int
+    """
+    logging.info('Cleaning up after job %s', job_id)
+
+    kvs.cache_gc(job_id)
+
+
+def is_pid_running(pid):
+    """
+    Check if a process is still running.
+
+    :param pid: the process id
+    :type pid: int
+
+    :return: True if the process is running, False otherwise
+    """
+    try:
+        os.kill(pid, 0)
+    except Exception as e:
+        return e.errno != errno.ESRCH
+    else:
+        return True
+
+
+class SupervisorLogMessageConsumer(LogMessageConsumer):
+    """
+    Supervise an OpenQuake job by:
+
+       - handling its messages
+       - periodically checking that the job process is still running
+    """
+    def __init__(self, job_id, pid, **kwargs):
+        super(SupervisorLogMessageConsumer, self).__init__(job_id, **kwargs)
+
+        self.pid = pid
+
+    def message_callback(self, msg):
+        """
+        Handles messages of severe level from the supervised job.
+        """
+        terminate_job(self.pid)
+
+        cleanup_after_job(self.job_id)
+
+        raise StopIteration
+
+    def timeout_callback(self):
+        """
+        On timeout expiration check if the job process is still running, and
+        act accordingly if not.
+        """
+        if not is_pid_running(self.pid):
+            logging.info('Process %s not running', self.pid)
+
+            cleanup_after_job(self.job_id)
+
+            raise StopIteration
+
+
+def supervise(pid, job_id):
+    """
+    Supervise a job process, entering a loop that ends only when the job
+    terminates.
+
+    :param pid: the process id
+    :type pid: int
+    :param job_id: the job id
+    :type job_id: int
+    """
+    logging.info('Entering supervisor for job %s', job_id)
+
+    with SupervisorLogMessageConsumer(
+        job_id, pid, levels=('ERROR', 'FATAL'),
+        timeout=0.1) as message_consumer:
+        message_consumer.run()
+
+    logging.info('Exiting supervisor for job %s', job_id)
+
+
+if __name__ == '__main__':
+    job_id, pid = map(int, sys.argv[1:])
+
+    # Set the name of this process (as reported by /bin/ps)
+    set_proc_title('openquake supervisor for job_id=%s job_pid=%s'
+                   % (job_id, pid))
+
+    # This supervisor will be spawned by bin/openquake and interrupting
+    # bin/openquake with Ctrl-C from the shell will propagate the signal to
+    # this supervisor, killing it.
+    # To avoid premature death of the supervisor we ignore the SIGINT signal.
+    def handler(signum, frame):
+        pass
+
+    signal.signal(signal.SIGINT, handler)
+
+    supervise(pid, job_id)
