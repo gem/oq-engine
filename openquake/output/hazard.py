@@ -586,7 +586,7 @@ class HazardMapDBReader(object):
         return points
 
 
-class HazardMapDBWriter(writer.DBWriter):
+class HazardMapDBWriter(writer.DBWriterSA):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
@@ -724,7 +724,7 @@ class HazardCurveDBReader(object):
         return points
 
 
-class HazardCurveDBWriter(writer.DBWriter):
+class HazardCurveDBWriter(writer.DBWriterSA):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -834,7 +834,7 @@ class GMFDBReader(object):
         return points
 
 
-class GMFDBWriter(writer.DBWriter):
+class GMFDBWriter(writer.DBWriterSA):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
