@@ -48,7 +48,7 @@ class LogMessageConsumer(object):
         :param levels: the logging levels we are interested in
         :type levels: None for all the levels (translated to a '*' in the
                       routing_key) or an iterable of stings
-                      (e.g. ['ERROR', 'CRITICAL'])
+                      (e.g. ['ERROR', 'FATAL'])
         :param timeout: the optional timeout in seconds. When it expires the
                         `timeout_callback` will be called.
         :type timeout: None or float
