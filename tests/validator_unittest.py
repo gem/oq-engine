@@ -22,8 +22,8 @@ This module tests the logic related to the engine configuration
 and its validation.
 """
 
-from openquake import job
 from openquake.job import config
+from tests.utils import helpers
 
 import unittest
 
@@ -100,25 +100,25 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         params = {}
 
-        engine = job.Job(params, sections=sections)
+        engine = helpers.create_job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure"}
 
-        engine = job.Job(params, sections=sections)
+        engine = helpers.create_job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure",
                 config.REGION_GRID_SPACING: 0.5}
 
-        engine = job.Job(params, sections=sections)
+        engine = helpers.create_job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure",
                 config.INPUT_REGION: "a, polygon",
                 config.REGION_GRID_SPACING: 0.5}
 
-        engine = job.Job(params, sections=sections)
+        engine = helpers.create_job(params, sections=sections)
         self.assertTrue(engine.is_valid()[0])
 
     def test_hazard_computation_type(self):
@@ -128,13 +128,13 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.SITES: "some, sites"}
         validator = config.ComputationTypeValidator(params)
 
-        engine = job.Job(params, validator=validator)
+        engine = helpers.create_job(params, validator=validator)
         self.assertTrue(engine.is_valid()[0])
 
         params = {config.INPUT_REGION: "a, polygon"}
         validator = config.ComputationTypeValidator(params)
 
-        engine = job.Job(params, validator=validator)
+        engine = helpers.create_job(params, validator=validator)
         self.assertTrue(engine.is_valid()[0])
 
         params = {config.SITES: "some, sites",
@@ -142,7 +142,7 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         validator = config.ComputationTypeValidator(params)
 
-        engine = job.Job(params, validator=validator)
+        engine = helpers.create_job(params, validator=validator)
         self.assertFalse(engine.is_valid()[0])
 
     def test_deterministic_is_not_supported_alone(self):
@@ -155,7 +155,7 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
 
         validator = config.DeterministicComputationValidator(sections, params)
-        engine = job.Job(None, sections=sections, validator=validator)
+        engine = helpers.create_job(None, sections=sections, validator=validator)
 
         self.assertTrue(engine.is_valid()[0])
 

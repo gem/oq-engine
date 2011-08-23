@@ -23,7 +23,7 @@ Base classes for the output methods of the various codecs.
 import logging
 from os.path import basename
 
-from db.alchemy.models import OqJob, Output
+from openquake.db.alchemy.models import OqJob, Output
 
 LOGGER = logging.getLogger('serializer')
 LOGGER.setLevel(logging.DEBUG)
@@ -173,6 +173,34 @@ class DBWriter(object):
         LOGGER.info("< serialize")
 
 
+class CompositeWriter(object):
+    """A writer that outputs to multiple writers"""
+
+    def __init__(self, *writers):
+        self.writers = writers
+
+    def serialize(self, iterable):
+        """Implementation of the "serialize" interface."""
+
+        for writer in self.writers:
+            if writer:
+                writer.serialize(iterable)
+
+
+def compose_writers(writers):
+    """
+    Takes a list of writers (the list can be empty or contain None items) and
+    returns a single writer or None if the list didn't contain any writer.
+    """
+
+    if all(writer == None for writer in writers):  # True if the list is empty
+        return None
+    elif len(writers) == 1:
+        return writers[0]
+    else:
+        return CompositeWriter(*writers)
+
+
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
@@ -202,6 +230,9 @@ class BulkInserter(object):
 
     def flush(self, session):
         """Inserts the entries in the database using a bulk insert query"""
+        if not self.values:
+            return
+
         cursor = session.connection().connection.cursor()
         value_args = []
         for f in self.fields:
