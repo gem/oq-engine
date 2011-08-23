@@ -102,7 +102,7 @@ class XMLFileWriter(FileWriter):
         self.close()
 
 
-class DBWriterSA(object):
+class DBWriterSA(object):  # SQLAlchemy
     """
     Abstact class implementing the "serialize" interface to output an iterable
     to the database.
@@ -275,7 +275,7 @@ def compose_writers(writers):
         return CompositeWriter(*writers)
 
 
-class BulkInserter(object):
+class BulkInserterSA(object):  # SQLAlchemy
     """Handle bulk object insertion"""
 
     def __init__(self, sa_model):
