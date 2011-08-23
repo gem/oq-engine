@@ -364,7 +364,7 @@ class BulkInserter(object):
         value_args = []
 
         field_map = dict()
-        for f in self.table._meta.fields:
+        for f in self.table._meta.fields:  # pylint: disable=W0212
             field_map[f.column] = f
 
         for f in self.fields:
@@ -374,6 +374,7 @@ class BulkInserter(object):
             else:
                 value_args.append('%s')
 
+        # pylint: disable=W0212
         sql = "INSERT INTO \"%s\" (%s) VALUES " % (
             self.table._meta.db_table, ", ".join(self.fields)) + \
             ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
