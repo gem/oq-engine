@@ -54,6 +54,7 @@ class LogMessageConsumer(object):
         :type timeout: None or float
         """
 
+        self.job_id = job_id
         self.timeout = timeout
 
         cfg = config.get_section("amqp")
