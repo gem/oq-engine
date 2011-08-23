@@ -26,3 +26,17 @@ CREATE TABLE riskr.bcr_distribution_data (
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
+
+
+-- foreign keys
+ALTER TABLE riskr.bcr_distribution
+ADD CONSTRAINT riskr_bcr_distribution_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.bcr_distribution
+ADD CONSTRAINT riskr_bcr_distribution_exposure_model_fk
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
+
+ALTER TABLE riskr.bcr_distribution_data
+ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
+FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
