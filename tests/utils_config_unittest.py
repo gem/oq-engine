@@ -23,6 +23,7 @@ Test related to code in openquake/utils/config.py
 
 
 import os
+import shutil
 import textwrap
 import unittest
 
@@ -37,10 +38,22 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
     def setUp(self):
         self.orig_env = os.environ.copy()
         os.environ.clear()
+        # Move the local configuration file out of the way if it exists.
+        # Otherwise the tests that follow will break.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile(local_path):
+            shutil.move(local_path, "%s.test_bakk" % local_path)
 
     def tearDown(self):
         os.environ.clear()
         os.environ.update(self.orig_env)
+        # Move the local configuration file back into place if it was stashed
+        # away.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile("%s.test_bakk" % local_path):
+            shutil.move("%s.test_bakk" % local_path, local_path)
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
 
     def test_get_paths_with_global_env_var_set(self):
         """
@@ -202,6 +215,10 @@ class ConfigTestCase(TestMixin, unittest.TestCase):
 class GetSectionTestCase(unittest.TestCase):
     """Tests the behaviour of utils.config.get_section()"""
 
+    def tearDown(self):
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
     def test_get_section_merely_calls_get_on_config_data_dict(self):
         "config.get_section() merely makes use of Config().get()"""
         orig_method = config.Config().get
@@ -218,6 +235,10 @@ class GetSectionTestCase(unittest.TestCase):
 
 class GetTestCase(unittest.TestCase):
     """Tests the behaviour of utils.config.get()"""
+
+    def tearDown(self):
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
 
     def test_get_with_empty_section_data(self):
         """config.get() returns `None` if the section data dict is empty."""

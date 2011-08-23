@@ -65,7 +65,7 @@ from openquake import logs
 from openquake import __version__
 
 from openquake import job
-from openquake import settings
+from openquake.utils import config
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
@@ -107,7 +107,8 @@ if __name__ == '__main__':
         print flags.get_flags_help()
         sys.exit(1)
 
-    logs.init_logs(level=FLAGS.debug, log_type=settings.LOGGING_BACKEND)
+    logs.init_logs(level=FLAGS.debug,
+                   log_type=config.get('logging', 'backend'))
 
     # Collect inputs
     # Determine Processing type

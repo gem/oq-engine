@@ -156,7 +156,7 @@ def GMF_DATA():
     }
 
 
-class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
     """Common code for hazard map db reader/writer test"""
 
     def tearDown(self):
@@ -175,7 +175,7 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.reader = HazardMapDBReader(self.session)
 
 
-class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
+class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
     """
     Unit tests for the HazardMapDBWriter class, which serializes
     hazard maps to the database.
@@ -272,7 +272,7 @@ class HazardMapDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.assertEqual(round_float(maximum), round_float(output.max_value))
 
 
-class HazardMapDBReaderTestCase(HazardCurveDBBaseTestCase):
+class HazardMapDBReaderTestCase(HazardMapDBBaseTestCase):
     """
     Unit tests for the HazardMapDBReader class, which deserializes
     hazard maps from the database.

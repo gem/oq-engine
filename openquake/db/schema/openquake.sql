@@ -464,6 +464,7 @@ CREATE TABLE hzrdi.r_rate_mdl (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Holds strike, dip and rake values with the respective constraints.
 CREATE TABLE hzrdi.focal_mechanism (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -547,6 +548,7 @@ CREATE TABLE uiapi.oq_job (
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
+    supervisor_pid INTEGER NOT NULL DEFAULT 0,
     oq_params_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -638,9 +640,10 @@ CREATE TABLE uiapi.output (
     --      gmf
     --      loss_curve
     --      loss_map
+    --      collapse_map
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'loss_curve', 'loss_map')),
+            'gmf', 'loss_curve', 'loss_map', 'collapse_map')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -808,6 +811,24 @@ CREATE TABLE riskr.aggregate_loss_curve_data (
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE riskr_ts;
+
+
+-- Collapse map data.
+CREATE TABLE riskr.collapse_map (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.collapse_map_data (
+    id SERIAL PRIMARY KEY,
+    collapse_map_id INTEGER NOT NULL, -- FK to collapse_map.id
+    asset_ref VARCHAR NOT NULL,
+    value float NOT NULL,
+    std_dev float NOT NULL
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'collapse_map_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.collapse_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Exposure model
@@ -1054,6 +1075,14 @@ ALTER TABLE riskr.loss_curve
 ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.collapse_map
+ADD CONSTRAINT riskr_collapse_map_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.collapse_map
+ADD CONSTRAINT riskr_collapse_map_exposure_model_fk
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
+
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
@@ -1065,6 +1094,10 @@ FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.collapse_map_data
+ADD CONSTRAINT riskr_collapse_map_data_collapse_map_fk
+FOREIGN KEY (collapse_map_id) REFERENCES riskr.collapse_map(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
