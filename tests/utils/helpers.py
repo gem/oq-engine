@@ -44,6 +44,7 @@ from openquake.utils import config
 
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
+from openquake.db import models
 
 FLAGS = flags.FLAGS
 
@@ -422,6 +423,9 @@ class DbTestMixin(TestMixin):
 
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
+
+    def default_user(self):
+        return models.OqUser.objects.get(user_name="openquake")
 
     def setup_upload(self, dbkey=None):
         """Create an upload with associated inputs.
