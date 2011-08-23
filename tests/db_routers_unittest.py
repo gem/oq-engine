@@ -157,7 +157,8 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [LossMap, LossMapData, LossCurve, LossCurveData,
-            AggregateLossCurveData]
+            AggregateLossCurveData,
+            BCRDistribution, BCRDistributionData]
         expected_db = 'riskr_read'
 
         self._db_for_read_helper(classes, expected_db)
@@ -168,7 +169,8 @@ class OQRouterTestCase(unittest.TestCase):
         for write operations.
         '''
         classes = [LossMap, LossMapData, LossCurve, LossCurveData,
-            AggregateLossCurveData]
+            AggregateLossCurveData,
+            BCRDistribution, BCRDistributionData]
         expected_db = 'riskr_write'
 
         self._db_for_write_helper(classes, expected_db)
