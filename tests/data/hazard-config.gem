@@ -2,6 +2,10 @@
 
 [HAZARD]
 
+CALCULATION_MODE = Event Based
+GROUND_MOTION_CORRELATION = false
+NUMBER_OF_LOGIC_TREE_SAMPLES = 0
+
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure

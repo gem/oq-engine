@@ -20,7 +20,7 @@
 
 """
 This module contains functions and classes for reading source data from NRML
-XML files and serializing the data to the OpenQuake pshai database.
+XML files and serializing the data to the OpenQuake hzrdi database.
 
 This module contains functions and classes for reading source data from CSV
 and serializing the data to the OpenQuake eqcat database.
@@ -87,7 +87,7 @@ def parse_mfd(fault, mfd_java_obj):
     """
     Read a magnitude frequency distribution object, determine the type (evenly
     discretized or truncated Gutenberg-Richter), and create a dict containing
-    the necessary data to insert into the pshai db.
+    the necessary data to insert into the hzrdi db.
 
     If the input MFD is not a supported type, a :py:exception:`ValueError` will
     be raised.
@@ -109,7 +109,7 @@ def parse_mfd(fault, mfd_java_obj):
         is a string representing the table name (including the tablespace). For
         example::
 
-            {'table': 'pshai.mfd_evd',
+            {'table': 'hzrdi.mfd_evd',
              'data': <dict of column name/value pairs>}
 
         The reason we add this additional wrapper is so we can generically do
@@ -208,7 +208,7 @@ def parse_simple_fault_src(fault):
                 set to the data which is to be inserted
 
         Example return value::
-            ({'table': 'pshai.mfd_evd', 'data': {
+            ({'table': 'hzrdi.mfd_evd', 'data': {
                 'max_val': 6.9500000000000002,
                 'total_cumulative_rate': 1.8988435199999998e-05,
                 'min_val': 6.5499999999999998,
@@ -219,7 +219,7 @@ def parse_simple_fault_src(fault):
                     0.00050806530000000003],
                 'total_moment_rate': 281889786038447.25,
                 'owner_id': None}},
-            {'table': 'pshai.simple_fault', 'data': {
+            {'table': 'hzrdi.simple_fault', 'data': {
                 'name': u'Mount Diablo Thrust',
                 'upper_depth': 8.0,
                 'mgf_evd_id': None,
@@ -230,7 +230,7 @@ def parse_simple_fault_src(fault):
                 'owner_id': None,
                 'dip': 38.0,
                 'description': None}},
-            {'table': 'pshai.source', 'data': {
+            {'table': 'hzrdi.source', 'data': {
                 'r_depth_distr_id': None,
                 'name': u'Mount Diablo Thrust',
                 'tectonic_region': 'active',
@@ -373,9 +373,9 @@ def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
 
     :returns: List of dicts of table/record id pairs, indicating the tables and
         the primary keys of the new records. For example::
-            [{'pshai.mfd_evd': 1},
-             {'pshai.simple_fault': 7},
-             {'pshai.source': 3}]
+            [{'hzrdi.mfd_evd': 1},
+             {'hzrdi.simple_fault': 7},
+             {'hzrdi.source': 3}]
     """
     def do_insert(insert):
         """

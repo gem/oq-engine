@@ -30,7 +30,7 @@ public class JsonSerializer {
      * Type definition for converting a hazard curve to JSON.
      */
     private static final Type CURVE_TYPE =
-            new TypeToken<List<Map<String, String>>>() {
+            new TypeToken<List<Double>>() {
             }.getType();
 
     /**
@@ -43,13 +43,13 @@ public class JsonSerializer {
     private static final String SITE_LAT = "site_lat";
     private static final String X = "x";
     private static final String Y = "y";
-    private static final String CURVE = "curve";
+    private static final String POES = "poes";
 
     /* End Hazard Curve to JSON stuff */
 
     /**
      * Serializes and array list of GEMSourceData
-     * 
+     *
      * @param sourceList
      * @return
      */
@@ -68,9 +68,13 @@ public class JsonSerializer {
         GsonBuilder gson = new GsonBuilder();
         gson.registerTypeAdapter(GEMSourceData.class,
                 new SourceDataDeserializer());
-        Type listType = new TypeToken<List<GEMSourceData>>() {
+        Type listType = new TypeToken<ArrayList<GEMSourceData>>() {
         }.getType();
-        return gson.create().fromJson((String) cache.get(key), listType);
+        // At least up to gson 1.6 what we get is a LinkedList<GEMSourceData>
+        // while GEM1ERF.GEM1ERF is expecting ArrayList<GEMSourceData>.
+        List<GEMSourceData> result =
+            gson.create().fromJson((String) cache.get(key), listType);
+        return new ArrayList<GEMSourceData>(result);
     }
 
     public static HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> getGmpeMapFromCache(
@@ -102,53 +106,38 @@ public class JsonSerializer {
 
     /**
      * Convert the input Map into a List of JSON Strings.
-     * 
+     *
      * <p>
      * <b>The order in which the results are returned is based on the order of
      * the site list.</b>
      * </p>
-     * 
+     *
      * @param hazCurves
      * @return List of JSON Strings
      */
     public static List<String> hazardCurvesToJson(
             Map<Site, DiscretizedFuncAPI> hazCurves, List<Site> siteList) {
-        List<String> json = new ArrayList<String>();
+        List<String> result = new ArrayList<String>();
         Gson gson = new Gson();
         for (Site site : siteList) {
-            Double lon = site.getLocation().getLongitude();
-            Double lat = site.getLocation().getLatitude();
-            Map<String, String> siteMap = new HashMap<String, String>();
-            siteMap.put(SITE_LON, lon.toString());
-            siteMap.put(SITE_LAT, lat.toString());
-
-            JsonObject hazardCurve =
-                    gson.toJsonTree(siteMap, SITE_TYPE).getAsJsonObject();
-            JsonElement curveElement =
-                    curveToJsonElement(hazCurves.get(site), gson);
-            hazardCurve.add(CURVE, curveElement);
-            json.add(hazardCurve.toString());
+            result.add(ordinatesToJsonElement(hazCurves.get(site), gson).toString());
         }
-        return json;
+        return result;
     }
 
     /**
-     * Convert a hazard curve to a JSON list of x,y pairs (as dicts). Example:
-     * [{"x": "-5.2983174", "y": "0.0"}, ... , {"x": "0.756122", "y": "0.0"}]
-     * 
+     * Convert a hazard curve to a JSON list of ordinates.
+     *
      * @param func
      * @return
      */
-    public static JsonElement curveToJsonElement(DiscretizedFuncAPI func,
+    public static JsonElement ordinatesToJsonElement(DiscretizedFuncAPI func,
             Gson gson) {
-        List<Map<String, String>> curve = new ArrayList<Map<String, String>>();
+        List<Double> curve = new ArrayList<Double>();
         Iterator<DataPoint2D> ptIter = func.getPointsIterator();
         while (ptIter.hasNext()) {
             DataPoint2D point = ptIter.next();
-            Map<String, String> xy = new HashMap<String, String>();
-            xy.put(X, Double.toString(point.getX()));
-            xy.put(Y, Double.toString(point.getY()));
-            curve.add(xy);
+            curve.add(point.getY());
         }
         return gson.toJsonTree(curve, CURVE_TYPE);
     }

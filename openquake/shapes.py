@@ -20,7 +20,6 @@
 
 """Collection of base classes for processing spatially-related data."""
 
-import geohash
 import json
 import math
 import numpy
@@ -38,9 +37,6 @@ from openquake import java
 from openquake.utils import round_float
 
 FLAGS = flags.FLAGS
-
-flags.DEFINE_integer('distance_precision', 12,
-    "Points within this geohash precision will be considered the same point")
 
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
@@ -330,31 +326,24 @@ class Site(object):
         return self.point.y
 
     def __eq__(self, other):
-        return self.hash() == other.hash()
+        """
+        Compare lat and lon values to determine equality.
+
+        :param other: another Site
+        :type other: :py:class:`openquake.shapes.Site`
+        """
+        return self.longitude == other.longitude \
+            and self.latitude == other.latitude
 
     def __ne__(self, other):
         return not self == other
 
     def equals(self, other):
         """Verbose wrapper around =="""
-        return self.point.equals(other)
-
-    def hash(self):
-        """Ugly geohashing function, get rid of this!
-        TODO(jmc): Dont use sites as dict keys"""
-        return self._geohash()
+        return self == other
 
     def __hash__(self):
-        if not self:
-            return 0  # empty
-        geohash_val = self._geohash()
-        value = ord(geohash_val[0]) << 7
-        for char in geohash_val:
-            value = c_mul(1000003, value) ^ ord(char)
-        value = value ^ len(geohash_val)
-        if value == -1:
-            value = -2
-        return value
+        return hash((self.longitude, self.latitude))
 
     def to_java(self):
         """Converts to a Java Site object"""
@@ -363,11 +352,6 @@ class Site(object):
         site_class = jpype.JClass("org.opensha.commons.data.Site")
         # TODO(JMC): Support named sites?
         return site_class(loc_class(self.latitude, self.longitude))
-
-    def _geohash(self):
-        """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x,
-            precision=FLAGS.distance_precision)
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
@@ -614,12 +598,11 @@ class Curve(object):
     def abscissa_for(self, y_value):
         """Return the x value corresponding to the given y value."""
 
-        data = []
         # inverting the function
-        for x_value in self.abscissae:
-            data.append((self.ordinate_for(x_value), x_value))
+        inverted_func = [(ordinate, x_value) for ordinate, x_value in
+                zip(self.ordinate_for(self.abscissae), self.abscissae)]
 
-        return Curve(data).ordinate_for(y_value)
+        return Curve(inverted_func).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
         """Check if the given value is outside the Y values boundaries."""

@@ -29,15 +29,15 @@ migration.
   -n | --dryrun   : don't do anything just show what needs done
   -p | --path P   : path to schema upgrade files [default: db/schema/upgrades]
   -U | --user U   : database user to use [default: postgres]
-
-TODO: extend the tool to perform upgrades across versions.
 """
 
+from distutils import version
 import getopt
 import logging
 import subprocess
 import re
 import sys
+import os
 
 
 logging.basicConfig(level=logging.INFO)
@@ -86,9 +86,10 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
         raise Exception("Neither SQL script nor command specified.")
 
     if config['host'] in ["localhost", "127.0.0.1"]:
-        psql_cmd = "psql -d %(db)s -U %(user)s" % config
+        psql_cmd = "psql --set ON_ERROR_STOP=1 -d %(db)s -U %(user)s" % config
     else:
-        psql_cmd = "psql -d %(db)s -U %(user)s -h %(host)s" % config
+        psql_cmd =\
+        "psql --set ON_ERROR_STOP=1 -d %(db)s -U %(user)s -h %(host)s" % config
 
     cmds = psql_cmd.split()
 
@@ -109,7 +110,9 @@ def psql(config, script=None, cmd=None, ignore_dryrun=False, runner=run_cmd):
 def find_scripts(path):
     """Find all SQL scripts at level 2 of the given `path`."""
     result = []
-    cmd = "find %s -mindepth 2 -maxdepth 2 -type f -name *.sql" % path
+    cmd = "find %s -mindepth 2 -maxdepth 2 -type f" \
+          "     ( -name *.sql -o -name *.py )" % path
+
     code, out, err = run_cmd(cmd.split(), ignore_exit_code=True)
 
     if code == 0:
@@ -117,6 +120,26 @@ def find_scripts(path):
         for file in out.split('\n'):
             result.append(file[prefix_length:])
     return [r for r in result if r]
+
+
+def version_key(string):
+    """Returns a version representation useful for version comparison"""
+
+    # remove the trailing '-<release>' number if any
+    string = string.split('-', 1)[0]
+
+    return version.StrictVersion(string)
+
+
+def script_sort_key(script):
+    """
+    Return a sort key to order upgrade scripts first by revision, then
+    by step, then by file name
+    """
+
+    revision, step, name = script.rsplit('/', 3)
+
+    return version_key(revision), int(step), name
 
 
 def scripts_to_run(artefact, rev_info, config):
@@ -130,14 +153,33 @@ def scripts_to_run(artefact, rev_info, config):
         `config`)
     """
     result = []
-    path = "%s/%s/%s" % (config['path'], artefact, rev_info['revision'])
+    revision = rev_info['revision']
+
+    # find upgrade scripts for this revision
+    path = "%s/%s/%s" % (config['path'], artefact, revision)
     files = find_scripts(path)
     step = int(rev_info['step'])
     for script in files:
         spath, sfile = script.split('/')
         if (int(spath) > step):
-            result.append(script)
-    return list(sorted(result))
+            result.append(os.path.join(revision, script))
+
+    # find upgrade scripts for revisions newer than the current one
+    path = "%s/%s" % (config['path'], artefact)
+    current_revision_key = version_key(revision)
+    if os.path.isdir(path):
+        dirs = [os.path.join(path, d)
+                    for d in os.listdir(path)
+                    if os.path.isdir(os.path.join(path, d))]
+
+        for dir_name in dirs:
+            path_revision = os.path.basename(dir_name)
+
+            if version_key(path_revision) > current_revision_key:
+                result.extend(os.path.join(path_revision, s)
+                                  for s in find_scripts(dir_name))
+
+    return sorted(result, key=script_sort_key)
 
 
 def error_occurred(output):
@@ -157,29 +199,35 @@ def run_scripts(artefact, rev_info, scripts, config):
     :param list scripts: a sorted list of SQL script paths (relative to the
         path in `config`)
     :param dict config: the configuration to use: database, host, user, path.
+    :returns: True for success, False for failure
     """
     max_step = 0
+    max_revision = '0.0.0'
+
     for script in scripts:
-        # Keep track of the max. step applied.
-        step, _ = script.split('/')
+        # Keep track of the max. step/revision applied.
+        revision, step, _ = script.split('/')
         step = int(step)
-        if step > max_step:
+        if ((version_key(revision), step) >
+            (version_key(max_revision), max_step)):
             max_step = step
+            max_revision = revision
 
         # Run the SQL script.
-        rev = rev_info['revision']
-        results = psql(config, script="%s/%s/%s" % (artefact, rev, script))
+        results = psql(config, script="%s/%s" % (artefact, script))
         if script_failed(results, script, config):
             # A step of '-1' indicates a broken upgrade.
             max_step = -1
             break
 
     if max_step != 0:
-        cmd = ("UPDATE admin.revision_info SET step=%s, "
+        cmd = ("UPDATE admin.revision_info SET step=%s, revision='%s', "
                "last_update=timezone('UTC'::text, now()) "
                "WHERE artefact='%s' AND revision = '%s'")
-        cmd %= (max_step, artefact, rev_info['revision'])
+        cmd %= (max_step, max_revision, artefact, rev_info['revision'])
         code, out, err = psql(config, cmd=cmd)
+
+    return max_step != -1
 
 
 def script_failed((code, out, err), script, config):
@@ -201,6 +249,7 @@ def perform_upgrade(config):
     """Perform the upgrades for all artefacts in the database.
 
     :param dict config: the configuration to use: database, host, user, path.
+    :returns: True for success, False for failure
     """
     # Get the revision information from the database.
     cmd = "SELECT artefact, id, revision, step FROM admin.revision_info"
@@ -217,19 +266,37 @@ def perform_upgrade(config):
     #  openquake/admin |  1 | 0.3.9-1  |    0
     #  openquake/eqcat |  2 | 0.3.9-1  |    0
     #  openquake/uiapi |  4 | 0.3.9-1  |    0
-    #  openquake/pshai |  3 | 0.3.9-1  |    0
+    #  openquake/hzrdi |  3 | 0.3.9-1  |    0
     # (4 rows)
     for info in db_rev_data:
         info = [d.strip() for d in info.split('|')]
         rev_data[info[0]] = dict(zip(columns, info[1:]))
     logging.debug(rev_data)
 
-    # Run upgrade scripts (if any) for all rtefacts.
+    # one-time only upgrade step (can't be a normal upgrade step)
+    if not 'openquake' in rev_data:
+        # this code works because we don't support upgrades from 0.3.9; the
+        # +1 is for the missing upgrade step for the big schema rename
+        cmd = "INSERT INTO admin.revision_info (artefact, revision, step)" \
+              "    VALUES ('openquake', '0.4.2', " \
+              "            (SELECT SUM(step) FROM admin.revision_info" \
+              "                 WHERE revision = '0.4.2') + 1)"
+        code, out, err = psql(config, cmd=cmd)
+        step = sum(int(r['step']) for r in rev_data.values()
+                       if r['revision'] == '0.4.2')
+        cmd = "DELETE FROM INTO admin.revision_info" \
+              "    WHERE artefact <> 'openquake'"
+        rev_data = dict(openquake=dict(revision='0.4.2', step=step))
+
+    # Run upgrade scripts (if any) for all artefacts.
     for artefact, rev_info in rev_data.iteritems():
         scripts = scripts_to_run(artefact, rev_info, config)
         if scripts:
             logging.debug("%s: %s" % (artefact, scripts))
-            run_scripts(artefact, rev_info, scripts, config)
+            if not run_scripts(artefact, rev_info, scripts, config):
+                return False
+
+    return True
 
 
 def main(cargs):
@@ -237,8 +304,9 @@ def main(cargs):
     def strip_dashes(arg):
         return arg.split('-')[-1]
 
-    config = dict(db="openquake", user="postgres", path="db/schema/upgrades",
-                  host="localhost", dryrun=False)
+    config = dict(
+        db="openquake", user="postgres", path="openquake/db/schema/upgrades",
+        host="localhost", dryrun=False)
     longopts = ["%s" % k if isinstance(v, bool) else "%s=" % k
                 for k, v in config.iteritems()] + ["help"]
     s2l = dict(d="db", p="path", n="dryrun", U="user")
@@ -258,7 +326,9 @@ def main(cargs):
         if opt not in config:
             opt = s2l[opt]
         config[opt] = arg if arg else not config[opt]
-    perform_upgrade(config)
+
+    success = perform_upgrade(config)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == '__main__':

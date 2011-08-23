@@ -17,6 +17,7 @@ Contents:
    hazard
    java
    job
+   kvs
    logs
    output
    producer
