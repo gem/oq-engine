@@ -40,3 +40,8 @@ FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RE
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
 FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
+
+
+-- indices
+CREATE INDEX riskr_bcr_distribution_output_id_idx on riskr.bcr_distribution(output_id);
+CREATE INDEX riskr_bcr_distribution_data_bcr_distribution_id_idx on riskr.bcr_distribution_data(bcr_distribution_id);
