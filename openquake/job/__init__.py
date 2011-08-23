@@ -415,12 +415,10 @@ class Job(object):
         """Compute valid region with appropriate cell size from config file."""
         if not self.has('REGION_VERTEX'):
             return None
-        # REGION_VERTEX coordinates are defined in the order (lat, lon)
-        verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
 
-        # Flips lon and lat, and builds a list of coord tuples
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.RegionConstraint.from_coordinates(coords)
+        region = shapes.RegionConstraint.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
 
@@ -532,24 +530,26 @@ class Job(object):
         the region is used."""
 
         if  self.has(conf.SITES):
-            coords = [float(x) for x in self.params[conf.SITES].split(",")]
             sites = []
+            coords = self._extract_coords(conf.SITES)
 
-            while (len(coords) > 0):
-                lat = coords.pop(0)
-                lon = coords.pop(0)
-
-                sites.append(shapes.Site(lon, lat))
+            for coord in coords:
+                sites.append(shapes.Site(coord[0], coord[1]))
 
             return sites
         else:
-            return self.sites_for_region()
+            return self._sites_for_region()
 
-    def sites_for_region(self):
+    def _extract_coords(self, config_param):
+        """Extract from a configuration parameter the list of coordinates."""
+        verts = [float(x) for x in self.params[config_param].split(",")]
+        return zip(verts[1::2], verts[::2])
+
+    def _sites_for_region(self):
         """Return the list of sites for the region at hand."""
-        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.Region.from_coordinates(coords)
+        region = shapes.Region.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         return [site for site in region]
 
