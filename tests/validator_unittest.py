@@ -22,8 +22,8 @@ This module tests the logic related to the engine configuration
 and its validation.
 """
 
-from openquake import job
 from openquake.job import config
+from tests.utils import helpers
 
 import unittest
 
@@ -98,10 +98,10 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         sections = [config.RISK_SECTION, "HAZARD", "general"]
         params = {}
 
-        engine = job.Job(params, sections=sections)
+        engine = helpers.create_job(params, sections=sections)
         self.assertFalse(engine.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure"}
 
-        engine = job.Job(params, sections=sections)
+        engine = helpers.create_job(params, sections=sections)
         self.assertTrue(engine.is_valid()[0])

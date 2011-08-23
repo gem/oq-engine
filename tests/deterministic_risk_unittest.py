@@ -32,6 +32,7 @@ from openquake import shapes
 from openquake.risk.job import deterministic as risk_job_det
 
 from tests.utils import helpers
+from tests.utils.helpers import patch
 
 TEST_JOB_ID = "1234"
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
@@ -144,14 +145,10 @@ class DeterministicRiskTestCase(unittest.TestCase):
         """
         Exercise the deterministic risk job and make sure it runs end-to-end.
         """
-        risk_job = job.Job.from_file(TEST_JOB_FILE, 'xml')
+        risk_job = helpers.job_from_file(TEST_JOB_FILE)
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
-            results = risk_job.launch()
-
-            # for results, we should a list of True values
-            # one for hazard, one for risk
-            self.assertEqual([True, True], results)
+            risk_job.launch()

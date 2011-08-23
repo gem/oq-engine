@@ -20,11 +20,11 @@
 
 """Collection of base classes for processing spatially-related data."""
 
-import math
-
-import geohash
 import json
+import math
+import numpy
 
+from itertools import izip
 from numpy import zeros
 from numpy import empty
 from numpy import allclose
@@ -37,9 +37,6 @@ from openquake import java
 from openquake.utils import round_float
 
 FLAGS = flags.FLAGS
-
-flags.DEFINE_integer('distance_precision', 12,
-    "Points within this geohash precision will be considered the same point")
 
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
@@ -329,31 +326,24 @@ class Site(object):
         return self.point.y
 
     def __eq__(self, other):
-        return self.hash() == other.hash()
+        """
+        Compare lat and lon values to determine equality.
+
+        :param other: another Site
+        :type other: :py:class:`openquake.shapes.Site`
+        """
+        return self.longitude == other.longitude \
+            and self.latitude == other.latitude
 
     def __ne__(self, other):
         return not self == other
 
     def equals(self, other):
         """Verbose wrapper around =="""
-        return self.point.equals(other)
-
-    def hash(self):
-        """Ugly geohashing function, get rid of this!
-        TODO(jmc): Dont use sites as dict keys"""
-        return self._geohash()
+        return self == other
 
     def __hash__(self):
-        if not self:
-            return 0  # empty
-        geohash_val = self._geohash()
-        value = ord(geohash_val[0]) << 7
-        for char in geohash_val:
-            value = c_mul(1000003, value) ^ ord(char)
-        value = value ^ len(geohash_val)
-        if value == -1:
-            value = -2
-        return value
+        return hash((self.longitude, self.latitude))
 
     def to_java(self):
         """Converts to a Java Site object"""
@@ -362,11 +352,6 @@ class Site(object):
         site_class = jpype.JClass("org.opensha.commons.data.Site")
         # TODO(JMC): Support named sites?
         return site_class(loc_class(self.latitude, self.longitude))
-
-    def _geohash(self):
-        """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x,
-            precision=FLAGS.distance_precision)
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
@@ -442,6 +427,60 @@ class FieldSet(object):
         """Pop off the fields sequentially"""
         for field in self.fields.values():
             yield Field.from_dict(field, grid=self.grid)
+
+
+def range_clip(val, val_range):
+    """
+    'Clip' a value (or sequence of values) to the
+    specified range.
+
+    Consider the example IML range [0.005, 0.007, 0.009].
+
+    If the input IML value is less than the min value (0.005), return the
+    min value.
+
+    If the input IML value is greater than the max value (0.009), return
+    the max value.
+
+    Otherwise, the IML will not change.
+
+    :param val: numeric value(s) to clip
+    :type val: float, list/tuple of floats, or :py:class:`numpy.ndarray` of
+        floats
+    :param val_range: This is the range we 'clip' the input value(s) to. The
+        range values should be arranged in ascending order with no duplicates.
+        The length of the range must be at least 2 elements.
+    :type val_range: 1-dimensional :py:class:`numpy.ndarray`
+
+    :returns: Clipped value(s).
+        If the input type is a single value, return a numpy numeric type (such
+        as numpy.float64).
+        If the input val is a sequence (list, tuple or
+        :py:class:`numpy.ndarray`), return a :py:class:`numpy.ndarray` of
+        clipped values.
+    """
+    assert len(val_range) >= 2, "val_range must contain at least 2 elements"
+    assert list(val_range) == sorted(set(val_range)), \
+        "val_range must be arranged in ascending order with no duplicates"
+
+    if isinstance(val, (list, tuple, numpy.ndarray)):
+        # convert to numpy.array so we can use numpy.putmask:
+        val = numpy.array(val)
+
+        # clip low values:
+        numpy.putmask(val, val < val_range[0], val_range[0])
+
+        # clip high values:
+        numpy.putmask(val, val > val_range[-1], val_range[-1])
+
+    else:
+        # should be a single (float) value
+        if val < val_range[0]:
+            val = val_range[0]
+        elif val > val_range[-1]:
+            val = val_range[-1]
+
+    return val
 
 
 class Curve(object):
@@ -540,7 +579,14 @@ class Curve(object):
         return self.y_values.ndim > 1
 
     def ordinate_for(self, x_value, y_index=0):
-        """Return the y value corresponding to the given x value."""
+        """
+            Return the y value corresponding to the given x value.
+            interp1d parameters can be a list of x_values, y_values
+            this is very useful to speed up the computation and feed
+            "directly" numpy
+        """
+
+        x_value = range_clip(x_value, self.x_values)
 
         y_values = self.y_values
 
@@ -552,12 +598,11 @@ class Curve(object):
     def abscissa_for(self, y_value):
         """Return the x value corresponding to the given y value."""
 
-        data = []
         # inverting the function
-        for x_value in self.abscissae:
-            data.append((self.ordinate_for(x_value), x_value))
+        inverted_func = [(ordinate, x_value) for ordinate, x_value in
+                zip(self.ordinate_for(self.abscissae), self.abscissae)]
 
-        return Curve(data).ordinate_for(y_value)
+        return Curve(inverted_func).ordinate_for(y_value)
 
     def ordinate_out_of_bounds(self, y_value):
         """Check if the given value is outside the Y values boundaries."""
@@ -579,45 +624,198 @@ class Curve(object):
         return json.JSONEncoder().encode(as_dict)
 
 
-class VulnerabilityFunction(Curve):
-    """This class represents a vulnerability fuction.
+class VulnerabilityFunction(object):
+    """
+    This class represents a vulnerability fuction.
 
     A vulnerability function has IMLs (Intensity Measure Levels) as
     X values and MLRs, CVs (Mean Loss Ratio and Coefficent of Variation)
     as Y values.
     """
 
+    def __init__(self, imls, loss_ratios, covs):
+        """
+        :param imls: Intensity Measure Levels for the vulnerability function.
+            All values must be >= 0.0.
+        :type imls: list of floats; values must be arranged in ascending order
+            with no duplicates
+        :param loss_ratios: Loss ratio values, where 0.0 <= value <= 1.0.
+        :type loss_ratios: list of floats, equal in length to imls
+        :param covs: Coefficients of Variation. All values must be >= 0.0.
+        :type covs: list of floats, equal in length to imls
+        """
+        self._imls = imls
+        self._loss_ratios = loss_ratios
+        self._covs = covs
+
+        # Check for proper IML ordering:
+        assert self._imls == sorted(set(self._imls)), \
+            "IML values must be in ascending order with no duplicates."
+
+        # Check for proper IML values (> 0.0).
+        assert all(x >= 0.0 for x in self._imls), \
+            "IML values must be >= 0.0."
+
+        # Check CoV and loss ratio list lengths:
+        assert len(self._covs) == len(self._imls), \
+            "CoV list should be the same length as the IML list."
+        assert len(self._loss_ratios) == len(self._imls), \
+            "Loss ratio list should be the same length as the IML list."
+
+        # Check for proper CoV values (>= 0.0):
+        assert all(x >= 0.0 for x in self._covs), \
+            "CoV values must be >= 0.0."
+
+        # Check for proper loss ratio values (0.0 <= value <= 1.0):
+        assert all(x >= 0.0 and x <= 1.0 for x in self._loss_ratios), \
+            "Loss ratio values must be in the interval [0.0, 1.0]."
+
+    def __eq__(self, other):
+        """
+        Compares IML, loss ratio, and CoV values to determine equality.
+        """
+        if not isinstance(other, VulnerabilityFunction):
+            return False
+        return allclose(self.imls, other.imls) \
+            and allclose(self.loss_ratios, other.loss_ratios) \
+            and allclose(self.covs, other.covs)
+
     @property
-    def means(self):
-        """Return the mean loss ratios of this function."""
-        if self.is_empty:
-            return self.ordinates
-        else:
-            return self.ordinates[:, 0]
+    def imls(self):
+        """
+        IML values as a numpy.array.
+        """
+        return numpy.array(self._imls)
+
+    @property
+    def loss_ratios(self):
+        """
+        Loss ratios as a numpy.array.
+        """
+        return numpy.array(self._loss_ratios)
+
+    @property
+    def covs(self):
+        """
+        Coeffecicients of Variation as a numpy.array.
+        """
+        return numpy.array(self._covs)
+
+    @property
+    def is_empty(self):
+        """
+        True if there are no IML values in the function.
+        """
+        return len(self.imls) == 0
+
+    def loss_ratio_for(self, iml):
+        """
+        Given 1 or more IML values, interpolate the corresponding loss ratio
+        value(s) on the curve.
+
+        Input IML value(s) is/are clipped to IML range defined for this
+        vulnerability function.
+
+        :param iml: IML value
+        :type iml: float (single value), list of floats, or
+            :py:class:`numpy.ndarray` of floats
+
+        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
+            values equal to the size of the input (1 or many)
+        """
+        iml = range_clip(iml, self.imls)
+
+        return interp1d(self.imls, self.loss_ratios)(iml)
+
+    def cov_for(self, iml):
+        """
+        Given 1 or more IML values, interpolate the corresponding Coefficient
+        of Variation value(s) on the curve.
+
+        Input IML value(s) is/are clipped to IML range defined for this
+        vulnerability function.
+
+        :param iml: IML value
+        :type iml: float (single value), list of floats, or
+            :py:class:`numpy.ndarray` of floats
+
+        :returns: :py:class:`numpy.ndarray` containing a number of interpolated
+            values equal to the size of the input (1 or many)
+        """
+        iml = range_clip(iml, self.imls)
+
+        return interp1d(self.imls, self.covs)(iml)
 
     def __iter__(self):
         """Iterate on the values of this function, returning triples
         in the form of (iml, mean loss ratio, cov)."""
-        for idx in range(len(self.abscissae)):
-            yield((self.abscissae[idx],
-                    self.ordinates[idx][0],
-                    self.ordinates[idx][1]))
+        return izip(self.imls, self.loss_ratios, self.covs)
 
-    def cov_for(self, iml):
-        """Return the interpolated CV (Coefficent of Variation)
-        for the given IML (Intensity Measure Level)."""
-        return self.ordinate_for(iml, 1)
+    def to_json(self):
+        """
+        Serialize this curve in JSON format.
+        Given the following sample data::
+            imls = [0.005, 0.007]
+            loss_ratios = [0.1, 0.3]
+            covs = [0.2, 0.4]
 
-    @property
-    def imls(self):
-        """Return the imls of this function."""
-        return self.abscissae
+        the output will be a JSON string structured like so::
+            {'0.005': [0.1, 0.2],
+             '0.007': [0.3, 0.4]}
+        """
+        as_dict = {}
 
-    @property
-    def covs(self):
-        """Return the covs of this function."""
-        return self.ordinates[:, 1]
+        for iml, loss_ratio, cov in self:
+            as_dict[str(iml)] = [loss_ratio, cov]
+
+        return json.JSONEncoder().encode(as_dict)
+
+    @classmethod
+    def from_dict(cls, vuln_func_dict):
+        """
+        Construct a VulnerabiltyFunction from a dictionary.
+
+        The dictionary keys can be unordered and of
+        whatever type can be converted to float with float().
+        :param vuln_func_dict: A dictionary of [loss ratio, CoV] pairs, keyed
+            by IMLs.
+            The IML keys can be numbers represented as either a string or
+            float.
+            Example::
+                {'0.005': [0.1, 0.2],
+                 '0.007': [0.3, 0.4],
+                 0.0098: [0.5, 0.6]}
+
+        :type vuln_func_dict: dict
+
+        :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
+        """
+        # flatten out the dict and convert keys to floats:
+        data = [(float(iml), lr_cov) for iml, lr_cov in vuln_func_dict.items()]
+        # sort the data (by iml) in ascending order:
+        data = sorted(data, key=lambda x: x[0])
+
+        imls = []
+        loss_ratios = []
+        covs = []
+
+        for iml, (lr, cov) in data:
+            imls.append(iml)
+            loss_ratios.append(lr)
+            covs.append(cov)
+
+        return cls(imls, loss_ratios, covs)
+
+    @classmethod
+    def from_json(cls, json_str):
+        """Construct a curve from a serialized version in
+        json format.
+
+        :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
+        """
+        as_dict = json.JSONDecoder().decode(json_str)
+        return cls.from_dict(as_dict)
 
 
 EMPTY_CURVE = Curve(())
-EMPTY_VULN_FUNCTION = VulnerabilityFunction(())
+EMPTY_VULN_FUNCTION = VulnerabilityFunction([], [], [])

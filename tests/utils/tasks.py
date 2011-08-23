@@ -27,6 +27,8 @@ from celery.decorators import task
 
 from tests.utils import helpers
 
+from openquake import java
+
 
 @task
 def test_data_reflector(job_id, *args, **kwargs):
@@ -81,6 +83,22 @@ def failing_task(data):
     exception throwing it back.
     """
     raise NotImplementedError(data)
+
+
+@java.jtask
+def jtask_task(data):
+    """
+    Takes a single argument called `data` and might raise a Java exception.
+    """
+    return str(java.jvm().java.lang.Integer(data))
+
+
+@java.jtask
+def failing_jtask_task(data):
+    """
+    Takes a single argument called `data` and raises a Python exception.
+    """
+    raise Exception('test exception')
 
 
 @task

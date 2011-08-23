@@ -98,17 +98,18 @@ def _sampled_based(vuln_function, ground_motion_field_set,
 
     loss_ratios = []
 
-    for ground_motion_field in ground_motion_field_set["IMLs"]:
-        mean_ratio = vuln_function.ordinate_for(ground_motion_field)
+    means = vuln_function.loss_ratio_for(ground_motion_field_set["IMLs"])
+    covs = vuln_function.cov_for(ground_motion_field_set["IMLs"])
 
+    for mean_ratio, cov in zip(means, covs):
         if mean_ratio <= 0.0:
             loss_ratios.append(0.0)
         else:
-            variance = (mean_ratio * vuln_function.cov_for(
-                    ground_motion_field)) ** 2.0
+            variance = (mean_ratio * cov) ** 2.0
 
             epsilon = epsilon_provider.epsilon(asset)
-            sigma = math.sqrt(math.log((variance / mean_ratio ** 2.0) + 1.0))
+            sigma = math.sqrt(
+                        math.log((variance / mean_ratio ** 2.0) + 1.0))
 
             mu = math.log(mean_ratio ** 2.0 / math.sqrt(
                     variance + mean_ratio ** 2.0))
@@ -135,6 +136,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
     """
 
     loss_ratios = []
+    retrieved = {}
     imls = vuln_function.imls
 
     # seems like with numpy you can only specify a single fill value
@@ -144,10 +146,17 @@ def _mean_based(vuln_function, ground_motion_field_set):
         if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
         elif ground_motion_field > imls[-1]:
-            loss_ratios.append(vuln_function.means[-1])
+            loss_ratios.append(vuln_function.loss_ratios[-1])
         else:
-            loss_ratios.append(vuln_function.ordinate_for(
-                    ground_motion_field))
+            # The actual value is computed later
+            mark = len(loss_ratios)
+            retrieved[mark] = ground_motion_field_set['IMLs'][mark]
+            loss_ratios.append(0.0)
+
+    means = vuln_function.loss_ratio_for(retrieved.values())
+
+    for mark, mean_ratio in zip(retrieved.keys(), means):
+        loss_ratios[mark] = mean_ratio
 
     return array(loss_ratios)
 
@@ -269,11 +278,9 @@ def _generate_curve(losses, probs_of_exceedance):
 def _assets_keys_for_gmfs(job_id, gmfs_key):
     """Return the asset related to the GMFs given."""
 
-    row = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[3]
-    column = lambda key: key.split(kvs.KVS_KEY_SEPARATOR)[2]
+    column, row = kvs.tokens.column_row_from_gmf_set_key(gmfs_key)
 
-    key = kvs.tokens.asset_key(
-            job_id, row(gmfs_key), column(gmfs_key))
+    key = kvs.tokens.asset_key(job_id, row, column)
 
     return kvs.get_client().lrange(key, 0, -1)
 
@@ -290,7 +297,7 @@ class AggregateLossCurve(object):
         aggregate_curve = AggregateLossCurve(vuln_model, epsilon_provider)
 
         gmfs_keys = kvs.get_keys("%s*%s*" % (
-                job_id, kvs.tokens.GMF_KEY_TOKEN))
+                kvs.tokens.generate_job_key(job_id), kvs.tokens.GMF_KEY_TOKEN))
 
         LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
         asset_counter = 0
