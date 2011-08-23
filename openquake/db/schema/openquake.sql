@@ -1103,6 +1103,14 @@ ALTER TABLE riskr.collapse_map
 ADD CONSTRAINT riskr_collapse_map_exposure_model_fk
 FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
 
+ALTER TABLE riskr.bcr_distribution
+ADD CONSTRAINT riskr_bcr_distribution_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.bcr_distribution
+ADD CONSTRAINT riskr_bcr_distribution_exposure_model_fk
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
+
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
@@ -1118,6 +1126,10 @@ FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 ALTER TABLE riskr.collapse_map_data
 ADD CONSTRAINT riskr_collapse_map_data_collapse_map_fk
 FOREIGN KEY (collapse_map_id) REFERENCES riskr.collapse_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.bcr_distribution_data
+ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
+FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
