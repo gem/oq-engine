@@ -16,31 +16,56 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+from alchemy_db_utils_unittest import *
+from black_box_tests import *
+from bulk_insert_unittest import *
 from cache_gc_unittest import *
+from db_loader_unittest import *
+from db_loader_unittest import *
+from db_routers_unittest import *
+from deterministic_hazard_unittest import *
+from deterministic_risk_unittest import *
 from geo_unittest import *
 from handlers_unittest import *
+from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
+from input_risk_unittest import *
+from java_unittest import *
 from job_unittest import *
 from kvs_unittest import *
 from logs_unittest import *
-from loss_output_unittest import *
 from loss_map_output_unittest import *
+from loss_output_unittest import *
+from output_hazard_unittest import *
+from output_risk_unittest import *
 from output_unittest import *
+from output_writers_unittest import *
 from parser_exposure_portfolio_unittest import *
 from parser_hazard_curve_unittest import *
+from parser_hazard_map_unittest import *
 from parser_vulnerability_model_unittest import *
+from probabilistic_unittest import *
 from producer_unittest import *
 from risk_job_unittest import *
 from risk_parser_unittest import *
-from risk_tests import *
+from risk_unittest import *
 from schema_unittest import *
-from probabilistic_unittest import *
-from deterministic_hazard_unittest import *
-from deterministic_risk_unittest import *
-from black_box_tests import *
-from parser_hazard_map_unittest import *
-from db_loader_unittest import *
 from shapes_unittest import *
-from validator_unittest import *
+from tools_dbmaint_unittest import *
+from utils_config_unittest import *
 from utils_general_unittest import *
+from utils_tasks_unittest import *
+from utils_version_unittest import *
+from validator_unittest import *
+
+import glob
+import os
+import sys
+
+for path in glob.glob(os.path.join(os.path.dirname(__file__), '*test*.py')):
+    test = os.path.splitext(os.path.basename(path))[0]
+    module = 'tests.' + test
+
+    if module not in sys.modules:
+        print >> sys.stderr, "Potential missing import of " + module

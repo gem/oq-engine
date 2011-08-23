@@ -18,14 +18,20 @@
 """Wrapper around our use of jpype.
 Includes classpath arguments, and heap size."""
 
-import logging
+from amqplib import client_0_8 as amqp
+import jpype
 import os
 import sys
+import traceback
 
-import jpype
+from celery.decorators import task as celery_task
 
-from openquake.logs import LOG
+from functools import wraps
+
 from openquake import flags
+from openquake import logs
+from openquake.utils import config
+
 FLAGS = flags.FLAGS
 
 # Settings this flag to true pipes Java stderr and stdout to python stderr and
@@ -43,7 +49,7 @@ JAVA_CLASSES = {
     'JsonSerializer': "org.gem.JsonSerializer",
     "EventSetGen": "org.gem.calc.StochasticEventSetGenerator",
     "Random": "java.util.Random",
-    "GEM1ERF": "org.gem.engine.hazard.GEM1ERF",
+    "GEM1ERF": "org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF",
     "HazardCalculator": "org.gem.calc.HazardCalculator",
     "Properties": "java.util.Properties",
     "CalculatorConfigHelper": "org.gem.engine.CalculatorConfigHelper",
@@ -76,30 +82,14 @@ JAVA_CLASSES = {
     "ApproxEvenlyGriddedSurface":
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
+    "MDC": "org.apache.log4j.MDC",
 }
-
-logging.getLogger('jpype').setLevel(logging.ERROR)
 
 
 def jclass(class_key):
     """Wrapper around jpype.JClass for short class names"""
     jvm()
     return jpype.JClass(JAVA_CLASSES[class_key])
-
-
-def _set_java_log_level(level):
-    """Sets the log level of the java logger.
-
-    :param level: a string, one of the logging levels defined in
-    :file:`logs.py`
-    """
-
-    if level == 'CRITICAL':
-        level = 'FATAL'
-
-    root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
-    jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
-    root_logger.setLevel(jlevel)
 
 
 def _setup_java_capture(out, err):
@@ -121,35 +111,144 @@ def _setup_java_capture(out, err):
     jpype.java.lang.System.setErr(ps(err_stream))
 
 
+class AMQPConnection(object):
+    """Implement the Java `org.gem.log.AMQPConnection` interface"""
+    # pylint: disable=C0103
+
+    def __init__(self):
+        self.host = None
+        self.port = None
+        self.username = None
+        self.password = None
+        self.virtualhost = None
+        self.connection = None
+        self.channel = None
+
+    def setHost(self, host):
+        """Set the AMQP host"""
+        self.host = host
+
+    def setPort(self, port):
+        """Set the AMQP port"""
+        self.port = port
+
+    def setUsername(self, username):
+        """Set the AMQP user name"""
+        self.username = username
+
+    def setPassword(self, password):
+        """Set the AMQP password"""
+        self.password = password
+
+    def setVirtualHost(self, virtualhost):
+        """Set the AMQP virtualhost"""
+        self.virtualhost = virtualhost
+
+    def close(self):
+        """Close the AMQP connection"""
+        channel = self.channel
+        connection = self.connection
+
+        self.channel = self.connection = None
+
+        if channel:
+            channel.close()
+        if connection:
+            connection.close()
+
+    def publish(self, exchange, routing_key, _timestamp,
+                _level, message):
+        """Send a new message to the queue"""
+        channel = self.getChannel()
+        msg = amqp.Message(body=message)
+
+        channel.basic_publish(msg, exchange=exchange,
+                              routing_key=routing_key)
+
+    def getChannel(self):
+        """Return the existing connection or create a new one"""
+        if self.channel:
+            return self.channel
+
+        host_port = '%s:%d' % (self.host, self.port or 5672)
+        self.connection = amqp.Connection(host=host_port,
+                                          userid=self.username,
+                                          password=self.password,
+                                          virtual_host=self.virtualhost,
+                                          insist=False)
+        self.channel = self.connection.channel()
+
+        return self.channel
+
+
+class AMQPFactory(object):
+    """Implement the Java org.gem.log.AMQPConnectionFactory interface"""
+    # pylint: disable=C0103
+
+    def getConnection(self):  # pylint: disable=R0201
+        """Return a new `org.gem.log.AMQPConnection` instance"""
+        return jvm().JProxy("org.gem.log.AMQPConnection",
+                            inst=AMQPConnection())
+
+
+def _setup_java_amqp():
+    """Set the connection factory for the Log4j AMQP log appender"""
+    amqpfactory = jpype.JProxy("org.gem.log.AMQPConnectionFactory",
+                               inst=AMQPFactory())
+    amqpappender = jpype.JClass("org.gem.log.AMQPAppender")
+    amqpappender.setConnectionFactory(amqpfactory)
+
+
+def init_logs(log_type='console', level='warn'):
+    """
+    Initialize Java logging.
+
+    The function might be called multiple times with different log levels.
+    """
+
+    if log_type == 'console':
+        if FLAGS.capture_java_debug:
+            _setup_java_capture(sys.stdout, sys.stderr)
+
+        properties = logs.LOG4J_STDOUT_SETTINGS.copy()
+    else:
+        _setup_java_amqp()
+
+        properties = logs.LOG4J_AMQP_SETTINGS.copy()
+
+    level = level.upper()
+    if level == 'CRITICAL':
+        level = 'FATAL'
+
+    properties['log4j.rootLogger'] %= dict(level=level)
+
+    log4j_properties = jpype.JClass("java.util.Properties")()
+    for key, value in properties.iteritems():
+        log4j_properties.setProperty(key, value)
+
+    jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(
+        log4j_properties)
+
+
 def jvm(max_mem=None):
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")),
                 '/usr/share/java')
-    log4j_properties_path = os.path.abspath(
-                                os.path.join(os.path.dirname(__file__),
-                                "../log4j.properties"))
+
     if not jpype.isJVMStarted():
         max_mem = get_jvm_max_mem(max_mem)
-        LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # force the default Xerces parser configuration, otherwise
             # some random system-installed JAR might override it
-            "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration="\
-                           "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
+            "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
+                "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
             # "-Dlog4j.debug", # turn on log4j internal debugging
-            "-Dlog4j.configuration=file://%s" % log4j_properties_path,
             "-Xmx%sM" % max_mem)
 
-        # override the log level set in log4j configuration file this can't be
-        # done on the JVM command line (i.e. -Dlog4j.rootLogger= is not
-        # supported by log4j)
-        _set_java_log_level(FLAGS.debug.upper())
-
-        if FLAGS.capture_java_debug:
-            _setup_java_capture(sys.stdout, sys.stderr)
+        init_logs(level=FLAGS.debug, log_type=config.get("logging", "backend"))
 
     return jpype
 
@@ -179,3 +278,145 @@ def get_jvm_max_mem(max_mem):
     if os.environ.get("OQ_JVM_MAXMEM"):
         return int(os.environ.get("OQ_JVM_MAXMEM"))
     return DEFAULT_JVM_MAX_MEM
+
+
+def _unpickle_javaexception(message, trace):
+    """
+    Helper function for unpickling :class:`JavaException` objects;
+    required because :module:`pickle` treats exceptions as opaque
+    objects.
+    """
+    e = JavaException()
+    e.message = message
+    e.trace = trace
+
+    return e
+
+
+class JavaException(Exception):
+    """
+    Stores the Java exception description and Java stacktrace in a
+    pickleable object.
+    """
+
+    def __init__(self, java_exception=None):
+        # we don't store the Java exception object to keep the Python
+        # object pickleable
+        Exception.__init__(self, str(java_exception))
+
+        if java_exception:
+            self.trace = self.get_java_stacktrace(java_exception)
+
+    def __str__(self):
+        return ('Java traceback (most recent call last):\n' +
+                ''.join(traceback.format_list(self.trace)) +
+                self.message)
+
+    def __reduce__(self):
+        # Exceptions are treated as 'unknown' objects by pickle unless
+        # there is a custom serialization handler
+        return (_unpickle_javaexception, (self.message, self.trace))
+
+    @classmethod
+    def _get_exception(cls, java_exception):
+        """Get the Java object wrapper for the exception."""
+        if hasattr(java_exception, '__javaobject__'):
+            return java_exception.__javaobject__
+        else:
+            return java_exception
+
+    @classmethod
+    def get_java_stacktrace(cls, java_exception):
+        """
+        Extracts the stacktrace from a Java exception
+
+        :param java_exception: Java exception object
+        :type java_exception: :class:`jpype.JavaException`
+
+        :returns: a list of `(filename, line number, function name, None)`
+            tuples (the same format used by the Python `traceback` module,
+            except there is no source code).
+        """
+        java_exception = cls._get_exception(java_exception)
+        trace = []
+
+        # traceback module returns inner frame first, Java uses
+        # reverse order
+        for frame in reversed(java_exception.getStackTrace()):
+            trace.append((frame.getFileName(),
+                          frame.getLineNumber(),
+                          '%s.%s' % (frame.getClassName(),
+                                     frame.getMethodName()),
+                          None))
+
+        return trace
+
+
+def jexception(func):
+    """
+    Decorator to extract the stack trace from a Java exception.
+
+    Re-throws a pickleable :class:`JavaException` object containing the
+    exception message and Java stack trace.
+    """
+    @wraps(func)
+    def unwrap_exception(*targs, **tkwargs):  # pylint: disable=C0111
+        jvm_instance = jvm()
+
+        try:
+            return func(*targs, **tkwargs)
+        except jvm_instance.JavaException, e:
+            trace = sys.exc_info()[2]
+
+            raise JavaException(e), None, trace
+
+    return unwrap_exception
+
+
+# alternative implementation using the decorator module; this can be composed
+# with the Celery task decorator
+# import decorator
+#
+# def jexception(func):
+#     @wraps(func)
+#     def unwrap_exception(func, *targs, **tkwargs):
+#         jvm_instance = jvm()
+#
+#         try:
+#             return func(*targs, **tkwargs)
+#         except jvm_instance.JavaException, e:
+#             trace = sys.exc_info()[2]
+#
+#             raise JavaException(e), None, trace
+#
+#     return decorator.decorator(unwrap_exception, func)
+
+
+# Java-exception-aware task decorator for celery
+def jtask(func, *args, **kwargs):
+    """
+    Java-exception aware task decorator for Celery.
+
+    Re-throws the exception as a pickleable :class:`JavaException` object.
+    """
+    task = celery_task(func, *args, **kwargs)
+    run = task.run
+
+    @wraps(run)
+    def call_task(*targs, **tkwargs):  # pylint: disable=C0111
+        jvm_instance = jvm()
+
+        try:
+            return run(*targs, **tkwargs)
+        except jvm_instance.JavaException, e:
+            trace = sys.exc_info()[2]
+
+            raise JavaException(e), None, trace
+
+    # overwrite the run method of the instance with our wrapper; we
+    # can't just pass call_task to celery_task because it does not
+    # have the right signature (we would need the decorator module as
+    # in the example below)
+    task.run = call_task
+
+    return task
