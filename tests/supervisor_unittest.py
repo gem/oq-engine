@@ -22,6 +22,7 @@ from tests.utils.helpers import patch
 
 from openquake import supervisor
 
+
 class SupervisorTestCase(unittest.TestCase):
     def setUp(self):
         self.patchers = []
@@ -48,6 +49,7 @@ class SupervisorTestCase(unittest.TestCase):
 
         with patch('openquake.supervisor.SupervisorLogMessageConsumer.run')\
              as run:
+
             def run_(mc):
                 while True:
                     try:
@@ -69,6 +71,7 @@ class SupervisorTestCase(unittest.TestCase):
 
         with patch('openquake.supervisor.SupervisorLogMessageConsumer.run')\
              as run:
+
             def run_(mc):
                 while True:
                     try:
