@@ -713,6 +713,33 @@ class AggregateLossCurveData(models.Model):
         db_table = 'riskr\".\"aggregate_loss_curve_data'
 
 
+class CollapseMap(models.Model):
+    '''
+    Holds metadata for the collapse map
+    '''
+
+    output = models.ForeignKey("Output")
+    exposure_model = models.ForeignKey("ExposureModel")
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"collapse_map'
+
+
+class CollapseMapData(models.Model):
+    '''
+    Holds the actual data for the collapse map
+    '''
+
+    collapse_map = models.ForeignKey("CollapseMap")
+    asset_ref = models.TextField()
+    value = models.FloatField()
+    std_dev = models.FloatField()
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"collapse_map_data'
+
+
 class BCRDistribution(models.Model):
     '''
     Holds metadata for the benefit-cost ratio distribution
