@@ -615,7 +615,7 @@ class HazardMapDBWriter(writer.DBWriterSA):
     def __init__(self, session, nrml_path, oq_job_id):
         super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
-        self.bulk_inserter = writer.BulkInserter(HazardMapData)
+        self.bulk_inserter = writer.BulkInserterSA(HazardMapData)
         self.hazard_map = None
 
     def get_output_type(self):
@@ -752,7 +752,7 @@ class HazardCurveDBWriter(writer.DBWriterSA):
                                                   oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(HazardCurveData)
+        self.bulk_inserter = writer.BulkInserterSA(HazardCurveData)
 
     def get_output_type(self):
         return "hazard_curve"
@@ -851,7 +851,7 @@ class GMFDBWriter(writer.DBWriterSA):
         super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(GMFData)
+        self.bulk_inserter = writer.BulkInserterSA(GMFData)
 
     def get_output_type(self):
         return "gmf"
