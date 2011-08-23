@@ -23,7 +23,6 @@ This module plots curves (hazard/loss/loss ratio) as read from an NRML file.
 As plotting engine, matplotlib is used. The plots are in SVG format.
 """
 
-import geohash
 import matplotlib
 matplotlib.use('SVG')
 import pylab
@@ -99,11 +98,10 @@ class CurvePlotter(object):
         """ Generator yields the path value for each dict in self.data """
         return (path for path in self.svg_filenames)
 
-    def _generate_filename(self, site_hash):
+    def _generate_filename(self, site):
         """ Return a file name string """
-        site_lat, site_lon = geohash.decode(site_hash)
         return "%s_%7.3f_%6.3f.svg" % (
-            self.output_base_path, site_lon, site_lat)
+            self.output_base_path, site.longitude, site.latitude)
 
 
 class RiskCurvePlotter(CurvePlotter):
@@ -142,13 +140,13 @@ class RiskCurvePlotter(CurvePlotter):
         for (nrml_point, nrml_attr) in nrml_element.filter(
             region_constraint=None):
 
-            site_hash = nrml_point.hash()
+            site_hash = hash(nrml_point)
             curve_id = nrml_attr['assetID']
 
             if site_hash not in self.data:
                 self.data[site_hash] = {
                     # capture SVG filename for each site
-                    'path': self._generate_filename(site_hash),
+                    'path': self._generate_filename(nrml_point),
                     'curves': {}}
 
             if curve_id not in self.data[site_hash]['curves']:
@@ -190,13 +188,13 @@ class HazardCurvePlotter(CurvePlotter):
         for (nrml_point, nrml_attr) in nrml_element.filter(
             region_constraint=None):
 
-            site_hash = nrml_point.hash()
+            site_hash = hash(nrml_point)
             ebl = nrml_attr['endBranchLabel']
 
             if site_hash not in self.data:
                 self.data[site_hash] = {
                     # capture SVG filename for each site
-                    'path': self._generate_filename(site_hash),
+                    'path': self._generate_filename(nrml_point),
                     'curves': {}}
 
             if ebl not in self.data[site_hash]['curves']:

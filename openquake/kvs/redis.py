@@ -36,22 +36,22 @@
 from __future__ import absolute_import
 import redis
 
-from openquake import settings
+from openquake.utils import config
 
 
 class Redis(object):
     """ A Borg-style wrapper for Redis client class. """
     __shared_state = {}
 
-    def __new__(cls, host=settings.KVS_HOST,
-                     port=settings.KVS_PORT,
+    def __new__(cls, host=config.get("kvs", "host"),
+                     port=int(config.get("kvs", "port")),
                      **kwargs):  # pylint: disable=W0613
         self = object.__new__(cls)
         self.__dict__ = cls.__shared_state
         return self
 
-    def __init__(self, host=settings.KVS_HOST,
-                       port=settings.KVS_PORT,
+    def __init__(self, host=config.get("kvs", "host"),
+                       port=int(config.get("kvs", "port")),
                        **kwargs):
         if not self.__dict__:
             args = {"host": host,

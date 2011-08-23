@@ -18,18 +18,14 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import os
 import unittest
 
-from db.alchemy.db_utils import get_uiapi_writer_session
-from db.alchemy import models
+from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.output.risk import *
 from openquake.shapes import Site, Curve
-from openquake.utils import round_float
 
-from db_tests import helpers
-from tests.utils import helpers as test_helpers
+from tests.utils import helpers
 
 
 def HAZARD_MAP_DATA(r1, r2):
@@ -127,12 +123,12 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
@@ -144,6 +140,26 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         session.commit()
 
+    @helpers.timeit
+    def test_deserialize_small(self):
+        data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
+
+        self.job = self.setup_classic_job()
+        session = get_db_session("reslt", "writer")
+        output_path = self.generate_output_path(self.job)
+
+        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+        hcw.serialize(data)
+
+        session.commit()
+
+        # deserialize
+        hcr = HazardCurveDBReader(session)
+
+        for i in xrange(0, 10):
+            # Call the function under test.
+            hcr.deserialize(hcw.output.id)
+
 
 class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def tearDown(self):
@@ -152,12 +168,12 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = HAZARD_MAP_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
@@ -177,12 +193,12 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = GMF_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
@@ -201,12 +217,12 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = LOSS_CURVE_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 20):
@@ -225,12 +241,12 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
-    @test_helpers.timeit
+    @helpers.timeit
     def test_serialize_small(self):
         data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_uiapi_writer_session()
+        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
