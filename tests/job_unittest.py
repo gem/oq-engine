@@ -16,36 +16,48 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import mock
 import os
+import sqlalchemy
 import unittest
 
-from openquake import shapes
-from tests.utils import helpers
-from openquake import job
+from openquake import java
 from openquake import kvs
 from openquake import flags
-from openquake.job import Job, LOG
-from openquake.job import config
+from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import OqJob
+from openquake.job import Job, LOG, prepare_job, run_job
 from openquake.job.mixins import Mixin
-from openquake.kvs import tokens
-from openquake.risk.job.general import RiskJobMixin
+from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+
+from tests.utils import helpers
+from tests.utils.helpers import patch
 
 
 CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
-SITE = shapes.Site(1.0, 1.0)
-EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
 
 FLAGS = flags.FLAGS
+
+
+def _toCoordList(polygon):
+    session = get_db_session("reslt", "writer")
+
+    pts = []
+
+    # postgis -> lon/lat -> config lat/lon, skip the closing point
+    for c in polygon.coords(session)[0][:-1]:
+        pts.append("%.2f" % c[1])
+        pts.append("%.2f" % c[0])
+
+    return ", ".join(pts)
 
 
 class JobTestCase(unittest.TestCase):
@@ -55,15 +67,12 @@ class JobTestCase(unittest.TestCase):
 
         # Delete managed job id info so we can predict the job key
         # which will be allocated for us
-        # Playing with NEXT_JOB_ID can lead to unexpected behaviour in other
-        # tests, see comment in tearDown
-        client.delete(tokens.CURRENT_JOBS)
-        client.delete(tokens.NEXT_JOB_ID)
+        client.delete(kvs.tokens.CURRENT_JOBS)
 
         self.generated_files = []
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
         self.job_with_includes = \
-            Job.from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES), 'xml')
+            helpers.job_from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
 
         self.generated_files.append(self.job.super_config_path)
         self.generated_files.append(self.job_with_includes.super_config_path)
@@ -75,10 +84,6 @@ class JobTestCase(unittest.TestCase):
             except OSError:
                 pass
 
-        # Playing with NEXT_JOB_ID breaks the uniqueness of the job_ids,
-        # causing failures of tests in kvs_unittest.py, if they run after this
-        # To avoid this we garbage collect job we know we used in this test
-        # case.
         kvs.cache_gc('::JOB::1::')
         kvs.cache_gc('::JOB::2::')
 
@@ -102,8 +107,7 @@ class JobTestCase(unittest.TestCase):
         self.assertFalse(LOG.warning.called)
         Job.default_configs()
         self.assertTrue(LOG.warning.called)
-        good_defaults = Job._Job__defaults
-        Job.__defaults = good_defaults
+        Job._Job__defaults = good_defaults
 
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
@@ -111,10 +115,12 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
-        job_with_only_hazard = \
-            Job.from_file(helpers.get_data_path(HAZARD_ONLY), 'xml')
-        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        FLAGS.include_defaults = True
+        try:
+            job_with_only_hazard = \
+                helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
+            self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
+        finally:
+            FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
         for each_job in [self.job, self.job_with_includes]:
@@ -147,16 +153,19 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin):
-            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+        with Mixin(self.job, general.RiskJobMixin):
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
 
         with Mixin(self.job, ClassicalPSHABasedMixin):
             self.assertTrue(
                 ClassicalPSHABasedMixin in self.job.__class__.__bases__)
 
     def test_job_mixes_in_properly(self):
-        with Mixin(self.job, RiskJobMixin):
-            self.assertTrue(RiskJobMixin in self.job.__class__.__bases__)
+        with Mixin(self.job, general.RiskJobMixin):
+            self.assertTrue(
+                general.RiskJobMixin in self.job.__class__.__bases__)
+
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
@@ -164,68 +173,12 @@ class JobTestCase(unittest.TestCase):
             self.assertTrue(
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
-    def test_a_job_has_an_identifier(self):
-        """
-        Test that the :py:class:`openquake.job.Job` constructor automatically
-        assigns a proper job ID.
-        """
-        client = kvs.get_client()
-
-        client.delete(tokens.CURRENT_JOBS)
-        client.delete(tokens.NEXT_JOB_ID)
-
-        self.assertEqual(tokens.JOB_KEY_FMT % 1, Job({}).job_id)
-
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = Job.from_file(
-            os.path.join(helpers.DATA_DIR, CONFIG_FILE), 'xml')
+        self.job = helpers.job_from_file(
+            os.path.join(helpers.DATA_DIR, CONFIG_FILE))
         self.generated_files.append(self.job.super_config_path)
-        self.assertEqual(self.job, Job.from_kvs(self.job.id))
-
-    def test_prepares_blocks_using_the_exposure(self):
-        a_job = Job({config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                            EXPOSURE_TEST_FILE)})
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        expected_block = job.Block((shapes.Site(9.15000, 45.16667),
-            shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        args = {
-            config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-            config.INPUT_REGION: helpers.get_data_path(
-            REGION_EXPOSURE_TEST_FILE)}
-        a_job = Job(args)
-        self.generated_files.append(a_job.super_config_path)
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        expected_block = job.Block((shapes.Site(9.15, 45.16667),
-                                    shapes.Site(9.15333, 45.122),
-                                    shapes.Site(9.14777, 45.17999)))
-
-        self.assertEqual(1, len(blocks_keys))
-        self.assertEqual(expected_block, job.Block.from_kvs(blocks_keys[0]))
-
-    def test_with_no_partition_we_just_process_a_single_block(self):
-        job.SITES_PER_BLOCK = 1
-
-        # test exposure has 6 assets
-        a_job = Job({config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)})
-
-        self.generated_files.append(a_job.super_config_path)
-
-        a_job._partition()
-        blocks_keys = a_job.blocks_keys
-
-        # but we have 1 block instead of 6
-        self.assertEqual(1, len(blocks_keys))
+        self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
+        helpers.cleanup_loggers()
 
     def test_job_calls_cleanup(self):
         """
@@ -240,17 +193,16 @@ class JobTestCase(unittest.TestCase):
         risk_exec_path = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
 
-        with mock.patch('openquake.job.Job._partition'):
-            with mock.patch(haz_exec_path) as haz_exec:
-                haz_exec.return_value = []
+        with patch(haz_exec_path) as haz_exec:
+            haz_exec.return_value = []
 
-                with mock.patch(risk_exec_path) as risk_exec:
-                    risk_exec.return_value = []
+            with patch(risk_exec_path) as risk_exec:
+                risk_exec.return_value = []
 
-                    with mock.patch('openquake.job.Job.cleanup') as clean_mock:
-                        self.job.launch()
+                with patch('openquake.job.Job.cleanup') as clean_mock:
+                    self.job.launch()
 
-                        self.assertEqual(1, clean_mock.call_count)
+                    self.assertEqual(1, clean_mock.call_count)
 
     def test_cleanup_calls_cache_gc(self):
         """
@@ -258,9 +210,10 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=1'],)
+        expected_args = (['python', 'bin/cache_gc.py',
+                          '--job=%d' % self.job.job_id], )
 
-        with mock.patch('subprocess.Popen') as popen_mock:
+        with patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
 
             self.assertEqual(1, popen_mock.call_count)
@@ -278,99 +231,351 @@ class JobTestCase(unittest.TestCase):
 
             self.assertEqual(os.environ, actual_kwargs['env'])
 
-    def test_cleanup_raises_on_bad_job_id(self):
-        """
-        If the ID of a job is somehow corrupted, verify that a RuntimeError is
-        raised by :py:method:`openquake.job.Job.cleanup`.
-        """
-        self.job.job_id = 'this-is-invalid'
 
-        self.assertRaises(RuntimeError, self.job.cleanup)
-
-    def test_job_init_assigns_unique_id(self):
-        """
-        This test ensures that unique job IDs are assigned to each Job object.
-        """
-        job1 = Job({})
-        job2 = Job({})
-
-        self.assertTrue(job1.job_id is not None)
-        self.assertTrue(job2.job_id is not None)
-
-        self.assertNotEqual(job1.job_id, job2.job_id)
-
-
-class BlockTestCase(unittest.TestCase):
-
-    def test_a_block_has_a_unique_id(self):
-        self.assertTrue(job.Block(()).id)
-        self.assertTrue(job.Block(()).id != job.Block(()).id)
-
-    def test_can_serialize_a_block_into_kvs(self):
-        block = job.Block((SITE, SITE))
-        block.to_kvs()
-
-        self.assertEqual(block, job.Block.from_kvs(block.id))
-
-
-class BlockSplitterTestCase(unittest.TestCase):
+class JobDbRecordTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.splitter = None
+        self.job = None
 
-    def test_an_empty_set_produces_no_blocks(self):
-        self.splitter = job.BlockSplitter(())
-        self._assert_number_of_blocks_is(0)
+    def tearDown(self):
+        try:
+            if self.job:
+                os.remove(self.job.super_config_path)
+        except OSError:
+            pass
 
-    def test_splits_the_set_into_a_single_block(self):
-        self.splitter = job.BlockSplitter((SITE, ), 3)
-        self._assert_number_of_blocks_is(1)
+    def test_job_db_record_for_output_type_db(self):
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-        self.splitter = job.BlockSplitter((SITE, SITE), 3)
-        self._assert_number_of_blocks_is(1)
+        session = get_db_session("uiapi", "writer")
 
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
-        self._assert_number_of_blocks_is(1)
+        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
-    def test_splits_the_set_into_multiple_blocks(self):
-        self.splitter = job.BlockSplitter((SITE, SITE), 1)
-        self._assert_number_of_blocks_is(2)
+    def test_job_db_record_for_output_type_xml(self):
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
 
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
-        self._assert_number_of_blocks_is(2)
+        session = get_db_session("uiapi", "writer")
 
-    def test_generates_the_correct_blocks(self):
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 3)
-        expected_blocks = (job.Block((SITE, SITE, SITE)), )
-        self._assert_blocks_are(expected_blocks)
+        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
-        self.splitter = job.BlockSplitter((SITE, SITE, SITE), 2)
-        expected_blocks = (job.Block((SITE, SITE)), job.Block((SITE, )))
-        self._assert_blocks_are(expected_blocks)
+    def test_set_status(self):
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-    def test_splitting_with_region_intersection(self):
-        region_constraint = shapes.RegionConstraint.from_simple(
-                (0.0, 0.0), (2.0, 2.0))
+        session = get_db_session("reslt", "writer")
 
-        sites = (shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5),
-            shapes.Site(2.0, 2.0), shapes.Site(3.0, 3.0))
+        status = 'running'
+        self.job.set_status(status)
 
-        expected_blocks = (
-                job.Block((shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.5))),
-                job.Block((shapes.Site(2.0, 2.0), )))
+        job = session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
-        self.splitter = job.BlockSplitter(sites, 2,
-                                            constraint=region_constraint)
-        self._assert_blocks_are(expected_blocks)
+        self.assertEqual(status, job.status)
 
-    def _assert_blocks_are(self, expected_blocks):
-        for idx, block in enumerate(self.splitter):
-            self.assertEqual(expected_blocks[idx], block)
+    def test_get_status_from_db(self):
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-    def _assert_number_of_blocks_is(self, number):
-        counter = 0
+        session = get_db_session("reslt", "writer")
+        session.query(OqJob).update({'status': 'failed'})
+        session.commit()
+        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
+        session.query(OqJob).update({'status': 'running'})
+        session.commit()
+        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'running')
 
-        for _block in self.splitter:
-            counter += 1
+    def test_is_job_completed(self):
+        job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        session = get_db_session("reslt", "writer")
+        pairs = [('pending', False), ('running', False),
+                 ('succeeded', True), ('failed', True)]
+        for status, is_completed in pairs:
+            session.query(OqJob).update({'status': status})
+            session.commit()
+            self.assertEqual(Job.is_job_completed(job_id), is_completed)
 
-        self.assertEqual(number, counter)
+
+class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
+    maxDiff = None
+
+    """
+    Unit tests for the prepare_job helper function, which creates a new
+    job entry with the associated parameters.
+
+    Test data is a trimmed-down version of smoketest config files
+
+    As a side-effect, also tests that the inserted record satisfied
+    the DB constraints.
+    """
+    def tearDown(self):
+        if hasattr(self, "job") and self.job:
+            self.teardown_job(self.job)
+
+    def assertFieldsEqual(self, expected, params):
+        got_params = dict((k, getattr(params, k)) for k in expected.keys())
+
+        self.assertEquals(expected, got_params)
+
+    def test_prepare_classical_job(self):
+        params = {
+            'CALCULATION_MODE': 'Classical',
+            'POES_HAZARD_MAPS': '0.01 0.1',
+            'INTENSITY_MEASURE_TYPE': 'PGA',
+            'REGION_VERTEX': '37.90, -121.90, 37.90, -121.60, 37.50, -121.60',
+            'MINIMUM_MAGNITUDE': '5.0',
+            'INVESTIGATION_TIME': '50.0',
+            'TREAT_GRID_SOURCE_AS': 'Point Sources',
+            'INCLUDE_AREA_SOURCES': 'true',
+            'TREAT_AREA_SOURCE_AS': 'Point Sources',
+            'QUANTILE_LEVELS': '0.25 0.50',
+            'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
+            'GROUND_MOTION_CORRELATION': 'true',
+            'GMPE_TRUNCATION_TYPE': '2 Sided',
+            'STANDARD_DEVIATION_TYPE': 'Total',
+            'MAXIMUM_DISTANCE': '200.0',
+            'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
+            'REGION_GRID_SPACING': '0.1',
+            'PERIOD': '0.0',
+            'AGGREGATE_LOSS_CURVE': '1',
+            'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+            'INCLUDE_FAULT_SOURCE': 'true',
+            'FAULT_SURFACE_DISCRETIZATION': '1.0',
+            'REFERENCE_VS30_VALUE': '760.0',
+            'COMPONENT': 'Average Horizontal (GMRotI50)',
+            'CONDITIONAL_LOSS_POE': '0.01',
+            'TRUNCATION_LEVEL': '3',
+            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+            'AREA_SOURCE_DISCRETIZATION': '0.1',
+        }
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['REGION_VERTEX'],
+                          _toCoordList(self.job.oq_params.region))
+        self.assertFieldsEqual(
+            {'job_type': 'classical',
+             'upload': None,
+             'region_grid_spacing': 0.1,
+             'min_magnitude': 5.0,
+             'investigation_time': 50.0,
+             'component': 'gmroti50',
+             'imt': 'pga',
+             'period': None,
+             'truncation_type': 'twosided',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 760.0,
+             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
+             'poes': [0.01, 0.1],
+             'realizations': 2,
+             'histories': None,
+             'gm_correlated': None,
+             }, self.job.oq_params)
+
+    def test_prepare_deterministic_job(self):
+        params = {
+            'CALCULATION_MODE': 'Deterministic',
+            'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
+            'GMF_RANDOM_SEED': '3',
+            'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
+            'INTENSITY_MEASURE_TYPE': 'PGA',
+            'REFERENCE_VS30_VALUE': '759.0',
+            'COMPONENT': 'Average Horizontal (GMRotI50)',
+            'REGION_GRID_SPACING': '0.02',
+            'REGION_VERTEX': '34.07, -118.25, 34.07, -118.22, 34.04, -118.22',
+            'PERIOD': '0.0',
+            'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
+            'TRUNCATION_LEVEL': '3',
+            'GMPE_TRUNCATION_TYPE': '1 Sided',
+            'GROUND_MOTION_CORRELATION': 'true',
+        }
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['REGION_VERTEX'],
+                          _toCoordList(self.job.oq_params.region))
+        self.assertFieldsEqual(
+            {'job_type': 'deterministic',
+             'upload': None,
+             'region_grid_spacing': 0.02,
+             'min_magnitude': None,
+             'investigation_time': None,
+             'component': 'gmroti50',
+             'imt': 'pga',
+             'period': None,
+             'truncation_type': 'onesided',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 759.0,
+             'imls': None,
+             'poes': None,
+             'realizations': None,
+             'histories': None,
+             'gm_correlated': True,
+             }, self.job.oq_params)
+
+    def test_prepare_event_based_job(self):
+        params = {
+            'CALCULATION_MODE': 'Event Based',
+            'POES_HAZARD_MAPS': '0.01 0.10',
+            'INTENSITY_MEASURE_TYPE': 'SA',
+            'REGION_VERTEX': '33.88, -118.30, 33.88, -118.06, 33.76, -118.06',
+            'INCLUDE_GRID_SOURCES': 'false',
+            'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
+            'RUPTURE_ASPECT_RATIO': '1.5',
+            'MINIMUM_MAGNITUDE': '5.0',
+            'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+            'INVESTIGATION_TIME': '50.0',
+            'TREAT_GRID_SOURCE_AS': 'Point Sources',
+            'INCLUDE_AREA_SOURCES': 'true',
+            'TREAT_AREA_SOURCE_AS': 'Point Sources',
+            'QUANTILE_LEVELS': '0.25 0.50',
+            'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
+            'GROUND_MOTION_CORRELATION': 'false',
+            'GMPE_TRUNCATION_TYPE': 'None',
+            'STANDARD_DEVIATION_TYPE': 'Total',
+            'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+            'RISK_CELL_SIZE': '0.0005',
+            'MAXIMUM_DISTANCE': '200.0',
+            'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
+            'REGION_GRID_SPACING': '0.02',
+            'PERIOD': '1.0',
+            'AGGREGATE_LOSS_CURVE': 'true',
+            'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+            'INCLUDE_FAULT_SOURCE': 'true',
+            'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+            'FAULT_SURFACE_DISCRETIZATION': '1.0',
+            'REFERENCE_VS30_VALUE': '760.0',
+            'COMPONENT': 'Average Horizontal',
+            'CONDITIONAL_LOSS_POE': '0.01',
+            'TRUNCATION_LEVEL': '3',
+            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+            'AREA_SOURCE_DISCRETIZATION': '0.1',
+            'FAULT_RUPTURE_OFFSET': '5.0',
+        }
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['REGION_VERTEX'],
+                          _toCoordList(self.job.oq_params.region))
+        self.assertFieldsEqual(
+            {'job_type': 'event_based',
+             'upload': None,
+             'region_grid_spacing': 0.02,
+             'min_magnitude': 5.0,
+             'investigation_time': 50.0,
+             'component': 'average',
+             'imt': 'sa',
+             'period': 1.0,
+             'truncation_type': 'none',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 760.0,
+             'imls': None,
+             'poes': None,
+             'realizations': 5,
+             'histories': 1,
+             'gm_correlated': False,
+             }, self.job.oq_params)
+
+
+class RunJobTestCase(unittest.TestCase):
+    def setUp(self):
+        self.job = None
+        self.session = get_db_session("reslt", "writer")
+        self.job_from_file = Job.from_file
+
+    def tearDown(self):
+        self.job = None
+
+    def _job_status(self):
+        return self.job.get_db_job(self.session).status
+
+    def test_successful_job_lifecycle(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_succeed():
+                self.assertEquals('running', self._job_status())
+
+                return []
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_succeed)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('succeeded', self._job_status())
+
+    def test_failed_job_lifecycle(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_fail():
+                self.assertEquals('running', self._job_status())
+
+                raise Exception('OMG!')
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_fail)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            self.assertRaises(Exception, run_job,
+                              helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_failed_db_job_lifecycle(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # called in place of Job.launch
+            def test_status_running_and_fail():
+                self.assertEquals('running', self._job_status())
+
+                session = get_db_session("uiapi", "writer")
+
+                session.query(OqJob).filter(OqJob.id == -1).one()
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock(
+                    side_effect=test_status_running_and_fail)
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+            self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
+                              helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.launch.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_invalid_job_lifecycle(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # replaces Job.is_valid with a mock
+            def patch_job_is_valid(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.is_valid = mock.Mock(
+                    return_value=(False, ["OMG!"]))
+
+                self.assertEquals('pending', self._job_status())
+
+                return self.job
+
+            from_file.side_effect = patch_job_is_valid
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+            self.assertEquals(1, self.job.is_valid.call_count)
+            self.assertEquals('failed', self._job_status())

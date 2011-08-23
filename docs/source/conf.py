@@ -69,7 +69,7 @@ copyright = u'2011, GEM Foundation'
 # built documents.
 #
 # The short X.Y version.
-version = '.'.join([str(x) for x in openquake.__version__])
+version = '.'.join([str(x) for x in openquake.__version__[:3]])
 # The full version, including alpha/beta/rc tags.
 release = version
 

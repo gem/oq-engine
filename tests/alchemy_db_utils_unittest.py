@@ -26,16 +26,25 @@ Test related to code in db/alchemy/db_utils.py
 import mock
 import os
 import unittest
+import sqlalchemy
 
-from db.alchemy.db_utils import (
-    SessionCache, get_eqcat_writer_session, get_pshai_writer_session,
-    get_uiapi_writer_session, get_eqcat_etl_session, get_pshai_etl_session)
+from tests.utils.helpers import patch
+from openquake.db.alchemy.db_utils import SessionCache, get_db_session
 
 
 class SessionCacheInitSessionTestCase(unittest.TestCase):
     """Tests the behaviour of alchemy.db_utils.SessionCache.init_session()."""
 
     def setUp(self):
+        SessionCache().__sessions__.clear()
+        # run with a clean environment
+        self.orig_env = os.environ.copy()
+        os.environ.pop("OQ_ENGINE_DB_NAME", None)
+        os.environ.pop("OQ_ENGINE_DB_HOST", None)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
         SessionCache().__sessions__.clear()
 
     def test_init_session_with_empty_user(self):
@@ -69,10 +78,10 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
     def test_init_session_without_oq_engine_db_name(self):
         """
         In the absence of the `OQ_ENGINE_DB_NAME` environment variable
-        the session will be established for the "geonode" database.
+        the session will be established for the "openquake" database.
         """
         self._perform_test(
-            "usr2", "", ("postgresql+psycopg2://usr2:@localhost/geonode",))
+            "usr2", "", ("postgresql+psycopg2://usr2:@localhost/openquake",))
 
     def test_init_session_with_oq_engine_db_host(self):
         """
@@ -80,7 +89,7 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         os.environ["OQ_ENGINE_DB_HOST"] = "bcd234"
         self._perform_test(
-            "usr3", "", ("postgresql+psycopg2://usr3:@bcd234/geonode",))
+            "usr3", "", ("postgresql+psycopg2://usr3:@bcd234/openquake",))
         del os.environ["OQ_ENGINE_DB_HOST"]
 
     def test_init_session_without_oq_engine_db_host(self):
@@ -89,21 +98,21 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         the session will be established for the `localhost`.
         """
         self._perform_test(
-            "usr4", "", ("postgresql+psycopg2://usr4:@localhost/geonode",))
+            "usr4", "", ("postgresql+psycopg2://usr4:@localhost/openquake",))
 
     def test_init_session_with_none_password(self):
         """
         _init_session() will use an empty string for `None` passwords.
         """
         self._perform_test(
-            "usr5", None, ("postgresql+psycopg2://usr5:@localhost/geonode",))
+            "usr5", None, ("postgresql+psycopg2://usr5:@localhost/openquake",))
 
     def test_init_session_with_empty_password(self):
         """
         _init_session() will use an empty password properly.
         """
         self._perform_test(
-            "usr6", "", ("postgresql+psycopg2://usr6:@localhost/geonode",))
+            "usr6", "", ("postgresql+psycopg2://usr6:@localhost/openquake",))
 
     def test_init_session_with_non_empty_password(self):
         """
@@ -111,7 +120,7 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         self._perform_test(
             "usr7", "s3cr3t",
-            ("postgresql+psycopg2://usr7:s3cr3t@localhost/geonode",))
+            ("postgresql+psycopg2://usr7:s3cr3t@localhost/openquake",))
 
     def test_init_session_updates_internal_dict(self):
         """
@@ -120,8 +129,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         """
         session = object()
         sc = SessionCache()
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
+        with patch('sqlalchemy.create_engine') as ce_mock:
+            with patch('sqlalchemy.orm.sessionmaker') as sm_mock:
                 sm_mock.return_value = lambda: session
                 self.assertTrue(sc.__sessions__.get("usr8") is None)
                 sc._init_session("usr8", "t0ps3cr3t")
@@ -140,8 +149,8 @@ class SessionCacheInitSessionTestCase(unittest.TestCase):
         :param dict expected_kwargs: a dictionary with keyword parameters that
             we expect will be passed to `sqlalchemy.create_engine()`
         """
-        with mock.patch('sqlalchemy.create_engine') as ce_mock:
-            with mock.patch('sqlalchemy.orm.sessionmaker') as sm_mock:
+        with patch('sqlalchemy.create_engine') as ce_mock:
+            with patch('sqlalchemy.orm.sessionmaker') as sm_mock:
                 sm_mock.return_value = object
                 SessionCache()._init_session(user, password)
                 self.assertEqual(1, ce_mock.call_count)
@@ -155,12 +164,16 @@ class SessionCacheGetTestCase(unittest.TestCase):
 
     def setUp(self):
         # Save the original _init_session() method.
+        self.orig_env = os.environ.copy()
         self.original_method = SessionCache()._init_session
         SessionCache().__sessions__.clear()
 
     def tearDown(self):
         # Restore the original _init_session() method.
         SessionCache()._init_session = self.original_method
+        SessionCache().__sessions__.clear()
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
     def test_get_with_no_session_for_user(self):
         """
@@ -185,16 +198,16 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We don't have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr1") is None)
+        self.assertTrue(sc.__sessions__.get("usr9") is None)
 
         # The actual method under test is called.
-        self.assertEqual(expected_session, sc.get("usr1", ""))
+        self.assertEqual(expected_session, sc.get("usr9", ""))
 
         # The method under test called the mock once and with the parameters
         # we passed.
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
-        self.assertEqual("usr1", user)
+        self.assertEqual("usr9", user)
         self.assertEqual("", passwd)
 
     def test_get_with_cached_session(self):
@@ -204,7 +217,7 @@ class SessionCacheGetTestCase(unittest.TestCase):
         """
         sc = SessionCache()
         expected_session = object()
-        sc.__sessions__["usr2"] = expected_session
+        sc.__sessions__["usr10"] = expected_session
 
         # Prepare mock.
         mock_method = mock.Mock()
@@ -213,10 +226,10 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We do have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr2") is expected_session)
+        self.assertTrue(sc.__sessions__.get("usr10") is expected_session)
 
         # The actual method under test is called.
-        self.assertTrue(sc.get("usr2", "") is expected_session)
+        self.assertTrue(sc.get("usr10", "") is expected_session)
 
         # The method under test did *not* call the mock.
         self.assertEqual(0, mock_method.call_count)
@@ -237,39 +250,48 @@ class SessionCacheGetTestCase(unittest.TestCase):
         sc._init_session = mock_method
 
         # We do not have a session in the cache for the user at hand.
-        self.assertTrue(sc.__sessions__.get("usr3") is None)
+        self.assertTrue(sc.__sessions__.get("usr11") is None)
 
         # The _init_session() mock will get called but fail to add a session to
         # the cache,
-        self.assertRaises(AssertionError, sc.get, "usr3", "")
+        self.assertRaises(AssertionError, sc.get, "usr11", "")
 
         # The method under test did call the mock..
         self.assertEqual(1, mock_method.call_count)
         (user, passwd), kwargs = mock_method.call_args
-        self.assertEqual("usr3", user)
+        self.assertEqual("usr11", user)
         self.assertEqual("", passwd)
         # ..but no session was added to the cache.
-        self.assertTrue(sc.__sessions__.get("usr3") is None)
+        self.assertTrue(sc.__sessions__.get("usr11") is None)
 
 
-class GetSessionTestCase(unittest.TestCase):
+class GetDbSessionTestCase(unittest.TestCase):
     """
-    Tests the various alchemy.db_utils.get_xxxxx_xxxx_session() functions.
+    Tests the alchemy.db_utils.get_db_session() function.
     """
-
     test_data = (
-        ("OQ_DB_EQCAT_WRITER", "OQ_DB_EQCAT_WRITER_PWD",
-         get_eqcat_writer_session),
-        ("OQ_DB_PSHAI_WRITER", "OQ_DB_PSHAI_WRITER_PWD",
-         get_pshai_writer_session),
-        ("OQ_DB_UIAPI_WRITER", "OQ_DB_UIAPI_WRITER_PWD",
-         get_uiapi_writer_session),
-        ("OQ_DB_EQCAT_ETL", "OQ_DB_EQCAT_ETL_PWD",
-         get_eqcat_etl_session),
-        ("OQ_DB_PSHAI_ETL", "OQ_DB_PSHAI_ETL_PWD",
-         get_pshai_etl_session))
+        ("OQ_DB_HZRDI_READER", ("hzrdi", "reader"),
+         ("oq_hzrdi_reader", "openquake")),
+        ("OQ_DB_HZRDI_WRITER", ("hzrdi", "writer"),
+         ("oq_hzrdi_writer", "openquake")),
+        ("OQ_DB_RISKI_READER", ("riski", "reader"),
+         ("oq_riski_reader", "openquake")),
+        ("OQ_DB_RISKI_WRITER", ("riski", "writer"),
+         ("oq_riski_writer", "openquake")),
+        ("OQ_DB_RESLT_READER", ("reslt", "reader"),
+         ("oq_reslt_reader", "openquake")),
+        ("OQ_DB_RESLT_WRITER", ("reslt", "writer"),
+         ("oq_reslt_writer", "openquake")),
+        ("OQ_DB_EQCAT_READER", ("eqcat", "reader"),
+         ("oq_eqcat_reader", "openquake")),
+        ("OQ_DB_EQCAT_WRITER", ("eqcat", "writer"),
+         ("oq_eqcat_writer", "openquake")),
+        ("OQ_DB_GED4GEM", ("ged4gem", None),
+         ("oq_ged4gem", "openquake")),
+    )
 
     def setUp(self):
+        self.orig_env = os.environ.copy()
         # Save the original get() method.
         self.original_method = SessionCache().get
         # Prepare mock.
@@ -281,44 +303,37 @@ class GetSessionTestCase(unittest.TestCase):
     def tearDown(self):
         # Restore the original get() method.
         SessionCache().get = self.original_method
+        SessionCache().__sessions__.clear()
+        os.environ.clear()
+        os.environ.update(self.orig_env)
 
-    def test_get_session_with_no_env(self):
+    def test_get_db_session_with_no_env(self):
         """
-        An `AssertionError` is raised if the `OQ_DB_<ns>_<access>` environment
-        variable is not set.
+        The default user/passwords will be used.
         """
-        for env_user, _, function in self.test_data:
-            if os.environ.get(env_user):
-                del os.environ[env_user]
-            self.assertRaises(AssertionError, function)
+        for (usr_var, (schema, role), (user, password)) in self.test_data:
+            if os.environ.get(usr_var) is not None:
+                del os.environ[usr_var]
+            pwd_var = usr_var + "_PWD"
+            if os.environ.get(pwd_var) is not None:
+                del os.environ[pwd_var]
+            session = get_db_session(schema, role)
+            self.assertTrue(session is self.expected_session)
+            (actual_user, actual_password), _ = self.mock_method.call_args
+            self.assertEqual(user, actual_user)
+            self.assertEqual(password, actual_password)
 
-    def test_get_session(self):
+    def test_get_db_session(self):
         """
         SessionCache.get() is called with the appropriate environment
         variables.
         """
-        for env_user, env_passwd, function in self.test_data:
-            os.environ[env_user] = "usr1"
-            os.environ[env_passwd] = "pwd1"
+        for (usr_var, (schema, role), (user, password)) in self.test_data:
+            os.environ[usr_var] = "usr12"
+            os.environ[usr_var + "_PWD"] = "pwd12"
 
-            session = function()
+            session = get_db_session(schema, role)
             self.assertTrue(session is self.expected_session)
             (user, passwd), _ = self.mock_method.call_args
-            self.assertEqual("usr1", user)
-            self.assertEqual("pwd1", passwd)
-
-    def test_get_session_with_none_passwd(self):
-        """
-        SessionCache.get() is called with the appropriate environment
-        variables.
-        """
-        for env_user, env_passwd, function in self.test_data:
-            os.environ[env_user] = "usr2"
-            if os.environ.get(env_passwd):
-                del os.environ[env_passwd]
-
-            session = function()
-            self.assertTrue(session is self.expected_session)
-            (user, passwd), _ = self.mock_method.call_args
-            self.assertEqual("usr2", user)
-            self.assertTrue(passwd is None)
+            self.assertEqual("usr12", user)
+            self.assertEqual("pwd12", passwd)

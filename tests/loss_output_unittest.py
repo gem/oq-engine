@@ -18,7 +18,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Tests for the serialization of loss/loss ratio curves to NRML format.
 """
@@ -46,7 +45,6 @@ SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves-single.xml'
 LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
 NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
-NRML_SCHEMA_PATH_OLD = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE_OLD)
 
 TEST_LOSS_CURVE = shapes.Curve(
     [(0.0, 0.44), (256.0, 0.23), (512.0, 0.2), (832.0, 0.16), (1216.0, 0.06)])
@@ -54,6 +52,7 @@ TEST_LOSS_CURVE = shapes.Curve(
 TEST_LOSS_RATIO_CURVE = shapes.Curve(
     [(0.0, 0.89), (0.2, 0.72), (0.4, 0.45), (0.6, 0.22), (0.8, 0.17),
      (1.0, 0.03)])
+
 
 class LossOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
@@ -75,10 +74,10 @@ class LossOutputTestCase(unittest.TestCase):
         first_site = shapes.Site(-117.0, 38.0)
         second_site = shapes.Site(-118.0, 39.0)
 
-        first_asset_a = {"assetID" : "a1711", "endBranchLabel": "A"}
-        first_asset_b = {"assetID" : "a1711", "endBranchLabel": "B"}
-        second_asset_a = {"assetID" : "a1712", "endBranchLabel": "A"}
-        second_asset_b = {"assetID" : "a1712", "endBranchLabel": "B"}
+        first_asset_a = {"assetID": "a1711", "endBranchLabel": "A"}
+        first_asset_b = {"assetID": "a1711", "endBranchLabel": "B"}
+        second_asset_a = {"assetID": "a1712", "endBranchLabel": "A"}
+        second_asset_b = {"assetID": "a1712", "endBranchLabel": "B"}
 
         self.loss_curves = [
             (first_site, (TEST_LOSS_CURVE, first_asset_a)),
@@ -137,7 +136,8 @@ class LossOutputTestCase(unittest.TestCase):
         is correct."""
 
         # serialize curves
-        xml_writer = risk_output.LossCurveXMLWriter(self.single_loss_curve_path)
+        xml_writer = risk_output.LossCurveXMLWriter(
+            self.single_loss_curve_path)
         xml_writer.serialize(self.single_loss_curve)
 
         # parse curves DOM-style
@@ -160,10 +160,8 @@ class LossOutputTestCase(unittest.TestCase):
         for idx, val in enumerate(TEST_LOSS_CURVE.ordinates):
             self.assertAlmostEqual(val, float(poe_values[idx]), 6)
 
-
     # TODO(jmc): Test that the lat and lon are correct for each curve
     # Optionally, compare it to another XML file.
-
     def test_loss_ratio_xml_is_correct(self):
         """Assert that content of serialized loss ratio curve data
         is correct."""
@@ -182,8 +180,8 @@ class LossOutputTestCase(unittest.TestCase):
 
         loss_ratio_el_txt = loaded_xml.findtext(
             ".//%s" % xml.RISK_LOSS_RATIO_ABSCISSA_TAG)
-        loss_ratio_values = [float(x) \
-            for x in loss_ratio_el_txt.strip().split()]
+        loss_ratio_values = [
+            float(x) for x in loss_ratio_el_txt.strip().split()]
 
         self.assertEqual(len(loss_ratio_values),
             len(TEST_LOSS_RATIO_CURVE.abscissae),
@@ -193,4 +191,3 @@ class LossOutputTestCase(unittest.TestCase):
             self.assertAlmostEqual(val, float(loss_ratio_values[idx]), 6)
         for idx, val in enumerate(TEST_LOSS_RATIO_CURVE.ordinates):
             self.assertAlmostEqual(val, float(poe_values[idx]), 6)
-

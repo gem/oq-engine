@@ -7,7 +7,7 @@
 It receives its inputs through a configuration file plus input data in .xml
 format and stores the results in .xml format.
 
-Avalable Hazard Analysis
+Available Hazard Analysis
 
   Classical PSHA
     Input   Source Model Logic Tree
@@ -50,25 +50,28 @@ Available Risk Analysis
 
 """
 
-import os
 import sys
+
+try:
+    import celeryconfig
+except ImportError:
+    sys.path.append('/usr/openquake')
 
 import oqpath
 oqpath.set_oq_path()
-
-from fabric.api import env, local, run
-from multiprocessing import Process
 
 from openquake import flags
 from openquake import logs
 from openquake import __version__
 
 from openquake import job
+from openquake.utils import config
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_file', 'openquake-config.gem', 'OpenQuake configuration file')
+flags.DEFINE_string('config_file', 'openquake-config.gem',
+                    'OpenQuake configuration file')
 flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
                   'Computation result output type')
 
@@ -104,7 +107,8 @@ if __name__ == '__main__':
         print flags.get_flags_help()
         sys.exit(1)
 
-    logs.init_logs()
+    logs.init_logs(level=FLAGS.debug,
+                   log_type=config.get('logging', 'backend'))
 
     # Collect inputs
     # Determine Processing type
