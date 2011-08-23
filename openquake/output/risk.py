@@ -402,7 +402,7 @@ class LossMapDBWriter(writer.DBWriterSA):
         super(LossMapDBWriter, self).__init__(*args, **kwargs)
 
         self.metadata = None
-        self.bulk_inserter = writer.BulkInserter(LossMapData)
+        self.bulk_inserter = writer.BulkInserterSA(LossMapData)
 
     def get_output_type(self):
         return 'loss_map'
@@ -691,7 +691,7 @@ class LossCurveDBWriter(writer.DBWriterSA):
         super(LossCurveDBWriter, self).__init__(*args, **kwargs)
 
         self.curve = None
-        self.bulk_inserter = writer.BulkInserter(LossCurveData)
+        self.bulk_inserter = writer.BulkInserterSA(LossCurveData)
 
     def get_output_type(self):
         return "loss_curve"
