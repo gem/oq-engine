@@ -56,3 +56,14 @@ COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the B
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
 COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
+
+
+-- grants
+GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
+
+GRANT SELECT ON riskr.bcr_distribution TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution TO oq_reslt_writer;
+
+GRANT SELECT ON riskr.bcr_distribution_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution_data TO oq_reslt_writer;
