@@ -26,17 +26,29 @@
 from launchpadlib.launchpad import Launchpad
 import argparse
 import logging
+import itertools
 import os
 import re
 import shlex
 import subprocess
 
-RE_REVIEWER = re.compile('\[r=(.*)\]')
-RE_BUGS = re.compile('\[f=(.*)\]')
+# regexps
+RE_BUGS = re.compile('\[f=(.*?)\]')
+RE_REVIEWER = re.compile('\[r=(.*?)\]')
 
-
-HOME_DIR = os.getenv('HOME')
 CACHE_DIR = os.path.expanduser("~/.launchpadlib/cache/")
+
+
+def parse_and_login(time):
+    """
+        Convenience function to parse and login to launchpad
+    """
+    commits_output = CommitsOutput.since(time)
+
+    launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'production',
+            CACHE_DIR)
+
+    return launchpad, commits_output
 
 
 class CommitsOutput(object):
@@ -67,24 +79,35 @@ class CommitsOutput(object):
                          grep.returncode, err))
             logging.error(error)
             raise Exception(error)
-        return out.splitlines()
+        return [line.strip() for line in out.splitlines()]
 
 
 # A serie of ArgumentParser action(s) that are triggered by parse_args()
 class FixCommitted(argparse.Action):
     """ Changes the status of a bug to Fix Committed when it is in
-        the repository
+        the master repository (i.e. merged)
     """
     def __call__(self, parser, namespace, values, option_string=None):
         values = True
         print 'FixCommitted: %r %r %r' % (namespace, values, option_string)
+
+        if namespace.time:
+            launchpad, commits_output = parse_and_login(namespace.time)
+            for commit_line in commits_output:
+                bugs = filter_bugs(commit_line)
+                for bug in bugs:
+                    if 'Fix Committed' in bug.bug_tasks[0].status:
+                        print str(bug.title) + ' Skip it!'
+                    else:
+                        print str(bug.title) + ' To mark!'
+
         setattr(namespace, self.dest, values)
 
 
 class FixReleased(argparse.Action):
     """
-        Changes the status of a bug to Fix Released when it's triggered
-        from the CI or other program
+        Changes the status of a bug to Fix Released when the release packages
+        are built
     """
     def __call__(self, parser, namespace, values, option_string=None):
         print 'FixReleased: %r %r %r' % (namespace, values, option_string)
@@ -98,15 +121,12 @@ class ChangeLog(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         print 'ChangeLog: %r %r %r' % (namespace, values, option_string)
 
-        # hack to pass a parameter to the ArgumentParser Custom Action
-        commits_output = CommitsOutput.since(namespace.time)
+        launchpad, commits_output = parse_and_login(namespace.time)
 
-        launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'staging',
-                CACHE_DIR)
-        for line in commits_output:
-            commit_line = line.strip().split()
-            reviewers = filter_reviewers(commit_line.pop(0))
-            bugs = filter_bugs(launchpad, commit_line.pop(0))
+        for commit_line in commits_output:
+            reviewers = filter_reviewers(commit_line)
+            bugs = launchpad_lookup(launchpad,
+                    filter_bugs(commit_line))
             for bug in bugs:
                 entry = """Fix-committed:  %s
 Summary:        %s
@@ -135,10 +155,10 @@ def arg_parse():
                 with quotes",
             metavar="TIME",
             required=True)
+
     parser.add_argument('-c', '--fix-committed', action=FixCommitted,
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
-            default=False,
             nargs="?",
             required=False)
 
@@ -146,7 +166,6 @@ def arg_parse():
             help="Invoked from the ppa build fetches from a git repository \
                 every with Fix Committed status and changes it to \
                 Fix Released",
-            default=False,
             nargs="?",
             required=False)
 
@@ -164,18 +183,34 @@ def filter_reviewers(reviewers):
     """
         Little helper function to filter reviewers
     """
+
     filtered_reviewers = [reviewer for reviewer in
             RE_REVIEWER.findall(reviewers).pop(0).split(',')]
     return ','.join(filtered_reviewers)
 
+def launchpad_lookup(lp, bugs):
+    try:
+        return [lp.bugs[bug] for bug in bugs]
+    # Sometimes launchpad does not fetch the correct bug, we have to handle
+    # this situation
+    except KeyError, e:
+        error_message = 'Bug not found, maybe a launchpad api error or ' \
+                'staging area? bug: %s' % e
+        logging.error(error_message)
+        raise Exception(error_message)
 
-def filter_bugs(lp, bugs):
+def filter_bugs(commit):
     """
         Little helper function to filter bugs
     """
-    return [lp.bugs[bug]
-                for bug in RE_BUGS.findall(bugs).pop(0).split(',')
-                if not bug.startswith('*')]
+
+    bugs = RE_BUGS.findall(commit)
+    if len(bugs):
+        return itertools.ifilterfalse(
+            lambda bug: bug.startswith('*'),
+            bugs.pop(0).split(','))
+    return bugs
+                    
 
 if __name__ == '__main__':
     (PARSER, ARGS) = arg_parse()
