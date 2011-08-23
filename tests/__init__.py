@@ -52,6 +52,7 @@ from risk_unittest import *
 from schema_unittest import *
 from shapes_unittest import *
 from tools_dbmaint_unittest import *
+from tools_oqbugs_unittest import *
 from utils_config_unittest import *
 from utils_general_unittest import *
 from utils_tasks_unittest import *
