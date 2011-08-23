@@ -58,7 +58,7 @@ _DB_NAMES = (
     'admin',
     'eqcat_read', 'eqcat_write',
     'hzrdi_read', 'hzrdi_write',
-    'hzrdr_read', 'hzrdi_write',
+    'hzrdr_read', 'hzrdr_write',
     'oqmif',
     'riski_read', 'riski_write',
     'riskr_read', 'riskr_write',
