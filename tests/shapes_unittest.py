@@ -146,22 +146,6 @@ class ShapesTestCase(unittest.TestCase):
 
         self.assertEqual(expected_coord_list, actual_coord_list)
 
-    def test_site_uses_round_floats(self):
-        """
-        This test ensures the coordinate precision is properly limited for
-        instances of :py:class:`openquake.shapes.Site`.
-        """
-        lon = -121.00000004
-        lat = 29.00000006
-
-        exp_lon = -121.0
-        exp_lat = 29.0000001
-
-        site = shapes.Site(lon, lat)
-
-        self.assertEqual(exp_lon, site.longitude)
-        self.assertEqual(exp_lat, site.latitude)
-
     def test_clip_low_iml_values(self):
         """
         Test :py:method:`openquake.shapes.range_clip` to
@@ -242,9 +226,9 @@ class CurveTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # simple curve: f(x) = x^2
-        x_vals = [1, 2, 3]
-        y_vals = [x ** 2 for x in x_vals]
-        cls.simple_curve = shapes.Curve(zip(x_vals, y_vals))
+        cls.x_vals = [1, 2, 3]
+        cls.y_vals = [x ** 2 for x in cls.x_vals]
+        cls.simple_curve = shapes.Curve(zip(cls.x_vals, cls.y_vals))
 
         # straight line
         cls.straight_curve = shapes.Curve(zip(range(1, 4), range(1, 4)))
@@ -279,6 +263,22 @@ class CurveTestCase(unittest.TestCase):
 
         # test high-end:
         self.assertEqual(3.0, self.straight_curve.ordinate_for(3.1))
+
+    def test_abscissa_for_in_not_ascending_order_with_dups(self):
+        """ This tests the corner case when:
+            "vals must be arranged in ascending order with no duplicates"
+        """
+        vals = [1, 1, 1]
+
+        curve = shapes.Curve(zip(vals, vals))
+
+        self.assertRaises(AssertionError, curve.abscissa_for, vals)
+
+    def test_abscissa_for_with_multiple_yvals(self):
+        """ tests the correctness of the abscissa method """
+        self.assertEqual(
+            self.simple_curve.abscissa_for(self.y_vals).tolist(),
+                self.x_vals)
 
 
 class VulnerabilityFunctionTestCase(unittest.TestCase):
@@ -559,3 +559,71 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         actual = [x for x in self.test_func]
 
         self.assertEqual(expected, actual)
+
+
+class SiteTestCase(unittest.TestCase):
+    """
+    Tests for the :py:class:`openquake.shapes.Site` class.
+    """
+
+    def test_site_uses_round_floats(self):
+        """
+        This test ensures the coordinate precision is properly limited for
+        instances of :py:class:`openquake.shapes.Site`.
+        """
+        lon = -121.00000004
+        lat = 29.00000006
+
+        exp_lon = -121.0
+        exp_lat = 29.0000001
+
+        site = shapes.Site(lon, lat)
+
+        self.assertEqual(exp_lon, site.longitude)
+        self.assertEqual(exp_lat, site.latitude)
+
+    def test_eq(self):
+        """
+        Test Site equality comparisons. Two sites with the same lon/lat should
+        be considered equal.
+        """
+        lon = 121.0
+        lat = 29.0
+
+        site1 = shapes.Site(lon, lat)
+        site2 = shapes.Site(lon, lat)
+
+        self.assertEqual(site1, site2)
+
+    def test_eq_with_rounded_lon_lat(self):
+        """
+        Test Site equality comparisons when using high-precision lon/lat values
+        (which are rounded down when the Site object is created).
+        """
+        site1 = shapes.Site(-121.0, 29.0000001)
+        site2 = shapes.Site(-121.00000004, 29.00000006)
+
+        self.assertEqual(site1, site2)
+
+    def test_hash(self):
+        """
+        Verify that two Sites with the same lon/lat have the same __hash__().
+        """
+        lon = 121.0
+        lat = 29.0
+
+        site1 = shapes.Site(lon, lat)
+        site2 = shapes.Site(lon, lat)
+
+        self.assertEqual(site1.__hash__(), site2.__hash__())
+
+    def test_hash_with_rounded_lon_lat(self):
+        """
+        Test the __hash__() equality of two Sites when using high-precision
+        lon/lat values (which are rounded down when the Site object is
+        created).
+        """
+        site1 = shapes.Site(-121.0, 29.0000001)
+        site2 = shapes.Site(-121.00000004, 29.00000006)
+
+        self.assertEqual(site1.__hash__(), site2.__hash__())

@@ -18,22 +18,23 @@
 
 """Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
 
+from collections import defaultdict
 import json
 import os
 
 from scipy.stats import norm
 
-from openquake.output import geotiff
 from openquake import job
-from openquake.job import mixins
 from openquake import kvs
-from openquake.job import config
 from openquake import logs
 from openquake import shapes
+from openquake.job import config as job_config
+from openquake.job import mixins
 from openquake.output import curve
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
+from openquake.utils.tasks import check_job_status
 
 from celery.decorators import task
 
@@ -70,13 +71,28 @@ def output(fn):
         conditional_loss_poes = [float(x) for x in self.params.get(
                     'CONDITIONAL_LOSS_POE', "0.01").split()]
 
-        results = []
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
-            results.extend(self._write_output_for_block(self.job_id, block_id))
+            self._write_output_for_block(self.job_id, block_id)
+
         for loss_poe in conditional_loss_poes:
-            results.extend(self.write_loss_map(loss_poe))
-        return results
+            path = os.path.join(self.base_path,
+                                self['OUTPUT_DIR'],
+                                "losses_at-%s.xml" % loss_poe)
+            writer = risk_output.create_loss_map_writer(
+                self.job_id, self.serialize_results_to, path, False)
+
+            if writer:
+                metadata = {
+                    "deterministic": False,
+                    "poe": loss_poe,
+                }
+
+                writer.serialize(
+                    [metadata]
+                    + self.asset_losses_per_site(
+                        loss_poe,
+                        self.grid_assets_iterator(self.region.grid)))
 
     return output_writer
 
@@ -100,9 +116,39 @@ def _plot(curve_path, result_path, **kwargs):
 @task
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
+    check_job_status(job_id)
     engine = job.Job.from_kvs(job_id)
     with mixins.Mixin(engine, RiskJobMixin) as mixed:
         return mixed.compute_risk(block_id, **kwargs)
+
+
+def read_sites_from_exposure(a_job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param a_job: a Job object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(a_job.base_path, a_job.params[job_config.EXPOSURE])
+
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = a_job.region
+
+    LOG.debug(
+        "Constraining exposure parsing to %s" % constraint)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates (bug 812395):
+        if not site in sites:
+            sites.append(site)
+
+    return sites
 
 
 class RiskJobMixin(mixins.Mixin):
@@ -115,7 +161,7 @@ class RiskJobMixin(mixins.Mixin):
 
         sites = []
         self.blocks_keys = []  # pylint: disable=W0201
-        sites = self._read_sites_from_exposure()
+        sites = read_sites_from_exposure(self)
 
         block_count = 0
 
@@ -128,29 +174,11 @@ class RiskJobMixin(mixins.Mixin):
         LOG.debug("Job has partitioned %s sites into %s blocks" % (
                 len(sites), block_count))
 
-    def _read_sites_from_exposure(self):
-        """Read the sites to compute from the exposure file specified
-        in the job definition."""
-
-        sites = []
-        path = os.path.join(self.base_path, self.params[config.EXPOSURE])
-
-        reader = exposure.ExposurePortfolioFile(path)
-        constraint = self.region
-
-        LOG.debug(
-            "Constraining exposure parsing to %s" % constraint)
-
-        for asset_data in reader.filter(constraint):
-            sites.append(asset_data[0])
-
-        return sites
-
     def store_exposure_assets(self):
         """Load exposure assets and write them to KVS."""
 
         exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
-            (self.base_path, self.params[config.EXPOSURE]))
+            (self.base_path, self.params[job_config.EXPOSURE]))
 
         for site, asset in exposure_parser.filter(self.region):
 # TODO(ac): This is kludgey (?)
@@ -159,13 +187,13 @@ class RiskJobMixin(mixins.Mixin):
             gridpoint = self.region.grid.point_at(site)
 
             asset_key = kvs.tokens.asset_key(
-                self.id, gridpoint.row, gridpoint.column)
+                self.job_id, gridpoint.row, gridpoint.column)
 
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
-        vulnerability.load_vulnerability_model(self.id,
+        vulnerability.load_vulnerability_model(self.job_id,
             "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
 
     def _serialize(self, block_id, **kwargs):
@@ -190,8 +218,8 @@ class RiskJobMixin(mixins.Mixin):
                                       serialize_filename)
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
-        writer = risk_output.create_loss_curve_writer(kwargs['curve_mode'],
-            serialize_path, self.params)
+        writer = risk_output.create_loss_curve_writer(self.job_id,
+            self.serialize_results_to, serialize_path, kwargs['curve_mode'])
         if writer:
             writer.serialize(kwargs['curves'])
 
@@ -199,35 +227,50 @@ class RiskJobMixin(mixins.Mixin):
         else:
             return []
 
+    def grid_assets_iterator(self, grid):
+        """
+        Generates the tuples (point, asset) for all assets known to this job
+        that are contained in grid.
+
+        :returns: tuples (point, asset) where:
+            * point is a :py:class:`openquake.shapes.GridPoint` on the grid
+
+            * asset is a :py:class:`dict` representing an asset
+        """
+
+        for point in grid:
+            asset_key = kvs.tokens.asset_key(
+                self.job_id, point.row, point.column)
+            for asset in kvs.get_list_json_decoded(asset_key):
+                yield point, asset
+
     def _write_output_for_block(self, job_id, block_id):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
         block = Block.from_kvs(block_id)
-        for point in block.grid(self.region):
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
-                site = shapes.Site(asset['lon'], asset['lat'])
+        for point, asset in self.grid_assets_iterator(
+                block.grid(self.region)):
+            site = shapes.Site(asset['lon'], asset['lat'])
 
-                loss_curve = kvs.get(
-                                kvs.tokens.loss_curve_key(job_id,
-                                                          point.row,
-                                                          point.column,
-                                                          asset["assetID"]))
-                loss_ratio_curve = kvs.get(
-                                kvs.tokens.loss_ratio_key(job_id,
-                                                          point.row,
-                                                          point.column,
-                                                          asset["assetID"]))
+            loss_curve = kvs.get(
+                            kvs.tokens.loss_curve_key(job_id,
+                                                        point.row,
+                                                        point.column,
+                                                        asset["assetID"]))
+            loss_ratio_curve = kvs.get(
+                            kvs.tokens.loss_ratio_key(job_id,
+                                                        point.row,
+                                                        point.column,
+                                                        asset["assetID"]))
 
-                if loss_curve:
-                    loss_curve = shapes.Curve.from_json(loss_curve)
-                    loss_curves.append((site, (loss_curve, asset)))
+            if loss_curve:
+                loss_curve = shapes.Curve.from_json(loss_curve)
+                loss_curves.append((site, (loss_curve, asset)))
 
-                if loss_ratio_curve:
-                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
+            if loss_ratio_curve:
+                loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
         results = self._serialize(block_id,
                                            curves=loss_ratio_curves,
@@ -240,32 +283,45 @@ class RiskJobMixin(mixins.Mixin):
                                                 render_multi=True))
         return results
 
-    def write_loss_map(self, loss_poe):
-        """ Iterates through all the assets and maps losses at loss_poe """
-        # Make a special grid at a higher resolution
-        risk_grid = shapes.Grid(self.region, float(self['RISK_CELL_SIZE']))
-        path = os.path.join(self.base_path,
-                            self['OUTPUT_DIR'],
-                            "losses_at-%s.tiff" % loss_poe)
-        output_generator = geotiff.LossMapGeoTiffFile(path, risk_grid,
-                init_value=0.0, normalize=True)
-        for point in self.region.grid:
-            asset_key = kvs.tokens.asset_key(self.id, point.row, point.column)
-            asset_list = kvs.get_client().lrange(asset_key, 0, -1)
-            for asset in [json.loads(x) for x in asset_list]:
-                key = kvs.tokens.loss_key(self.id, point.row, point.column,
-                        asset["assetID"], loss_poe)
-                loss = kvs.get(key)
-                LOG.debug("Loss for asset %s at %s %s is %s" %
-                    (asset["assetID"], asset['lon'], asset['lat'], loss))
-                if loss:
-                    loss_ratio = float(loss) / float(asset["assetValue"])
-                    risk_site = shapes.Site(asset['lon'], asset['lat'])
-                    risk_point = risk_grid.point_at(risk_site)
-                    output_generator.write(
-                            (risk_point.row, risk_point.column), loss_ratio)
-        output_generator.close()
-        return [path]
+    def asset_losses_per_site(self, loss_poe, assets_iterator):
+        """
+        For each site in the region of this job, returns a list of assets and
+        their losses at a given probability of exceedance.
+
+        :param:loss_poe: the probability of exceedance
+        :type:loss_poe: float
+        :param:assets_iterator: an iterator over the assets, returning (point,
+            asset) tuples. See
+            :py:class:`openquake.risk.job.general.grid_assets_iterator`.
+
+        :returns: A list of tuples in the form expected by the
+        :py:class:`LossMapWriter.serialize` method:
+
+           (site, [(loss, asset), ...])
+
+           Where:
+
+            :py:class:`openquake.shapes.Site` the site
+            :py:class:`dict` the asset dict
+            :py:class:`dict` (loss dict) with the following key:
+                ***value*** - the value of the loss for the asset
+        """
+        result = defaultdict(list)
+
+        for point, asset in assets_iterator:
+            key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
+                    asset["assetID"], loss_poe)
+            loss_value = kvs.get(key)
+            LOG.debug("Loss for asset %s at %s %s is %s" %
+                (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+            if loss_value:
+                risk_site = shapes.Site(asset['lon'], asset['lat'])
+                loss = {
+                    "value": loss_value,
+                }
+                result[risk_site].append((loss, asset))
+
+        return result.items()
 
 
 class EpsilonProvider(object):

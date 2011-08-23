@@ -70,10 +70,10 @@ def compute_aggregate_curve(job):
 
     epsilon_provider = general.EpsilonProvider(job.params)
     aggregate_loss_curve = \
-        prob.AggregateLossCurve.from_kvs(job.id, epsilon_provider)
+        prob.AggregateLossCurve.from_kvs(job.job_id, epsilon_provider)
 
     path = os.path.join(job.params["BASE_PATH"],
-            job.params["OUTPUT_DIR"], _filename(job.id))
+            job.params["OUTPUT_DIR"], _filename(job.job_id))
 
     plotter = curve.CurvePlot(path)
     plotter.write(_for_plotting(

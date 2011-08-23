@@ -22,7 +22,6 @@ event based approach.
 """
 
 
-import json
 import numpy
 import os
 
@@ -69,7 +68,7 @@ class DeterministicEventBasedMixin:
             LOGGER.debug("Dispatching task for block %s of %s"
                 % (block_id, len(self.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.id, block_id, vuln_model=vuln_model,
+                self.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -98,23 +97,23 @@ class DeterministicEventBasedMixin:
         loss_map_path = os.path.join(
             self['BASE_PATH'],
             self['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.id)
-        loss_map_xml_writer = risk_output.LossMapXMLWriter(loss_map_path)
+            'loss-map-%s.xml' % self.job_id)
+        loss_map_writer = risk_output.create_loss_map_writer(
+            self.job_id, self.serialize_results_to, loss_map_path, True)
 
-        LOGGER.debug("Starting serialization of the loss map...")
+        if loss_map_writer:
+            LOGGER.debug("Starting serialization of the loss map...")
 
-        # Add a metadata dict in the first list position
-        # TODO(LB): we need to define some meaningful values for the metadata
-        # here. For now, I'm just going to leave it blank.
-        loss_map_metadata = {}
-        loss_map_data.insert(0, loss_map_metadata)
-        loss_map_xml_writer.serialize(loss_map_data)
+            # Add a metadata dict in the first list position
+            # Note: the metadata is still incomplete (see bug 809410)
+            loss_map_metadata = {'deterministic': True}
+            loss_map_data.insert(0, loss_map_metadata)
+            loss_map_writer.serialize(loss_map_data)
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
         print "Mean region loss value: %s" % sum_per_gmf.mean
         print "Standard deviation region loss value: %s" % sum_per_gmf.stddev
-        return [True]
 
     def compute_risk(self, block_id, **kwargs):
         """
@@ -210,8 +209,8 @@ class DeterministicEventBasedMixin:
         """
         sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
         for point in block.grid(self.region):
-            gmvs = load_gmvs_for_point(self.id, point)
-            assets = load_assets_for_point(self.id, point)
+            gmvs = load_gmvs_for_point(self.job_id, point)
+            assets = load_assets_for_point(self.job_id, point)
             for asset in assets:
                 # the SumPerGroundMotionField add() method expects a dict
                 # with a single key ('IMLs') and value set to the sequence of
@@ -264,8 +263,8 @@ class DeterministicEventBasedMixin:
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key:
             # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.id, point)}
-            assets = load_assets_for_point(self.id, point)
+            gmvs = {'IMLs': load_gmvs_for_point(self.job_id, point)}
+            assets = load_assets_for_point(self.job_id, point)
             for asset in assets:
                 vuln_function = \
                     vuln_model[asset['vulnerabilityFunctionReference']]
@@ -303,9 +302,7 @@ def load_gmvs_for_point(job_id, point):
         realization of the calculation for a single point.
     """
     gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
-    gmfs = kvs.get_client().lrange(gmfs_key, 0, -1)
-    decoder = json.JSONDecoder()
-    return [float(decoder.decode(x)['mag']) for x in gmfs]
+    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
 
 
 def load_assets_for_point(job_id, point):
@@ -319,9 +316,7 @@ def load_assets_for_point(job_id, point):
             {u'assetValue': 124.27, u'vulnerabilityFunctionReference': u'ID'}
     """
     assets_key = kvs.tokens.asset_key(job_id, point.row, point.column)
-    assets = kvs.get_client().lrange(assets_key, 0, -1)
-    decoder = json.JSONDecoder()
-    return [decoder.decode(x) for x in assets]
+    return kvs.get_list_json_decoded(assets_key)
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):

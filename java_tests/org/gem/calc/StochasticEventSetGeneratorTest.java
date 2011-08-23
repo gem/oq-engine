@@ -5,11 +5,11 @@ import static org.junit.Assert.assertEquals;
 import java.util.ArrayList;
 import java.util.Random;
 
-import org.gem.engine.hazard.GEM1ERF;
 import org.junit.Test;
 import org.opensha.commons.geo.Location;
 import org.opensha.sha.earthquake.EqkRupture;
 import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMFaultSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.faultSurface.FaultTrace;
@@ -45,7 +45,7 @@ public class StochasticEventSetGeneratorTest {
 
     /**
     * compute total moment rate as done by NSHMP code
-    * 
+    *
     * @param minMag
     *            : minimum magnitude (rounded to multiple of deltaMag and moved
     *            to bin center)
@@ -69,7 +69,7 @@ public class StochasticEventSetGeneratorTest {
         }
         return moRate;
     }
-    
+
     // @Test
     // This test needs a lot of memory resources that we don't currently have on
     // our CI VM...
@@ -120,7 +120,7 @@ public class StochasticEventSetGeneratorTest {
     /**
      * This method returns an example of fault source (taken from California
      * NSHMP Model, bFault_stitched_D2.1_GR0.in)
-     * 
+     *
      * @return
      */
     private GEMFaultSourceData getExampleFaultSource() {
@@ -167,7 +167,7 @@ public class StochasticEventSetGeneratorTest {
     /**
      * Compare occurrence rates with those calculated from multiple stochastic
      * event sets
-     * 
+     *
      * @param mfd
      *            {@link IncrementalMagFreqDist} containing expected occurrence
      *            rates

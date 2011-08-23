@@ -48,18 +48,8 @@ import com.google.gson.reflect.TypeToken;
 public class JsonSerializerTest {
 
     private ArrayList<GEMSourceData> sourceList;
-    private static final String TEST_CURVE_JSON =
-            "[{\"y\":\"0.0\",\"x\":\"-5.2983174\"},{\"y\":\"1.0\",\"x\":\"0.756122\"}]";
-    private static final String TEST_HAZARD_CURVE_JSON_1 =
-            String
-                    .format(
-                            "{\"site_lon\":\"-118.3\",\"site_lat\":\"34.12\",\"curve\":%s}",
-                            TEST_CURVE_JSON);
-    private static final String TEST_HAZARD_CURVE_JSON_2 =
-            String
-                    .format(
-                            "{\"site_lon\":\"-118.16\",\"site_lat\":\"33.88\",\"curve\":%s}",
-                            TEST_CURVE_JSON);
+    private static final String TEST_CURVE_JSON_1 = "[0.0,1.0]";
+    private static final String TEST_CURVE_JSON_2 = "[2.0,3.0]";
 
     @Before
     public void setUp() {
@@ -69,8 +59,8 @@ public class JsonSerializerTest {
     @Test
     public void testHazardCurvesToJson() {
         List<String> expectedResults = new ArrayList<String>();
-        expectedResults.add(TEST_HAZARD_CURVE_JSON_1);
-        expectedResults.add(TEST_HAZARD_CURVE_JSON_2);
+        expectedResults.add(TEST_CURVE_JSON_1);
+        expectedResults.add(TEST_CURVE_JSON_2);
 
         Site site1, site2;
         site1 = new Site();
@@ -85,8 +75,8 @@ public class JsonSerializerTest {
 
         Map<Site, DiscretizedFuncAPI> testMap =
                 new HashMap<Site, DiscretizedFuncAPI>();
-        testMap.put(site1, new TestCurve());
-        testMap.put(site2, new TestCurve());
+        testMap.put(site1, new TestCurve(0.0, 1.0));
+        testMap.put(site2, new TestCurve(2.0, 3.0));
 
         // order matters
         List<Site> siteList = new ArrayList<Site>();
@@ -96,13 +86,13 @@ public class JsonSerializerTest {
         List<String> actualResults =
                 JsonSerializer.hazardCurvesToJson(testMap, siteList);
 
-        assertTrue(hazCurvesJsonResultsAreEqual(expectedResults, actualResults));
+        assertEquals(expectedResults, actualResults);
     }
 
     /**
      * Returns false of the two lists don't match (taking into account order).
      * Returns false if the test loop is not entered.
-     * 
+     *
      * @param expected
      * @param actual
      * @return
@@ -117,11 +107,11 @@ public class JsonSerializerTest {
     }
 
     @Test
-    public void testCurveToJsonElement() {
-        DiscretizedFuncAPI curve = new TestCurve();
+    public void testOrdinatesToJsonElement() {
+        DiscretizedFuncAPI curve = new TestCurve(0.0, 1.0);
         Gson gson = new Gson();
-        JsonElement json = JsonSerializer.curveToJsonElement(curve, gson);
-        assertEquals(TEST_CURVE_JSON, json.toString());
+        JsonElement json = JsonSerializer.ordinatesToJsonElement(curve, gson);
+        assertEquals(TEST_CURVE_JSON_1, json.toString());
     }
 
     /**
@@ -609,14 +599,19 @@ public class JsonSerializerTest {
     /**
      * Test implementation of Discretized FuncAPI. This is a partial
      * implementation including only what we need for tests.
-     * 
+     *
      * @author larsbutler
-     * 
+     *
      */
     static class TestCurve extends ArbitrarilyDiscretizedFunc {
 
         static final double[] X_VALS = { -5.2983174, 0.756122 };
-        static final double[] Y_VALS = { 0.0, 1.0 };
+        double[] y_vals = { 0.0, 1.0 };
+
+        public TestCurve(double y0, double y1) {
+            y_vals[0] = y0;
+            y_vals[1] = y1;
+        }
 
         @Override
         public Iterator<DataPoint2D> getPointsIterator() {
@@ -632,7 +627,7 @@ public class JsonSerializerTest {
                 @Override
                 public DataPoint2D next() {
                     DataPoint2D point =
-                            new DataPoint2D(X_VALS[count], Y_VALS[count]);
+                            new DataPoint2D(X_VALS[count], y_vals[count]);
                     count++;
                     return point;
                 }
