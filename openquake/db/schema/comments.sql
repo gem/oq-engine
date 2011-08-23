@@ -320,7 +320,8 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - gmf
     - loss_curve
     - loss_map
-    - collapse_map';
+    - collapse_map
+    - bcr_distribution';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
 
