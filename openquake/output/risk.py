@@ -328,7 +328,7 @@ class LossMapDBReader(object):
         return site, (loss, asset)
 
 
-class LossMapDBWriter(writer.DBWriter):
+class LossMapDBWriter(writer.DBWriterSA):
     """
     Serialize to the database deterministic and non-deterministic loss maps.
 
@@ -664,7 +664,7 @@ class LossCurveDBReader(object):
         return curves
 
 
-class LossCurveDBWriter(writer.DBWriter):
+class LossCurveDBWriter(writer.DBWriterSA):
     """
     Serializer to the database for loss curves.
 
