@@ -80,7 +80,7 @@ class OQRouter(object):
             # 'schema_write'.
             return '%s_write' % schema
 
-    def allow_relation(self, obj1, obj2, **_hints):
+    def allow_relation(self, _obj1, _obj2, **_hints):  # pylint: disable=R0201
         '''
         Determine if relations between two model objects should be allowed.
 
