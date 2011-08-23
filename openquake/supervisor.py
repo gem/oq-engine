@@ -18,6 +18,17 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""
+This module implements supervise(), a function that monitors an OpenQuake job.
+
+Upon job termination, successful or for an error of whatever level or gravity,
+supervise() will:
+
+   - ensure a cleanup of the resources used by the job
+   - update status of the job record in the database
+   - signal through an amqp exchange the outcome of the job
+"""
+
 import errno
 import logging
 import os
@@ -65,7 +76,7 @@ def is_pid_running(pid):
     """
     try:
         os.kill(pid, 0)
-    except Exception as e:
+    except OSError as e:
         return e.errno != errno.ESRCH
     else:
         return True
