@@ -31,7 +31,6 @@ class CatalogAllfields(models.Model):
     '''
     Global catalog view, needed for GeoNode integration
     '''
-    id = models.IntegerField()
     owner_id = models.IntegerField()
     eventid = models.IntegerField()
     agency = models.TextField()
@@ -65,7 +64,6 @@ class SimpleSource(models.Model):
     '''
     Simple source view, needed for GeoNode integration
     '''
-    id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
     gid = models.TextField()
@@ -98,7 +96,6 @@ class SimpleRupture(models.Model):
     '''
     Simple rupture view, needed for GeoNode integration
     '''
-    id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
     gid = models.TextField()
@@ -120,7 +117,6 @@ class ComplexSource(models.Model):
     '''
     Complex source view, needed for GeoNode integration
     '''
-    id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
     gid = models.TextField()
@@ -141,7 +137,6 @@ class ComplexRupture(models.Model):
     '''
     Complex rupture view, needed for GeoNode integration
     '''
-    id = models.IntegerField()
     owner_id = models.IntegerField()
     input_id = models.IntegerField()
     gid = models.TextField()
