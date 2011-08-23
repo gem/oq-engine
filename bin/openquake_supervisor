@@ -28,21 +28,20 @@ import sys
 from openquake.supervisor import supervise
 
 try:
-    import setproctitle
+    # setproctitle is optional external dependency
+    # apt-get installl python-setproctitle or
+    # http://pypi.python.org/pypi/setproctitle/
+    from setproctitle import setproctitle
 except ImportError:
-    def set_proc_title(title):  # pylint: disable=C0111,W0613
-        pass
-else:
-    def set_proc_title(title):  # pylint: disable=C0111
-        setproctitle.setproctitle(title)
+    setproctitle = lambda title: None
 
 def main():  # pylint: disable=C0111
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
 
     # Set the name of this process (as reported by /bin/ps)
-    set_proc_title('openquake supervisor for job_id=%s job_pid=%s'
-                   % (job_id, pid))
+    setproctitle('openquake supervisor for job_id=%s job_pid=%s'
+                 % (job_id, pid))
 
     # This supervisor will be spawned by bin/openquake and interrupting
     # bin/openquake with Ctrl-C from the shell will propagate the signal to
