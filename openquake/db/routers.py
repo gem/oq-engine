@@ -79,3 +79,11 @@ class OQRouter(object):
             # For everything else, the db name we want to use is
             # 'schema_write'.
             return '%s_write' % schema
+
+    def allow_relation(self, obj1, obj2, **_hints):
+        '''
+        Determine if relations between two model objects should be allowed.
+
+        For now, this always returns True.
+        '''
+        return True
