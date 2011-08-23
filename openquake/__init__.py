@@ -53,6 +53,6 @@ Copyright (c) 2010, GEM Foundation.
 # released OpenQuake code.
 __version__ = (
     0,  # major
-    3,  # minor
-    9,  # sprint number
+    4,  # minor
+    2,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!
