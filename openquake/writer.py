@@ -99,7 +99,7 @@ class XMLFileWriter(FileWriter):
         self.close()
 
 
-class DBWriter(object):
+class DBWriterSA(object):
     """
     Abstact class implementing the "serialize" interface to output an iterable
     to the database.
