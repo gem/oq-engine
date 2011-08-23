@@ -31,6 +31,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import sys
 
 import guppy
 import mock as mock_module
@@ -39,7 +40,7 @@ from openquake import flags
 from openquake import logs
 from openquake.job import Job
 from openquake import producer
-from openquake import settings
+from openquake.utils import config
 
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
@@ -79,7 +80,7 @@ def _patched_mocksignature(func, mock=None, skipfirst=False):
         func = func.__func__
 
     if mock is None:
-        mock = Mock()
+        mock = mock_module.Mock()
     signature, func = mock_module._getsignature(func, skipfirst)
 
     checker = eval("lambda %s: None" % signature)
@@ -124,7 +125,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    job = Job.from_file(config_file_path, 'xml_without_db')
+    job = Job.from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
@@ -263,6 +264,11 @@ def wait_for_celery_tasks(celery_results,
 
         time.sleep(wait_time)
 
+# preserve stdout/stderr (note: we want the nose-manipulated stdout/stderr,
+# otherwise we could just use __stdout__/__stderr__)
+STDOUT = sys.stdout
+STDERR = sys.stderr
+
 
 def cleanup_loggers():
     root = logging.getLogger()
@@ -272,6 +278,12 @@ def cleanup_loggers():
             isinstance(h, logging.StreamHandler) or
             isinstance(h, logs.AMQPHandler)):
             root.removeHandler(h)
+
+    # restore the damage created by redirect_stdouts_to_logger; this is only
+    # necessary because tests perform multiple log initializations, sometimes
+    # for AMQP, sometimes for console
+    sys.stdout = STDOUT
+    sys.stderr = STDERR
 
 
 class TestStore(object):
@@ -284,7 +296,7 @@ class TestStore(object):
         """Initialize the test store."""
         if TestStore._conn is not None:
             return
-        TestStore._conn = redis.Redis(db=settings.TEST_KVS_DB)
+        TestStore._conn = redis.Redis(db=int(config.get("kvs", "test_db")))
 
     @staticmethod
     def close():

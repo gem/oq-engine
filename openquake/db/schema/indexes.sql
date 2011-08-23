@@ -67,6 +67,8 @@ CREATE INDEX riskr_loss_map_data_loss_map_id_idx on riskr.loss_map_data(loss_map
 CREATE INDEX riskr_loss_curve_output_id_idx on riskr.loss_curve(output_id);
 CREATE INDEX riskr_loss_curve_data_loss_curve_id_idx on riskr.loss_curve_data(loss_curve_id);
 CREATE INDEX riskr_aggregate_loss_curve_data_loss_curve_id_idx on riskr.aggregate_loss_curve_data(loss_curve_id);
+CREATE INDEX riskr_collapse_map_output_id_idx on riskr.collapse_map(output_id);
+CREATE INDEX riskr_collapse_map_data_collapse_map_id_idx on riskr.collapse_map_data(collapse_map_id);
 
 -- oqmif indexes
 CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site);

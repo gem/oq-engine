@@ -201,6 +201,8 @@ COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last chan
 
 
 COMMENT ON TABLE oqmif.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN oqmif.exposure_model.owner_id IS 'The foreign key to the user who owns the exposure model in question';
+COMMENT ON COLUMN oqmif.exposure_model.name IS 'The exposure model name';
 COMMENT ON COLUMN oqmif.exposure_model.description IS 'An optional description of the risk exposure model at hand';
 COMMENT ON COLUMN oqmif.exposure_model.category IS 'The risk category modelled';
 COMMENT ON COLUMN oqmif.exposure_model.unit IS 'The unit of measurement for the exposure data in the model at hand';
@@ -264,7 +266,15 @@ COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign 
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
 
+COMMENT ON TABLE riskr.collapse_map IS 'Holds metadata for the collapse map';
+COMMENT ON COLUMN riskr.collapse_map.output_id IS 'The foreign key to the output record that represents the corresponding collapse map.';
+COMMENT ON COLUMN riskr.collapse_map.exposure_model_id IS 'The foreign key to the exposure model for this collapse map.';
 
+COMMENT ON TABLE riskr.collapse_map_data IS 'Holds the actual data for the collapse map';
+COMMENT ON COLUMN riskr.collapse_map_data.collapse_map_id IS 'The foreign key to the map record to which the collapse map data belongs';
+COMMENT ON COLUMN riskr.collapse_map_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.collapse_map_data.value IS 'The collapse amount';
+COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of the collapse amount';
 
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
@@ -280,7 +290,8 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
-COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
 COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based or deterministic.';
 COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
@@ -308,7 +319,8 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - hazard_map
     - gmf
     - loss_curve
-    - loss_map';
+    - loss_map
+    - collapse_map';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
 

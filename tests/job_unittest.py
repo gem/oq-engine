@@ -115,10 +115,12 @@ class JobTestCase(unittest.TestCase):
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
         FLAGS.include_defaults = False
-        job_with_only_hazard = \
-            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
-        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        FLAGS.include_defaults = True
+        try:
+            job_with_only_hazard = \
+                helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
+            self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
+        finally:
+            FLAGS.include_defaults = True
 
     def test_job_writes_to_super_config(self):
         for each_job in [self.job, self.job_with_includes]:
@@ -208,7 +210,8 @@ class JobTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job.cleanup` properly initiates KVS
         garbage collection.
         """
-        expected_args = (['python', 'bin/cache_gc.py', '--job=0'], )
+        expected_args = (['python', 'bin/cache_gc.py',
+                          '--job=%d' % self.job.job_id], )
 
         with patch('subprocess.Popen') as popen_mock:
             self.job.cleanup()
@@ -266,6 +269,27 @@ class JobDbRecordTestCase(unittest.TestCase):
         job = session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
         self.assertEqual(status, job.status)
+
+    def test_get_status_from_db(self):
+        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+
+        session = get_db_session("reslt", "writer")
+        session.query(OqJob).update({'status': 'failed'})
+        session.commit()
+        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
+        session.query(OqJob).update({'status': 'running'})
+        session.commit()
+        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'running')
+
+    def test_is_job_completed(self):
+        job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        session = get_db_session("reslt", "writer")
+        pairs = [('pending', False), ('running', False),
+                 ('succeeded', True), ('failed', True)]
+        for status, is_completed in pairs:
+            session.query(OqJob).update({'status': status})
+            session.commit()
+            self.assertEqual(Job.is_job_completed(job_id), is_completed)
 
 
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
