@@ -41,3 +41,5 @@ def main():
         if not is_pid_running(supervisor_pid):
             spawn_job_supervisor(job_id, job_pid)
 
+if __name__ == '__main__':
+    main()
