@@ -106,7 +106,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
                               [0.454, 0.214, 0.123, 0.102])
 
 
-class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     Test the code to read the ground motion fields from DB.
     """
@@ -114,7 +114,7 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.job = self.setup_classic_job()
         for gmf in GMF_DATA():
             output_path = self.generate_output_path(self.job)
-            hcw = GMFDBWriter(output_path, self.job.id)
+            hcw = GmfDBWriter(output_path, self.job.id)
             hcw.serialize(gmf)
 
     def tearDown(self):
