@@ -304,6 +304,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     As a side-effect, also tests that the inserted record satisfied
     the DB constraints.
     """
+
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -471,6 +472,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
 
 class RunJobTestCase(unittest.TestCase):
+
     def setUp(self):
         self.job = None
         self.session = get_db_session("reslt", "writer")
@@ -590,7 +592,7 @@ class RunJobTestCase(unittest.TestCase):
 
         params = {config.INPUT_REGION: input_region,
                 config.REGION_GRID_SPACING: 1.0}
-                
+
         engine = helpers.create_job(params, sections=sections)
 
         expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
