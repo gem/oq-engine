@@ -576,7 +576,7 @@ class HazardMapDBReader(object):
         return points
 
 
-class HazardMapDBWriter(writer.DBWriterSA):
+class HazardMapDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
@@ -602,10 +602,10 @@ class HazardMapDBWriter(writer.DBWriterSA):
     the same for all items.
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
-        self.bulk_inserter = writer.BulkInserterSA(HazardMapData)
+        self.bulk_inserter = writer.BulkInserter(models.HazardMapData)
         self.hazard_map = None
 
     def get_output_type(self):
@@ -616,20 +616,21 @@ class HazardMapDBWriter(writer.DBWriterSA):
 
         # get the value for HazardMap from the first value
         header = iterable[0][1]
-        self.hazard_map = HazardMap(
+        self.hazard_map = models.HazardMap(
             output=self.output, poe=header['poE'],
             statistic_type=header['statistics'])
         if header['statistics'] == 'quantile':
             self.hazard_map.quantile = header['quantileValue']
 
-        self.session.add(self.hazard_map)
-        self.session.flush()
+        self.hazard_map.save()
 
         # Update the output record with the minimum/maximum values.
         self.output.min_value = round_float(min(
             data[1].get("IML") for data in iterable))
         self.output.max_value = round_float(max(
             data[1].get("IML") for data in iterable))
+
+        self.output.save()
 
         super(HazardMapDBWriter, self).serialize(iterable)
 
@@ -899,7 +900,8 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardMapXMLWriter,
-                          HazardMapDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: HazardMapDBWriter(p, j))
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
