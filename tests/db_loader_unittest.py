@@ -21,7 +21,6 @@
     Unittests for NRML/CSV input files loaders to the database
 """
 
-import geoalchemy
 import unittest
 
 from openquake import java
@@ -233,9 +232,8 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                 'upper_depth': 8.0,
                 'mgf_evd_id': None,
                 'mfd_tgr_id': None,
-                'outline': \
-                    geoalchemy.WKTSpatialElement(SIMPLE_FAULT_OUTLINE_WKT),
-                'edge': geoalchemy.WKTSpatialElement(SIMPLE_FAULT_EDGE_WKT),
+                'outline': SIMPLE_FAULT_OUTLINE_WKT,
+                'edge': SIMPLE_FAULT_EDGE_WKT,
                 'lower_depth': 13.0,
                 'gid': u'src01',
                 'owner_id': None,
@@ -264,12 +262,12 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         exp_outline = expected[1]['data'].pop('outline')
         actual_outline = simple_data[1]['data'].pop('outline')
 
-        self.assertEqual(exp_outline.geom_wkt, actual_outline.geom_wkt)
+        self.assertEqual(exp_outline, actual_outline)
 
         exp_edge = expected[1]['data'].pop('edge')
         actual_edge = simple_data[1]['data'].pop('edge')
 
-        self.assertEqual(exp_edge.geom_wkt, actual_edge.geom_wkt)
+        self.assertEqual(exp_edge, actual_edge)
 
         # Now we can test the rest of the data.
         for idx, exp in enumerate(expected):
@@ -279,7 +277,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         engine = db_utils.get_db_session("job", "init").connection().engine
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
                                                 xml.nrml_schema_file())
-        src_loader = db_loader.SourceModelLoader(test_file, engine)
+        src_loader = db_loader.SourceModelLoader(test_file)
 
         results = src_loader.serialize()
 
@@ -300,22 +298,18 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # sure the expected records are there.
         # At this point, we're not going to check every single value; we just
         # want to make sure the records made it into the database.
-        tables = src_loader.meta.tables
 
         # list of tuples of (table name, id)
         table_id_pairs = [x.items()[0] for x in results]
 
         for table_name, record_id in table_id_pairs:
-            table = tables[table_name]
+            table = db_loader.TABLE_MAP[table_name]
 
             # run a query against the table object to get a ResultProxy
-            result_proxy = table.select(table.c.id == record_id).execute()
+            result_proxy = table.objects.filter(id=record_id).all()
 
             # there should be 1 record here
-            self.assertEqual(1, result_proxy.rowcount)
-
-        # clean up db resources
-        src_loader.close()
+            self.assertEqual(1, len(result_proxy))
 
     def test_serialize(self):
         """
