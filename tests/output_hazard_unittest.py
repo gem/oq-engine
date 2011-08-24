@@ -172,7 +172,7 @@ class HazardMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.display_name = os.path.basename(output_path)
 
         self.writer = HazardMapDBWriter(self.session, output_path, self.job.id)
-        self.reader = HazardMapDBReader(self.session)
+        self.reader = HazardMapDBReader()
 
 
 class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
