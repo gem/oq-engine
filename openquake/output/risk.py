@@ -655,7 +655,7 @@ class LossCurveDBReader(object):
         return curves
 
 
-class LossCurveDBWriter(writer.DBWriterSA):
+class LossCurveDBWriter(writer.DBWriter):
     """
     Serializer to the database for loss curves.
 
@@ -678,11 +678,11 @@ class LossCurveDBWriter(writer.DBWriterSA):
          ]
     """
 
-    def __init__(self, *args, **kwargs):
-        super(LossCurveDBWriter, self).__init__(*args, **kwargs)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curve = None
-        self.bulk_inserter = writer.BulkInserterSA(LossCurveData)
+        self.bulk_inserter = writer.BulkInserter(models.LossCurveData)
 
     def get_output_type(self):
         return "loss_curve"
@@ -727,15 +727,13 @@ class LossCurveDBWriter(writer.DBWriterSA):
         """
 
         if self.curve is None:
-            self.curve = LossCurve(output=self.output,
+            self.curve = models.LossCurve(output=self.output,
                 unit=asset_object.get('assetValueUnit'),
                 # The following attributes (endBranchLabel, lossCategory) are
                 # currently not passed in by the calculators
                 end_branch_label=asset_object.get('endBranchLabel'),
                 category=asset_object.get('lossCategory'))
-
-            self.session.add(self.curve)
-            self.session.flush()
+            self.curve.save()
 
         # Note: asset_object has lon and lat attributes that appear to contain
         # the same coordinates as point
@@ -791,9 +789,7 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
         job_id = int(job_id)
 
         if curve_mode == 'loss':
-            writers.append(LossCurveDBWriter(get_db_session("reslt", "writer"),
-                                             nrml_path,
-                                             job_id))
+            writers.append(LossCurveDBWriter(nrml_path, job_id))
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             pass
