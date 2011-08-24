@@ -504,7 +504,9 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db', supervised=False)
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('succeeded', self._job_status())
@@ -529,9 +531,10 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            self.assertRaises(Exception, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db',
-                              supervised=False)
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                self.assertRaises(Exception, run_job,
+                                helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -558,9 +561,10 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db',
-                              supervised=False)
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
+                                helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -579,7 +583,9 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_is_valid
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db', supervised=False)
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.is_valid.call_count)
         self.assertEquals('failed', self._job_status())
