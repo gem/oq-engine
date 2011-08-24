@@ -17,7 +17,6 @@
 
 
 from alchemy_db_utils_unittest import *
-from black_box_tests import *
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
 from db_loader_unittest import *
