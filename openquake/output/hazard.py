@@ -667,31 +667,19 @@ class HazardCurveDBReader(object):
     :func:`HazardCurveXMLWriter.serialize` to produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    def deserialize(self, output_id):  # pylint: disable=R0201
         """
         Read a the given hazard curve from the database.
 
         The structure of the result is documented in
         :class:`HazardCurveDBWriter`.
         """
-        hazard_curve = self.session.query(HazardCurve) \
-            .filter(HazardCurve.output_id == output_id).all()
-        params = self.session.query(OqParams) \
-            .join(OqJob) \
-            .join(Output) \
-            .filter(Output.id == output_id).one()
+        hazard_curves = models.HazardCurve.objects.filter(output=output_id)
+        params = models.Output.objects.get(id=output_id).oq_job.oq_params
         points = []
 
-        for hazard_curve_datum in hazard_curve:
-            hazard_curve_data = self.session.query(
-                sqlfunc.ST_X(HazardCurveData.location),
-                sqlfunc.ST_Y(HazardCurveData.location),
-                HazardCurveData) \
-                .filter(HazardCurveData.hazard_curve ==
-                        hazard_curve_datum).all()
+        for hazard_curve_datum in hazard_curves:
+            hazard_curve_data = hazard_curve_datum.hazardcurvedata_set.all()
 
             common = {
                 'IMLValues': params.imls,
@@ -706,11 +694,12 @@ class HazardCurveDBReader(object):
             else:
                 common['endBranchLabel'] = hazard_curve_datum.end_branch_label
 
-            for lon, lat, datum in hazard_curve_data:
+            for datum in hazard_curve_data:
                 attrs = common.copy()
                 attrs['PoEValues'] = datum.poes
 
-                points.append((shapes.Site(lon, lat), attrs))
+                loc = datum.location
+                points.append((shapes.Site(loc.x, loc.y), attrs))
 
         return points
 

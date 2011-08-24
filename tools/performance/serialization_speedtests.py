@@ -154,7 +154,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         session.commit()
 
         # deserialize
-        hcr = HazardCurveDBReader(session)
+        hcr = HazardCurveDBReader()
 
         for i in xrange(0, 10):
             # Call the function under test.
