@@ -100,7 +100,7 @@ class BulkInserterTestCase(unittest.TestCase):
                           full_name='An user',
                           data_is_open=False)
 
-    @transaction.commit_on_success
+    @transaction.commit_on_success('admin')
     def test_flush(self):
         inserter = BulkInserter(OqUser)
         connection = writer.connections['admin']
@@ -122,7 +122,7 @@ class BulkInserterTestCase(unittest.TestCase):
                               ' (%%s, %%s), (%%s, %%s)' %
                           (", ".join(fields)), connection.sql)
 
-    @transaction.commit_on_success
+    @transaction.commit_on_success('reslt_writer')
     def test_flush_geometry(self):
         inserter = BulkInserter(GmfData)
         connection = writer.connections['reslt_writer']

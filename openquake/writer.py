@@ -366,7 +366,8 @@ class BulkInserter(object):
         if not self.values:
             return
 
-        cursor = connections[router.db_for_write(self.table)].cursor()
+        alias = router.db_for_write(self.table)
+        cursor = connections[alias].cursor()
         value_args = []
 
         field_map = dict()
@@ -385,7 +386,7 @@ class BulkInserter(object):
             self.table._meta.db_table, ", ".join(self.fields)) + \
             ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
         cursor.execute(sql, self.values)
-        transaction.set_dirty()
+        transaction.set_dirty(using=alias)
 
         self.fields = None
         self.values = []
