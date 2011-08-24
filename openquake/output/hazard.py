@@ -586,7 +586,7 @@ class HazardMapDBReader(object):
         return points
 
 
-class HazardMapDBWriter(writer.DBWriter):
+class HazardMapDBWriter(writer.DBWriterSA):
     """
     Serialize the location/IML data to the `uiapi.hazard_map_data` database
     table.
@@ -615,7 +615,7 @@ class HazardMapDBWriter(writer.DBWriter):
     def __init__(self, session, nrml_path, oq_job_id):
         super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
-        self.bulk_inserter = writer.BulkInserter(HazardMapData)
+        self.bulk_inserter = writer.BulkInserterSA(HazardMapData)
         self.hazard_map = None
 
     def get_output_type(self):
@@ -724,7 +724,7 @@ class HazardCurveDBReader(object):
         return points
 
 
-class HazardCurveDBWriter(writer.DBWriter):
+class HazardCurveDBWriter(writer.DBWriterSA):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -752,7 +752,7 @@ class HazardCurveDBWriter(writer.DBWriter):
                                                   oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(HazardCurveData)
+        self.bulk_inserter = writer.BulkInserterSA(HazardCurveData)
 
     def get_output_type(self):
         return "hazard_curve"
@@ -834,7 +834,7 @@ class GMFDBReader(object):
         return points
 
 
-class GMFDBWriter(writer.DBWriter):
+class GMFDBWriter(writer.DBWriterSA):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -851,7 +851,7 @@ class GMFDBWriter(writer.DBWriter):
         super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(GMFData)
+        self.bulk_inserter = writer.BulkInserterSA(GMFData)
 
     def get_output_type(self):
         return "gmf"

@@ -128,7 +128,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
@@ -173,7 +173,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = HAZARD_MAP_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
@@ -198,7 +198,7 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = GMF_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
@@ -222,7 +222,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = LOSS_CURVE_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 20):
@@ -246,7 +246,7 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
+        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
