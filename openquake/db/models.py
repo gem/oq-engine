@@ -528,6 +528,8 @@ class Output(models.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
+        (u'collapse_map', u'Collapse map'),
+        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
