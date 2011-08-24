@@ -26,6 +26,7 @@ from os.path import basename
 from django.db import transaction
 from django.db import connections
 from django.db import router
+from django.contrib.gis.db import models as gis_models
 
 from openquake.db import models
 from openquake.db.alchemy.models import OqJob, Output
@@ -374,7 +375,7 @@ class BulkInserter(object):
 
         for f in self.fields:
             col = field_map[f]
-            if hasattr(col, 'srid'):
+            if isinstance(col, gis_models.GeometryField):
                 value_args.append('GeomFromText(%%s, %d)' % col.srid)
             else:
                 value_args.append('%s')
