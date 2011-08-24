@@ -811,7 +811,7 @@ class GMFDBReader(object):
         return points
 
 
-class GMFDBWriter(writer.DBWriterSA):
+class GMFDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -824,11 +824,11 @@ class GMFDBWriter(writer.DBWriterSA):
          Site(-117, 41): {'groundMotion': 0.3}}
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(GMFDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserterSA(GMFData)
+        self.bulk_inserter = writer.BulkInserter(models.GmfData)
 
     def get_output_type(self):
         return "gmf"
@@ -915,4 +915,5 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           GMFXMLWriter,
-                          GMFDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: GMFDBWriter(p, j))
