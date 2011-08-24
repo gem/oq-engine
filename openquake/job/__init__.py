@@ -97,7 +97,7 @@ def spawn_job_supervisor(job_id, pid):
                  'because no supervisor is configured in openquake.cfg')
 
 
-def run_job(job_file, output_type, supervised=True):
+def run_job(job_file, output_type):
     """
     Given a job_file, run the job.
 
@@ -105,8 +105,6 @@ def run_job(job_file, output_type, supervised=True):
     :type job_file: string
     :param output_type: the desired format for the results, one of 'db', 'xml'
     :type output_type: string
-    :param supervised: should the supervisor be spawned for this job?
-    :type supervised: boolean
     """
 
     a_job = Job.from_file(job_file, output_type)
@@ -115,8 +113,7 @@ def run_job(job_file, output_type, supervised=True):
     if is_job_valid[0]:
         a_job.set_status('running')
 
-        if supervised:
-            spawn_job_supervisor(a_job.job_id, os.getpid())
+        spawn_job_supervisor(a_job.job_id, os.getpid())
 
         try:
             a_job.launch()
