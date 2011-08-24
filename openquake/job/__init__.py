@@ -529,7 +529,7 @@ class Job(object):
         only on the sites specified in that parameter, otherwise
         the region is used."""
 
-        if  self.has(conf.SITES):
+        if self.has(conf.SITES):
             sites = []
             coords = self._extract_coords(conf.SITES)
 
