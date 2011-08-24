@@ -20,7 +20,7 @@ import unittest
 
 from tests.utils.helpers import patch
 
-from openquake import supervisor
+from openquake.supervising import supervisor
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -33,11 +33,11 @@ class SupervisorTestCase(unittest.TestCase):
             self.patchers.append(patcher)
             setattr(self, attr, patcher.start())
 
-        patch_('openquake.supervisor.is_pid_running')
+        patch_('openquake.supervising.is_pid_running')
 
         # patch the actions taken by the supervisor
-        patch_('openquake.supervisor.cleanup_after_job')
-        patch_('openquake.supervisor.terminate_job')
+        patch_('openquake.supervising.supervisor.cleanup_after_job')
+        patch_('openquake.supervising.supervisor.terminate_job')
 
     def tearDown(self):
         for patcher in self.patchers:
@@ -47,8 +47,8 @@ class SupervisorTestCase(unittest.TestCase):
         # the job process is running
         self.is_pid_running.return_value = True
 
-        with patch('openquake.supervisor.SupervisorLogMessageConsumer.run')\
-             as run:
+        with patch('openquake.supervising.' \
+                   'supervisor.SupervisorLogMessageConsumer.run') as run:
 
             def run_(mc):
                 while True:
@@ -69,8 +69,8 @@ class SupervisorTestCase(unittest.TestCase):
         # the job process is running
         self.is_pid_running.return_value = True
 
-        with patch('openquake.supervisor.SupervisorLogMessageConsumer.run')\
-             as run:
+        with patch('openquake.supervising.' \
+                   'supervisor.SupervisorLogMessageConsumer.run') as run:
 
             def run_(mc):
                 while True:
