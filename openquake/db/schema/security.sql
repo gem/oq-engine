@@ -59,6 +59,10 @@ GRANT ALL ON SEQUENCE riskr.loss_curve_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.aggregate_loss_curve_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.loss_map_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.collapse_map_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.collapse_map_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
@@ -193,6 +197,22 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map TO oq_reslt_writer;
 -- riskr.loss_map_data
 GRANT SELECT ON riskr.loss_map_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.loss_map_data TO oq_reslt_writer;
+
+-- riskr.collapse_map
+GRANT SELECT ON riskr.collapse_map TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.collapse_map TO oq_reslt_writer;
+
+-- riskr.collapse_map_data
+GRANT SELECT ON riskr.collapse_map_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.collapse_map_data TO oq_reslt_writer;
+
+-- riskr.bcr_distribution
+GRANT SELECT ON riskr.bcr_distribution TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution TO oq_reslt_writer;
+
+-- riskr.bcr_distribution_data
+GRANT SELECT ON riskr.bcr_distribution_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution_data TO oq_reslt_writer;
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
