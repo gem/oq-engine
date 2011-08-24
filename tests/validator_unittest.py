@@ -155,7 +155,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
 
         validator = config.DeterministicComputationValidator(sections, params)
-        engine = helpers.create_job(None, sections=sections, validator=validator)
+        engine = helpers.create_job(
+            None, sections=sections, validator=validator)
 
         self.assertTrue(engine.is_valid()[0])
 
