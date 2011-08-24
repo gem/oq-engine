@@ -528,6 +528,8 @@ class Output(models.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
+        (u'collapse_map', u'Collapse map'),
+        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -709,6 +711,32 @@ class AggregateLossCurveData(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"aggregate_loss_curve_data'
+
+
+class BCRDistribution(models.Model):
+    '''
+    Holds metadata for the benefit-cost ratio distribution
+    '''
+
+    output = models.ForeignKey("Output")
+    exposure_model = models.ForeignKey("ExposureModel")
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"bcr_distribution'
+
+
+class BCRDistributionData(models.Model):
+    '''
+    Holds the actual data for the benefit-cost ratio distribution
+    '''
+
+    bcr_distribution = models.ForeignKey("BCRDistribution")
+    asset_ref = models.TextField()
+    bcr = models.FloatField()
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"bcr_distribution_data'
 
 
 ## Tables in the 'oqmif' schema.
