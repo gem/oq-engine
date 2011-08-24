@@ -111,7 +111,7 @@ class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 
     create_function = staticmethod(hazard_output.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter
-    db_writer_class = hazard_output.GMFDBWriter
+    db_writer_class = hazard_output.GmfDBWriter
 
 
 class CreateRiskWriterTest(unittest.TestCase):
