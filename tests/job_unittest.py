@@ -504,7 +504,7 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db', supervised=False)
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('succeeded', self._job_status())
@@ -530,7 +530,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
             self.assertRaises(Exception, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db')
+                              helpers.get_data_path(CONFIG_FILE), 'db',
+                              supervised=False)
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -558,7 +559,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
             self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db')
+                              helpers.get_data_path(CONFIG_FILE), 'db',
+                              supervised=False)
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -577,7 +579,7 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_is_valid
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db', supervised=False)
 
         self.assertEquals(1, self.job.is_valid.call_count)
         self.assertEquals('failed', self._job_status())
@@ -633,3 +635,24 @@ class RunJobTestCase(unittest.TestCase):
                 shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
 
         self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_supervisor_is_spawned(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock()
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+
+            with patch('openquake.job.spawn_job_supervisor')\
+                as spawn_job_supervisor:
+
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+                self.assertEquals(1, spawn_job_supervisor.call_count)
+                self.assertEquals(((self.job.job_id, os.getpid()), {}),
+                                  spawn_job_supervisor.call_args)
