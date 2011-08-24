@@ -270,16 +270,10 @@ class GetDbSessionTestCase(unittest.TestCase):
     Tests the alchemy.db_utils.get_db_session() function.
     """
     test_data = (
-        ("OQ_DB_HZRDI_READER", ("hzrdi", "reader"),
-         ("oq_hzrdi_reader", "openquake")),
-        ("OQ_DB_HZRDI_WRITER", ("hzrdi", "writer"),
-         ("oq_hzrdi_writer", "openquake")),
-        ("OQ_DB_RISKI_READER", ("riski", "reader"),
-         ("oq_riski_reader", "openquake")),
-        ("OQ_DB_RISKI_WRITER", ("riski", "writer"),
-         ("oq_riski_writer", "openquake")),
-        ("OQ_DB_RESLT_READER", ("reslt", "reader"),
-         ("oq_reslt_reader", "openquake")),
+        ("OQ_DB_JOB_SUPERV", ("job", "superv"),
+         ("oq_job_superv", "openquake")),
+        ("OQ_DB_JOB_INIT", ("job", "init"),
+         ("oq_job_init", "openquake")),
         ("OQ_DB_RESLT_WRITER", ("reslt", "writer"),
          ("oq_reslt_writer", "openquake")),
         ("OQ_DB_EQCAT_READER", ("eqcat", "reader"),

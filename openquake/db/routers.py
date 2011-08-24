@@ -63,7 +63,7 @@ class OQRouter(object):
         elif schema in ("hzrdr", "riskr"):
             return "job_init"
         elif schema in ("hzrdi", "riski", "uiapi"):
-            return "reslt_write"
+            return "reslt_writer"
         else:
             return '%s_read' % schema
 
@@ -80,7 +80,7 @@ class OQRouter(object):
         elif schema in ("hzrdi", "riski", "uiapi"):
             return "job_init"
         elif schema in ("hzrdr", "riskr"):
-            return "reslt_write"
+            return "reslt_writer"
         else:
             return '%s_write' % schema
 

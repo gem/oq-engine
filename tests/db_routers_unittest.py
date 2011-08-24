@@ -93,7 +93,7 @@ class OQRouterTestCase(unittest.TestCase):
         '''
         classes = [Rupture, Source, SimpleFault, MfdEvd, MfdTgr, ComplexFault,
             RDepthDistr, RRateMdl, FocalMechanism]
-        expected_db = 'reslt_write'
+        expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -114,7 +114,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [Upload, Input, OqJob, OqParams, Output, ErrorMsg]
-        expected_db = 'reslt_write'
+        expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -147,7 +147,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [HazardMap, HazardMapData, HazardCurve, HazardCurveData,
             GmfData]
 
-        expected_db = 'reslt_write'
+        expected_db = 'reslt_writer'
 
         self._db_for_write_helper(classes, expected_db)
 
@@ -171,7 +171,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [LossMap, LossMapData, LossCurve, LossCurveData,
             AggregateLossCurveData, CollapseMap, CollapseMapData,
             BCRDistribution, BCRDistributionData]
-        expected_db = 'reslt_write'
+        expected_db = 'reslt_writer'
 
         self._db_for_write_helper(classes, expected_db)
 
@@ -201,7 +201,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [VulnerabilityModel, VulnerabilityFunction]
-        expected_db = 'reslt_write'
+        expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
 
