@@ -703,7 +703,7 @@ class HazardCurveDBReader(object):
         return points
 
 
-class HazardCurveDBWriter(writer.DBWriterSA):
+class HazardCurveDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -726,12 +726,11 @@ class HazardCurveDBWriter(writer.DBWriterSA):
            'statistics': 'quantile'})]
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(HazardCurveDBWriter, self).__init__(session, nrml_path,
-                                                  oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserterSA(HazardCurveData)
+        self.bulk_inserter = writer.BulkInserter(models.HazardCurveData)
 
     def get_output_type(self):
         return "hazard_curve"
@@ -764,17 +763,17 @@ class HazardCurveDBWriter(writer.DBWriterSA):
             hazard_curve_item = self.curves_per_branch_label[curve_label]
         else:
             if 'endBranchLabel' in values:
-                hazard_curve_item = HazardCurve(
+                hazard_curve_item = models.HazardCurve(
                     output=self.output, end_branch_label=curve_label)
             else:
-                hazard_curve_item = HazardCurve(
+                hazard_curve_item = models.HazardCurve(
                     output=self.output, statistic_type=curve_label)
 
                 if 'quantileValue' in values:
                     hazard_curve_item.quantile = values['quantileValue']
 
             self.curves_per_branch_label[curve_label] = hazard_curve_item
-            self.session.flush()
+            hazard_curve_item.save()
 
         self.bulk_inserter.add_entry(
             hazard_curve_id=hazard_curve_item.id,
@@ -882,7 +881,8 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardCurveXMLWriter,
-                          HazardCurveDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: HazardCurveDBWriter(p, j))
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
