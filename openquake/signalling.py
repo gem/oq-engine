@@ -144,3 +144,25 @@ class LogMessageConsumer(object):
         to the caller.
         """
         raise NotImplementedError()
+
+
+def signal_job_outcome(job_id, outcome):
+    """
+    Send an amqp message to the appropriate exchange to publish the outcome of
+    a job.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :param outcome: the outcome of the job, 'succeeded' or 'failed'
+    :type outcome: string
+    """
+    cfg = config.get_section("amqp")
+
+    with amqp.Connection(host=cfg['host'],
+                         userid=cfg['user'],
+                         password=cfg['password'],
+                         virtual_host=cfg['vhost']) as conn:
+        with conn.channel() as chn:
+            chn.basic_publish(amqp.Message(),
+                              exchange=cfg['exchange'],
+                              routing_key='log.%s.%s' % (outcome, job_id))
