@@ -31,6 +31,6 @@ COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';
 
 
 -- security:
-GRANT SELECT ON uiapi.error_msg TO openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_job_superv;
+GRANT SELECT ON uiapi.error_msg TO oq_uiapi_reader;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_uiapi_writer;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
