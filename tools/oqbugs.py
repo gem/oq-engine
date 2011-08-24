@@ -94,7 +94,7 @@ class FixCommitted(argparse.Action):
         if namespace.time:
             launchpad, commits_output = parse_and_login(namespace.time)
             for commit_line in commits_output:
-                bugs = filter_bugs(commit_line)
+                bugs = launchpad_lookup(launchpad, filter_bugs(commit_line))
                 for bug in bugs:
                     if 'Fix Committed' in bug.bug_tasks[0].status:
                         print str(bug.title) + ' Skip it!'
@@ -203,7 +203,6 @@ def filter_bugs(commit):
     """
         Little helper function to filter bugs
     """
-
     bugs = RE_BUGS.findall(commit)
     if len(bugs):
         return itertools.ifilterfalse(
