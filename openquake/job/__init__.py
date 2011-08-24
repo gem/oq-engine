@@ -332,13 +332,15 @@ class Job(object):
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
-    def __init__(self, params, job_id, sections=list(), base_path=None):
+    def __init__(self, params, job_id, sections=list(), base_path=None,
+            validator=None):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
+        :param validator: validator(s) used to check the configuration file
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -350,6 +352,8 @@ class Job(object):
         self.sections = list(set(sections))
         self.serialize_results_to = []
         self.base_path = base_path
+        self.validator = validator
+
         if base_path:
             self.to_kvs()
 
@@ -368,7 +372,11 @@ class Job(object):
             tuple is returned
         """
 
-        return conf.default_validators(self.sections, self.params).is_valid()
+        if self.validator is None:
+            self.validator = conf.default_validators(
+                self.sections, self.params)
+
+        return self.validator.is_valid()
 
     @property
     def job_id(self):
@@ -407,12 +415,10 @@ class Job(object):
         """Compute valid region with appropriate cell size from config file."""
         if not self.has('REGION_VERTEX'):
             return None
-        # REGION_VERTEX coordinates are defined in the order (lat, lon)
-        verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
 
-        # Flips lon and lat, and builds a list of coord tuples
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.RegionConstraint.from_coordinates(coords)
+        region = shapes.RegionConstraint.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
 
@@ -515,11 +521,35 @@ class Job(object):
         key = kvs.tokens.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
-    def sites_for_region(self):
+    def sites_to_compute(self):
+        """Return the sites used to trigger the computation on the
+        hazard subsystem.
+
+        If the SITES parameter is specified, the computation is triggered
+        only on the sites specified in that parameter, otherwise
+        the region is used."""
+
+        if self.has(conf.SITES):
+            sites = []
+            coords = self._extract_coords(conf.SITES)
+
+            for coord in coords:
+                sites.append(shapes.Site(coord[0], coord[1]))
+
+            return sites
+        else:
+            return self._sites_for_region()
+
+    def _extract_coords(self, config_param):
+        """Extract from a configuration parameter the list of coordinates."""
+        verts = [float(x) for x in self.params[config_param].split(",")]
+        return zip(verts[1::2], verts[::2])
+
+    def _sites_for_region(self):
         """Return the list of sites for the region at hand."""
-        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.Region.from_coordinates(coords)
+        region = shapes.Region.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         return [site for site in region]
 
