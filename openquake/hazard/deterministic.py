@@ -94,7 +94,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             around an instance of java.util.Map.
         """
 
-        calculator = self.gmf_calculator(self.sites_for_region())
+        calculator = self.gmf_calculator(self.sites_to_compute())
 
         if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
             return calculator.getCorrelatedGroundMotionField_JB2009(
