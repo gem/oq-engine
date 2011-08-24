@@ -83,7 +83,7 @@ class ProbabilisticEventMixin():
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
-        session = get_db_session("reslt", "reader")
+        session = get_db_session("job", "init")
 
         ids = session.query(models.Output.id) \
             .filter(models.Output.oq_job_id == job_id) \
@@ -93,7 +93,7 @@ class ProbabilisticEventMixin():
 
     def _get_db_gmf(self, gmf_id):
         """Returns a field for the given GMF"""
-        session = get_db_session("reslt", "reader")
+        session = get_db_session("job", "init")
         grid = self.region.grid
         field = zeros((grid.rows, grid.columns))
 
