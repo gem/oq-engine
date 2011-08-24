@@ -20,7 +20,11 @@
 
 import unittest
 
-from openquake.db.alchemy.models import OqUser, GMFData
+from django.db import transaction
+
+from openquake import writer
+
+from openquake.db.models import OqUser, GmfData
 from openquake.writer import BulkInserter
 
 
@@ -41,26 +45,20 @@ class DummyConnection(object):
         self.values = values
 
 
-class DummySession(object):
-    CONNECTION = DummyConnection()
-
-    def connection(self):
-        return self.CONNECTION
-
-    @property
-    def sql(self):
-        return self.CONNECTION.sql
-
-    @property
-    def values(self):
-        return self.CONNECTION.values
-
-
 class BulkInserterTestCase(unittest.TestCase):
     """
     Unit tests for the BulkInserter class, which simplifies database
     bulk insert
     """
+
+    def setUp(self):
+        self.connections = writer.connections
+
+        writer.connections = dict(
+            admin=DummyConnection(), hzrdr_write=DummyConnection())
+
+    def tearDown(self):
+        writer.connections = self.connections
 
     def test_add_entry(self):
         """Test multiple add entry calls"""
@@ -102,38 +100,41 @@ class BulkInserterTestCase(unittest.TestCase):
                           full_name='An user',
                           data_is_open=False)
 
+    @transaction.commit_on_success
     def test_flush(self):
         inserter = BulkInserter(OqUser)
-        session = DummySession()
+        connection = writer.connections['admin']
 
         inserter.add_entry(user_name='user1', full_name='An user')
         fields = inserter.fields
-        inserter.flush(session)
+        inserter.flush()
 
-        self.assertEquals('INSERT INTO admin.oq_user (%s) VALUES (%%s, %%s)' %
-                          (", ".join(fields)), session.sql)
+        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES' \
+                              ' (%%s, %%s)' %
+                          (", ".join(fields)), connection.sql)
 
         inserter.add_entry(user_name='user1', full_name='An user')
         inserter.add_entry(user_name='user2', full_name='Another user')
         fields = inserter.fields
-        inserter.flush(session)
+        inserter.flush()
 
-        self.assertEquals('INSERT INTO admin.oq_user (%s) VALUES' \
+        self.assertEquals('INSERT INTO "admin"."oq_user" (%s) VALUES' \
                               ' (%%s, %%s), (%%s, %%s)' %
-                          (", ".join(fields)), session.sql)
+                          (", ".join(fields)), connection.sql)
 
+    @transaction.commit_on_success
     def test_flush_geometry(self):
-        inserter = BulkInserter(GMFData)
-        session = DummySession()
+        inserter = BulkInserter(GmfData)
+        connection = writer.connections['hzrdr_write']
 
         inserter.add_entry(location='POINT(1 1)', output_id=1)
         fields = inserter.fields
-        inserter.flush(session)
+        inserter.flush()
 
         if fields[0] == 'output_id':
             values = '%s, GeomFromText(%s, 4326)'
         else:
             values = 'GeomFromText(%s, 4326), %s'
 
-        self.assertEquals('INSERT INTO hzrdr.gmf_data (%s) VALUES (%s)' %
-                          (", ".join(fields), values), session.sql)
+        self.assertEquals('INSERT INTO "hzrdr"."gmf_data" (%s) VALUES (%s)' %
+                          (", ".join(fields), values), connection.sql)
