@@ -120,9 +120,8 @@ def parse_mfd(fault, mfd_java_obj):
              'data': <dict of column name/value pairs>}
 
         The reason we add this additional wrapper is so we can generically do
-        database inserts with sqlalchemy; the table name allows to use
-        sqlalchemy to retrieve the appropriate :py:class:`sqlalchemy.Table`
-        object, which can then be used to perform the insert.
+        database inserts; the table name allows retrieving the appropriate
+        Django model, which can then be used to perform the insert.
     """
 
     mfd_type = mfd_java_obj.__javaclass__.getName()
@@ -471,9 +470,6 @@ class SourceModelLoader(object):
         """
         :param src_model_path: path to a source model file
         :type src_model_path: str
-
-        :param engine: db engine to provide connectivity and reflection
-        :type engine: :py:class:`sqlalchemy.engine.base.Engine`
 
         :param mfd_bin_width: Magnitude Frequency Distribution bin width
         :type mfd_bin_width: float
