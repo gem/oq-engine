@@ -25,8 +25,7 @@ import unittest
 
 from openquake import java
 from openquake import xml
-from openquake.db.alchemy import db_utils
-from openquake.utils import db
+from openquake.db import models
 from openquake.utils.db import loader as db_loader
 
 from tests.utils import helpers
@@ -338,7 +337,7 @@ class CsvLoaderTestCase(unittest.TestCase):
     def setUp(self):
         csv_file = "ISC_snippet.csv"
         self.csv_path = helpers.get_data_path(csv_file)
-        self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
+        self.db_loader = db_loader.CsvModelLoader(self.csv_path)
         self.db_loader._read_model()
         self.csv_reader = self.db_loader.csv_reader
 
@@ -370,37 +369,22 @@ class CsvLoaderTestCase(unittest.TestCase):
         csv_headers = sorted(self.csv_reader.next().keys())
         self.assertEqual(csv_headers, expected_headers)
 
-    def _retrieve_db_data(self, soup_db):
+    def _retrieve_db_data(self):
+        values = models.Catalog.objects.order_by('eventid').values(
+            'id', 'time', 'time_error', 'depth', 'depth_error', 'agency',
+            'eventid', 'identifier',
+            'surface__semi_minor', 'surface__semi_major', 'surface__strike',
+            'magnitude__mb_val', 'magnitude__mb_val_error',
+            'magnitude__ml_val', 'magnitude__ml_val_error',
+            'magnitude__ms_val', 'magnitude__ms_val_error',
+            'magnitude__mw_val', 'magnitude__mw_val_error',
+            )
 
-        # compatible with SQLAlchemy 0.6.4; a bit of an hack because
-        # it knows how ".join" is implemented in SQLSoup; there does
-        # not seem a cleaner solution
-        def _join(soup_db, left, right, **kwargs):
-            from sqlalchemy import join
+        def _strip_table(dic):
+            # only return the column name
+            return dict((k.split('__')[-1], v) for k, v in dic.items())
 
-            j = join(left, right)
-            return soup_db.map(j, **kwargs)
-
-        # doing some "trickery" with *properties and primary_key,
-        # to adapt the code for sqlalchemy 0.7
-
-        # surface join
-        surf_join = _join(soup_db, soup_db.catalog, soup_db.surface,
-            properties={'id_surface': [soup_db.surface.c.id]},
-                        exclude_properties=[soup_db.surface.c.id,
-                            soup_db.surface.c.last_update],
-            primary_key=[soup_db.surface.c.id])
-
-        # magnitude join
-        mag_join = _join(soup_db, surf_join, soup_db.magnitude,
-            properties={'id_magnitude': [soup_db.magnitude.c.id],
-                    'id_surface': [soup_db.surface.c.id]},
-                        exclude_properties=[soup_db.magnitude.c.id,
-                            soup_db.magnitude.c.last_update,
-                            soup_db.surface.c.last_update],
-            primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
-
-        return mag_join.order_by(soup_db.catalog.eventid).all()
+        return [_strip_table(r) for r in values]
 
     def _verify_db_data(self, csv_loader, db_rows):
 
@@ -428,12 +412,12 @@ class CsvLoaderTestCase(unittest.TestCase):
             timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
             csv_time = csv_loader._date_to_timestamp(*timestamp)
             # first we compare the timestamps
-            self.assertEqual(str(db_row.time), csv_time)
+            self.assertEqual(str(db_row['time']), csv_time)
 
             # then, we cycle through the csv keys and consider some special
             # cases
             for csv_key in csv_keys:
-                db_val = getattr(db_row, csv_key)
+                db_val = db_row[csv_key]
                 csv_val = csv_row[csv_key]
 
                 def convert_val(v):
@@ -451,20 +435,11 @@ class CsvLoaderTestCase(unittest.TestCase):
 
                 self.assertEqual(db_val, convert_val(csv_val))
 
-    def _writer_soup(self):
-        engine = db_utils.get_db_session("eqcat", "writer").connection().engine
-
-        csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
-        return csv_loader._sql_soup_init('eqcat')
-
     def _clean_db_data(self):
-        soup_db = self._writer_soup()
-        db_rows = self._retrieve_db_data(soup_db)
+        db_rows = self._retrieve_db_data()
 
         for db_row in db_rows:
-            soup_db.delete(db_row)
-
-        soup_db.commit()
+            models.Catalog.objects.get(id=db_row['id']).delete()
 
     def test_csv_to_db_loader_end_to_end(self):
         """
@@ -474,15 +449,11 @@ class CsvLoaderTestCase(unittest.TestCase):
             * Deletes the inserted records from the database
         """
 
-        engine = db_utils.get_db_session("eqcat", "writer").connection().engine
-
-        csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
+        csv_loader = db_loader.CsvModelLoader(self.csv_path)
         csv_loader.serialize()
-        db_rows = self._retrieve_db_data(csv_loader.soup)
+        db_rows = self._retrieve_db_data()
 
         # rewind the file
         csv_loader.csv_fd.seek(0)
 
         self._verify_db_data(csv_loader, db_rows)
-
-        csv_loader.soup.commit()
