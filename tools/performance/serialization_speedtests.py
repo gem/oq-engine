@@ -194,7 +194,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             hmw.serialize(data)
 
 
-class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -209,7 +209,7 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            gmfw = GMFDBWriter(output_path + str(i), self.job.id)
+            gmfw = GmfDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             gmfw.serialize(data)
