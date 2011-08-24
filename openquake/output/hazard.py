@@ -44,6 +44,7 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 import logging
 from lxml import etree
 
+from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import (
     HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData,
@@ -545,30 +546,19 @@ class HazardMapDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    def deserialize(self, output_id):  # pylint: disable=R0201
         """
         Read a the given hazard map from the database.
 
         The structure of the result is documented in
         :class:`HazardMapDBWriter`.
         """
-        hazard_map = self.session.query(HazardMap) \
-            .filter(HazardMap.output_id == output_id).one()
-        hazard_map_data = self.session.query(
-            sqlfunc.ST_X(HazardMapData.location),
-            sqlfunc.ST_Y(HazardMapData.location),
-            HazardMapData) \
-            .filter(HazardMapData.hazard_map_id == hazard_map.id)
-        params = self.session.query(OqParams) \
-            .join(OqJob) \
-            .join(Output) \
-            .filter(Output.id == output_id).one()
+        hazard_map = models.HazardMap.objects.get(output=output_id)
+        hazard_map_data = hazard_map.hazardmapdata_set.all()
+        params = hazard_map.output.oq_job.oq_params
         points = []
 
-        for lon, lat, datum in hazard_map_data:
+        for datum in hazard_map_data:
             values = {
                 'IML': datum.value,
                 'IMT': job.REVERSE_ENUM_MAP[params.imt],
@@ -581,7 +571,8 @@ class HazardMapDBReader(object):
             if hazard_map.statistic_type == 'quantile':
                 values['quantileValue'] = hazard_map.quantile
 
-            points.append((shapes.Site(lon, lat), values))
+            loc = datum.location
+            points.append((shapes.Site(loc.x, loc.y), values))
 
         return points
 
