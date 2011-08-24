@@ -220,7 +220,7 @@ class DBWriter(object):
         """
         raise NotImplementedError()
 
-    @transaction.commit_on_success
+    @transaction.commit_on_success('reslt_writer')
     def serialize(self, iterable):
         """
         Implementation of the "serialize" interface.
