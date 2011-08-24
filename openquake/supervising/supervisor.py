@@ -33,7 +33,7 @@ import logging
 import os
 import signal
 
-from openquake.signalling import LogMessageConsumer
+from openquake import signalling
 from openquake import kvs
 from openquake.supervising import is_pid_running
 
@@ -65,7 +65,7 @@ def cleanup_after_job(job_id):
     kvs.cache_gc(job_id)
 
 
-class SupervisorLogMessageConsumer(LogMessageConsumer):
+class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
     """
     Supervise an OpenQuake job by:
 
@@ -76,6 +76,9 @@ class SupervisorLogMessageConsumer(LogMessageConsumer):
         super(SupervisorLogMessageConsumer, self).__init__(job_id, **kwargs)
 
         self.pid = pid
+
+    def generate_queue_name(self):
+        return 'supervisor-%s' % self.job_id
 
     def message_callback(self, msg):
         """
