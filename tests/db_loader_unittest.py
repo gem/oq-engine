@@ -276,7 +276,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
             helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        engine = db_utils.get_db_session("hzrdi", "writer").connection().engine
+        engine = db_utils.get_db_session("job", "init").connection().engine
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
                                                 xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file, engine)
