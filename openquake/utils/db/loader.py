@@ -608,7 +608,8 @@ class CsvModelLoader(object):
                                 mw_val_error=row['mw_val_error'])
             magnitude.save()
 
-            wkt = 'SRID=4326;POINT(%s %s)' % (row['longitude'], row['latitude'])
+            wkt = 'SRID=4326;POINT(%s %s)' % (
+                row['longitude'], row['latitude'])
             catalog = models.Catalog(owner_id=1, time=timestamp,
                 surface=surface, eventid=row['eventid'],
                 agency=row['agency'], identifier=row['identifier'],
