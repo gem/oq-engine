@@ -61,7 +61,7 @@ _DB_NAMES = (
     'job_init',
     'job_superv',
     'oqmif',
-    'reslt_write',
+    'reslt_writer',
 )
 DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
 # We need a 'default' database to make Django happy:

@@ -23,7 +23,6 @@ event based calculation.
 """
 
 import math
-import mock
 import numpy
 import unittest
 import json
@@ -33,7 +32,6 @@ from tests.utils.helpers import patch
 
 from openquake import java
 from openquake import kvs
-from openquake import job
 from openquake import flags
 from openquake import shapes
 
