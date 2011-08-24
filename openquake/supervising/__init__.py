@@ -38,6 +38,8 @@ def is_pid_running(pid):
 
     :return: True if the process is running, False otherwise
     """
+    # NB: Process ids are not globally unique, so existance of process with
+    # given pid doesn't guarantee that the job/supervisor/whatever is alive.
     try:
         os.kill(pid, 0)
     except OSError as e:
