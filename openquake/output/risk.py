@@ -328,7 +328,7 @@ class LossMapDBReader(object):
         return site, (loss, asset)
 
 
-class LossMapDBWriter(writer.DBWriter):
+class LossMapDBWriter(writer.DBWriterSA):
     """
     Serialize to the database deterministic and non-deterministic loss maps.
 
@@ -402,7 +402,7 @@ class LossMapDBWriter(writer.DBWriter):
         super(LossMapDBWriter, self).__init__(*args, **kwargs)
 
         self.metadata = None
-        self.bulk_inserter = writer.BulkInserter(LossMapData)
+        self.bulk_inserter = writer.BulkInserterSA(LossMapData)
 
     def get_output_type(self):
         return 'loss_map'
@@ -664,7 +664,7 @@ class LossCurveDBReader(object):
         return curves
 
 
-class LossCurveDBWriter(writer.DBWriter):
+class LossCurveDBWriter(writer.DBWriterSA):
     """
     Serializer to the database for loss curves.
 
@@ -691,7 +691,7 @@ class LossCurveDBWriter(writer.DBWriter):
         super(LossCurveDBWriter, self).__init__(*args, **kwargs)
 
         self.curve = None
-        self.bulk_inserter = writer.BulkInserter(LossCurveData)
+        self.bulk_inserter = writer.BulkInserterSA(LossCurveData)
 
     def get_output_type(self):
         return "loss_curve"
