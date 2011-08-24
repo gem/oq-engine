@@ -332,7 +332,12 @@ class BulkInserter(object):
     """Handle bulk object insertion"""
 
     def __init__(self, dj_model):
-        """Create a new bulk inserter for a SQLAlchemy model class"""
+        """
+        Create a new bulk inserter for a Django model class
+
+        :param dj_model: Django model
+        :type dj_model: :class:`django.db.models.Model`
+        """
         self.table = dj_model
         self.fields = None
         self.values = []
