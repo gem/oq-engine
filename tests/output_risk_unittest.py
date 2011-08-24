@@ -92,7 +92,7 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.display_name = os.path.basename(output_path)
 
         self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
-        self.reader = LossCurveDBReader(self.session)
+        self.reader = LossCurveDBReader()
 
     def normalize(self, values):
         result = []
