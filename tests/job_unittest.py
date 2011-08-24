@@ -21,12 +21,12 @@ import os
 import sqlalchemy
 import unittest
 
-from openquake import java
 from openquake import kvs
 from openquake import flags
+from openquake import shapes
+from openquake.job import Job, LOG, config, prepare_job, run_job
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob
-from openquake.job import Job, LOG, prepare_job, run_job
 from openquake.job.mixins import Mixin
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
@@ -304,6 +304,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     As a side-effect, also tests that the inserted record satisfied
     the DB constraints.
     """
+
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -471,6 +472,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
 
 class RunJobTestCase(unittest.TestCase):
+
     def setUp(self):
         self.job = None
         self.session = get_db_session("reslt", "writer")
@@ -577,5 +579,57 @@ class RunJobTestCase(unittest.TestCase):
             from_file.side_effect = patch_job_is_valid
             run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-            self.assertEquals(1, self.job.is_valid.call_count)
-            self.assertEquals('failed', self._job_status())
+        self.assertEquals(1, self.job.is_valid.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_computes_sites_in_region_when_specified(self):
+        """When we have hazard jobs only, and we specify a region,
+        we use the standard algorithm to split the region in sites. In this
+        example, the region has just four sites (the region boundaries).
+        """
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_computes_specific_sites_when_specified(self):
+        """When we have hazard jobs only, and we specify a list of sites
+        (SITES parameter in the configuration file) we trigger the
+        computation only on those sites.
+        """
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        sites = "1.0, 1.5, 1.5, 2.5, 3.0, 3.0, 4.0, 4.5"
+
+        params = {config.SITES: sites}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.5, 1.0), shapes.Site(2.5, 1.5),
+                shapes.Site(3.0, 3.0), shapes.Site(4.5, 4.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_computes_sites_in_region_with_risk_jobs(self):
+        """When we have hazard and risk jobs, we always use the region."""
+        sections = [config.HAZARD_SECTION,
+                config.GENERAL_SECTION, config.RISK_SECTION]
+
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())

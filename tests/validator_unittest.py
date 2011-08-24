@@ -51,51 +51,53 @@ class ValidatorSetTestCase(unittest.TestCase):
     def test_an_empty_set_has_no_error_messages(self):
         self.assertEquals([], config.ValidatorSet().is_valid()[1])
 
-    def test_with_a_validator_the_result_is_the_validator(self):
-        set = config.ValidatorSet()
-        set.add(AlwaysTrueValidator())
+    def test_with_a_single_validator_the_result_is_the_validator(self):
+        validator = config.ValidatorSet()
+        validator.add(AlwaysTrueValidator())
 
-        self.assertTrue(set.is_valid()[0])
+        self.assertTrue(validator.is_valid()[0])
 
     def test_a_set_is_valid_when_all_validators_are_valid(self):
-        set = config.ValidatorSet()
+        validator = config.ValidatorSet()
 
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
 
-        self.assertTrue(set.is_valid()[0])
-        set.add(AlwaysFalseValidator(""))
+        self.assertTrue(validator.is_valid()[0])
+        validator.add(AlwaysFalseValidator(""))
 
-        self.assertFalse(set.is_valid()[0])
+        self.assertFalse(validator.is_valid()[0])
 
     def test_no_error_messages_when_the_set_is_valid(self):
-        set = config.ValidatorSet()
+        validator = config.ValidatorSet()
 
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysTrueValidator())
 
-        self.assertEquals([], set.is_valid()[1])
+        self.assertEquals([], validator.is_valid()[1])
 
     def test_the_set_keeps_track_of_the_failed_validators(self):
-        set = config.ValidatorSet()
+        validator = config.ValidatorSet()
 
-        set.add(AlwaysTrueValidator())
-        set.add(AlwaysFalseValidator("MESSAGE#1"))
-        set.add(AlwaysFalseValidator("MESSAGE#2"))
-        set.add(AlwaysFalseValidator("MESSAGE#3"))
+        validator.add(AlwaysTrueValidator())
+        validator.add(AlwaysFalseValidator("MESSAGE#1"))
+        validator.add(AlwaysFalseValidator("MESSAGE#2"))
+        validator.add(AlwaysFalseValidator("MESSAGE#3"))
 
-        self.assertFalse(set.is_valid()[0])
+        self.assertFalse(validator.is_valid()[0])
 
         error_messages = ["MESSAGE#1", "MESSAGE#2", "MESSAGE#3"]
-        self.assertEquals(error_messages, set.is_valid()[1])
+        self.assertEquals(error_messages, validator.is_valid()[1])
 
 
 class ConfigurationConstraintsTestCase(unittest.TestCase):
 
-    def test_with_risk_processing_the_exposure_must_be_specified(self):
-        sections = [config.RISK_SECTION, "HAZARD", "general"]
+    def test_risk_mandatory_parameters(self):
+        sections = [config.RISK_SECTION,
+                config.HAZARD_SECTION, config.GENERAL_SECTION]
+
         params = {}
 
         engine = helpers.create_job(params, sections=sections)
@@ -104,4 +106,60 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.EXPOSURE: "/a/path/to/exposure"}
 
         engine = helpers.create_job(params, sections=sections)
+        self.assertFalse(engine.is_valid()[0])
+
+        params = {config.EXPOSURE: "/a/path/to/exposure",
+                config.REGION_GRID_SPACING: 0.5}
+
+        engine = helpers.create_job(params, sections=sections)
+        self.assertFalse(engine.is_valid()[0])
+
+        params = {config.EXPOSURE: "/a/path/to/exposure",
+                config.INPUT_REGION: "a, polygon",
+                config.REGION_GRID_SPACING: 0.5}
+
+        engine = helpers.create_job(params, sections=sections)
         self.assertTrue(engine.is_valid()[0])
+
+    def test_hazard_computation_type(self):
+        """Region (REGION_VERTEX) and specific sites (SITES)
+        are not supported at the same time."""
+
+        params = {config.SITES: "some, sites"}
+        validator = config.ComputationTypeValidator(params)
+
+        engine = helpers.create_job(params, validator=validator)
+        self.assertTrue(engine.is_valid()[0])
+
+        params = {config.INPUT_REGION: "a, polygon"}
+        validator = config.ComputationTypeValidator(params)
+
+        engine = helpers.create_job(params, validator=validator)
+        self.assertTrue(engine.is_valid()[0])
+
+        params = {config.SITES: "some, sites",
+                config.INPUT_REGION: "a, polygon"}
+
+        validator = config.ComputationTypeValidator(params)
+
+        engine = helpers.create_job(params, validator=validator)
+        self.assertFalse(engine.is_valid()[0])
+
+    def test_deterministic_is_not_supported_alone(self):
+        """When we specify a deterministic computation, we only
+        support hazard + risk jobs."""
+
+        sections = [config.RISK_SECTION,
+                config.HAZARD_SECTION, config.GENERAL_SECTION]
+
+        params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
+
+        validator = config.DeterministicComputationValidator(sections, params)
+        engine = helpers.create_job(
+            None, sections=sections, validator=validator)
+
+        self.assertTrue(engine.is_valid()[0])
+
+        sections.remove(config.RISK_SECTION)
+
+        self.assertFalse(engine.is_valid()[0])
