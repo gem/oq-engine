@@ -801,25 +801,19 @@ class GMFDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    def deserialize(self, output_id):  # pylint: disable=R0201
         """
         Read a the given ground motion field from the database.
 
         The structure of the result is documented in :class:`GMFDBWriter`.
         """
-        gmf_data = self.session.query(
-            sqlfunc.ST_X(GMFData.location),
-            sqlfunc.ST_Y(GMFData.location),
-            GMFData.ground_motion) \
-            .filter(GMFData.output_id == output_id).all()
+        gmf_data = models.GmfData.objects.filter(output=output_id)
         points = {}
 
-        for lon, lat, ground_motion in gmf_data:
-            points[shapes.Site(lon, lat)] = {
-                'groundMotion': ground_motion,
+        for datum in gmf_data:
+            loc = datum.location
+            points[shapes.Site(loc.x, loc.y)] = {
+                'groundMotion': datum.ground_motion,
             }
 
         return points
