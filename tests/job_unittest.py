@@ -247,14 +247,14 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_db_session("uiapi", "writer")
+        session = get_db_session("job", "init")
 
         session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
 
-        session = get_db_session("uiapi", "writer")
+        session = get_db_session("job", "init")
 
         session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
@@ -273,7 +273,7 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_get_status_from_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_db_session("reslt", "writer")
+        session = get_db_session("job", "init")
         session.query(OqJob).update({'status': 'failed'})
         session.commit()
         self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
@@ -283,7 +283,7 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def test_is_job_completed(self):
         job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
-        session = get_db_session("reslt", "writer")
+        session = get_db_session("job", "init")
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
@@ -546,7 +546,7 @@ class RunJobTestCase(unittest.TestCase):
             def test_status_running_and_fail():
                 self.assertEquals('running', self._job_status())
 
-                session = get_db_session("uiapi", "writer")
+                session = get_db_session("job", "init")
 
                 session.query(OqJob).filter(OqJob.id == -1).one()
 
