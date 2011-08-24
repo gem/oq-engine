@@ -333,7 +333,7 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.writer = HazardCurveDBWriter(self.session, output_path,
                                           self.job.id)
-        self.reader = HazardCurveDBReader(self.session)
+        self.reader = HazardCurveDBReader()
 
     def sort(self, values):
         def sort_key(v):
