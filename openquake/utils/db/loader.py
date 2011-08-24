@@ -28,13 +28,9 @@ and serializing the data to the OpenQuake eqcat database.
 
 
 import csv
-from sqlalchemy.ext.sqlsoup import SqlSoup
 import datetime
-from sqlalchemy.orm import scoped_session, sessionmaker
 
-import geoalchemy
 import numpy
-import sqlalchemy
 
 from openquake import java, xml
 from openquake.db import models
@@ -535,22 +531,13 @@ class CsvModelLoader(object):
         Csv Model Loader which gets data from a particular CSV source and
         "serializes" the data to the database
     """
-    def __init__(self, src_model_path, engine, schema):
+    def __init__(self, src_model_path):
         """
             :param src_model_path: path to a source model file
             :type src_model_path: str
-
-            :param engine: db engine to provide connectivity and reflection
-            :type engine: :py:class:`sqlalchemy.engine.base.Engine`
-
-            :param schema: the schema needed to access the database
-            :type schema: str
         """
 
         self.src_model_path = src_model_path
-        self.engine = engine
-        self.soup = None
-        self.schema = schema
         self.csv_reader = None
         self.csv_fd = open(self.src_model_path, 'r')
 
@@ -565,7 +552,6 @@ class CsvModelLoader(object):
             Reads the model
             Writes to the db
         """
-        self.soup = self._sql_soup_init(self.schema)
         self._read_model()
         self._write_to_db(self.csv_reader)
 
@@ -596,9 +582,10 @@ class CsvModelLoader(object):
                 int(row['month']), int(row['day']), int(row['hour']),
                 int(row['minute']), int(row['second']))
 
-            surface = self.soup.surface(semi_minor=row['semi_minor'],
+            surface = models.Surface(semi_minor=row['semi_minor'],
                 semi_major=row['semi_major'],
                 strike=row['strike'])
+            surface.save()
 
             for mag in mags:
                 row[mag] = row[mag].strip()
@@ -611,7 +598,7 @@ class CsvModelLoader(object):
                 else:
                     row[mag] = float(row[mag])
 
-            magnitude = self.soup.magnitude(mb_val=row['mb_val'],
+            magnitude = models.Magnitude(mb_val=row['mb_val'],
                                 mb_val_error=row['mb_val_error'],
                                 ml_val=row['ml_val'],
                                 ml_val_error=row['ml_val_error'],
@@ -619,31 +606,13 @@ class CsvModelLoader(object):
                                 ms_val_error=row['ms_val_error'],
                                 mw_val=row['mw_val'],
                                 mw_val_error=row['mw_val_error'])
+            magnitude.save()
 
-            wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
-            self.soup.catalog(owner_id=1, time=timestamp,
+            wkt = 'SRID=4326;POINT(%s %s)' % (row['longitude'], row['latitude'])
+            catalog = models.Catalog(owner_id=1, time=timestamp,
                 surface=surface, eventid=row['eventid'],
                 agency=row['agency'], identifier=row['identifier'],
                 time_error=row['time_error'], depth=row['depth'],
                 depth_error=row['depth_error'], magnitude=magnitude,
-                point=geoalchemy.WKTSpatialElement(wkt, 4326))
-
-        # commit results
-        self.soup.commit()
-
-    def _sql_soup_init(self, schema):
-        """
-            Gets the schema to connect
-            to the db, creates a SqlSoup instance, sets the schema
-
-            :param schema: database schema
-            :type schema: str
-        """
-        # be sure that autoflushing/expire_on_commit/autocommit are false
-        soup_db = SqlSoup(self.engine,
-            session=scoped_session(sessionmaker(autoflush=False,
-            expire_on_commit=False, autocommit=False)))
-        soup_db.schema = schema
-        soup_db.catalog.relate('surface', soup_db.surface)
-        soup_db.catalog.relate('magnitude', soup_db.magnitude)
-        return soup_db
+                point=wkt)
+            catalog.save()
