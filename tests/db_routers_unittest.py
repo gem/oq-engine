@@ -86,60 +86,60 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_hzrdi_correct_read_db(self):
+    def test_hzrdi_read_schema(self):
         '''
         For each model in the 'hzrdi' schema, test for proper db routing
         for read operations.
         '''
         classes = [Rupture, Source, SimpleFault, MfdEvd, MfdTgr, ComplexFault,
             RDepthDistr, RRateMdl, FocalMechanism]
-        expected_db = 'hzrdi_read'
+        expected_db = 'reslt_write'
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_hzrdi_correct_write_db(self):
+    def test_hzrdi_write_schema(self):
         '''
         For each model in the 'hzrdi' schema, test for proper db routing
         for write operations.
         '''
         classes = [Rupture, Source, SimpleFault, MfdEvd, MfdTgr, ComplexFault,
             RDepthDistr, RRateMdl, FocalMechanism]
-        expected_db = 'hzrdi_write'
+        expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_uiapi_correct_read_db(self):
+    def test_uiapi_read_schema(self):
         '''
         For each model in the 'uiapi' schema, test for proper db routing
         for read operations.
         '''
         classes = [Upload, Input, OqJob, OqParams, Output, ErrorMsg]
-        expected_db = 'uiapi_read'
+        expected_db = 'reslt_write'
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_uiapi_correct_write_db(self):
+    def test_uiapi_write_schema(self):
         '''
         For each model in the 'uiapi' schema, test for proper db routing
         for write operations.
         '''
         classes = [Upload, Input, OqJob, OqParams, Output, ErrorMsg]
-        expected_db = 'uiapi_write'
+        expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_hzrdr_correct_read_db(self):
+    def test_hzrdr_read_schema(self):
         '''
         For each model in the 'hzrdr' schema, test for proper db routing
         for read operations.
         '''
         classes = [HazardMap, HazardMapData, HazardCurve, HazardCurveData,
             GmfData]
-        expected_db = 'hzrdr_read'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_hzrdr_correct_write_db(self):
+    def test_hzrdr_write_schema(self):
         '''
         For each model in the 'hzrdr' schema, test for proper db routing
         for write operations.
@@ -147,11 +147,11 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [HazardMap, HazardMapData, HazardCurve, HazardCurveData,
             GmfData]
 
-        expected_db = 'hzrdr_write'
+        expected_db = 'reslt_write'
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_riskr_correct_read_db(self):
+    def test_riskr_read_schema(self):
         '''
         For each model in the 'riskr' schema, test for proper db routing
         for read operations.
@@ -159,11 +159,11 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [LossMap, LossMapData, LossCurve, LossCurveData,
             AggregateLossCurveData, CollapseMap, CollapseMapData,
             BCRDistribution, BCRDistributionData]
-        expected_db = 'riskr_read'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_riskr_correct_write_db(self):
+    def test_riskr_write_schema(self):
         '''
         For each model in the 'riskr' schema, test for proper db routing
         for write operations.
@@ -171,7 +171,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [LossMap, LossMapData, LossCurve, LossCurveData,
             AggregateLossCurveData, CollapseMap, CollapseMapData,
             BCRDistribution, BCRDistributionData]
-        expected_db = 'riskr_write'
+        expected_db = 'reslt_write'
 
         self._db_for_write_helper(classes, expected_db)
 
@@ -195,22 +195,22 @@ class OQRouterTestCase(unittest.TestCase):
 
         self._db_for_write_helper(classes, expected_db)
 
-    def test_riski_correct_read_db(self):
+    def test_riski_read_schema(self):
         '''
         For each model in the 'riski' schema, test for proper db routing
         for read operations.
         '''
         classes = [VulnerabilityModel, VulnerabilityFunction]
-        expected_db = 'riski_read'
+        expected_db = 'reslt_write'
 
         self._db_for_read_helper(classes, expected_db)
 
-    def test_riski_correct_write_db(self):
+    def test_riski_write_schema(self):
         '''
         For each model in the 'riski' schema, test for proper db routing
         for write operations.
         '''
         classes = [VulnerabilityModel, VulnerabilityFunction]
-        expected_db = 'riski_write'
+        expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)

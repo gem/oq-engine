@@ -57,12 +57,14 @@ class OQRouter(object):
         '''
         schema = self._schema_from_model(model)
 
-        if schema in ('admin', 'oqmif'):
+        if schema in ("admin", "oqmif"):
             # The db name for these is the same as the schema
             return schema
+        elif schema in ("hzrdr", "riskr"):
+            return "job_init"
+        elif schema in ("hzrdi", "riski", "uiapi"):
+            return "reslt_write"
         else:
-            # For everything else, the db name we want to use is
-            # 'schema_read'.
             return '%s_read' % schema
 
     def db_for_write(self, model, **_hints):
@@ -75,9 +77,11 @@ class OQRouter(object):
         if schema in ('admin', 'oqmif'):
             # The db name for these is the same as the schema
             return schema
+        elif schema in ("hzrdi", "riski", "uiapi"):
+            return "job_init"
+        elif schema in ("hzrdr", "riskr"):
+            return "reslt_write"
         else:
-            # For everything else, the db name we want to use is
-            # 'schema_write'.
             return '%s_write' % schema
 
     def allow_relation(self, _obj1, _obj2, **_hints):  # pylint: disable=R0201
