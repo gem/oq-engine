@@ -37,6 +37,7 @@ import numpy
 import sqlalchemy
 
 from openquake import java, xml
+from openquake.db import models
 from openquake.utils import db
 
 SRC_DATA_PKG = 'org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData'
@@ -50,6 +51,12 @@ DEFAULT_GRID_SPACING = 1.0  # kilometers
 TECTONIC_REGION_MAP = {
     'Active Shallow Crust': 'active',
     'Subduction Interface': 'interface'}
+TABLE_MAP = {
+    'hzrdi.mfd_evd': models.MfdEvd,
+    'hzrdi.mfd_tgr': models.MfdTgr,
+    'hzrdi.simple_fault': models.SimpleFault,
+    'hzrdi.source': models.Source,
+}
 
 
 def get_fault_surface(fault):
@@ -268,9 +275,7 @@ def parse_simple_fault_src(fault):
 
         trace_coords = coord_list(trace)
 
-        simple_fault['edge'] = \
-            geoalchemy.WKTSpatialElement(
-                'SRID=4326;LINESTRING(%s)' % trace_coords)
+        simple_fault['edge'] = 'SRID=4326;LINESTRING(%s)' % trace_coords
 
         surface = get_fault_surface(fault)
 
@@ -280,9 +285,7 @@ def parse_simple_fault_src(fault):
 
         outline_coords = formatter.format()
 
-        simple_fault['outline'] = \
-            geoalchemy.WKTSpatialElement(
-                'SRID=4326;POLYGON((%s))' % outline_coords)
+        simple_fault['outline'] = 'SRID=4326;POLYGON((%s))' % outline_coords
 
         simple_fault_insert = {
             'table': '%s.simple_fault' % db.PSHAI_TS,
@@ -346,14 +349,9 @@ def parse_point_src(_source_data):
     raise NotImplementedError
 
 
-def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
+def write_simple_fault(simple_data, owner_id, input_id):
     """
     Perform an insert of the given data.
-
-    :param engine_meta: Database metadata object which we need to gain access
-        to the appropriate table objects, which can then be used to perform
-        insert operations.
-    :type engine_meta: :py:class:`sqlalchemy.schema.MetaData`
 
     :param simple_data: 3-tuple of insert data (mfd, simple_fault, source). See
         the documentation for :py:function:`parse_simple_fault_src` for more
@@ -392,15 +390,18 @@ def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
         assert owner_id is not None, "owner_id should not be None"
         assert isinstance(owner_id, int), "owner_id should be an integer"
 
-        table = engine_meta.tables[insert['table']]
+        table = TABLE_MAP[insert['table']]
 
         data = insert['data']
 
-        data['owner_id'] = owner_id
+        # fix owner reference
+        data.pop('owner_id')
+        data['owner'] = models.OqUser.objects.get(id=owner_id)
 
-        result = table.insert().execute(data)
+        item = table(**data)
+        item.save()
 
-        return result.inserted_primary_key[0]
+        return item.id
 
     assert len(simple_data) == 3, \
         "Expected a 3-tuple: (mfd, simple_fault, source)"
@@ -409,10 +410,14 @@ def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
 
     mfd_id = do_insert(mfd)
 
+    # fix mfd references
+    simple_fault['data'].pop('mgf_evd_id', None)
+    simple_fault['data'].pop('mfd_tgr_id', None)
+
     if mfd['table'] == '%s.mfd_evd' % db.PSHAI_TS:
-        simple_fault['data']['mfd_evd_id'] = mfd_id
+        simple_fault['data']['mfd_evd'] = models.MfdEvd.objects.get(id=mfd_id)
     elif mfd['table'] == '%s.mfd_tgr' % db.PSHAI_TS:
-        simple_fault['data']['mfd_tgr_id'] = mfd_id
+        simple_fault['data']['mfd_tgr'] = models.MfdTgr.objects.get(id=mfd_id)
 
     simple_id = do_insert(simple_fault)
 
@@ -461,7 +466,7 @@ class SourceModelLoader(object):
         '%s.GEMPointSourceData' % SRC_DATA_PKG: {
             'fn': None}}
 
-    def __init__(self, src_model_path, engine,
+    def __init__(self, src_model_path,
         mfd_bin_width=DEFAULT_MFD_BIN_WIDTH, owner_id=1, input_id=None):
         """
         :param src_model_path: path to a source model file
@@ -484,7 +489,6 @@ class SourceModelLoader(object):
             GUI.
         """
         self.src_model_path = src_model_path
-        self.engine = engine
         self.mfd_bin_width = mfd_bin_width
         self.owner_id = owner_id
         self.input_id = input_id
@@ -494,18 +498,6 @@ class SourceModelLoader(object):
             "openquake.nrml.schema", xml.nrml_schema_file())
         self.src_reader = java.jclass('SourceModelReader')(
             self.src_model_path, self.mfd_bin_width)
-
-        self.meta = sqlalchemy.MetaData(engine)
-        self.meta.reflect(schema=db.PSHAI_TS)
-
-    def close(self):
-        """
-        Clean up DB resources.
-        """
-        # 1) clear tables from meta
-        self.meta.clear()
-        # 2) release connections to the pool
-        self.engine.dispose()
 
     def serialize(self):
         """
@@ -536,7 +528,7 @@ class SourceModelLoader(object):
                 continue
 
             results.extend(
-                write(self.meta, read(src), owner_id=self.owner_id,
+                write(read(src), owner_id=self.owner_id,
                 input_id=self.input_id))
 
         return results
