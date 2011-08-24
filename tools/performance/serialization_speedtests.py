@@ -206,16 +206,13 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = GMF_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            gmfw = GMFDBWriter(session, output_path + str(i), self.job.id)
+            gmfw = GMFDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             gmfw.serialize(data)
-
-        session.commit()
 
 
 class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):

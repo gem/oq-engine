@@ -112,10 +112,9 @@ class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         for gmf in GMF_DATA():
             output_path = self.generate_output_path(self.job)
-            hcw = GMFDBWriter(session, output_path, self.job.id)
+            hcw = GMFDBWriter(output_path, self.job.id)
             hcw.serialize(gmf)
 
     def tearDown(self):
