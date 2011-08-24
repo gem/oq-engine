@@ -186,7 +186,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         self.assertEqual(
             '%s.IncrementalMagFreqDist' % db_loader.MFD_PACKAGE, mfd_type)
 
-        # this is the dict we'll be passing to sqlalchemy to do the db insert
+        # this is the dict we'll be passing to Django to do the db insert
         mfd_insert = db_loader.parse_mfd(self.simple, mfd)
 
         helpers.assertDictAlmostEqual(self, expected, mfd_insert)
@@ -274,7 +274,6 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
             helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        engine = db_utils.get_db_session("job", "init").connection().engine
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
                                                 xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file)
