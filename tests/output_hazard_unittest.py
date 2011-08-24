@@ -439,7 +439,7 @@ class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = GMFDBWriter(self.session, output_path, self.job.id)
+        self.writer = GMFDBWriter(output_path, self.job.id)
         self.reader = GMFDBReader()
 
     def normalize(self, values):
