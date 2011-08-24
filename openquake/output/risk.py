@@ -28,6 +28,7 @@ from collections import defaultdict
 
 from lxml import etree
 
+from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import LossCurve, LossCurveData
 from openquake.db.alchemy.models import LossMap, LossMapData
@@ -275,26 +276,20 @@ class LossMapDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    def deserialize(self, output_id):  # pylint: disable=R0201
         """
         Read a the given loss map from the database.
 
         The structure of the result is documented in :class:`LossMapDBWriter`.
         """
-        loss_map = self.session.query(LossMap) \
-            .filter(LossMap.output_id == output_id).one()
-        loss_map_data = self.session.query(
-            sqlfunc.ST_X(LossMapData.location),
-            sqlfunc.ST_Y(LossMapData.location),
-            LossMapData) \
-            .filter(LossMapData.loss_map == loss_map).all()
+        loss_map = models.LossMap.objects.get(output=output_id)
+        loss_map_data = loss_map.lossmapdata_set.all()
+
         items = defaultdict(list)
 
-        for lon, lat, datum in loss_map_data:
-            site, loss_asset = self._get_item(loss_map, lon, lat, datum)
+        for datum in loss_map_data:
+            loc = datum.location
+            site, loss_asset = self._get_item(loss_map, loc.x, loc.y, datum)
             items[site].append(loss_asset)
 
         return [self._get_metadata(loss_map)] + items.items()
