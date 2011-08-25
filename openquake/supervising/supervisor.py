@@ -33,6 +33,7 @@ import logging
 import os
 import signal
 
+from openquake.db.models import OqJob, ErrorMsg
 from openquake import signalling
 from openquake import kvs
 from openquake.supervising import is_pid_running
@@ -65,6 +66,25 @@ def cleanup_after_job(job_id):
     kvs.cache_gc(job_id)
 
 
+def update_job_status_and_error_msg(job_id, status, error_msg=None):
+    """
+    Store in the database the status of a job and optionally an error message.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :param status: the status of the job, e.g. 'failed'
+    :type status: string
+    :param error_msg: the error message, if any
+    :type error_msg: string or None
+    """
+    job = OqJob.objects.get(id=job_id)
+    job.status = status
+    job.save()
+
+    if error_msg:
+        ErrorMsg.objects.create(oq_job=job, detailed=error_msg)
+
+
 class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
     """
     Supervise an OpenQuake job by:
@@ -86,6 +106,10 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
         """
         terminate_job(self.pid)
 
+        signalling.signal_job_outcome(self.job_id, 'failed')
+
+        update_job_status_and_error_msg(self.job_id, 'failed', msg.body)
+
         cleanup_after_job(self.job_id)
 
         raise StopIteration
@@ -97,6 +121,19 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
         """
         if not is_pid_running(self.pid):
             logging.info('Process %s not running', self.pid)
+
+            # see what status was left in the database by the exited job
+            job = OqJob.objects.get(id=self.job_id)
+
+            if job.status == 'succeeded':
+                signalling.signal_job_outcome(self.job_id, 'succeeded')
+            else:
+                signalling.signal_job_outcome(self.job_id, 'failed')
+
+                if job.status == 'running':
+                    # The job crashed without having a chance to update the
+                    # status in the database.  We do it here.
+                    update_job_status_and_error_msg(self.job_id, 'failed')
 
             cleanup_after_job(self.job_id)
 
