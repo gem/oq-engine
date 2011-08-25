@@ -118,8 +118,8 @@ class SupersupervisorTestCase(unittest.TestCase):
                 job_pid += 1
                 job.save()
                 if status == 'running' and supervisor_pid == self.stopped_pid:
-                    self.died_supervisor_job_id = job.id
-                    self.died_supervisor_job_pid = job.job_pid
+                    self.dead_supervisor_job_id = job.id
+                    self.dead_supervisor_job_pid = job.job_pid
         self.is_pid_running = patch('openquake.supervising.is_pid_running')
         self.is_pid_running = self.is_pid_running.start()
         self.is_pid_running.side_effect = lambda pid: pid != self.stopped_pid
@@ -131,5 +131,5 @@ class SupersupervisorTestCase(unittest.TestCase):
         with patch('openquake.job.spawn_job_supervisor') as spawn:
             supersupervisor.main()
             self.assertEqual(spawn.call_count, 1)
-            args = (self.died_supervisor_job_id, self.died_supervisor_job_pid)
+            args = (self.dead_supervisor_job_id, self.dead_supervisor_job_pid)
             self.assertEqual(spawn.call_args, (args, {}))
