@@ -22,6 +22,7 @@ import os
 import unittest
 
 from openquake.db.alchemy.db_utils import get_db_session
+from openquake.db.alchemy.models import OqJob
 from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
