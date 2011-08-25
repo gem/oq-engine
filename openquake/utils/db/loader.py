@@ -151,7 +151,7 @@ def parse_mfd(fault, mfd_java_obj):
             mfd_java_obj.getTotalMomentRate() / surface_area
 
         # wrap the insert data in dict keyed by table name
-        mfd_insert = {'table': '%s.mfd_evd' % db.PSHAI_TS, 'data': mfd}
+        mfd_insert = {'table': '%s.mfd_evd' % db.HZRDI_TS, 'data': mfd}
 
     elif mfd_type == '%s.GutenbergRichterMagFreqDist' % MFD_PACKAGE:
         # 'truncated Gutenberg-Richter' MFD
@@ -180,7 +180,7 @@ def parse_mfd(fault, mfd_java_obj):
         mfd['total_moment_rate'] = \
             mfd_java_obj.getTotalMomentRate() / surface_area
 
-        mfd_insert = {'table': '%s.mfd_tgr' % db.PSHAI_TS, 'data': mfd}
+        mfd_insert = {'table': '%s.mfd_tgr' % db.HZRDI_TS, 'data': mfd}
 
     else:
         raise ValueError("Unsupported MFD type: %s" % mfd_type)
@@ -283,7 +283,7 @@ def parse_simple_fault_src(fault):
         simple_fault['outline'] = 'SRID=4326;POLYGON((%s))' % outline_coords
 
         simple_fault_insert = {
-            'table': '%s.simple_fault' % db.PSHAI_TS,
+            'table': '%s.simple_fault' % db.HZRDI_TS,
             'data': simple_fault}
 
         return simple_fault_insert
@@ -305,7 +305,7 @@ def parse_simple_fault_src(fault):
         source['rake'] = fault.getRake()
 
         source_insert = {
-            'table': '%s.source' % db.PSHAI_TS,
+            'table': '%s.source' % db.HZRDI_TS,
             'data': source}
 
         return source_insert
@@ -409,9 +409,9 @@ def write_simple_fault(simple_data, owner_id, input_id):
     simple_fault['data'].pop('mgf_evd_id', None)
     simple_fault['data'].pop('mfd_tgr_id', None)
 
-    if mfd['table'] == '%s.mfd_evd' % db.PSHAI_TS:
+    if mfd['table'] == '%s.mfd_evd' % db.HZRDI_TS:
         simple_fault['data']['mfd_evd'] = models.MfdEvd.objects.get(id=mfd_id)
-    elif mfd['table'] == '%s.mfd_tgr' % db.PSHAI_TS:
+    elif mfd['table'] == '%s.mfd_tgr' % db.HZRDI_TS:
         simple_fault['data']['mfd_tgr'] = models.MfdTgr.objects.get(id=mfd_id)
 
     simple_id = do_insert(simple_fault)

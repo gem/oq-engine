@@ -34,7 +34,7 @@ from sqlalchemy.databases import postgres
 postgres.ischema_names['geometry'] = geoalchemy.Geometry
 
 # Tablespaces
-PSHAI_TS = 'hzrdi'
+HZRDI_TS = 'hzrdi'
 ADMIN_TS = 'admin'
 EQCAT_TS = 'eqcat'
 
