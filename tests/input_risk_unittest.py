@@ -78,9 +78,8 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
-        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+        hcw = HazardCurveDBWriter(output_path, self.job.id)
         hcw.serialize(HAZARD_CURVE_DATA())
 
     def tearDown(self):

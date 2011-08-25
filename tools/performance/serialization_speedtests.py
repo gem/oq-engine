@@ -140,17 +140,13 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            hcw = HazardCurveDBWriter(session, output_path + str(i),
-                                       self.job.id)
+            hcw = HazardCurveDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             hcw.serialize(data)
-
-        session.commit()
 
     @helpers.timeit
     def test_deserialize_small(self):
@@ -160,7 +156,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
-        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+        hcw = HazardCurveDBWriter(output_path, self.job.id)
         hcw.serialize(data)
 
         session.commit()
