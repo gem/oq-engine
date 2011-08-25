@@ -190,7 +190,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
     def test_insert_output(self):
         """An `uiapi.output` record is inserted correctly."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.insert_output("hazard_map")
@@ -211,7 +211,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
     def test_serialize_mean(self):
         """serialize() inserts the output and the hazard_map_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_MEAN_DATA())
@@ -236,7 +236,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
     def test_serialize_quantile(self):
         """serialize() inserts the output and the hazard_map_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
@@ -268,7 +268,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
         maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
+        output = self.job.output_set.get()
         self.assertEqual(round_float(minimum), round_float(output.min_value))
         self.assertEqual(round_float(maximum), round_float(output.max_value))
 
@@ -362,7 +362,7 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(HAZARD_CURVE_DATA())
@@ -456,7 +456,7 @@ class GmfDBWriterTestCase(GmfDBBaseTestCase):
     def test_serialize(self):
         """serialize() inserts the output and the gmf_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(GMF_DATA())
