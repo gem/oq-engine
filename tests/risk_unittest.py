@@ -633,7 +633,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with mock.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
-                aggregate.compute_aggregate_curve(self.job, curve)
+                aggregate.plot_aggregate_curve(self.job, curve)
 
                 # make sure write() and close() were both called
                 self.assertEqual(1, write_mock.call_count)
@@ -658,7 +658,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with mock.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
-                aggregate.compute_aggregate_curve(self.job, curve)
+                aggregate.plot_aggregate_curve(self.job, curve)
 
                 # the plotter should not be called
                 self.assertEqual(0, write_mock.call_count)
