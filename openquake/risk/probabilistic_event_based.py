@@ -47,7 +47,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set,
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+        **TSES** - time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
@@ -83,7 +83,7 @@ def _sampled_based(vuln_function, ground_motion_field_set,
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+        **TSES** - time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
@@ -128,7 +128,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+        **TSES** - time representative of the Stochastic Event Set (float)
     """
 
     loss_ratios = []
@@ -279,7 +279,11 @@ class AggregateLossCurve(object):
         self.losses = None
 
     def append(self, losses):
-        """Add the given losses to the current losses count."""
+        """Accumulate losses into a single sum..
+
+        :param losses: an array of loss values.
+        :type losses: 1-dimensional :py:class:`numpy.ndarray`
+        """
 
         if self.losses is None:
             self.losses = losses
@@ -293,7 +297,17 @@ class AggregateLossCurve(object):
         return self.losses is None
 
     def compute(self, tses, time_span, number_of_samples=None):
-        """Compute the aggregate loss curve."""
+        """Compute the aggregate loss curve.
+        
+        :param tses: time representative of the Stochastic Event Set.
+        :type tses: float
+        :param time_span: time span parameter.
+        :type time_span: float
+        :param number_of_samples: the number of samples used when computing
+            the range of losses. The default value is
+            :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
+        :type number_of_samples: integer
+        """
 
         if self.empty:
             return shapes.EMPTY_CURVE
