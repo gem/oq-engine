@@ -629,7 +629,8 @@ class LossCurveDBReader(object):
     produce an XML file.
     """
 
-    def deserialize(self, output_id):  # pylint: disable=R0201
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given loss curve from the database.
 
