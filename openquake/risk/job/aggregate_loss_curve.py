@@ -16,7 +16,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 Module to compute and plot an aggregate loss curve.
 """
@@ -71,7 +70,7 @@ def compute_aggregate_curve(job, aggregate_curve):
         return
 
     path = os.path.join(job.params["BASE_PATH"],
-            job.params["OUTPUT_DIR"], _filename(job.id))
+            job.params["OUTPUT_DIR"], _filename(job.job_id))
 
     plotter = curve.CurvePlot(path)
     plotter.write(_for_plotting(aggregate_curve,
