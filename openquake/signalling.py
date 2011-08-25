@@ -52,15 +52,16 @@ def connect():
                            virtual_host=cfg['vhost'])
     chn = conn.channel()
     # I use the vhost as a realm, which seems to be an arbitrary string
-    chn.access_request(cfg['vhost'], active=False, read=True)
+    chn.access_request(cfg['vhost'], active=True, read=True, write=True)
     chn.exchange_declare(cfg['exchange'], 'topic', auto_delete=False)
 
     return conn, chn
 
 
-def create_queue(job_id, levels, name=''):
+def declare_and_bind_queue(job_id, levels, name=''):
     """
-    Create an amqp queue for sending/receiving messages for a specific job.
+    Create an amqp queue for sending/receiving messages for a specific job, and
+    binds it to the appropriate exchange.
 
     :param job_id: the id of the job
     :type job_id: int
@@ -123,8 +124,8 @@ class LogMessageConsumer(object):
         if levels is None:
             levels = ('*',)
 
-        self.qname = create_queue(self.job_id, levels,
-                                  self.get_queue_name())
+        self.qname = declare_and_bind_queue(self.job_id, levels,
+                                            self.get_queue_name())
 
     def get_queue_name(self):
         return ''
