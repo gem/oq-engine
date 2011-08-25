@@ -141,15 +141,12 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
             raise StopIteration
 
 
-QUEUE_CREATED_MSG = 'SUPERVISOR QUEUE CREATED'
-
-
 def supervisor_queue_name(job_id):
     return 'supervisor-%s' % job_id
 
 
-def create_supervisor_queue(job_id):
-    return signalling.create_queue(
+def declare_and_bind_supervisor_queue(job_id):
+    return signalling.declare_and_bind_queue(
         job_id, ('ERROR', 'FATAL'), supervisor_queue_name(job_id))
 
 
