@@ -124,7 +124,7 @@ def run_job(job_file, output_type):
         except sqlalchemy.exc.SQLAlchemyError:
             # Try to cleanup the session status to have a chance to update the
             # job record without further errors.
-            session = get_db_session("reslt", "writer")
+            session = get_db_session("job", "init")
             if session.is_active:
                 session.rollback()
 
@@ -191,7 +191,7 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_db_session("reslt", "writer")
+    session = get_db_session("job", "init")
 
     # TODO specify the owner as a command line parameter
     owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
@@ -358,7 +358,7 @@ class Job(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        session = get_db_session("reslt", "reader")
+        session = get_db_session("job", "init")
         [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
         return status
 
@@ -444,7 +444,7 @@ class Job(object):
         :type status: string
         """
 
-        session = get_db_session("reslt", "writer")
+        session = get_db_session("job", "init")
         db_job = self.get_db_job(session)
         db_job.status = status
         session.add(db_job)
