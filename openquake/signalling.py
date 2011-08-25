@@ -27,12 +27,26 @@ from amqplib import client_0_8 as amqp
 from openquake.utils import config
 
 
-def generate_routing_key(job_id, level):
-    assert level in ('*', 'failed', 'succeeded', 'ERROR', 'FATAL')
+def generate_routing_key(job_id, type_):
+    """
+    Generate an amqp routing key to route messages of a job.
+
+    :param job_id: the id of the job or '*' for a key matching any job
+    :type job_id: int or the string '*'
+    :param type_: the type of the message. One of
+      - 'failed', to match messages notifying the failure of a job
+      - 'succeeded', to match messages notifying the success of job
+      - a logging level, e.g. 'ERROR', to match logging messages
+      - '*' to match any type of message
+    :type type_: string
+    :return: the routing key
+    :rtype: string
+    """
+    assert type_ in ('*', 'failed', 'succeeded', 'ERROR', 'FATAL')
 
     assert isinstance(job_id, int) or job_id == '*'
 
-    return 'log.%s.%s' % (level, job_id)
+    return 'log.%s.%s' % (type_, job_id)
 
 
 def connect():
@@ -60,8 +74,11 @@ def connect():
 
 def declare_and_bind_queue(job_id, levels, name=''):
     """
-    Create an amqp queue for sending/receiving messages for a specific job, and
-    binds it to the appropriate exchange.
+    Create an amqp queue for sending/receiving messages and binds it to the
+    exchange of specific job and levels.
+
+    It is safe to call this function more than once.  If the exchange, queue or
+    bindings already exists, this function won't create them again.
 
     :param job_id: the id of the job
     :type job_id: int
@@ -127,7 +144,10 @@ class LogMessageConsumer(object):
         self.qname = declare_and_bind_queue(self.job_id, levels,
                                             self.get_queue_name())
 
-    def get_queue_name(self):
+    def get_queue_name(self):  # pylint: disable=R0201
+        """
+        The name of the queue that will contain the messages of this consumer.
+        """
         return ''
 
     def __enter__(self):
