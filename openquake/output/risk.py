@@ -276,7 +276,7 @@ class LossMapDBReader(object):
     produce an XML file.
     """
 
-    def deserialize(self, output_id):  # pylint: disable=R0201
+    def deserialize(self, output_id):
         """
         Read a the given loss map from the database.
 
@@ -294,7 +294,8 @@ class LossMapDBReader(object):
 
         return [self._get_metadata(loss_map)] + items.items()
 
-    def _get_metadata(self, loss_map):  # pylint: disable=R0201
+    @staticmethod
+    def _get_metadata(loss_map):
         """
         Returns the metadata dictionary for this loss map
 
@@ -303,7 +304,8 @@ class LossMapDBReader(object):
         return dict((metadata_key, getattr(loss_map, key))
                         for key, metadata_key in LOSS_MAP_METADATA_KEYS)
 
-    def _get_item(self, loss_map, lon, lat, datum):  # pylint: disable=R0201
+    @staticmethod
+    def _get_item(loss_map, lon, lat, datum):
         """
         Returns the data for a point in the loss map
 
