@@ -625,23 +625,16 @@ class LossCurveDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given loss curve from the database.
 
         The structure of the result is documented in
         :class:`LossCurveDBWriter`.
         """
-        loss_curve = self.session.query(LossCurve) \
-            .filter(LossCurve.output_id == output_id).one()
-        loss_curve_data = self.session.query(
-            sqlfunc.ST_X(LossCurveData.location),
-            sqlfunc.ST_Y(LossCurveData.location),
-            LossCurveData) \
-            .filter(LossCurveData.loss_curve == loss_curve).all()
+        loss_curve = models.LossCurve.objects.get(output=output_id)
+        loss_curve_data = loss_curve.losscurvedata_set.all()
 
         curves = []
         asset = {
@@ -650,13 +643,14 @@ class LossCurveDBReader(object):
             'lossCategory': loss_curve.category,
         }
 
-        for lon, lat, datum in loss_curve_data:
+        for datum in loss_curve_data:
             curve = shapes.Curve(zip(datum.losses, datum.poes))
 
             asset_object = asset.copy()
             asset_object['assetID'] = datum.asset_ref
 
-            curves.append((shapes.Site(lon, lat), (curve, asset_object)))
+            loc = datum.location
+            curves.append((shapes.Site(loc.x, loc.y), (curve, asset_object)))
 
         return curves
 
