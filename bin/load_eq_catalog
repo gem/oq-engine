@@ -22,7 +22,6 @@
     CLI frontend to load the EQ Catalog into a postgres database
 """
 
-import os
 import sys
 
 import oqpath
@@ -47,6 +46,8 @@ flags.DEFINE_string('host', 'localhost', "Postgres' host")
 flags.DEFINE_string('port', '5432', "Postgres' port")
 flags.DEFINE_string('dbname', 'openquake', 'OpenQuake db')
 flags.DEFINE_string('dbschema', 'eqcat', 'Openquake schema')
+flags.DEFINE_string('csvfile', 'tests/data/ISC_sampledata1.csv',
+    'Openquake schema')
 
 flags.DEFINE_boolean('version', False, 'Show version information')
 
@@ -70,21 +71,24 @@ HELP USAGE
 
 EXAMPLE:
     %(loader)s --dbuser=youruser \
---dbpassword=yourpassword""" % {'loader': sys.argv[0]}
+[--csvfile=yourcsvfile]""" % {'loader': sys.argv[0]}
 
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
 
-    if FLAGS.dbuser and FLAGS.dbpassword and FLAGS.dbname:
+    if len(sys.argv) == 1:
+        eq_help()
+        sys.exit(0)
 
-        engine = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
+    elif FLAGS.dbuser and FLAGS.dbname:
+
+        ENGINE = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
                                   password=FLAGS.dbpassword)
 
-        # TODO: make CSV_PATH a parameter
-        CSV_PATH = "tests/data/ISC_sampledata1.csv"
-        csv_loader = db_loader.CsvModelLoader(CSV_PATH, engine, FLAGS.dbschema)
-        csv_loader.serialize()
+        CSV_PATH = FLAGS.csvfile
+        CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH, ENGINE, FLAGS.dbschema)
+        CSV_LOADER.serialize()
         print "Import of %s done." % CSV_PATH
 
     elif FLAGS.version:
