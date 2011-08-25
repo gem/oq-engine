@@ -36,6 +36,7 @@ from openquake import logs
 from openquake import shapes
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
+from openquake.db.models import OqJob as OqJobModel
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
@@ -91,7 +92,10 @@ def spawn_job_supervisor(job_id, pid):
 
         cmd = [exe, str(job_id), str(pid)]
 
-        return subprocess.Popen(cmd, env=os.environ).pid
+        supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
+        OqJobModel.objects.filter(id=job_id).update(
+            supervisor_pid=supervisor_pid, job_pid=pid
+        )
     else:
         LOG.warn('This job won\'t be supervised, '
                  'because no supervisor is configured in openquake.cfg')
