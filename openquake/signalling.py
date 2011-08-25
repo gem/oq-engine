@@ -42,7 +42,8 @@ def generate_routing_key(job_id, type_):
     :return: the routing key
     :rtype: string
     """
-    assert type_ in ('*', 'failed', 'succeeded', 'ERROR', 'FATAL')
+    assert type_ in ('*', 'failed', 'succeeded',
+                     'FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG')
 
     assert isinstance(job_id, int) or job_id == '*'
 
