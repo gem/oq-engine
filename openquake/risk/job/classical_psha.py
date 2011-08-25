@@ -69,7 +69,7 @@ class ClassicalPSHABasedMixin:
         job = models.OqJob.objects.get(id=self.job_id)
         hc = models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job).extra(
-            where=["ST_GeoHash(location, 12) = '%s'" % gh])[0]
+            where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
         return Curve(zip(job.oq_params.imls, hc.poes))
 

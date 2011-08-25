@@ -83,9 +83,9 @@ class ProbabilisticEventMixin():
         """Returns a list of the output IDs of all computed GMFs"""
 
         ids = models.Output.objects.filter(
-            oq_job=job_id, output_type='gmf').values_list('id')
+            oq_job=job_id, output_type='gmf').values_list('id', flat=True)
 
-        return [row[0] for row in ids]
+        return list(ids)
 
     def _get_db_gmf(self, gmf_id):
         """Returns a field for the given GMF"""
