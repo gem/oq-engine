@@ -99,6 +99,9 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
         self.pid = pid
 
     def get_queue_name(self):
+        """
+        The name of the queue that will contain the messages of this consumer.
+        """
         return supervisor_queue_name(self.job_id)
 
     def message_callback(self, msg):
@@ -142,10 +145,19 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
 
 
 def supervisor_queue_name(job_id):
+    """
+    Return the name for the message queue of a job supervisor.
+    """
     return 'supervisor-%s' % job_id
 
 
-def declare_and_bind_supervisor_queue(job_id):
+def bind_supervisor_queue(job_id):
+    """
+    Declare and bind the message queue used by the job supervisor.
+
+    It is safe to call this function more than once.  If the exchange, queue or
+    bindings already exists, this function won't create them again.
+    """
     return signalling.declare_and_bind_queue(
         job_id, ('ERROR', 'FATAL'), supervisor_queue_name(job_id))
 

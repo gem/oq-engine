@@ -56,7 +56,7 @@ def main():  # pylint: disable=C0111
     signal.signal(signal.SIGINT, lambda _, __: None)
 
     # Create the supervisor amqp queue
-    supervisor.declare_and_bind_supervisor_queue(job_id)
+    supervisor.bind_supervisor_queue(job_id)
 
     supervisor.supervise(pid, job_id)
 
