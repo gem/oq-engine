@@ -42,8 +42,7 @@ from openquake.job import Job
 from openquake import producer
 from openquake.utils import config
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
+from openquake.db import models
 
 FLAGS = flags.FLAGS
 
@@ -427,18 +426,17 @@ class DbTestMixin(TestMixin):
         """Create an upload with associated inputs.
 
         :param integer dbkey: if set use the upload record with given db key.
-        :returns: a :py:class:`db.alchemy.models.Upload` instance
+        :returns: a :py:class:`db.models.Upload` instance
         """
-        session = get_db_session("job", "init")
         if dbkey:
-            upload = session.query(Upload).filter(Upload.id == dbkey).one()
-            return upload
+            return models.Upload.objects.get(id=dbkey)
 
-        user = session.query(OqUser).filter(
-            OqUser.user_name == "openquake").one()
-        upload = Upload(owner=user, path=tempfile.mkdtemp())
-        session.add(upload)
-        session.commit()
+        user = models.OqUser.objects.get(user_name="openquake")
+        user.save()
+
+        upload = models.Upload(owner=user, path=tempfile.mkdtemp())
+        upload.save()
+
         return upload
 
     def teardown_upload(self, upload, filesystem_only=True):
@@ -446,7 +444,7 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given upload.
 
-        :param upload: the :py:class:`db.alchemy.models.Upload` instance
+        :param upload: the :py:class:`db.models.Upload` instance
             in question
         :param bool filesystem_only: if set the upload/input database records
             will be left intact. This saves time and the test db will be
@@ -456,9 +454,7 @@ class DbTestMixin(TestMixin):
         shutil.rmtree(upload.path, ignore_errors=True)
         if filesystem_only:
             return
-        session = get_db_session("job", "init")
-        session.delete(upload)
-        session.commit()
+        upload.delete()
 
     def setup_classic_job(self, create_job_path=True, upload_id=None):
         """Create a classic job with associated upload and inputs.
@@ -466,11 +462,10 @@ class DbTestMixin(TestMixin):
         :param integer upload_id: if set use upload record with given db key.
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
-        :returns: a :py:class:`db.alchemy.models.OqJob` instance
+        :returns: a :py:class:`db.models.OqJob` instance
         """
-        session = get_db_session("job", "init")
         upload = self.setup_upload(upload_id)
-        oqp = OqParams()
+        oqp = models.OqParams()
         oqp.job_type = "classical"
         oqp.upload = upload
         oqp.region_grid_spacing = 0.01
@@ -486,16 +481,19 @@ class DbTestMixin(TestMixin):
         oqp.realizations = 1
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
-        session.add(oqp)
-        job = OqJob(oq_params=oqp, owner=upload.owner, job_type="classical")
-        session.add(job)
-        session.commit()
+        oqp.save()
+
+        job = models.OqJob(oq_params=oqp, owner=upload.owner,
+                           job_type="classical")
+        job.save()
+
         if create_job_path:
             job.path = os.path.join(upload.path, str(job.id))
-            session.add(job)
-            session.commit()
+            job.save()
+
             os.mkdir(job.path)
             os.chmod(job.path, 0777)
+
         return job
 
     def teardown_job(self, job, filesystem_only=True):
@@ -503,7 +501,7 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given job.
 
-        :param job: the :py:class:`db.alchemy.models.OqJob` instance
+        :param job: the :py:class:`db.models.OqJob` instance
             in question
         :param bool filesystem_only: if set the oq_job/oq_param/upload/input
             database records will be left intact. This saves time and the test
@@ -515,31 +513,30 @@ class DbTestMixin(TestMixin):
             self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
         if filesystem_only:
             return
-        session = get_db_session("job", "init")
-        session.delete(job)
-        session.delete(oqp)
-        session.commit()
+
+        job.delete()
+        opq.delete()
 
     def setup_output(self, job_to_use=None, output_type="hazard_map",
                      db_backed=True):
         """Create an output object of the given type.
 
         :param job_to_use: if set use the passed
-            :py:class:`db.alchemy.models.OqJob` instance as opposed to
+            :py:class:`db.models.OqJob` instance as opposed to
             creating a new one.
         :param str output_type: map type, one of "hazard_map", "loss_map"
         :param bool db_backed: initialize the property of the newly created
-            :py:class:`db.alchemy.models.Output` instance with this value.
-        :returns: a :py:class:`db.alchemy.models.Output` instance
+            :py:class:`db.models.Output` instance with this value.
+        :returns: a :py:class:`db.models.Output` instance
         """
         job = job_to_use if job_to_use else self.setup_classic_job()
-        output = Output(owner=job.owner, oq_job=job, output_type=output_type,
-                        db_backed=db_backed)
+        output = models.Output(owner=job.owner, oq_job=job,
+                               output_type=output_type,
+                               db_backed=db_backed)
         output.path = self.generate_output_path(job, output_type)
         output.display_name = os.path.basename(output.path)
-        session = get_db_session("job", "init")
-        session.add(output)
-        session.commit()
+        output.save()
+
         return output
 
     def generate_output_path(self, job, output_type="hazard_map"):
@@ -554,7 +551,7 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given output.
 
-        :param output: the :py:class:`db.alchemy.models.Output` instance
+        :param output: the :py:class:`db.models.Output` instance
             in question
         :param bool teardown_job: the associated job and its related artefacts
             shall be torn down as well.
@@ -564,8 +561,6 @@ class DbTestMixin(TestMixin):
         """
         job = output.oq_job
         if not filesystem_only:
-            session = get_db_session("job", "init")
-            session.delete(output)
-            session.commit()
+            output.delete()
         if teardown_job:
             self.teardown_job(job, filesystem_only=filesystem_only)

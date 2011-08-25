@@ -20,7 +20,6 @@
 
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
 from openquake.job import Job
 from openquake.job.mixins import Mixin
 from openquake.output.hazard import *
