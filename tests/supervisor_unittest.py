@@ -18,9 +18,14 @@
 
 import unittest
 
-from tests.utils.helpers import patch
+from tests.utils.helpers import patch, job_from_file, get_data_path
+from openquake.db.models import OqJob
 
 from openquake.supervising import supervisor
+from openquake.supervising import supersupervisor
+
+
+CONFIG_FILE = "config.gem"
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -95,3 +100,36 @@ class SupervisorTestCase(unittest.TestCase):
 
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(((1,), {}), self.cleanup_after_job.call_args)
+
+
+class SupersupervisorTestCase(unittest.TestCase):
+    def setUp(self):
+        self.running_pid = 1324
+        self.stopped_pid = 4312
+        OqJob.objects.all().update(status='succeeded')
+        job_pid = 1
+        for status in ('pending', 'running', 'failed', 'succeeded'):
+            for supervisor_pid in (self.running_pid, self.stopped_pid):
+                job = job_from_file(get_data_path(CONFIG_FILE))
+                job = OqJob.objects.get(id=job.job_id)
+                job.status = status
+                job.supervisor_pid = supervisor_pid
+                job.job_pid = job_pid
+                job_pid += 1
+                job.save()
+                if status == 'running' and supervisor_pid == self.stopped_pid:
+                    self.died_supervisor_job_id = job.id
+                    self.died_supervisor_job_pid = job.job_pid
+        self.is_pid_running = patch('openquake.supervising.is_pid_running')
+        self.is_pid_running = self.is_pid_running.start()
+        self.is_pid_running.side_effect = lambda pid: pid != self.stopped_pid
+
+    def tearDown(self):
+        self.is_pid_running.stop()
+
+    def test_main(self):
+        with patch('openquake.job.spawn_job_supervisor') as spawn:
+            supersupervisor.main()
+            self.assertEqual(spawn.call_count, 1)
+            args = (self.died_supervisor_job_id, self.died_supervisor_job_pid)
+            self.assertEqual(spawn.call_args, (args, {}))
