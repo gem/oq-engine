@@ -784,7 +784,7 @@ class HazardCurveDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-class GMFDBReader(object):
+class GmfDBReader(object):
     """
     Read ground motion field data from the database, returning a data structure
     that can be passed to :func:`GMFXMLWriter.serialize` to
@@ -796,7 +796,7 @@ class GMFDBReader(object):
         """
         Read a the given ground motion field from the database.
 
-        The structure of the result is documented in :class:`GMFDBWriter`.
+        The structure of the result is documented in :class:`GmfDBWriter`.
         """
         gmf_data = models.GmfData.objects.filter(output=output_id)
         points = {}
@@ -810,7 +810,7 @@ class GMFDBReader(object):
         return points
 
 
-class GMFDBWriter(writer.DBWriterSA):
+class GmfDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -823,11 +823,11 @@ class GMFDBWriter(writer.DBWriterSA):
          Site(-117, 41): {'groundMotion': 0.3}}
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(GmfDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserterSA(GMFData)
+        self.bulk_inserter = writer.BulkInserter(models.GmfData)
 
     def get_output_type(self):
         return "gmf"
@@ -911,8 +911,9 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     :param str nrml_path: the full path of the XML/NRML representation of the
         ground motion field.
     :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
-        :py:class:`output.hazard.GMFDBWriter` instance.
+        :py:class:`output.hazard.GmfDBWriter` instance.
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           GMFXMLWriter,
-                          GMFDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: GmfDBWriter(p, j))
