@@ -48,7 +48,7 @@ from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
 # pylint: disable=W0611
 from openquake.db.alchemy.models import (
-    HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData)
+    HazardMap, HazardMapData, GMFData)
 
 from openquake import job
 from openquake import shapes
@@ -706,7 +706,7 @@ class HazardCurveDBReader(object):
         return points
 
 
-class HazardCurveDBWriter(writer.DBWriterSA):
+class HazardCurveDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -729,12 +729,11 @@ class HazardCurveDBWriter(writer.DBWriterSA):
            'statistics': 'quantile'})]
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(HazardCurveDBWriter, self).__init__(session, nrml_path,
-                                                  oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserterSA(HazardCurveData)
+        self.bulk_inserter = writer.BulkInserter(models.HazardCurveData)
 
     def get_output_type(self):
         return "hazard_curve"
@@ -764,23 +763,23 @@ class HazardCurveDBWriter(writer.DBWriterSA):
             raise ValueError(error_msg)
 
         if curve_label in self.curves_per_branch_label:
-            hazard_curve_item = self.curves_per_branch_label[curve_label]
+            hazard_curve = self.curves_per_branch_label[curve_label]
         else:
             if 'endBranchLabel' in values:
-                hazard_curve_item = HazardCurve(
+                hazard_curve = models.HazardCurve(
                     output=self.output, end_branch_label=curve_label)
             else:
-                hazard_curve_item = HazardCurve(
+                hazard_curve = models.HazardCurve(
                     output=self.output, statistic_type=curve_label)
 
                 if 'quantileValue' in values:
-                    hazard_curve_item.quantile = values['quantileValue']
+                    hazard_curve.quantile = values['quantileValue']
 
-            self.curves_per_branch_label[curve_label] = hazard_curve_item
-            self.session.flush()
+            self.curves_per_branch_label[curve_label] = hazard_curve
+            hazard_curve.save()
 
         self.bulk_inserter.add_entry(
-            hazard_curve_id=hazard_curve_item.id,
+            hazard_curve_id=hazard_curve.id,
             poes=values['PoEValues'],
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
@@ -880,7 +879,8 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardCurveXMLWriter,
-                          HazardCurveDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: HazardCurveDBWriter(p, j))
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
