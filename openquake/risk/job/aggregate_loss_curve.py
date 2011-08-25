@@ -50,19 +50,18 @@ def _for_plotting(loss_curve, time_span):
     return data
 
 
-# TODO (ac): Update doc!
-def compute_aggregate_curve(job, aggregate_curve):
-    """Compute and plot an aggreate loss curve.
-
-    This function expects to find in kvs a set of pre computed
-    GMFs and assets.
+def plot_aggregate_curve(job, aggregate_curve):
+    """Plot an aggreate loss curve.
 
     This function is triggered only if the AGGREGATE_LOSS_CURVE
     parameter is specified in the configuration file.
 
     :param job: the job the engine is currently processing.
-    :type job: openquake.risk.job.probabilistic.ProbabilisticEventMixin
+    :type job: :py:class:`openquake.risk.job.probabilistic.ProbabilisticEventMixin`
+    :param aggregate_curve: the aggregate curve to plot.
+    :type aggregate_curve: :py:class:`openquake.shapes.Curve`
     """
+
     if not job.has("AGGREGATE_LOSS_CURVE"):
         LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
                 "skipping aggregate loss curve computation...")
