@@ -244,13 +244,10 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            lmw = LossMapDBWriter(session, output_path + str(i), self.job.id)
+            lmw = LossMapDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             lmw.serialize(data)
-
-        session.commit()
