@@ -22,10 +22,11 @@
 """
 The OpenQuake job supervisor process, spawned by each OpenQuake job.
 """
+import os
 import signal
 import sys
 
-from openquake.supervising.supervisor import supervise
+from openquake.supervising import supervisor
 
 try:
     # setproctitle is optional external dependency
@@ -36,6 +37,10 @@ except ImportError:
     setproctitle = lambda title: None
 
 def main():  # pylint: disable=C0111
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
+
+    from openquake import supervisor
+
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
 
@@ -49,7 +54,12 @@ def main():  # pylint: disable=C0111
     # To avoid premature death of the supervisor we ignore the SIGINT signal.
     signal.signal(signal.SIGINT, lambda _, __: None)
 
-    supervise(pid, job_id)
+    supervisor.create_supervisor_queue(job_id)
+
+    sys.stdout.write(supervisor.QUEUE_CREATED_MSG + '\n')
+    sys.stdout.flush()
+
+    supervisor.supervise(pid, job_id)
 
 if __name__ == '__main__':
     main()

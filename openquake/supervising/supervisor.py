@@ -140,6 +140,15 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
             raise StopIteration
 
 
+QUEUE_CREATED_MSG = 'SUPERVISOR QUEUE CREATED'
+
+
+def create_supervisor_queue(job_id):
+    qname = 'supervisor-%s' % job_id
+
+    return signalling.create_queue(job_id, ('ERROR', 'FATAL'), qname)
+
+
 def supervise(pid, job_id):
     """
     Supervise a job process, entering a loop that ends only when the job
