@@ -55,7 +55,7 @@ class BulkInserterTestCase(unittest.TestCase):
         self.connections = writer.connections
 
         writer.connections = dict(
-            admin=DummyConnection(), hzrdr_write=DummyConnection())
+            admin=DummyConnection(), reslt_writer=DummyConnection())
 
     def tearDown(self):
         writer.connections = self.connections
@@ -100,7 +100,7 @@ class BulkInserterTestCase(unittest.TestCase):
                           full_name='An user',
                           data_is_open=False)
 
-    @transaction.commit_on_success
+    @transaction.commit_on_success('admin')
     def test_flush(self):
         inserter = BulkInserter(OqUser)
         connection = writer.connections['admin']
@@ -122,10 +122,10 @@ class BulkInserterTestCase(unittest.TestCase):
                               ' (%%s, %%s), (%%s, %%s)' %
                           (", ".join(fields)), connection.sql)
 
-    @transaction.commit_on_success
+    @transaction.commit_on_success('reslt_writer')
     def test_flush_geometry(self):
         inserter = BulkInserter(GmfData)
-        connection = writer.connections['hzrdr_write']
+        connection = writer.connections['reslt_writer']
 
         inserter.add_entry(location='POINT(1 1)', output_id=1)
         fields = inserter.fields
