@@ -233,7 +233,7 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.display_name = os.path.basename(output_path)
 
         self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
-        self.reader = LossMapDBReader(self.session)
+        self.reader = LossMapDBReader()
 
 
 class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
