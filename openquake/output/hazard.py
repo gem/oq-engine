@@ -46,6 +46,7 @@ from lxml import etree
 
 from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
+# pylint: disable=W0611
 from openquake.db.alchemy.models import (
     HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData)
 
