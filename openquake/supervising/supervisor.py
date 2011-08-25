@@ -82,7 +82,8 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
     job.save()
 
     if error_msg:
-        ErrorMsg.objects.create(oq_job=job, detailed=error_msg)
+        ErrorMsg.objects.using('job_superv')\
+                        .create(oq_job=job, detailed=error_msg)
 
 
 class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
