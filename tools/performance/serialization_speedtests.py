@@ -230,16 +230,13 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = LOSS_CURVE_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 20):
-            lcw = LossCurveDBWriter(session, output_path + str(i), self.job.id)
+            lcw = LossCurveDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             lcw.serialize(data)
-
-        session.commit()
 
 
 class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
