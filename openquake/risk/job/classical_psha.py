@@ -67,7 +67,7 @@ class ClassicalPSHABasedMixin:
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
-        session = get_db_session("reslt", "reader")
+        session = get_db_session("job", "init")
 
         iml_query = session.query(models.OqParams.imls) \
             .join(models.OqJob) \
