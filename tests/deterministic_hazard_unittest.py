@@ -23,16 +23,15 @@ event based calculation.
 """
 
 import math
-import mock
 import numpy
 import unittest
 import json
 
-from utils import helpers
+from tests.utils import helpers
+from tests.utils.helpers import patch
 
 from openquake import java
 from openquake import kvs
-from openquake import job
 from openquake import flags
 from openquake import shapes
 
@@ -42,13 +41,13 @@ DETERMINISTIC_SMOKE_TEST = helpers.smoketest_file("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
 
 
-def compute_ground_motion_field(self, random_generator):
+def compute_ground_motion_field(self, _random_generator):
     """Stubbed version of the method that computes the ground motion
     field calling java stuff."""
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.sites_for_region():
+    for site in self.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
@@ -63,22 +62,18 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.kvs_client = kvs.get_client(binary=False)
-        # kvs.flush()
-
-    @classmethod
-    def tearDownClass(cls):
-        # kvs.flush()
-        pass
+        cls.kvs_client = kvs.get_client()
 
     def setUp(self):
         kvs.flush()
 
         flags.FLAGS.include_defaults = False
 
-        self.job = job.Job.from_file(DETERMINISTIC_SMOKE_TEST, 'xml')
+        self.job = helpers.job_from_file(DETERMINISTIC_SMOKE_TEST)
 
         self.job.params[NUMBER_OF_CALC_KEY] = "1"
+
+        self.job.params['SERIALIZE_RESULTS_TO'] = 'xml'
 
         # saving the default java implementation
         self.default = \
@@ -97,7 +92,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         kvs.flush()
 
-    def test_triggered_with_deterministic_calculation_mode(self):
+    def test_deterministic_job_completes(self):
         """The deterministic calculator is triggered.
 
         When CALCULATION_MODE is set to "Deterministic" the deterministic event
@@ -109,9 +104,9 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
             # True, True means that both mixins (hazard and risk) are triggered
-            self.assertEqual([True, True], self.job.launch())
+            self.job.launch()
 
     def test_the_hazard_subsystem_stores_gmfs_for_all_the_sites(self):
         """The hazard subsystem stores the computed gmfs in kvs.
@@ -125,15 +120,15 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
             self.job.launch()
             decoder = json.JSONDecoder()
 
-            for site in self.job.sites_for_region():
+            for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job.id, point)
+                    self.job.job_id, point)
 
                 # just one calculation is triggered in this test case
                 print "key is %s" % key
@@ -164,15 +159,15 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
             self.job.launch()
             decoder = json.JSONDecoder()
 
-            for site in self.job.sites_for_region():
+            for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job.id, point)
+                    self.job.job_id, point)
 
                 self.assertEqual(3, self.kvs_client.llen(key))
                 gmv = decoder.decode(self.kvs_client.lpop(key))
@@ -219,14 +214,14 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     def test_simple_computation_using_the_java_calculator(self):
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
             self.job.launch()
 
-            for site in self.job.sites_for_region():
+            for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job.id, point)
+                    self.job.job_id, point)
 
                 self.assertTrue(kvs.get_keys(key))
 
