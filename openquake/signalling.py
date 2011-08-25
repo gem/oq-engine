@@ -50,7 +50,7 @@ def connect():
     return conn, chn
 
 
-def create_queue(job_id, levels, name=None):
+def create_queue(job_id, levels, name=''):
     """
     Create an amqp queue for sending/receiving messages for a specific job.
 
@@ -58,9 +58,9 @@ def create_queue(job_id, levels, name=None):
     :type job_id: int
     :param levels: the signalling levels, e.g. 'ERROR'
     :type levels: iterable of strings
-    :param name: the name for the queue
-    :type name: string or None to give the queue an automatically generated
-                name
+    :param name: the name for the queue, '' (empty string) to give the queue an
+                 automatically generated name
+    :type name: string
     :return: the name of the created queue
     :rtype: string
     """
@@ -68,7 +68,7 @@ def create_queue(job_id, levels, name=None):
 
     conn, chn = connect()
 
-    name, _, _ = chn.queue_declare(name)
+    name, _, _ = chn.queue_declare(queue=name)
 
     for level in levels:
         chn.queue_bind(name, cfg['exchange'],
@@ -116,10 +116,10 @@ class LogMessageConsumer(object):
             levels = ('*',)
 
         self.qname = create_queue(self.job_id, levels,
-                                  self.generate_queue_name())
+                                  self.get_queue_name())
 
-    def generate_queue_name(self):
-        return None
+    def get_queue_name(self):
+        return ''
 
     def __enter__(self):
         return self

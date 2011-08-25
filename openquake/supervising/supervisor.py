@@ -97,8 +97,8 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
 
         self.pid = pid
 
-    def generate_queue_name(self):
-        return 'supervisor-%s' % self.job_id
+    def get_queue_name(self):
+        return supervisor_queue_name(self.job_id)
 
     def message_callback(self, msg):
         """
@@ -143,10 +143,13 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
 QUEUE_CREATED_MSG = 'SUPERVISOR QUEUE CREATED'
 
 
-def create_supervisor_queue(job_id):
-    qname = 'supervisor-%s' % job_id
+def supervisor_queue_name(job_id):
+    return 'supervisor-%s' % job_id
 
-    return signalling.create_queue(job_id, ('ERROR', 'FATAL'), qname)
+
+def create_supervisor_queue(job_id):
+    return signalling.create_queue(
+        job_id, ('ERROR', 'FATAL'), supervisor_queue_name(job_id))
 
 
 def supervise(pid, job_id):
