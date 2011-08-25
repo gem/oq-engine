@@ -28,8 +28,6 @@ from openquake import job
 from openquake import kvs
 from openquake import shapes
 
-from openquake.db.alchemy import db_utils
-
 from openquake.output import hazard
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
