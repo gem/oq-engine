@@ -24,9 +24,9 @@ The OpenQuake job supervisor supervisor process, spawned periodically
 to respawn crashed :mod:`supervisors <openquake.supervising.supervisor>`.
 """
 
-from openquake.job import spawn_job_supervisor
+from openquake import job
 from openquake.db.models import OqJob
-from openquake.supervising import is_pid_running
+from openquake import supervising
 
 
 def main():
@@ -38,8 +38,8 @@ def main():
     qs = OqJob.objects.filter(status='running') \
                       .values_list('id', 'job_pid', 'supervisor_pid')
     for job_id, job_pid, supervisor_pid in qs:
-        if not is_pid_running(supervisor_pid):
-            spawn_job_supervisor(job_id, job_pid)
+        if not supervising.is_pid_running(supervisor_pid):
+            job.spawn_job_supervisor(job_id, job_pid)
 
 if __name__ == '__main__':
     main()
