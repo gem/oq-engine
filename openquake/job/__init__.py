@@ -95,8 +95,11 @@ def spawn_job_supervisor(job_id, pid):
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
         OqJobModel.objects.filter(id=job_id).update(
-            supervisor_pid=supervisor_pid, job_pid=pid
-        )
+            supervisor_pid=supervisor_pid, job_pid=pid)
+
+        # Ensure the supervisor amqp queue exists
+        supervisor.declare_and_bind_supervisor_queue(job_id)
+
         return supervisor_pid
     else:
         LOG.warn('This job won\'t be supervised, '
