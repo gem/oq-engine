@@ -43,12 +43,11 @@ class OQRouter(object):
 
         :returns: schema name, or None if no schema is defined
         '''
-        match = cls.SCHEMA_TABLE_RE.match(
-            model._meta.db_table)  # pylint: disable=W0212
-        if match:
-            return match.group(1), match.group(2)
+        parts = model._meta.db_table.split('"."')
+        if len(parts) == 2:
+            return parts
         else:
-            return None, None
+            return None, parts[0]
 
     def db_for_read(self, model, **_hints):
         '''
