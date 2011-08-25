@@ -18,6 +18,18 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+# simple non-automated speed tests; run with
+# nosetests -s to see timing for single tests
+#
+# some indicative timings:
+# GMFDBWriterTestCase.test_serialize_small            2.71 sec
+# HazardCurveDBWriterTestCase.test_deserialize_small 24.32 sec
+# HazardCurveDBWriterTestCase.test_serialize_small   17.48 sec
+# HazardMapDBWriterTestCase.test_serialize_small      3.48 sec
+# LossCurveDBWriterTestCase.test_serialize_small     11.24 sec
+# LossMapDBWriterTestCase.test_serialize_small       12.80 sec
+
+
 import unittest
 
 from openquake.db.alchemy.db_utils import get_db_session
@@ -154,7 +166,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         session.commit()
 
         # deserialize
-        hcr = HazardCurveDBReader(session)
+        hcr = HazardCurveDBReader()
 
         for i in xrange(0, 10):
             # Call the function under test.
