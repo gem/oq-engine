@@ -26,9 +26,7 @@ from celery.exceptions import TimeoutError
 from openquake import kvs
 from openquake import logs
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy import models
-from sqlalchemy import func as sqlfunc
+from openquake.db import models
 
 from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based as cpsha_based
@@ -67,24 +65,13 @@ class ClassicalPSHABasedMixin:
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
-        session = get_db_session("job", "init")
+        gh = geohash.encode(site.latitude, site.longitude, precision=12)
+        job = models.OqJob.objects.get(id=self.job_id)
+        hc = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job).extra(
+            where=["ST_GeoHash(location, 12) = '%s'" % gh])[0]
 
-        iml_query = session.query(models.OqParams.imls) \
-            .join(models.OqJob) \
-            .filter(models.OqJob.id == self.job_id)
-        curve_query = session.query(models.HazardCurveData.poes) \
-            .join(models.HazardCurve) \
-            .join(models.Output) \
-            .filter(models.Output.oq_job_id == self.job_id) \
-            .filter(models.HazardCurve.statistic_type == 'mean') \
-            .filter(sqlfunc.ST_GeoHash(models.HazardCurveData.location, 12)
-                        == geohash.encode(site.latitude, site.longitude,
-                                          precision=12))
-
-        hc = curve_query.one()
-        pms = iml_query.one()
-
-        return Curve(zip(pms.imls, hc.poes))
+        return Curve(zip(job.oq_params.imls, hc.poes))
 
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
