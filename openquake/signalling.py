@@ -53,7 +53,7 @@ def connect():
     chn = conn.channel()
     # I use the vhost as a realm, which seems to be an arbitrary string
     chn.access_request(cfg['vhost'], active=False, read=True)
-    chn.exchange_declare(cfg['exchange'], 'topic', auto_delete=True)
+    chn.exchange_declare(cfg['exchange'], 'topic', auto_delete=False)
 
     return conn, chn
 
@@ -76,7 +76,7 @@ def create_queue(job_id, levels, name=''):
 
     conn, chn = connect()
 
-    name, _, _ = chn.queue_declare(queue=name)
+    name, _, _ = chn.queue_declare(queue=name, auto_delete=False)
 
     for level in levels:
         chn.queue_bind(name, cfg['exchange'],
