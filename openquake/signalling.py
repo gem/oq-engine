@@ -110,12 +110,13 @@ class LogMessageConsumer(object):
         self.job_id = job_id
         self.timeout = timeout
 
-        self.conn, self.ch = connect()
+        self.conn, self.chn = connect()
 
         if levels is None:
             levels = ('*',)
 
-        create_queue(self.job_id, levels, self.generate_queue_name())
+        self.qname = create_queue(self.job_id, levels,
+                                  self.generate_queue_name())
 
     def generate_queue_name(self):
         return None
