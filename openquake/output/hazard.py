@@ -47,7 +47,7 @@ from lxml import etree
 from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import (
-    HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData)
+    HazardMap, HazardMapData, GMFData)
 
 from openquake import job
 from openquake import shapes
