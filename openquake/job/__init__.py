@@ -98,7 +98,7 @@ def spawn_job_supervisor(job_id, pid):
             supervisor_pid=supervisor_pid, job_pid=pid)
 
         # Ensure the supervisor amqp queue exists
-        supervisor.declare_and_bind_supervisor_queue(job_id)
+        supervisor.bind_supervisor_queue(job_id)
 
         return supervisor_pid
     else:
