@@ -84,8 +84,8 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
 # TODO (ac): Confirm this works regardless of the method of hazard calc
         histories = int(self["NUMBER_OF_SEISMICITY_HISTORIES"])
         realizations = int(self["NUMBER_OF_LOGIC_TREE_SAMPLES"])
-
         num_ses = histories * realizations
+
         return num_ses * self._time_span()
 
     def _time_span(self):
