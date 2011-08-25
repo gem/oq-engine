@@ -30,7 +30,6 @@ from lxml import etree
 
 from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import LossMap, LossMapData
 
 from openquake import logs
 from openquake import shapes
@@ -324,7 +323,7 @@ class LossMapDBReader(object):
         return site, (loss, asset)
 
 
-class LossMapDBWriter(writer.DBWriterSA):
+class LossMapDBWriter(writer.DBWriter):
     """
     Serialize to the database deterministic and non-deterministic loss maps.
 
@@ -394,11 +393,11 @@ class LossMapDBWriter(writer.DBWriterSA):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        super(LossMapDBWriter, self).__init__(*args, **kwargs)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.metadata = None
-        self.bulk_inserter = writer.BulkInserterSA(LossMapData)
+        self.bulk_inserter = writer.BulkInserter(models.LossMapData)
 
     def get_output_type(self):
         return 'loss_map'
@@ -460,9 +459,8 @@ class LossMapDBWriter(writer.DBWriterSA):
         for key, metadata_key in LOSS_MAP_METADATA_KEYS:
             kwargs[key] = metadata.get(metadata_key)
 
-        self.metadata = LossMap(**kwargs)
-        self.session.add(self.metadata)
-        self.session.flush()
+        self.metadata = models.LossMap(**kwargs)
+        self.metadata.save()
 
 
 def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
@@ -485,9 +483,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
     writers = []
 
     if 'db' in serialize_to:
-        writers.append(LossMapDBWriter(get_db_session("reslt", "writer"),
-                                       nrml_path,
-                                       job_id))
+        writers.append(LossMapDBWriter(nrml_path, job_id))
 
     if 'xml' in serialize_to:
         if deterministic:
