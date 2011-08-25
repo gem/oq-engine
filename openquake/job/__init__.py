@@ -34,6 +34,7 @@ from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
+from openquake import supervisor
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.models import OqJob as OqJobModel
@@ -96,6 +97,7 @@ def spawn_job_supervisor(job_id, pid):
         OqJobModel.objects.filter(id=job_id).update(
             supervisor_pid=supervisor_pid, job_pid=pid
         )
+        return supervisor_pid
     else:
         LOG.warn('This job won\'t be supervised, '
                  'because no supervisor is configured in openquake.cfg')
