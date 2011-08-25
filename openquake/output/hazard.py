@@ -760,23 +760,23 @@ class HazardCurveDBWriter(writer.DBWriter):
             raise ValueError(error_msg)
 
         if curve_label in self.curves_per_branch_label:
-            hazard_curve_item = self.curves_per_branch_label[curve_label]
+            hazard_curve = self.curves_per_branch_label[curve_label]
         else:
             if 'endBranchLabel' in values:
-                hazard_curve_item = models.HazardCurve(
+                hazard_curve = models.HazardCurve(
                     output=self.output, end_branch_label=curve_label)
             else:
-                hazard_curve_item = models.HazardCurve(
+                hazard_curve = models.HazardCurve(
                     output=self.output, statistic_type=curve_label)
 
                 if 'quantileValue' in values:
-                    hazard_curve_item.quantile = values['quantileValue']
+                    hazard_curve.quantile = values['quantileValue']
 
-            self.curves_per_branch_label[curve_label] = hazard_curve_item
-            hazard_curve_item.save()
+            self.curves_per_branch_label[curve_label] = hazard_curve
+            hazard_curve.save()
 
         self.bulk_inserter.add_entry(
-            hazard_curve_id=hazard_curve_item.id,
+            hazard_curve_id=hazard_curve.id,
             poes=values['PoEValues'],
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
