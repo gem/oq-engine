@@ -36,6 +36,7 @@ try:
 except ImportError:
     setproctitle = lambda title: None
 
+
 def main():  # pylint: disable=C0111
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
 
@@ -54,12 +55,11 @@ def main():  # pylint: disable=C0111
     # To avoid premature death of the supervisor we ignore the SIGINT signal.
     signal.signal(signal.SIGINT, lambda _, __: None)
 
-    supervisor.create_supervisor_queue(job_id)
-
-    sys.stdout.write(supervisor.QUEUE_CREATED_MSG + '\n')
-    sys.stdout.flush()
+    # Create the supervisor amqp queue
+    supervisor.declare_and_bind_supervisor_queue(job_id)
 
     supervisor.supervise(pid, job_id)
+
 
 if __name__ == '__main__':
     main()
