@@ -683,4 +683,3 @@ class RunJobTestCase(unittest.TestCase):
             job = OqJobModel.objects.get(pk=job.job_id)
             self.assertEqual(job.supervisor_pid, 42)
             self.assertEqual(job.job_pid, 54321)
-
