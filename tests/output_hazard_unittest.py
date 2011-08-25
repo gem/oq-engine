@@ -424,7 +424,7 @@ class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
                           self.sort(_normalize(data)))
 
 
-class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
     """Common code for ground motion field db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
@@ -438,8 +438,8 @@ class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = GMFDBWriter(self.session, output_path, self.job.id)
-        self.reader = GMFDBReader()
+        self.writer = GmfDBWriter(output_path, self.job.id)
+        self.reader = GmfDBReader()
 
     def normalize(self, values):
         def sort_key(v):
@@ -448,9 +448,9 @@ class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         return sorted(values, key=sort_key)
 
 
-class GMFDBWriterTestCase(GMFDBBaseTestCase):
+class GmfDBWriterTestCase(GmfDBBaseTestCase):
     """
-    Unit tests for the GMFDBWriter class, which serializes
+    Unit tests for the GmfDBWriter class, which serializes
     ground motion fields to the database.
     """
     def test_serialize(self):
@@ -485,9 +485,9 @@ class GMFDBWriterTestCase(GMFDBBaseTestCase):
                           self.normalize(inserted_data))
 
 
-class GMFDBReaderTestCase(GMFDBBaseTestCase):
+class GmfDBReaderTestCase(GmfDBBaseTestCase):
     """
-    Unit tests for the GMFDBReader class, which deserializes
+    Unit tests for the GmfDBReader class, which deserializes
     ground motion fields from the database.
     """
     def tearDown(self):
