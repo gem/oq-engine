@@ -38,17 +38,7 @@ FLAGS = flags.FLAGS
 
 # database related params
 
-flags.DEFINE_string('dbuser', 'postgres',
-    'User of the database')
-
-flags.DEFINE_string('dbpassword', '', 'User password')
-flags.DEFINE_string('host', 'localhost', "Postgres' host")
-flags.DEFINE_string('port', '5432', "Postgres' port")
-flags.DEFINE_string('dbname', 'openquake', 'OpenQuake db')
-flags.DEFINE_string('dbschema', 'eqcat', 'Openquake schema')
-flags.DEFINE_string('csvfile', 'tests/data/ISC_sampledata1.csv',
-    'Openquake schema')
-
+flags.DEFINE_string('csvfile', None, 'Openquake schema')
 flags.DEFINE_boolean('version', False, 'Show version information')
 
 
@@ -70,8 +60,7 @@ HELP USAGE
     %(loader)s --help # to get verbose help
 
 EXAMPLE:
-    %(loader)s --dbuser=youruser \
-[--csvfile=yourcsvfile]""" % {'loader': sys.argv[0]}
+    %(loader)s [--csvfile=yourcsvfile]""" % {'loader': sys.argv[0]}
 
 
 if __name__ == '__main__':
@@ -81,13 +70,10 @@ if __name__ == '__main__':
         eq_help()
         sys.exit(0)
 
-    elif FLAGS.dbuser and FLAGS.dbname:
-
-        ENGINE = db.create_engine(FLAGS.dbname, FLAGS.dbuser,
-                                  password=FLAGS.dbpassword)
+    elif FLAGS.csvfile:
 
         CSV_PATH = FLAGS.csvfile
-        CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH, ENGINE, FLAGS.dbschema)
+        CSV_LOADER = db_loader.CsvModelLoader(CSV_PATH)
         CSV_LOADER.serialize()
         print "Import of %s done." % CSV_PATH
 
