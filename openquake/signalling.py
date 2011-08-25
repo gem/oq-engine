@@ -27,6 +27,14 @@ from amqplib import client_0_8 as amqp
 from openquake.utils import config
 
 
+def generate_routing_key(job_id, level):
+    assert level in ('*', 'failed', 'succeeded', 'ERROR', 'FATAL')
+
+    assert isinstance(job_id, int) or job_id == '*'
+
+    return 'log.%s.%s' % (level, job_id)
+
+
 def connect():
     """
     Create an amqp channel for signalling using the parameters from
@@ -72,7 +80,7 @@ def create_queue(job_id, levels, name=''):
 
     for level in levels:
         chn.queue_bind(name, cfg['exchange'],
-                       routing_key='log.%s.%s' % (level, job_id))
+                       routing_key=generate_routing_key(job_id, level))
 
     chn.close()
     conn.close()
@@ -203,7 +211,7 @@ def signal_job_outcome(job_id, outcome):
     conn, chn = connect()
 
     chn.basic_publish(amqp.Message(), exchange=cfg['exchange'],
-                      routing_key='log.%s.%s' % (outcome, job_id))
+                      routing_key=generate_routing_key(job_id, outcome))
 
     chn.close()
     conn.close()
