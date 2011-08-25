@@ -546,7 +546,8 @@ class HazardMapDBReader(object):
     produce an XML file.
     """
 
-    def deserialize(self, output_id):  # pylint: disable=R0201
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given hazard map from the database.
 
@@ -801,7 +802,8 @@ class GMFDBReader(object):
     produce an XML file.
     """
 
-    def deserialize(self, output_id):  # pylint: disable=R0201
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given ground motion field from the database.
 
