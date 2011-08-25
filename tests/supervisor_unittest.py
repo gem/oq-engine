@@ -30,6 +30,10 @@ CONFIG_FILE = "config.gem"
 
 class SupervisorTestCase(unittest.TestCase):
     def setUp(self):
+        # Patch a few methods here and restore them in the tearDown to avoid
+        # too many nested with
+        # See http://www.voidspace.org.uk/python/mock/patch.html \
+        #     #patch-methods-start-and-stop
         self.patchers = []
 
         def patch_(attr_path):
