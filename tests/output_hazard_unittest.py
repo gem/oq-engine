@@ -21,8 +21,6 @@
 import os
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob
 from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
@@ -168,7 +166,6 @@ class HazardMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -195,18 +192,16 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         # Call the function under test.
         self.writer.insert_output("hazard_map")
 
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # Make sure the inserted output record has the right data.
-        [output] = self.job.output_set
+        output = self.job.output_set.get()
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
-        self.assertTrue(self.job is output.oq_job)
 
     def test_serialize_mean(self):
         """serialize() inserts the output and the hazard_map_data records."""
@@ -216,22 +211,21 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        [hazard_map] = output.hazardmap_set
+        output = self.job.output_set.get()
+        hazard_map = output.hazardmap_set.get()
 
         self.assertEquals(0.01, hazard_map.poe)
         self.assertEquals('mean', hazard_map.statistic_type)
         self.assertEquals(None, hazard_map.quantile)
 
         self.assertEqual(len(HAZARD_MAP_MEAN_DATA()),
-                         len(hazard_map.hazardmapdata_set))
-        self.assertEqual(0, len(output.lossmap_set))
+                         len(hazard_map.hazardmapdata_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
 
     def test_serialize_quantile(self):
         """serialize() inserts the output and the hazard_map_data records."""
@@ -241,22 +235,21 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
 
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        [hazard_map] = output.hazardmap_set
+        output = self.job.output_set.get()
+        hazard_map = output.hazardmap_set.get()
 
         self.assertEquals(0.01, hazard_map.poe)
         self.assertEquals('quantile', hazard_map.statistic_type)
         self.assertEquals(0.2, hazard_map.quantile)
 
         self.assertEqual(len(HAZARD_MAP_QUANTILE_DATA()),
-                         len(hazard_map.hazardmapdata_set))
-        self.assertEqual(0, len(output.lossmap_set))
+                         len(hazard_map.hazardmapdata_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
 
     def test_serialize_sets_min_max_values(self):
         """
@@ -328,7 +321,6 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -368,22 +360,21 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.writer.serialize(HAZARD_CURVE_DATA())
 
         # After calling the function under test we see the expected output.
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
-        self.assertEqual(1, len(self.job.output_set))
+        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        self.assertEqual(4, len(output.hazardcurve_set))
-        self.assertEqual(0, len(output.lossmap_set))
+        output = self.job.output_set.get()
+        self.assertEqual(4, len(output.hazardcurve_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
 
         # read data from the DB and check that it's equal to the original data
         inserted_data = []
 
-        for hc in output.hazardcurve_set:
-            for hcd in hc.hazardcurvedata_set:
-                location = hcd.location.coords(self.session)
-                node = (Site(location[0], location[1]),
+        for hc in output.hazardcurve_set.all():
+            for hcd in hc.hazardcurvedata_set.all():
+                location = hcd.location
+                node = (Site(location.x, location.y),
                         {'PoEValues': hcd.poes})
                 if hc.end_branch_label:
                     node[1]['endBranchLabel'] = hc.end_branch_label
@@ -434,7 +425,6 @@ class GmfDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
@@ -462,23 +452,22 @@ class GmfDBWriterTestCase(GmfDBBaseTestCase):
         self.writer.serialize(GMF_DATA())
 
         # Reload job row.
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        self.assertEqual(0, len(output.hazardcurve_set))
-        self.assertEqual(0, len(output.lossmap_set))
-        self.assertEqual(4, len(output.gmfdata_set))
+        output = self.job.output_set.get()
+        self.assertEqual(0, len(output.hazardcurve_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
+        self.assertEqual(4, len(output.gmfdata_set.all()))
 
         # read data from the DB and check that it's equal to the original data
         inserted_data = []
 
-        for gmfd in output.gmfdata_set:
-            location = gmfd.location.coords(self.session)
-            inserted_data.append((Site(location[0], location[1]),
+        for gmfd in output.gmfdata_set.all():
+            location = gmfd.location
+            inserted_data.append((Site(location.x, location.y),
                                   {'groundMotion': gmfd.ground_motion}))
 
         self.assertEquals(self.normalize(GMF_DATA().items()),
