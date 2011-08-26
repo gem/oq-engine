@@ -28,6 +28,7 @@ from openquake import flags
 from openquake import java
 from openquake import logs
 from openquake import job
+from openquake import signalling
 from openquake.utils import config
 
 from tests.utils.helpers import cleanup_loggers
@@ -326,8 +327,6 @@ class PythonAMQPLogTestCase(AMQPLogTestBase):
 
 
 class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
-    TOPIC = config.get("amqp", "exchange")
-    ROUTING_KEY = 'log.*.*'
 
     def setUp(self):
         # save and override process name
@@ -360,7 +359,9 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
 
     def test_log_configuration(self):
         """Test that the AMQP log configuration is consistent"""
-        conn, ch, qname = self.setup_queue()
+        conn, ch = signalling.connect()
+        # match messages of any level related to any job
+        qname = signalling.declare_and_bind_queue('*', '*')
 
         # now there is a queue, send the log messages from Java
         root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
