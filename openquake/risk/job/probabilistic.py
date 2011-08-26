@@ -38,9 +38,7 @@ from openquake.parser import vulnerability
 from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy import models
-from sqlalchemy import func as sqlfunc
+from openquake.db import models
 
 LOGGER = logs.LOG
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
@@ -83,31 +81,25 @@ class ProbabilisticEventMixin():
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
-        session = get_db_session("reslt", "reader")
 
-        ids = session.query(models.Output.id) \
-            .filter(models.Output.oq_job_id == job_id) \
-            .filter(models.Output.output_type == 'gmf')
+        ids = models.Output.objects.filter(
+            oq_job=job_id, output_type='gmf').values_list('id', flat=True)
 
-        return [row[0] for row in ids]
+        return list(ids)
 
     def _get_db_gmf(self, gmf_id):
         """Returns a field for the given GMF"""
-        session = get_db_session("reslt", "reader")
         grid = self.region.grid
         field = zeros((grid.rows, grid.columns))
 
-        sites = session.query(
-                sqlfunc.ST_X(models.GMFData.location),
-                sqlfunc.ST_Y(models.GMFData.location),
-                models.GMFData.ground_motion) \
-            .filter(models.GMFData.output_id == gmf_id)
+        gmf_sites = models.GmfData.objects.filter(output=gmf_id)
 
-        for x, y, value in sites:
-            site = shapes.Site(x, y)
+        for gmf_site in gmf_sites:
+            loc = gmf_site.location
+            site = shapes.Site(loc.x, loc.y)
             grid_point = grid.point_at(site)
 
-            field[grid_point.row][grid_point.column] = value
+            field[grid_point.row][grid_point.column] = gmf_site.ground_motion
 
         return shapes.Field(field)
 

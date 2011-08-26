@@ -56,13 +56,12 @@ def _db_cfg(db_name):
 
 _DB_NAMES = (
     'admin',
-    'eqcat_read', 'eqcat_write',
-    'hzrdi_read', 'hzrdi_write',
-    'hzrdr_read', 'hzrdi_write',
+    'eqcat_read',
+    'eqcat_write',
+    'job_init',
+    'job_superv',
     'oqmif',
-    'riski_read', 'riski_write',
-    'riskr_read', 'riskr_write',
-    'uiapi_read', 'uiapi_write',
+    'reslt_writer',
 )
 DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
 # We need a 'default' database to make Django happy:

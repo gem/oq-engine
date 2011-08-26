@@ -44,10 +44,11 @@ GMFs are serialized per object (=Site) as implemented in the base class.
 import logging
 from lxml import etree
 
+from openquake.db import models
 from openquake.db.alchemy.db_utils import get_db_session
+# pylint: disable=W0611
 from openquake.db.alchemy.models import (
-    HazardMap, HazardMapData, HazardCurve, HazardCurveData, GMFData,
-    Output, OqParams, OqJob)
+    HazardMap, HazardMapData, GMFData)
 
 from openquake import job
 from openquake import shapes
@@ -545,30 +546,20 @@ class HazardMapDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given hazard map from the database.
 
         The structure of the result is documented in
         :class:`HazardMapDBWriter`.
         """
-        hazard_map = self.session.query(HazardMap) \
-            .filter(HazardMap.output_id == output_id).one()
-        hazard_map_data = self.session.query(
-            sqlfunc.ST_X(HazardMapData.location),
-            sqlfunc.ST_Y(HazardMapData.location),
-            HazardMapData) \
-            .filter(HazardMapData.hazard_map_id == hazard_map.id)
-        params = self.session.query(OqParams) \
-            .join(OqJob) \
-            .join(Output) \
-            .filter(Output.id == output_id).one()
+        hazard_map = models.HazardMap.objects.get(output=output_id)
+        hazard_map_data = hazard_map.hazardmapdata_set.all()
+        params = hazard_map.output.oq_job.oq_params
         points = []
 
-        for lon, lat, datum in hazard_map_data:
+        for datum in hazard_map_data:
             values = {
                 'IML': datum.value,
                 'IMT': job.REVERSE_ENUM_MAP[params.imt],
@@ -581,7 +572,8 @@ class HazardMapDBReader(object):
             if hazard_map.statistic_type == 'quantile':
                 values['quantileValue'] = hazard_map.quantile
 
-            points.append((shapes.Site(lon, lat), values))
+            loc = datum.location
+            points.append((shapes.Site(loc.x, loc.y), values))
 
         return points
 
@@ -612,10 +604,10 @@ class HazardMapDBWriter(writer.DBWriter):
     the same for all items.
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(HazardMapDBWriter, self).__init__(session, nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
-        self.bulk_inserter = writer.BulkInserter(HazardMapData)
+        self.bulk_inserter = writer.BulkInserter(models.HazardMapData)
         self.hazard_map = None
 
     def get_output_type(self):
@@ -626,20 +618,21 @@ class HazardMapDBWriter(writer.DBWriter):
 
         # get the value for HazardMap from the first value
         header = iterable[0][1]
-        self.hazard_map = HazardMap(
+        self.hazard_map = models.HazardMap(
             output=self.output, poe=header['poE'],
             statistic_type=header['statistics'])
         if header['statistics'] == 'quantile':
             self.hazard_map.quantile = header['quantileValue']
 
-        self.session.add(self.hazard_map)
-        self.session.flush()
+        self.hazard_map.save()
 
         # Update the output record with the minimum/maximum values.
         self.output.min_value = round_float(min(
             data[1].get("IML") for data in iterable))
         self.output.max_value = round_float(max(
             data[1].get("IML") for data in iterable))
+
+        self.output.save()
 
         super(HazardMapDBWriter, self).serialize(iterable)
 
@@ -676,31 +669,19 @@ class HazardCurveDBReader(object):
     :func:`HazardCurveXMLWriter.serialize` to produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    def deserialize(self, output_id):  # pylint: disable=R0201
         """
         Read a the given hazard curve from the database.
 
         The structure of the result is documented in
         :class:`HazardCurveDBWriter`.
         """
-        hazard_curve = self.session.query(HazardCurve) \
-            .filter(HazardCurve.output_id == output_id).all()
-        params = self.session.query(OqParams) \
-            .join(OqJob) \
-            .join(Output) \
-            .filter(Output.id == output_id).one()
+        hazard_curves = models.HazardCurve.objects.filter(output=output_id)
+        params = models.Output.objects.get(id=output_id).oq_job.oq_params
         points = []
 
-        for hazard_curve_datum in hazard_curve:
-            hazard_curve_data = self.session.query(
-                sqlfunc.ST_X(HazardCurveData.location),
-                sqlfunc.ST_Y(HazardCurveData.location),
-                HazardCurveData) \
-                .filter(HazardCurveData.hazard_curve ==
-                        hazard_curve_datum).all()
+        for hazard_curve_datum in hazard_curves:
+            hazard_curve_data = hazard_curve_datum.hazardcurvedata_set.all()
 
             common = {
                 'IMLValues': params.imls,
@@ -715,11 +696,12 @@ class HazardCurveDBReader(object):
             else:
                 common['endBranchLabel'] = hazard_curve_datum.end_branch_label
 
-            for lon, lat, datum in hazard_curve_data:
+            for datum in hazard_curve_data:
                 attrs = common.copy()
                 attrs['PoEValues'] = datum.poes
 
-                points.append((shapes.Site(lon, lat), attrs))
+                loc = datum.location
+                points.append((shapes.Site(loc.x, loc.y), attrs))
 
         return points
 
@@ -747,12 +729,11 @@ class HazardCurveDBWriter(writer.DBWriter):
            'statistics': 'quantile'})]
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(HazardCurveDBWriter, self).__init__(session, nrml_path,
-                                                  oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(HazardCurveData)
+        self.bulk_inserter = writer.BulkInserter(models.HazardCurveData)
 
     def get_output_type(self):
         return "hazard_curve"
@@ -782,59 +763,54 @@ class HazardCurveDBWriter(writer.DBWriter):
             raise ValueError(error_msg)
 
         if curve_label in self.curves_per_branch_label:
-            hazard_curve_item = self.curves_per_branch_label[curve_label]
+            hazard_curve = self.curves_per_branch_label[curve_label]
         else:
             if 'endBranchLabel' in values:
-                hazard_curve_item = HazardCurve(
+                hazard_curve = models.HazardCurve(
                     output=self.output, end_branch_label=curve_label)
             else:
-                hazard_curve_item = HazardCurve(
+                hazard_curve = models.HazardCurve(
                     output=self.output, statistic_type=curve_label)
 
                 if 'quantileValue' in values:
-                    hazard_curve_item.quantile = values['quantileValue']
+                    hazard_curve.quantile = values['quantileValue']
 
-            self.curves_per_branch_label[curve_label] = hazard_curve_item
-            self.session.flush()
+            self.curves_per_branch_label[curve_label] = hazard_curve
+            hazard_curve.save()
 
         self.bulk_inserter.add_entry(
-            hazard_curve_id=hazard_curve_item.id,
+            hazard_curve_id=hazard_curve.id,
             poes=values['PoEValues'],
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-class GMFDBReader(object):
+class GmfDBReader(object):
     """
     Read ground motion field data from the database, returning a data structure
     that can be passed to :func:`GMFXMLWriter.serialize` to
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given ground motion field from the database.
 
-        The structure of the result is documented in :class:`GMFDBWriter`.
+        The structure of the result is documented in :class:`GmfDBWriter`.
         """
-        gmf_data = self.session.query(
-            sqlfunc.ST_X(GMFData.location),
-            sqlfunc.ST_Y(GMFData.location),
-            GMFData.ground_motion) \
-            .filter(GMFData.output_id == output_id).all()
+        gmf_data = models.GmfData.objects.filter(output=output_id)
         points = {}
 
-        for lon, lat, ground_motion in gmf_data:
-            points[shapes.Site(lon, lat)] = {
-                'groundMotion': ground_motion,
+        for datum in gmf_data:
+            loc = datum.location
+            points[shapes.Site(loc.x, loc.y)] = {
+                'groundMotion': datum.ground_motion,
             }
 
         return points
 
 
-class GMFDBWriter(writer.DBWriter):
+class GmfDBWriter(writer.DBWriter):
     """
     Serialize the location/IML data to the `hzrdr.hazard_curve` database
     table.
@@ -847,11 +823,11 @@ class GMFDBWriter(writer.DBWriter):
          Site(-117, 41): {'groundMotion': 0.3}}
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
-        super(GMFDBWriter, self).__init__(session, nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(GmfDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
-        self.bulk_inserter = writer.BulkInserter(GMFData)
+        self.bulk_inserter = writer.BulkInserter(models.GmfData)
 
     def get_output_type(self):
         return "gmf"
@@ -903,7 +879,8 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardCurveXMLWriter,
-                          HazardCurveDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: HazardCurveDBWriter(p, j))
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
@@ -920,7 +897,8 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardMapXMLWriter,
-                          HazardMapDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: HazardMapDBWriter(p, j))
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
@@ -933,8 +911,9 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     :param str nrml_path: the full path of the XML/NRML representation of the
         ground motion field.
     :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
-        :py:class:`output.hazard.GMFDBWriter` instance.
+        :py:class:`output.hazard.GmfDBWriter` instance.
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           GMFXMLWriter,
-                          GMFDBWriter)
+                          # SQLAlchemy temporary adapter
+                          lambda s, p, j: GmfDBWriter(p, j))

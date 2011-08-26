@@ -91,8 +91,8 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
-        self.reader = LossCurveDBReader(self.session)
+        self.writer = LossCurveDBWriter(output_path, self.job.id)
+        self.reader = LossCurveDBReader()
 
     def normalize(self, values):
         result = []
@@ -232,8 +232,8 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
-        self.reader = LossMapDBReader(self.session)
+        self.writer = LossMapDBWriter(output_path, self.job.id)
+        self.reader = LossMapDBReader()
 
 
 class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
