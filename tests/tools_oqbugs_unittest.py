@@ -43,6 +43,7 @@ def prepare_mock(bugs):
     attributes = {
      'date_fix_committed': str(datetime.datetime.now()),
      'assignee': mock_name,
+     'status': 'In Progress',
      'web_link': 'http://openquake.org'}
 
     bugs_list = {}
@@ -51,7 +52,6 @@ def prepare_mock(bugs):
         magic_mock = mock.MagicMock()
 
         for prop, val in attributes.iteritems():
-            magic_mock.bug_tasks[0].status = 'In Progress'
             magic_mock.title = 'a bug title'
             setattr(magic_mock.bug_tasks[0], prop, val)
             # prepares a dictionary for mocking launchpad_instance.bugs
