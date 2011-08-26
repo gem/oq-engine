@@ -51,12 +51,10 @@ FLAGS = flags.FLAGS
 
 
 def _toCoordList(polygon):
-    session = get_db_session("reslt", "writer")
-
     pts = []
 
     # postgis -> lon/lat -> config lat/lon, skip the closing point
-    for c in polygon.coords(session)[0][:-1]:
+    for c in polygon.coords[0][:-1]:
         pts.append("%.2f" % c[1])
         pts.append("%.2f" % c[0])
 
