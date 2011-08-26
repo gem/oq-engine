@@ -87,21 +87,29 @@ class FixCommitted(argparse.Action):
     """ Changes the status of a bug to Fix Committed when it is in
         the master repository (i.e. merged)
     """
-    def __call__(self, parser, namespace, values, option_string=None):
+
+    def __call__(self, parser, namespace, values, option_string=None, bugs=[]):
         values = True
-        print 'FixCommitted: %r %r %r' % (namespace, values, option_string)
+        print 'FixCommitted: %r %r %r' % (namespace, True, option_string)
+        print type(namespace)
+        print type(namespace.time)
 
         if namespace.time:
             launchpad, commits_output = parse_and_login(namespace.time)
             for commit_line in commits_output:
-                bugs = launchpad_lookup(launchpad, filter_bugs(commit_line))
-                for bug in bugs:
-                    if 'Fix Committed' in bug.bug_tasks[0].status:
-                        print str(bug.title) + ' Skip it!'
-                    else:
-                        print str(bug.title) + ' To mark!'
-
+                print commit_line
+                #for testing purposes
+                if len(bugs) == 0:
+                    bugs = launchpad_lookup(launchpad, filter_bugs(commit_line))
+                    
+                    for bug in bugs:
+                        if bug.bug_tasks[0].status != "Fix Committed":
+                            bug.bug_tasks[0].status = 'Fix Committed'
+                            bug.salvami()
+                            print bug
+                            print bug.called
         setattr(namespace, self.dest, values)
+        return bugs
 
 
 class FixReleased(argparse.Action):
