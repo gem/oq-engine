@@ -34,7 +34,6 @@ import numpy
 
 from openquake import java, xml
 from openquake.db import models
-from openquake.utils import db
 
 SRC_DATA_PKG = 'org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData'
 MFD_PACKAGE = 'org.opensha.sha.magdist'
