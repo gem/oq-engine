@@ -168,7 +168,7 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
             LOGGER.debug("GMF_SLICE for %s X %s : \n\t%s" % (
                     col, row, gmf_slice))
             gmf = {"IMLs": gmf_slice, "TSES": self._tses(),
-                    "TimeSpan": self._timespan()}
+                    "TimeSpan": self._time_span()}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
