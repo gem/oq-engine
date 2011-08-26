@@ -23,16 +23,6 @@ This module contains constants and some basic utilities and scaffolding to
 assist with database interactions.
 """
 
-import sqlalchemy
-import geoalchemy
-
-from sqlalchemy.databases import postgres
-
-# This allows us to reflect 'geometry' columns from PostGIS tables.
-# This is slightly hack-ish, but it's either this or we have to declare
-# columns with the appropriate type manually (yuck).
-postgres.ischema_names['geometry'] = geoalchemy.Geometry
-
 # Tablespaces
 HZRDI_TS = 'hzrdi'
 ADMIN_TS = 'admin'
@@ -65,15 +55,3 @@ MFD_TGR = dict.fromkeys([
     'owner_id', 'magnitude_type', 'min_val', 'max_val', 'a_val', 'b_val',
     # optional:
     'total_cumulative_rate', 'total_moment_rate'])
-
-
-def create_engine(
-    dbname, user, password='', host='localhost', engine='postgresql'):
-    """
-    Function wrapper for :py:func:`sqlalchemy.create_engine` which helps
-    generate a db connection string.
-    """
-
-    conn_str = '%s://%s:%s@%s/%s' % (engine, user, password, host, dbname)
-    db = sqlalchemy.create_engine(conn_str)
-    return db
