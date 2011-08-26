@@ -33,6 +33,7 @@ from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
+from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake.supervising import supervisor
 from openquake.db.alchemy.db_utils import get_db_session
@@ -90,6 +91,9 @@ def spawn_job_supervisor(job_id, pid):
         if oq_config.get('logging', 'backend') != 'amqp':
             LOG.warn('If you want to run supervised jobs it\'s better '
                      'to set [logging] backend=amqp in openquake.cfg')
+
+        if not os.path.isabs(exe):
+            exe = os.path.join(OPENQUAKE_ROOT, exe)
 
         cmd = [exe, str(job_id), str(pid)]
 
