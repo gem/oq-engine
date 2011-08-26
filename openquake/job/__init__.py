@@ -18,6 +18,7 @@
 
 """A single hazard/risk job."""
 
+import geoalchemy as ga
 import multiprocessing
 import os
 import re
@@ -26,8 +27,7 @@ import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
-
-import geoalchemy as ga
+from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
 from openquake import java
@@ -36,7 +36,10 @@ from openquake import logs
 from openquake import shapes
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
-from openquake.db.models import OqJob as OqJobModel
+# TODO: clean up these imports once we get rid of SQLAlchemy
+from openquake.db.models import OqJob as DjOqJob
+from openquake.db.models import OqParams as DjOqParams
+from openquake.db.models import OqUser as DjOqUser
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
@@ -93,7 +96,7 @@ def spawn_job_supervisor(job_id, pid):
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-        OqJobModel.objects.filter(id=job_id).update(
+        DjOqJob.objects.filter(id=job_id).update(
             supervisor_pid=supervisor_pid, job_pid=pid
         )
     else:
@@ -191,17 +194,38 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_db_session("job", "init")
-
     # TODO specify the owner as a command line parameter
-    owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
-    oqp = OqParams(upload=None)
-    job = OqJob(owner=owner, path=None, oq_params=oqp,
-                job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+    owner = DjOqUser.objects.get(user_id='openquake')
+    oqp = DjOqParams(upload=None)
 
-    # fill-in parameters
+    job = DjOqJob(
+        owner=owner, path=None, oq_params=oqp,
+        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    #######
+    # fill in parameters
+    if 'SITES' in params:
+        ewkt = multipoint_ewkt_from_coords(params['SITES'])
+        sites = GEOSGeometry(ewkt)
+        oqp.sites = sites
+
+    elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+        oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
+
+        # TODO: move this to a util function in shapes
+        # config lat/lon -> postgis -> lon/lat
+        coords = [float(v) for v in
+                  params['REGION_VERTEX'].split(",")]
+        vertices = ['%f %f' % (coords[i + 1], coords[i])
+                    for i in xrange(0, len(coords), 2)]
+        wkt = 'SRID=4326;POLYGON((%s, %s))'
+        wkt %= (', '.join(vertices), vertices[0])
+        region = GEOSGeometry(wkt)
+        oqp.region = region
+
+    ######
+
     oqp.job_type = job.job_type
-    oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -227,18 +251,9 @@ def prepare_job(params):
 
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
-
-    # config lat/lon -> postgis -> lon/lat
-    coords = [float(v) for v in
-                  params['REGION_VERTEX'].split(",")]
-    vertices = ["%f %f" % (coords[i + 1], coords[i])
-                    for i in xrange(0, len(coords), 2)]
-    region = "SRID=4326;POLYGON((%s, %s))" % (", ".join(vertices), vertices[0])
-    oqp.region = ga.WKTSpatialElement(region)
-
-    session.add(oqp)
-    session.add(job)
-    session.commit()
+   
+    oqp.save()
+    job.save()
 
     return job
 

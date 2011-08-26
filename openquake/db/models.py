@@ -471,7 +471,7 @@ class OqParams(models.Model):
 
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
-    upload = models.ForeignKey('Upload')
+    upload = models.ForeignKey('Upload', null=True)
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
