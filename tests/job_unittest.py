@@ -21,13 +21,16 @@ import os
 import sqlalchemy
 import unittest
 
-from openquake import java
 from openquake import kvs
 from openquake import flags
+from openquake import shapes
+from openquake.utils import config as oq_config
+from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import spawn_job_supervisor
+from openquake.job.mixins import Mixin
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob
-from openquake.job import Job, LOG, prepare_job, run_job
-from openquake.job.mixins import Mixin
+from openquake.db.models import OqJob as OqJobModel
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -247,14 +250,14 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_db_session("uiapi", "writer")
+        session = get_db_session("job", "init")
 
         session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
 
-        session = get_db_session("uiapi", "writer")
+        session = get_db_session("job", "init")
 
         session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
 
@@ -273,7 +276,7 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_get_status_from_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
 
-        session = get_db_session("reslt", "writer")
+        session = get_db_session("job", "init")
         session.query(OqJob).update({'status': 'failed'})
         session.commit()
         self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
@@ -283,7 +286,7 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def test_is_job_completed(self):
         job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
-        session = get_db_session("reslt", "writer")
+        session = get_db_session("job", "init")
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
@@ -304,6 +307,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     As a side-effect, also tests that the inserted record satisfied
     the DB constraints.
     """
+
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -471,6 +475,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
 
 class RunJobTestCase(unittest.TestCase):
+
     def setUp(self):
         self.job = None
         self.session = get_db_session("reslt", "writer")
@@ -502,7 +507,9 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('succeeded', self._job_status())
@@ -527,8 +534,10 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            self.assertRaises(Exception, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db')
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                self.assertRaises(Exception, run_job,
+                                helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -540,7 +549,7 @@ class RunJobTestCase(unittest.TestCase):
             def test_status_running_and_fail():
                 self.assertEquals('running', self._job_status())
 
-                session = get_db_session("uiapi", "writer")
+                session = get_db_session("job", "init")
 
                 session.query(OqJob).filter(OqJob.id == -1).one()
 
@@ -555,8 +564,10 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db')
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
+                                helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -575,7 +586,100 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_is_valid
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-            self.assertEquals(1, self.job.is_valid.call_count)
-            self.assertEquals('failed', self._job_status())
+            with patch('openquake.job.spawn_job_supervisor'):
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.is_valid.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_computes_sites_in_region_when_specified(self):
+        """When we have hazard jobs only, and we specify a region,
+        we use the standard algorithm to split the region in sites. In this
+        example, the region has just four sites (the region boundaries).
+        """
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_computes_specific_sites_when_specified(self):
+        """When we have hazard jobs only, and we specify a list of sites
+        (SITES parameter in the configuration file) we trigger the
+        computation only on those sites.
+        """
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        sites = "1.0, 1.5, 1.5, 2.5, 3.0, 3.0, 4.0, 4.5"
+
+        params = {config.SITES: sites}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.5, 1.0), shapes.Site(2.5, 1.5),
+                shapes.Site(3.0, 3.0), shapes.Site(4.5, 4.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_computes_sites_in_region_with_risk_jobs(self):
+        """When we have hazard and risk jobs, we always use the region."""
+        sections = [config.HAZARD_SECTION,
+                config.GENERAL_SECTION, config.RISK_SECTION]
+
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_supervisor_is_spawned(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock()
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+
+            with patch('openquake.job.spawn_job_supervisor')\
+                as spawn_job_supervisor:
+
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+                self.assertEquals(1, spawn_job_supervisor.call_count)
+                self.assertEquals(((self.job.job_id, os.getpid()), {}),
+                                  spawn_job_supervisor.call_args)
+
+    def test_spawn_job_supervisor(self):
+        class FakeProcess(object):
+            pid = 42
+
+        oq_config.Config().cfg['supervisor']['exe'] = 'supervise me'
+        job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
+
+        with patch('subprocess.Popen') as popen:
+            popen.return_value = FakeProcess()
+            spawn_job_supervisor(job_id=job.job_id, pid=54321)
+            self.assertEqual(popen.call_count, 1)
+            self.assertEqual(popen.call_args,
+                             ((['supervise me', str(job.job_id), '54321'], ),
+                              {'env': os.environ}))
+            job = OqJobModel.objects.get(pk=job.job_id)
+            self.assertEqual(job.supervisor_pid, 42)
+            self.assertEqual(job.job_pid, 54321)
