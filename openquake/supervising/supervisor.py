@@ -51,6 +51,7 @@ def terminate_job(pid):
     """
 
     logging.info('Terminating job process %s', pid)
+
     os.kill(pid, signal.SIGKILL)
 
 
@@ -65,6 +66,18 @@ def cleanup_after_job(job_id):
 
     kvs.cache_gc(job_id)
 
+
+def get_job_status(job_id):
+    """
+    Return the status of the job stored in its database record.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :return: the status of the job
+    :rtype: string
+    """
+
+    return OqJob.objects.get(id=job_id).status
 
 def update_job_status_and_error_msg(job_id, status, error_msg=None):
     """
@@ -127,17 +140,18 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
             logging.info('Process %s not running', self.pid)
 
             # see what status was left in the database by the exited job
-            job = OqJob.objects.get(id=self.job_id)
+            job_status = get_job_status(self.job_id)
 
-            if job.status == 'succeeded':
+            if job_status == 'succeeded':
                 signalling.signal_job_outcome(self.job_id, 'succeeded')
             else:
                 signalling.signal_job_outcome(self.job_id, 'failed')
 
-                if job.status == 'running':
+                if job_status == 'running':
                     # The job crashed without having a chance to update the
                     # status in the database.  We do it here.
-                    update_job_status_and_error_msg(self.job_id, 'failed')
+                    update_job_status_and_error_msg(self.job_id, 'failed',
+                                                    'crash')
 
             cleanup_after_job(self.job_id)
 
