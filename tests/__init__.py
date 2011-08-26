@@ -51,6 +51,7 @@ from risk_parser_unittest import *
 from risk_unittest import *
 from schema_unittest import *
 from shapes_unittest import *
+from signalling_unittest import *
 from supervisor_unittest import *
 from tools_dbmaint_unittest import *
 from utils_config_unittest import *
