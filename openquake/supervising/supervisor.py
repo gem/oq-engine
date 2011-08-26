@@ -35,8 +35,8 @@ import signal
 
 from openquake.db.models import OqJob, ErrorMsg
 from openquake import signalling
+from openquake import supervising
 from openquake import kvs
-from openquake.supervising import is_pid_running
 
 
 logging.basicConfig(level=logging.INFO)
@@ -123,7 +123,7 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
         On timeout expiration check if the job process is still running, and
         act accordingly if not.
         """
-        if not is_pid_running(self.pid):
+        if not supervising.is_pid_running(self.pid):
             logging.info('Process %s not running', self.pid)
 
             # see what status was left in the database by the exited job
