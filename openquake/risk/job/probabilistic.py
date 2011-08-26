@@ -72,13 +72,12 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
                 return
 
         curve = aggregate_curve.compute(self._tses(), self._time_span())
-        aggregate_loss_curve.compute_aggregate_curve(self, curve)
+        aggregate_loss_curve.plot_aggregate_curve(self, curve)
 
-        return results
-
-# TODO (ac): Add doc!
-# TODO (ac): Test it!
     def _tses(self):
+        """Return the time representative of the Stochastic Event Set
+        specified for this job."""
+
 # TODO (ac): Confirm this works regardless of the method of hazard calc
         histories = int(self["NUMBER_OF_SEISMICITY_HISTORIES"])
         realizations = int(self["NUMBER_OF_LOGIC_TREE_SAMPLES"])
@@ -87,6 +86,7 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
         return num_ses * self._time_span()
 
     def _time_span(self):
+        """Return the time span specified for this job."""
         return float(self["INVESTIGATION_TIME"])
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
@@ -167,23 +167,18 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
             key_gmf = kvs.tokens.gmf_set_key(self.job_id, col, row)
             LOGGER.debug("GMF_SLICE for %s X %s : \n\t%s" % (
                     col, row, gmf_slice))
-            timespan = float(self['INVESTIGATION_TIME'])
             gmf = {"IMLs": gmf_slice, "TSES": self._tses(),
                     "TimeSpan": self._timespan()}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
-# TODO (ac): Improve doc!
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
-        """This task computes risk for a block of sites. It requires to have
-        pre-initialized in kvs:
-         1) list of sites
-         2) gmfs
-         3) exposure portfolio (=assets)
-         4) vulnerability
-        """
+        """Compute risk for a block of sites, that means:
 
-        conditional_loss_poes = [float(x) for x in self.params.get(
-                "CONDITIONAL_LOSS_POE", "0.01").split()]
+        * loss ratio curves
+        * loss curves
+        * conditional losses
+        * (partial) aggregate loss curve
+        """
 
         self.slice_gmfs(block_id)
 
@@ -198,17 +193,17 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
         for point in block.grid(self.region):
             key = kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
-            
+
             asset_key = kvs.tokens.asset_key(
                 self.job_id, point.row, point.column)
-            
+
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("Processing asset %s" % (asset))
-            
+
                 # loss ratios, used both to produce the curve
                 # and to aggregate the losses
                 loss_ratios = self.compute_loss_ratios(asset, gmf_slice)
-            
+
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point.column, point.row, asset, gmf_slice, loss_ratios)
 
@@ -218,21 +213,28 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
                     loss_curve = self.compute_loss_curve(
                         point.column, point.row, loss_ratio_curve, asset)
 
-                    for loss_poe in conditional_loss_poes:
+                    for loss_poe in self._conditional_loss_poes():
                         self.compute_conditional_loss(point.column, point.row,
                                 loss_curve, asset, loss_poe)
 
         return aggregate_curve.losses
 
+    def _conditional_loss_poes(self):
+        """Return the PoE(s) specified in the configuration file used to
+        compute the conditional loss."""
+
+        return [float(x) for x in self.params.get(
+            "CONDITIONAL_LOSS_POE", "0.01").split()]
+
     def compute_loss_ratios(self, asset, gmf_slice):
-        """For a given asset and ground motion field, computes the loss ratios
-        used to obtain the related loss ratio curve and aggregate loss curve."""
+        """For a given asset and ground motion field, computes
+        the loss ratios used to obtain the related loss ratio curve
+        and aggregate loss curve."""
 
         epsilon_provider = general.EpsilonProvider(self.params)
 
-# TODO (ac): Extract to a method, and test it!
         vuln_function = self.vuln_curves.get(
-                asset["vulnerabilityFunctionReference"], None)
+            asset["vulnerabilityFunctionReference"], None)
 
         if not vuln_function:
             LOGGER.error(
@@ -259,12 +261,12 @@ class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
 
         kvs.set(key, loss_conditional)
 
-    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice, loss_ratios):
+    def compute_loss_ratio_curve(
+            self, col, row, asset, gmf_slice, loss_ratios):
         """Compute the loss ratio curve for a single asset."""
 
-        # fail if the asset has an unknown vulnerability code
         vuln_function = self.vuln_curves.get(
-                asset["vulnerabilityFunctionReference"], None)
+            asset["vulnerabilityFunctionReference"], None)
 
         if not vuln_function:
             LOGGER.error(
