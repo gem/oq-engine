@@ -220,18 +220,15 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                     0.00050806530000000003],
                 total_moment_rate=281889786038447.25,
                 owner_id=None),
-            {'table': 'hzrdi.simple_fault', 'data': {
-                'name': u'Mount Diablo Thrust',
-                'upper_depth': 8.0,
-                'mgf_evd_id': None,
-                'mfd_tgr_id': None,
-                'outline': SIMPLE_FAULT_OUTLINE_WKT,
-                'edge': SIMPLE_FAULT_EDGE_WKT,
-                'lower_depth': 13.0,
-                'gid': u'src01',
-                'owner_id': None,
-                'dip': 38.0,
-                'description': None}},
+            models.SimpleFault(
+                name='Mount Diablo Thrust',
+                upper_depth=8.0,
+                outline=SIMPLE_FAULT_OUTLINE_WKT,
+                edge=SIMPLE_FAULT_EDGE_WKT,
+                lower_depth=13.0,
+                gid='src01',
+                dip=38.0,
+                description=None),
             {'table': 'hzrdi.source', 'data': {
                 'r_depth_distr_id': None,
                 'name': u'Mount Diablo Thrust',
@@ -247,24 +244,9 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         simple_data = db_loader.parse_simple_fault_src(self.simple)
 
-        # The WKTSpatialElement objects do not make for nice comparisons.
-        # So instead, we'll just test the text element of each object
-        # to make sure the coords and spatial reference system match.
-        # To do that, we need to remove the WKTSpatialElements so
-        # we can compare the rest of the dicts for equality.
-        exp_outline = expected[1]['data'].pop('outline')
-        actual_outline = simple_data[1]['data'].pop('outline')
-
-        self.assertEqual(exp_outline, actual_outline)
-
-        exp_edge = expected[1]['data'].pop('edge')
-        actual_edge = simple_data[1]['data'].pop('edge')
-
-        self.assertEqual(exp_edge, actual_edge)
-
         # Now we can test the rest of the data.
         helpers.assertModelAlmostEqual(self, expected[0], simple_data[0])
-        helpers.assertDictAlmostEqual(self, expected[1], simple_data[1])
+        helpers.assertModelAlmostEqual(self, expected[1], simple_data[1])
         helpers.assertDictAlmostEqual(self, expected[2], simple_data[2])
 
     def _serialize_test_helper(self, test_file, expected_tables):
