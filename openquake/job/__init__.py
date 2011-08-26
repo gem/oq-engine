@@ -33,7 +33,9 @@ from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
+from openquake import OPENQUAKE_ROOT
 from openquake import shapes
+from openquake.supervising import supervisor
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.models import OqJob as OqJobModel
@@ -90,12 +92,19 @@ def spawn_job_supervisor(job_id, pid):
             LOG.warn('If you want to run supervised jobs it\'s better '
                      'to set [logging] backend=amqp in openquake.cfg')
 
+        if not os.path.isabs(exe):
+            exe = os.path.join(OPENQUAKE_ROOT, exe)
+
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
         OqJobModel.objects.filter(id=job_id).update(
-            supervisor_pid=supervisor_pid, job_pid=pid
-        )
+            supervisor_pid=supervisor_pid, job_pid=pid)
+
+        # Ensure the supervisor amqp queue exists
+        supervisor.bind_supervisor_queue(job_id)
+
+        return supervisor_pid
     else:
         LOG.warn('This job won\'t be supervised, '
                  'because no supervisor is configured in openquake.cfg')
