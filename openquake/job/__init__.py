@@ -34,7 +34,7 @@ from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake import supervisor
+from openquake.supervising import supervisor
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
 from openquake.db.models import OqJob as OqJobModel
