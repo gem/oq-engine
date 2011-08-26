@@ -229,25 +229,21 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                 gid='src01',
                 dip=38.0,
                 description=None),
-            {'table': 'hzrdi.source', 'data': {
-                'r_depth_distr_id': None,
-                'name': u'Mount Diablo Thrust',
-                'tectonic_region': 'active',
-                'rake': 90.0,
-                'si_type': 'simple',
-                'gid': u'src01',
-                'simple_fault_id': None,
-                'owner_id': None,
-                'hypocentral_depth': None,
-                'description': None,
-                'input_id': None}})
+            models.Source(
+                name='Mount Diablo Thrust',
+                tectonic_region='active',
+                rake=90.0,
+                si_type='simple',
+                gid='src01',
+                hypocentral_depth=None,
+                description=None))
 
         simple_data = db_loader.parse_simple_fault_src(self.simple)
 
         # Now we can test the rest of the data.
         helpers.assertModelAlmostEqual(self, expected[0], simple_data[0])
         helpers.assertModelAlmostEqual(self, expected[1], simple_data[1])
-        helpers.assertDictAlmostEqual(self, expected[2], simple_data[2])
+        helpers.assertModelAlmostEqual(self, expected[2], simple_data[2])
 
     def _serialize_test_helper(self, test_file, expected_tables):
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
