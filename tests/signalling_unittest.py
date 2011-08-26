@@ -22,6 +22,7 @@ from openquake import signalling
 
 
 class SignallingTestCase(unittest.TestCase):
+
     def test_generate_routing_key(self):
         self.assertEqual('log.failed.123',
                          signalling.generate_routing_key(123, 'failed'))
@@ -49,6 +50,7 @@ class SignallingTestCase(unittest.TestCase):
         signalling.signal_job_outcome(0, 'succeeded')
 
         messages = []
+
         def callback(msg):
             messages.append(msg)
             ch.basic_cancel(msg.consumer_tag)
