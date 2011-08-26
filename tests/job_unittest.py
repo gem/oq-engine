@@ -483,7 +483,7 @@ class RunJobTestCase(unittest.TestCase):
         self.job = None
 
     def _job_status(self):
-        return self.job.get_db_job(self.session).status
+        return OqJob.objects.get(id=self.job.id).status
 
     def test_successful_job_lifecycle(self):
         with patch('openquake.job.Job.from_file') as from_file:
