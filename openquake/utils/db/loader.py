@@ -243,7 +243,7 @@ def parse_simple_fault_src(fault):
         Build up the simple fault dict. See the documentation for
         :py:function:`parse_simple_fault_src` for more information.
         """
-        simple_fault = db.SIMPLE_FAULT.copy()
+        simple_fault = dict()
         simple_fault['name'] = fault.getName()
         simple_fault['gid'] = fault.getID()
         simple_fault['dip'] = fault.getDip()
@@ -276,11 +276,7 @@ def parse_simple_fault_src(fault):
 
         simple_fault['outline'] = 'SRID=4326;POLYGON((%s))' % outline_coords
 
-        simple_fault_insert = {
-            'table': '%s.simple_fault' % db.HZRDI_TS,
-            'data': simple_fault}
-
-        return simple_fault_insert
+        return models.SimpleFault(**simple_fault)
 
     def build_source_insert(fault):
         """
@@ -383,14 +379,10 @@ def write_simple_fault(simple_data, owner_id, input_id):
 
     mfd_id = do_insert(mfd)
 
-    # fix mfd references
-    simple_fault['data'].pop('mgf_evd_id', None)
-    simple_fault['data'].pop('mfd_tgr_id', None)
-
     if isinstance(mfd, models.MfdEvd):
-        simple_fault['data']['mfd_evd'] = mfd
+        simple_fault.mfd_evd = mfd
     elif isinstance(mfd, models.MfdTgr):
-        simple_fault['data']['mfd_tgr'] = mfd
+        simple_fault.mfd_tgr = mfd
 
     simple_id = do_insert(simple_fault)
 
@@ -405,7 +397,7 @@ def write_simple_fault(simple_data, owner_id, input_id):
 
     return [
         {_table_name(mfd): mfd_id},
-        {simple_fault['table']: simple_id},
+        {_table_name(simple_fault): simple_id},
         {source['table']: source_id}]
 
 
