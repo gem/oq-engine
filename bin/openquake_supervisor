@@ -26,8 +26,6 @@ import os
 import signal
 import sys
 
-from openquake.supervising import supervisor
-
 try:
     # setproctitle is optional external dependency
     # apt-get installl python-setproctitle or
@@ -40,7 +38,7 @@ except ImportError:
 def main():  # pylint: disable=C0111
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
 
-    from openquake import supervisor
+    from openquake.supervising import supervisor
 
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
