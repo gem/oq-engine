@@ -319,31 +319,6 @@ def parse_simple_fault_src(fault):
     return mfd_insert, simple_fault_insert, source_insert
 
 
-def parse_complex_fault_src(_source_data):
-    """
-    :param _source_data:
-    :type _source_data: jpype-wrapped java object of type
-        `GEMSubductionFaultSourceData`
-    """
-    raise NotImplementedError
-
-
-def parse_area_src(_source_data):
-    """
-    :param _source_data:
-    :type _source_data: jpype-wrapped java object of type `GEMAreaSourceData`
-    """
-    raise NotImplementedError
-
-
-def parse_point_src(_source_data):
-    """
-    :param _source_data:
-    :type _source_data: jpype-wrapped java object of type `GEMPointSourceData`
-    """
-    raise NotImplementedError
-
-
 def write_simple_fault(simple_data, owner_id, input_id):
     """
     Perform an insert of the given data.
@@ -444,11 +419,11 @@ class SourceModelLoader(object):
         '%s.GEMFaultSourceData' % SRC_DATA_PKG: {
             'fn': parse_simple_fault_src},
         '%s.GEMSubductionFaultSourceData' % SRC_DATA_PKG: {
-            'fn': parse_complex_fault_src},
+            'fn': None},
         '%s.GEMAreaSourceData' % SRC_DATA_PKG: {
-            'fn': parse_area_src},
+            'fn': None},
         '%s.GEMPointSourceData' % SRC_DATA_PKG: {
-            'fn': parse_point_src}}
+            'fn': None}}
 
     # Functions for writing sources to the db.
     SRC_DATA_WRITE_FN_MAP = {
