@@ -123,10 +123,11 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for write operations.
         '''
-        classes = [Upload, Input, OqJob, OqParams, Output, ErrorMsg]
+        classes = [Upload, Input, OqJob, OqParams, ErrorMsg]
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
+        self._db_for_write_helper([Output], 'reslt_writer')
 
     def test_hzrdr_read_schema(self):
         '''
