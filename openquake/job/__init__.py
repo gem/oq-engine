@@ -222,7 +222,7 @@ def prepare_job(params):
     oqp.save()
 
     # TODO specify the owner as a command line parameter
-    [owner] = OqUser.objects.filter(user_name="openquake")
+    owner = OqUser.objects.get(user_name="openquake")
     job = OqJob(owner=owner, path=None, oq_params=oqp, job_type=oqp.job_type)
     job.save()
     return job
