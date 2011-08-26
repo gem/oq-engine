@@ -43,9 +43,11 @@ def generate_routing_key(job_id, type_):
     :rtype: string
     """
     assert type_ in ('*', 'failed', 'succeeded',
-                     'FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG')
+                     'FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG'), \
+           'invalid routing type %r' % type_
 
-    assert isinstance(job_id, int) or job_id == '*'
+    assert isinstance(job_id, int) or job_id == '*', \
+           'invalid job id %r' % job_id
 
     return 'log.%s.%s' % (type_, job_id)
 
