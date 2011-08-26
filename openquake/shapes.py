@@ -842,14 +842,13 @@ def multipoint_ewkt_from_coords(coords):
             "SRID=4326;MULTIPOINT((-122.0 38.113), (-122.114 38.113))"
     '''
     coord_list = [round_float(x) for x in coords.split(",")]
-    points = ['(%f %f)' % (coord_list[i + 1], coord_list[i]) for i in
+    points = ['(%s %s)' % (coord_list[i + 1], coord_list[i]) for i in
               xrange(0, len(coord_list), 2)]
 
     ewkt = 'SRID=4326;MULTIPOINT(%s)'
     ewkt %= ', '.join(points)
 
     return ewkt
-
 
 
 def polygon_ewkt_from_coords(coords):
@@ -873,7 +872,7 @@ def polygon_ewkt_from_coords(coords):
             "SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, -122.0 38.113))"
     '''
     coord_list = [round_float(x) for x in coords.split(",")]
-    vertices = ['%f %f' % (coord_list[i + 1], coord_list[i]) for i in
+    vertices = ['%s %s' % (coord_list[i + 1], coord_list[i]) for i in
                 xrange(0, len(coord_list), 2)]
 
     ewkt = 'SRID=4326;POLYGON((%s, %s))'
