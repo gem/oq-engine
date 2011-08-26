@@ -472,7 +472,6 @@ class OqParams(models.Model):
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     upload = models.ForeignKey('Upload')
-    region_grid_spacing = models.FloatField()
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
@@ -505,7 +504,11 @@ class OqParams(models.Model):
     histories = models.IntegerField(null=True)
     gm_correlated = models.BooleanField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    region = models.PolygonField(srid=4326)
+
+    # We can specify a (region and region_grid_spacing) or sites, but not both.
+    region = models.PolygonField(srid=4326, null=True)
+    region_grid_spacing = models.FloatField(null=True)
+    sites = models.MultiPointField(srid=4326, null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
