@@ -90,6 +90,7 @@ def spawn_job_supervisor(job_id, pid):
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
         job = OqJob.objects.get(id=job_id)
         job.supervisor_pid = supervisor_pid
+        job.job_pid = pid
         job.save()
     else:
         LOG.warn('This job won\'t be supervised, '
@@ -117,8 +118,8 @@ def run_job(job_file, output_type):
         try:
             a_job.launch()
         except IntegrityError, ex:
-            LOG.critical("Job failed with exception: '%s'" % str(ex))
             transaction.rollback()
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
             raise
         except Exception, ex:
