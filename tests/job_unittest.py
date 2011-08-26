@@ -533,7 +533,8 @@ class RunJobTestCase(unittest.TestCase):
             # called in place of Job.launch
             def test_status_running_and_fail():
                 self.assertEquals('running', self._job_status())
-                OqJob.objects.get(id=-1)
+                x = OqJob()
+                x.save()
 
             # replaces Job.launch with a mock
             def patch_job_launch(*args, **kwargs):
@@ -660,3 +661,4 @@ class RunJobTestCase(unittest.TestCase):
                               {'env': os.environ}))
             job = OqJob.objects.get(pk=job.job_id)
             self.assertEqual(job.supervisor_pid, 42)
+            self.assertEqual(job.job_pid, 54321)
