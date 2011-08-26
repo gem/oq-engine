@@ -32,6 +32,12 @@ from tests.utils import helpers
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
 TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
+TABLE_MAP = {
+    'hzrdi.mfd_evd': models.MfdEvd,
+    'hzrdi.mfd_tgr': models.MfdTgr,
+    'hzrdi.simple_fault': models.SimpleFault,
+    'hzrdi.source': models.Source,
+}
 
 SIMPLE_FAULT_OUTLINE_WKT = \
 '''SRID=4326;POLYGON((
@@ -274,7 +280,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         table_id_pairs = [x.items()[0] for x in results]
 
         for table_name, record_id in table_id_pairs:
-            table = db_loader.TABLE_MAP[table_name]
+            table = TABLE_MAP[table_name]
 
             # run a query against the table object to get a ResultProxy
             result_proxy = table.objects.filter(id=record_id).all()

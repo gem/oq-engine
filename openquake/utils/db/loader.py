@@ -46,12 +46,6 @@ DEFAULT_GRID_SPACING = 1.0  # kilometers
 TECTONIC_REGION_MAP = {
     'Active Shallow Crust': 'active',
     'Subduction Interface': 'interface'}
-TABLE_MAP = {
-    'hzrdi.mfd_evd': models.MfdEvd,
-    'hzrdi.mfd_tgr': models.MfdTgr,
-    'hzrdi.simple_fault': models.SimpleFault,
-    'hzrdi.source': models.Source,
-}
 
 
 def get_fault_surface(fault):
@@ -334,66 +328,41 @@ def write_simple_fault(simple_data, owner_id, input_id):
              {'hzrdi.simple_fault': 7},
              {'hzrdi.source': 3}]
     """
-    def do_insert(insert):
-        """
-        Set the owner_id for the record, insert the data, and return the id of
-        the new record.
 
-        This assumes one only record insertion.
-
-        :param insert: the data to be inserted (a dict keyed by column names)
-        :type insert: dict
-
-        :returns: primary key of the new record
-        """
-        assert owner_id is not None, "owner_id should not be None"
-        assert isinstance(owner_id, int), "owner_id should be an integer"
-
-        if isinstance(insert, dict):
-            table = TABLE_MAP[insert['table']]
-
-            data = insert['data']
-
-            # fix owner reference
-            data.pop('owner_id')
-            data['owner'] = models.OqUser.objects.get(id=owner_id)
-
-            item = table(**data)
-            item.save()
-        else:
-            item = insert
-            insert.owner = models.OqUser.objects.get(id=owner_id)
-            insert.save()
-
-        return item.id
-
+    assert owner_id is not None, "owner_id should not be None"
+    assert isinstance(owner_id, int), "owner_id should be an integer"
     assert len(simple_data) == 3, \
         "Expected a 3-tuple: (mfd, simple_fault, source)"
 
+    owner = models.OqUser.objects.get(id=owner_id)
     mfd, simple_fault, source = simple_data
 
-    mfd_id = do_insert(mfd)
+    mfd.owner = owner
+
+    mfd.save()
 
     if isinstance(mfd, models.MfdEvd):
         simple_fault.mfd_evd = mfd
     elif isinstance(mfd, models.MfdTgr):
         simple_fault.mfd_tgr = mfd
 
-    simple_id = do_insert(simple_fault)
-
-    source.simple_fault = simple_fault
+    simple_fault.owner = owner
+    simple_fault.save()
 
     # if an input_id is supplied, let's specify it
     # for the 'source' table entry
     if input_id:
         source.input = models.Input.objects.get(id=input_id)
 
-    source_id = do_insert(source)
+    source.owner = owner
+    source.simple_fault = simple_fault
+
+    source.save()
 
     return [
-        {_table_name(mfd): mfd_id},
-        {_table_name(simple_fault): simple_id},
-        {_table_name(source): source_id}]
+        {_table_name(mfd): mfd.id},
+        {_table_name(simple_fault): simple_fault.id},
+        {_table_name(source): source.id}]
 
 
 class SourceModelLoader(object):
