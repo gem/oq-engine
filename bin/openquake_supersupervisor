@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -14,47 +16,4 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-[kvs]
-port = 6379
-host = localhost
-test_db = 3
-
-[amqp]
-host = localhost
-port = 5672
-user = guest
-password = guest
-vhost = /
-exchange = oq.signalling
-
-[logging]
-backend = console
-
-[supervisor]
-# exe = bin/openquake_supervisor
-exe =
-
-[database]
-name = openquake
-host = localhost
-port = 5432
-
-admin_password =
-admin_user = oq_admin
-
-eqcat_read_password =
-eqcat_read_user = oq_eqcat_reader
-eqcat_write_password =
-eqcat_write_user = oq_eqcat_writer
-
-job_init_password =
-job_init_user = oq_job_init
-
-job_superv_password =
-job_superv_user = oq_job_superv
-
-oqmif_password =
-oqmif_user = oq_ged4gem
-
-reslt_writer_password =
-reslt_writer_user = oq_reslt_writer
+python -m openquake.supervising.supersupervisor

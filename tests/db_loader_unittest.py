@@ -21,13 +21,11 @@
     Unittests for NRML/CSV input files loaders to the database
 """
 
-import geoalchemy
 import unittest
 
 from openquake import java
 from openquake import xml
-from openquake.db.alchemy import db_utils
-from openquake.utils import db
+from openquake.db import models
 from openquake.utils.db import loader as db_loader
 
 from tests.utils import helpers
@@ -187,7 +185,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         self.assertEqual(
             '%s.IncrementalMagFreqDist' % db_loader.MFD_PACKAGE, mfd_type)
 
-        # this is the dict we'll be passing to sqlalchemy to do the db insert
+        # this is the dict we'll be passing to Django to do the db insert
         mfd_insert = db_loader.parse_mfd(self.simple, mfd)
 
         helpers.assertDictAlmostEqual(self, expected, mfd_insert)
@@ -233,9 +231,8 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
                 'upper_depth': 8.0,
                 'mgf_evd_id': None,
                 'mfd_tgr_id': None,
-                'outline': \
-                    geoalchemy.WKTSpatialElement(SIMPLE_FAULT_OUTLINE_WKT),
-                'edge': geoalchemy.WKTSpatialElement(SIMPLE_FAULT_EDGE_WKT),
+                'outline': SIMPLE_FAULT_OUTLINE_WKT,
+                'edge': SIMPLE_FAULT_EDGE_WKT,
                 'lower_depth': 13.0,
                 'gid': u'src01',
                 'owner_id': None,
@@ -264,22 +261,21 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         exp_outline = expected[1]['data'].pop('outline')
         actual_outline = simple_data[1]['data'].pop('outline')
 
-        self.assertEqual(exp_outline.geom_wkt, actual_outline.geom_wkt)
+        self.assertEqual(exp_outline, actual_outline)
 
         exp_edge = expected[1]['data'].pop('edge')
         actual_edge = simple_data[1]['data'].pop('edge')
 
-        self.assertEqual(exp_edge.geom_wkt, actual_edge.geom_wkt)
+        self.assertEqual(exp_edge, actual_edge)
 
         # Now we can test the rest of the data.
         for idx, exp in enumerate(expected):
             helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        engine = db_utils.get_db_session("hzrdi", "writer").connection().engine
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
                                                 xml.nrml_schema_file())
-        src_loader = db_loader.SourceModelLoader(test_file, engine)
+        src_loader = db_loader.SourceModelLoader(test_file)
 
         results = src_loader.serialize()
 
@@ -300,22 +296,18 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # sure the expected records are there.
         # At this point, we're not going to check every single value; we just
         # want to make sure the records made it into the database.
-        tables = src_loader.meta.tables
 
         # list of tuples of (table name, id)
         table_id_pairs = [x.items()[0] for x in results]
 
         for table_name, record_id in table_id_pairs:
-            table = tables[table_name]
+            table = db_loader.TABLE_MAP[table_name]
 
             # run a query against the table object to get a ResultProxy
-            result_proxy = table.select(table.c.id == record_id).execute()
+            result_proxy = table.objects.filter(id=record_id).all()
 
             # there should be 1 record here
-            self.assertEqual(1, result_proxy.rowcount)
-
-        # clean up db resources
-        src_loader.close()
+            self.assertEqual(1, len(result_proxy))
 
     def test_serialize(self):
         """
@@ -345,7 +337,7 @@ class CsvLoaderTestCase(unittest.TestCase):
     def setUp(self):
         csv_file = "ISC_snippet.csv"
         self.csv_path = helpers.get_data_path(csv_file)
-        self.db_loader = db_loader.CsvModelLoader(self.csv_path, None, 'eqcat')
+        self.db_loader = db_loader.CsvModelLoader(self.csv_path)
         self.db_loader._read_model()
         self.csv_reader = self.db_loader.csv_reader
 
@@ -377,37 +369,22 @@ class CsvLoaderTestCase(unittest.TestCase):
         csv_headers = sorted(self.csv_reader.next().keys())
         self.assertEqual(csv_headers, expected_headers)
 
-    def _retrieve_db_data(self, soup_db):
+    def _retrieve_db_data(self):
+        values = models.Catalog.objects.order_by('eventid').values(
+            'id', 'time', 'time_error', 'depth', 'depth_error', 'agency',
+            'eventid', 'identifier',
+            'surface__semi_minor', 'surface__semi_major', 'surface__strike',
+            'magnitude__mb_val', 'magnitude__mb_val_error',
+            'magnitude__ml_val', 'magnitude__ml_val_error',
+            'magnitude__ms_val', 'magnitude__ms_val_error',
+            'magnitude__mw_val', 'magnitude__mw_val_error',
+            )
 
-        # compatible with SQLAlchemy 0.6.4; a bit of an hack because
-        # it knows how ".join" is implemented in SQLSoup; there does
-        # not seem a cleaner solution
-        def _join(soup_db, left, right, **kwargs):
-            from sqlalchemy import join
+        def _strip_table(dic):
+            # only return the column name
+            return dict((k.split('__')[-1], v) for k, v in dic.items())
 
-            j = join(left, right)
-            return soup_db.map(j, **kwargs)
-
-        # doing some "trickery" with *properties and primary_key,
-        # to adapt the code for sqlalchemy 0.7
-
-        # surface join
-        surf_join = _join(soup_db, soup_db.catalog, soup_db.surface,
-            properties={'id_surface': [soup_db.surface.c.id]},
-                        exclude_properties=[soup_db.surface.c.id,
-                            soup_db.surface.c.last_update],
-            primary_key=[soup_db.surface.c.id])
-
-        # magnitude join
-        mag_join = _join(soup_db, surf_join, soup_db.magnitude,
-            properties={'id_magnitude': [soup_db.magnitude.c.id],
-                    'id_surface': [soup_db.surface.c.id]},
-                        exclude_properties=[soup_db.magnitude.c.id,
-                            soup_db.magnitude.c.last_update,
-                            soup_db.surface.c.last_update],
-            primary_key=[soup_db.magnitude.c.id, soup_db.surface.c.id])
-
-        return mag_join.order_by(soup_db.catalog.eventid).all()
+        return [_strip_table(r) for r in values]
 
     def _verify_db_data(self, csv_loader, db_rows):
 
@@ -435,12 +412,12 @@ class CsvLoaderTestCase(unittest.TestCase):
             timestamp = _prepare_date(csv_row, _pop_date_fields(csv_keys))
             csv_time = csv_loader._date_to_timestamp(*timestamp)
             # first we compare the timestamps
-            self.assertEqual(str(db_row.time), csv_time)
+            self.assertEqual(str(db_row['time']), csv_time)
 
             # then, we cycle through the csv keys and consider some special
             # cases
             for csv_key in csv_keys:
-                db_val = getattr(db_row, csv_key)
+                db_val = db_row[csv_key]
                 csv_val = csv_row[csv_key]
 
                 def convert_val(v):
@@ -458,20 +435,11 @@ class CsvLoaderTestCase(unittest.TestCase):
 
                 self.assertEqual(db_val, convert_val(csv_val))
 
-    def _writer_soup(self):
-        engine = db_utils.get_db_session("eqcat", "writer").connection().engine
-
-        csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
-        return csv_loader._sql_soup_init('eqcat')
-
     def _clean_db_data(self):
-        soup_db = self._writer_soup()
-        db_rows = self._retrieve_db_data(soup_db)
+        db_rows = self._retrieve_db_data()
 
         for db_row in db_rows:
-            soup_db.delete(db_row)
-
-        soup_db.commit()
+            models.Catalog.objects.get(id=db_row['id']).delete()
 
     def test_csv_to_db_loader_end_to_end(self):
         """
@@ -481,15 +449,11 @@ class CsvLoaderTestCase(unittest.TestCase):
             * Deletes the inserted records from the database
         """
 
-        engine = db_utils.get_db_session("eqcat", "writer").connection().engine
-
-        csv_loader = db_loader.CsvModelLoader(self.csv_path, engine, 'eqcat')
+        csv_loader = db_loader.CsvModelLoader(self.csv_path)
         csv_loader.serialize()
-        db_rows = self._retrieve_db_data(csv_loader.soup)
+        db_rows = self._retrieve_db_data()
 
         # rewind the file
         csv_loader.csv_fd.seek(0)
 
         self._verify_db_data(csv_loader, db_rows)
-
-        csv_loader.soup.commit()
