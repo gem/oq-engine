@@ -71,10 +71,8 @@ def spawn_job_supervisor(job_id, pid):
     """
     Spawn a supervisor process as configured in openquake.cfg.
 
-    :param job_id: the id of the job to be supervised
-    :type job_id: int
-    :param pid: the process id of the job to be supervised
-    :type pid: int
+    :param int job_id: the id of the job to be supervised
+    :param int pid: the process id of the job to be supervised
     :return: the id of the supervisor process or None if no supervisor was
              configured
     :rtype: int or None
