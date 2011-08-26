@@ -527,32 +527,6 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
 
-    def test_failed_db_job_lifecycle(self):
-        with patch('openquake.job.Job.from_file') as from_file:
-
-            # called in place of Job.launch
-            def test_status_running_and_fail():
-                self.assertEquals('running', self._job_status())
-                x = OqJob()
-                x.save()
-
-            # replaces Job.launch with a mock
-            def patch_job_launch(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.launch = mock.Mock(
-                    side_effect=test_status_running_and_fail)
-                self.assertEquals('pending', self._job_status())
-                return self.job
-
-            from_file.side_effect = patch_job_launch
-
-            with patch('openquake.job.spawn_job_supervisor'):
-                self.assertRaises(exceptions.ObjectDoesNotExist, run_job,
-                                helpers.get_data_path(CONFIG_FILE), 'db')
-
-        self.assertEquals(1, self.job.launch.call_count)
-        self.assertEquals('failed', self._job_status())
-
     def test_invalid_job_lifecycle(self):
         with patch('openquake.job.Job.from_file') as from_file:
 
