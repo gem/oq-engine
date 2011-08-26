@@ -135,7 +135,7 @@ class OqBugsTestCase(unittest.TestCase):
             for bug in launchpad_lookup(self.launchpad, self.bugs):
                 self.assertTrue(isinstance(bug, mock.Mock))
 
-    def test_fix_committed_mark(self):
+    def test_fix_committed_status(self):
         for commit in self.correct_commits:
             # preparing bugs for mocker
             self.bugs = prepare_mock(filter_bugs(commit))
