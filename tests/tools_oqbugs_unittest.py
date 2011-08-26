@@ -21,14 +21,28 @@
 """
 Unit tests for the tools/oqbugs.py tool.
 """
-
 import unittest
 from tools.oqbugs import (CommitsOutput, filter_reviewers, filter_bugs,
-        launchpad_lookup)
+        launchpad_lookup, FixCommitted)
 import mock
 import os
+from argparse import Namespace
+
 
 CACHE_DIR = os.path.expanduser("~/.launchpadlib-test/cache/")
+
+class StatusMock(mock.Mock):
+
+    def __init__(self):
+        self.lp_status = 'In Progress'
+        self.default_mock = mock.Mock(return_value=self.lp_status)
+    @property
+    def status(self):
+        return self.default_mock()
+
+    @status.setter
+    def set_status(self, status):
+        self.lp_status = status
 
 
 class OqBugsTestCase(unittest.TestCase):
@@ -37,8 +51,12 @@ class OqBugsTestCase(unittest.TestCase):
     def _prepare_mock(self, bugs):
         bugs_list = {}
         for bug in bugs:
+            status_mock = StatusMock()
             magic_mock = mock.MagicMock()
-            magic_mock.bug_tasks.__getitem__ = mock.Mock(spec=[])
+            
+            magic_mock.bug_tasks.__getitem__ = status_mock
+            magic_mock.bug_tasks.__setitem__ = status_mock
+#            magic_mock.bug_tasks.status = 'In Progress'
             bugs_list.update({bug : magic_mock})
         return bugs_list
 
@@ -123,3 +141,32 @@ class OqBugsTestCase(unittest.TestCase):
             self.bugs = self._prepare_mock(commit)
             for bug in launchpad_lookup(self.launchpad, self.bugs):
                 self.assertTrue(isinstance(bug, mock.Mock))
+
+    def test_fix_committed_mark(self):
+#        class StubEntry(list):
+#            
+#            def __init__(self):
+#                super(StubEntry, self).__init__(self)
+#                self.status = "Not Committed"
+#                self.called = False
+#                self.bug_tasks = []
+
+#            def salvami(self):
+#                self.called = True
+
+
+#        task = StubEntry()
+#        sub_task = StubEntry()
+        for commit in self.correct_commits:
+            # preparing bugs for mocker
+            self.bugs = self._prepare_mock(commit)
+            tasks = launchpad_lookup(self.launchpad, self.bugs)
+        
+            namespace = Namespace(time='1 week')
+        
+            fix_committed = FixCommitted(None, "fix_committed")
+            tasks = fix_committed(None, namespace, True, bugs=tasks)
+            for task in tasks:    
+                self.assertEqual("Fix Committed", task.bug_tasks[0].status)
+                self.assertTrue(sub_task.called)
+
