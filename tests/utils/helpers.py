@@ -36,6 +36,8 @@ import sys
 import guppy
 import mock as mock_module
 
+from django.core import exceptions
+
 from openquake import flags
 from openquake import logs
 from openquake.job import Job
@@ -244,6 +246,50 @@ def assertDictAlmostEqual(test_case, expected, actual):
             assertDictAlmostEqual(test_case, exp_val, act_val)
         else:
             test_case.assertEqual(expected[key], actual[key])
+
+
+def assertModelAlmostEqual(test_case, expected, actual):
+    """
+    Assert that two Django models are equal. For values which are numbers,
+    we use :py:meth:`unittest.TestCase.assertAlmostEqual` for number
+    comparisons with a reasonable precision tolerance.
+
+    If the `expected` input value contains nested models, this function
+    will recurse through them and check for equality.
+
+    :param test_case: TestCase object on which we can call all of the basic
+        'assert' methods.
+    :type test_case: :py:class:`unittest.TestCase` object
+    :type expected: dict
+    :type actual: dict
+    """
+
+    from django.contrib.gis.db import models as gis_models
+
+    test_case.assertEqual(type(expected), type(actual))
+
+    def getattr_or_none(model, field):
+        try:
+            return getattr(model, field.name)
+        except exceptions.ObjectDoesNotExist:
+            return None
+
+    for field in expected._meta.fields:
+        if field.name == 'last_update':
+            continue
+
+        exp_val = getattr_or_none(expected, field)
+        act_val = getattr_or_none(actual, field)
+
+        # If it's a number, use assertAlmostEqual to compare
+        # the values with a reasonable tolerance.
+        if isinstance(exp_val, (int, float, long, complex)):
+            test_case.assertAlmostEqual(exp_val, act_val)
+        elif isinstance(exp_val, gis_models.Model):
+            # make a recursive call in case there are nested dicts
+            assertModelAlmostEqual(test_case, exp_val, act_val)
+        else:
+            test_case.assertEqual(exp_val, act_val)
 
 
 def wait_for_celery_tasks(celery_results,
