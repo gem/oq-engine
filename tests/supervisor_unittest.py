@@ -30,6 +30,7 @@ from openquake.supervising import supersupervisor
 
 CONFIG_FILE = "config.gem"
 
+
 class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
     def setUp(self):
         self.job = self.setup_classic_job(create_job_path=False)
@@ -125,7 +126,6 @@ class SupervisorTestCase(unittest.TestCase):
             self.assertEqual(((123, 'failed', 'a msg'), {}),
                              self.update_job_status_and_error_msg.call_args)
 
-
     def test_actions_after_job_process_termination(self):
         # the job process is *not* running
         self.is_pid_running.return_value = False
@@ -141,7 +141,6 @@ class SupervisorTestCase(unittest.TestCase):
         self.assertEqual(1, self.signal_job_outcome.call_count)
         self.assertEqual(((123, 'succeeded'), {}),
                             self.signal_job_outcome.call_args)
-
 
     def test_actions_after_job_process_crash(self):
         # the job process is *not* running

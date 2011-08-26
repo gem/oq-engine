@@ -79,6 +79,7 @@ def get_job_status(job_id):
 
     return OqJob.objects.get(id=job_id).status
 
+
 def update_job_status_and_error_msg(job_id, status, error_msg=None):
     """
     Store in the database the status of a job and optionally an error message.
