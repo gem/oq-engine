@@ -650,9 +650,6 @@ class RunJobTestCase(unittest.TestCase):
 
         oq_config.Config().cfg['supervisor']['exe'] = 'supervise me'
         job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
-        row = OqJob.objects.get(id=job.job_id)
-        row.job_pid = 54321
-        row.save()
 
         with patch('subprocess.Popen') as popen:
             popen.return_value = FakeProcess()
@@ -663,4 +660,3 @@ class RunJobTestCase(unittest.TestCase):
                               {'env': os.environ}))
             job = OqJob.objects.get(pk=job.job_id)
             self.assertEqual(job.supervisor_pid, 42)
-            self.assertEqual(job.job_pid, 54321)
