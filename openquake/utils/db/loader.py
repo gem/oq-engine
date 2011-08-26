@@ -289,7 +289,8 @@ def parse_simple_fault_src(fault):
 
 
 def _table_name(model):
-    return '.'.join(model._meta.db_table.split('"."'))
+    """Return table name for a given model"""
+    return '.'.join(model._meta.db_table.split('"."'))  # pylint: disable=W0212
 
 
 def write_simple_fault(simple_data, owner_id, input_id):
