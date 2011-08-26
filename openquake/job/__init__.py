@@ -89,8 +89,9 @@ def spawn_job_supervisor(job_id, pid):
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-        OqJob.objects.get(id=job_id).update(
-            supervisor_pid=supervisor_pid, job_pid=pid)
+        job = OqJob.objects.get(id=job_id)
+        job.supervisor_pid = supervisor_pid
+        job.save()
     else:
         LOG.warn('This job won\'t be supervised, '
                  'because no supervisor is configured in openquake.cfg')
@@ -116,19 +117,9 @@ def run_job(job_file, output_type):
 
         try:
             a_job.launch()
-        except sqlalchemy.exc.SQLAlchemyError:
-            # Try to cleanup the session status to have a chance to update the
-            # job record without further errors.
-            session = get_db_session("job", "init")
-            if session.is_active:
-                session.rollback()
-
+        except Exception, ex:
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
-
-            raise
-        except:
-            a_job.set_status('failed')
-
             raise
         else:
             a_job.set_status('succeeded')
