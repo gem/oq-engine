@@ -18,8 +18,9 @@
 
 import mock
 import os
-import sqlalchemy
 import unittest
+
+from django.core import exceptions
 
 from openquake import kvs
 from openquake import flags
@@ -28,9 +29,7 @@ from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob
-from openquake.db.models import OqJob as OqJobModel
+from openquake.db.models import OqJob
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -247,49 +246,38 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        session = get_db_session("job", "init")
-
-        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
+        OqJob.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
-
-        session = get_db_session("job", "init")
-
-        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
+        OqJob.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        session = get_db_session("reslt", "writer")
-
         status = 'running'
         self.job.set_status(status)
-
-        job = session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
-
-        self.assertEqual(status, job.status)
+        self.assertEqual(status, OqJob.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        row = OqJob.objects.get(id=self.job.job_id)
 
-        session = get_db_session("job", "init")
-        session.query(OqJob).update({'status': 'failed'})
-        session.commit()
-        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
-        session.query(OqJob).update({'status': 'running'})
-        session.commit()
-        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'running')
+        row.status = "failed"
+        row.save()
+        self.assertEqual("failed", Job.get_status_from_db(self.job.job_id))
+
+        row.status = "running"
+        row.save()
+        self.assertEqual("running", Job.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
         job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
-        session = get_db_session("job", "init")
+        row = OqJob.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
-            session.query(OqJob).update({'status': status})
-            session.commit()
+            row.status = status
+            row.save()
             self.assertEqual(Job.is_job_completed(job_id), is_completed)
 
 
@@ -476,14 +464,13 @@ class RunJobTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = None
-        self.session = get_db_session("reslt", "writer")
         self.job_from_file = Job.from_file
 
     def tearDown(self):
         self.job = None
 
     def _job_status(self):
-        return OqJob.objects.get(id=self.job.id).status
+        return OqJob.objects.get(id=self.job.job_id).status
 
     def test_successful_job_lifecycle(self):
         with patch('openquake.job.Job.from_file') as from_file:
@@ -546,25 +533,20 @@ class RunJobTestCase(unittest.TestCase):
             # called in place of Job.launch
             def test_status_running_and_fail():
                 self.assertEquals('running', self._job_status())
-
-                session = get_db_session("job", "init")
-
-                session.query(OqJob).filter(OqJob.id == -1).one()
+                OqJob.objects.get(id=-1)
 
             # replaces Job.launch with a mock
             def patch_job_launch(*args, **kwargs):
                 self.job = self.job_from_file(*args, **kwargs)
                 self.job.launch = mock.Mock(
                     side_effect=test_status_running_and_fail)
-
                 self.assertEquals('pending', self._job_status())
-
                 return self.job
 
             from_file.side_effect = patch_job_launch
 
             with patch('openquake.job.spawn_job_supervisor'):
-                self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
+                self.assertRaises(exceptions.ObjectDoesNotExist, run_job,
                                 helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
@@ -655,14 +637,12 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor')\
-                as spawn_job_supervisor:
-
+            with patch('openquake.job.spawn_job_supervisor') as mocked_func:
                 run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-                self.assertEquals(1, spawn_job_supervisor.call_count)
+                self.assertEquals(1, mocked_func.call_count)
                 self.assertEquals(((self.job.job_id, os.getpid()), {}),
-                                  spawn_job_supervisor.call_args)
+                                  mocked_func.call_args)
 
     def test_spawn_job_supervisor(self):
         class FakeProcess(object):
@@ -670,6 +650,9 @@ class RunJobTestCase(unittest.TestCase):
 
         oq_config.Config().cfg['supervisor']['exe'] = 'supervise me'
         job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
+        row = OqJob.objects.get(id=job.job_id)
+        row.job_pid = 54321
+        row.save()
 
         with patch('subprocess.Popen') as popen:
             popen.return_value = FakeProcess()
@@ -678,6 +661,6 @@ class RunJobTestCase(unittest.TestCase):
             self.assertEqual(popen.call_args,
                              ((['supervise me', str(job.job_id), '54321'], ),
                               {'env': os.environ}))
-            job = OqJobModel.objects.get(pk=job.job_id)
+            job = OqJob.objects.get(pk=job.job_id)
             self.assertEqual(job.supervisor_pid, 42)
             self.assertEqual(job.job_pid, 54321)
