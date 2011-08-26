@@ -120,13 +120,13 @@ def parse_mfd(fault, mfd_java_obj):
 
     if mfd_type == '%s.IncrementalMagFreqDist' % MFD_PACKAGE:
         # 'evenly discretized' MFD
-        mfd = dict()
+        mfd = models.MfdEvd()
 
-        mfd['min_val'] = mfd_java_obj.getMinX()
-        mfd['max_val'] = mfd_java_obj.getMaxX()
-        mfd['bin_size'] = mfd_java_obj.getDelta()
+        mfd.min_val = mfd_java_obj.getMinX()
+        mfd.max_val = mfd_java_obj.getMaxX()
+        mfd.bin_size = mfd_java_obj.getDelta()
 
-        mfd['mfd_values'] = \
+        mfd.mfd_values = \
             [mfd_java_obj.getY(x) for x in range(mfd_java_obj.getNum())]
 
         # Now we can calculate the (optional) total moment rate & total
@@ -134,45 +134,40 @@ def parse_mfd(fault, mfd_java_obj):
 
         # The 'total cumulative rate' and 'total moment rate' both need to be
         # normalized by the fault surface area.
-        mfd['total_cumulative_rate'] = \
+        mfd.total_cumulative_rate = \
             mfd_java_obj.getTotalIncrRate() / surface_area
 
-        mfd['total_moment_rate'] = \
+        mfd.total_moment_rate = \
             mfd_java_obj.getTotalMomentRate() / surface_area
-
-        # create model instance
-        mfd_insert = models.MfdEvd(**mfd)
 
     elif mfd_type == '%s.GutenbergRichterMagFreqDist' % MFD_PACKAGE:
         # 'truncated Gutenberg-Richter' MFD
-        mfd = dict()
+        mfd = models.MfdTgr()
 
-        mfd['min_val'] = mfd_java_obj.getMinX()
-        mfd['max_val'] = mfd_java_obj.getMaxX()
-        mfd['b_val'] = mfd_java_obj.get_bValue()
+        mfd.min_val = mfd_java_obj.getMinX()
+        mfd.max_val = mfd_java_obj.getMaxX()
+        mfd.b_val = mfd_java_obj.get_bValue()
 
         # 'a_val' needs to be calculated:
         delta = mfd_java_obj.getDelta()
         min_mag = mfd_java_obj.getMinX() - (delta / 2)
         max_mag = mfd_java_obj.getMaxX() + (delta / 2)
         total_cumul_rate = mfd_java_obj.getTotCumRate()
-        denominator = float(numpy.power(10, -(mfd['b_val'] * min_mag))
-            - numpy.power(10, -(mfd['b_val'] * max_mag)))
+        denominator = float(numpy.power(10, -(mfd.b_val * min_mag))
+            - numpy.power(10, -(mfd.b_val * max_mag)))
 
-        mfd['a_val'] = float(numpy.log10(total_cumul_rate / denominator))
+        mfd.a_val = float(numpy.log10(total_cumul_rate / denominator))
 
-        mfd['total_cumulative_rate'] = \
+        mfd.total_cumulative_rate = \
             mfd_java_obj.getTotCumRate() / surface_area
 
-        mfd['total_moment_rate'] = \
+        mfd.total_moment_rate = \
             mfd_java_obj.getTotalMomentRate() / surface_area
-
-        mfd_insert = models.MfdTgr(**mfd)
 
     else:
         raise ValueError("Unsupported MFD type: %s" % mfd_type)
 
-    return mfd_insert
+    return mfd
 
 
 def parse_simple_fault_src(fault):
@@ -236,12 +231,13 @@ def parse_simple_fault_src(fault):
         Build up the simple fault dict. See the documentation for
         :py:function:`parse_simple_fault_src` for more information.
         """
-        simple_fault = dict()
-        simple_fault['name'] = fault.getName()
-        simple_fault['gid'] = fault.getID()
-        simple_fault['dip'] = fault.getDip()
-        simple_fault['upper_depth'] = fault.getSeismDepthUpp()
-        simple_fault['lower_depth'] = fault.getSeismDepthLow()
+        simple_fault = models.SimpleFault()
+
+        simple_fault.name = fault.getName()
+        simple_fault.gid = fault.getID()
+        simple_fault.dip = fault.getDip()
+        simple_fault.upper_depth = fault.getSeismDepthUpp()
+        simple_fault.lower_depth = fault.getSeismDepthLow()
 
         trace = fault.getTrace()
 
@@ -257,7 +253,7 @@ def parse_simple_fault_src(fault):
 
         trace_coords = coord_list(trace)
 
-        simple_fault['edge'] = 'SRID=4326;LINESTRING(%s)' % trace_coords
+        simple_fault.edge = 'SRID=4326;LINESTRING(%s)' % trace_coords
 
         surface = get_fault_surface(fault)
 
@@ -267,27 +263,27 @@ def parse_simple_fault_src(fault):
 
         outline_coords = formatter.format()
 
-        simple_fault['outline'] = 'SRID=4326;POLYGON((%s))' % outline_coords
+        simple_fault.outline = 'SRID=4326;POLYGON((%s))' % outline_coords
 
-        return models.SimpleFault(**simple_fault)
+        return simple_fault
 
     def build_source_insert(fault):
         """
         Build up the source dict. See the documentation for
         :py:function:`parse_simple_fault_src` for more information.
         """
-        source = dict()
+        source = models.Source()
 
         # NOTE(LB): this gid will be the same as the simple_fault.gid
         # This could be horribly wrong.
-        source['gid'] = fault.getID()
-        source['name'] = fault.getName()
-        source['si_type'] = 'simple'
-        source['tectonic_region'] = \
+        source.gid = fault.getID()
+        source.name = fault.getName()
+        source.si_type = 'simple'
+        source.tectonic_region = \
             TECTONIC_REGION_MAP.get(fault.getTectReg().name)
-        source['rake'] = fault.getRake()
+        source.rake = fault.getRake()
 
-        return models.Source(**source)
+        return source
 
     mfd_java_obj = fault.getMfd()
 
