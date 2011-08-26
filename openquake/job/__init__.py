@@ -25,6 +25,7 @@ import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
+from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
@@ -115,6 +116,11 @@ def run_job(job_file, output_type):
 
         try:
             a_job.launch()
+        except IntegrityError, ex:
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
+            transaction.rollback()
+            a_job.set_status('failed')
+            raise
         except Exception, ex:
             LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
