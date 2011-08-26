@@ -873,9 +873,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         block = Block((SITE, SITE), self.block_id)
         block.to_kvs()
 
-        session = db_utils.get_db_session('reslt', 'writer')
-        writer = hazard.HazardCurveDBWriter(session, 'test_path.xml',
-                                            self.job_id)
+        writer = hazard.HazardCurveDBWriter('test_path.xml', self.job_id)
         writer.serialize(self.hazard_curve)
 
         kvs.set_value_json_encoded(

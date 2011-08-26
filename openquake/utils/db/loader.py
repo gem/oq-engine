@@ -28,15 +28,12 @@ and serializing the data to the OpenQuake eqcat database.
 
 
 import csv
-from sqlalchemy.ext.sqlsoup import SqlSoup
 import datetime
-from sqlalchemy.orm import scoped_session, sessionmaker
 
-import geoalchemy
 import numpy
-import sqlalchemy
 
 from openquake import java, xml
+from openquake.db import models
 from openquake.utils import db
 
 SRC_DATA_PKG = 'org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData'
@@ -50,6 +47,12 @@ DEFAULT_GRID_SPACING = 1.0  # kilometers
 TECTONIC_REGION_MAP = {
     'Active Shallow Crust': 'active',
     'Subduction Interface': 'interface'}
+TABLE_MAP = {
+    'hzrdi.mfd_evd': models.MfdEvd,
+    'hzrdi.mfd_tgr': models.MfdTgr,
+    'hzrdi.simple_fault': models.SimpleFault,
+    'hzrdi.source': models.Source,
+}
 
 
 def get_fault_surface(fault):
@@ -113,9 +116,8 @@ def parse_mfd(fault, mfd_java_obj):
              'data': <dict of column name/value pairs>}
 
         The reason we add this additional wrapper is so we can generically do
-        database inserts with sqlalchemy; the table name allows to use
-        sqlalchemy to retrieve the appropriate :py:class:`sqlalchemy.Table`
-        object, which can then be used to perform the insert.
+        database inserts; the table name allows retrieving the appropriate
+        Django model, which can then be used to perform the insert.
     """
 
     mfd_type = mfd_java_obj.__javaclass__.getName()
@@ -149,7 +151,7 @@ def parse_mfd(fault, mfd_java_obj):
             mfd_java_obj.getTotalMomentRate() / surface_area
 
         # wrap the insert data in dict keyed by table name
-        mfd_insert = {'table': '%s.mfd_evd' % db.PSHAI_TS, 'data': mfd}
+        mfd_insert = {'table': '%s.mfd_evd' % db.HZRDI_TS, 'data': mfd}
 
     elif mfd_type == '%s.GutenbergRichterMagFreqDist' % MFD_PACKAGE:
         # 'truncated Gutenberg-Richter' MFD
@@ -178,7 +180,7 @@ def parse_mfd(fault, mfd_java_obj):
         mfd['total_moment_rate'] = \
             mfd_java_obj.getTotalMomentRate() / surface_area
 
-        mfd_insert = {'table': '%s.mfd_tgr' % db.PSHAI_TS, 'data': mfd}
+        mfd_insert = {'table': '%s.mfd_tgr' % db.HZRDI_TS, 'data': mfd}
 
     else:
         raise ValueError("Unsupported MFD type: %s" % mfd_type)
@@ -268,9 +270,7 @@ def parse_simple_fault_src(fault):
 
         trace_coords = coord_list(trace)
 
-        simple_fault['edge'] = \
-            geoalchemy.WKTSpatialElement(
-                'SRID=4326;LINESTRING(%s)' % trace_coords)
+        simple_fault['edge'] = 'SRID=4326;LINESTRING(%s)' % trace_coords
 
         surface = get_fault_surface(fault)
 
@@ -280,12 +280,10 @@ def parse_simple_fault_src(fault):
 
         outline_coords = formatter.format()
 
-        simple_fault['outline'] = \
-            geoalchemy.WKTSpatialElement(
-                'SRID=4326;POLYGON((%s))' % outline_coords)
+        simple_fault['outline'] = 'SRID=4326;POLYGON((%s))' % outline_coords
 
         simple_fault_insert = {
-            'table': '%s.simple_fault' % db.PSHAI_TS,
+            'table': '%s.simple_fault' % db.HZRDI_TS,
             'data': simple_fault}
 
         return simple_fault_insert
@@ -307,7 +305,7 @@ def parse_simple_fault_src(fault):
         source['rake'] = fault.getRake()
 
         source_insert = {
-            'table': '%s.source' % db.PSHAI_TS,
+            'table': '%s.source' % db.HZRDI_TS,
             'data': source}
 
         return source_insert
@@ -346,14 +344,9 @@ def parse_point_src(_source_data):
     raise NotImplementedError
 
 
-def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
+def write_simple_fault(simple_data, owner_id, input_id):
     """
     Perform an insert of the given data.
-
-    :param engine_meta: Database metadata object which we need to gain access
-        to the appropriate table objects, which can then be used to perform
-        insert operations.
-    :type engine_meta: :py:class:`sqlalchemy.schema.MetaData`
 
     :param simple_data: 3-tuple of insert data (mfd, simple_fault, source). See
         the documentation for :py:function:`parse_simple_fault_src` for more
@@ -392,15 +385,18 @@ def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
         assert owner_id is not None, "owner_id should not be None"
         assert isinstance(owner_id, int), "owner_id should be an integer"
 
-        table = engine_meta.tables[insert['table']]
+        table = TABLE_MAP[insert['table']]
 
         data = insert['data']
 
-        data['owner_id'] = owner_id
+        # fix owner reference
+        data.pop('owner_id')
+        data['owner'] = models.OqUser.objects.get(id=owner_id)
 
-        result = table.insert().execute(data)
+        item = table(**data)
+        item.save()
 
-        return result.inserted_primary_key[0]
+        return item.id
 
     assert len(simple_data) == 3, \
         "Expected a 3-tuple: (mfd, simple_fault, source)"
@@ -409,10 +405,14 @@ def write_simple_fault(engine_meta, simple_data, owner_id, input_id):
 
     mfd_id = do_insert(mfd)
 
-    if mfd['table'] == '%s.mfd_evd' % db.PSHAI_TS:
-        simple_fault['data']['mfd_evd_id'] = mfd_id
-    elif mfd['table'] == '%s.mfd_tgr' % db.PSHAI_TS:
-        simple_fault['data']['mfd_tgr_id'] = mfd_id
+    # fix mfd references
+    simple_fault['data'].pop('mgf_evd_id', None)
+    simple_fault['data'].pop('mfd_tgr_id', None)
+
+    if mfd['table'] == '%s.mfd_evd' % db.HZRDI_TS:
+        simple_fault['data']['mfd_evd'] = models.MfdEvd.objects.get(id=mfd_id)
+    elif mfd['table'] == '%s.mfd_tgr' % db.HZRDI_TS:
+        simple_fault['data']['mfd_tgr'] = models.MfdTgr.objects.get(id=mfd_id)
 
     simple_id = do_insert(simple_fault)
 
@@ -461,14 +461,11 @@ class SourceModelLoader(object):
         '%s.GEMPointSourceData' % SRC_DATA_PKG: {
             'fn': None}}
 
-    def __init__(self, src_model_path, engine,
+    def __init__(self, src_model_path,
         mfd_bin_width=DEFAULT_MFD_BIN_WIDTH, owner_id=1, input_id=None):
         """
         :param src_model_path: path to a source model file
         :type src_model_path: str
-
-        :param engine: db engine to provide connectivity and reflection
-        :type engine: :py:class:`sqlalchemy.engine.base.Engine`
 
         :param mfd_bin_width: Magnitude Frequency Distribution bin width
         :type mfd_bin_width: float
@@ -484,7 +481,6 @@ class SourceModelLoader(object):
             GUI.
         """
         self.src_model_path = src_model_path
-        self.engine = engine
         self.mfd_bin_width = mfd_bin_width
         self.owner_id = owner_id
         self.input_id = input_id
@@ -494,18 +490,6 @@ class SourceModelLoader(object):
             "openquake.nrml.schema", xml.nrml_schema_file())
         self.src_reader = java.jclass('SourceModelReader')(
             self.src_model_path, self.mfd_bin_width)
-
-        self.meta = sqlalchemy.MetaData(engine)
-        self.meta.reflect(schema=db.PSHAI_TS)
-
-    def close(self):
-        """
-        Clean up DB resources.
-        """
-        # 1) clear tables from meta
-        self.meta.clear()
-        # 2) release connections to the pool
-        self.engine.dispose()
 
     def serialize(self):
         """
@@ -536,7 +520,7 @@ class SourceModelLoader(object):
                 continue
 
             results.extend(
-                write(self.meta, read(src), owner_id=self.owner_id,
+                write(read(src), owner_id=self.owner_id,
                 input_id=self.input_id))
 
         return results
@@ -547,22 +531,13 @@ class CsvModelLoader(object):
         Csv Model Loader which gets data from a particular CSV source and
         "serializes" the data to the database
     """
-    def __init__(self, src_model_path, engine, schema):
+    def __init__(self, src_model_path):
         """
             :param src_model_path: path to a source model file
             :type src_model_path: str
-
-            :param engine: db engine to provide connectivity and reflection
-            :type engine: :py:class:`sqlalchemy.engine.base.Engine`
-
-            :param schema: the schema needed to access the database
-            :type schema: str
         """
 
         self.src_model_path = src_model_path
-        self.engine = engine
-        self.soup = None
-        self.schema = schema
         self.csv_reader = None
         self.csv_fd = open(self.src_model_path, 'r')
 
@@ -577,7 +552,6 @@ class CsvModelLoader(object):
             Reads the model
             Writes to the db
         """
-        self.soup = self._sql_soup_init(self.schema)
         self._read_model()
         self._write_to_db(self.csv_reader)
 
@@ -608,9 +582,10 @@ class CsvModelLoader(object):
                 int(row['month']), int(row['day']), int(row['hour']),
                 int(row['minute']), int(row['second']))
 
-            surface = self.soup.surface(semi_minor=row['semi_minor'],
+            surface = models.Surface(semi_minor=row['semi_minor'],
                 semi_major=row['semi_major'],
                 strike=row['strike'])
+            surface.save()
 
             for mag in mags:
                 row[mag] = row[mag].strip()
@@ -623,7 +598,7 @@ class CsvModelLoader(object):
                 else:
                     row[mag] = float(row[mag])
 
-            magnitude = self.soup.magnitude(mb_val=row['mb_val'],
+            magnitude = models.Magnitude(mb_val=row['mb_val'],
                                 mb_val_error=row['mb_val_error'],
                                 ml_val=row['ml_val'],
                                 ml_val_error=row['ml_val_error'],
@@ -631,31 +606,14 @@ class CsvModelLoader(object):
                                 ms_val_error=row['ms_val_error'],
                                 mw_val=row['mw_val'],
                                 mw_val_error=row['mw_val_error'])
+            magnitude.save()
 
-            wkt = 'POINT(%s %s)' % (row['longitude'], row['latitude'])
-            self.soup.catalog(owner_id=1, time=timestamp,
+            wkt = 'SRID=4326;POINT(%s %s)' % (
+                row['longitude'], row['latitude'])
+            catalog = models.Catalog(owner_id=1, time=timestamp,
                 surface=surface, eventid=row['eventid'],
                 agency=row['agency'], identifier=row['identifier'],
                 time_error=row['time_error'], depth=row['depth'],
                 depth_error=row['depth_error'], magnitude=magnitude,
-                point=geoalchemy.WKTSpatialElement(wkt, 4326))
-
-        # commit results
-        self.soup.commit()
-
-    def _sql_soup_init(self, schema):
-        """
-            Gets the schema to connect
-            to the db, creates a SqlSoup instance, sets the schema
-
-            :param schema: database schema
-            :type schema: str
-        """
-        # be sure that autoflushing/expire_on_commit/autocommit are false
-        soup_db = SqlSoup(self.engine,
-            session=scoped_session(sessionmaker(autoflush=False,
-            expire_on_commit=False, autocommit=False)))
-        soup_db.schema = schema
-        soup_db.catalog.relate('surface', soup_db.surface)
-        soup_db.catalog.relate('magnitude', soup_db.magnitude)
-        return soup_db
+                point=wkt)
+            catalog.save()

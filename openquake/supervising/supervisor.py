@@ -29,13 +29,13 @@ supervise() will:
    - signal through an amqp exchange the outcome of the job
 """
 
-import errno
 import logging
 import os
 import signal
 
 from openquake.signalling import LogMessageConsumer
 from openquake import kvs
+from openquake.supervising import is_pid_running
 
 
 logging.basicConfig(level=logging.INFO)
@@ -63,23 +63,6 @@ def cleanup_after_job(job_id):
     logging.info('Cleaning up after job %s', job_id)
 
     kvs.cache_gc(job_id)
-
-
-def is_pid_running(pid):
-    """
-    Check if a process is still running.
-
-    :param pid: the process id
-    :type pid: int
-
-    :return: True if the process is running, False otherwise
-    """
-    try:
-        os.kill(pid, 0)
-    except OSError as e:
-        return e.errno != errno.ESRCH
-    else:
-        return True
 
 
 class SupervisorLogMessageConsumer(LogMessageConsumer):

@@ -32,10 +32,10 @@ class OQRouter(object):
     '''
 
     # Parses the schema name from model's _meta.db_table
-    SCHEMA_RE = re.compile(r'^(\w+)"')
+    SCHEMA_TABLE_RE = re.compile(r'^(\w+)"\.\"(\w+)')
 
     @classmethod
-    def _schema_from_model(cls, model):
+    def _schema_table_from_model(cls, model):
         '''
         Get the db schema name from a given model.
 
@@ -43,19 +43,18 @@ class OQRouter(object):
 
         :returns: schema name, or None if no schema is defined
         '''
-        match = cls.SCHEMA_RE.match(
-            model._meta.db_table)  # pylint: disable=W0212
-        if match:
-            return match.group(1)
+        parts = model._meta.db_table.split('"."')
+        if len(parts) == 2:
+            return parts
         else:
-            return None
+            return None, parts[0]
 
     def db_for_read(self, model, **_hints):
         '''
         Get the name of the correct db configuration to use for read operations
         on the given model.
         '''
-        schema = self._schema_from_model(model)
+        schema = self._schema_table_from_model(model)[0]
 
         if schema in ("admin", "oqmif"):
             # The db name for these is the same as the schema
@@ -72,11 +71,13 @@ class OQRouter(object):
         Get the name of the correct db configuration to use for write
         operations on the given model.
         '''
-        schema = self._schema_from_model(model)
+        schema, table = self._schema_table_from_model(model)
 
         if schema in ('admin', 'oqmif'):
             # The db name for these is the same as the schema
             return schema
+        elif schema == "uiapi" and table == "output":
+            return "reslt_writer"
         elif schema in ("hzrdi", "riski", "uiapi"):
             return "job_init"
         elif schema in ("hzrdr", "riskr"):
