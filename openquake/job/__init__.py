@@ -25,7 +25,6 @@ import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
-from django.db import IntegrityError, transaction
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
