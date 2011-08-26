@@ -44,7 +44,6 @@ from openquake.hazard import opensha
 import openquake.hazard.job
 
 from tests.utils import helpers
-from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
 
