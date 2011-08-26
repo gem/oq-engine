@@ -49,13 +49,15 @@ def prepare_mock(bugs):
     bugs_list = {}
     # prepares instances of mocked launchpad's bug objects
     for bug in bugs:
+        # MagicMock supports most of python's "magical" methods
         magic_mock = mock.MagicMock()
 
         for prop, val in attributes.iteritems():
             magic_mock.title = 'a bug title'
             setattr(magic_mock.bug_tasks[0], prop, val)
+
             # prepares a dictionary for mocking launchpad_instance.bugs
-            # lookup
+            # lookup. key is bug number, value is a prepared MagicMock object
             bugs_list.update({bug: magic_mock})
     return bugs_list
 
