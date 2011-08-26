@@ -44,12 +44,12 @@ def parse_and_login(time=None):
         Convenience function to parse and login to launchpad
     """
     launchpad = None
-    commits_output = None
+    commits_output = []
 
     if time:
         commits_output = CommitsOutput.since(time)
 
-        launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'staging',
+        launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'production',
                 CACHE_DIR)
 
     return launchpad, commits_output
@@ -88,7 +88,7 @@ class CommitsOutput(object):
 
 
 # A serie of ArgumentParser action(s) that are triggered by parse_args()
-def fix_committed(launchpad, commit_line):
+def fix_committed(launchpad, commit_lines):
     class FixCommitted(argparse.Action):
         """ Changes the status of a bug to Fix Committed when it is in
             the master repository (i.e. merged)
@@ -101,14 +101,15 @@ def fix_committed(launchpad, commit_line):
                     values, option_string)
 
             changed_bugs = [] 
-            if namespace.time:
-                bugs = launchpad_lookup(launchpad, 
-                        filter_bugs(commit_line))
-                
-                for bug in bugs:
-                    if bug.bug_tasks[0].status != "Fix Committed":
-                        bug.bug_tasks[0].status = 'Fix Committed'
-                        changed_bugs.append(bug)
+            for commit_line in commit_lines:
+                if namespace.time:
+                    bugs = launchpad_lookup(launchpad, 
+                            filter_bugs(commit_line))
+                    
+                    for bug in bugs:
+                        if bug.bug_tasks[0].status != "Fix Committed":
+                            bug.bug_tasks[0].status = 'Fix Committed'
+                            changed_bugs.append(bug)
             return changed_bugs
     return FixCommitted
 
@@ -123,61 +124,70 @@ class FixReleased(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
-class ChangeLog(argparse.Action):
-    """
-        Prints on screen the ChangeLog since a time
-    """
-    def __call__(self, parser, namespace, values, option_string=None):
-        print 'ChangeLog: %r %r %r' % (namespace, values, option_string)
+def changelog(launchpad, commit_lines):
+    class ChangeLog(argparse.Action):
+        """
+            Prints on screen the ChangeLog since a time
+        """
+        def __call__(self, parser, namespace, values, option_string=None):
+            print 'ChangeLog: %r %r %r' % (namespace, values, option_string)
 
-        launchpad, commits_output = parse_and_login(namespace.time)
-
-        for commit_line in commits_output:
-            reviewers = filter_reviewers(commit_line)
-            bugs = launchpad_lookup(launchpad,
-                    filter_bugs(commit_line))
-            for bug in bugs:
-                entry = """Fix-committed:  %s
+            for commit_line in commit_lines:
+                reviewers = filter_reviewers(commit_line)
+                bugs = launchpad_lookup(launchpad,
+                        filter_bugs(commit_line))
+                for bug in bugs:
+                    entry = """Fix-committed:  %s
 Summary:        %s
 Url:            %s
 Reviewed-by:    %s
 Closed-by:      %s
 """ % (
-                    str(bug.bug_tasks[0].date_fix_committed),
-                    str(bug.title),
-                    str(bug.bug_tasks[0].web_link),
-                    str(reviewers),
-                    str(bug.bug_tasks[0].assignee.name))
+                        str(bug.bug_tasks[0].date_fix_committed),
+                        str(bug.title),
+                        str(bug.bug_tasks[0].web_link),
+                        str(reviewers),
+                        str(bug.bug_tasks[0].assignee.name))
 
-                print entry
-        setattr(namespace, self.dest, values)
-
+                    print entry
+    return ChangeLog
 
 def arg_parse():
     """
         Prepares ArgumentParser for argument checking/triggering
     """
+
+    launchpad = None
+    commits_output = []
     parser = argparse.ArgumentParser(description=__doc__, add_help=False)
 
     parser.add_argument('-t', '--time', dest="time",
             help="time: timeframe (i.e '1 month', '1 week', etc) \
                 with quotes",
-            metavar="TIME",
+            metavar="TIME"
             )
 
     # pre-parse time to provide it to the next parser with custom methods in
     # custom argparse actions
-    args, _ = parser.parse_known_args()
+    args, remaining_argv = parser.parse_known_args()
 
-    # hack to make the option required after pre-parsing 
     parser._actions[0].required = True
+
+    if args.time:
+        if len(remaining_argv):
+            (launchpad, commits_output) = parse_and_login(args.time)
+        remaining_argv.extend(['-t', args.time])
 
     # merges the two parsers and instantiate the second final parser
     action_parser = argparse.ArgumentParser(description=__doc__, 
-            add_help=True, parents=[parser])
+            parents=[parser],
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            add_help=True)
 
-    (launchpad, commits_output) = parse_and_login(args.time)
-    action_parser.add_argument('-c', '--fix-committed', 
+
+    # hack
+    action_group = action_parser.add_mutually_exclusive_group()
+    action_group.add_argument('-c', '--fix-committed', 
             action=fix_committed(launchpad, commits_output),
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
@@ -185,28 +195,24 @@ def arg_parse():
             dest='fix_committed',
             required=False)
 
-    action_parser.add_argument('-r', '--fix-released', action=FixReleased,
+    action_group.add_argument('-r', '--fix-released', action=FixReleased,
             help="Invoked from the ppa build fetches from a git repository \
                 every with Fix Committed status and changes it to \
                 Fix Released",
             nargs=0,
             required=False)
 
-    action_parser.add_argument('-l', '--change-log', action=ChangeLog,
+
+    action_group.add_argument('-l', '--changelog', 
+            action=changelog(launchpad, commits_output),
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
             nargs=0,
             required=False)
 
-    
-    if args.time:
-        action_args = action_parser.parse_args()
-        print action_args
-    else:
-        print action_parser.print_help()
-        return (None, None)
+    action_parser.parse_args(remaining_argv)
 
-    return action_parser, action_args
+    return args
 
 
 def filter_reviewers(reviewers):
@@ -242,4 +248,4 @@ def filter_bugs(commit):
                     
 
 if __name__ == '__main__':
-    (PARSER, ARGS) = arg_parse()
+    arg_parse()
