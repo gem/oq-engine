@@ -239,8 +239,6 @@ def parse_simple_fault_src(fault):
         simple_fault.upper_depth = fault.getSeismDepthUpp()
         simple_fault.lower_depth = fault.getSeismDepthLow()
 
-        trace = fault.getTrace()
-
         # coords are ordered as lon/lat/depth
         point_str_3d = lambda pt: \
             ' '.join([
@@ -251,18 +249,14 @@ def parse_simple_fault_src(fault):
         coord_list = lambda point_list: \
             ', '.join([point_str_3d(point) for point in point_list])
 
+        trace = fault.getTrace()
         trace_coords = coord_list(trace)
-
         simple_fault.edge = 'SRID=4326;LINESTRING(%s)' % trace_coords
 
         surface = get_fault_surface(fault)
-
         location_list = surface.getSurfacePerimeterLocsList()
-
         formatter = java.jclass("LocationListFormatter")(location_list)
-
         outline_coords = formatter.format()
-
         simple_fault.outline = 'SRID=4326;POLYGON((%s))' % outline_coords
 
         return simple_fault
