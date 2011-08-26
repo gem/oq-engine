@@ -78,9 +78,8 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
-        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+        hcw = HazardCurveDBWriter(output_path, self.job.id)
         hcw.serialize(HAZARD_CURVE_DATA())
 
     def tearDown(self):
@@ -106,16 +105,15 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
                               [0.454, 0.214, 0.123, 0.102])
 
 
-class GMFDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     Test the code to read the ground motion fields from DB.
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         for gmf in GMF_DATA():
             output_path = self.generate_output_path(self.job)
-            hcw = GMFDBWriter(session, output_path, self.job.id)
+            hcw = GmfDBWriter(output_path, self.job.id)
             hcw.serialize(gmf)
 
     def tearDown(self):

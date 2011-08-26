@@ -1,5 +1,4 @@
 /*
-  Static data for the OpenQuake database schema.
 
     Copyright (c) 2010-2011, GEM Foundation.
 
@@ -11,7 +10,6 @@
 */
 
 
-INSERT INTO admin.organization(name) VALUES('GEM Foundation');
-INSERT INTO admin.oq_user(user_name, full_name, organization_id) VALUES('openquake', 'Default user', 1);
-
-INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake', '0.4.2', 14);
+CREATE INDEX uiapi_oq_job_status_running
+    ON uiapi.oq_job(status)
+    WHERE status = 'running';

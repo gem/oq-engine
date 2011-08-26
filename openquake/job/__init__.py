@@ -36,6 +36,7 @@ from openquake import logs
 from openquake import shapes
 from openquake.db.alchemy.db_utils import get_db_session
 from openquake.db.alchemy.models import OqJob, OqUser, OqParams
+from openquake.db.models import OqJob as OqJobModel
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
@@ -70,8 +71,45 @@ ENUM_MAP = {
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
+def spawn_job_supervisor(job_id, pid):
+    """
+    Spawn a supervisor process as configured in openquake.cfg.
+
+    :param job_id: the id of the job to be supervised
+    :type job_id: int
+    :param pid: the process id of the job to be supervised
+    :type pid: int
+    :return: the id of the supervisor process or None if no supervisor was
+             configured
+    :rtype: int or None
+    """
+    exe = oq_config.get('supervisor', 'exe')
+
+    if exe:
+        if oq_config.get('logging', 'backend') != 'amqp':
+            LOG.warn('If you want to run supervised jobs it\'s better '
+                     'to set [logging] backend=amqp in openquake.cfg')
+
+        cmd = [exe, str(job_id), str(pid)]
+
+        supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
+        OqJobModel.objects.filter(id=job_id).update(
+            supervisor_pid=supervisor_pid, job_pid=pid
+        )
+    else:
+        LOG.warn('This job won\'t be supervised, '
+                 'because no supervisor is configured in openquake.cfg')
+
+
 def run_job(job_file, output_type):
-    """Given a job_file, run the job."""
+    """
+    Given a job_file, run the job.
+
+    :param job_file: the path of the configuration file for the job
+    :type job_file: string
+    :param output_type: the desired format for the results, one of 'db', 'xml'
+    :type output_type: string
+    """
 
     a_job = Job.from_file(job_file, output_type)
     is_job_valid = a_job.is_valid()
@@ -79,12 +117,14 @@ def run_job(job_file, output_type):
     if is_job_valid[0]:
         a_job.set_status('running')
 
+        spawn_job_supervisor(a_job.job_id, os.getpid())
+
         try:
             a_job.launch()
         except sqlalchemy.exc.SQLAlchemyError:
             # Try to cleanup the session status to have a chance to update the
             # job record without further errors.
-            session = get_db_session("reslt", "writer")
+            session = get_db_session("job", "init")
             if session.is_active:
                 session.rollback()
 
@@ -151,7 +191,7 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    session = get_db_session("reslt", "writer")
+    session = get_db_session("job", "init")
 
     # TODO specify the owner as a command line parameter
     owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
@@ -318,7 +358,7 @@ class Job(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        session = get_db_session("reslt", "reader")
+        session = get_db_session("job", "init")
         [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
         return status
 
@@ -332,13 +372,15 @@ class Job(object):
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
-    def __init__(self, params, job_id, sections=list(), base_path=None):
+    def __init__(self, params, job_id, sections=list(), base_path=None,
+            validator=None):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
+        :param validator: validator(s) used to check the configuration file
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -350,6 +392,8 @@ class Job(object):
         self.sections = list(set(sections))
         self.serialize_results_to = []
         self.base_path = base_path
+        self.validator = validator
+
         if base_path:
             self.to_kvs()
 
@@ -368,7 +412,11 @@ class Job(object):
             tuple is returned
         """
 
-        return conf.default_validators(self.sections, self.params).is_valid()
+        if self.validator is None:
+            self.validator = conf.default_validators(
+                self.sections, self.params)
+
+        return self.validator.is_valid()
 
     @property
     def job_id(self):
@@ -396,7 +444,7 @@ class Job(object):
         :type status: string
         """
 
-        session = get_db_session("reslt", "writer")
+        session = get_db_session("job", "init")
         db_job = self.get_db_job(session)
         db_job.status = status
         session.add(db_job)
@@ -407,12 +455,10 @@ class Job(object):
         """Compute valid region with appropriate cell size from config file."""
         if not self.has('REGION_VERTEX'):
             return None
-        # REGION_VERTEX coordinates are defined in the order (lat, lon)
-        verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
 
-        # Flips lon and lat, and builds a list of coord tuples
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.RegionConstraint.from_coordinates(coords)
+        region = shapes.RegionConstraint.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
 
@@ -515,11 +561,35 @@ class Job(object):
         key = kvs.tokens.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
-    def sites_for_region(self):
+    def sites_to_compute(self):
+        """Return the sites used to trigger the computation on the
+        hazard subsystem.
+
+        If the SITES parameter is specified, the computation is triggered
+        only on the sites specified in that parameter, otherwise
+        the region is used."""
+
+        if self.has(conf.SITES):
+            sites = []
+            coords = self._extract_coords(conf.SITES)
+
+            for coord in coords:
+                sites.append(shapes.Site(coord[0], coord[1]))
+
+            return sites
+        else:
+            return self._sites_for_region()
+
+    def _extract_coords(self, config_param):
+        """Extract from a configuration parameter the list of coordinates."""
+        verts = [float(x) for x in self.params[config_param].split(",")]
+        return zip(verts[1::2], verts[::2])
+
+    def _sites_for_region(self):
         """Return the list of sites for the region at hand."""
-        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.Region.from_coordinates(coords)
+        region = shapes.Region.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         return [site for site in region]
 
