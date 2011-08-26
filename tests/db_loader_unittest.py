@@ -160,21 +160,18 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
     def test_parse_mfd_simple_fault(self):
 
-        expected = {
-            'table': 'hzrdi.mfd_evd',
-            'data': {
-                'max_val': 6.9500000000000002,
-                'total_cumulative_rate': 1.8988435199999998e-05,
-                'min_val': 6.5499999999999998,
-                'bin_size': 0.10000000000000009,
-                'mfd_values': [
-                    0.0010614989,
-                    0.00088291626999999998,
-                    0.00073437776999999999,
-                    0.00061082879999999995,
-                    0.00050806530000000003],
-                'total_moment_rate': 281889786038447.25,
-                'owner_id': None}}
+        expected = models.MfdEvd(
+            max_val=6.9500000000000002,
+            total_cumulative_rate=1.8988435199999998e-05,
+            min_val=6.5499999999999998,
+            bin_size=0.10000000000000009,
+            mfd_values=[
+                0.0010614989,
+                0.00088291626999999998,
+                0.00073437776999999999,
+                0.00061082879999999995,
+                0.00050806530000000003],
+            total_moment_rate=281889786038447.25)
 
         mfd = self.simple.getMfd()
 
@@ -188,19 +185,16 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # this is the dict we'll be passing to Django to do the db insert
         mfd_insert = db_loader.parse_mfd(self.simple, mfd)
 
-        helpers.assertDictAlmostEqual(self, expected, mfd_insert)
+        helpers.assertModelAlmostEqual(self, expected, mfd_insert)
 
     def test_parse_mfd_complex_fault(self):
-        expected = {
-            'table': 'hzrdi.mfd_tgr',
-            'data': {
-                'b_val': 0.80000000000000004,
-                'total_cumulative_rate': 4.933442096397671e-10,
-                'min_val': 6.5499999999999998,
-                'max_val': 8.9499999999999993,
-                'total_moment_rate': 198544639016.43918,
-                'a_val': 1.0,
-                'owner_id': None}}
+        expected = models.MfdTgr(
+            b_val=0.80000000000000004,
+            total_cumulative_rate=4.933442096397671e-10,
+            min_val=6.5499999999999998,
+            max_val=8.9499999999999993,
+            total_moment_rate=198544639016.43918,
+            a_val=1.0)
 
         mfd = self.complex.getMfd()
 
@@ -210,22 +204,22 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         mfd_insert = db_loader.parse_mfd(self.complex, mfd)
 
-        helpers.assertDictAlmostEqual(self, expected, mfd_insert)
+        helpers.assertModelAlmostEqual(self, expected, mfd_insert)
 
     def test_parse_simple_fault_src(self):
 
         expected = (
-            {'table': 'hzrdi.mfd_evd', 'data': {
-                'max_val': 6.9500000000000002,
-                'total_cumulative_rate': 1.8988435199999998e-05,
-                'min_val': 6.5499999999999998,
-                'bin_size': 0.10000000000000009,
-                'mfd_values': [
+            models.MfdEvd(
+                max_val=6.9500000000000002,
+                total_cumulative_rate=1.8988435199999998e-05,
+                min_val=6.5499999999999998,
+                bin_size=0.10000000000000009,
+                mfd_values=[
                     0.0010614989, 0.00088291626999999998,
                     0.00073437776999999999, 0.00061082879999999995,
                     0.00050806530000000003],
-                'total_moment_rate': 281889786038447.25,
-                'owner_id': None}},
+                total_moment_rate=281889786038447.25,
+                owner_id=None),
             {'table': 'hzrdi.simple_fault', 'data': {
                 'name': u'Mount Diablo Thrust',
                 'upper_depth': 8.0,
@@ -269,8 +263,9 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         self.assertEqual(exp_edge, actual_edge)
 
         # Now we can test the rest of the data.
-        for idx, exp in enumerate(expected):
-            helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
+        helpers.assertModelAlmostEqual(self, expected[0], simple_data[0])
+        helpers.assertDictAlmostEqual(self, expected[1], simple_data[1])
+        helpers.assertDictAlmostEqual(self, expected[2], simple_data[2])
 
     def _serialize_test_helper(self, test_file, expected_tables):
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",

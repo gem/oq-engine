@@ -127,10 +127,7 @@ def parse_mfd(fault, mfd_java_obj):
 
     if mfd_type == '%s.IncrementalMagFreqDist' % MFD_PACKAGE:
         # 'evenly discretized' MFD
-        mfd = db.MFD_EVD.copy()
-
-        # let the db set the default mag type
-        mfd.pop('magnitude_type')
+        mfd = dict()
 
         mfd['min_val'] = mfd_java_obj.getMinX()
         mfd['max_val'] = mfd_java_obj.getMaxX()
@@ -150,15 +147,12 @@ def parse_mfd(fault, mfd_java_obj):
         mfd['total_moment_rate'] = \
             mfd_java_obj.getTotalMomentRate() / surface_area
 
-        # wrap the insert data in dict keyed by table name
-        mfd_insert = {'table': '%s.mfd_evd' % db.HZRDI_TS, 'data': mfd}
+        # create model instance
+        mfd_insert = models.MfdEvd(**mfd)
 
     elif mfd_type == '%s.GutenbergRichterMagFreqDist' % MFD_PACKAGE:
         # 'truncated Gutenberg-Richter' MFD
-        mfd = db.MFD_TGR.copy()
-
-        # let the db set the default mag type
-        mfd.pop('magnitude_type')
+        mfd = dict()
 
         mfd['min_val'] = mfd_java_obj.getMinX()
         mfd['max_val'] = mfd_java_obj.getMaxX()
@@ -180,7 +174,7 @@ def parse_mfd(fault, mfd_java_obj):
         mfd['total_moment_rate'] = \
             mfd_java_obj.getTotalMomentRate() / surface_area
 
-        mfd_insert = {'table': '%s.mfd_tgr' % db.HZRDI_TS, 'data': mfd}
+        mfd_insert = models.MfdTgr(**mfd)
 
     else:
         raise ValueError("Unsupported MFD type: %s" % mfd_type)
@@ -319,6 +313,10 @@ def parse_simple_fault_src(fault):
     return mfd_insert, simple_fault_insert, source_insert
 
 
+def _table_name(model):
+    return '.'.join(model._meta.db_table.split('"."'))
+
+
 def write_simple_fault(simple_data, owner_id, input_id):
     """
     Perform an insert of the given data.
@@ -360,16 +358,21 @@ def write_simple_fault(simple_data, owner_id, input_id):
         assert owner_id is not None, "owner_id should not be None"
         assert isinstance(owner_id, int), "owner_id should be an integer"
 
-        table = TABLE_MAP[insert['table']]
+        if isinstance(insert, dict):
+            table = TABLE_MAP[insert['table']]
 
-        data = insert['data']
+            data = insert['data']
 
-        # fix owner reference
-        data.pop('owner_id')
-        data['owner'] = models.OqUser.objects.get(id=owner_id)
+            # fix owner reference
+            data.pop('owner_id')
+            data['owner'] = models.OqUser.objects.get(id=owner_id)
 
-        item = table(**data)
-        item.save()
+            item = table(**data)
+            item.save()
+        else:
+            item = insert
+            insert.owner = models.OqUser.objects.get(id=owner_id)
+            insert.save()
 
         return item.id
 
@@ -384,10 +387,10 @@ def write_simple_fault(simple_data, owner_id, input_id):
     simple_fault['data'].pop('mgf_evd_id', None)
     simple_fault['data'].pop('mfd_tgr_id', None)
 
-    if mfd['table'] == '%s.mfd_evd' % db.HZRDI_TS:
-        simple_fault['data']['mfd_evd'] = models.MfdEvd.objects.get(id=mfd_id)
-    elif mfd['table'] == '%s.mfd_tgr' % db.HZRDI_TS:
-        simple_fault['data']['mfd_tgr'] = models.MfdTgr.objects.get(id=mfd_id)
+    if isinstance(mfd, models.MfdEvd):
+        simple_fault['data']['mfd_evd'] = mfd
+    elif isinstance(mfd, models.MfdTgr):
+        simple_fault['data']['mfd_tgr'] = mfd
 
     simple_id = do_insert(simple_fault)
 
@@ -401,7 +404,7 @@ def write_simple_fault(simple_data, owner_id, input_id):
     source_id = do_insert(source)
 
     return [
-        {mfd['table']: mfd_id},
+        {_table_name(mfd): mfd_id},
         {simple_fault['table']: simple_id},
         {source['table']: source_id}]
 
@@ -495,8 +498,9 @@ class SourceModelLoader(object):
                 continue
 
             results.extend(
-                write(read(src), owner_id=self.owner_id,
-                input_id=self.input_id))
+                write(read(src),
+                      owner_id=self.owner_id,
+                      input_id=self.input_id))
 
         return results
 
