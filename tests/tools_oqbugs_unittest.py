@@ -21,54 +21,54 @@
 """
 Unit tests for the tools/oqbugs.py tool.
 """
+
 import unittest
 from tools.oqbugs import (CommitsOutput, filter_reviewers, filter_bugs,
-        launchpad_lookup, FixCommitted)
+        launchpad_lookup, fix_committed)
 import mock
 import os
 from argparse import Namespace
-
+import datetime
 
 CACHE_DIR = os.path.expanduser("~/.launchpadlib-test/cache/")
 
-class StatusMock(mock.Mock):
 
-    def __init__(self):
-        self.lp_status = 'In Progress'
-        self.default_mock = mock.Mock(return_value=self.lp_status)
-    @property
-    def status(self):
-        return self.default_mock()
+def prepare_mock(bugs):
+    """
+        prepares mock objects for tests
+    """
 
-    @status.setter
-    def set_status(self, status):
-        self.lp_status = status
+    mock_name = mock.Mock()
+    mock_name.name = 'Funky Monk'
+    attributes = {
+     'date_fix_committed': str(datetime.datetime.now()),
+     'assignee': mock_name,
+     'web_link': 'http://openquake.org'}
+
+    bugs_list = {}
+    # prepares instances of mocked launchpad's bug objects
+    for bug in bugs:
+        magic_mock = mock.MagicMock()
+
+        for prop, val in attributes.iteritems():
+            magic_mock.bug_tasks[0].status = 'In Progress'
+            magic_mock.title = 'a bug title'
+            setattr(magic_mock.bug_tasks[0], prop, val)
+            # prepares a dictionary for mocking launchpad_instance.bugs
+            # lookup
+            bugs_list.update({bug: magic_mock})
+    return bugs_list
 
 
 class OqBugsTestCase(unittest.TestCase):
-    """Tests the behaviour of ChangeLog custom action."""
-
-    def _prepare_mock(self, bugs):
-        bugs_list = {}
-        for bug in bugs:
-            status_mock = StatusMock()
-            magic_mock = mock.MagicMock()
-            
-            magic_mock.bug_tasks.__getitem__ = status_mock
-            magic_mock.bug_tasks.__setitem__ = status_mock
-#            magic_mock.bug_tasks.status = 'In Progress'
-            bugs_list.update({bug : magic_mock})
-        return bugs_list
+    """Tests the mechanics of oqbugs ."""
 
     def setUp(self):
-        self.bugs =  {}
+        self.bugs = {}
 
-        # utilities methods for mocking a dict...
         def getitem(name):
+            """ utility methods for returning dict data from a mock """
             return self.bugs[name]
-
-        def setitem(name, val):
-            self.bugs[name] = val
 
         self.correct_commits = ['[r=favalex][f=827908]',
                 '[r=mbarbon][f=*827366]',
@@ -82,7 +82,6 @@ class OqBugsTestCase(unittest.TestCase):
         self.wrong_lines = ['lorem', 'loren', 'sofia']
 
         self.launchpad = mock.MagicMock()
-        self.launchpad.bugs.__setitem__ = mock.Mock(side_effect=setitem)
         self.launchpad.bugs.__getitem__ = mock.Mock(side_effect=getitem)
 
     def tearDown(self):
@@ -113,60 +112,45 @@ class OqBugsTestCase(unittest.TestCase):
 
     def test_launchpad_instances(self):
         bugs_list = filter_bugs(self.multiple_bugs_commit[0])
-        self.bugs = self._prepare_mock(bugs_list)
-        print self.bugs
+        self.bugs = prepare_mock(bugs_list)
         self.assertEquals(len(launchpad_lookup(self.launchpad,
                 self.bugs.keys())), 3)
 
     def test_launchpad_attributes(self):
         bugs_list = filter_bugs(self.correct_commits[0])
-        self.bugs = self._prepare_mock(bugs_list)
+        self.bugs = prepare_mock(bugs_list)
         for bug_instance in launchpad_lookup(self.launchpad, self.bugs.keys()):
-            self.assertTrue(isinstance(bug_instance, mock.Mock))
-            self.assertTrue(isinstance(bug_instance.bug_tasks, mock.Mock))
-            self.assertTrue(isinstance(bug_instance.title, mock.Mock))
+            self.assertTrue(isinstance(bug_instance.title, str))
             self.assertTrue(isinstance(
-                bug_instance.bug_tasks[0].date_fix_committed, mock.Mock))
+                bug_instance.bug_tasks[0].date_fix_committed, str))
             self.assertTrue(isinstance(
-                bug_instance.bug_tasks[0].assignee.name, mock.Mock))
+                bug_instance.bug_tasks[0].assignee.name, str))
             self.assertTrue(isinstance(
-                bug_instance.bug_tasks[0].web_link, mock.Mock))
-            self.assertTrue(False)
-
-
+                bug_instance.bug_tasks[0].web_link, str))
 
     def test_commits_output_bugs(self):
         for commit in self.correct_commits:
             # preparing bugs for mocker
-            self.bugs = self._prepare_mock(commit)
+            self.bugs = prepare_mock(commit)
             for bug in launchpad_lookup(self.launchpad, self.bugs):
                 self.assertTrue(isinstance(bug, mock.Mock))
 
     def test_fix_committed_mark(self):
-#        class StubEntry(list):
-#            
-#            def __init__(self):
-#                super(StubEntry, self).__init__(self)
-#                self.status = "Not Committed"
-#                self.called = False
-#                self.bug_tasks = []
-
-#            def salvami(self):
-#                self.called = True
-
-
-#        task = StubEntry()
-#        sub_task = StubEntry()
         for commit in self.correct_commits:
             # preparing bugs for mocker
-            self.bugs = self._prepare_mock(commit)
-            tasks = launchpad_lookup(self.launchpad, self.bugs)
-        
-            namespace = Namespace(time='1 week')
-        
-            fix_committed = FixCommitted(None, "fix_committed")
-            tasks = fix_committed(None, namespace, True, bugs=tasks)
-            for task in tasks:    
-                self.assertEqual("Fix Committed", task.bug_tasks[0].status)
-                self.assertTrue(sub_task.called)
+            self.bugs = prepare_mock(filter_bugs(commit))
+            #tasks = launchpad_lookup(self.launchpad, self.bugs)
 
+            # gets the FixCommitted reference by calling the fix_committed
+            # method with args
+            tasks = fix_committed(self.launchpad, commit)
+
+            namespace = Namespace(time='1 week')
+
+            # creates an argparse action instance and __call__[s] it passing
+            # the namespace object
+            bugs = tasks(None, None)(None, namespace,
+                    None)
+
+            for bug in bugs:
+                self.assertEqual("Fix Committed", bug.bug_tasks[0].status)
