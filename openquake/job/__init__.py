@@ -32,8 +32,10 @@ from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
+from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake.db.models import OqJob, OqParams, OqUser
+from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
@@ -85,6 +87,9 @@ def spawn_job_supervisor(job_id, pid):
             LOG.warn('If you want to run supervised jobs it\'s better '
                      'to set [logging] backend=amqp in openquake.cfg')
 
+        if not os.path.isabs(exe):
+            exe = os.path.join(OPENQUAKE_ROOT, exe)
+
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
@@ -92,6 +97,11 @@ def spawn_job_supervisor(job_id, pid):
         job.supervisor_pid = supervisor_pid
         job.job_pid = pid
         job.save()
+
+        # Ensure the supervisor amqp queue exists
+        supervisor.bind_supervisor_queue(job_id)
+
+        return supervisor_pid
     else:
         LOG.warn('This job won\'t be supervised, '
                  'because no supervisor is configured in openquake.cfg')
