@@ -283,7 +283,7 @@ def parse_simple_fault_src(fault):
         Build up the source dict. See the documentation for
         :py:function:`parse_simple_fault_src` for more information.
         """
-        source = db.SOURCE.copy()
+        source = dict()
 
         # NOTE(LB): this gid will be the same as the simple_fault.gid
         # This could be horribly wrong.
@@ -294,11 +294,7 @@ def parse_simple_fault_src(fault):
             TECTONIC_REGION_MAP.get(fault.getTectReg().name)
         source['rake'] = fault.getRake()
 
-        source_insert = {
-            'table': '%s.source' % db.HZRDI_TS,
-            'data': source}
-
-        return source_insert
+        return models.Source(**source)
 
     mfd_java_obj = fault.getMfd()
 
@@ -386,19 +382,19 @@ def write_simple_fault(simple_data, owner_id, input_id):
 
     simple_id = do_insert(simple_fault)
 
-    source['data']['simple_fault_id'] = simple_id
+    source.simple_fault = simple_fault
 
     # if an input_id is supplied, let's specify it
     # for the 'source' table entry
     if input_id:
-        source['data']['input_id'] = input_id
+        source.input = models.Input.objects.get(id=input_id)
 
     source_id = do_insert(source)
 
     return [
         {_table_name(mfd): mfd_id},
         {_table_name(simple_fault): simple_id},
-        {source['table']: source_id}]
+        {_table_name(source): source_id}]
 
 
 class SourceModelLoader(object):
