@@ -18,6 +18,8 @@
 
 import unittest
 
+from amqplib import client_0_8 as amqp
+
 from tests.utils.helpers import patch, job_from_file, get_data_path
 from openquake.db.models import OqJob
 
@@ -62,7 +64,7 @@ class SupervisorTestCase(unittest.TestCase):
             def run_(mc):
                 while True:
                     try:
-                        mc.message_callback('a msg')
+                        mc.message_callback(amqp.Message(body='a msg'))
                     except StopIteration:
                         break
 
@@ -84,7 +86,7 @@ class SupervisorTestCase(unittest.TestCase):
             def run_(mc):
                 while True:
                     try:
-                        mc.message_callback('a msg')
+                        mc.message_callback(amqp.Message(body='a msg'))
                     except StopIteration:
                         break
 
