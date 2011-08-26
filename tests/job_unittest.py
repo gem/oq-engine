@@ -21,6 +21,9 @@ import os
 import sqlalchemy
 import unittest
 
+from django.contrib.gis.geos.polygon import Polygon
+from django.contrib.gis.geos.collections import MultiPoint
+
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
@@ -50,17 +53,23 @@ REGION_TEST_FILE = "small.region"
 FLAGS = flags.FLAGS
 
 
-def _toCoordList(polygon):
-    session = get_db_session("reslt", "writer")
-
+def _to_coord_list(geometry):
     pts = []
 
-    # postgis -> lon/lat -> config lat/lon, skip the closing point
-    for c in polygon.coords(session)[0][:-1]:
-        pts.append("%.2f" % c[1])
-        pts.append("%.2f" % c[0])
+    if isinstance(geometry, Polygon):
+        # Ignore the last coord:
+        for i in geometry.coords[0][:-1]:
+            pts.extend(i)
 
-    return ", ".join(pts)
+        return ', '.join(pts)
+
+    elif isinstance(geometry, MultiPoint):
+        for i in geometry.coords:
+            pts.extend(i)
+
+        return ', '.join(pts) 
+    else:
+        raise RuntimeError('Unexpected geometry type: %s' % type(geometry))
 
 
 class JobTestCase(unittest.TestCase):
@@ -351,7 +360,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'classical',
              'upload': None,
@@ -391,7 +400,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'deterministic',
              'upload': None,
@@ -453,7 +462,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'event_based',
              'upload': None,
