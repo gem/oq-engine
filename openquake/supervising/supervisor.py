@@ -116,7 +116,7 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
         """
         The name of the queue that will contain the messages of this consumer.
         """
-        return supervisor_queue_name(self.job_id)
+        return get_supervisor_queue_name(self.job_id)
 
     def message_callback(self, msg):
         """
@@ -159,7 +159,7 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
             raise StopIteration
 
 
-def supervisor_queue_name(job_id):
+def get_supervisor_queue_name(job_id):
     """
     Return the name for the message queue of a job supervisor.
     """
@@ -174,7 +174,7 @@ def bind_supervisor_queue(job_id):
     bindings already exists, this function won't create them again.
     """
     return signalling.declare_and_bind_queue(
-        job_id, ('ERROR', 'FATAL'), supervisor_queue_name(job_id))
+        job_id, ('ERROR', 'FATAL'), get_supervisor_queue_name(job_id))
 
 
 def supervise(pid, job_id):
