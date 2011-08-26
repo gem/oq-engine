@@ -39,14 +39,18 @@ RE_REVIEWER = re.compile('\[r=(.*?)\]')
 CACHE_DIR = os.path.expanduser("~/.launchpadlib/cache/")
 
 
-def parse_and_login(time):
+def parse_and_login(time=None):
     """
         Convenience function to parse and login to launchpad
     """
-    commits_output = CommitsOutput.since(time)
+    launchpad = None
+    commits_output = None
 
-    launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'production',
-            CACHE_DIR)
+    if time:
+        commits_output = CommitsOutput.since(time)
+
+        launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'staging',
+                CACHE_DIR)
 
     return launchpad, commits_output
 
@@ -79,37 +83,34 @@ class CommitsOutput(object):
                          grep.returncode, err))
             logging.error(error)
             raise Exception(error)
+
         return [line.strip() for line in out.splitlines()]
 
 
 # A serie of ArgumentParser action(s) that are triggered by parse_args()
-class FixCommitted(argparse.Action):
-    """ Changes the status of a bug to Fix Committed when it is in
-        the master repository (i.e. merged)
-    """
+def fix_committed(launchpad, commit_line):
+    class FixCommitted(argparse.Action):
+        """ Changes the status of a bug to Fix Committed when it is in
+            the master repository (i.e. merged)
+        """
 
-    def __call__(self, parser, namespace, values, option_string=None, bugs=[]):
-        values = True
-        print 'FixCommitted: %r %r %r' % (namespace, True, option_string)
-        print type(namespace)
-        print type(namespace.time)
+        def __call__(self, parser, namespace, values, option_string=None):
 
-        if namespace.time:
-            launchpad, commits_output = parse_and_login(namespace.time)
-            for commit_line in commits_output:
-                print commit_line
-                #for testing purposes
-                if len(bugs) == 0:
-                    bugs = launchpad_lookup(launchpad, filter_bugs(commit_line))
-                    
-                    for bug in bugs:
-                        if bug.bug_tasks[0].status != "Fix Committed":
-                            bug.bug_tasks[0].status = 'Fix Committed'
-                            bug.salvami()
-                            print bug
-                            print bug.called
-        setattr(namespace, self.dest, values)
-        return bugs
+
+            print 'FixCommitted: %s %r %r %r' % (parser, namespace, 
+                    values, option_string)
+
+            changed_bugs = [] 
+            if namespace.time:
+                bugs = launchpad_lookup(launchpad, 
+                        filter_bugs(commit_line))
+                
+                for bug in bugs:
+                    if bug.bug_tasks[0].status != "Fix Committed":
+                        bug.bug_tasks[0].status = 'Fix Committed'
+                        changed_bugs.append(bug)
+            return changed_bugs
+    return FixCommitted
 
 
 class FixReleased(argparse.Action):
@@ -156,35 +157,56 @@ def arg_parse():
     """
         Prepares ArgumentParser for argument checking/triggering
     """
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, add_help=False)
 
     parser.add_argument('-t', '--time', dest="time",
             help="time: timeframe (i.e '1 month', '1 week', etc) \
                 with quotes",
             metavar="TIME",
-            required=True)
+            )
 
-    parser.add_argument('-c', '--fix-committed', action=FixCommitted,
+    # pre-parse time to provide it to the next parser with custom methods in
+    # custom argparse actions
+    args, _ = parser.parse_known_args()
+
+    # hack to make the option required after pre-parsing 
+    parser._actions[0].required = True
+
+    # merges the two parsers and instantiate the second final parser
+    action_parser = argparse.ArgumentParser(description=__doc__, 
+            add_help=True, parents=[parser])
+
+    (launchpad, commits_output) = parse_and_login(args.time)
+    action_parser.add_argument('-c', '--fix-committed', 
+            action=fix_committed(launchpad, commits_output),
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
-            nargs="?",
+            nargs=0,
+            dest='fix_committed',
             required=False)
 
-    parser.add_argument('-r', '--fix-released', action=FixReleased,
+    action_parser.add_argument('-r', '--fix-released', action=FixReleased,
             help="Invoked from the ppa build fetches from a git repository \
                 every with Fix Committed status and changes it to \
                 Fix Released",
-            nargs="?",
+            nargs=0,
             required=False)
 
-    parser.add_argument('-l', '--change-log', action=ChangeLog,
+    action_parser.add_argument('-l', '--change-log', action=ChangeLog,
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
-            nargs="?",
+            nargs=0,
             required=False)
 
-    args = parser.parse_args()
-    return parser, args
+    
+    if args.time:
+        action_args = action_parser.parse_args()
+        print action_args
+    else:
+        print action_parser.print_help()
+        return (None, None)
+
+    return action_parser, action_args
 
 
 def filter_reviewers(reviewers):
