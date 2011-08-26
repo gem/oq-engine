@@ -27,6 +27,7 @@ import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
+from django.db import transaction
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
@@ -188,21 +189,15 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
+@transaction.commit_on_success(using='job_init')
 def prepare_job(params):
     """
     Create a new OqJob and fill in the related OpParams entry.
 
     Returns the newly created job object.
     """
-    # TODO specify the owner as a command line parameter
-    owner = DjOqUser.objects.get(user_id='openquake')
     oqp = DjOqParams(upload=None)
-
-    job = DjOqJob(
-        owner=owner, path=None, oq_params=oqp,
-        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
-
-    #######
+    
     # fill in parameters
     if 'SITES' in params:
         ewkt = multipoint_ewkt_from_coords(params['SITES'])
@@ -212,18 +207,20 @@ def prepare_job(params):
     elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
         oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
 
-        # TODO: move this to a util function in shapes
-        # config lat/lon -> postgis -> lon/lat
-        coords = [float(v) for v in
-                  params['REGION_VERTEX'].split(",")]
-        vertices = ['%f %f' % (coords[i + 1], coords[i])
-                    for i in xrange(0, len(coords), 2)]
-        wkt = 'SRID=4326;POLYGON((%s, %s))'
-        wkt %= (', '.join(vertices), vertices[0])
-        region = GEOSGeometry(wkt)
+        ewkt = shapes.polygon_ewkt_from_coords(params['REGION_VERTEX'])
+        region = GEOSGeometry(ewkt)
         oqp.region = region
 
-    ######
+    else:
+        raise RuntimeError(
+            "Job config contains neither sites nor region of interest.")
+
+    # TODO specify the owner as a command line parameter
+    owner = DjOqUser.objects.get(user_name='openquake')
+
+    job = DjOqJob(
+        owner=owner, path=None, oq_params=oqp,
+        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
 
     oqp.job_type = job.job_type
     oqp.component = ENUM_MAP[params['COMPONENT']]
@@ -251,6 +248,9 @@ def prepare_job(params):
 
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
+
+    print "oqp.poes %s" % oqp.poes
+    print "oqp.imls %s" % oqp.imls
    
     oqp.save()
     job.save()
