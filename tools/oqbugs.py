@@ -171,6 +171,7 @@ def arg_parse():
     # custom argparse actions
     args, remaining_argv = parser.parse_known_args()
 
+    # after partial check, force -t/--time as required parameter
     parser._actions[0].required = True
 
     if args.time:
@@ -185,8 +186,7 @@ def arg_parse():
             add_help=True)
 
 
-    # hack
-    action_group = action_parser.add_mutually_exclusive_group()
+    action_group = action_parser.add_mutually_exclusive_group(required=True)
     action_group.add_argument('-c', '--fix-committed', 
             action=fix_committed(launchpad, commits_output),
             help="Invoked from the CI gets from a git repository every \
@@ -210,7 +210,7 @@ def arg_parse():
             nargs=0,
             required=False)
 
-    action_parser.parse_args(remaining_argv)
+    args = action_parser.parse_args(remaining_argv)
 
     return args
 
