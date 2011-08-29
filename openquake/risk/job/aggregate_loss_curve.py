@@ -24,8 +24,6 @@ import os
 
 from openquake.logs import LOG
 from openquake.output import curve
-from openquake.risk.job import general
-from openquake.risk import probabilistic_event_based as prob
 
 
 def _filename(job_id):
@@ -57,7 +55,8 @@ def plot_aggregate_curve(job, aggregate_curve):
     parameter is specified in the configuration file.
 
     :param job: the job the engine is currently processing.
-    :type job: :py:class:`openquake.risk.job.probabilistic.ProbabilisticEventMixin`
+    :type job:
+        :py:class:`openquake.risk.job.probabilistic.ProbabilisticEventMixin`
     :param aggregate_curve: the aggregate curve to plot.
     :type aggregate_curve: :py:class:`openquake.shapes.Curve`
     """

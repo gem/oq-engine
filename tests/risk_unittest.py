@@ -22,13 +22,9 @@ import json
 import mock
 import numpy
 import unittest
-from math import log
 
-from openquake import job
 from openquake import kvs
 from openquake import shapes
-
-from openquake.db.alchemy import db_utils
 
 from openquake.output import hazard
 
@@ -41,7 +37,6 @@ from openquake.risk import deterministic_event_based as det
 from openquake.risk import common
 
 from tests.utils import helpers
-from tests.utils.helpers import patch
 
 
 ASSET_VALUE = 5.0
@@ -549,7 +544,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
     def test_computes_the_aggregate_loss_curve(self):
         # no epsilon_provided is needed because the vulnerability
-        # function has all the covs equal to zero        
+        # function has all the covs equal to zero
         loss_ratios_1 = prob.compute_loss_ratios(
             self.vuln_function_2, self.gmfs_1, None, self.asset_1)
 
@@ -626,9 +621,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
         this test.
         """
-        
+
         curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
-        
+
         with mock.patch(
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with mock.patch(
