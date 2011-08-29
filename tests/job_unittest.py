@@ -334,7 +334,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'FAULT_RUPTURE_OFFSET': '5.0',
     }
 
-
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
