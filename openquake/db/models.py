@@ -33,7 +33,10 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
         return 'float[]'
 
     def get_prep_value(self, value):
-        return "{" + ', '.join(str(v) for v in value) + "}"
+        if value is None:
+            return None
+        else:
+            return "{" + ', '.join(str(v) for v in value) + "}"
 
 
 ## Tables in the 'admin' schema.
