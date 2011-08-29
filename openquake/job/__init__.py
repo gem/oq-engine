@@ -18,7 +18,6 @@
 
 """A single hazard/risk job."""
 
-import geoalchemy as ga
 import multiprocessing
 import os
 import re
