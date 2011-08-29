@@ -94,7 +94,10 @@ class JavaLoggingBridge(object):
         assert _rem == 0
         assert level in self.SUPPORTED_LEVELS
 
-        logger_name = 'java.%s' % event.getLoggerName()
+        if event.logger.getParent() is None:
+            logger_name = 'java'
+        else:
+            logger_name = 'java.%s' % event.getLoggerName()
         logger = logging.getLogger(logger_name)
 
         if not logger.isEnabledFor(level):
