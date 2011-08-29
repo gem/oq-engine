@@ -825,12 +825,14 @@ def multipoint_ewkt_from_coords(coords):
     '''
     Convert a string list of coordinates to SRS 4326 MULTIPOINT EWKT.
 
-    For more information about EWKT, see: http://en.wikipedia.org/wiki/Well-known_text
+    For more information about EWKT, see:
+    http://en.wikipedia.org/wiki/Well-known_text
 
     NOTE: Input coordinates are expected in the order (lat, lon). The ordering
     for SRS 4326 is (lon, lat).
 
-    NOTE 2: All coordinate values will be rounded using :py:function:`openquake.utils.round_float`
+    NOTE 2: All coordinate values will be rounded using
+    :py:function:`openquake.utils.round_float`
 
 
     :param str coords: Comma separated list of coordinates pairs (lat, lon).
@@ -855,12 +857,14 @@ def polygon_ewkt_from_coords(coords):
     '''
     Convert a string list of coordinates to SRS 4326 POLYGON EWKT.
 
-    For more information about EWKT, see: http://en.wikipedia.org/wiki/Well-known_text
+    For more information about EWKT, see:
+    http://en.wikipedia.org/wiki/Well-known_text
 
     NOTE: Input coordinates are expected in the order (lat, lon). The ordering
     for SRS 4326 is (lon, lat).
 
-    NOTE 2: All coordinate values will be rounded using :py:function:`openquake.utils.round_float`
+    NOTE 2: All coordinate values will be rounded using
+    :py:function:`openquake.utils.round_float`
 
 
     :param str coords: Comma separated list of coordinates pairs (lat, lon).
@@ -869,14 +873,16 @@ def polygon_ewkt_from_coords(coords):
 
     :returns: 4326 POLYGON WKT. Given the example input above, the output
         would be::
-            "SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, -122.0 38.113))"
+            "SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, \
+-122.57 38.111, -122.0 38.113))"
     '''
     coord_list = [round_float(x) for x in coords.split(",")]
     vertices = ['%s %s' % (coord_list[i + 1], coord_list[i]) for i in
                 xrange(0, len(coord_list), 2)]
 
     ewkt = 'SRID=4326;POLYGON((%s, %s))'
-    # The polygon needs to form a closed loop, so the first & last coord must be the same:
+    # The polygon needs to form a closed loop, so the first & last coord must
+    # be the same:
     ewkt %= (', '.join(vertices), vertices[0])
 
     return ewkt
