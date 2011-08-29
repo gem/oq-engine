@@ -86,15 +86,32 @@ def jclass(class_key):
 
 
 class JavaLoggingBridge(object):
+    """
+    :class:`JavaLoggingBridge` is responsible for receiving java logging
+    messages and relogging them.
+    """
+    #: The list of supported levels is used for sanity checks.
     SUPPORTED_LEVELS = set((logging.DEBUG, logging.INFO, logging.WARNING,
                             logging.ERROR, logging.CRITICAL))
 
     def append(self, event):
+        """
+        Given java ``LogEvent`` object log the message
+        as if it was logged by python logging.
+        """
+        # log4j uses the following numbers for logging levels by default:
+        # 10000 DEBUG, 20000 INFO, 30000 WARNING, 40000 ERROR, 50000 FATAL.
+        # Python logging uses 10, 20, 30, 40 and 50 respectively.
+        # So for mapping of logging levels we need to divide java
+        # log level by 1000.
         level, _rem = divmod(event.getLevel().toInt(), 1000)
+        # Checking that one of default levels was used.
         assert _rem == 0
         assert level in self.SUPPORTED_LEVELS
 
         if event.logger.getParent() is None:
+            # getParent() returns ``None`` only for root logger.
+            # Use the name "java" for it instead of "java.root".
             logger_name = 'java'
         else:
             logger_name = 'java.%s' % event.getLoggerName()
@@ -109,12 +126,15 @@ class JavaLoggingBridge(object):
 
         filename = location_info.getFileName()
         if filename == '?':
+            # mapping of unknown filenames from java "?" to python
             filename = '(unknown file)'
 
         lineno = location_info.getLineNumber()
         if not lineno.isdigit():
+            # java uses "?" for unknown line number, python use 0
             lineno = 0
         else:
+            # LocationInformation.getLineNumber() returns string
             lineno = int(lineno)
 
         classname = location_info.getClassName()
@@ -124,9 +144,13 @@ class JavaLoggingBridge(object):
         else:
             funcname = '%s.%s' % (classname, methname)
 
+        # Now do what logging.Logger._log() does:
+        # create log record and handle it.
         record = logger.makeRecord(logger.name, level, filename, lineno, msg,
                                    args=(), exc_info=None, func=funcname,
                                    extra=None)
+        # these two values are set by LogRecord constructor
+        # so we need to overwrite them.
         record.threadName = event.getThreadName()
         record.processName = 'java'
         logger.handle(record)
@@ -137,6 +161,8 @@ def init_logs():
     Initialize Java logging.
     """
     appender = jclass('PythonBridgeAppender')
+    # ``bridge`` is a static property of PythonBridge class.
+    # So there will be only one JavaLoggingBridge for all loggers.
     appender.bridge = jpype.JProxy('org.gem.log.PythonBridge',
                                    inst=JavaLoggingBridge())
     props = jclass("Properties")()
