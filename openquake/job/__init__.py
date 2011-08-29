@@ -97,10 +97,6 @@ def spawn_job_supervisor(job_id, pid):
         OqJob.objects.filter(id=job_id).update(
             supervisor_pid=supervisor_pid, job_pid=pid
         )
-        job = OqJob.objects.get(id=job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = pid
-        job.save()
 
         # Ensure the supervisor amqp queue exists
         supervisor.bind_supervisor_queue(job_id)
