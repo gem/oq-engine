@@ -247,10 +247,7 @@ def setup_job_logging(job_id):
     """Make job id and process name available to the Java and Python loggers"""
     process_name = multiprocessing.current_process().name
 
-    # Make the job_id available to the java logging context.
-    mdc = java.jclass('MDC')
-    mdc.put('job_id', job_id)
-    mdc.put('processName', process_name)
+    # TODO: Make the job_id available to the java logging context.
 
     # make the job_id available to the Python logging context
     logs.AMQPHandler.MDC['job_id'] = job_id
