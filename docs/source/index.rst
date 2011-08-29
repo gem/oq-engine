@@ -25,7 +25,7 @@ Contents:
    schema
    shapes
    tasks
-   util_tasks
+   utils
    writer
    xml
 
