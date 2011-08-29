@@ -465,22 +465,6 @@ class Job(object):
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
                 self.execute()
 
-        self.cleanup()
-
-    def cleanup(self):
-        """
-        Perform any necessary cleanup steps after the job completes.
-
-        Currently, this method only clears KVS cache data for the job.
-        """
-        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
-
-        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
-
-        # run KVS garbage collection aynchronously
-        # stdout goes to /dev/null to silence any output from the GC
-        subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
-
     def __getitem__(self, name):
         return self.params[name]
 
