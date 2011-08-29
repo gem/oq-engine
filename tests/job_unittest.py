@@ -346,7 +346,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_prepare_job_raises_if_no_geometry(self):
         '''
         If no geometry is specified (neither SITES nor REGION_VERTEX +
-        REGION_GRID_SPACING), a RuntimeError shoudl be raised.
+        REGION_GRID_SPACING), a RuntimeError should be raised.
 
         Note: The job validator _should_ catch any such error before we hit
         prepare_job.
@@ -385,7 +385,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_prepare_classical_job_over_sites(self):
         '''
         Same as test_prepare_classical_job, but with geometry specified as
-        list of sites.
+        a list of sites.
         '''
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
@@ -441,6 +441,10 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job_over_sites(self):
+        '''
+        Same as test_prepare_deterministic_job, but with geometry specified as
+        a list of sites.
+        '''
 
         params = self.BASE_DETERMINISTIC_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
@@ -495,6 +499,11 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              }, self.job.oq_params)
 
     def test_prepare_event_based_job_over_sites(self):
+        '''
+        Same as test_prepare_event_based_job, but with geometry specified as
+        a list of sites.
+        '''
+
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
 
