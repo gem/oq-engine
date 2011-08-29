@@ -82,8 +82,8 @@ def get_fault_surface(fault):
 def parse_mfd(fault, mfd_java_obj):
     """
     Read a magnitude frequency distribution object, determine the type (evenly
-    discretized or truncated Gutenberg-Richter), and create a dict containing
-    the necessary data to insert into the hzrdi db.
+    discretized or truncated Gutenberg-Richter), and create a Django model
+    to insert into the hzrdi db.
 
     If the input MFD is not a supported type, a :py:exception:`ValueError` will
     be raised.
@@ -99,18 +99,9 @@ def parse_mfd(fault, mfd_java_obj):
         `org.opensha.sha.magdist.IncrementalMagFreqDist` or
         `org.opensha.sha.magdist.GutenbergRichterMagFreqDist`
 
-    :returns: Dict values to be inserted into either the mfd_evd or mfd_tgr
-        table. Values are keyed by column name. The dict will then be wrapped
-        in another dict with two keys: 'table' and 'data'. The value of 'table'
-        is a string representing the table name (including the tablespace). For
-        example::
-
-            {'table': 'hzrdi.mfd_evd',
-             'data': <dict of column name/value pairs>}
-
-        The reason we add this additional wrapper is so we can generically do
-        database inserts; the table name allows retrieving the appropriate
-        Django model, which can then be used to perform the insert.
+    :returns: a Django model instance for the frequency distribution
+        (either :class:`openquake.db.models.MfdEvd` or
+        :class:`openquake.db.models.MfdTgr`).
     """
 
     mfd_type = mfd_java_obj.__javaclass__.getName()
@@ -182,53 +173,13 @@ def parse_simple_fault_src(fault):
             * Source
     :type fault: jpype java object of type `GEMFaultSourceData`
 
-    :returns: 3-tuple of (mfd, simple_fault, source). Each item will be a dict
-        with the following keys:
-            * table
-                name of the table to which the data should be inserted;
-                includes the tablespace
-            * data
-                dict containing keys corresponding to column names; values are
-                set to the data which is to be inserted
-
-        Example return value::
-            ({'table': 'hzrdi.mfd_evd', 'data': {
-                'max_val': 6.9500000000000002,
-                'total_cumulative_rate': 1.8988435199999998e-05,
-                'min_val': 6.5499999999999998,
-                'bin_size': 0.10000000000000009,
-                'mfd_values': [
-                    0.0010614989, 0.00088291626999999998,
-                    0.00073437776999999999, 0.00061082879999999995,
-                    0.00050806530000000003],
-                'total_moment_rate': 281889786038447.25,
-                'owner_id': None}},
-            {'table': 'hzrdi.simple_fault', 'data': {
-                'name': u'Mount Diablo Thrust',
-                'upper_depth': 8.0,
-                'mgf_evd_id': None,
-                'mfd_tgr_id': None,
-                'edge': <WKTSpatialElement at 0x107228a50; ... >,
-                'lower_depth': 13.0,
-                'gid': u'src01',
-                'owner_id': None,
-                'dip': 38.0,
-                'description': None}},
-            {'table': 'hzrdi.source', 'data': {
-                'r_depth_distr_id': None,
-                'name': u'Mount Diablo Thrust',
-                'tectonic_region': 'active',
-                'rake': 90.0,
-                'si_type': 'simple',
-                'gid': u'src01',
-                'simple_fault_id': None,
-                'owner_id': None,
-                'hypocentral_depth': None,
-                'description': None}})
+    :returns: 3-tuple of (mfd, simple_fault, source). Each item will be a
+        Django model instance for the appropriate table.
     """
     def build_simple_fault_insert(fault):
         """
-        Build up the simple fault dict. See the documentation for
+        Build an :class:`openquake.db.models.SimpleFault` Django
+        model. See the documentation for
         :py:function:`parse_simple_fault_src` for more information.
         """
         simple_fault = models.SimpleFault()
@@ -263,8 +214,9 @@ def parse_simple_fault_src(fault):
 
     def build_source_insert(fault):
         """
-        Build up the source dict. See the documentation for
-        :py:function:`parse_simple_fault_src` for more information.
+        Build an :class:`openquake.db.models.Source` Django model. See
+        the documentation for :py:function:`parse_simple_fault_src`
+        for more information.
         """
         source = models.Source()
 
@@ -297,9 +249,15 @@ def write_simple_fault(simple_data, owner_id, input_id):
     """
     Perform an insert of the given data.
 
-    :param simple_data: 3-tuple of insert data (mfd, simple_fault, source). See
-        the documentation for :py:function:`parse_simple_fault_src` for more
-        information on the structure of this input.
+    :param simple_data: 3-tuple of insert data `(mfd, simple_fault, source)`.
+        Each item of the tuple is a Django model instance.
+
+        `mfd` is an :class:`openquake.db.models.MfdEvd` or
+        :class:`openquake.db.models.MfdTgr` model
+
+        `simple_fault` is an :class:`openquake.db.models.SimpleFault` model
+
+        `source` is an :class:`openquake.db.models.Source` model
 
     :param owner_id: Per the OpenQuake database standards, the tables in the
         database associated with a simple fault all have an 'owner_id' column.
