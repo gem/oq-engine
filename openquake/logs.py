@@ -50,6 +50,11 @@ RISK_LOG = logging.getLogger("risk")
 HAZARD_LOG = logging.getLogger("hazard")
 LOG = logging.getLogger()
 
+LOGGING_AMQP_FORMAT = '%(asctime)s %(loglevel)-5s %(processName)s' \
+    ' [%(name)s] - Job %(job_id)s - %(message)s'
+LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
+    ' [%(name)s] - %(message)s'
+
 
 def init_logs(log_type='console', level='warn'):
     """
