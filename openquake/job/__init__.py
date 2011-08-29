@@ -22,7 +22,6 @@ import geoalchemy as ga
 import multiprocessing
 import os
 import re
-import sqlalchemy
 import subprocess
 import urlparse
 
@@ -34,13 +33,10 @@ from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
+from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob, OqUser, OqParams
-# TODO: clean up these imports once we get rid of SQLAlchemy
-from openquake.db.models import OqJob as DjOqJob
-from openquake.db.models import OqParams as DjOqParams
-from openquake.db.models import OqUser as DjOqUser
+from openquake.db.models import OqJob, OqParams, OqUser
+from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
@@ -79,10 +75,8 @@ def spawn_job_supervisor(job_id, pid):
     """
     Spawn a supervisor process as configured in openquake.cfg.
 
-    :param job_id: the id of the job to be supervised
-    :type job_id: int
-    :param pid: the process id of the job to be supervised
-    :type pid: int
+    :param int job_id: the id of the job to be supervised
+    :param int pid: the process id of the job to be supervised
     :return: the id of the supervisor process or None if no supervisor was
              configured
     :rtype: int or None
@@ -94,12 +88,24 @@ def spawn_job_supervisor(job_id, pid):
             LOG.warn('If you want to run supervised jobs it\'s better '
                      'to set [logging] backend=amqp in openquake.cfg')
 
+        if not os.path.isabs(exe):
+            exe = os.path.join(OPENQUAKE_ROOT, exe)
+
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-        DjOqJob.objects.filter(id=job_id).update(
+        OqJob.objects.filter(id=job_id).update(
             supervisor_pid=supervisor_pid, job_pid=pid
         )
+        job = OqJob.objects.get(id=job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = pid
+        job.save()
+
+        # Ensure the supervisor amqp queue exists
+        supervisor.bind_supervisor_queue(job_id)
+
+        return supervisor_pid
     else:
         LOG.warn('This job won\'t be supervised, '
                  'because no supervisor is configured in openquake.cfg')
@@ -125,19 +131,9 @@ def run_job(job_file, output_type):
 
         try:
             a_job.launch()
-        except sqlalchemy.exc.SQLAlchemyError:
-            # Try to cleanup the session status to have a chance to update the
-            # job record without further errors.
-            session = get_db_session("job", "init")
-            if session.is_active:
-                session.rollback()
-
+        except Exception, ex:
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
-
-            raise
-        except:
-            a_job.set_status('failed')
-
             raise
         else:
             a_job.set_status('succeeded')
@@ -196,8 +192,8 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    oqp = DjOqParams(upload=None)
-    
+    oqp = OqParams(upload=None)
+
     # fill in parameters
     if 'SITES' in params:
         ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
@@ -216,13 +212,15 @@ def prepare_job(params):
             "Job config contains neither sites nor region of interest.")
 
     # TODO specify the owner as a command line parameter
-    owner = DjOqUser.objects.get(user_name='openquake')
+    owner = OqUser.objects.get(user_name='openquake')
 
-    job = DjOqJob(
+    job = OqJob(
         owner=owner, path=None,
         job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
 
     oqp.job_type = job.job_type
+
+    # fill-in parameters
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -372,9 +370,7 @@ class Job(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        session = get_db_session("job", "init")
-        [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
-        return status
+        return OqJob.objects.get(id=job_id).status
 
     @staticmethod
     def is_job_completed(job_id):
@@ -442,14 +438,6 @@ class Job(object):
         """Returns the kvs key for this job."""
         return kvs.tokens.generate_job_key(self.job_id)
 
-    def get_db_job(self, session):
-        """
-        Get the database record belonging to this job.
-
-        :param session: the SQLAlchemy database session
-        """
-        return session.query(OqJob).filter(OqJob.id == self.job_id).one()
-
     def set_status(self, status):
         """
         Set the status of the database record belonging to this job.
@@ -457,12 +445,9 @@ class Job(object):
         :param status: one of 'pending', 'running', 'succeeded', 'failed'
         :type status: string
         """
-
-        session = get_db_session("job", "init")
-        db_job = self.get_db_job(session)
-        db_job.status = status
-        session.add(db_job)
-        session.commit()
+        job = OqJob.objects.get(id=self.job_id)
+        job.status = status
+        job.save()
 
     @property
     def region(self):
@@ -501,22 +486,6 @@ class Job(object):
                 LOG.debug(
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
                 self.execute()
-
-        self.cleanup()
-
-    def cleanup(self):
-        """
-        Perform any necessary cleanup steps after the job completes.
-
-        Currently, this method only clears KVS cache data for the job.
-        """
-        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
-
-        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
-
-        # run KVS garbage collection aynchronously
-        # stdout goes to /dev/null to silence any output from the GC
-        subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
 
     def __getitem__(self, name):
         return self.params[name]
