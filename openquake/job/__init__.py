@@ -200,7 +200,7 @@ def prepare_job(params):
     
     # fill in parameters
     if 'SITES' in params:
-        ewkt = multipoint_ewkt_from_coords(params['SITES'])
+        ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
         sites = GEOSGeometry(ewkt)
         oqp.sites = sites
 
@@ -219,7 +219,7 @@ def prepare_job(params):
     owner = DjOqUser.objects.get(user_name='openquake')
 
     job = DjOqJob(
-        owner=owner, path=None, oq_params=oqp,
+        owner=owner, path=None,
         job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
 
     oqp.job_type = job.job_type
@@ -232,16 +232,17 @@ def prepare_job(params):
     if oqp.imt == 'sa':
         oqp.period = float(params.get('PERIOD', 0.0))
 
-    if oqp.job_type != 'classical':
-        oqp.gm_correlated = (
-            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
-    else:
+    if oqp.job_type == 'classical':
         oqp.imls = [float(v) for v in
                         params['INTENSITY_MEASURE_LEVELS'].split(",")]
         oqp.poes = [float(v) for v in
                         params['POES_HAZARD_MAPS'].split(" ")]
 
-    if oqp.job_type != 'deterministic':
+    if oqp.job_type in ('deterministic', 'event_based'):
+        oqp.gm_correlated = (
+            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+
+    if oqp.job_type in  ('classical', 'event_based'):
         oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
         oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
         oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
@@ -249,10 +250,8 @@ def prepare_job(params):
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
 
-    print "oqp.poes %s" % oqp.poes
-    print "oqp.imls %s" % oqp.imls
-   
     oqp.save()
+    job.oq_params = oqp
     job.save()
 
     return job
