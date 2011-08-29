@@ -180,57 +180,6 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
         helpers.cleanup_loggers()
 
-    def test_job_calls_cleanup(self):
-        """
-        This test ensures that jobs call
-        :py:method:`openquake.job.Job.cleanup`.
-
-        The test job file defines an Event-Based calculation; the Event-Based
-        mixins are mocked in this test (so the entire calculation isn't
-        actually run).
-        """
-        haz_exec_path = 'openquake.hazard.opensha.EventBasedMixin.execute'
-        risk_exec_path = \
-            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
-
-        with patch(haz_exec_path) as haz_exec:
-            haz_exec.return_value = []
-
-            with patch(risk_exec_path) as risk_exec:
-                risk_exec.return_value = []
-
-                with patch('openquake.job.Job.cleanup') as clean_mock:
-                    self.job.launch()
-
-                    self.assertEqual(1, clean_mock.call_count)
-
-    def test_cleanup_calls_cache_gc(self):
-        """
-        This ensures that the job cleanup method
-        :py:method:`openquake.job.Job.cleanup` properly initiates KVS
-        garbage collection.
-        """
-        expected_args = (['python', 'bin/cache_gc.py',
-                          '--job=%d' % self.job.job_id], )
-
-        with patch('subprocess.Popen') as popen_mock:
-            self.job.cleanup()
-
-            self.assertEqual(1, popen_mock.call_count)
-
-            actual_args, actual_kwargs = popen_mock.call_args
-
-            self.assertEqual(expected_args, actual_args)
-
-            # testing the kwargs is slight more complex, since stdout is
-            # directed to /dev/null
-            popen_stdout = actual_kwargs['stdout']
-            self.assertTrue(isinstance(popen_stdout, file))
-            self.assertEqual('/dev/null', popen_stdout.name)
-            self.assertEqual('w', popen_stdout.mode)
-
-            self.assertEqual(os.environ, actual_kwargs['env'])
-
 
 class JobDbRecordTestCase(unittest.TestCase):
 
