@@ -648,7 +648,6 @@ class ShapesUtilsTestCase(unittest.TestCase):
 
         self.assertEqual(expected_ewkt, actual_ewkt)
 
-
     def test_multipoint_ewkt_round_float(self):
         '''
         Test usage of
@@ -665,7 +664,6 @@ class ShapesUtilsTestCase(unittest.TestCase):
 
         self.assertEqual(expected_ewkt, actual_ewkt)
 
-
     def test_polygon_ewkt(self):
         '''
         Test typical usage of
@@ -681,7 +679,6 @@ class ShapesUtilsTestCase(unittest.TestCase):
         actual_ewkt = shapes.polygon_ewkt_from_coords(coords)
 
         self.assertEqual(expected_ewkt, actual_ewkt)
-
 
     def test_polygon_ewkt_round_float(self):
         '''

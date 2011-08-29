@@ -66,7 +66,7 @@ def _to_coord_list(geometry):
             pts.append(str(c[1]))
             pts.append(str(c[0]))
 
-        return ', '.join(pts) 
+        return ', '.join(pts)
     else:
         raise RuntimeError('Unexpected geometry type: %s' % type(geometry))
 
@@ -297,7 +297,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'GROUND_MOTION_CORRELATION': 'true',
     }
 
-
     BASE_EVENT_BASED_PARAMS = {
         'CALCULATION_MODE': 'Event Based',
         'POES_HAZARD_MAPS': '0.01 0.10',
@@ -334,7 +333,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'AREA_SOURCE_DISCRETIZATION': '0.1',
         'FAULT_RUPTURE_OFFSET': '5.0',
     }
-
 
 
     def tearDown(self):
@@ -468,7 +466,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'histories': None,
              'gm_correlated': True,
              }, self.job.oq_params)
-
 
     def test_prepare_event_based_job(self):
         params = self.BASE_EVENT_BASED_PARAMS.copy()
