@@ -93,9 +93,11 @@ def spawn_job_supervisor(job_id, pid):
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-        OqJob.objects.filter(id=job_id).update(
-            supervisor_pid=supervisor_pid, job_pid=pid
-        )
+
+        job = OqJob.objects.get(id=job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = pid
+        job.save()
 
         # Ensure the supervisor amqp queue exists
         supervisor.bind_supervisor_queue(job_id)
@@ -191,6 +193,10 @@ def prepare_job(params):
 
     # fill in parameters
     if 'SITES' in params:
+        if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+            raise RuntimeError(
+                "Job config contains both sites and region of interest.")
+
         ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
         sites = GEOSGeometry(ewkt)
         oqp.sites = sites
