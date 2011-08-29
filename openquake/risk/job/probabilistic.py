@@ -44,7 +44,7 @@ LOGGER = logs.LOG
 DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
 
-class ProbabilisticEventMixin(): # pylint: disable=W0232,W0201
+class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
     """Mixin for Probalistic Event Risk Job."""
 
     @general.preload

@@ -298,7 +298,7 @@ class AggregateLossCurve(object):
 
     def compute(self, tses, time_span, number_of_samples=None):
         """Compute the aggregate loss curve.
-        
+
         :param tses: time representative of the Stochastic Event Set.
         :type tses: float
         :param time_span: time span parameter.
