@@ -286,7 +286,7 @@ def assertModelAlmostEqual(test_case, expected, actual):
         if isinstance(exp_val, (int, float, long, complex)):
             test_case.assertAlmostEqual(exp_val, act_val)
         elif isinstance(exp_val, gis_models.Model):
-            # make a recursive call in case there are nested dicts
+            # make a recursive call in case there are nested models
             assertModelAlmostEqual(test_case, exp_val, act_val)
         else:
             test_case.assertEqual(exp_val, act_val)
