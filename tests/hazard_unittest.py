@@ -44,7 +44,6 @@ from openquake.hazard import opensha
 import openquake.hazard.job
 
 from tests.utils import helpers
-from tests.kvs_unittest import ONE_CURVE_MODEL
 
 LOG = logs.LOG
 
@@ -102,6 +101,10 @@ class HazardEngineTestCase(unittest.TestCase):
     def setUp(self):
         self.generated_files = []
         self.kvs_client = kvs.get_client()
+
+        # We will run a full test using amqp logging, as configured in
+        # openquake.cfg
+        helpers.declare_signalling_exchange()
 
     def tearDown(self):
         for cfg in self.generated_files:
