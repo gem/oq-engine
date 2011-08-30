@@ -29,7 +29,6 @@ from collections import defaultdict
 from lxml import etree
 
 from openquake.db import models
-from openquake.db.alchemy.db_utils import get_db_session
 
 from openquake import logs
 from openquake import shapes
@@ -38,8 +37,6 @@ from openquake import xml
 
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
-
-from sqlalchemy import func as sqlfunc
 
 LOGGER = logs.RISK_LOG
 
