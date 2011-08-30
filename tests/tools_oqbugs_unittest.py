@@ -24,7 +24,7 @@ Unit tests for the tools/oqbugs.py tool.
 
 import unittest
 from tools.oqbugs import (CommitsOutput, filter_reviewers, filter_bugs,
-        launchpad_lookup, fix_committed)
+        launchpad_lookup, fix_apply)
 import mock
 import os
 from argparse import Namespace
@@ -141,11 +141,10 @@ class OqBugsTestCase(unittest.TestCase):
         for commit in self.correct_commits:
             # preparing bugs for mocker
             self.bugs = prepare_mock(filter_bugs(commit))
-            #tasks = launchpad_lookup(self.launchpad, self.bugs)
 
             # gets the FixCommitted reference by calling the fix_committed
             # method with args
-            tasks = fix_committed(self.launchpad, commit)
+            tasks = fix_apply(self.launchpad, commit, 'Fix Committed')
 
             namespace = Namespace(time='1 week')
 
