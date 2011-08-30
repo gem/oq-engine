@@ -29,7 +29,6 @@ from django.db import router
 from django.contrib.gis.db import models as gis_models
 
 from openquake.db import models
-from openquake.db.alchemy.models import OqJob, Output
 
 LOGGER = logging.getLogger('serializer')
 LOGGER.setLevel(logging.DEBUG)
@@ -103,80 +102,6 @@ class XMLFileWriter(FileWriter):
             self.write(key, val)
         self.write_footer()
         self.close()
-
-
-class DBWriterSA(object):  # SQLAlchemy
-    """
-    Abstact class implementing the "serialize" interface to output an iterable
-    to the database.
-
-    Subclasses must either implement get_output_type() and insert_datum() or
-    override serialize().
-    """
-
-    def __init__(self, session, nrml_path, oq_job_id):
-        self.nrml_path = nrml_path
-        self.oq_job_id = oq_job_id
-        self.session = session
-        self.output = None
-        self.bulk_inserter = None
-
-    def insert_output(self, output_type):
-        """Insert an `uiapi.output` record for the job at hand."""
-
-        assert self.output is None
-
-        LOGGER.info("> insert_output")
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=basename(self.nrml_path),
-                             output_type=output_type, db_backed=True)
-        self.session.add(self.output)
-        self.session.flush()
-        LOGGER.info("output = '%s'" % self.output)
-        LOGGER.info("< insert_output")
-
-    def get_output_type(self):
-        """
-        The type of the output record as a string
-        """
-        raise NotImplementedError()
-
-    def insert_datum(self, key, values):
-        """
-        Called for each item of the iterable during serialize.
-        """
-        raise NotImplementedError()
-
-    def serialize(self, iterable):
-        """
-        Implementation of the "serialize" interface.
-
-        An Output record with type get_output_type() will be created, then
-        each item of the iterable will be serialized in turn to the database.
-        """
-        LOGGER.info("> serialize")
-        LOGGER.info("serializing %s points" % len(iterable))
-
-        if not self.output:
-            self.insert_output(self.get_output_type())
-        LOGGER.info("output = '%s'" % self.output)
-
-        if isinstance(iterable, dict):
-            items = iterable.iteritems()
-        else:
-            items = iterable
-
-        for key, values in items:
-            self.insert_datum(key, values)
-
-        if self.bulk_inserter:
-            self.bulk_inserter.flush(self.session)
-        self.session.commit()
-
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< serialize")
 
 
 class DBWriter(object):
@@ -278,57 +203,6 @@ def compose_writers(writers):
         return CompositeWriter(*writers)
 
 
-class BulkInserterSA(object):  # SQLAlchemy
-    """Handle bulk object insertion"""
-
-    def __init__(self, sa_model):
-        """Create a new bulk inserter for a SQLAlchemy model class"""
-        self.table = sa_model.__table__
-        self.fields = None
-        self.values = []
-        self.count = 0
-
-    def add_entry(self, **kwargs):
-        """
-        Add a new entry to be inserted
-
-        The first time the method is called the field list is stored;
-        subsequent add_entry() calls must provide the same set of
-        keyword arguments.
-
-        Handles PostGIS/GeoAlchemy types.
-        """
-        if not self.fields:
-            self.fields = kwargs.keys()
-        assert set(self.fields) == set(kwargs.keys())
-        for k in self.fields:
-            self.values.append(kwargs[k])
-        self.count += 1
-
-    def flush(self, session):
-        """Inserts the entries in the database using a bulk insert query"""
-        if not self.values:
-            return
-
-        cursor = session.connection().connection.cursor()
-        value_args = []
-        for f in self.fields:
-            col = self.table.columns[f]
-            if hasattr(col.type, 'srid'):
-                value_args.append('GeomFromText(%%s, %d)' % col.type.srid)
-            else:
-                value_args.append('%s')
-
-        sql = "INSERT INTO %s.%s (%s) VALUES " % (
-            self.table.schema, self.table.name, ", ".join(self.fields)) + \
-            ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
-        cursor.execute(sql, self.values)
-
-        self.fields = None
-        self.values = []
-        self.count = 0
-
-
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
@@ -352,7 +226,7 @@ class BulkInserter(object):
         subsequent add_entry() calls must provide the same set of
         keyword arguments.
 
-        Handles PostGIS/GeoAlchemy types.
+        Handles PostGIS/GeoDjango types.
         """
         if not self.fields:
             self.fields = kwargs.keys()

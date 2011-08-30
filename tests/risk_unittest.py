@@ -19,16 +19,11 @@
 
 import os
 import json
-import mock
 import numpy
 import unittest
-from math import log
 
-from openquake import job
 from openquake import kvs
 from openquake import shapes
-
-from openquake.db.alchemy import db_utils
 
 from openquake.output import hazard
 
