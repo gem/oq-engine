@@ -20,7 +20,6 @@
 
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
 from openquake.job import Job
 from openquake.job.mixins import Mixin
 from openquake.output.hazard import *
@@ -46,6 +45,32 @@ def HAZARD_CURVE_DATA():
           'PoEValues': [0.454, 0.214, 0.123, 0.102],
           'IMT': 'PGA',
           'statistics': 'mean'}),
+        (Site(-122.2, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'statistics': 'quantile',
+          'quantileValue': 0.25}),
+        (Site(-122.1, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.454, 0.214, 0.123, 0.102],
+          'IMT': 'PGA',
+          'statistics': 'quantile',
+          'quantileValue': 0.25}),
+        (Site(-122.2, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
+          'endBranchLabel': '1'}),
+        (Site(-122.1, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.454, 0.214, 0.123, 0.102],
+          'IMT': 'PGA',
+          'endBranchLabel': '1'}),
     ]
 
 

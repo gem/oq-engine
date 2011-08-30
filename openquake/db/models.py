@@ -33,7 +33,10 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
         return 'float[]'
 
     def get_prep_value(self, value):
-        return "{" + ', '.join(str(v) for v in value) + "}"
+        if value:
+            return "{" + ', '.join(str(v) for v in value) + "}"
+        else:
+            return None
 
 
 ## Tables in the 'admin' schema.
@@ -398,7 +401,7 @@ class Upload(models.Model):
         (u'succeeded', u'Succeeded'),
     )
     status = models.TextField(choices=STATUS_CHOICES, default='pending')
-    job_pid = models.IntegerField()
+    job_pid = models.IntegerField(default=0)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -471,7 +474,7 @@ class OqParams(models.Model):
 
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
-    upload = models.ForeignKey('Upload')
+    upload = models.ForeignKey('Upload', null=True)
     region_grid_spacing = models.FloatField()
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
