@@ -422,6 +422,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'rupture', u'Rupture'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -471,7 +472,6 @@ class OqParams(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
-
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     upload = models.ForeignKey('Upload', null=True)
@@ -490,6 +490,7 @@ class OqParams(models.Model):
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
+    damping = models.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
        (u'none', u'None'),
        (u'onesided', u'One-sided'),
@@ -506,6 +507,8 @@ class OqParams(models.Model):
     realizations = models.IntegerField(null=True)
     histories = models.IntegerField(null=True)
     gm_correlated = models.BooleanField(null=True)
+    gmf_calculation_number = models.IntegerField(null=True)
+    rupture_surface_discretization = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     # We can specify a (region and region_grid_spacing) or sites, but not both.
