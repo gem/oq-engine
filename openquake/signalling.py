@@ -27,6 +27,11 @@ from amqplib import client_0_8 as amqp
 from openquake.utils import config
 
 
+_ROUTING_KEY_PREFIX = 'log'
+_ROUTING_KEY_TYPES = ('failed', 'succeeded', 'fatal', 'error', 'warn',
+    'info', 'debug')
+
+
 def generate_routing_key(job_id, type_):
     """
     Generate an amqp routing key to route messages of a job.
@@ -42,14 +47,32 @@ def generate_routing_key(job_id, type_):
     :return: the routing key
     :rtype: string
     """
-    assert type_ in ('*', 'failed', 'succeeded',
-                     'fatal', 'error', 'warn', 'info', 'debug'), \
+    assert type_ == '*' or type_ in _ROUTING_KEY_TYPES, \
            'invalid routing type %r' % type_
 
     assert isinstance(job_id, (int, long)) or job_id == '*', \
            'invalid job id %r' % job_id
 
-    return 'log.%s.%s' % (type_, job_id)
+    return '%s.%s.%s' % (_ROUTING_KEY_PREFIX, type_, job_id)
+
+
+def parse_routing_key(routing_key):
+    """
+    """
+
+    prefix, type_, job_id = routing_key.split('.')
+
+    if prefix != _ROUTING_KEY_PREFIX:
+        raise ValueError('invalid prefix %r for a signalling routing key'
+                            % prefix)
+
+    job_id = int(job_id)
+
+    if type_ not in _ROUTING_KEY_TYPES:
+        raise ValueError('invalid type %r for a signalling routing key'
+                         % type_)
+
+    return job_id, type_
 
 
 def connect():
