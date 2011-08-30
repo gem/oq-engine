@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from alchemy_db_utils_unittest import *
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
 from db_loader_unittest import *
