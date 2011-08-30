@@ -68,7 +68,8 @@ class ClassicalPSHABasedMixin:
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
         job = models.OqJob.objects.get(id=self.job_id)
         hc = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job).extra(
+            hazard_curve__output__oq_job=job,
+            hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
         return Curve(zip(job.oq_params.imls, hc.poes))

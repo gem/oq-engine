@@ -23,7 +23,6 @@ Database related unit tests for hazard computations with the hazard engine.
 
 import unittest
 
-from openquake.hazard import opensha
 from openquake.output import writer as output_writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
