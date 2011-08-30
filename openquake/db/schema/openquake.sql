@@ -518,9 +518,10 @@ CREATE TABLE uiapi.input (
     --      GMPE logic tree (lt_gmpe)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
+    --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'vulnerability')),
+                             'exposure', 'vulnerability', 'rupture')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
@@ -585,6 +586,9 @@ CREATE TABLE uiapi.oq_params (
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
+    damping float CONSTRAINT damping_is_set
+        CHECK(((imt = 'sa') AND (damping IS NOT NULL))
+              OR ((imt != 'sa') AND (damping IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
@@ -614,6 +618,26 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             ((job_type = 'classical') AND (gm_correlated IS NULL))
             OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
+    -- deterministic job fields
+    gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
+        CHECK(
+            ((job_type = 'deterministic')
+             AND (gmf_calculation_number IS NOT NULL)
+             AND (realizations > 0))
+            OR
+            ((job_type != 'deterministic')
+             AND (gmf_calculation_number IS NULL))),
+    -- deterministic job fields
+    rupture_surface_discretization float
+        CONSTRAINT rupture_surface_discretization_is_set
+        CHECK(
+            ((job_type = 'deterministic')
+             AND (rupture_surface_discretization IS NOT NULL)
+             AND (rupture_surface_discretization > 0))
+            OR
+            ((job_type != 'deterministic')
+             AND (rupture_surface_discretization IS NULL))),
+    -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
