@@ -16,7 +16,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from alchemy_db_utils_unittest import *
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
 from db_loader_unittest import *
@@ -51,6 +50,7 @@ from risk_parser_unittest import *
 from risk_unittest import *
 from schema_unittest import *
 from shapes_unittest import *
+from signalling_unittest import *
 from supervisor_unittest import *
 from tools_dbmaint_unittest import *
 from tools_oqbugs_unittest import *
