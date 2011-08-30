@@ -292,7 +292,8 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source logic tree (lt_source)
     - GMPE logic tree (lt_gmpe)
     - exposure file (exposure)
-    - vulnerability file (vulnerability)';
+    - vulnerability file (vulnerability)
+    - rupture file (rupture)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
