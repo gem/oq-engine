@@ -17,3 +17,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 """ Mixins for risk jobs. """
+
+import probabilistic
+import classical_psha
+import deterministic
