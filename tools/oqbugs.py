@@ -88,8 +88,8 @@ class CommitsOutput(object):
 
 
 # A serie of ArgumentParser action(s) that are triggered by parse_args()
-def fix_committed(launchpad, commit_lines):
-    class FixCommitted(argparse.Action):
+def fix_apply(launchpad, commit_lines, status_type):
+    class FixApply(argparse.Action):
         """ Changes the status of a bug to Fix Committed when it is in
             the master repository (i.e. merged)
         """
@@ -107,21 +107,11 @@ def fix_committed(launchpad, commit_lines):
                             filter_bugs(commit_line))
                     
                     for bug in bugs:
-                        if bug.bug_tasks[0].status != "Fix Committed":
-                            bug.bug_tasks[0].status = 'Fix Committed'
+                        if bug.bug_tasks[0].status != status_type:
+                            bug.bug_tasks[0].status = status_type
                             changed_bugs.append(bug)
             return changed_bugs
-    return FixCommitted
-
-
-class FixReleased(argparse.Action):
-    """
-        Changes the status of a bug to Fix Released when the release packages
-        are built
-    """
-    def __call__(self, parser, namespace, values, option_string=None):
-        print 'FixReleased: %r %r %r' % (namespace, values, option_string)
-        setattr(namespace, self.dest, values)
+    return FixApply
 
 
 def changelog(launchpad, commit_lines):
@@ -188,14 +178,15 @@ def arg_parse():
 
     action_group = action_parser.add_mutually_exclusive_group(required=True)
     action_group.add_argument('-c', '--fix-committed', 
-            action=fix_committed(launchpad, commits_output),
+            action=fix_apply(launchpad, commits_output, 'Fix Committed'),
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
             nargs=0,
             dest='fix_committed',
             required=False)
 
-    action_group.add_argument('-r', '--fix-released', action=FixReleased,
+    action_group.add_argument('-r', '--fix-released', 
+            action=fix_apply(launchpad, commits_output, 'Fix Released'),
             help="Invoked from the ppa build fetches from a git repository \
                 every with Fix Committed status and changes it to \
                 Fix Released",
