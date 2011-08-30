@@ -22,7 +22,4 @@ These include Classical PSHA-based risk analysis,
 and deterministic analysis based on either a set of GMF files,
 or a single GMF file."""
 
-import openquake.risk.job
-import openquake.risk.job.probabilistic
-import openquake.risk.job.classical_psha
-import openquake.risk.job.deterministic
+import job
