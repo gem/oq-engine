@@ -15,7 +15,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Ostensibly core computation methods for hazard engine. Most of the hard
 computation is backed by the Java HazardEngine via the hazard_wrapper
