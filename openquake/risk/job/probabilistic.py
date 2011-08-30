@@ -63,8 +63,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
         for task in tasks:
             try:
-                # TODO (chris): Figure out where to put that timeout
-                task.wait(timeout=None)
+                task.wait()
 
                 aggregate_curve.append(task.result)
             except TimeoutError:
