@@ -401,7 +401,7 @@ class Upload(models.Model):
         (u'succeeded', u'Succeeded'),
     )
     status = models.TextField(choices=STATUS_CHOICES, default='pending')
-    job_pid = models.IntegerField()
+    job_pid = models.IntegerField(default=0)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
