@@ -24,7 +24,6 @@ Tests for the Python-Java code layer.
 
 import cPickle
 import os
-import traceback
 import unittest
 
 from openquake import java

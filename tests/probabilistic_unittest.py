@@ -18,12 +18,9 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import os
 import unittest
 
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.parser import exposure
-from tests.utils import helpers
 
 
 NUMBER_OF_SAMPLES_FROM_CONFIG = "10"

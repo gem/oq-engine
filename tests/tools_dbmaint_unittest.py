@@ -23,7 +23,6 @@ Unit tests for the tools/dbmaint.py tool.
 """
 
 from distutils import version
-import mock
 import os
 import shutil
 import sys
