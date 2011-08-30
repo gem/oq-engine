@@ -45,18 +45,12 @@ import logging
 from lxml import etree
 
 from openquake.db import models
-from openquake.db.alchemy.db_utils import get_db_session
-# pylint: disable=W0611
-from openquake.db.alchemy.models import (
-    HazardMap, HazardMapData, GMFData)
 
 from openquake import job
 from openquake import shapes
 from openquake import writer
 from openquake.utils import round_float
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
-
-from sqlalchemy import func as sqlfunc
 
 
 LOGGER = logging.getLogger('hazard-serializer')
@@ -856,8 +850,7 @@ def _create_writer(job_id, serialize_to, nrml_path,
     if 'db' in serialize_to:
         assert job_id, "No job_id supplied"
         job_id = int(job_id)
-        session = get_db_session("reslt", "writer")
-        writers.append(create_db_writer(session, nrml_path, job_id))
+        writers.append(create_db_writer(nrml_path, job_id))
 
     if 'xml' in serialize_to:
         writers.append(create_xml_writer(nrml_path))
@@ -879,8 +872,7 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardCurveXMLWriter,
-                          # SQLAlchemy temporary adapter
-                          lambda s, p, j: HazardCurveDBWriter(p, j))
+                          HazardCurveDBWriter)
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
@@ -897,8 +889,7 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardMapXMLWriter,
-                          # SQLAlchemy temporary adapter
-                          lambda s, p, j: HazardMapDBWriter(p, j))
+                          HazardMapDBWriter)
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
@@ -915,5 +906,4 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(job_id, serialize_to, nrml_path,
                           GMFXMLWriter,
-                          # SQLAlchemy temporary adapter
-                          lambda s, p, j: GmfDBWriter(p, j))
+                          GmfDBWriter)
