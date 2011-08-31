@@ -26,16 +26,12 @@ import numpy
 import os
 
 from openquake import kvs
-from openquake import logs
 from openquake import shapes
 
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.risk import deterministic_event_based as det
 from openquake.risk.job import general
-
-
-LOGGER = logs.LOG
 
 
 class DeterministicEventBasedMixin:
@@ -49,9 +45,10 @@ class DeterministicEventBasedMixin:
     def execute(self):
         """Entry point for triggering the computation."""
 
-        LOGGER.debug("Executing deterministic risk computation.")
-        LOGGER.debug("This will calculate mean and standard deviation loss"
-            "values for the region defined in the job config.")
+        self.logger.debug("Executing deterministic risk computation.")
+        self.logger.debug("This will calculate mean and standard "
+                          "deviation loss values for the region "
+                          "defined in the job config.")
 
         tasks = []
 
@@ -65,8 +62,8 @@ class DeterministicEventBasedMixin:
         region_loss_map_data = {}
 
         for block_id in self.blocks_keys:
-            LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.blocks_keys)))
+            self.logger.debug("Dispatching task for block %s of %s",
+                              block_id, len(self.blocks_keys))
             a_task = general.compute_risk.delay(
                 self.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
@@ -102,7 +99,7 @@ class DeterministicEventBasedMixin:
             self.job_id, self.serialize_results_to, loss_map_path, True)
 
         if loss_map_writer:
-            LOGGER.debug("Starting serialization of the loss map...")
+            self.logger.debug("Starting serialization of the loss map...")
 
             # Add a metadata dict in the first list position
             # Note: the metadata is still incomplete (see bug 809410)
