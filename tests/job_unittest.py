@@ -362,7 +362,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         other.
         '''
         params = self.BASE_CLASSICAL_PARAMS.copy()
-        
+
         params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
         params['REGION_GRID_SPACING'] = '0.1'
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
