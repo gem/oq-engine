@@ -522,7 +522,7 @@ class DbTestMixin(TestMixin):
             created and captured in the job record
         :returns: a :py:class:`db.models.OqJob` instance
         """
-        assert upload_id is None # temporary
+        assert upload_id is None  # temporary
 
         owner = models.OqUser.objects.get(user_name="openquake")
 

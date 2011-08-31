@@ -417,7 +417,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual([
                 {'path': 'smoketests/classical_psha_simple/small_exposure.xml',
                  'type': 'exposure'},
-                {'path': 'smoketests/classical_psha_simple/gmpe_logic_tree.xml',
+                {'path': 'smoketests/classical_psha_simple/' \
+                         'gmpe_logic_tree.xml',
                  'type': 'lt_gmpe'},
                 {'path': 'smoketests/classical_psha_simple/' \
                          'source_model_logic_tree.xml',
