@@ -33,7 +33,6 @@ from openquake import shapes
 
 from openquake.xml import NRML_NS, GML_NS, NRML
 
-LOG = logs.LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
