@@ -24,49 +24,103 @@ class JavaLogsTestCase(unittest.TestCase):
     def setUp(self):
         self.jvm = java.jvm()
         self.handler = logging.handlers.BufferingHandler(capacity=float('inf'))
-        self.logger = logging.getLogger('java')
-        self.logger.addHandler(self.handler)
-        self.logger.setLevel(logging.DEBUG)
+        self.python_logger = logging.getLogger('java')
+        self.python_logger.addHandler(self.handler)
+        self.python_logger.setLevel(logging.DEBUG)
+
+        jlogger_class = self.jvm.JClass("org.apache.log4j.Logger")
+        self.root_logger = jlogger_class.getRootLogger()
+        self.other_logger = jlogger_class.getLogger('other_logger')
 
     def tearDown(self):
-        self.logger.removeHandler(self.handler)
-        self.logger.setLevel(logging.NOTSET)
+        self.python_logger.removeHandler(self.handler)
+        self.python_logger.setLevel(logging.NOTSET)
 
-    def test_java_logging(self):
-        jlogger_class = self.jvm.JClass("org.apache.log4j.Logger")
-        root_logger = jlogger_class.getRootLogger()
-        other_logger = jlogger_class.getLogger('other_logger')
+    def test_error(self):
+        self.root_logger.error('java error msg')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertEqual(record.levelname, 'ERROR')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'java error msg')
+        self.assertEqual(record.threadName, 'main')
+        self.assertEqual(record.processName, 'java')
 
-        root_logger.error('java error msg')
-        other_logger.warn('warning message')
-        other_logger.debug('this is verbose debug info')
-        root_logger.fatal('something bad has happened')
-        root_logger.info('information message')
+    def test_warning(self):
+        self.other_logger.warn('warning message')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.WARNING)
+        self.assertEqual(record.levelname, 'WARNING')
+        self.assertEqual(record.name, 'java.other_logger')
+        self.assertEqual(record.msg, 'warning message')
 
-        records = self.handler.buffer
-        self.assertEqual(records[0].levelno, logging.ERROR)
-        self.assertEqual(records[0].levelname, 'ERROR')
-        self.assertEqual(records[0].name, 'java')
-        self.assertEqual(records[0].msg, 'java error msg')
-        self.assertEqual(records[0].threadName, 'main')
-        self.assertEqual(records[0].processName, 'java')
+    def test_debug(self):
+        self.other_logger.debug('this is verbose debug info')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.DEBUG)
+        self.assertEqual(record.levelname, 'DEBUG')
+        self.assertEqual(record.name, 'java.other_logger')
+        self.assertEqual(record.msg, 'this is verbose debug info')
 
-        self.assertEqual(records[1].levelno, logging.WARNING)
-        self.assertEqual(records[1].levelname, 'WARNING')
-        self.assertEqual(records[1].name, 'java.other_logger')
-        self.assertEqual(records[1].msg, 'warning message')
+    def test_fatal(self):
+        self.root_logger.fatal('something bad has happened')
+        [record] = self.handler.buffer
+        # java "fatal" records are mapped to python "critical" ones
+        self.assertEqual(record.levelno, logging.CRITICAL)
+        self.assertEqual(record.levelname, 'CRITICAL')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'something bad has happened')
 
-        self.assertEqual(records[2].levelno, logging.DEBUG)
-        self.assertEqual(records[2].levelname, 'DEBUG')
-        self.assertEqual(records[2].name, 'java.other_logger')
-        self.assertEqual(records[2].msg, 'this is verbose debug info')
+    def test_info(self):
+        self.root_logger.info('information message')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.INFO)
+        self.assertEqual(record.levelname, 'INFO')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'information message')
 
-        self.assertEqual(records[3].levelno, logging.CRITICAL)
-        self.assertEqual(records[3].levelname, 'CRITICAL')
-        self.assertEqual(records[3].name, 'java')
-        self.assertEqual(records[3].msg, 'something bad has happened')
+    def test_custom_level(self):
+        # checking that logging with custom levels issues a warning but works
 
-        self.assertEqual(records[4].levelno, logging.INFO)
-        self.assertEqual(records[4].levelname, 'INFO')
-        self.assertEqual(records[4].name, 'java')
-        self.assertEqual(records[4].msg, 'information message')
+        # org.apache.log4j.Level doesn't allow to be instantiated directly
+        # and jpype doesn't support subclassing java in python. that's why
+        # in this test we just check JavaLoggingBridge without touching
+        # java objects.
+        class MockMessage(object):
+            def getLevel(self):
+                class Level(object):
+                    def toInt(self):
+                        return 12345
+                return Level()
+            @property
+            def logger(self):
+                class Logger(object):
+                    def getParent(self):
+                        return None
+                return Logger()
+            def getLocationInformation(self):
+                class LocationInformation(object):
+                    getFileName = lambda self: 'some/file'
+                    getLineNumber = lambda self: '123'
+                    getClassName = lambda self: 'someclassname'
+                    getMethodName = lambda self: 'somemethod'
+                return LocationInformation()
+            getLoggerName = lambda self: 'root'
+            getMessage = lambda self: 'somemessage'
+            getThreadName = lambda self: 'somethread'
+
+        java.JavaLoggingBridge().append(MockMessage())
+        # we expect to have two messages logged in this case:
+        # first is warning about unknown level used,
+        # and second is the actual log message.
+        [warning, record] = self.handler.buffer
+
+        self.assertEqual(warning.levelno, logging.WARNING)
+        self.assertEqual(warning.name, 'java')
+        self.assertEqual(warning.getMessage(), 'unrecognised logging level ' \
+                                               '12345 was used')
+
+        self.assertEqual(record.levelno, 12345)
+        self.assertEqual(record.levelname, 'Level 12345')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'somemessage')
