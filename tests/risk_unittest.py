@@ -19,7 +19,6 @@
 
 import os
 import json
-import mock
 import numpy
 import unittest
 
@@ -624,9 +623,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
 
-        with mock.patch(
+        with helpers.patch(
             'openquake.output.curve.CurvePlot.write') as write_mock:
-            with mock.patch(
+            with helpers.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
                 aggregate.plot_aggregate_curve(self.job, curve)
 
@@ -649,9 +648,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
 
-        with mock.patch(
+        with helpers.patch(
             'openquake.output.curve.CurvePlot.write') as write_mock:
-            with mock.patch(
+            with helpers.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
                 aggregate.plot_aggregate_curve(self.job, curve)
 
