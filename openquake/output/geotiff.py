@@ -38,8 +38,6 @@ from openquake import writer
 
 from openquake.output import template
 
-LOG = logs.LOG
-
 GDAL_FORMAT = "GTiff"
 GDAL_PIXEL_DATA_TYPE = gdal.GDT_Float32
 SPATIAL_REFERENCE_SYSTEM = "WGS84"
