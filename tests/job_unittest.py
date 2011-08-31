@@ -355,6 +355,20 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertRaises(RuntimeError, prepare_job, params)
 
+    def test_prepare_job_raises_if_both_geometries_specified(self):
+        '''
+        If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified, a
+        RuntimeError should be raised. A job config can only have one or the
+        other.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+        
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        self.assertRaises(RuntimeError, prepare_job, params)
+
     def test_prepare_classical_job(self):
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
