@@ -561,7 +561,7 @@ CREATE TABLE uiapi.oq_params (
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
     upload_id INTEGER,
-    region_grid_spacing float NOT NULL,
+    region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
             ((job_type = 'deterministic') AND (min_magnitude IS NULL))
@@ -618,7 +618,14 @@ CREATE TABLE uiapi.oq_params (
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'oq_params', 'region', 4326, 'POLYGON', 2);
-ALTER TABLE uiapi.oq_params ALTER COLUMN region SET NOT NULL;
+SELECT AddGeometryColumn('uiapi', 'oq_params', 'sites', 4326, 'MULTIPOINT', 2);
+-- Params can either contain a site list ('sites') or
+-- region + region_grid_spacing, but not both.
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT oq_params_geometry CHECK(
+    ((region IS NOT NULL) AND (region_grid_spacing IS NOT NULL)
+        AND (sites IS NULL))
+    OR ((region IS NULL) AND (region_grid_spacing IS NULL)
+        AND (sites IS NOT NULL)));
 
 
 -- A single OpenQuake calculation engine output. The data may reside in a file
