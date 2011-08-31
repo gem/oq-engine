@@ -34,7 +34,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.models import OqJob, OqParams, OqUser, InputSet
+from openquake.db.models import OqJob, OqParams, OqUser, InputSet, Input
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -53,6 +53,13 @@ CALCULATION_MODE = {
     'Classical': 'classical',
     'Deterministic': 'deterministic',
     'Event Based': 'event_based',
+}
+
+INPUT_FILE_TYPES = {
+    'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
+    'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
+    'EXPOSURE': 'exposure',
+    'VULNERABILITY': 'vulnerability',
 }
 
 ENUM_MAP = {
@@ -194,6 +201,19 @@ def prepare_job(params):
 
     input_set = InputSet(upload=None, owner=owner)
     input_set.save()
+
+    # insert input files in input table
+    for param_key, file_type in INPUT_FILE_TYPES.items():
+        if param_key not in params:
+            continue
+        path = params[param_key]
+        # TODO remove with --include_defaults
+        if not os.path.exists(path):
+            continue
+
+        in_model = Input(input_set=input_set, path=path,
+                         input_type=file_type, size=os.path.getsize(path))
+        in_model.save()
 
     oqp = OqParams(input_set=input_set)
 

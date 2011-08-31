@@ -372,10 +372,24 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertRaises(RuntimeError, prepare_job, params)
 
+    def _get_inputs(self, job):
+        inputs = [dict(path=i.path, type=i.input_type)
+                      for i in self.job.oq_params.input_set.input_set.all()]
+
+        return sorted(inputs, key=lambda i: i['type'])
+
     def test_prepare_classical_job(self):
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
         params['REGION_GRID_SPACING'] = '0.1'
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = \
+            'smoketests/classical_psha_simple/source_model_logic_tree.xml'
+        params['GMPE_LOGIC_TREE_FILE'] = \
+            'smoketests/classical_psha_simple/gmpe_logic_tree.xml'
+        params['EXPOSURE'] = \
+            'smoketests/classical_psha_simple/small_exposure.xml'
+        params['VULNERABILITY'] = \
+            'smoketests/classical_psha_simple/vulnerability.xml'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
@@ -400,6 +414,17 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
              }, self.job.oq_params)
+        self.assertEqual([
+                {'path': 'smoketests/classical_psha_simple/small_exposure.xml',
+                 'type': 'exposure'},
+                {'path': 'smoketests/classical_psha_simple/gmpe_logic_tree.xml',
+                 'type': 'lt_gmpe'},
+                {'path': 'smoketests/classical_psha_simple/' \
+                         'source_model_logic_tree.xml',
+                 'type': 'lt_source'},
+                {'path': 'smoketests/classical_psha_simple/vulnerability.xml',
+                 'type': 'vulnerability'},
+                ], self._get_inputs(self.job))
 
     def test_prepare_classical_job_over_sites(self):
         '''
@@ -434,6 +459,11 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_VERTEX'] = \
             '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
         params['REGION_GRID_SPACING'] = '0.02'
+        params['SINGLE_RUPTURE_MODEL'] = \
+            'smoketests/deterministic/simple-fault-rupture.xml'
+        params['EXPOSURE'] = 'smoketests/deterministic/LA_small_portfolio.xml'
+        params['VULNERABILITY'] = \
+            'smoketests/deterministic/vulnerability.xml'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
@@ -458,6 +488,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gmf_calculation_number': 5,
              'rupture_surface_discretization': 0.1,
              }, self.job.oq_params)
+        self.assertEqual([
+                {'path': 'smoketests/deterministic/LA_small_portfolio.xml',
+                 'type': 'exposure'},
+                {'path': 'smoketests/deterministic/vulnerability.xml',
+                 'type': 'vulnerability'},
+                ], self._get_inputs(self.job))
 
     def test_prepare_deterministic_job_over_sites(self):
         '''
@@ -493,6 +529,13 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_VERTEX'] = \
             '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
         params['REGION_GRID_SPACING'] = '0.02'
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = \
+            'smoketests/simplecase/source_model_logic_tree.xml'
+        params['GMPE_LOGIC_TREE_FILE'] = \
+            'smoketests/simplecase/gmpe_logic_tree.xml'
+        params['EXPOSURE'] = 'smoketests/simplecase/small_exposure.xml'
+        params['VULNERABILITY'] = \
+            'smoketests/simplecase/vulnerability.xml'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
@@ -517,6 +560,16 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
              }, self.job.oq_params)
+        self.assertEqual([
+                {'path': 'smoketests/simplecase/small_exposure.xml',
+                 'type': 'exposure'},
+                {'path': 'smoketests/simplecase/gmpe_logic_tree.xml',
+                 'type': 'lt_gmpe'},
+                {'path': 'smoketests/simplecase/source_model_logic_tree.xml',
+                 'type': 'lt_source'},
+                {'path': 'smoketests/simplecase/vulnerability.xml',
+                 'type': 'vulnerability'},
+                ], self._get_inputs(self.job))
 
     def test_prepare_event_based_job_over_sites(self):
         '''
