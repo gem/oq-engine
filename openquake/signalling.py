@@ -58,6 +58,14 @@ def generate_routing_key(job_id, type_):
 
 def parse_routing_key(routing_key):
     """
+    Extract the job id and routing key type from a routing key.
+
+    Raises a ValueError if the key is malformed.
+
+    :param routing_key: the routing key
+    :type routing_key: string
+    :return: the tuple (job_id, routing_key_type)
+    :rtype: job_id int, routing_key_type string
     """
 
     prefix, type_, job_id = routing_key.split('.')
