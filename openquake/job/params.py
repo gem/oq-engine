@@ -35,6 +35,13 @@ CALCULATION_MODE = {
     'Event Based': 'event_based',
 }
 
+INPUT_FILE_TYPES = {
+    'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
+    'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
+    'EXPOSURE': 'exposure',
+    'VULNERABILITY': 'vulnerability',
+}
+
 ENUM_MAP = {
     'Average Horizontal': 'average',
     'Average Horizontal (GMRotI50)': 'gmroti50',
