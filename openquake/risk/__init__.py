@@ -15,14 +15,10 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """
 Core computation methods for the risk 'engine'
 These include Classical PSHA-based risk analysis,
 and deterministic analysis based on either a set of GMF files,
 or a single GMF file."""
 
-import openquake.risk.job
-import openquake.risk.job.probabilistic
-import openquake.risk.job.classical_psha
-import openquake.risk.job.deterministic
+import job
