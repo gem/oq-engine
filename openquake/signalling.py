@@ -20,6 +20,7 @@
 """
 Classes dealing with amqp signalling between jobbers, workers and supervisors.
 """
+import logging
 import time
 
 from amqplib import client_0_8 as amqp
@@ -270,3 +271,29 @@ def signal_job_outcome(job_id, outcome):
 
     chn.close()
     conn.close()
+
+
+class Collector(LogMessageConsumer):
+    """
+    Log the signalling messages with the supplied logger.
+
+    :param job_id: the id of a job to log only messages of a particular job, or
+                   '*' to log them all, regardless of the job
+    :type job_id: int or the '*' string
+    :param logger: the logger that will receive the messages
+    :type logger: :py:class:`logging.Logger`
+    """
+    def __init__(self, job_id, logger):
+        super(Collector, self).__init__(job_id)
+
+        self.logger = logger
+
+    def message_callback(self, msg):
+        try:
+            job_id, type_ = \
+                parse_routing_key(msg.delivery_info['routing_key'])
+        except ValueError:
+            pass
+        else:
+            if type_ in ('debug', 'info', 'warn', 'error', 'fatal'):
+                self.logger.log(getattr(logging, type_.upper()), msg.body)
