@@ -250,7 +250,7 @@ class LogMessageConsumer(object):
         Can raise StopIteration to stop the loop inside `run` and let it return
         to the caller.
         """
-        raise NotImplementedError()
+        pass
 
 
 def signal_job_outcome(job_id, outcome):
@@ -290,6 +290,7 @@ class Collector(LogMessageConsumer):
 
     def message_callback(self, msg):
         try:
+            # pylint: disable=W0612
             job_id, type_ = \
                 parse_routing_key(msg.delivery_info['routing_key'])
         except ValueError:
