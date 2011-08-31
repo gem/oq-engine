@@ -140,24 +140,25 @@ class OqBugsTestCase(unittest.TestCase):
     def test_fix_committed_and_fix_released(self):
         for commit in self.correct_commits:
             # preparing bugs for mocker
-            self.bugs = prepare_mock(filter_bugs(commit))
+            self.bugs.update(prepare_mock(filter_bugs(commit)))
 
-            # gets the FixCommitted reference by calling the fix_committed
-            # method with args
+        # gets the FixApply instances reference by calling the fix_apply
+        # method with specific args
+        lp_fixes = {
+            'Fix Committed': fix_apply(self.launchpad,
+                self.correct_commits, 'Fix Committed'),
+            'Fix Released': fix_apply(self.launchpad,
+                self.correct_commits, 'Fix Released')}
 
+        namespace = Namespace(time='1 week')
 
-            lp_fixes = {
-                'Fix Committed': fix_apply(self.launchpad,
-                    commit, 'Fix Committed'),
-                'Fix Released': fix_apply(self.launchpad,
-                    commit, 'Fix Released')}
+        for status, lp_fix in lp_fixes.iteritems():
+            # creates an argparse action instance and __call__[s] it passing
+            # the namespace object
+            bugs = lp_fix(None, None)(None, namespace,
+                    None)
 
-            namespace = Namespace(time='1 week')
-
-            for status, lp_fix in lp_fixes.iteritems():
-                # creates an argparse action instance and __call__[s] it passing
-                # the namespace object
-                bugs = lp_fix(None, None)(None, namespace,
-                        None)
-                for bug in bugs:
-                    self.assertEqual(status, bug.bug_tasks[0].status)
+            # there should be bugs (mocked objects) returned
+            self.assertTrue(len(bugs))
+            for bug in bugs:
+                self.assertEqual(status, bug.bug_tasks[0].status)
