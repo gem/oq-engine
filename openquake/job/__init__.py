@@ -37,13 +37,13 @@ from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, InputSet, FloatArrayField)
+    OqJob, OqParams, OqUser, JobStats, InputSet, Input, FloatArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.job.params import (
-    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS)
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -235,6 +235,15 @@ def prepare_job(params):
     job = OqJob(
         owner=owner, path=None,
         job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    # insert input files in input table
+    for param_key, file_type in INPUT_FILE_TYPES.items():
+        if param_key not in params:
+            continue
+        path = params[param_key]
+        in_model = Input(input_set=input_set, path=path,
+                         input_type=file_type, size=os.path.getsize(path))
+        in_model.save()
 
     oqp = OqParams(input_set=input_set)
     oqp.job_type = job.job_type
