@@ -506,6 +506,14 @@ class DbTestMixin(TestMixin):
             return
         upload.delete()
 
+    def teardown_input_set(self, input_set, filesystem_only):
+        if input_set.upload is not None:
+            self.teardown_upload(input_set.upload,
+                                 filesystem_only=filesystem_only)
+        if filesystem_only:
+            return
+        input_set.delete()
+
     def setup_classic_job(self, create_job_path=True, upload_id=None):
         """Create a classic job with associated upload and inputs.
 
@@ -514,10 +522,16 @@ class DbTestMixin(TestMixin):
             created and captured in the job record
         :returns: a :py:class:`db.models.OqJob` instance
         """
-        upload = self.setup_upload(upload_id)
+        assert upload_id is None # temporary
+
+        owner = models.OqUser.objects.get(user_name="openquake")
+
+        input_set = models.InputSet(owner=owner)
+        input_set.save()
+
         oqp = models.OqParams()
         oqp.job_type = "classical"
-        oqp.upload = upload
+        oqp.input_set = input_set
         oqp.region_grid_spacing = 0.01
         oqp.min_magnitude = 5.0
         oqp.investigation_time = 50.0
@@ -533,12 +547,12 @@ class DbTestMixin(TestMixin):
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqp.save()
 
-        job = models.OqJob(oq_params=oqp, owner=upload.owner,
+        job = models.OqJob(oq_params=oqp, owner=owner,
                            job_type="classical")
         job.save()
 
         if create_job_path:
-            job.path = os.path.join(upload.path, str(job.id))
+            job.path = os.path.join(tempfile.mkdtemp(), str(job.id))
             job.save()
 
             os.mkdir(job.path)
@@ -559,8 +573,9 @@ class DbTestMixin(TestMixin):
             anyway.
         """
         oqp = job.oq_params
-        if oqp.upload is not None:
-            self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
+        if oqp.input_set is not None:
+            self.teardown_input_set(oqp.input_set,
+                                    filesystem_only=filesystem_only)
         if filesystem_only:
             return
 

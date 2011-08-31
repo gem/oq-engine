@@ -34,7 +34,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.models import OqJob, OqParams, OqUser
+from openquake.db.models import OqJob, OqParams, OqUser, InputSet
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -189,7 +189,13 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    oqp = OqParams(upload=None)
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name="openquake")
+
+    input_set = InputSet(upload=None, owner=owner)
+    input_set.save()
+
+    oqp = OqParams(input_set=input_set)
 
     # fill in parameters
     if 'SITES' in params:
@@ -212,16 +218,8 @@ def prepare_job(params):
         raise RuntimeError(
             "Job config contains neither sites nor region of interest.")
 
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name='openquake')
-
-    job = OqJob(
-        owner=owner, path=None,
-        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
-
-    oqp.job_type = job.job_type
-
     # fill-in parameters
+    oqp.job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -256,7 +254,8 @@ def prepare_job(params):
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
 
     oqp.save()
-    job.oq_params = oqp
+
+    job = OqJob(owner=owner, path=None, oq_params=oqp, job_type=oqp.job_type)
     job.save()
 
     return job
