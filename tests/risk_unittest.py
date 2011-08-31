@@ -19,6 +19,7 @@
 
 import os
 import json
+import mock
 import numpy
 import unittest
 
