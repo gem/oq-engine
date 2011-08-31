@@ -69,6 +69,7 @@ GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input_set_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
@@ -229,6 +230,10 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_job_init;
 -- uiapi.output
 GRANT SELECT ON uiapi.output TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_reslt_writer;
+
+-- uiapi.input_set
+GRANT SELECT ON uiapi.input_set TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input_set TO oq_job_init;
 
 -- uiapi.upload
 GRANT SELECT ON uiapi.upload TO GROUP openquake;

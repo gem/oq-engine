@@ -505,13 +505,22 @@ CREATE TABLE uiapi.upload (
 ) TABLESPACE uiapi_ts;
 
 
+-- Set of input files for an OpenQuake job
+CREATE TABLE uiapi.input_set (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    upload_id INTEGER,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 -- A single OpenQuake input file uploaded by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    upload_id INTEGER NOT NULL,
+    input_set_id INTEGER NOT NULL,
     -- The full path of the input file on the server
-    path VARCHAR NOT NULL UNIQUE,
+    path VARCHAR NOT NULL,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt_source)
@@ -527,6 +536,7 @@ CREATE TABLE uiapi.input (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
+
 
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
@@ -561,7 +571,7 @@ CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
-    upload_id INTEGER,
+    input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
@@ -1073,14 +1083,11 @@ FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_input_set_fk
+FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
-FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_input_set_fk
+FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
