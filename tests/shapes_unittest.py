@@ -627,3 +627,74 @@ class SiteTestCase(unittest.TestCase):
         site2 = shapes.Site(-121.00000004, 29.00000006)
 
         self.assertEqual(site1.__hash__(), site2.__hash__())
+
+
+class ShapesUtilsTestCase(unittest.TestCase):
+    '''
+    Tests for utility methods in the shapes module.
+    '''
+
+    def test_multipoint_ewkt(self):
+        '''
+        Test typical usage of
+        :py:function:`openquake.shapes.multipoint_ewkt_from_coords`
+        '''
+        expected_ewkt = \
+            'SRID=4326;MULTIPOINT((-122.0 38.113), (-122.114 38.113))'
+
+        coords = '38.113, -122.0, 38.113, -122.114'
+
+        actual_ewkt = shapes.multipoint_ewkt_from_coords(coords)
+
+        self.assertEqual(expected_ewkt, actual_ewkt)
+
+    def test_multipoint_ewkt_round_float(self):
+        '''
+        Test usage of
+        :py:function:`openquake.shapes.multipoint_ewkt_from_coords` to ensure
+        that high-precision coordinate values are rounded down a reasonable
+        level of precision.
+        '''
+        expected_ewkt = \
+            'SRID=4326;MULTIPOINT((-122.0 38.1130001), (-122.114 38.113))'
+
+        coords = '38.11300006, -122.00000001, 38.113, -122.114'
+
+        actual_ewkt = shapes.multipoint_ewkt_from_coords(coords)
+
+        self.assertEqual(expected_ewkt, actual_ewkt)
+
+    def test_polygon_ewkt(self):
+        '''
+        Test typical usage of
+        :py:function:`openquake.shapes.polygon_ewkt_from_coords`
+        '''
+        # Note that the first & last coord are the same to form a closed loop.
+        expected_ewkt = (
+            'SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, '
+            '-122.57 38.111, -122.0 38.113))')
+
+        coords = '38.113, -122.0, 38.113, -122.114, 38.111, -122.57'
+
+        actual_ewkt = shapes.polygon_ewkt_from_coords(coords)
+
+        self.assertEqual(expected_ewkt, actual_ewkt)
+
+    def test_polygon_ewkt_round_float(self):
+        '''
+        Test usage of
+        :py:function:`openquake.shapes.polygon_ewkt_from_coords` to ensure
+        that high-precision coordinate values are rounded down a reasonable
+        level of precision.
+        '''
+        # Note that the first & last coord are the same to form a closed loop.
+        expected_ewkt = (
+            'SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, '
+            '-122.57 38.1110001, -122.0 38.113))')
+
+        coords = \
+            '38.113, -122.00000001, 38.113, -122.114, 38.11100006, -122.57'
+
+        actual_ewkt = shapes.polygon_ewkt_from_coords(coords)
+
+        self.assertEqual(expected_ewkt, actual_ewkt)
