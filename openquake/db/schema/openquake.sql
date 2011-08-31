@@ -555,7 +555,7 @@ CREATE TABLE uiapi.oq_job (
 ) TABLESPACE uiapi_ts;
 
 
--- Tracks various statistics about jobs
+-- Tracks various job statistics
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
