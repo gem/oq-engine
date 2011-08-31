@@ -408,13 +408,24 @@ class Upload(models.Model):
         db_table = 'uiapi\".\"upload'
 
 
+class InputSet(models.Model):
+    '''
+    Set of input files for an OpenQuake job
+    '''
+    owner = models.ForeignKey('OqUser')
+    upload = models.ForeignKey('Upload', null=True)
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"input_set'
+
+
 class Input(models.Model):
     '''
     A single OpenQuake input file uploaded by the user
     '''
-    owner = models.ForeignKey('OqUser')
-    upload = models.ForeignKey('Upload')
-    path = models.TextField(unique=True)
+    input_set = models.ForeignKey('InputSet')
+    path = models.TextField()
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
         (u'source', u'Source Model'),
@@ -488,7 +499,7 @@ class OqParams(models.Model):
         (u'deterministic', u'Deterministic'),
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
-    upload = models.ForeignKey('Upload', null=True)
+    input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
