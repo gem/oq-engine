@@ -22,15 +22,12 @@ This module defines functions used to compute loss ratio and loss curves
 using the probabilistic event based approach.
 """
 
-import json
 import math
 
 from numpy import zeros, array, linspace
 from numpy import histogram, where, mean
 
-from openquake import kvs, shapes
-from openquake.parser import vulnerability
-from openquake.logs import LOG
+from openquake import shapes
 from openquake.risk.common import collect, loop
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
@@ -50,7 +47,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set,
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+        **TSES** - time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
@@ -86,7 +83,7 @@ def _sampled_based(vuln_function, ground_motion_field_set,
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+        **TSES** - time representative of the Stochastic Event Set (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
@@ -131,7 +128,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
-        **TSES** - Time representative of the Stochastic Event Set (float)
+        **TSES** - time representative of the Stochastic Event Set (float)
     """
 
     loss_ratios = []
@@ -217,7 +214,7 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
-        epsilon_provider, asset, number_of_samples=None):
+        epsilon_provider, asset, number_of_samples=None, loss_ratios=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -249,8 +246,9 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     if not ground_motion_field_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
-    loss_ratios = compute_loss_ratios(vuln_function,
-            ground_motion_field_set, epsilon_provider, asset)
+    if loss_ratios is None:
+        loss_ratios = compute_loss_ratios(
+            vuln_function, ground_motion_field_set, epsilon_provider, asset)
 
     loss_ratios_range = _compute_loss_ratios_range(
             loss_ratios, number_of_samples)
@@ -274,98 +272,42 @@ def _generate_curve(losses, probs_of_exceedance):
     return shapes.Curve(zip(mean_losses, probs_of_exceedance))
 
 
-def _assets_keys_for_gmfs(job_id, gmfs_key):
-    """Return the asset related to the GMFs given."""
-
-    column, row = kvs.tokens.column_row_from_gmf_set_key(gmfs_key)
-
-    key = kvs.tokens.asset_key(job_id, row, column)
-
-    return kvs.get_client().lrange(key, 0, -1)
-
-
 class AggregateLossCurve(object):
     """Aggregate a set of losses and produce the resulting loss curve."""
 
-    @staticmethod
-    def from_kvs(job_id, epsilon_provider):
-        """Return an aggregate curve using the GMFs and assets
-        stored in the underlying kvs system."""
+    def __init__(self):
+        self.losses = None
 
-        vuln_model = vulnerability.load_vuln_model_from_kvs(job_id)
-        aggregate_curve = AggregateLossCurve(vuln_model, epsilon_provider)
+    def append(self, losses):
+        """Accumulate losses into a single sum..
 
-        gmfs_keys = kvs.get_keys("%s*%s*" % (
-                kvs.tokens.generate_job_key(job_id), kvs.tokens.GMF_KEY_TOKEN))
+        :param losses: an array of loss values.
+        :type losses: 1-dimensional :py:class:`numpy.ndarray`
+        """
 
-        LOG.debug("Found %s stored GMFs..." % len(gmfs_keys))
-        asset_counter = 0
-
-        for gmfs_key in gmfs_keys:
-            assets = _assets_keys_for_gmfs(job_id, gmfs_key)
-
-            for asset in assets:
-                asset_counter += 1
-                gmfs = kvs.get_value_json_decoded(gmfs_key)
-
-                aggregate_curve.append(gmfs,
-                        json.JSONDecoder().decode(asset))
-
-        LOG.debug("Found %s stored assets..." % asset_counter)
-        return aggregate_curve
-
-    def __init__(self, vuln_model, epsilon_provider):
-        self._tses = self._time_span = self._gmfs_length = None
-
-        self.distribution = []
-        self.vuln_model = vuln_model
-        self.epsilon_provider = epsilon_provider
-
-    def append(self, gmfs, asset):
-        """Add the losses distribution identified by the given GMFs
-        and asset to the set used to compute the aggregate curve."""
-
-        if self.empty:
-            self._initialize_parameters(gmfs)
-
-        assert gmfs["TimeSpan"] == self._time_span
-        assert gmfs["TSES"] == self._tses
-        assert len(gmfs["IMLs"]) == self._gmfs_length
-
-        if asset["vulnerabilityFunctionReference"] in self.vuln_model:
-            loss_ratios = compute_loss_ratios(self.vuln_model[
-                    asset["vulnerabilityFunctionReference"]], gmfs,
-                    self.epsilon_provider, asset)
-
-            self.distribution.append(loss_ratios * asset["assetValue"])
+        if self.losses is None:
+            self.losses = losses
         else:
-            LOG.debug("Unknown vulnerability function %s, asset %s will " \
-                    "not be included in the aggregate computation"
-                    % (asset["vulnerabilityFunctionReference"],
-                    asset["assetID"]))
-
-    def _initialize_parameters(self, gmfs):
-        """Initialize the GMFs parameters."""
-        self._tses = gmfs["TSES"]
-        self._time_span = gmfs["TimeSpan"]
-        self._gmfs_length = len(gmfs["IMLs"])
+            self.losses = self.losses + losses
 
     @property
     def empty(self):
         """Return true is this aggregate curve has no losses
         associated, false otherwise."""
-        return len(self.distribution) == 0
+        return self.losses is None
 
-    @property
-    def losses(self):
-        """Return the losses used to compute the aggregate curve."""
-        if self.empty:
-            return array([])
-        else:  # if needed because numpy returns a scalar if the list is empty
-            return array(self.distribution).sum(axis=0)
+    def compute(self, tses, time_span, number_of_samples=None):
+        """Compute the aggregate loss curve.
 
-    def compute(self, number_of_samples=None):
-        """Compute the aggregate loss curve."""
+        :param tses: time representative of the Stochastic Event Set.
+        :type tses: float
+        :param time_span: time span parameter.
+        :type time_span: float
+        :param number_of_samples: the number of samples used when computing
+            the range of losses. The default value is
+            :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
+        :type number_of_samples: integer
+        """
 
         if self.empty:
             return shapes.EMPTY_CURVE
@@ -375,6 +317,6 @@ class AggregateLossCurve(object):
 
         probs_of_exceedance = _compute_probs_of_exceedance(
                 _compute_rates_of_exceedance(_compute_cumulative_histogram(
-                losses, loss_range), self._tses), self._time_span)
+                losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
