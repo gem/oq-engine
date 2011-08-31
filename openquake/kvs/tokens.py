@@ -23,8 +23,6 @@ import hashlib
 from openquake import logs
 
 
-LOG = logs.LOG
-
 _KVS_KEY_SEPARATOR = '!'
 
 # hazard tokens
