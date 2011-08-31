@@ -105,9 +105,6 @@ class JavaLoggingBridge(object):
         # So for mapping of logging levels we need to divide java
         # log level by 1000.
         level, _rem = divmod(event.getLevel().toInt(), 1000)
-        # Checking that one of default levels was used.
-        assert _rem == 0
-        assert level in self.SUPPORTED_LEVELS
 
         if event.logger.getParent() is None:
             # getParent() returns ``None`` only for root logger.
@@ -117,8 +114,14 @@ class JavaLoggingBridge(object):
             logger_name = 'java.%s' % event.getLoggerName()
         logger = logging.getLogger(logger_name)
 
-        if not logger.isEnabledFor(level):
-            return
+        if _rem != 0 or level not in self.SUPPORTED_LEVELS:
+            # java side used some custom logging level.
+            # don't try to map it to python level and don't
+            # check if python logger was enabled for it
+            level = event.getLevel().toInt()
+        else:
+            if not logger.isEnabledFor(level):
+                return
 
         msg = event.getMessage()
 
