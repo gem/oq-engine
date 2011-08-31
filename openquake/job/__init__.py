@@ -37,7 +37,7 @@ from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, FloatArrayField)
+    OqJob, OqParams, OqUser, JobStats, InputSet, FloatArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -226,15 +226,17 @@ def prepare_job(params):
 
     Returns the newly created job object.
     """
-    oqp = OqParams(upload=None)
-
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name='openquake')
+
+    input_set = InputSet(upload=None, owner=owner)
+    input_set.save()
 
     job = OqJob(
         owner=owner, path=None,
         job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
 
+    oqp = OqParams(input_set=input_set)
     oqp.job_type = job.job_type
 
     for name, param in PARAMS.items():
@@ -269,6 +271,7 @@ def prepare_job(params):
         oqp.damping = None
 
     oqp.save()
+
     job.oq_params = oqp
     job.save()
 
