@@ -268,11 +268,11 @@ class JavaAMQPLogTestCase(AMQPLogTestBase):
         self.assertEquals(2, len(messages))
 
         self.assertEquals('INFO - Info message', messages[0].body)
-        self.assertEquals('oq-unittest-log.INFO',
+        self.assertEquals('oq-unittest-log.info',
                           messages[0].delivery_info['routing_key'])
 
         self.assertEquals('WARN - Warn message', messages[1].body)
-        self.assertEquals('oq-unittest-log.WARN',
+        self.assertEquals('oq-unittest-log.warn',
                           messages[1].delivery_info['routing_key'])
 
 
@@ -318,11 +318,11 @@ class PythonAMQPLogTestCase(AMQPLogTestBase):
         self.assertEquals(2, len(messages))
 
         self.assertEquals('Info message', messages[0].body)
-        self.assertEquals('oq-unittest-log.INFO',
+        self.assertEquals('oq-unittest-log.info',
                           messages[0].delivery_info['routing_key'])
 
         self.assertEquals('Warn message', messages[1].body)
-        self.assertEquals('oq-unittest-log.WARNING',
+        self.assertEquals('oq-unittest-log.warning',
                           messages[1].delivery_info['routing_key'])
 
 
@@ -373,11 +373,11 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
 
         # and from Python
         root_log = logging.getLogger()
-        root_log.debug('Python debug message')
-        root_log.info('Python info message')
-        root_log.warning('Python warn message')
-        root_log.error('Python error message')
-        root_log.critical('Python fatal message')
+        root_log.debug('Python %s message', 'debug')
+        root_log.info('Python %s message', 'info')
+        root_log.warning('Python %s message', 'warn')
+        root_log.error('Python %s message', 'error')
+        root_log.critical('Python %s message', 'fatal')
 
         # process the messages
         messages = []
@@ -406,7 +406,7 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         for i, source in enumerate(['Java', 'Python']):
             for j, level in enumerate(['debug', 'info', 'warn',
                                        'error', 'fatal']):
-                expected = 'log.%s.123' % level.upper()
+                expected = 'log.%s.123' % level
                 got = messages[i * 5 + j].delivery_info['routing_key']
 
                 self.assertEquals(

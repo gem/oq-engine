@@ -125,8 +125,8 @@ public class AMQPAppenderTest {
 
         assertThat(dummyConnection, is(not(equalTo(null))));
         assertThat(dummyConnection.entries.size(), is(equalTo(2)));
-        assertThat(entry(0).routingKey, is(equalTo("log.INFO")));
-        assertThat(entry(1).routingKey, is(equalTo("log.WARN")));
+        assertThat(entry(0).routingKey, is(equalTo("log.info")));
+        assertThat(entry(1).routingKey, is(equalTo("log.warn")));
     }
 
     // test that throwable handling is left to the layout if required
