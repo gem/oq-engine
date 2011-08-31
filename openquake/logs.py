@@ -249,16 +249,14 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         if not self.MDC:
             return record
 
-        # create a new LogRecord object containing the custom keys in the
-        # MDC class field
-        args = self.MDC.copy()
-        args.update(record.args)
-
         new_record = logging.LogRecord(
             name=record.name, level=record.levelno, pathname=record.pathname,
-            lineno=record.lineno, msg=record.msg, args=[args],
+            lineno=record.lineno, msg=record.msg, args=record.args,
             exc_info=record.exc_info, func=record.funcName)
 
+        # create a new LogRecord object containing the custom keys in the
+        # MDC class field
+        #
         # the documentation says that formatters use .args; in reality
         # they reach directly into __dict__
         for key, value in self.MDC.items():
@@ -274,7 +272,7 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         channel = self._connect()
         full_record = self._update_record(record)
         msg = amqp.Message(body=self.format(full_record))
-        routing_key = self.routing_key.format(full_record)
+        routing_key = self.routing_key.format(full_record).lower()
 
         channel.basic_publish(msg, exchange=self.exchange,
                               routing_key=routing_key)
