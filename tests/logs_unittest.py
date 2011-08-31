@@ -92,12 +92,14 @@ class JavaLogsTestCase(unittest.TestCase):
                     def toInt(self):
                         return 12345
                 return Level()
+
             @property
             def logger(self):
                 class Logger(object):
                     def getParent(self):
                         return None
                 return Logger()
+
             def getLocationInformation(self):
                 class LocationInformation(object):
                     getFileName = lambda self: 'some/file'
@@ -105,6 +107,7 @@ class JavaLogsTestCase(unittest.TestCase):
                     getClassName = lambda self: 'someclassname'
                     getMethodName = lambda self: 'somemethod'
                 return LocationInformation()
+
             getLoggerName = lambda self: 'root'
             getMessage = lambda self: 'somemessage'
             getThreadName = lambda self: 'somethread'
@@ -124,3 +127,6 @@ class JavaLogsTestCase(unittest.TestCase):
         self.assertEqual(record.levelname, 'Level 12345')
         self.assertEqual(record.name, 'java')
         self.assertEqual(record.msg, 'somemessage')
+        self.assertEqual(record.pathname, 'some/file')
+        self.assertEqual(record.lineno, 123)
+        self.assertEqual(record.funcName, 'someclassname.somemethod')
