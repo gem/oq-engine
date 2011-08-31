@@ -373,11 +373,11 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
 
         # and from Python
         root_log = logging.getLogger()
-        root_log.debug('Python debug message')
-        root_log.info('Python info message')
-        root_log.warning('Python warn message')
-        root_log.error('Python error message')
-        root_log.critical('Python fatal message')
+        root_log.debug('Python %s message', 'debug')
+        root_log.info('Python %s message', 'info')
+        root_log.warning('Python %s message', 'warn')
+        root_log.error('Python %s message', 'error')
+        root_log.critical('Python %s message', 'fatal')
 
         # process the messages
         messages = []
