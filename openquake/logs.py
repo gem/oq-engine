@@ -30,7 +30,6 @@ import sys
 from celery.log import redirect_stdouts_to_logger, LoggingProxy
 
 from openquake import flags
-from openquake.utils import config
 
 FLAGS = flags.FLAGS
 
