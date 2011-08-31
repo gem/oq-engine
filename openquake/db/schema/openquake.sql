@@ -874,7 +874,7 @@ CREATE TABLE oqmif.exposure_data (
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- Vulnerability function reference
-    vulnerability_function_id INTEGER NOT NULL,
+    vf_ref VARCHAR NOT NULL,
     structure_type VARCHAR,
     retrofitting_cost float,
     last_update timestamp without time zone
@@ -1134,10 +1134,6 @@ FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELET
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
 REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
-
-ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
-oqmif_exposure_data_vulnerability_function_fk FOREIGN KEY (vulnerability_function_id)
-REFERENCES riski.vulnerability_function(id) ON DELETE RESTRICT;
 
 ALTER TABLE riski.vulnerability_function ADD CONSTRAINT
 riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY
