@@ -393,26 +393,21 @@ class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
         self.assertEquals(10, len(messages))
 
         # check message order
-        for i, source in enumerate(['Java', 'Python']):
-            for j, level in enumerate(['debug', 'info', 'warn',
-                                       'error', 'fatal']):
+        for source in ['Java', 'Python']:
+            for level in ['debug', 'info', 'warn', 'error', 'fatal']:
+                routing_key = 'log.%s.123' % level
                 fragment = '%s %s message' % (source, level)
                 contained = filter(lambda msg: fragment in msg.body, messages)
+
                 self.assertEquals(
                     1, len(contained),
                     '"%s" contained in "%s"' % (fragment, contained))
 
-        # check topic
-        for i, source in enumerate(['Java', 'Python']):
-            for j, level in enumerate(['debug', 'info', 'warn',
-                                       'error', 'fatal']):
-                expected = 'log.%s.123' % level
-                got = messages[i * 5 + j].delivery_info['routing_key']
-
+                recv_routing_key = contained[0].delivery_info['routing_key']
                 self.assertEquals(
-                    expected, got,
+                    routing_key, recv_routing_key,
                     '%s %s routing key: expected %s got %s' % (
-                        source, level, expected, got))
+                        source, level, routing_key, recv_routing_key))
 
         # check process name in messages
         for i, msg in enumerate(messages):
