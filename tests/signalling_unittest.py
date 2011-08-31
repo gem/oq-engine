@@ -64,3 +64,27 @@ class SignallingTestCase(unittest.TestCase):
         conn.close()
 
         self.assertEqual(1, len(messages))
+
+    def test_parse_routing_key_malformed(self):
+        self.assertRaises(ValueError, signalling.parse_routing_key,
+                          'log.warn.123.unexpected-part')
+
+    def test_parse_routing_key_wrong_prefix(self):
+        self.assertRaises(ValueError, signalling.parse_routing_key,
+                          'aaa.warn.123')
+
+    def test_parse_routing_key_job_id_not_integer(self):
+        self.assertRaises(ValueError, signalling.parse_routing_key,
+                          'log.warn.not-an-integer')
+
+    def test_parse_routing_key_wrong_type(self):
+        self.assertRaises(ValueError, signalling.parse_routing_key,
+                          'log.not-a-valid-type.123')
+
+    def test_parse_routing_key(self):
+        job_id = 123
+        type_ = 'warn'
+
+        self.assertEqual((job_id, type_),
+                         signalling.parse_routing_key(
+                             'log.%s.%s' % (type_, job_id)))
