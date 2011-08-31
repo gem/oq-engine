@@ -306,6 +306,10 @@ COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or su
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
+COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
+
+
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
 COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based or deterministic.';
 COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
