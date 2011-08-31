@@ -20,29 +20,12 @@ import oqpath
 oqpath.set_oq_path()
 
 
-class Collector(signalling.LogMessageConsumer):
-    def __init__(self, *args, **kwargs):
-        super(Collector, self).__init__(*args, **kwargs)
-
-        self.logger = logging.getLogger('collector')
-
-    def message_callback(self, msg):
-        try:
-            job_id, type_ = \
-                signalling.parse_routing_key(msg.delivery_info['routing_key'])
-        except ValueError:
-            pass
-        else:
-            if type_ in ('debug', 'info', 'warn', 'error', 'fatal'):
-                self.logger.log(getattr(logging, type_.upper()), msg.body)
-
-
 def main():
     logging.config.fileConfig(os.path.join(openquake.OPENQUAKE_ROOT,
                                            'logging.cfg'))
 
     # any job
-    collector = Collector('*')
+    collector = signalling.Collector('*', logging.getLogger('collector'))
 
     collector.run()
 
