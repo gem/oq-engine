@@ -23,6 +23,7 @@ import os
 import re
 import subprocess
 import urlparse
+import logging
 
 from ConfigParser import ConfigParser, RawConfigParser
 from django.contrib.gis.geos import GEOSGeometry
@@ -357,6 +358,12 @@ class Job(object):
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
+    @staticmethod
+    def get_logger_for(job_id):
+        # TODO: document, unittest
+        logger = logging.getLogger('oq.job')
+        return logging.LoggerAdapter(logger, {'job_id': job_id})
+
     def __init__(self, params, job_id, sections=list(), base_path=None,
             validator=None):
         """
@@ -402,6 +409,13 @@ class Job(object):
                 self.sections, self.params)
 
         return self.validator.is_valid()
+
+    @property
+    def logger(self):
+        # TODO: document, unittest
+        if not hasattr(self, '_logger'):
+            self._logger = self.get_logger_for(self.job_id)
+        return self._logger
 
     @property
     def job_id(self):
