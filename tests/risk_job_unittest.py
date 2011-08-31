@@ -19,6 +19,7 @@
 
 import os
 import unittest
+import logging
 
 from openquake import job
 from openquake import kvs
@@ -189,6 +190,7 @@ class RiskJobMixinTestCase(unittest.TestCase):
         mixin.params = {config.EXPOSURE: os.path.join(
             helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)}
 
+        mixin.logger = logging.getLogger('riskjobmixin')
         mixin.region = None
         mixin.base_path = "."
         mixin.partition()

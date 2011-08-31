@@ -30,7 +30,6 @@ from itertools import izip
 
 from openquake import java
 from openquake import kvs
-from openquake import logs
 from openquake import shapes
 from openquake import xml
 
@@ -41,8 +40,6 @@ from openquake.job.mixins import Mixin
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
-
-LOG = logs.LOG
 
 # NOTE: this refers to how the values are stored in KVS. In the config
 # file, values are stored untransformed (i.e., the list of IMLs is
@@ -103,7 +100,7 @@ class BasePSHAMixin(Mixin):
         done currently using the file itself, since it has nested references to
         other files."""
 
-        LOG.info("Storing source model from job config")
+        self.logger.info("Storing source model from job config")
         key = kvs.tokens.source_model_key(self.job_id)
         print "source model key is", key
         jpype = java.jvm()
@@ -246,8 +243,8 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self.params.get("GMPE_LT_RANDOM_SEED", None))
 
         for realization in xrange(0, realizations):
-            LOG.info("Calculating hazard curves for realization %s"
-                     % realization)
+            self.logger.info("Calculating hazard curves for realization %s",
+                             realization)
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
@@ -307,7 +304,7 @@ class ClassicalMixin(BasePSHAMixin):
             return
 
         # Compute and serialize the mean curves.
-        LOG.info("Computing mean hazard curves")
+        self.logger.info("Computing mean hazard curves")
 
         utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
@@ -315,7 +312,7 @@ class ClassicalMixin(BasePSHAMixin):
             flatten_results=True)
 
         if curve_serializer:
-            LOG.info("Serializing mean hazard curves")
+            self.logger.info("Serializing mean hazard curves")
 
             curve_serializer(sites)
 
@@ -323,7 +320,7 @@ class ClassicalMixin(BasePSHAMixin):
             assert map_func, "No calculation function for mean hazard maps set"
             assert map_serializer, "No serializer for the mean hazard maps set"
 
-            LOG.info("Computing/serializing mean hazard maps")
+            self.logger.info("Computing/serializing mean hazard maps")
             map_func(self.job_id, sites, self.imls, self.poes_hazard_maps)
             map_serializer(sites, self.poes_hazard_maps)
 
@@ -365,7 +362,7 @@ class ClassicalMixin(BasePSHAMixin):
             return
 
         # compute and serialize quantile hazard curves
-        LOG.info("Computing quantile hazard curves")
+        self.logger.info("Computing quantile hazard curves")
 
         utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
@@ -374,8 +371,8 @@ class ClassicalMixin(BasePSHAMixin):
             flatten_results=True)
 
         if curve_serializer:
-            LOG.info("Serializing quantile curves for %s values"
-                     % len(quantiles))
+            self.logger.info("Serializing quantile curves for %s values",
+                             len(quantiles))
             for quantile in quantiles:
                 curve_serializer(sites, quantile)
 
@@ -384,12 +381,12 @@ class ClassicalMixin(BasePSHAMixin):
             assert map_serializer, "No serializer for the quantile maps set."
 
             # quantile maps
-            LOG.info("Computing quantile hazard maps")
+            self.logger.info("Computing quantile hazard maps")
             map_func(self.job_id, sites, quantiles, self.imls,
                      self.poes_hazard_maps)
 
-            LOG.info("Serializing quantile maps for %s values"
-                     % len(quantiles))
+            self.logger.info("Serializing quantile maps for %s values",
+                             len(quantiles))
             for quantile in quantiles:
                 map_serializer(sites, self.poes_hazard_maps, quantile)
 
@@ -403,8 +400,8 @@ class ClassicalMixin(BasePSHAMixin):
         sites = self.sites_to_compute()
         realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
 
-        LOG.info("Going to run classical PSHA hazard for %s realizations "
-                 "and %s sites" % (realizations, len(sites)))
+        self.logger.info("Going to run classical PSHA hazard for %s " \
+                         "realizations and %s sites", realizations, len(sites))
 
         self.do_curves(sites, realizations,
             serializer=self.serialize_hazard_curve_of_realization)
@@ -581,9 +578,9 @@ class ClassicalMixin(BasePSHAMixin):
         """
         nrml_path = self.build_nrml_path(nrml_file)
 
-        LOG.debug("Generating NRML hazard map file for PoE %s, "\
-            "%s nodes in hazard map: %s" % (
-            poe, len(sites), nrml_file))
+        self.logger.debug("Generating NRML hazard map file for PoE %s, "\
+                          "%s nodes in hazard map: %s",
+                          poe, len(sites), nrml_file)
 
         map_writer = hazard_output.create_hazardmap_writer(
             self.job_id, self.serialize_results_to, nrml_path)
@@ -728,9 +725,9 @@ class EventBasedMixin(BasePSHAMixin):
 
         histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        LOG.info(
-            "Going to run hazard for %s histories of %s realizations each."
-            % (histories, realizations))
+        self.logger.info("Going to run hazard for %s histories " \
+                         "of %s realizations each.",
+                         histories, realizations)
 
         for i in range(0, histories):
             pending_tasks = []
@@ -763,7 +760,7 @@ class EventBasedMixin(BasePSHAMixin):
                     for param
                     in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
 
-        LOG.debug("IML: %s" % (iml_list))
+        self.logger.debug("IML: %s", iml_list)
         files = []
         for event_set in ses:
             for rupture in ses[event_set]:
