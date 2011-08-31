@@ -112,6 +112,7 @@ class JavaLoggingBridge(object):
             # don't try to map it to python level and don't
             # check if python logger was enabled for it
             level = event.getLevel().toInt()
+            logger.warning('unrecognised logging level %d was used', level)
         else:
             if not logger.isEnabledFor(level):
                 return
