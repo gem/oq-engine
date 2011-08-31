@@ -18,7 +18,6 @@
 """Wrapper around our use of jpype.
 Includes classpath arguments, and heap size."""
 
-from amqplib import client_0_8 as amqp
 import jpype
 import os
 import sys
@@ -28,12 +27,6 @@ import logging
 from celery.decorators import task as celery_task
 
 from functools import wraps
-
-from openquake import flags
-from openquake import logs
-from openquake.utils import config
-
-FLAGS = flags.FLAGS
 
 
 JAVA_CLASSES = {
