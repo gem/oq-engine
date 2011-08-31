@@ -26,6 +26,9 @@ import os
 import signal
 import sys
 
+import oqpath
+oqpath.set_oq_path()
+
 try:
     # setproctitle is optional external dependency
     # apt-get installl python-setproctitle or

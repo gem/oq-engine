@@ -43,7 +43,7 @@ class OQRouter(object):
 
         :returns: schema name, or None if no schema is defined
         '''
-        parts = model._meta.db_table.split('"."')
+        parts = model._meta.db_table.split('"."')  # pylint: disable=W0212
         if len(parts) == 2:
             return parts
         else:
