@@ -107,8 +107,7 @@ class CollectorTestCase(unittest.TestCase):
                             'routing_key': routing_key}
 
                 msg = FakeMessage('a msg',
-                                  signalling.generate_routing_key(123,
-                                                                  routing_type))
+                            signalling.generate_routing_key(123, routing_type))
                 mc.message_callback(msg)
 
             run.side_effect = run_
