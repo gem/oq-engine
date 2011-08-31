@@ -521,7 +521,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'classical',
-             'upload': None,
              'region_grid_spacing': 0.1,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
@@ -556,7 +555,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
             {'job_type': 'classical',
-             'upload': None,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
              'component': 'gmroti50',
@@ -584,7 +582,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'deterministic',
-             'upload': None,
              'region_grid_spacing': 0.02,
              'min_magnitude': None,
              'investigation_time': None,
@@ -619,7 +616,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
             {'job_type': 'deterministic',
-             'upload': None,
              'min_magnitude': None,
              'investigation_time': None,
              'component': 'gmroti50',
@@ -647,7 +643,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'event_based',
-             'upload': None,
              'region_grid_spacing': 0.02,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
@@ -682,7 +677,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
             {'job_type': 'event_based',
-             'upload': None,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
              'component': 'average',
