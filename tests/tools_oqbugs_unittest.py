@@ -137,21 +137,27 @@ class OqBugsTestCase(unittest.TestCase):
             for bug in launchpad_lookup(self.launchpad, self.bugs):
                 self.assertTrue(isinstance(bug, mock.Mock))
 
-    def test_fix_committed_status(self):
+    def test_fix_committed_and_fix_released(self):
         for commit in self.correct_commits:
             # preparing bugs for mocker
             self.bugs = prepare_mock(filter_bugs(commit))
 
             # gets the FixCommitted reference by calling the fix_committed
             # method with args
-            tasks = fix_apply(self.launchpad, commit, 'Fix Committed')
+
+
+            lp_fixes = {
+                'Fix Committed': fix_apply(self.launchpad,
+                    commit, 'Fix Committed'),
+                'Fix Released': fix_apply(self.launchpad,
+                    commit, 'Fix Released')}
 
             namespace = Namespace(time='1 week')
 
-            # creates an argparse action instance and __call__[s] it passing
-            # the namespace object
-            bugs = tasks(None, None)(None, namespace,
-                    None)
-
-            for bug in bugs:
-                self.assertEqual("Fix Committed", bug.bug_tasks[0].status)
+            for status, lp_fix in lp_fixes.iteritems():
+                # creates an argparse action instance and __call__[s] it passing
+                # the namespace object
+                bugs = lp_fix(None, None)(None, namespace,
+                        None)
+                for bug in bugs:
+                    self.assertEqual(status, bug.bug_tasks[0].status)
