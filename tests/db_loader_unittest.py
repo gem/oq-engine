@@ -32,6 +32,12 @@ from tests.utils import helpers
 
 TEST_SRC_FILE = helpers.get_data_path('example-source-model.xml')
 TGR_MFD_TEST_FILE = helpers.get_data_path('one-simple-source-tgr-mfd.xml')
+TABLE_MAP = {
+    'hzrdi.mfd_evd': models.MfdEvd,
+    'hzrdi.mfd_tgr': models.MfdTgr,
+    'hzrdi.simple_fault': models.SimpleFault,
+    'hzrdi.source': models.Source,
+}
 
 SIMPLE_FAULT_OUTLINE_WKT = \
 '''SRID=4326;POLYGON((
@@ -160,21 +166,18 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
     def test_parse_mfd_simple_fault(self):
 
-        expected = {
-            'table': 'hzrdi.mfd_evd',
-            'data': {
-                'max_val': 6.9500000000000002,
-                'total_cumulative_rate': 1.8988435199999998e-05,
-                'min_val': 6.5499999999999998,
-                'bin_size': 0.10000000000000009,
-                'mfd_values': [
-                    0.0010614989,
-                    0.00088291626999999998,
-                    0.00073437776999999999,
-                    0.00061082879999999995,
-                    0.00050806530000000003],
-                'total_moment_rate': 281889786038447.25,
-                'owner_id': None}}
+        expected = models.MfdEvd(
+            max_val=6.9500000000000002,
+            total_cumulative_rate=1.8988435199999998e-05,
+            min_val=6.5499999999999998,
+            bin_size=0.10000000000000009,
+            mfd_values=[
+                0.0010614989,
+                0.00088291626999999998,
+                0.00073437776999999999,
+                0.00061082879999999995,
+                0.00050806530000000003],
+            total_moment_rate=281889786038447.25)
 
         mfd = self.simple.getMfd()
 
@@ -188,19 +191,16 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         # this is the dict we'll be passing to Django to do the db insert
         mfd_insert = db_loader.parse_mfd(self.simple, mfd)
 
-        helpers.assertDictAlmostEqual(self, expected, mfd_insert)
+        helpers.assertModelAlmostEqual(self, expected, mfd_insert)
 
     def test_parse_mfd_complex_fault(self):
-        expected = {
-            'table': 'hzrdi.mfd_tgr',
-            'data': {
-                'b_val': 0.80000000000000004,
-                'total_cumulative_rate': 4.933442096397671e-10,
-                'min_val': 6.5499999999999998,
-                'max_val': 8.9499999999999993,
-                'total_moment_rate': 198544639016.43918,
-                'a_val': 1.0,
-                'owner_id': None}}
+        expected = models.MfdTgr(
+            b_val=0.80000000000000004,
+            total_cumulative_rate=4.933442096397671e-10,
+            min_val=6.5499999999999998,
+            max_val=8.9499999999999993,
+            total_moment_rate=198544639016.43918,
+            a_val=1.0)
 
         mfd = self.complex.getMfd()
 
@@ -210,67 +210,46 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         mfd_insert = db_loader.parse_mfd(self.complex, mfd)
 
-        helpers.assertDictAlmostEqual(self, expected, mfd_insert)
+        helpers.assertModelAlmostEqual(self, expected, mfd_insert)
 
     def test_parse_simple_fault_src(self):
 
         expected = (
-            {'table': 'hzrdi.mfd_evd', 'data': {
-                'max_val': 6.9500000000000002,
-                'total_cumulative_rate': 1.8988435199999998e-05,
-                'min_val': 6.5499999999999998,
-                'bin_size': 0.10000000000000009,
-                'mfd_values': [
+            models.MfdEvd(
+                max_val=6.9500000000000002,
+                total_cumulative_rate=1.8988435199999998e-05,
+                min_val=6.5499999999999998,
+                bin_size=0.10000000000000009,
+                mfd_values=[
                     0.0010614989, 0.00088291626999999998,
                     0.00073437776999999999, 0.00061082879999999995,
                     0.00050806530000000003],
-                'total_moment_rate': 281889786038447.25,
-                'owner_id': None}},
-            {'table': 'hzrdi.simple_fault', 'data': {
-                'name': u'Mount Diablo Thrust',
-                'upper_depth': 8.0,
-                'mgf_evd_id': None,
-                'mfd_tgr_id': None,
-                'outline': SIMPLE_FAULT_OUTLINE_WKT,
-                'edge': SIMPLE_FAULT_EDGE_WKT,
-                'lower_depth': 13.0,
-                'gid': u'src01',
-                'owner_id': None,
-                'dip': 38.0,
-                'description': None}},
-            {'table': 'hzrdi.source', 'data': {
-                'r_depth_distr_id': None,
-                'name': u'Mount Diablo Thrust',
-                'tectonic_region': 'active',
-                'rake': 90.0,
-                'si_type': 'simple',
-                'gid': u'src01',
-                'simple_fault_id': None,
-                'owner_id': None,
-                'hypocentral_depth': None,
-                'description': None,
-                'input_id': None}})
+                total_moment_rate=281889786038447.25,
+                owner_id=None),
+            models.SimpleFault(
+                name='Mount Diablo Thrust',
+                upper_depth=8.0,
+                outline=SIMPLE_FAULT_OUTLINE_WKT,
+                edge=SIMPLE_FAULT_EDGE_WKT,
+                lower_depth=13.0,
+                gid='src01',
+                dip=38.0,
+                description=None),
+            models.Source(
+                name='Mount Diablo Thrust',
+                tectonic_region='active',
+                rake=90.0,
+                si_type='simple',
+                gid='src01',
+                hypocentral_depth=None,
+                description=None))
 
         simple_data = db_loader.parse_simple_fault_src(self.simple)
 
-        # The WKTSpatialElement objects do not make for nice comparisons.
-        # So instead, we'll just test the text element of each object
-        # to make sure the coords and spatial reference system match.
-        # To do that, we need to remove the WKTSpatialElements so
-        # we can compare the rest of the dicts for equality.
-        exp_outline = expected[1]['data'].pop('outline')
-        actual_outline = simple_data[1]['data'].pop('outline')
-
-        self.assertEqual(exp_outline, actual_outline)
-
-        exp_edge = expected[1]['data'].pop('edge')
-        actual_edge = simple_data[1]['data'].pop('edge')
-
-        self.assertEqual(exp_edge, actual_edge)
-
         # Now we can test the rest of the data.
-        for idx, exp in enumerate(expected):
-            helpers.assertDictAlmostEqual(self, exp, simple_data[idx])
+        helpers.assertModelAlmostEqual(self, expected[0], simple_data[0])
+        helpers.assertModelAlmostEqual(self, expected[1], simple_data[1])
+        helpers.assertModelAlmostEqual(self, expected[2], simple_data[2])
 
     def _serialize_test_helper(self, test_file, expected_tables):
         java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
@@ -301,7 +280,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         table_id_pairs = [x.items()[0] for x in results]
 
         for table_name, record_id in table_id_pairs:
-            table = db_loader.TABLE_MAP[table_name]
+            table = TABLE_MAP[table_name]
 
             # run a query against the table object to get a ResultProxy
             result_proxy = table.objects.filter(id=record_id).all()

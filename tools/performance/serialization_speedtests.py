@@ -32,7 +32,6 @@
 
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.output.risk import *
 from openquake.shapes import Site, Curve
@@ -153,13 +152,10 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
         hcw = HazardCurveDBWriter(output_path, self.job.id)
         hcw.serialize(data)
-
-        session.commit()
 
         # deserialize
         hcr = HazardCurveDBReader()

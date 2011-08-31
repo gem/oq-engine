@@ -43,7 +43,7 @@ def generate_routing_key(job_id, type_):
     :rtype: string
     """
     assert type_ in ('*', 'failed', 'succeeded',
-                     'FATAL', 'ERROR', 'WARN', 'INFO', 'DEBUG'), \
+                     'fatal', 'error', 'warn', 'info', 'debug'), \
            'invalid routing type %r' % type_
 
     assert isinstance(job_id, (int, long)) or job_id == '*', \
@@ -130,7 +130,7 @@ class LogMessageConsumer(object):
         :param levels: the logging levels we are interested in
         :type levels: None for all the levels (translated to a '*' in the
                       routing_key) or an iterable of stings
-                      (e.g. ['ERROR', 'FATAL'])
+                      (e.g. ['error', 'fatal'])
         :param timeout: the optional timeout in seconds. When it expires the
                         `timeout_callback` will be called.
         :type timeout: None or float

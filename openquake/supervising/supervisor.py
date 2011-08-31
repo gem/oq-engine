@@ -174,7 +174,7 @@ def bind_supervisor_queue(job_id):
     bindings already exists, this function won't create them again.
     """
     return signalling.declare_and_bind_queue(
-        job_id, ('ERROR', 'FATAL'), get_supervisor_queue_name(job_id))
+        job_id, ('error', 'fatal'), get_supervisor_queue_name(job_id))
 
 
 def supervise(pid, job_id):
@@ -190,7 +190,7 @@ def supervise(pid, job_id):
     logging.info('Entering supervisor for job %s', job_id)
 
     with SupervisorLogMessageConsumer(
-        job_id, pid, levels=('ERROR', 'FATAL'),
+        job_id, pid, levels=('error', 'fatal'),
         timeout=0.1) as message_consumer:
         message_consumer.run()
 
