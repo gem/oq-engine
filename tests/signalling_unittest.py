@@ -16,9 +16,12 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+import logging
 import unittest
 
 from openquake import signalling
+
+from tests.utils.helpers import patch
 
 
 class SignallingTestCase(unittest.TestCase):
@@ -88,3 +91,40 @@ class SignallingTestCase(unittest.TestCase):
         self.assertEqual((job_id, type_),
                          signalling.parse_routing_key(
                              'log.%s.%s' % (type_, job_id)))
+
+
+class CollectorTestCase(unittest.TestCase):
+    def test_collector_logs_messages(self):
+        routing_type = 'warn'
+
+        with patch('openquake.signalling.Collector.run') as run:
+
+            def run_(mc):
+                class FakeMessage(object):
+                    def __init__(self, body, routing_key):
+                        self.body = body
+                        self.delivery_info = {
+                            'routing_key': routing_key}
+
+                msg = FakeMessage('a msg',
+                                  signalling.generate_routing_key(123,
+                                                                  routing_type))
+                mc.message_callback(msg)
+
+            run.side_effect = run_
+
+            class FakeLogger(object):
+                def __init__(self):
+                    self.logs = []
+
+                def log(self, level, msg):
+                    self.logs.append((level, msg))
+
+            logger = FakeLogger()
+
+            collector = signalling.Collector('*', logger)
+            collector.run()
+
+            self.assertEqual([(getattr(logging, routing_type.upper()),
+                               'a msg')],
+                             logger.logs)
