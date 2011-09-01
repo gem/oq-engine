@@ -270,6 +270,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'MAXIMUM_DISTANCE': '200.0',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
         'PERIOD': '0.0',
+        'DAMPING': '5.0',
         'AGGREGATE_LOSS_CURVE': '1',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
@@ -290,7 +291,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'REFERENCE_VS30_VALUE': '759.0',
         'COMPONENT': 'Average Horizontal (GMRotI50)',
-                'PERIOD': '0.0',
+        'PERIOD': '0.0',
+        'DAMPING': '5.0',
         'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
         'TRUNCATION_LEVEL': '3',
         'GMPE_TRUNCATION_TYPE': '1 Sided',
@@ -320,6 +322,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'MAXIMUM_DISTANCE': '200.0',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
+        'DAMPING': '5.0',
         'AGGREGATE_LOSS_CURVE': 'true',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
@@ -394,6 +397,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 2,
              'histories': None,
              'gm_correlated': None,
+             'damping': None,
+             'gmf_calculation_number': None,
+             'rupture_surface_discretization': None,
              }, self.job.oq_params)
 
     def test_prepare_classical_job_over_sites(self):
@@ -426,7 +432,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job(self):
-
         params = self.BASE_DETERMINISTIC_PARAMS.copy()
         params['REGION_VERTEX'] = \
             '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
@@ -452,6 +457,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': None,
              'histories': None,
              'gm_correlated': True,
+             'damping': None,
+             'gmf_calculation_number': 5,
+             'rupture_surface_discretization': 0.1,
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job_over_sites(self):
@@ -510,6 +518,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 5,
              'histories': 1,
              'gm_correlated': False,
+             'damping': 5.0,
+             'gmf_calculation_number': None,
+             'rupture_surface_discretization': None,
              }, self.job.oq_params)
 
     def test_prepare_event_based_job_over_sites(self):
