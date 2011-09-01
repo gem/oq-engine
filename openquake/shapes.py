@@ -819,3 +819,59 @@ class VulnerabilityFunction(object):
 
 EMPTY_CURVE = Curve(())
 EMPTY_VULN_FUNCTION = VulnerabilityFunction([], [], [])
+
+
+def multipoint_ewkt_from_coords(coords):
+    '''
+    Convert a string list of coordinates to SRS 4326 MULTIPOINT EWKT.
+
+    For more information about EWKT, see:
+    http://en.wikipedia.org/wiki/Well-known_text
+
+    NOTE: Input coordinates are expected in the order (lat, lon). The ordering
+    for SRS 4326 is (lon, lat).
+
+    NOTE 2: All coordinate values will be rounded using
+    :py:function:`openquake.utils.round_float`
+
+    >>> multipoint_ewkt_from_coords("38.113, -122.0, 38.113, -122.114")
+    'SRID=4326;MULTIPOINT((-122.0 38.113), (-122.114 38.113))'
+    '''
+    coord_list = [round_float(x) for x in coords.split(",")]
+    points = ['(%s %s)' % (coord_list[i + 1], coord_list[i]) for i in
+              xrange(0, len(coord_list), 2)]
+
+    ewkt = 'SRID=4326;MULTIPOINT(%s)'
+    ewkt %= ', '.join(points)
+
+    return ewkt
+
+
+def polygon_ewkt_from_coords(coords):
+    '''
+    Convert a string list of coordinates to SRS 4326 POLYGON EWKT.
+
+    For more information about EWKT, see:
+    http://en.wikipedia.org/wiki/Well-known_text
+
+    NOTE: Input coordinates are expected in the order (lat, lon). The ordering
+    for SRS 4326 is (lon, lat).
+
+    NOTE 2: All coordinate values will be rounded using
+    :py:function:`openquake.utils.round_float`
+
+    >>> polygon_ewkt_from_coords(
+    ...     "38.113, -122.0, 38.113, -122.114, 38.111, -122.57")
+    'SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, \
+-122.0 38.113))'
+    '''
+    coord_list = [round_float(x) for x in coords.split(",")]
+    vertices = ['%s %s' % (coord_list[i + 1], coord_list[i]) for i in
+                xrange(0, len(coord_list), 2)]
+
+    ewkt = 'SRID=4326;POLYGON((%s, %s))'
+    # The polygon needs to form a closed loop, so the first & last coord must
+    # be the same:
+    ewkt %= (', '.join(vertices), vertices[0])
+
+    return ewkt
