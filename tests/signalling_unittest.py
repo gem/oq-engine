@@ -95,7 +95,7 @@ class SignallingTestCase(unittest.TestCase):
 
 class CollectorTestCase(unittest.TestCase):
     def test_collector_logs_messages(self):
-        routing_type = 'warn'
+        level = 'warn'
 
         with patch('openquake.signalling.Collector.run') as run:
 
@@ -107,7 +107,7 @@ class CollectorTestCase(unittest.TestCase):
                             'routing_key': routing_key}
 
                 msg = FakeMessage('a msg',
-                            signalling.generate_routing_key(123, routing_type))
+                            signalling.generate_routing_key(123, level))
                 mc.message_callback(msg)
 
             run.side_effect = run_
@@ -124,6 +124,5 @@ class CollectorTestCase(unittest.TestCase):
             collector = signalling.Collector('*', logger)
             collector.run()
 
-            self.assertEqual([(getattr(logging, routing_type.upper()),
-                               'a msg')],
+            self.assertEqual([(getattr(logging, level.upper()), 'a msg')],
                              logger.logs)
