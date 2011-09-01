@@ -461,7 +461,7 @@ class ClassicalMixin(BasePSHAMixin):
             'statistics': 'quantile',
             'quantileValue': quantile}
         nrml_file = self.quantile_hazard_curve_filename(quantile)
-        key_template =\
+        key_template = \
             kvs.tokens.quantile_hazard_curve_key_template(self.job_id,
                                                           str(quantile))
 
