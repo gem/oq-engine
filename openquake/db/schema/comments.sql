@@ -194,7 +194,7 @@ COMMENT ON TABLE oqmif.exposure_data IS 'Per-asset risk exposure data';
 COMMENT ON COLUMN oqmif.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
 COMMENT ON COLUMN oqmif.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
 COMMENT ON COLUMN oqmif.exposure_data.value IS 'The value of the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.vulnerability_function_id IS 'A reference to the vulnerability function that should be used for the asset at hand';
+COMMENT ON COLUMN oqmif.exposure_data.vf_ref IS 'A reference to the vulnerability function that should be used for the asset at hand';
 COMMENT ON COLUMN oqmif.exposure_data.structure_type IS 'An optional structure type for the asset at hand';
 COMMENT ON COLUMN oqmif.exposure_data.retrofitting_cost IS 'An optional cost of retrofitting for the asset at hand';
 COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last change of the exposure data for the asset at hand';
@@ -292,7 +292,8 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source logic tree (lt_source)
     - GMPE logic tree (lt_gmpe)
     - exposure file (exposure)
-    - vulnerability file (vulnerability)';
+    - vulnerability file (vulnerability)
+    - rupture file (rupture)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
