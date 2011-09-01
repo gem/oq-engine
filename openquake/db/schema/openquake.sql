@@ -561,10 +561,10 @@ CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
     start_time timestamp with time zone,
-    finish_time timestamp with time zone,
+    stop_time timestamp with time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER NOT NULL
-) TABLESPACE uiatpi_ts;
+) TABLESPACE uiapi_ts;
 
 
 -- The parameters needed for an OpenQuake engine run
