@@ -90,10 +90,14 @@ class JvmMaxMemTestCase(unittest.TestCase):
     def test_jvm_memmax_setting_is_not_passed(self):
         """Do not pass -Xmx to the jvm."""
         with helpers.patch("jpype.startJVM") as startjvm_mock:
-            with helpers.patch("openquake.java.init_logs"):
-                java.jvm()
-                args, _ = startjvm_mock.call_args
-                self.assertFalse(filter(lambda a: a.startswith("-Xmx"), args))
+            with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
+                # Make sure that startJVM() gets called.
+                isjvmstarted_mock.side_effect = lambda: False
+                with helpers.patch("openquake.java.init_logs"):
+                    java.jvm()
+                    args, _ = startjvm_mock.call_args
+                    self.assertFalse(
+                        filter(lambda a: a.startswith("-Xmx"), args))
 
 
 class CeleryJavaExceptionTestCase(unittest.TestCase):
