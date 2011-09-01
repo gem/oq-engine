@@ -556,6 +556,17 @@ CREATE TABLE uiapi.oq_job (
 ) TABLESPACE uiapi_ts;
 
 
+-- Tracks various job statistics
+CREATE TABLE uiapi.job_stats (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    start_time timestamp with time zone,
+    stop_time timestamp with time zone,
+    -- The number of total sites in the calculation
+    num_sites INTEGER NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 -- The parameters needed for an OpenQuake engine run
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
@@ -1069,6 +1080,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_oq_params_fk
 FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
