@@ -518,9 +518,10 @@ CREATE TABLE uiapi.input (
     --      GMPE logic tree (lt_gmpe)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
+    --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'vulnerability')),
+                             'exposure', 'vulnerability', 'rupture')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
@@ -561,7 +562,7 @@ CREATE TABLE uiapi.oq_params (
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
     upload_id INTEGER,
-    region_grid_spacing float NOT NULL,
+    region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
             ((job_type = 'deterministic') AND (min_magnitude IS NULL))
@@ -585,6 +586,9 @@ CREATE TABLE uiapi.oq_params (
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
+    damping float CONSTRAINT damping_is_set
+        CHECK(((imt = 'sa') AND (damping IS NOT NULL))
+              OR ((imt != 'sa') AND (damping IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
@@ -614,11 +618,38 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             ((job_type = 'classical') AND (gm_correlated IS NULL))
             OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
+    -- deterministic job fields
+    gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
+        CHECK(
+            ((job_type = 'deterministic')
+             AND (gmf_calculation_number IS NOT NULL)
+             AND (realizations > 0))
+            OR
+            ((job_type != 'deterministic')
+             AND (gmf_calculation_number IS NULL))),
+    -- deterministic job fields
+    rupture_surface_discretization float
+        CONSTRAINT rupture_surface_discretization_is_set
+        CHECK(
+            ((job_type = 'deterministic')
+             AND (rupture_surface_discretization IS NOT NULL)
+             AND (rupture_surface_discretization > 0))
+            OR
+            ((job_type != 'deterministic')
+             AND (rupture_surface_discretization IS NULL))),
+    -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'oq_params', 'region', 4326, 'POLYGON', 2);
-ALTER TABLE uiapi.oq_params ALTER COLUMN region SET NOT NULL;
+SELECT AddGeometryColumn('uiapi', 'oq_params', 'sites', 4326, 'MULTIPOINT', 2);
+-- Params can either contain a site list ('sites') or
+-- region + region_grid_spacing, but not both.
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT oq_params_geometry CHECK(
+    ((region IS NOT NULL) AND (region_grid_spacing IS NOT NULL)
+        AND (sites IS NULL))
+    OR ((region IS NULL) AND (region_grid_spacing IS NULL)
+        AND (sites IS NOT NULL)));
 
 
 -- A single OpenQuake calculation engine output. The data may reside in a file
@@ -874,7 +905,7 @@ CREATE TABLE oqmif.exposure_data (
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- Vulnerability function reference
-    vulnerability_function_id INTEGER NOT NULL,
+    vf_ref VARCHAR NOT NULL,
     structure_type VARCHAR,
     retrofitting_cost float,
     last_update timestamp without time zone
@@ -1134,10 +1165,6 @@ FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELET
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
 REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
-
-ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
-oqmif_exposure_data_vulnerability_function_fk FOREIGN KEY (vulnerability_function_id)
-REFERENCES riski.vulnerability_function(id) ON DELETE RESTRICT;
 
 ALTER TABLE riski.vulnerability_function ADD CONSTRAINT
 riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY

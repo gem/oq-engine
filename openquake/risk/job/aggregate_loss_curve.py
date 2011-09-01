@@ -24,8 +24,6 @@ import os
 
 from openquake.logs import LOG
 from openquake.output import curve
-from openquake.risk.job import general
-from openquake.risk import probabilistic_event_based as prob
 
 
 def _filename(job_id):
@@ -50,34 +48,30 @@ def _for_plotting(loss_curve, time_span):
     return data
 
 
-def compute_aggregate_curve(job):
-    """Compute and plot an aggreate loss curve.
-
-    This function expects to find in kvs a set of pre computed
-    GMFs and assets.
+def plot_aggregate_curve(job, aggregate_curve):
+    """Plot an aggreate loss curve.
 
     This function is triggered only if the AGGREGATE_LOSS_CURVE
     parameter is specified in the configuration file.
 
     :param job: the job the engine is currently processing.
-    :type job: openquake.risk.job.probabilistic.ProbabilisticEventMixin
+    :type job:
+        :py:class:`openquake.risk.job.probabilistic.ProbabilisticEventMixin`
+    :param aggregate_curve: the aggregate curve to plot.
+    :type aggregate_curve: :py:class:`openquake.shapes.Curve`
     """
+
     if not job.has("AGGREGATE_LOSS_CURVE"):
         LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
                 "skipping aggregate loss curve computation...")
 
         return
 
-    epsilon_provider = general.EpsilonProvider(job.params)
-    aggregate_loss_curve = \
-        prob.AggregateLossCurve.from_kvs(job.job_id, epsilon_provider)
-
     path = os.path.join(job.params["BASE_PATH"],
             job.params["OUTPUT_DIR"], _filename(job.job_id))
 
     plotter = curve.CurvePlot(path)
-    plotter.write(_for_plotting(
-            aggregate_loss_curve.compute(),
+    plotter.write(_for_plotting(aggregate_curve,
             job.params["INVESTIGATION_TIME"]), autoscale_y=False)
 
     plotter.close()

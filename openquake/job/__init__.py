@@ -25,6 +25,7 @@ import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
+from django.db import transaction
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
@@ -92,6 +93,7 @@ def spawn_job_supervisor(job_id, pid):
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
+
         job = OqJob.objects.get(id=job_id)
         job.supervisor_pid = supervisor_pid
         job.job_pid = pid
@@ -180,6 +182,7 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
+@transaction.commit_on_success(using='job_init')
 def prepare_job(params):
     """
     Create a new OqJob and fill in the related OpParams entry.
@@ -188,9 +191,37 @@ def prepare_job(params):
     """
     oqp = OqParams(upload=None)
 
+    # fill in parameters
+    if 'SITES' in params:
+        if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+            raise RuntimeError(
+                "Job config contains both sites and region of interest.")
+
+        ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
+        sites = GEOSGeometry(ewkt)
+        oqp.sites = sites
+
+    elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+        oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
+
+        ewkt = shapes.polygon_ewkt_from_coords(params['REGION_VERTEX'])
+        region = GEOSGeometry(ewkt)
+        oqp.region = region
+
+    else:
+        raise RuntimeError(
+            "Job config contains neither sites nor region of interest.")
+
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name='openquake')
+
+    job = OqJob(
+        owner=owner, path=None,
+        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    oqp.job_type = job.job_type
+
     # fill-in parameters
-    oqp.job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
-    oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -199,37 +230,35 @@ def prepare_job(params):
 
     if oqp.imt == 'sa':
         oqp.period = float(params.get('PERIOD', 0.0))
+        oqp.damping = float(params.get('DAMPING', 0.0))
 
-    if oqp.job_type != 'classical':
-        oqp.gm_correlated = (
-            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
-    else:
+    if oqp.job_type == 'classical':
         oqp.imls = [float(v) for v in
                         params['INTENSITY_MEASURE_LEVELS'].split(",")]
         oqp.poes = [float(v) for v in
                         params['POES_HAZARD_MAPS'].split(" ")]
 
-    if oqp.job_type != 'deterministic':
+    if oqp.job_type in ('deterministic', 'event_based'):
+        oqp.gm_correlated = (
+            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+
+    if oqp.job_type in  ('classical', 'event_based'):
         oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
         oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
         oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+    else:
+        oqp.gmf_calculation_number = int(
+            params['NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS'])
+        oqp.rupture_surface_discretization = float(
+            params['RUPTURE_SURFACE_DISCRETIZATION'])
 
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
 
-    # config lat/lon -> postgis -> lon/lat
-    coords = [float(v) for v in
-                  params['REGION_VERTEX'].split(",")]
-    vertices = ["%f %f" % (coords[i + 1], coords[i])
-                    for i in xrange(0, len(coords), 2)]
-    region = "SRID=4326;POLYGON((%s, %s))" % (", ".join(vertices), vertices[0])
-    oqp.region = GEOSGeometry(region)
     oqp.save()
-
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name="openquake")
-    job = OqJob(owner=owner, path=None, oq_params=oqp, job_type=oqp.job_type)
+    job.oq_params = oqp
     job.save()
+
     return job
 
 
