@@ -218,7 +218,7 @@ def prepare_job(params):  # pylint: disable=R0912,R0915
 
     oqp = OqParams(input_set=input_set)
 
-    # fill in parameters
+    # fill in sites/region
     if 'SITES' in params:
         if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
             raise RuntimeError(
@@ -239,7 +239,7 @@ def prepare_job(params):  # pylint: disable=R0912,R0915
         raise RuntimeError(
             "Job config contains neither sites nor region of interest.")
 
-    # fill-in parameters
+    # fill in rest of the parameters
     oqp.job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
