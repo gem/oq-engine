@@ -474,6 +474,9 @@ class JobStats(models.Model):
     # The number of total sites in job
     num_sites = models.IntegerField()
 
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"job_stats'
+
 
 class OqParams(models.Model):
     '''
