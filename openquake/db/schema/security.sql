@@ -225,7 +225,7 @@ GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_job_init;
 
 -- uiapi.job_stats
 GRANT SELECT ON uiapi.job_stats TO GROUP openquake;
--- oq_job_init is granted write access to record job start time
+-- oq_job_init is granted write access to record job start time and other job stats at job init time
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_init;
 -- oq_job_superv is granted write access so that the job supervisor can record job completion time
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
