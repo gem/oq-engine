@@ -372,8 +372,9 @@ class Job(object):
 
         base_path = params['BASE_PATH']
 
-        job = Job(params, job_id, sections=sections, base_path=base_path)
-        job.serialize_results_to = serialize_results_to
+        job = Job(params, job_id, sections=sections, base_path=base_path,
+                  serialize_results_to=serialize_results_to)
+        job.to_kvs()
 
         return job
 
@@ -397,14 +398,13 @@ class Job(object):
         return status == 'succeeded' or status == 'failed'
 
     def __init__(self, params, job_id, sections=list(), base_path=None,
-            validator=None):
+                 serialize_results_to=list()):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
-        :param validator: validator(s) used to check the configuration file
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -416,10 +416,7 @@ class Job(object):
         self.sections = list(set(sections))
         self.serialize_results_to = []
         self.base_path = base_path
-        self.validator = validator
-
-        if base_path:
-            self.to_kvs()
+        self.serialize_results_to = list(serialize_results_to)
 
     def has(self, name):
         """Return true if this job has the given parameter defined
