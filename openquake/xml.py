@@ -132,6 +132,13 @@ def nrml_schema_file():
 
 
 def validates_against_xml_schema(xml_instance_path, schema_path):
+    """
+    Checks whether an XML file validates against an XML Schema
+
+    :param xml_instance_path: XML document path
+    :param schema_path: XML schema path
+    :returns: boolean success value
+    """
     xml_doc = etree.parse(xml_instance_path)
     xmlschema = etree.XMLSchema(etree.parse(schema_path))
     return xmlschema.validate(xml_doc)
@@ -169,4 +176,5 @@ def lon_lat_from_gml_pos(pos_el):
 
 
 def strip_namespace_from_tag(full_tag, namespace):
+    """Remove namespace alias from a tag"""
     return full_tag[len(namespace):]
