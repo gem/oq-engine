@@ -28,6 +28,7 @@ import unittest
 
 from openquake import java
 
+from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
 
 
@@ -85,6 +86,14 @@ class JvmMaxMemTestCase(unittest.TestCase):
         """
         os.environ["OQ_JVM_MAXMEM"] = "I hate numbers!"
         self.assertRaises(ValueError, java.get_jvm_max_mem, None)
+
+    def test_jvm_memmax_setting_is_not_passed(self):
+        """Do not pass -Xmx to the jvm."""
+        with helpers.patch("jpype.startJVM") as startjvm_mock:
+            with helpers.patch("openquake.java.init_logs"):
+                java.jvm()
+                args, _ = startjvm_mock.call_args
+                self.assertFalse(filter(lambda a: a.startswith("-Xmx"), args))
 
 
 class CeleryJavaExceptionTestCase(unittest.TestCase):

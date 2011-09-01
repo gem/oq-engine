@@ -244,9 +244,7 @@ def jvm(max_mem=None):
             # force the default Xerces parser configuration, otherwise
             # some random system-installed JAR might override it
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
-                "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
-            # "-Dlog4j.debug", # turn on log4j internal debugging
-            "-Xmx%sM" % max_mem)
+                "org.apache.xerces.parsers.XIncludeAwareParserConfiguration")
 
         init_logs(level=FLAGS.debug, log_type=config.get("logging", "backend"))
 
