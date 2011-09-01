@@ -13,11 +13,11 @@ import os
 import logging
 import logging.config
 
-import openquake
-from openquake import signalling
-
 import oqpath
 oqpath.set_oq_path()
+
+import openquake
+from openquake import signalling
 
 
 def main():
