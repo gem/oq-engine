@@ -1,6 +1,4 @@
-# -*- coding: utf-8 -*-
-
-# Copyright (c) 2010-2011, GEM Foundation.
+# Copyright (c) 2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3
@@ -16,8 +14,4 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-""" Mixins for risk jobs. """
-
-import probabilistic
-import classical_psha
-import deterministic
+"""A variety of importers for the various hazard/risk model tables."""

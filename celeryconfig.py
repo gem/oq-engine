@@ -30,7 +30,7 @@ import sys
 from openquake.utils import config
 
 
-sys.path.append('.')
+sys.path.insert(0, os.path.dirname(__file__))
 
 amqp = config.get_section("amqp")
 
