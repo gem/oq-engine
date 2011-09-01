@@ -31,6 +31,7 @@ import os
 import re
 import shlex
 import subprocess
+from openquake import __version__
 
 # regexps
 RE_BUGS = re.compile('\[f=(.*?)\]')
@@ -39,20 +40,33 @@ RE_REVIEWER = re.compile('\[r=(.*?)\]')
 CACHE_DIR = os.path.expanduser("~/.launchpadlib/cache/")
 
 
-def parse_and_login(time=None):
-    """
-        Convenience function to parse and login to launchpad
-    """
-    launchpad = None
-    commits_output = []
-
-    if time:
-        commits_output = CommitsOutput.since(time)
-
-        launchpad = Launchpad.login_with('OpenQuake Bug Bot', 'production',
+def launchpad_login():
+    return Launchpad.login_with('OpenQuake Bug Bot', 'production',
                 CACHE_DIR)
 
-    return launchpad, commits_output
+# def fetch_commits(time=None,until=None):
+#     """
+#         Convenience function to parse commits
+#     """
+#     commits_output = []
+# 
+#     if time:
+#         commits_output = CommitsOutput.since(time, until)
+# 
+#     return commits_output
+
+def milestone_interval(launchpad):
+    cur_milestone_ver = '.'.join(
+            [str(datum) for datum in __version__[:3]])
+
+    cur_milestone = launchpad.projects["openquake"].getMilestone(
+        name=cur_milestone_ver)
+    for  milestone in cur_milestone.series_target.all_milestones:
+        if not milestone.is_active:
+            prev_milestone_inactive =  milestone
+ 
+    return (cur_milestone.date_targeted, prev_milestone_inactive.date_targeted)
+
 
 
 class CommitsOutput(object):
@@ -61,13 +75,18 @@ class CommitsOutput(object):
     """
 
     @staticmethod
-    def since(time):
+    def since(time, until=None):
         """
             Reads from git
             extracts the output from a pipe
             returns read lines
         """
+
         git_cmd = shlex.split("git log --merges --since='%s'" % time)
+
+        if until:
+            git_cmd.extend(shlex.split("--until='%s'" % until))
+
         git = subprocess.Popen(
             git_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
@@ -157,12 +176,19 @@ def arg_parse():
     args, remaining_argv = parser.parse_known_args()
 
     # after partial check, force -t/--time as required parameter
-    parser._actions[0].required = True
+    #parser._actions[0].required = True
 
     if args.time:
         if len(remaining_argv):
-            (launchpad, commits_output) = parse_and_login(args.time)
+            launchpad = launchpad_login()
+            commits_output = CommitsOutput.since(args.time)
         remaining_argv.extend(['-t', args.time])
+    else:
+        launchpad = launchpad_login()
+        cur_milestone_date, prev_milestone_date = milestone_interval(launchpad)
+
+        commits_output = CommitsOutput.since(prev_milestone_date.isoformat(),
+            until=cur_milestone_date.isoformat())
 
     # merges the two parsers and instantiate the second final parser
     action_parser = argparse.ArgumentParser(description=__doc__,
