@@ -634,6 +634,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual([
                 {'path': 'smoketests/deterministic/LA_small_portfolio.xml',
                  'type': 'exposure'},
+                {'path': 'smoketests/deterministic/simple-fault-rupture.xml',
+                 'type': 'rupture'},
                 {'path': 'smoketests/deterministic/vulnerability.xml',
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
