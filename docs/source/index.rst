@@ -19,6 +19,7 @@ Contents:
    job
    kvs
    logs
+   input
    output
    producer
    risk
