@@ -57,7 +57,8 @@ class DeterministicEventBasedMixin:
 
         epsilon_provider = general.EpsilonProvider(self.params)
 
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider,
+                                                  logger=self.logger)
 
         region_loss_map_data = {}
 
