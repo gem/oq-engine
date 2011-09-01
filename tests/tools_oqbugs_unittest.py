@@ -96,6 +96,10 @@ class OqBugsTestCase(unittest.TestCase):
     def test_commits_output_for_one_month(self):
         self.assertTrue(len(CommitsOutput.since('1 month')))
 
+    def test_commits_output_interval(self):
+        self.assertTrue(len(CommitsOutput.since("2011-07-20T00:00:00",
+            until="2011-08-09T00:00:00")))
+
     def test_commits_output_reviewers(self):
         for commit in self.correct_commits:
             self.assertTrue(len(filter_reviewers(commit)))
