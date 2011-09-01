@@ -96,16 +96,12 @@ def fix_apply(launchpad, commit_lines, status_type):
 
         def __call__(self, parser, namespace, values, option_string=None):
 
-
-            print 'FixCommitted: %s %r %r %r' % (parser, namespace, 
-                    values, option_string)
-
-            changed_bugs = [] 
+            changed_bugs = []
             for commit_line in commit_lines:
                 if namespace.time:
-                    bugs = launchpad_lookup(launchpad, 
+                    bugs = launchpad_lookup(launchpad,
                             filter_bugs(commit_line))
-                    
+
                     for bug in bugs:
                         if bug.bug_tasks[0].status != status_type:
                             bug.bug_tasks[0].status = status_type
@@ -120,7 +116,6 @@ def changelog(launchpad, commit_lines):
             Prints on screen the ChangeLog since a time
         """
         def __call__(self, parser, namespace, values, option_string=None):
-            print 'ChangeLog: %r %r %r' % (namespace, values, option_string)
 
             for commit_line in commit_lines:
                 reviewers = filter_reviewers(commit_line)
@@ -142,6 +137,7 @@ Closed-by:      %s
                     print entry
     return ChangeLog
 
+
 def arg_parse():
     """
         Prepares ArgumentParser for argument checking/triggering
@@ -154,8 +150,7 @@ def arg_parse():
     parser.add_argument('-t', '--time', dest="time",
             help="time: timeframe (i.e '1 month', '1 week', etc) \
                 with quotes",
-            metavar="TIME"
-            )
+            metavar="TIME")
 
     # pre-parse time to provide it to the next parser with custom methods in
     # custom argparse actions
@@ -170,14 +165,13 @@ def arg_parse():
         remaining_argv.extend(['-t', args.time])
 
     # merges the two parsers and instantiate the second final parser
-    action_parser = argparse.ArgumentParser(description=__doc__, 
+    action_parser = argparse.ArgumentParser(description=__doc__,
             parents=[parser],
             formatter_class=argparse.RawDescriptionHelpFormatter,
             add_help=True)
 
-
     action_group = action_parser.add_mutually_exclusive_group(required=True)
-    action_group.add_argument('-c', '--fix-committed', 
+    action_group.add_argument('-c', '--fix-committed',
             action=fix_apply(launchpad, commits_output, 'Fix Committed'),
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
@@ -185,7 +179,7 @@ def arg_parse():
             dest='fix_committed',
             required=False)
 
-    action_group.add_argument('-r', '--fix-released', 
+    action_group.add_argument('-r', '--fix-released',
             action=fix_apply(launchpad, commits_output, 'Fix Released'),
             help="Invoked from the ppa build fetches from a git repository \
                 every with Fix Committed status and changes it to \
@@ -193,8 +187,7 @@ def arg_parse():
             nargs=0,
             required=False)
 
-
-    action_group.add_argument('-l', '--changelog', 
+    action_group.add_argument('-l', '--changelog',
             action=changelog(launchpad, commits_output),
             help="Invoked from the CI gets from a git repository every \
                 bug and changes status on launchpad to Fix Committed",
@@ -215,7 +208,9 @@ def filter_reviewers(reviewers):
             RE_REVIEWER.findall(reviewers).pop(0).split(',')]
     return ','.join(filtered_reviewers)
 
+
 def launchpad_lookup(lp, bugs):
+    """ looks up a list of bugs in launchpad """
     try:
         return [lp.bugs[bug] for bug in bugs]
     # Sometimes launchpad does not fetch the correct bug, we have to handle
@@ -225,6 +220,7 @@ def launchpad_lookup(lp, bugs):
                 'staging area? bug: %s' % e
         logging.error(error_message)
         raise Exception(error_message)
+
 
 def filter_bugs(commit):
     """
@@ -236,7 +232,7 @@ def filter_bugs(commit):
             lambda bug: bug.startswith('*'),
             bugs.pop(0).split(','))
     return bugs
-                    
+
 
 if __name__ == '__main__':
     arg_parse()
