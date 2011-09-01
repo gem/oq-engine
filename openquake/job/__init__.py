@@ -230,6 +230,7 @@ def prepare_job(params):
 
     if oqp.imt == 'sa':
         oqp.period = float(params.get('PERIOD', 0.0))
+        oqp.damping = float(params.get('DAMPING', 0.0))
 
     if oqp.job_type == 'classical':
         oqp.imls = [float(v) for v in
@@ -245,6 +246,11 @@ def prepare_job(params):
         oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
         oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
         oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+    else:
+        oqp.gmf_calculation_number = int(
+            params['NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS'])
+        oqp.rupture_surface_discretization = float(
+            params['RUPTURE_SURFACE_DISCRETIZATION'])
 
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
