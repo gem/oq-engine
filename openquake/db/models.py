@@ -464,6 +464,17 @@ class OqJob(models.Model):
         db_table = 'uiapi\".\"oq_job'
 
 
+class JobStats(models.Model):
+    '''
+    Capture various statistics about a job.
+    '''
+    oq_job = models.ForeignKey('OqJob')
+    start_time = models.DateTimeField(editable=False)
+    stop_time = models.DateTimeField(editable=False)
+    # The number of total sites in job
+    num_sites = models.IntegerField()
+
+
 class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
