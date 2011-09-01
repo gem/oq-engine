@@ -44,17 +44,6 @@ def launchpad_login():
     return Launchpad.login_with('OpenQuake Bug Bot', 'production',
                 CACHE_DIR)
 
-# def fetch_commits(time=None,until=None):
-#     """
-#         Convenience function to parse commits
-#     """
-#     commits_output = []
-# 
-#     if time:
-#         commits_output = CommitsOutput.since(time, until)
-# 
-#     return commits_output
-
 def milestone_interval(launchpad):
     cur_milestone_ver = '.'.join(
             [str(datum) for datum in __version__[:3]])
