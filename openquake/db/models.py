@@ -422,6 +422,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'rupture', u'Rupture'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -471,11 +472,9 @@ class OqParams(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
-
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     upload = models.ForeignKey('Upload', null=True)
-    region_grid_spacing = models.FloatField()
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
@@ -491,6 +490,7 @@ class OqParams(models.Model):
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
+    damping = models.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
        (u'none', u'None'),
        (u'onesided', u'One-sided'),
@@ -507,8 +507,14 @@ class OqParams(models.Model):
     realizations = models.IntegerField(null=True)
     histories = models.IntegerField(null=True)
     gm_correlated = models.BooleanField(null=True)
+    gmf_calculation_number = models.IntegerField(null=True)
+    rupture_surface_discretization = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    region = models.PolygonField(srid=4326)
+
+    # We can specify a (region and region_grid_spacing) or sites, but not both.
+    region = models.PolygonField(srid=4326, null=True)
+    region_grid_spacing = models.FloatField(null=True)
+    sites = models.MultiPointField(srid=4326, null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
@@ -796,7 +802,7 @@ class ExposureData(models.Model):
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     value = models.FloatField()
-    vulnerability_function = models.ForeignKey("VulnerabilityFunction")
+    vf_ref = models.TextField()
     structure_type = models.TextField(null=True)
     retrofitting_cost = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
