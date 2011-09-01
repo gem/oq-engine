@@ -291,10 +291,10 @@ class Collector(LogMessageConsumer):
     def message_callback(self, msg):
         try:
             # pylint: disable=W0612
-            job_id, type_ = \
+            job_id, level = \
                 parse_routing_key(msg.delivery_info['routing_key'])
         except ValueError:
             pass
         else:
-            if type_ in ('debug', 'info', 'warn', 'error', 'fatal'):
-                self.logger.log(getattr(logging, type_.upper()), msg.body)
+            if level in ('debug', 'info', 'warn', 'error', 'fatal'):
+                self.logger.log(getattr(logging, level.upper()), msg.body)
