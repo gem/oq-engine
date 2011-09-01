@@ -253,6 +253,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     As a side-effect, also tests that the inserted record satisfied
     the DB constraints.
     """
+    BASE_PATH = os.getcwd()
+
     BASE_CLASSICAL_PARAMS = {
         'CALCULATION_MODE': 'Classical',
         'POES_HAZARD_MAPS': '0.01 0.1',
@@ -281,6 +283,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'TRUNCATION_LEVEL': '3',
         'COMPUTE_MEAN_HAZARD_CURVE': 'true',
         'AREA_SOURCE_DISCRETIZATION': '0.1',
+        'BASE_PATH': BASE_PATH,
     }
 
     BASE_DETERMINISTIC_PARAMS = {
@@ -297,6 +300,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'TRUNCATION_LEVEL': '3',
         'GMPE_TRUNCATION_TYPE': '1 Sided',
         'GROUND_MOTION_CORRELATION': 'true',
+        'BASE_PATH': BASE_PATH,
     }
 
     BASE_EVENT_BASED_PARAMS = {
@@ -335,6 +339,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'COMPUTE_MEAN_HAZARD_CURVE': 'true',
         'AREA_SOURCE_DISCRETIZATION': '0.1',
         'FAULT_RUPTURE_OFFSET': '5.0',
+        'BASE_PATH': BASE_PATH,
     }
 
     def tearDown(self):
@@ -415,15 +420,18 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'rupture_surface_discretization': None,
              }, self.job.oq_params)
         self.assertEqual([
-                {'path': 'smoketests/classical_psha_simple/small_exposure.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/classical_psha_simple/small_exposure.xml',
                  'type': 'exposure'},
-                {'path': 'smoketests/classical_psha_simple/' \
-                         'gmpe_logic_tree.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/classical_psha_simple/gmpe_logic_tree.xml',
                  'type': 'lt_gmpe'},
-                {'path': 'smoketests/classical_psha_simple/' \
-                         'source_model_logic_tree.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/classical_psha_simple/'
+                     'source_model_logic_tree.xml',
                  'type': 'lt_source'},
-                {'path': 'smoketests/classical_psha_simple/vulnerability.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/classical_psha_simple/vulnerability.xml',
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
@@ -490,11 +498,14 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'rupture_surface_discretization': 0.1,
              }, self.job.oq_params)
         self.assertEqual([
-                {'path': 'smoketests/deterministic/LA_small_portfolio.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/deterministic/LA_small_portfolio.xml',
                  'type': 'exposure'},
-                {'path': 'smoketests/deterministic/simple-fault-rupture.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/deterministic/simple-fault-rupture.xml',
                  'type': 'rupture'},
-                {'path': 'smoketests/deterministic/vulnerability.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/deterministic/vulnerability.xml',
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
@@ -564,13 +575,17 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'rupture_surface_discretization': None,
              }, self.job.oq_params)
         self.assertEqual([
-                {'path': 'smoketests/simplecase/small_exposure.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/simplecase/small_exposure.xml',
                  'type': 'exposure'},
-                {'path': 'smoketests/simplecase/gmpe_logic_tree.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/simplecase/gmpe_logic_tree.xml',
                  'type': 'lt_gmpe'},
-                {'path': 'smoketests/simplecase/source_model_logic_tree.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/simplecase/source_model_logic_tree.xml',
                  'type': 'lt_source'},
-                {'path': 'smoketests/simplecase/vulnerability.xml',
+                {'path': self.BASE_PATH +
+                     '/smoketests/simplecase/vulnerability.xml',
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 

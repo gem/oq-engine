@@ -203,11 +203,13 @@ def prepare_job(params):  # pylint: disable=R0912,R0915
     input_set = InputSet(upload=None, owner=owner)
     input_set.save()
 
+    base_path = params['BASE_PATH']
+
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
-        path = params[param_key]
+        path = os.path.join(base_path, params[param_key])
         # TODO remove with --include_defaults
         if not os.path.exists(path):
             continue
