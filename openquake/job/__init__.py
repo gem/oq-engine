@@ -191,7 +191,7 @@ def guarantee_file(base_path, file_spec):
 
 
 @transaction.commit_on_success(using='job_init')
-def prepare_job(params):
+def prepare_job(params):  # pylint: disable=R0912,R0915
     """
     Create a new OqJob and fill in the related OpParams entry.
 
