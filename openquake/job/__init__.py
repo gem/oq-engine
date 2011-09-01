@@ -60,6 +60,7 @@ INPUT_FILE_TYPES = {
     'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
     'EXPOSURE': 'exposure',
     'VULNERABILITY': 'vulnerability',
+    'SINGLE_RUPTURE_MODEL': 'rupture',
 }
 
 ENUM_MAP = {
