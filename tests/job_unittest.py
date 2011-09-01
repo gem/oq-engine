@@ -19,6 +19,7 @@
 import mock
 import os
 import unittest
+import logging
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
@@ -28,7 +29,7 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
-from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob
@@ -99,26 +100,16 @@ class JobTestCase(unittest.TestCase):
         kvs.cache_gc('::JOB::2::')
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
-
-        class call_logger(object):
-
-            def __init__(self, method):
-                self.called = False
-                self.method = method
-
-            def __call__(self, *args, **kwargs):
-                try:
-                    return self.method(*args, **kwargs)
-                finally:
-                    self.called = True
-
+        handler = logging.handlers.BufferingHandler(capacity=float('inf'))
+        Job.unknown_job_logger.addHandler(handler)
         good_defaults = Job._Job__defaults
         Job._Job__defaults = ["/tmp/sbfalds"]
-        LOG.warning = call_logger(LOG.warning)
-        self.assertFalse(LOG.warning.called)
-        Job.default_configs()
-        self.assertTrue(LOG.warning.called)
-        Job._Job__defaults = good_defaults
+        try:
+            Job.default_configs()
+            self.assertEqual(len(handler.buffer), 1)
+        finally:
+            Job.unknown_job_logger.removeHandler(handler)
+            Job._Job__defaults = good_defaults
 
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
