@@ -709,16 +709,14 @@ CREATE TABLE uiapi.oq_params (
     gmf_random_seed integer
         CONSTRAINT gmf_random_seed_is_set
         CHECK(
-            ((job_type IN ('deterministic', 'event_based'))
-             AND (gmf_random_seed IS NOT NULL))
+            (job_type IN ('deterministic', 'event_based'))
             OR
             ((job_type = 'classical')
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based'))
-             AND (gmpe_lt_random_seed IS NOT NULL))
+            (job_type IN ('classical', 'event_based'))
             OR
             ((job_type = 'deterministic')
              AND (gmpe_lt_random_seed IS NULL))),
@@ -818,8 +816,7 @@ CREATE TABLE uiapi.oq_params (
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based'))
-             AND (source_model_lt_random_seed IS NOT NULL))
+            (job_type IN ('classical', 'event_based'))
             OR
             ((job_type = 'deterministic')
              AND (source_model_lt_random_seed IS NULL))),
