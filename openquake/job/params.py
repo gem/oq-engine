@@ -102,10 +102,10 @@ define_param('TRUNCATION_LEVEL', 'truncation_level')
 define_param('REFERENCE_VS30_VALUE', 'reference_vs30_value')
 
 define_param('PERIOD', 'period', default=0.0)
-define_param('DAMPING', 'damping', default=0.0,
-             modes=('event_based', 'deterministic'))
+define_param('DAMPING', 'damping', default=0.0)
 
-define_param('INTENSITY_MEASURE_LEVELS', 'imls', modes='classical')
+define_param('INTENSITY_MEASURE_LEVELS', 'imls',
+             modes=('classical', 'event_based'))
 define_param('POES_HAZARD_MAPS', 'poes', modes='classical')
 
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
@@ -127,13 +127,11 @@ define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
              modes='event_based')
 
 define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
-             'reference_depth_to_2pt5km_per_sec_param',
-             modes=('classical', 'event_based'))
+             'reference_depth_to_2pt5km_per_sec_param')
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'))
 
-define_param('SADIGH_SITE_TYPE', 'sadigh_site_type',
-             modes=('classical', 'event_based'))
+define_param('SADIGH_SITE_TYPE', 'sadigh_site_type')
 
 # classical_psha_simple
 define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',

@@ -607,8 +607,8 @@ CREATE TABLE uiapi.oq_params (
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
-            ((job_type = 'classical') AND (imls IS NOT NULL))
-            OR ((job_type != 'classical') AND (imls IS NULL))),
+            ((job_type in ('classical', 'event_based')) AND (imls IS NOT NULL))
+            OR ((job_type = 'deterministic') AND (imls IS NULL))),
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
@@ -771,14 +771,7 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type IN ('deterministic', 'event_based'))
              AND (quantile_levels IS NULL))),
-    reference_depth_to_2pt5km_per_sec_param float
-        CONSTRAINT reference_depth_to_2pt5km_per_sec_param_is_set
-        CHECK(
-            ((job_type IN ('classical', 'event_based'))
-             AND (reference_depth_to_2pt5km_per_sec_param IS NOT NULL))
-            OR
-            ((job_type = 'deterministic')
-             AND (reference_depth_to_2pt5km_per_sec_param IS NULL))),
+    reference_depth_to_2pt5km_per_sec_param float,
     risk_cell_size float,
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
@@ -805,14 +798,7 @@ CREATE TABLE uiapi.oq_params (
     --     ('rock', 'Rock'),
     --     ('deep-soil', 'Deep-Soil'),
     -- )
-    sadigh_site_type VARCHAR
-        CONSTRAINT sadigh_site_type_is_set
-        CHECK(
-            ((job_type IN ('classical', 'event_based'))
-             AND (sadigh_site_type IS NOT NULL))
-            OR
-            ((job_type = 'deterministic')
-             AND (sadigh_site_type IS NULL))),
+    sadigh_site_type VARCHAR,
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
