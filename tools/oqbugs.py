@@ -49,7 +49,7 @@ def launchpad_login():
 
 
 def milestone_interval(launchpad):
-    """ 
+    """
         * fetches current openquake's version
         * returns current milestone date_targeted attribute
         * returns the first inactive milestone
@@ -63,6 +63,7 @@ def milestone_interval(launchpad):
     for  milestone in cur_milestone.series_target.all_milestones:
         if not milestone.is_active:
             prev_milestone_inactive = milestone
+            break
 
     return (cur_milestone.date_targeted, prev_milestone_inactive.date_targeted)
 
@@ -106,12 +107,12 @@ class CommitsOutput(object):
 
 # A serie of ArgumentParser action(s) that are triggered by parse_args()
 def fix_apply(launchpad, commit_lines, status_type):
-    """ 
-        convenience wrapper function to pass parameters to FixApply 
+    """
+        convenience wrapper function to pass parameters to FixApply
         argparse action
     """
     class FixApply(argparse.Action):
-        """ 
+        """
             Changes the status of a bug to status_type
             (Fix Committed/Fix Released)
         """
@@ -133,8 +134,8 @@ def fix_apply(launchpad, commit_lines, status_type):
 
 
 def changelog(launchpad, commit_lines):
-    """ 
-        convenience wrapper function to pass parameters to ChangeLog 
+    """
+        convenience wrapper function to pass parameters to ChangeLog
         argparse action
     """
     class ChangeLog(argparse.Action):
@@ -146,6 +147,8 @@ def changelog(launchpad, commit_lines):
 
             for commit_line in commit_lines:
                 reviewers = filter_reviewers(commit_line)
+                # TODO: generalize filter_bugs to match multiple lines and
+                # speed up the launchpad_lookup process
                 bugs = launchpad_lookup(launchpad,
                         filter_bugs(commit_line))
                 for bug in bugs:
