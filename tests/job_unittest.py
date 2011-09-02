@@ -384,32 +384,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEquals(expected, got_params)
 
-    def test_prepare_job_raises_if_no_geometry(self):
-        '''
-        If no geometry is specified (neither SITES nor REGION_VERTEX +
-        REGION_GRID_SPACING), a RuntimeError should be raised.
-
-        Note: The job validator _should_ catch any such error before we hit
-        prepare_job.
-        '''
-        params = self.BASE_CLASSICAL_PARAMS.copy()
-
-        self.assertRaises(RuntimeError, prepare_job, params)
-
-    def test_prepare_job_raises_if_both_geometries_specified(self):
-        '''
-        If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified, a
-        RuntimeError should be raised. A job config can only have one or the
-        other.
-        '''
-        params = self.BASE_CLASSICAL_PARAMS.copy()
-
-        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
-        params['REGION_GRID_SPACING'] = '0.1'
-        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
-
-        self.assertRaises(RuntimeError, prepare_job, params)
-
     def test_prepare_classical_job(self):
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
@@ -663,27 +637,6 @@ class RunJobTestCase(unittest.TestCase):
                                 helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
-        self.assertEquals('failed', self._job_status())
-
-    def test_invalid_job_lifecycle(self):
-        with patch('openquake.job.Job.from_file') as from_file:
-
-            # replaces Job.is_valid with a mock
-            def patch_job_is_valid(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.is_valid = mock.Mock(
-                    return_value=(False, ["OMG!"]))
-
-                self.assertEquals('pending', self._job_status())
-
-                return self.job
-
-            from_file.side_effect = patch_job_is_valid
-
-            with patch('openquake.job.spawn_job_supervisor'):
-                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        self.assertEquals(1, self.job.is_valid.call_count)
         self.assertEquals('failed', self._job_status())
 
     def test_computes_sites_in_region_when_specified(self):
