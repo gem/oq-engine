@@ -23,14 +23,13 @@ the underlying kvs systems.
 """
 
 import json
+import logging
+
 import numpy
 
-from openquake import logs
 from openquake.kvs import tokens
 from openquake.kvs.redis import Redis
 
-
-LOG = logs.LOG
 
 DEFAULT_LENGTH_RANDOM_ID = 8
 INTERNAL_ID_SEPARATOR = ':'
@@ -231,6 +230,7 @@ def cache_gc(job_id):
         exist in CURRENT_JOBS
     """
     client = get_client()
+    logger = logging.getLogger('oq.kvs')
 
     if client.sismember(tokens.CURRENT_JOBS, job_id):
         # matches a current job
@@ -243,7 +243,7 @@ def cache_gc(job_id):
             # delete should return True
             if not success:
                 msg = 'Redis failed to delete data for job %s' % job_id
-                LOG.error(msg)
+                logger.error(msg)
                 raise RuntimeError(msg)
 
         # finally, remove the job key from CURRENT_JOBS
@@ -251,12 +251,12 @@ def cache_gc(job_id):
 
         msg = 'KVS garbage collection removed %s keys for job %s'
         msg %= (len(keys), job_id)
-        LOG.info(msg)
+        logger.info(msg)
 
         return len(keys)
     else:
         # does not match a current job
         msg = 'KVS garbage collection was called with an invalid job key: ' \
             '%s is not recognized as a current job.' % job_id
-        LOG.error(msg)
+        logger.error(msg)
         return None
