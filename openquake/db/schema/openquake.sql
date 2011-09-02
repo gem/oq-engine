@@ -629,7 +629,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             ((job_type = 'classical') AND (gm_correlated IS NULL))
             OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
-    -- deterministic job fields
+
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
             ((job_type = 'deterministic')
@@ -638,7 +638,6 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'deterministic')
              AND (gmf_calculation_number IS NULL))),
-    -- deterministic job fields
     rupture_surface_discretization float
         CONSTRAINT rupture_surface_discretization_is_set
         CHECK(
@@ -652,7 +651,6 @@ CREATE TABLE uiapi.oq_params (
     aggregate_loss_curve boolean,
     area_source_discretization float,
     area_source_magnitude_scaling_relationship VARCHAR,
-    base_path VARCHAR,
     compute_mean_hazard_curve boolean,
     conditional_loss_poe float[],
     exposure VARCHAR,
@@ -665,16 +663,12 @@ CREATE TABLE uiapi.oq_params (
     gmpe_lt_random_seed integer,
     gmpe_model_name VARCHAR,
     grid_source_magnitude_scaling_relationship VARCHAR,
-    hazard_map_cpt VARCHAR,
     include_area_sources boolean,
     include_fault_source boolean,
     include_grid_sources boolean,
     include_subduction_fault_source boolean,
     loss_curves_output_prefix VARCHAR,
-    loss_map VARCHAR,
-    loss_ratio_map VARCHAR,
     maximum_distance VARCHAR,
-    output_dir VARCHAR,
     quantile_levels float[],
     reference_depth_to_2pt5km_per_sec_param float,
     risk_cell_size float,

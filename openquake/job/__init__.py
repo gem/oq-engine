@@ -236,27 +236,23 @@ define_param('RUPTURE_SURFACE_DISCRETIZATION', 'rupture_surface_discretization',
 
 define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories', modes='event_based')
 
-
-
-
 define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM', 'reference_depth_to_2pt5km_per_sec_param', modes=('classical', 'event_based'))
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed', modes=('event_based', 'deterministic'))
 
 define_param('VULNERABILITY', 'vulnerability')
 define_param('SINGLE_RUPTURE_MODEL', 'single_rupture_model')
-define_param('BASE_PATH', 'base_path')
 define_param('EXPOSURE', 'exposure')
 define_param('SADIGH_SITE_TYPE', 'sadigh_site_type', modes=('classical', 'event_based'))
-define_param('OUTPUT_DIR', 'output_dir')
+#define_param('OUTPUT_DIR', 'output_dir')
 
 # classical_psha_simple
 define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE', 'subduction_rupture_floating_type', modes=('classical', 'event_based'))
 define_param('INCLUDE_GRID_SOURCES', 'include_grid_sources', modes=('classical', 'event_based'))
-define_param('LOSS_RATIO_MAP', 'loss_ratio_map')
+#define_param('LOSS_RATIO_MAP', 'loss_ratio_map')
 define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve')
 define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA', 'subduction_fault_magnitude_scaling_sigma', modes=('classical', 'event_based'))
 define_param('TREAT_GRID_SOURCE_AS', 'treat_grid_source_as', modes=('classical', 'event_based'))
-define_param('LOSS_MAP', 'loss_map')
+#define_param('LOSS_MAP', 'loss_map')
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
 define_param('INCLUDE_AREA_SOURCES', 'include_area_sources', modes=('classical', 'event_based'))
 define_param('TREAT_AREA_SOURCE_AS', 'treat_area_source_as', modes=('classical', 'event_based'))
@@ -278,7 +274,6 @@ define_param('INCLUDE_FAULT_SOURCE', 'include_fault_source', modes=('classical',
 define_param('FAULT_MAGNITUDE_SCALING_RELATIONSHIP', 'fault_magnitude_scaling_relationship', modes=('classical', 'event_based'))
 define_param('SUBDUCTION_RUPTURE_ASPECT_RATIO', 'subduction_rupture_aspect_ratio', modes=('classical', 'event_based'))
 define_param('FAULT_SURFACE_DISCRETIZATION', 'fault_surface_discretization', modes=('classical', 'event_based'))
-define_param('HAZARD_MAP_CPT', 'hazard_map_cpt')
 define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed', modes=('classical', 'event_based'))
 define_param('SUBDUCTION_FAULT_SURFACE_DISCRETIZATION', 'subduction_fault_surface_discretization', modes=('classical', 'event_based'))
 define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe')
