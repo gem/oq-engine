@@ -45,8 +45,7 @@ LEVELS = {'debug': logging.DEBUG,
 flags.DEFINE_string('logfile', '',
     'Path to the log file. Leave empty to log to stderr.')
 
-RISK_LOG = logging.getLogger("risk")
-HAZARD_LOG = logging.getLogger("hazard")
+# TODO: get rid of this
 LOG = logging.getLogger()
 
 LOGGING_AMQP_FORMAT = '%(asctime)s %(loglevel)-5s %(processName)s' \
@@ -101,8 +100,6 @@ def init_logs_stdout(level):
         LOG.addHandler(hdlr)
 
     LOG.setLevel(logging_level)
-    RISK_LOG.setLevel(logging_level)
-    HAZARD_LOG.setLevel(logging_level)
 
     # capture java logging (this is what celeryd does with the workers, we use
     # exactly the same system for bin/openquakes and the likes)
@@ -129,8 +126,6 @@ def init_logs_amqp(level):
 
     # initialize Python logging
     LOG.setLevel(logging_level)
-    RISK_LOG.setLevel(logging_level)
-    HAZARD_LOG.setLevel(logging_level)
 
 
 class AMQPHandler(logging.Handler):  # pylint: disable=R0902
