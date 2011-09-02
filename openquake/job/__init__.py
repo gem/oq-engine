@@ -215,9 +215,9 @@ def prepare_job(params):
         else:
             if param.type in (models.BooleanField, models.NullBooleanField):
                 if value.lower() in ('0', 'false'):
-                    value = 'False'
+                    value = False
                 else:
-                    value = 'True'
+                    value = True
             elif param.type == models.PolygonField:
                 ewkt = shapes.polygon_ewkt_from_coords(value)
                 value = GEOSGeometry(ewkt)
