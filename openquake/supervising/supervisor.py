@@ -33,7 +33,9 @@ import logging
 import os
 import signal
 
-from openquake.db.models import OqJob, ErrorMsg
+from datetime import datetime
+
+from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import signalling
 from openquake import supervising
 from openquake import kvs
@@ -53,6 +55,21 @@ def terminate_job(pid):
     logging.info('Terminating job process %s', pid)
 
     os.kill(pid, signal.SIGKILL)
+
+
+def record_job_stop_time(job_id):
+    """
+    Call this when a job concludes (successful or not) to record the
+    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
+
+    :param job_id: the job id
+    :type job_id: int
+    """
+    logging.info('Recording stop time for job %s to job_stats' % job_id)
+
+    job_stats = JobStats.objects.get(oq_job=job_id)
+    job_stats.stop_time = datetime.utcnow()
+    job_stats.save(using='job_superv')
 
 
 def cleanup_after_job(job_id):
@@ -128,6 +145,8 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
 
         update_job_status_and_error_msg(self.job_id, 'failed', msg.body)
 
+        record_job_stop_time(self.job_id)
+
         cleanup_after_job(self.job_id)
 
         raise StopIteration
@@ -153,6 +172,8 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
                     # status in the database.  We do it here.
                     update_job_status_and_error_msg(self.job_id, 'failed',
                                                     'crash')
+
+            record_job_stop_time(self.job_id)
 
             cleanup_after_job(self.job_id)
 
