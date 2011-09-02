@@ -648,6 +648,78 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'deterministic')
              AND (rupture_surface_discretization IS NULL))),
+
+    aggregate_loss_curve boolean,
+    area_source_discretization float,
+    area_source_magnitude_scaling_relationship VARCHAR,
+    base_path VARCHAR,
+    compute_mean_hazard_curve boolean,
+    conditional_loss_poe float[],
+    exposure VARCHAR,
+    fault_magnitude_scaling_relationship VARCHAR,
+    fault_magnitude_scaling_sigma float,
+    fault_rupture_offset float,
+    fault_surface_discretization float,
+    gmf_random_seed integer,
+    gmpe_logic_tree_file VARCHAR,
+    gmpe_lt_random_seed integer,
+    gmpe_model_name VARCHAR,
+    grid_source_magnitude_scaling_relationship VARCHAR,
+    hazard_map_cpt VARCHAR,
+    include_area_sources boolean,
+    include_fault_source boolean,
+    include_grid_sources boolean,
+    include_subduction_fault_source boolean,
+    loss_curves_output_prefix VARCHAR,
+    loss_map VARCHAR,
+    loss_ratio_map VARCHAR,
+    maximum_distance VARCHAR,
+    output_dir VARCHAR,
+    quantile_levels float[],
+    reference_depth_to_2pt5km_per_sec_param float,
+    risk_cell_size float,
+    rupture_aspect_ratio float,
+    -- RUPTURE_FLOATING_TYPE_CHOICES = (
+    --     ('only along strike ( rupture full ddw)', 'Only along strike ( rupture full DDW)'),
+    --     ('along strike and down dip', 'Along strike and down dip'),
+    --     ('along strike & centered down dip', 'Along strike & centered down dip'),
+    -- )
+    rupture_floating_type VARCHAR,
+    -- SADIGH_SITE_TYPE_CHOICES = (
+    --     ('rock', 'Rock'),
+    --     ('deep-soil', 'Deep-Soil'),
+    -- )
+    sadigh_site_type VARCHAR,
+    single_rupture_model VARCHAR,
+    source_model_logic_tree_file VARCHAR,
+    source_model_lt_random_seed integer,
+    -- STANDARD_DEVIATION_TYPE_CHOICES = (
+    --     ('total', 'Total'),
+    --     ('inter-event', 'Inter-Event'),
+    --     ('intra-event', 'Intra-Event'),
+    --     ('none (zero)', 'None (zero)'),
+    --     ('total (mag dependent)', 'Total (Mag Dependent)'),
+    --     ('total (pga dependent)', 'Total (PGA Dependent)'),
+    --     ('intra-event (mag dependent)', 'Intra-Event (Mag Dependent)'),
+    -- )
+    standard_deviation_type VARCHAR,
+    subduction_fault_magnitude_scaling_relationship VARCHAR,
+    subduction_fault_magnitude_scaling_sigma float,
+    subduction_fault_rupture_offset float,
+    subduction_fault_surface_discretization float,
+    subduction_rupture_aspect_ratio float,
+    subduction_rupture_floating_type VARCHAR,
+    -- SOURCE_AS_CHOICES = (
+    --     ('point sources', 'Point Sources'),
+    --     ('line sources (random or given strike)', 'Line Sources (random or given strike)'),
+    --     ('cross hair line sources', 'Cross Hair Line Sources'),
+    --     ('16 spoked line sources', '16 Spoked Line Sources'),
+    -- )
+    treat_area_source_as VARCHAR,
+    treat_grid_source_as VARCHAR,
+    vulnerability VARCHAR,
+    width_of_mfd_bin float,
+
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL

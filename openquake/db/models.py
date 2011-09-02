@@ -583,7 +583,7 @@ class OqParams(models.Model):
         ('total (pga dependent)', 'Total (PGA Dependent)'),
         ('intra-event (mag dependent)', 'Intra-Event (Mag Dependent)'),
     )
-    standard_deviation_type = models.Field(null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
+    standard_deviation_type = models.TextField(null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
     subduction_fault_magnitude_scaling_relationship = models.TextField(null=True)
     subduction_fault_magnitude_scaling_sigma = models.FloatField(null=True)
     subduction_fault_rupture_offset = models.FloatField(null=True)
