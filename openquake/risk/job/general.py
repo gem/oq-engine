@@ -38,7 +38,7 @@ from openquake.utils.tasks import check_job_status
 
 from celery.decorators import task
 
-LOG = logs.LOG
+
 BLOCK_SIZE = 100
 
 
