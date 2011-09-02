@@ -247,6 +247,8 @@ def launchpad_lookup(lp, bugs):
     """ looks up a list of bugs in launchpad """
     try:
         bug_instances = [lp.bugs[bug] for bug in bugs if bug]
+
+        # returns bug_instances if they are belonging to PROJECT_NAME
         return [bug_instance for bug_instance in bug_instances
                 if bug_instance.bug_tasks[0].milestone
                 and (
