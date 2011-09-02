@@ -653,13 +653,11 @@ CREATE TABLE uiapi.oq_params (
     area_source_magnitude_scaling_relationship VARCHAR,
     compute_mean_hazard_curve boolean,
     conditional_loss_poe float[],
-    exposure VARCHAR,
     fault_magnitude_scaling_relationship VARCHAR,
     fault_magnitude_scaling_sigma float,
     fault_rupture_offset float,
     fault_surface_discretization float,
     gmf_random_seed integer,
-    gmpe_logic_tree_file VARCHAR,
     gmpe_lt_random_seed integer,
     gmpe_model_name VARCHAR,
     grid_source_magnitude_scaling_relationship VARCHAR,
@@ -684,8 +682,6 @@ CREATE TABLE uiapi.oq_params (
     --     ('deep-soil', 'Deep-Soil'),
     -- )
     sadigh_site_type VARCHAR,
-    single_rupture_model VARCHAR,
-    source_model_logic_tree_file VARCHAR,
     source_model_lt_random_seed integer,
     -- STANDARD_DEVIATION_TYPE_CHOICES = (
     --     ('total', 'Total'),
@@ -711,7 +707,6 @@ CREATE TABLE uiapi.oq_params (
     -- )
     treat_area_source_as VARCHAR,
     treat_grid_source_as VARCHAR,
-    vulnerability VARCHAR,
     width_of_mfd_bin float,
 
     -- timestamp
