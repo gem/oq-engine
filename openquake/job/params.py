@@ -52,7 +52,13 @@ PARAMS = {}
 
 
 def define_param(name, column, modes=None, default=None):
-    """Adds a new column definition to the PARAMS dictionary"""
+    """
+    Adds a new parameter definition to the PARAMS dictionary
+
+    If `column` is `None`, the parameter is only checked but not inserted
+    in the `oq_params` table.
+    """
+
     if modes is None:
         modes = CALCULATION_MODES
     elif isinstance(modes, basestring):
@@ -68,10 +74,12 @@ def define_param(name, column, modes=None, default=None):
         # pylint: disable=W0212
         return type(OqParams._meta.get_field_by_name(column)[0])
 
-    PARAMS[name] = Param(column=column,
-                         type=column_type(),
-                         default=default,
-                         modes=modes)
+    if column == None:
+        PARAMS[name] = Param(column=column, type=None, default=default,
+                             modes=modes)
+    else:
+        PARAMS[name] = Param(column=column, type=column_type(),
+                             default=default, modes=modes)
 
 
 define_param('SITES', 'sites')
