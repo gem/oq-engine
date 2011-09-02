@@ -533,29 +533,22 @@ class OqParams(models.Model):
     aggregate_loss_curve = models.NullBooleanField(null=True) # 1/0 ?
     area_source_discretization = models.FloatField(null=True)
     area_source_magnitude_scaling_relationship = models.TextField(null=True)
-    base_path = models.TextField(null=True) # ???
     compute_mean_hazard_curve = models.NullBooleanField(null=True)
     conditional_loss_poe = FloatArrayField(null=True)
-    exposure = models.TextField(null=True)
     fault_magnitude_scaling_relationship = models.TextField(null=True)
     fault_magnitude_scaling_sigma = models.FloatField(null=True)
     fault_rupture_offset = models.FloatField(null=True)
     fault_surface_discretization = models.FloatField(null=True)
     gmf_random_seed = models.IntegerField(null=True)
-    gmpe_logic_tree_file = models.TextField(null=True)
     gmpe_lt_random_seed = models.IntegerField(null=True)
     gmpe_model_name = models.TextField(null=True)
     grid_source_magnitude_scaling_relationship = models.TextField(null=True)
-    hazard_map_cpt = models.TextField(null=True)
     include_area_sources = models.NullBooleanField(null=True)
     include_fault_source = models.NullBooleanField(null=True)
     include_grid_sources = models.NullBooleanField(null=True)
     include_subduction_fault_source = models.NullBooleanField(null=True)
     loss_curves_output_prefix = models.TextField(null=True)
-    loss_map = models.TextField(null=True)
-    loss_ratio_map = models.TextField(null=True)
     maximum_distance = models.FloatField(null=True)
-    output_dir = models.TextField(null=True)
     quantile_levels = FloatArrayField(null=True)
     reference_depth_to_2pt5km_per_sec_param = models.FloatField(null=True)
     risk_cell_size = models.FloatField(null=True)
@@ -571,8 +564,6 @@ class OqParams(models.Model):
         ('deep-soil', 'Deep-Soil'),
     )
     sadigh_site_type = models.TextField(null=True, choices=SADIGH_SITE_TYPE_CHOICES)
-    single_rupture_model = models.TextField(null=True)
-    source_model_logic_tree_file = models.TextField(null=True)
     source_model_lt_random_seed = models.IntegerField(null=True)
     STANDARD_DEVIATION_TYPE_CHOICES = (
         ('total', 'Total'),
@@ -598,7 +589,6 @@ class OqParams(models.Model):
     )
     treat_area_source_as = models.TextField(null=True, choices=SOURCE_AS_CHOICES)
     treat_grid_source_as = models.TextField(null=True, choices=SOURCE_AS_CHOICES)
-    vulnerability = models.TextField(null=True)
     width_of_mfd_bin = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
