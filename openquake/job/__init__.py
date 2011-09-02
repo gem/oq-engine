@@ -35,7 +35,8 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.models import OqJob, OqParams, OqUser, JobStats
+from openquake.db.models import (
+    OqJob, OqParams, OqUser, JobStats, FloatArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -182,10 +183,9 @@ def guarantee_file(base_path, file_spec):
     url = urlparse.urlparse(file_spec)
     return resolve_handler(url, base_path).get()
 
+from django.contrib.gis.db import models
 
 from collections import namedtuple
-
-import django
 
 Param = namedtuple('Param', 'column type default modes')
 
@@ -204,22 +204,14 @@ def define_param(name, column, modes=None, default=None):
     assert modes.issubset(CALCULATION_MODES),\
            'unexpected mode(s) %r' % (modes - CALCULATION_MODES)
 
-    def column_definition():
-        try:
-            field = OqParams._meta.get_field_by_name(column)
-        except django.db.models.fields.FieldDoesNotExist:
-            print '    %s = models.Field(null=True)' % column
-        else:
-            return type(field[0])
+    def column_type():
+        return type(OqParams._meta.get_field_by_name(column)[0])
 
-    type_ = column_definition()
-
-    PARAMS[name] = Param(column=column, type=type_, default=default, modes=modes)
+    PARAMS[name] = Param(column=column, type=column_type(), default=default, modes=modes)
 
 define_param('SITES', 'sites')
 define_param('REGION_GRID_SPACING', 'region_grid_spacing')
 define_param('REGION_VERTEX', 'region')
-define_param('CALCULATION_MODE', 'job_type')
 define_param('COMPONENT', 'component')
 define_param('INTENSITY_MEASURE_TYPE', 'imt')
 define_param('GMPE_TRUNCATION_TYPE', 'truncation_type')
@@ -313,18 +305,8 @@ def prepare_job(params):
         if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
             raise RuntimeError(
                 "Job config contains both sites and region of interest.")
-
-        ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
-        sites = GEOSGeometry(ewkt)
-        oqp.sites = sites
-
     elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
-        oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
-
-        ewkt = shapes.polygon_ewkt_from_coords(params['REGION_VERTEX'])
-        region = GEOSGeometry(ewkt)
-        oqp.region = region
-
+        pass
     else:
         raise RuntimeError(
             "Job config contains neither sites nor region of interest.")
@@ -338,48 +320,53 @@ def prepare_job(params):
 
     oqp.job_type = job.job_type
 
-    # fill-in parameters
-    oqp.component = ENUM_MAP[params['COMPONENT']]
-    oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
-    oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
-    oqp.truncation_level = float(params['TRUNCATION_LEVEL'])
-    oqp.reference_vs30_value = float(params['REFERENCE_VS30_VALUE'])
+    for name, param in PARAMS.items():
+        if job.job_type in param.modes and param.default is not None:
+            setattr(oqp, param.column, param.default)
 
-    if oqp.imt == 'sa':
-        oqp.period = float(params.get('PERIOD', 0.0))
-        oqp.damping = float(params.get('DAMPING', 0.0))
-
-    if oqp.job_type == 'classical':
-        oqp.imls = [float(v) for v in
-                        params['INTENSITY_MEASURE_LEVELS'].split(",")]
-        oqp.poes = [float(v) for v in
-                        params['POES_HAZARD_MAPS'].split(" ")]
-
-    if oqp.job_type in ('deterministic', 'event_based'):
-        oqp.gm_correlated = (
-            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
-
-    if oqp.job_type in  ('classical', 'event_based'):
-        oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
-        oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
-        oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-    else:
-        oqp.gmf_calculation_number = int(
-            params['NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS'])
-        oqp.rupture_surface_discretization = float(
-            params['RUPTURE_SURFACE_DISCRETIZATION'])
-
-    if oqp.job_type == 'event_based':
-        oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
+    number_re = re.compile('[^0-9.]+')
 
     for name, value in params.items():
         try:
             param = PARAMS[name]
         except KeyError:
-            print "define_param('%s', 'id', None)" % name
+            print 'Ignoring unknown parameter %r' % name
+            continue
 
         if job.job_type not in param.modes:
             print 'Ignoring', name, 'in', job.job_type, ', it\'s meaningful only in', ', '.join(param.modes)
+        else:
+            try:
+                if param.type in (models.BooleanField, models.NullBooleanField):
+                    value = 'False' if (value.lower() in ('0', 'false')) else 'True'
+                elif param.type == models.PolygonField:
+                    ewkt = shapes.polygon_ewkt_from_coords(value)
+                    value = GEOSGeometry(ewkt)
+                elif param.type == models.MultiPointField:
+                    ewkt = shapes.multipoint_ewkt_from_coords(value)
+                    value = GEOSGeometry(ewkt)
+                elif param.type == FloatArrayField:
+                    value = [float(v) for v in number_re.split(value.strip())]
+
+                setattr(oqp, param.column, value)
+            except:
+                import pdb; pdb.post_mortem()
+
+    oqp.component = ENUM_MAP[params['COMPONENT']]
+    oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
+    oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
+
+    if oqp.imt != 'sa':
+        oqp.period = None
+        oqp.damping = None
+
+    print 'job_type', oqp.job_type
+    print 'imt', oqp.imt
+    print 'damping', repr(oqp.damping)
+    print 'region', repr(oqp.region)
+    print 'region_grid_spacing', repr(oqp.region_grid_spacing)
+    print 'sites', repr(oqp.sites)
+    print 'gm_correlated', repr(oqp.gm_correlated)
 
     oqp.save()
     job.oq_params = oqp
