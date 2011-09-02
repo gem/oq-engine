@@ -34,7 +34,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.models import OqJob, OqParams, OqUser
+from openquake.db.models import OqJob, OqParams, OqUser, InputSet, Input
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -53,6 +53,14 @@ CALCULATION_MODE = {
     'Classical': 'classical',
     'Deterministic': 'deterministic',
     'Event Based': 'event_based',
+}
+
+INPUT_FILE_TYPES = {
+    'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
+    'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
+    'EXPOSURE': 'exposure',
+    'VULNERABILITY': 'vulnerability',
+    'SINGLE_RUPTURE_MODEL': 'rupture',
 }
 
 ENUM_MAP = {
@@ -183,15 +191,32 @@ def guarantee_file(base_path, file_spec):
 
 
 @transaction.commit_on_success(using='job_init')
-def prepare_job(params):
+def prepare_job(params):  # pylint: disable=R0912,R0915
     """
     Create a new OqJob and fill in the related OpParams entry.
 
     Returns the newly created job object.
     """
-    oqp = OqParams(upload=None)
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name="openquake")
 
-    # fill in parameters
+    input_set = InputSet(upload=None, owner=owner)
+    input_set.save()
+
+    base_path = params['BASE_PATH']
+
+    # insert input files in input table
+    for param_key, file_type in INPUT_FILE_TYPES.items():
+        if param_key not in params:
+            continue
+        path = os.path.join(base_path, params[param_key])
+        in_model = Input(input_set=input_set, path=path,
+                         input_type=file_type, size=os.path.getsize(path))
+        in_model.save()
+
+    oqp = OqParams(input_set=input_set)
+
+    # fill in sites/region
     if 'SITES' in params:
         if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
             raise RuntimeError(
@@ -212,16 +237,8 @@ def prepare_job(params):
         raise RuntimeError(
             "Job config contains neither sites nor region of interest.")
 
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name='openquake')
-
-    job = OqJob(
-        owner=owner, path=None,
-        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
-
-    oqp.job_type = job.job_type
-
-    # fill-in parameters
+    # fill in rest of the parameters
+    oqp.job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -256,7 +273,8 @@ def prepare_job(params):
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
 
     oqp.save()
-    job.oq_params = oqp
+
+    job = OqJob(owner=owner, path=None, oq_params=oqp, job_type=oqp.job_type)
     job.save()
 
     return job
