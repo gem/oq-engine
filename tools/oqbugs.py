@@ -189,7 +189,7 @@ def arg_parse():
     # after partial check, force -t/--time as required parameter
     #parser._actions[0].required = True
 
-    if len(remaining_argv):
+    if remaining_argv:
         if args.time:
             launchpad = launchpad_login()
             commits_output = CommitsOutput.since(args.time)
