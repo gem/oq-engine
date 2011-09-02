@@ -649,40 +649,180 @@ CREATE TABLE uiapi.oq_params (
              AND (rupture_surface_discretization IS NULL))),
 
     aggregate_loss_curve boolean,
-    area_source_discretization float,
-    area_source_magnitude_scaling_relationship VARCHAR,
-    compute_mean_hazard_curve boolean,
+    area_source_discretization float
+        CONSTRAINT area_source_discretization_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (area_source_discretization IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (area_source_discretization IS NULL))),
+    area_source_magnitude_scaling_relationship VARCHAR
+        CONSTRAINT area_source_magnitude_scaling_relationship_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (area_source_magnitude_scaling_relationship IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (area_source_magnitude_scaling_relationship IS NULL))),
+    compute_mean_hazard_curve boolean
+        CONSTRAINT compute_mean_hazard_curve_is_set
+        CHECK(
+            ((job_type = 'classical')
+             AND (compute_mean_hazard_curve IS NOT NULL))
+            OR
+            ((job_type IN ('deterministic', 'event_based'))
+             AND (compute_mean_hazard_curve IS NULL))),
     conditional_loss_poe float[],
-    fault_magnitude_scaling_relationship VARCHAR,
-    fault_magnitude_scaling_sigma float,
-    fault_rupture_offset float,
-    fault_surface_discretization float,
-    gmf_random_seed integer,
-    gmpe_lt_random_seed integer,
+    fault_magnitude_scaling_relationship VARCHAR
+        CONSTRAINT fault_magnitude_scaling_relationship_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (fault_magnitude_scaling_relationship IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_magnitude_scaling_relationship IS NULL))),
+    fault_magnitude_scaling_sigma float
+        CONSTRAINT fault_magnitude_scaling_sigma_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (fault_magnitude_scaling_sigma IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_magnitude_scaling_sigma IS NULL))),
+    fault_rupture_offset float
+        CONSTRAINT fault_rupture_offset_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (fault_rupture_offset IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_rupture_offset IS NULL))),
+    fault_surface_discretization float
+        CONSTRAINT fault_surface_discretization_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (fault_surface_discretization IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_surface_discretization IS NULL))),
+    gmf_random_seed integer
+        CONSTRAINT gmf_random_seed_is_set
+        CHECK(
+            ((job_type IN ('deterministic', 'event_based'))
+             AND (gmf_random_seed IS NOT NULL))
+            OR
+            ((job_type = 'classical')
+             AND (gmf_random_seed IS NULL))),
+    gmpe_lt_random_seed integer
+        CONSTRAINT gmpe_lt_random_seed_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (gmpe_lt_random_seed IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (gmpe_lt_random_seed IS NULL))),
     gmpe_model_name VARCHAR,
     grid_source_magnitude_scaling_relationship VARCHAR,
-    include_area_sources boolean,
-    include_fault_source boolean,
-    include_grid_sources boolean,
-    include_subduction_fault_source boolean,
+    include_area_sources boolean
+        CONSTRAINT include_area_sources_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (include_area_sources IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_area_sources IS NULL))),
+    include_fault_source boolean
+        CONSTRAINT include_fault_source_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (include_fault_source IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_fault_source IS NULL))),
+    include_grid_sources boolean
+        CONSTRAINT include_grid_sources_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (include_grid_sources IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_grid_sources IS NULL))),
+    include_subduction_fault_source boolean
+        CONSTRAINT include_subduction_fault_source_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (include_subduction_fault_source IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_subduction_fault_source IS NULL))),
     loss_curves_output_prefix VARCHAR,
-    maximum_distance VARCHAR,
-    quantile_levels float[],
-    reference_depth_to_2pt5km_per_sec_param float,
+    maximum_distance VARCHAR
+        CONSTRAINT maximum_distance_is_set
+        CHECK(
+            ((job_type = 'classical')
+             AND (maximum_distance IS NOT NULL))
+            OR
+            ((job_type IN ('deterministic', 'event_based'))
+             AND (maximum_distance IS NULL))),
+    quantile_levels float[]
+        CONSTRAINT quantile_levels_is_set
+        CHECK(
+            ((job_type = 'classical')
+             AND (quantile_levels IS NOT NULL))
+            OR
+            ((job_type IN ('deterministic', 'event_based'))
+             AND (quantile_levels IS NULL))),
+    reference_depth_to_2pt5km_per_sec_param float
+        CONSTRAINT reference_depth_to_2pt5km_per_sec_param_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (reference_depth_to_2pt5km_per_sec_param IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (reference_depth_to_2pt5km_per_sec_param IS NULL))),
     risk_cell_size float,
-    rupture_aspect_ratio float,
+    rupture_aspect_ratio float
+        CONSTRAINT rupture_aspect_ratio_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (rupture_aspect_ratio IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (rupture_aspect_ratio IS NULL))),
     -- RUPTURE_FLOATING_TYPE_CHOICES = (
     --     ('only along strike ( rupture full ddw)', 'Only along strike ( rupture full DDW)'),
     --     ('along strike and down dip', 'Along strike and down dip'),
     --     ('along strike & centered down dip', 'Along strike & centered down dip'),
     -- )
-    rupture_floating_type VARCHAR,
+    rupture_floating_type VARCHAR
+        CONSTRAINT rupture_floating_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (rupture_floating_type IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (rupture_floating_type IS NULL))),
     -- SADIGH_SITE_TYPE_CHOICES = (
     --     ('rock', 'Rock'),
     --     ('deep-soil', 'Deep-Soil'),
     -- )
-    sadigh_site_type VARCHAR,
-    source_model_lt_random_seed integer,
+    sadigh_site_type VARCHAR
+        CONSTRAINT sadigh_site_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (sadigh_site_type IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (sadigh_site_type IS NULL))),
+    source_model_lt_random_seed integer
+        CONSTRAINT source_model_lt_random_seed_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (source_model_lt_random_seed IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (source_model_lt_random_seed IS NULL))),
     -- STANDARD_DEVIATION_TYPE_CHOICES = (
     --     ('total', 'Total'),
     --     ('inter-event', 'Inter-Event'),
@@ -692,22 +832,92 @@ CREATE TABLE uiapi.oq_params (
     --     ('total (pga dependent)', 'Total (PGA Dependent)'),
     --     ('intra-event (mag dependent)', 'Intra-Event (Mag Dependent)'),
     -- )
-    standard_deviation_type VARCHAR,
-    subduction_fault_magnitude_scaling_relationship VARCHAR,
-    subduction_fault_magnitude_scaling_sigma float,
-    subduction_fault_rupture_offset float,
-    subduction_fault_surface_discretization float,
-    subduction_rupture_aspect_ratio float,
-    subduction_rupture_floating_type VARCHAR,
+    standard_deviation_type VARCHAR
+        CONSTRAINT standard_deviation_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (standard_deviation_type IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (standard_deviation_type IS NULL))),
+    subduction_fault_magnitude_scaling_relationship VARCHAR
+        CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_magnitude_scaling_relationship IS NULL))),
+    subduction_fault_magnitude_scaling_sigma float
+        CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_magnitude_scaling_sigma IS NULL))),
+    subduction_fault_rupture_offset float
+        CONSTRAINT subduction_fault_rupture_offset_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (subduction_fault_rupture_offset IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_rupture_offset IS NULL))),
+    subduction_fault_surface_discretization float
+        CONSTRAINT subduction_fault_surface_discretization_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (subduction_fault_surface_discretization IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_surface_discretization IS NULL))),
+    subduction_rupture_aspect_ratio float
+        CONSTRAINT subduction_rupture_aspect_ratio_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (subduction_rupture_aspect_ratio IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_rupture_aspect_ratio IS NULL))),
+    subduction_rupture_floating_type VARCHAR
+        CONSTRAINT subduction_rupture_floating_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (subduction_rupture_floating_type IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_rupture_floating_type IS NULL))),
     -- SOURCE_AS_CHOICES = (
     --     ('point sources', 'Point Sources'),
     --     ('line sources (random or given strike)', 'Line Sources (random or given strike)'),
     --     ('cross hair line sources', 'Cross Hair Line Sources'),
     --     ('16 spoked line sources', '16 Spoked Line Sources'),
     -- )
-    treat_area_source_as VARCHAR,
-    treat_grid_source_as VARCHAR,
-    width_of_mfd_bin float,
+    treat_area_source_as VARCHAR
+        CONSTRAINT treat_area_source_as_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (treat_area_source_as IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (treat_area_source_as IS NULL))),
+    treat_grid_source_as VARCHAR
+        CONSTRAINT treat_grid_source_as_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (treat_grid_source_as IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (treat_grid_source_as IS NULL))),
+    width_of_mfd_bin float
+        CONSTRAINT width_of_mfd_bin_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based'))
+             AND (width_of_mfd_bin IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (width_of_mfd_bin IS NULL))),
 
     -- timestamp
     last_update timestamp without time zone
