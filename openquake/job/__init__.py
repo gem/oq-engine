@@ -174,6 +174,31 @@ def parse_config_files(config_file, default_configuration_files):
     return params, sections
 
 
+def filter_configuration_parameters(params, sections):
+    """
+    Pre-process configuration parameters removing unknown ones.
+    """
+
+    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
+    new_params = dict()
+
+    for name, value in params.items():
+        try:
+            param = PARAMS[name]
+        except KeyError:
+            print 'Ignoring unknown parameter %r' % name
+            continue
+
+        if job_type not in param.modes:
+            print 'Ignoring', name, 'in', job_type, \
+                ', it\'s meaningful only in', ', '.join(param.modes)
+            continue
+
+        new_params[name] = value
+
+    return new_params, sections
+
+
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
@@ -207,28 +232,23 @@ def prepare_job(params):
     number_re = re.compile('[^0-9.]+')
 
     for name, value in params.items():
-        try:
-            param = PARAMS[name]
-        except KeyError:
-            print 'Ignoring unknown parameter %r' % name
+        param = PARAMS[name]
+        value = value.strip()
+
+        if param.type in (models.BooleanField, models.NullBooleanField):
+            value = value.lower() not in ('0', 'false')
+        elif param.type == models.PolygonField:
+            ewkt = shapes.polygon_ewkt_from_coords(value)
+            value = GEOSGeometry(ewkt)
+        elif param.type == models.MultiPointField:
+            ewkt = shapes.multipoint_ewkt_from_coords(value)
+            value = GEOSGeometry(ewkt)
+        elif param.type == FloatArrayField:
+            value = [float(v) for v in number_re.split(value) if len(v)]
+        elif param.type == None:
             continue
 
-        if job.job_type not in param.modes:
-            print 'Ignoring', name, 'in', job.job_type, \
-                ', it\'s meaningful only in', ', '.join(param.modes)
-        else:
-            if param.type in (models.BooleanField, models.NullBooleanField):
-                value = value.lower() not in ('0', 'false')
-            elif param.type == models.PolygonField:
-                ewkt = shapes.polygon_ewkt_from_coords(value)
-                value = GEOSGeometry(ewkt)
-            elif param.type == models.MultiPointField:
-                ewkt = shapes.multipoint_ewkt_from_coords(value)
-                value = GEOSGeometry(ewkt)
-            elif param.type == FloatArrayField:
-                value = [float(v) for v in number_re.split(value.strip())]
-
-            setattr(oqp, param.column, value)
+        setattr(oqp, param.column, value)
 
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
@@ -319,6 +339,7 @@ class Job(object):
 
         params, sections = parse_config_files(
             config_file, Job.default_configs())
+        params, sections = filter_configuration_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
         is_valid, errors = validator.is_valid()
