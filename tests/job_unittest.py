@@ -19,14 +19,17 @@
 import mock
 import os
 import unittest
+import logging
 
+from django.contrib.gis.geos.polygon import Polygon
+from django.contrib.gis.geos.collections import MultiPoint
 from django.core import exceptions
 
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
-from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob
@@ -49,15 +52,24 @@ REGION_TEST_FILE = "small.region"
 FLAGS = flags.FLAGS
 
 
-def _toCoordList(polygon):
+def _to_coord_list(geometry):
     pts = []
 
-    # postgis -> lon/lat -> config lat/lon, skip the closing point
-    for c in polygon.coords[0][:-1]:
-        pts.append("%.2f" % c[1])
-        pts.append("%.2f" % c[0])
+    if isinstance(geometry, Polygon):
+        # Ignore the last coord:
+        for c in geometry.coords[0][:-1]:
+            pts.append(str(c[1]))
+            pts.append(str(c[0]))
 
-    return ", ".join(pts)
+        return ', '.join(pts)
+    elif isinstance(geometry, MultiPoint):
+        for c in geometry.coords:
+            pts.append(str(c[1]))
+            pts.append(str(c[0]))
+
+        return ', '.join(pts)
+    else:
+        raise RuntimeError('Unexpected geometry type: %s' % type(geometry))
 
 
 class JobTestCase(unittest.TestCase):
@@ -88,26 +100,16 @@ class JobTestCase(unittest.TestCase):
         kvs.cache_gc('::JOB::2::')
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
-
-        class call_logger(object):
-
-            def __init__(self, method):
-                self.called = False
-                self.method = method
-
-            def __call__(self, *args, **kwargs):
-                try:
-                    return self.method(*args, **kwargs)
-                finally:
-                    self.called = True
-
+        handler = logging.handlers.BufferingHandler(capacity=float('inf'))
+        Job.unknown_job_logger.addHandler(handler)
         good_defaults = Job._Job__defaults
         Job._Job__defaults = ["/tmp/sbfalds"]
-        LOG.warning = call_logger(LOG.warning)
-        self.assertFalse(LOG.warning.called)
-        Job.default_configs()
-        self.assertTrue(LOG.warning.called)
-        Job._Job__defaults = good_defaults
+        try:
+            Job.default_configs()
+            self.assertEqual(len(handler.buffer), 1)
+        finally:
+            Job.unknown_job_logger.removeHandler(handler)
+            Job._Job__defaults = good_defaults
 
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
@@ -242,6 +244,86 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     As a side-effect, also tests that the inserted record satisfied
     the DB constraints.
     """
+    BASE_CLASSICAL_PARAMS = {
+        'CALCULATION_MODE': 'Classical',
+        'POES_HAZARD_MAPS': '0.01 0.1',
+        'INTENSITY_MEASURE_TYPE': 'PGA',
+        'MINIMUM_MAGNITUDE': '5.0',
+        'INVESTIGATION_TIME': '50.0',
+        'TREAT_GRID_SOURCE_AS': 'Point Sources',
+        'INCLUDE_AREA_SOURCES': 'true',
+        'TREAT_AREA_SOURCE_AS': 'Point Sources',
+        'QUANTILE_LEVELS': '0.25 0.50',
+        'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
+        'GROUND_MOTION_CORRELATION': 'true',
+        'GMPE_TRUNCATION_TYPE': '2 Sided',
+        'STANDARD_DEVIATION_TYPE': 'Total',
+        'MAXIMUM_DISTANCE': '200.0',
+        'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
+        'PERIOD': '0.0',
+        'AGGREGATE_LOSS_CURVE': '1',
+        'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+        'INCLUDE_FAULT_SOURCE': 'true',
+        'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'REFERENCE_VS30_VALUE': '760.0',
+        'COMPONENT': 'Average Horizontal (GMRotI50)',
+        'CONDITIONAL_LOSS_POE': '0.01',
+        'TRUNCATION_LEVEL': '3',
+        'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+        'AREA_SOURCE_DISCRETIZATION': '0.1',
+    }
+
+    BASE_DETERMINISTIC_PARAMS = {
+        'CALCULATION_MODE': 'Deterministic',
+        'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
+        'GMF_RANDOM_SEED': '3',
+        'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
+        'INTENSITY_MEASURE_TYPE': 'PGA',
+        'REFERENCE_VS30_VALUE': '759.0',
+        'COMPONENT': 'Average Horizontal (GMRotI50)',
+                'PERIOD': '0.0',
+        'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
+        'TRUNCATION_LEVEL': '3',
+        'GMPE_TRUNCATION_TYPE': '1 Sided',
+        'GROUND_MOTION_CORRELATION': 'true',
+    }
+
+    BASE_EVENT_BASED_PARAMS = {
+        'CALCULATION_MODE': 'Event Based',
+        'POES_HAZARD_MAPS': '0.01 0.10',
+        'INTENSITY_MEASURE_TYPE': 'SA',
+        'INCLUDE_GRID_SOURCES': 'false',
+        'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
+        'RUPTURE_ASPECT_RATIO': '1.5',
+        'MINIMUM_MAGNITUDE': '5.0',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'INVESTIGATION_TIME': '50.0',
+        'TREAT_GRID_SOURCE_AS': 'Point Sources',
+        'INCLUDE_AREA_SOURCES': 'true',
+        'TREAT_AREA_SOURCE_AS': 'Point Sources',
+        'QUANTILE_LEVELS': '0.25 0.50',
+        'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
+        'GROUND_MOTION_CORRELATION': 'false',
+        'GMPE_TRUNCATION_TYPE': 'None',
+        'STANDARD_DEVIATION_TYPE': 'Total',
+        'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+        'RISK_CELL_SIZE': '0.0005',
+        'MAXIMUM_DISTANCE': '200.0',
+        'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
+        'PERIOD': '1.0',
+        'AGGREGATE_LOSS_CURVE': 'true',
+        'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+        'INCLUDE_FAULT_SOURCE': 'true',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'REFERENCE_VS30_VALUE': '760.0',
+        'COMPONENT': 'Average Horizontal',
+        'CONDITIONAL_LOSS_POE': '0.01',
+        'TRUNCATION_LEVEL': '3',
+        'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+        'AREA_SOURCE_DISCRETIZATION': '0.1',
+        'FAULT_RUPTURE_OFFSET': '5.0',
+    }
 
     def tearDown(self):
         if hasattr(self, "job") and self.job:
@@ -252,41 +334,40 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEquals(expected, got_params)
 
+    def test_prepare_job_raises_if_no_geometry(self):
+        '''
+        If no geometry is specified (neither SITES nor REGION_VERTEX +
+        REGION_GRID_SPACING), a RuntimeError should be raised.
+
+        Note: The job validator _should_ catch any such error before we hit
+        prepare_job.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+
+        self.assertRaises(RuntimeError, prepare_job, params)
+
+    def test_prepare_job_raises_if_both_geometries_specified(self):
+        '''
+        If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified, a
+        RuntimeError should be raised. A job config can only have one or the
+        other.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        self.assertRaises(RuntimeError, prepare_job, params)
+
     def test_prepare_classical_job(self):
-        params = {
-            'CALCULATION_MODE': 'Classical',
-            'POES_HAZARD_MAPS': '0.01 0.1',
-            'INTENSITY_MEASURE_TYPE': 'PGA',
-            'REGION_VERTEX': '37.90, -121.90, 37.90, -121.60, 37.50, -121.60',
-            'MINIMUM_MAGNITUDE': '5.0',
-            'INVESTIGATION_TIME': '50.0',
-            'TREAT_GRID_SOURCE_AS': 'Point Sources',
-            'INCLUDE_AREA_SOURCES': 'true',
-            'TREAT_AREA_SOURCE_AS': 'Point Sources',
-            'QUANTILE_LEVELS': '0.25 0.50',
-            'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
-            'GROUND_MOTION_CORRELATION': 'true',
-            'GMPE_TRUNCATION_TYPE': '2 Sided',
-            'STANDARD_DEVIATION_TYPE': 'Total',
-            'MAXIMUM_DISTANCE': '200.0',
-            'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
-            'REGION_GRID_SPACING': '0.1',
-            'PERIOD': '0.0',
-            'AGGREGATE_LOSS_CURVE': '1',
-            'NUMBER_OF_SEISMICITY_HISTORIES': '1',
-            'INCLUDE_FAULT_SOURCE': 'true',
-            'FAULT_SURFACE_DISCRETIZATION': '1.0',
-            'REFERENCE_VS30_VALUE': '760.0',
-            'COMPONENT': 'Average Horizontal (GMRotI50)',
-            'CONDITIONAL_LOSS_POE': '0.01',
-            'TRUNCATION_LEVEL': '3',
-            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
-            'AREA_SOURCE_DISCRETIZATION': '0.1',
-        }
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'classical',
              'upload': None,
@@ -306,27 +387,45 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gm_correlated': None,
              }, self.job.oq_params)
 
+    def test_prepare_classical_job_over_sites(self):
+        '''
+        Same as test_prepare_classical_job, but with geometry specified as
+        a list of sites.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['SITES'],
+                          _to_coord_list(self.job.oq_params.sites))
+        self.assertFieldsEqual(
+            {'job_type': 'classical',
+             'upload': None,
+             'min_magnitude': 5.0,
+             'investigation_time': 50.0,
+             'component': 'gmroti50',
+             'imt': 'pga',
+             'period': None,
+             'truncation_type': 'twosided',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 760.0,
+             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
+             'poes': [0.01, 0.1],
+             'realizations': 2,
+             'histories': None,
+             'gm_correlated': None,
+             }, self.job.oq_params)
+
     def test_prepare_deterministic_job(self):
-        params = {
-            'CALCULATION_MODE': 'Deterministic',
-            'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
-            'GMF_RANDOM_SEED': '3',
-            'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
-            'INTENSITY_MEASURE_TYPE': 'PGA',
-            'REFERENCE_VS30_VALUE': '759.0',
-            'COMPONENT': 'Average Horizontal (GMRotI50)',
-            'REGION_GRID_SPACING': '0.02',
-            'REGION_VERTEX': '34.07, -118.25, 34.07, -118.22, 34.04, -118.22',
-            'PERIOD': '0.0',
-            'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
-            'TRUNCATION_LEVEL': '3',
-            'GMPE_TRUNCATION_TYPE': '1 Sided',
-            'GROUND_MOTION_CORRELATION': 'true',
-        }
+
+        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+        params['REGION_VERTEX'] = \
+            '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
+        params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'deterministic',
              'upload': None,
@@ -346,53 +445,79 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gm_correlated': True,
              }, self.job.oq_params)
 
+    def test_prepare_deterministic_job_over_sites(self):
+        '''
+        Same as test_prepare_deterministic_job, but with geometry specified as
+        a list of sites.
+        '''
+
+        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+        params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['SITES'],
+                          _to_coord_list(self.job.oq_params.sites))
+        self.assertFieldsEqual(
+            {'job_type': 'deterministic',
+             'upload': None,
+             'min_magnitude': None,
+             'investigation_time': None,
+             'component': 'gmroti50',
+             'imt': 'pga',
+             'period': None,
+             'truncation_type': 'onesided',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 759.0,
+             'imls': None,
+             'poes': None,
+             'realizations': None,
+             'histories': None,
+             'gm_correlated': True,
+             }, self.job.oq_params)
+
     def test_prepare_event_based_job(self):
-        params = {
-            'CALCULATION_MODE': 'Event Based',
-            'POES_HAZARD_MAPS': '0.01 0.10',
-            'INTENSITY_MEASURE_TYPE': 'SA',
-            'REGION_VERTEX': '33.88, -118.30, 33.88, -118.06, 33.76, -118.06',
-            'INCLUDE_GRID_SOURCES': 'false',
-            'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
-            'RUPTURE_ASPECT_RATIO': '1.5',
-            'MINIMUM_MAGNITUDE': '5.0',
-            'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
-            'INVESTIGATION_TIME': '50.0',
-            'TREAT_GRID_SOURCE_AS': 'Point Sources',
-            'INCLUDE_AREA_SOURCES': 'true',
-            'TREAT_AREA_SOURCE_AS': 'Point Sources',
-            'QUANTILE_LEVELS': '0.25 0.50',
-            'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
-            'GROUND_MOTION_CORRELATION': 'false',
-            'GMPE_TRUNCATION_TYPE': 'None',
-            'STANDARD_DEVIATION_TYPE': 'Total',
-            'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
-            'RISK_CELL_SIZE': '0.0005',
-            'MAXIMUM_DISTANCE': '200.0',
-            'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
-            'REGION_GRID_SPACING': '0.02',
-            'PERIOD': '1.0',
-            'AGGREGATE_LOSS_CURVE': 'true',
-            'NUMBER_OF_SEISMICITY_HISTORIES': '1',
-            'INCLUDE_FAULT_SOURCE': 'true',
-            'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
-            'FAULT_SURFACE_DISCRETIZATION': '1.0',
-            'REFERENCE_VS30_VALUE': '760.0',
-            'COMPONENT': 'Average Horizontal',
-            'CONDITIONAL_LOSS_POE': '0.01',
-            'TRUNCATION_LEVEL': '3',
-            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
-            'AREA_SOURCE_DISCRETIZATION': '0.1',
-            'FAULT_RUPTURE_OFFSET': '5.0',
-        }
+        params = self.BASE_EVENT_BASED_PARAMS.copy()
+        params['REGION_VERTEX'] = \
+            '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+        params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'event_based',
              'upload': None,
              'region_grid_spacing': 0.02,
+             'min_magnitude': 5.0,
+             'investigation_time': 50.0,
+             'component': 'average',
+             'imt': 'sa',
+             'period': 1.0,
+             'truncation_type': 'none',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 760.0,
+             'imls': None,
+             'poes': None,
+             'realizations': 5,
+             'histories': 1,
+             'gm_correlated': False,
+             }, self.job.oq_params)
+
+    def test_prepare_event_based_job_over_sites(self):
+        '''
+        Same as test_prepare_event_based_job, but with geometry specified as
+        a list of sites.
+        '''
+
+        params = self.BASE_EVENT_BASED_PARAMS.copy()
+        params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['SITES'],
+                          _to_coord_list(self.job.oq_params.sites))
+        self.assertFieldsEqual(
+            {'job_type': 'event_based',
+             'upload': None,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
              'component': 'average',

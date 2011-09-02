@@ -97,22 +97,6 @@ def output(fn):
     return output_writer
 
 
-def _plot(curve_path, result_path, **kwargs):
-    """
-    Build a plotter, and then render the plot
-    """
-    LOG.debug("Plotting %s" % kwargs['curve_mode'])
-
-    render_multi = kwargs.get("render_multi")
-    autoscale = False if kwargs['curve_mode'] == 'loss_ratio' else True
-    plotter = curve.RiskCurvePlotter(result_path,
-                                     curve_path,
-                                     mode=kwargs["curve_mode"],
-                                     render_multi=render_multi)
-    plotter.plot(autoscale_y=autoscale)
-    return plotter.filenames()
-
-
 @task
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
@@ -139,8 +123,7 @@ def read_sites_from_exposure(a_job):
     reader = exposure.ExposurePortfolioFile(path)
     constraint = a_job.region
 
-    LOG.debug(
-        "Constraining exposure parsing to %s" % constraint)
+    a_job.logger.debug("Constraining exposure parsing to %s", constraint)
 
     for site, _asset_data in reader.filter(constraint):
 

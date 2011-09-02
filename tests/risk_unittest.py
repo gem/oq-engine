@@ -36,7 +36,6 @@ from openquake.risk import deterministic_event_based as det
 from openquake.risk import common
 
 from tests.utils import helpers
-from tests.utils.helpers import patch
 
 
 ASSET_VALUE = 5.0
@@ -539,21 +538,38 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.vuln_function_1, gmfs, None, None))
 
     def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
-        self.assertEqual(shapes.EMPTY_CURVE,
-                prob.AggregateLossCurve({}, None).compute())
+        self.assertEqual(
+            shapes.EMPTY_CURVE, prob.AggregateLossCurve().compute(0, 0))
 
     def test_computes_the_aggregate_loss_curve(self):
-        vuln_functions = {"ID": self.vuln_function_2}
-
         # no epsilon_provided is needed because the vulnerability
         # function has all the covs equal to zero
-        aggregate_curve = prob.AggregateLossCurve(vuln_functions, None)
-        aggregate_curve.append(self.gmfs_1, self.asset_1)
-        aggregate_curve.append(self.gmfs_2, self.asset_2)
-        aggregate_curve.append(self.gmfs_3, self.asset_3)
-        aggregate_curve.append(self.gmfs_4, self.asset_4)
-        aggregate_curve.append(self.gmfs_5, self.asset_5)
-        aggregate_curve.append(self.gmfs_6, self.asset_6)
+        loss_ratios_1 = prob.compute_loss_ratios(
+            self.vuln_function_2, self.gmfs_1, None, self.asset_1)
+
+        loss_ratios_2 = prob.compute_loss_ratios(
+            self.vuln_function_2, self.gmfs_2, None, self.asset_2)
+
+        loss_ratios_3 = prob.compute_loss_ratios(
+            self.vuln_function_2, self.gmfs_3, None, self.asset_3)
+
+        loss_ratios_4 = prob.compute_loss_ratios(
+            self.vuln_function_2, self.gmfs_4, None, self.asset_4)
+
+        loss_ratios_5 = prob.compute_loss_ratios(
+            self.vuln_function_2, self.gmfs_5, None, self.asset_5)
+
+        loss_ratios_6 = prob.compute_loss_ratios(
+            self.vuln_function_2, self.gmfs_6, None, self.asset_6)
+
+        aggregate_curve = prob.AggregateLossCurve()
+
+        aggregate_curve.append(loss_ratios_1 * self.asset_1["assetValue"])
+        aggregate_curve.append(loss_ratios_2 * self.asset_2["assetValue"])
+        aggregate_curve.append(loss_ratios_3 * self.asset_3["assetValue"])
+        aggregate_curve.append(loss_ratios_4 * self.asset_4["assetValue"])
+        aggregate_curve.append(loss_ratios_5 * self.asset_5["assetValue"])
+        aggregate_curve.append(loss_ratios_6 * self.asset_6["assetValue"])
 
         expected_losses = numpy.array((7.2636, 57.9264, 187.4893, 66.9082,
                 47.0280, 248.7796, 23.2329, 121.3514, 177.4167, 259.2902,
@@ -567,79 +583,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (106.20489077, 0.917915), (172.88276113, 0.77686984),
                 (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
 
-        self.assertEqual(expected_curve, aggregate_curve.compute(6))
+        self.assertEqual(expected_curve, aggregate_curve.compute(
+                200, 50, number_of_samples=6))
 
-    def test_no_distribution_without_gmfs(self):
-        aggregate_curve = prob.AggregateLossCurve({}, None)
-        self.assertEqual(0, aggregate_curve.losses.size)
-
-    def test_with_no_vuln_function_no_distribution_is_added(self):
-        aggregate_curve = prob.AggregateLossCurve(
-                {"ID": shapes.EMPTY_VULN_FUNCTION}, None)
-
-        asset = {"vulnerabilityFunctionReference": "WRONG_ID",
-                "assetValue": 1.0, "assetID": "ASSET_ID"}
-
-        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
-        self.assertEqual(0, aggregate_curve.losses.size)
-
-    def test_tses_parameter_must_be_congruent(self):
-        aggregate_curve = prob.AggregateLossCurve(
-                {"ID": shapes.EMPTY_VULN_FUNCTION}, None)
-
-        asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
-
-        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
-
-        self.assertRaises(AssertionError,
-                aggregate_curve.append, {
-                "TSES": 2, "TimeSpan": 1, "IMLs": ()}, asset)
-
-    def test_time_span_parameter_must_be_congruent(self):
-        aggregate_curve = prob.AggregateLossCurve(
-                {"ID": shapes.EMPTY_VULN_FUNCTION}, None)
-
-        asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
-
-        aggregate_curve.append({"TSES": 1, "TimeSpan": 1, "IMLs": ()}, asset)
-
-        self.assertRaises(AssertionError,
-                aggregate_curve.append, {
-                "TSES": 1, "TimeSpan": 2, "IMLs": ()}, asset)
-
-    def test_gmfs_length_must_be_congruent(self):
-        aggregate_curve = prob.AggregateLossCurve(
-                {"ID": shapes.EMPTY_VULN_FUNCTION}, None)
-
-        asset = {"vulnerabilityFunctionReference": "ID", "assetValue": 1.0}
-
-        aggregate_curve.append({
-                "IMLs": (), "TSES": 1, "TimeSpan": 1}, asset)
-
-        self.assertRaises(AssertionError,
-                aggregate_curve.append, {
-                "IMLs": (1.0, ), "TSES": 1, "TimeSpan": 1}, asset)
-
-    def test_creating_the_aggregate_curve_from_kvs_loads_the_vuln_model(self):
-        # we have just self.vuln_function_2 stored in kvs
-        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id, None)
-
-        self.assertEqual(self.vuln_function_2,
-                aggregate_curve.vuln_model["ID"])
-
-    def test_creating_the_aggregate_curve_from_kvs_gets_all_the_gmfs(self):
-        # we have 6 gmfs stored in kvs
-        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id, None)
-        self.assertEqual(6, len(aggregate_curve.distribution))
-
-    def test_creating_the_aggregate_curve_from_kvs_gets_all_the_sites(self):
-        expected_curve = shapes.Curve([(39.52702042, 0.99326205),
-                (106.20489077, 0.917915), (172.88276113, 0.77686984),
-                (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
-
-        # result is correct, so we are getting the correct assets
-        aggregate_curve = prob.AggregateLossCurve.from_kvs(self.job_id, None)
-        self.assertEqual(expected_curve, aggregate_curve.compute(6))
+    def test_no_losses_without_gmfs(self):
+        aggregate_curve = prob.AggregateLossCurve()
+        self.assertEqual(None, aggregate_curve.losses)
 
     def test_curve_to_plot_interface_translation(self):
         curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
@@ -671,9 +620,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
         this test.
         """
-        with patch('openquake.output.curve.CurvePlot.write') as write_mock:
-            with patch('openquake.output.curve.CurvePlot.close') as close_mock:
-                aggregate.compute_aggregate_curve(self.job)
+
+        curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
+
+        with helpers.patch(
+            'openquake.output.curve.CurvePlot.write') as write_mock:
+            with helpers.patch(
+                'openquake.output.curve.CurvePlot.close') as close_mock:
+                aggregate.plot_aggregate_curve(self.job, curve)
 
                 # make sure write() and close() were both called
                 self.assertEqual(1, write_mock.call_count)
@@ -692,13 +646,13 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         del self.params["AGGREGATE_LOSS_CURVE"]
 
-        # storing a new job definition in kvs
-        self.job = helpers.create_job(self.params, base_path=".")
-        self.job.to_kvs()
+        curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
 
-        with patch('openquake.output.curve.CurvePlot.write') as write_mock:
-            with patch('openquake.output.curve.CurvePlot.close') as close_mock:
-                aggregate.compute_aggregate_curve(self.job)
+        with helpers.patch(
+            'openquake.output.curve.CurvePlot.write') as write_mock:
+            with helpers.patch(
+                'openquake.output.curve.CurvePlot.close') as close_mock:
+                aggregate.plot_aggregate_curve(self.job, curve)
 
                 # the plotter should not be called
                 self.assertEqual(0, write_mock.call_count)
