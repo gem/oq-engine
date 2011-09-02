@@ -309,7 +309,6 @@ COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only
 
 COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
 COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.job_stats.oq_job_id IS 'This field is unique since there should only be one stats record per job';
 
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
