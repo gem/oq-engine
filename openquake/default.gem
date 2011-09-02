@@ -18,10 +18,6 @@ COMPUTE_MEAN_HAZARD_CURVE = false
 # default: empty list of PoEs, don't compute hazard maps
 POES_HAZARD_MAPS =
 
-# INPUT FILES
-SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
-GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
-
 GROUND_MOTION_CORRELATION = true
 
 INTENSITY_MEASURE_TYPE = PGA
