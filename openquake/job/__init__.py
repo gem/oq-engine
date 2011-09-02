@@ -203,10 +203,7 @@ def prepare_job(params):
                 ', it\'s meaningful only in', ', '.join(param.modes)
         else:
             if param.type in (models.BooleanField, models.NullBooleanField):
-                if value.lower() in ('0', 'false'):
-                    value = False
-                else:
-                    value = True
+                value = value.lower() not in ('0', 'false')
             elif param.type == models.PolygonField:
                 ewkt = shapes.polygon_ewkt_from_coords(value)
                 value = GEOSGeometry(ewkt)
