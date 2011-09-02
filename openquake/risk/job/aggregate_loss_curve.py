@@ -22,7 +22,6 @@ Module to compute and plot an aggregate loss curve.
 
 import os
 
-from openquake.logs import LOG
 from openquake.output import curve
 
 
@@ -62,8 +61,8 @@ def plot_aggregate_curve(job, aggregate_curve):
     """
 
     if not job.has("AGGREGATE_LOSS_CURVE"):
-        LOG.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
-                "skipping aggregate loss curve computation...")
+        job.logger.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
+                         "skipping aggregate loss curve computation...")
 
         return
 
@@ -75,4 +74,4 @@ def plot_aggregate_curve(job, aggregate_curve):
             job.params["INVESTIGATION_TIME"]), autoscale_y=False)
 
     plotter.close()
-    LOG.debug("Aggregate loss curve stored at %s" % path)
+    job.logger.debug("Aggregate loss curve stored at %s", path)
