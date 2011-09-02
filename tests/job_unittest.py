@@ -31,7 +31,7 @@ from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
-from openquake.db.models import OqJob, JobStats
+from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -259,6 +259,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'MINIMUM_MAGNITUDE': '5.0',
         'INVESTIGATION_TIME': '50.0',
+        'INCLUDE_GRID_SOURCES': 'true',
         'TREAT_GRID_SOURCE_AS': 'Point Sources',
         'INCLUDE_AREA_SOURCES': 'true',
         'TREAT_AREA_SOURCE_AS': 'Point Sources',
@@ -274,13 +275,31 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'AGGREGATE_LOSS_CURVE': '1',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
+        'FAULT_RUPTURE_OFFSET': '5.0',
         'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'FAULT_MAGNITUDE_SCALING_RELATIONSHIP': 'W&C 1994 Mag-Length Rel.',
         'REFERENCE_VS30_VALUE': '760.0',
+        'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM': '5.0',
         'COMPONENT': 'Average Horizontal (GMRotI50)',
         'CONDITIONAL_LOSS_POE': '0.01',
         'TRUNCATION_LEVEL': '3',
         'COMPUTE_MEAN_HAZARD_CURVE': 'true',
         'AREA_SOURCE_DISCRETIZATION': '0.1',
+        'AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'WIDTH_OF_MFD_BIN': '0.1',
+        'SADIGH_SITE_TYPE': 'Rock',
+        'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'true',
+        'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+        'SUBDUCTION_FAULT_SURFACE_DISCRETIZATION': '10.0',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'SUBDUCTION_RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'RUPTURE_ASPECT_RATIO': '1.5',
+        'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
     }
 
     BASE_DETERMINISTIC_PARAMS = {
@@ -326,20 +345,39 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'AGGREGATE_LOSS_CURVE': 'true',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
-        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'FAULT_RUPTURE_OFFSET': '5.0',
         'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'FAULT_MAGNITUDE_SCALING_RELATIONSHIP': 'W&C 1994 Mag-Length Rel.',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
         'REFERENCE_VS30_VALUE': '760.0',
+        'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM': '5.0',
         'COMPONENT': 'Average Horizontal',
         'CONDITIONAL_LOSS_POE': '0.01',
         'TRUNCATION_LEVEL': '3',
         'COMPUTE_MEAN_HAZARD_CURVE': 'true',
         'AREA_SOURCE_DISCRETIZATION': '0.1',
-        'FAULT_RUPTURE_OFFSET': '5.0',
+        'AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'WIDTH_OF_MFD_BIN': '0.1',
+        'SADIGH_SITE_TYPE': 'Rock',
+        'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+        'SUBDUCTION_FAULT_SURFACE_DISCRETIZATION': '10.0',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'SUBDUCTION_RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'RUPTURE_ASPECT_RATIO': '1.5',
+        'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
     }
 
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
+
+    def _reload_params(self):
+        return OqParams.objects.get(id=self.job.oq_params.id)
 
     def assertFieldsEqual(self, expected, params):
         got_params = dict((k, getattr(params, k)) for k in expected.keys())
@@ -378,6 +416,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_GRID_SPACING'] = '0.1'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
@@ -411,6 +450,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
@@ -438,6 +478,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
@@ -472,6 +513,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
@@ -499,6 +541,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
@@ -533,6 +576,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
