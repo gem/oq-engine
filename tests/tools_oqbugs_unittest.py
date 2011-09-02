@@ -40,9 +40,11 @@ def prepare_mock(bugs):
 
     mock_name = mock.Mock()
     mock_name.name = 'Funky Monk'
+    mock_name.title = 'OpenQuake'
     attributes = {
      'date_fix_committed': str(datetime.datetime.now()),
      'assignee': mock_name,
+     'milestone': mock_name,
      'status': 'In Progress',
      'web_link': 'http://openquake.org'}
 
