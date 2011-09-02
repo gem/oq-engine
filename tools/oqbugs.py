@@ -111,8 +111,9 @@ def fix_apply(launchpad, commit_lines, status_type):
         argparse action
     """
     class FixApply(argparse.Action):
-        """ Changes the status of a bug to Fix Committed when it is in
-            the master repository (i.e. merged)
+        """ 
+            Changes the status of a bug to status_type
+            (Fix Committed/Fix Released)
         """
 
         def __call__(self, parser, namespace, values, option_string=None):
