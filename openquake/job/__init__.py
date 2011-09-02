@@ -352,7 +352,7 @@ class Job(object):
 
         job = Job(params, job_id, sections=sections, base_path=base_path)
         job.serialize_results_to = serialize_results_to
-        job.config_file = config_file  # pylint: disable=W0201
+
         return job
 
     @staticmethod
