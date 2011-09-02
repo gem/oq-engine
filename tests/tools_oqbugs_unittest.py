@@ -88,9 +88,6 @@ class OqBugsTestCase(unittest.TestCase):
         self.launchpad = mock.MagicMock()
         self.launchpad.bugs.__getitem__ = mock.Mock(side_effect=getitem)
 
-    def tearDown(self):
-        pass
-
     def test_commits_output_is_empty(self):
         self.assertEquals(CommitsOutput.since('0 week'), [])
 
@@ -98,6 +95,7 @@ class OqBugsTestCase(unittest.TestCase):
     def test_commits_output_for_one_month(self):
         self.assertTrue(len(CommitsOutput.since('1 month')))
 
+    # interval between two openquake milestones
     def test_commits_output_interval(self):
         self.assertTrue(len(CommitsOutput.since("2011-07-20T00:00:00",
             until="2011-08-09T00:00:00")))
