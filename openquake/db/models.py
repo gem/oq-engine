@@ -554,16 +554,20 @@ class OqParams(models.Model):
     risk_cell_size = models.FloatField(null=True)
     rupture_aspect_ratio = models.FloatField(null=True)
     RUPTURE_FLOATING_TYPE_CHOICES = (
-        ('only along strike ( rupture full ddw)', 'Only along strike ( rupture full DDW)'),
+        ('only along strike ( rupture full ddw)',
+             'Only along strike ( rupture full DDW)'),
         ('along strike and down dip', 'Along strike and down dip'),
-        ('along strike & centered down dip', 'Along strike & centered down dip'),
+        ('along strike & centered down dip',
+             'Along strike & centered down dip'),
     )
-    rupture_floating_type = models.TextField(null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
+    rupture_floating_type = models.TextField(
+        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
     SADIGH_SITE_TYPE_CHOICES = (
         ('rock', 'Rock'),
         ('deep-soil', 'Deep-Soil'),
     )
-    sadigh_site_type = models.TextField(null=True, choices=SADIGH_SITE_TYPE_CHOICES)
+    sadigh_site_type = models.TextField(
+        null=True, choices=SADIGH_SITE_TYPE_CHOICES)
     source_model_lt_random_seed = models.IntegerField(null=True)
     STANDARD_DEVIATION_TYPE_CHOICES = (
         ('total', 'Total'),
@@ -574,21 +578,27 @@ class OqParams(models.Model):
         ('total (pga dependent)', 'Total (PGA Dependent)'),
         ('intra-event (mag dependent)', 'Intra-Event (Mag Dependent)'),
     )
-    standard_deviation_type = models.TextField(null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
-    subduction_fault_magnitude_scaling_relationship = models.TextField(null=True)
+    standard_deviation_type = models.TextField(
+        null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
+    subduction_fault_magnitude_scaling_relationship = \
+        models.TextField(null=True)
     subduction_fault_magnitude_scaling_sigma = models.FloatField(null=True)
     subduction_fault_rupture_offset = models.FloatField(null=True)
     subduction_fault_surface_discretization = models.FloatField(null=True)
     subduction_rupture_aspect_ratio = models.FloatField(null=True)
-    subduction_rupture_floating_type = models.TextField(null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
+    subduction_rupture_floating_type = models.TextField(
+        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
     SOURCE_AS_CHOICES = (
         ('point sources', 'Point Sources'),
-        ('line sources (random or given strike)', 'Line Sources (random or given strike)'),
+        ('line sources (random or given strike)',
+             'Line Sources (random or given strike)'),
         ('cross hair line sources', 'Cross Hair Line Sources'),
         ('16 spoked line sources', '16 Spoked Line Sources'),
     )
-    treat_area_source_as = models.TextField(null=True, choices=SOURCE_AS_CHOICES)
-    treat_grid_source_as = models.TextField(null=True, choices=SOURCE_AS_CHOICES)
+    treat_area_source_as = models.TextField(
+        null=True, choices=SOURCE_AS_CHOICES)
+    treat_grid_source_as = models.TextField(
+        null=True, choices=SOURCE_AS_CHOICES)
     width_of_mfd_bin = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
