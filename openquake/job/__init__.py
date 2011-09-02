@@ -176,17 +176,6 @@ def prepare_job(params):
     """
     oqp = OqParams(upload=None)
 
-    # fill in parameters
-    if 'SITES' in params:
-        if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
-            raise RuntimeError(
-                "Job config contains both sites and region of interest.")
-    elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
-        pass
-    else:
-        raise RuntimeError(
-            "Job config contains neither sites nor region of interest.")
-
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name='openquake')
 
