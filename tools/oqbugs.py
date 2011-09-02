@@ -186,9 +186,6 @@ def arg_parse():
     # custom argparse actions
     args, remaining_argv = parser.parse_known_args()
 
-    # after partial check, force -t/--time as required parameter
-    #parser._actions[0].required = True
-
     if remaining_argv:
         if args.time:
             launchpad = launchpad_login()
@@ -203,7 +200,7 @@ def arg_parse():
                 prev_milestone_date.isoformat(),
                 until=cur_milestone_date.isoformat())
 
-    # merges the two parsers and instantiate the second final parser
+    # "merges" the two parsers and instantiate the second final parser
     action_parser = argparse.ArgumentParser(description=__doc__,
             parents=[parser],
             formatter_class=argparse.RawDescriptionHelpFormatter,
