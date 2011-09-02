@@ -26,14 +26,11 @@ import unittest
 
 from lxml import etree
 
-from openquake import logs
 from openquake import shapes
 from openquake import xml
 from tests.utils import helpers
 
 from openquake.output import risk as risk_output
-
-LOG = logs.RISK_LOG
 
 TEST_LOSS_MAP_XML_OUTPUT_PATH = helpers.get_output_path('test-loss-map.xml')
 EXPECTED_TEST_LOSS_MAP = helpers.get_data_path('expected-test-loss-map.xml')
