@@ -25,6 +25,7 @@ from collections import namedtuple
 
 from openquake.db.models import OqParams
 
+# pylint: disable=C0103
 Param = namedtuple('Param', 'column type default modes')
 
 # TODO unify with utils/oqrunner/config_writer.py
@@ -47,10 +48,11 @@ ENUM_MAP = {
 }
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
-
 PARAMS = {}
 
+
 def define_param(name, column, modes=None, default=None):
+    """Adds a new column definition to the PARAMS dictionary"""
     if modes is None:
         modes = CALCULATION_MODES
     elif isinstance(modes, basestring):
@@ -58,13 +60,19 @@ def define_param(name, column, modes=None, default=None):
     else:
         modes = set(modes)
 
-    assert modes.issubset(CALCULATION_MODES),\
+    assert modes.issubset(CALCULATION_MODES), \
            'unexpected mode(s) %r' % (modes - CALCULATION_MODES)
 
     def column_type():
+        """Returns the `type` object for the column"""
+        # pylint: disable=W0212
         return type(OqParams._meta.get_field_by_name(column)[0])
 
-    PARAMS[name] = Param(column=column, type=column_type(), default=default, modes=modes)
+    PARAMS[name] = Param(column=column,
+                         type=column_type(),
+                         default=default,
+                         modes=modes)
+
 
 define_param('SITES', 'sites')
 define_param('REGION_GRID_SPACING', 'region_grid_spacing')
@@ -170,8 +178,8 @@ define_param('SUBDUCTION_RUPTURE_ASPECT_RATIO',
              modes=('classical', 'event_based'))
 define_param('FAULT_SURFACE_DISCRETIZATION', 'fault_surface_discretization',
              modes=('classical', 'event_based'))
-define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed'
-             , modes=('classical', 'event_based'))
+define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed',
+             modes=('classical', 'event_based'))
 define_param('SUBDUCTION_FAULT_SURFACE_DISCRETIZATION',
              'subduction_fault_surface_discretization',
              modes=('classical', 'event_based'))
