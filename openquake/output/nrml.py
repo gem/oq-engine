@@ -17,8 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 Base functionality for NRML serialization.
 """
@@ -29,11 +27,11 @@ from openquake import logs
 from openquake import writer
 from openquake import xml
 
-LOG = logs.LOG
 
 NRML_DEFAULT_ID = 'nrml'
 RISKRESULT_DEFAULT_ID = 'rr'
 HAZARDRESULT_DEFAULT_ID = 'hr'
+
 
 class TreeNRMLWriter(writer.FileWriter):
     """
@@ -42,10 +40,10 @@ class TreeNRMLWriter(writer.FileWriter):
     model and then serializes using the close() method.
     This is required when the (site, attribute) pairs have to be collected
     per category in different tree branches (e.g., for loss curves, several
-    curves have to be assigned to the same asset). 
+    curves have to be assigned to the same asset).
     """
     def write(self, point, value):
-        """Write out an individual point (has to be implemented in 
+        """Write out an individual point (has to be implemented in
         derived class).
         """
         raise NotImplementedError
@@ -64,11 +62,10 @@ class TreeNRMLWriter(writer.FileWriter):
         super(TreeNRMLWriter, self).close()
 
     def _create_root_element(self):
-        """Adds NRML root element to lxml tree representation.""" 
+        """Adds NRML root element to lxml tree representation."""
         self.root_node = etree.Element(xml.NRML_ROOT_TAG, nsmap=xml.NSMAP)
 
 
 def set_gml_id(element, gml_id):
     """Set gml:id attribute for element"""
     element.set("%sid" % xml.GML, str(gml_id))
-
