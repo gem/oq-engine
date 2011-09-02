@@ -159,6 +159,31 @@ def parse_config_file(config_file):
     return sections, params
 
 
+def parse_config_files(config_file, default_configuration_files):
+    """
+    Loads the specified configuration file, using the files in
+    default_configuration_files to provide defaults.
+
+    :param config_file: configuration file
+    :param default_configuration_files: list of configuration files
+    :type default_configuration_files: list
+    """
+
+    config_file = os.path.abspath(config_file)
+    base_path = os.path.abspath(os.path.dirname(config_file))
+
+    params = {}
+    sections = []
+
+    for each_config_file in default_configuration_files + [config_file]:
+        new_sections, new_params = parse_config_file(each_config_file)
+        sections.extend(new_sections)
+        params.update(new_params)
+    params['BASE_PATH'] = base_path
+
+    return params, sections
+
+
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
@@ -302,19 +327,9 @@ class Job(object):
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
-        config_file = os.path.abspath(config_file)
-        LOG.debug("Loading Job from %s" % (config_file))
+        params, sections = parse_config_files(
+            config_file, Job.default_configs())
 
-        base_path = os.path.abspath(os.path.dirname(config_file))
-
-        params = {}
-
-        sections = []
-        for each_config_file in Job.default_configs() + [config_file]:
-            new_sections, new_params = parse_config_file(each_config_file)
-            sections.extend(new_sections)
-            params.update(new_params)
-        params['BASE_PATH'] = base_path
 
         if output_type == 'xml_without_db':
             # we are running a test
@@ -332,6 +347,8 @@ class Job(object):
                 serialize_results_to = ['db']
             else:
                 serialize_results_to = ['db', 'xml']
+
+        base_path = params['BASE_PATH']
 
         job = Job(params, job_id, sections=sections, base_path=base_path)
         job.serialize_results_to = serialize_results_to
