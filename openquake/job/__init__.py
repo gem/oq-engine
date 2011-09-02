@@ -210,10 +210,6 @@ def prepare_job(params):  # pylint: disable=R0912,R0915
         if param_key not in params:
             continue
         path = os.path.join(base_path, params[param_key])
-        # TODO remove with --include_defaults
-        if not os.path.exists(path):
-            continue
-
         in_model = Input(input_set=input_set, path=path,
                          input_type=file_type, size=os.path.getsize(path))
         in_model.save()
