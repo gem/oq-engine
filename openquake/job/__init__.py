@@ -210,23 +210,24 @@ def prepare_job(params):
             continue
 
         if job.job_type not in param.modes:
-            print 'Ignoring', name, 'in', job.job_type, ', it\'s meaningful only in', ', '.join(param.modes)
+            print 'Ignoring', name, 'in', job.job_type, \
+                ', it\'s meaningful only in', ', '.join(param.modes)
         else:
-            try:
-                if param.type in (models.BooleanField, models.NullBooleanField):
-                    value = 'False' if (value.lower() in ('0', 'false')) else 'True'
-                elif param.type == models.PolygonField:
-                    ewkt = shapes.polygon_ewkt_from_coords(value)
-                    value = GEOSGeometry(ewkt)
-                elif param.type == models.MultiPointField:
-                    ewkt = shapes.multipoint_ewkt_from_coords(value)
-                    value = GEOSGeometry(ewkt)
-                elif param.type == FloatArrayField:
-                    value = [float(v) for v in number_re.split(value.strip())]
+            if param.type in (models.BooleanField, models.NullBooleanField):
+                if value.lower() in ('0', 'false'):
+                    value = 'False'
+                else:
+                    value = 'True'
+            elif param.type == models.PolygonField:
+                ewkt = shapes.polygon_ewkt_from_coords(value)
+                value = GEOSGeometry(ewkt)
+            elif param.type == models.MultiPointField:
+                ewkt = shapes.multipoint_ewkt_from_coords(value)
+                value = GEOSGeometry(ewkt)
+            elif param.type == FloatArrayField:
+                value = [float(v) for v in number_re.split(value.strip())]
 
-                setattr(oqp, param.column, value)
-            except:
-                import pdb; pdb.post_mortem()
+            setattr(oqp, param.column, value)
 
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
@@ -235,14 +236,6 @@ def prepare_job(params):
     if oqp.imt != 'sa':
         oqp.period = None
         oqp.damping = None
-
-    print 'job_type', oqp.job_type
-    print 'imt', oqp.imt
-    print 'damping', repr(oqp.damping)
-    print 'region', repr(oqp.region)
-    print 'region_grid_spacing', repr(oqp.region_grid_spacing)
-    print 'sites', repr(oqp.sites)
-    print 'gm_correlated', repr(oqp.gm_correlated)
 
     oqp.save()
     job.oq_params = oqp

@@ -530,7 +530,7 @@ class OqParams(models.Model):
     region_grid_spacing = models.FloatField(null=True)
     sites = models.MultiPointField(srid=4326, null=True)
 
-    aggregate_loss_curve = models.NullBooleanField(null=True) # 1/0 ?
+    aggregate_loss_curve = models.NullBooleanField(null=True)  # 1/0 ?
     area_source_discretization = models.FloatField(null=True)
     area_source_magnitude_scaling_relationship = models.TextField(null=True)
     compute_mean_hazard_curve = models.NullBooleanField(null=True)
