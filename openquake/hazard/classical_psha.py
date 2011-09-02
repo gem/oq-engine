@@ -28,7 +28,7 @@ from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
 
 from openquake import kvs
-from openquake.logs import LOG
+from openquake.job import Job
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -101,7 +101,7 @@ def compute_quantile_hazard_curves(job_id, sites, realizations, quantiles):
     using as input all the pre-computed curves for different realizations.
     """
 
-    LOG.debug("[QUANTILE_HAZARD_CURVES] List of quantiles is %s" % quantiles)
+    Job.get_logger_for(job_id).debug("List of quantiles is %s", quantiles)
 
     keys = []
     for site in sites:
@@ -119,7 +119,7 @@ def compute_quantile_hazard_curves(job_id, sites, realizations, quantiles):
     return keys
 
 
-def build_interpolator(poes, imls, site=None):
+def build_interpolator(poes, imls, site=None, logger=None):
     """
     Return a function interpolating the specified points.
 
@@ -147,15 +147,17 @@ def build_interpolator(poes, imls, site=None):
         maximum IMLs of the original points describing the curve.
         """
         if poe > poes[-1]:
-            LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
-                "using maximum PoE value pair, PoE: %s, IML: %s, at site %s"
-                % (poe, poes[-1], imls[-1], site))
+            if logger:
+                logger.debug("Interpolation out of bounds for PoE %s, using " \
+                             "maximum PoE value pair, PoE: %s, IML: %s, " \
+                             "at site %s", poe, poes[-1], imls[-1], site)
             return imls[-1]
 
         if poe < poes[0]:
-            LOG.debug("[HAZARD_MAP] Interpolation out of bounds for PoE %s, "\
-                "using minimum PoE value pair, PoE: %s, IML: %s, at site %s"
-                % (poe, poes[0], imls[0], site))
+            if logger:
+                logger.debug("Interpolation out of bounds for PoE %s, using " \
+                             "maximum PoE value pair, PoE: %s, IML: %s, " \
+                             "at site %s", poe, poes[0], imls[0], site)
             return imls[0]
 
         return math.exp(interpolator(poe))
@@ -168,8 +170,9 @@ def compute_quantile_hazard_maps(job_id, sites, quantiles, imls, poes):
     pre computed quantile hazard curves.
     """
 
-    LOG.debug("[QUANTILE_HAZARD_MAPS] List of POEs is %s" % poes)
-    LOG.debug("[QUANTILE_HAZARD_MAPS] List of quantiles is %s" % quantiles)
+    logger = Job.get_logger_for(job_id)
+    logger.debug("List of POEs is %s", poes)
+    logger.debug("List of quantiles is %s", quantiles)
 
     keys = []
     for quantile in quantiles:
@@ -177,7 +180,7 @@ def compute_quantile_hazard_maps(job_id, sites, quantiles, imls, poes):
             quantile_poes = kvs.get_value_json_decoded(
                 kvs.tokens.quantile_hazard_curve_key(job_id, site, quantile))
 
-            interpolate = build_interpolator(quantile_poes, imls, site)
+            interpolate = build_interpolator(quantile_poes, imls, site, logger)
 
             for poe in poes:
                 key = kvs.tokens.quantile_hazard_map_key(
@@ -194,13 +197,14 @@ def compute_mean_hazard_maps(job_id, sites, imls, poes):
     pre computed mean hazard curves.
     """
 
-    LOG.debug("[MEAN_HAZARD_MAPS] List of POEs is %s" % poes)
+    logger = Job.get_logger_for(job_id)
+    logger.debug("List of POEs is %s", poes)
 
     keys = []
     for site in sites:
         mean_poes = kvs.get_value_json_decoded(
             kvs.tokens.mean_hazard_curve_key(job_id, site))
-        interpolate = build_interpolator(mean_poes, imls, site)
+        interpolate = build_interpolator(mean_poes, imls, site, logger)
 
         for poe in poes:
             key = kvs.tokens.mean_hazard_map_key(job_id, site, poe)

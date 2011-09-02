@@ -26,6 +26,7 @@ import urlparse
 import logging
 
 from ConfigParser import ConfigParser, RawConfigParser
+from django.db import transaction
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
@@ -40,7 +41,6 @@ from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.kvs import mark_job_as_current
-from openquake.logs import LOG
 from openquake.utils import config as oq_config
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -84,8 +84,9 @@ def spawn_job_supervisor(job_id, pid):
 
     if exe:
         if oq_config.get('logging', 'backend') != 'amqp':
-            LOG.warn('If you want to run supervised jobs it\'s better '
-                     'to set [logging] backend=amqp in openquake.cfg')
+            logger = Job.get_logger_for(job_id)
+            logger.warn('If you want to run supervised jobs it\'s better '
+                        'to set [logging] backend=amqp in openquake.cfg')
 
         if not os.path.isabs(exe):
             exe = os.path.join(OPENQUAKE_ROOT, exe)
@@ -93,6 +94,7 @@ def spawn_job_supervisor(job_id, pid):
         cmd = [exe, str(job_id), str(pid)]
 
         supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
+
         job = OqJob.objects.get(id=job_id)
         job.supervisor_pid = supervisor_pid
         job.job_pid = pid
@@ -103,8 +105,9 @@ def spawn_job_supervisor(job_id, pid):
 
         return supervisor_pid
     else:
-        LOG.warn('This job won\'t be supervised, '
-                 'because no supervisor is configured in openquake.cfg')
+        logger = Job.get_logger_for(job_id)
+        logger.warn('This job won\'t be supervised, '
+                    'because no supervisor is configured in openquake.cfg')
 
 
 def run_job(job_file, output_type):
@@ -128,7 +131,7 @@ def run_job(job_file, output_type):
         try:
             a_job.launch()
         except Exception, ex:
-            LOG.critical("Job failed with exception: '%s'" % str(ex))
+            a_job.logger.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
             raise
         else:
@@ -136,10 +139,10 @@ def run_job(job_file, output_type):
     else:
         a_job.set_status('failed')
 
-        LOG.critical("The job configuration is inconsistent:")
-
-        for error_message in is_job_valid[1]:
-            LOG.critical("   >>> %s" % error_message)
+        msg = ["The job configuration is inconsistent:"]
+        msg += ["   >>> %s" % error_message
+                for error_message in is_job_valid[1]]
+        a_job.logger.critical('\n'.join(msg))
 
 
 def parse_config_file(config_file):
@@ -181,6 +184,7 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
+@transaction.commit_on_success(using='job_init')
 def prepare_job(params):
     """
     Create a new OqJob and fill in the related OpParams entry.
@@ -189,9 +193,37 @@ def prepare_job(params):
     """
     oqp = OqParams(upload=None)
 
+    # fill in parameters
+    if 'SITES' in params:
+        if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+            raise RuntimeError(
+                "Job config contains both sites and region of interest.")
+
+        ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
+        sites = GEOSGeometry(ewkt)
+        oqp.sites = sites
+
+    elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+        oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
+
+        ewkt = shapes.polygon_ewkt_from_coords(params['REGION_VERTEX'])
+        region = GEOSGeometry(ewkt)
+        oqp.region = region
+
+    else:
+        raise RuntimeError(
+            "Job config contains neither sites nor region of interest.")
+
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name='openquake')
+
+    job = OqJob(
+        owner=owner, path=None,
+        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    oqp.job_type = job.job_type
+
     # fill-in parameters
-    oqp.job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
-    oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -201,16 +233,17 @@ def prepare_job(params):
     if oqp.imt == 'sa':
         oqp.period = float(params.get('PERIOD', 0.0))
 
-    if oqp.job_type != 'classical':
-        oqp.gm_correlated = (
-            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
-    else:
+    if oqp.job_type == 'classical':
         oqp.imls = [float(v) for v in
                         params['INTENSITY_MEASURE_LEVELS'].split(",")]
         oqp.poes = [float(v) for v in
                         params['POES_HAZARD_MAPS'].split(" ")]
 
-    if oqp.job_type != 'deterministic':
+    if oqp.job_type in ('deterministic', 'event_based'):
+        oqp.gm_correlated = (
+            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+
+    if oqp.job_type in  ('classical', 'event_based'):
         oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
         oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
         oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
@@ -218,19 +251,10 @@ def prepare_job(params):
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
 
-    # config lat/lon -> postgis -> lon/lat
-    coords = [float(v) for v in
-                  params['REGION_VERTEX'].split(",")]
-    vertices = ["%f %f" % (coords[i + 1], coords[i])
-                    for i in xrange(0, len(coords), 2)]
-    region = "SRID=4326;POLYGON((%s, %s))" % (", ".join(vertices), vertices[0])
-    oqp.region = GEOSGeometry(region)
     oqp.save()
-
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name="openquake")
-    job = OqJob(owner=owner, path=None, oq_params=oqp, job_type=oqp.job_type)
+    job.oq_params = oqp
     job.save()
+
     return job
 
 
@@ -255,6 +279,11 @@ class Job(object):
                     "/etc/openquake.gem",   # Site level configs
                     "~/.openquake.gem"]     # Are we running as a user?
 
+    #: This logger is for messages which are relative to job execution but
+    #: don't yet have job_id (job initialization, for instance). For any
+    #: other logging purposes job and mixins should use :attr:`logger`.
+    unknown_job_logger = logging.getLogger('oq.job')
+
     @classmethod
     def default_configs(cls):
         """
@@ -264,9 +293,10 @@ class Job(object):
             return []
 
         if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
-            LOG.warning("No default configuration! If your job config doesn't "
-                        "define all of the expected properties things might "
-                        "break.")
+            cls.unknown_job_logger.warning(
+                "No default configuration! If your job config doesn't "
+                "define all of the expected properties things might break."
+            )
         return cls.__defaults
 
     @staticmethod
@@ -304,7 +334,7 @@ class Job(object):
         assert output_type in ('db', 'xml', 'xml_without_db')
 
         config_file = os.path.abspath(config_file)
-        LOG.debug("Loading Job from %s" % (config_file))
+        Job.unknown_job_logger.debug("Loading Job from %s", config_file)
 
         base_path = os.path.abspath(os.path.dirname(config_file))
 
@@ -361,8 +391,8 @@ class Job(object):
     @staticmethod
     def get_logger_for(job_id):
         # TODO: document, unittest
-        logger = logging.getLogger('oq.job')
-        return logging.LoggerAdapter(logger, {'job_id': job_id})
+        return logging.LoggerAdapter(Job.unknown_job_logger,
+                                     {'job_id': job_id})
 
     def __init__(self, params, job_id, sections=list(), base_path=None,
             validator=None):
@@ -472,7 +502,7 @@ class Job(object):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                LOG.debug(
+                self.logger.debug(
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
                 self.execute()
 
@@ -512,13 +542,14 @@ class Job(object):
         sha1s."""
         kvs_client = kvs.get_client()
         if self.base_path is None:
-            LOG.debug("Can't slurp files without a base path, homie...")
+            self.logger.debug("Can't slurp files " \
+                              "without a base path, homie...")
             return
         for key, val in self.params.items():
             if key[-5:] == '_FILE':
                 path = os.path.join(self.base_path, val)
                 with open(path) as data_file:
-                    LOG.debug("Slurping %s" % path)
+                    self.logger.debug("Slurping %s", path)
                     blob = data_file.read()
                     file_key = kvs.tokens.generate_blob_key(self.job_id, blob)
                     kvs_client.set(file_key, blob)
