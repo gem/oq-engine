@@ -44,7 +44,7 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
 
     def test_record_job_stop_time(self):
         """
-        Test that job stop is recorded properly.
+        Test that job stop time is recorded properly.
         """
         stats = JobStats(
             oq_job=self.job, start_time=datetime.utcnow(), num_sites=10)
@@ -52,7 +52,7 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
 
         supervisor.record_job_stop_time(self.job.id)
 
-        # Query the stats and check for the stop_time
+        # Fetch the stats and check for the stop_time
         stats = JobStats.objects.get(oq_job=self.job.id)
         self.assertTrue(stats.stop_time is not None)
 
