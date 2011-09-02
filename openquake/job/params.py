@@ -81,6 +81,15 @@ def define_param(name, column, modes=None, default=None):
         PARAMS[name] = Param(column=column, type=column_type(),
                              default=default, modes=modes)
 
+define_param('CALCULATION_MODE', None)
+define_param('VULNERABILITY', None)
+define_param('SINGLE_RUPTURE_MODEL', None, modes=('deterministic'))
+define_param('EXPOSURE', None)
+define_param('GMPE_LOGIC_TREE_FILE', None, modes=('classical', 'event_based'))
+define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
+             modes=('classical', 'event_based'))
+define_param('OUTPUT_DIR', None)
+define_param('BASE_PATH', None)
 
 define_param('SITES', 'sites')
 define_param('REGION_GRID_SPACING', 'region_grid_spacing')
@@ -123,12 +132,8 @@ define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'))
 
-# define_param('VULNERABILITY', 'vulnerability')
-# define_param('SINGLE_RUPTURE_MODEL', 'single_rupture_model')
-# define_param('EXPOSURE', 'exposure')
 define_param('SADIGH_SITE_TYPE', 'sadigh_site_type',
              modes=('classical', 'event_based'))
-#define_param('OUTPUT_DIR', 'output_dir')
 
 # classical_psha_simple
 define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
@@ -136,14 +141,12 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              modes=('classical', 'event_based'))
 define_param('INCLUDE_GRID_SOURCES', 'include_grid_sources',
              modes=('classical', 'event_based'))
-#define_param('LOSS_RATIO_MAP', 'loss_ratio_map')
 define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve')
 define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA',
              'subduction_fault_magnitude_scaling_sigma',
              modes=('classical', 'event_based'))
 define_param('TREAT_GRID_SOURCE_AS', 'treat_grid_source_as',
              modes=('classical', 'event_based'))
-#define_param('LOSS_MAP', 'loss_map')
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
 define_param('INCLUDE_AREA_SOURCES', 'include_area_sources',
              modes=('classical', 'event_based'))
@@ -154,7 +157,6 @@ define_param('QUANTILE_LEVELS', 'quantile_levels', modes='classical')
 define_param('INCLUDE_SUBDUCTION_FAULT_SOURCE',
              'include_subduction_fault_source',
              modes=('classical', 'event_based'))
-#define_param('GMPE_LOGIC_TREE_FILE', 'gmpe_logic_tree_file')
 define_param('GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
              'grid_source_magnitude_scaling_relationship')
 define_param('STANDARD_DEVIATION_TYPE', 'standard_deviation_type',
@@ -168,7 +170,6 @@ define_param('FAULT_MAGNITUDE_SCALING_SIGMA',
              'fault_magnitude_scaling_sigma',
              modes=('classical', 'event_based'))
 define_param('RISK_CELL_SIZE', 'risk_cell_size')
-#define_param('SOURCE_MODEL_LOGIC_TREE_FILE', 'source_model_logic_tree_file')
 define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
              modes=('classical', 'event_based'))
 define_param('AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
