@@ -57,7 +57,8 @@ class DeterministicEventBasedMixin:
 
         epsilon_provider = general.EpsilonProvider(self.params)
 
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider,
+                                                  logger=self.logger)
 
         region_loss_map_data = {}
 
@@ -204,7 +205,8 @@ class DeterministicEventBasedMixin:
             per realization.
 
         """
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider,
+                                                  logger=self.logger)
         for point in block.grid(self.region):
             gmvs = load_gmvs_for_point(self.job_id, point)
             assets = load_assets_for_point(self.job_id, point)
