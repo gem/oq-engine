@@ -104,28 +104,18 @@ def run_job(job_file, output_type):
     """
 
     a_job = Job.from_file(job_file, output_type)
-    is_job_valid = a_job.is_valid()
+    a_job.set_status('running')
 
-    if is_job_valid[0]:
-        a_job.set_status('running')
+    spawn_job_supervisor(a_job.job_id, os.getpid())
 
-        spawn_job_supervisor(a_job.job_id, os.getpid())
-
-        try:
-            a_job.launch()
-        except Exception, ex:
-            LOG.critical("Job failed with exception: '%s'" % str(ex))
-            a_job.set_status('failed')
-            raise
-        else:
-            a_job.set_status('succeeded')
-    else:
+    try:
+        a_job.launch()
+    except Exception, ex:
+        LOG.critical("Job failed with exception: '%s'" % str(ex))
         a_job.set_status('failed')
-
-        LOG.critical("The job configuration is inconsistent:")
-
-        for error_message in is_job_valid[1]:
-            LOG.critical("   >>> %s" % error_message)
+        raise
+    else:
+        a_job.set_status('succeeded')
 
 
 def parse_config_file(config_file):
@@ -330,6 +320,11 @@ class Job(object):
         params, sections = parse_config_files(
             config_file, Job.default_configs())
 
+        validator = conf.default_validators(sections, params)
+        is_valid, errors = validator.is_valid()
+
+        if not is_valid:
+            raise conf.ValidationException(errors)
 
         if output_type == 'xml_without_db':
             # we are running a test
@@ -403,22 +398,6 @@ class Job(object):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
         return name in self.params and self.params[name]
-
-    def is_valid(self):
-        """Return true if this job is valid and can be
-        processed, false otherwise.
-
-        :returns: the status of this job and the related error messages.
-        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
-            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
-            tuple is returned
-        """
-
-        if self.validator is None:
-            self.validator = conf.default_validators(
-                self.sections, self.params)
-
-        return self.validator.is_valid()
 
     @property
     def job_id(self):
