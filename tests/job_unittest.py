@@ -31,7 +31,7 @@ from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
-from openquake.db.models import OqJob
+from openquake.db.models import OqJob, JobStats
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -730,3 +730,46 @@ class RunJobTestCase(unittest.TestCase):
             job = OqJob.objects.get(pk=job.job_id)
             self.assertEqual(job.supervisor_pid, 42)
             self.assertEqual(job.job_pid, 54321)
+
+
+class JobStatsTestCase(unittest.TestCase):
+    '''
+    Tests related to capturing job stats.
+    '''
+
+    def setUp(self):
+        # Test 'event-based' job
+        self.eb_job = helpers.job_from_file('smoketests/simplecase/config.gem')
+
+    def test_record_initial_stats(self):
+        '''
+        Verify that :py:method:`openquake.job.Job._record_initial_stats`
+        reports initial job stats.
+
+        As we add fields to the uiapi.job_stats table, this test will need to
+        be updated to check for this new information.
+        '''
+        self.eb_job._record_initial_stats()
+
+        actual_stats = JobStats.objects.get(oq_job=self.eb_job.job_id)
+
+        self.assertTrue(actual_stats.start_time is not None)
+        self.assertEqual(91, actual_stats.num_sites)
+
+    def test_job_launch_calls_record_initial_stats(self):
+        '''
+        When a job is launched, make sure that
+        :py:method:`openquake.job.Job._record_initial_stats` is called.
+        '''
+        # Mock out pieces of the test job so it doesn't actually run.
+        haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
+        risk_execute = \
+            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
+        record = 'openquake.job.Job._record_initial_stats'
+
+        with patch(haz_execute) as _haz_mock:
+            with patch(risk_execute) as _risk_mock:
+                with patch(record) as record_mock:
+                    self.eb_job.launch()
+
+                    self.assertEqual(1, record_mock.call_count)
