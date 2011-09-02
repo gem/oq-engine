@@ -34,6 +34,20 @@ DETERMINISTIC_MODE = "Deterministic"
 CALCULATION_MODE = "CALCULATION_MODE"
 
 
+class ValidationException(Exception):
+    """Trivial wrapper for configuration validation errors"""
+
+    def __init__(self, errors):
+        super(ValidationException, self).__init__()
+
+        self.errors = errors
+
+    def __str__(self):
+        msg = 'The job configuration contained some errors:\n\n'
+
+        return msg + '\n'.join(self.errors)
+
+
 class ValidatorSet(object):
     """A set of validators."""
 
