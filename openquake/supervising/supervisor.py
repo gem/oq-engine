@@ -65,7 +65,7 @@ def record_job_stop_time(job_id):
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Recording stop time for job %s to job_stats' % job_id)
+    logging.info('Recording stop time for job %s to job_stats', job_id)
 
     job_stats = JobStats.objects.get(oq_job=job_id)
     job_stats.stop_time = datetime.utcnow()
