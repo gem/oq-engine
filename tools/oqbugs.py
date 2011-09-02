@@ -189,17 +189,19 @@ def arg_parse():
     # after partial check, force -t/--time as required parameter
     #parser._actions[0].required = True
 
-    if args.time:
-        if len(remaining_argv):
+    if len(remaining_argv):
+        if args.time:
             launchpad = launchpad_login()
             commits_output = CommitsOutput.since(args.time)
-        remaining_argv.extend(['-t', args.time])
-    else:
-        launchpad = launchpad_login()
-        cur_milestone_date, prev_milestone_date = milestone_interval(launchpad)
+            remaining_argv.extend(['-t', args.time])
+        else:
+            launchpad = launchpad_login()
+            cur_milestone_date, prev_milestone_date = milestone_interval(
+                launchpad)
 
-        commits_output = CommitsOutput.since(prev_milestone_date.isoformat(),
-            until=cur_milestone_date.isoformat())
+            commits_output = CommitsOutput.since(
+                prev_milestone_date.isoformat(),
+                until=cur_milestone_date.isoformat())
 
     # merges the two parsers and instantiate the second final parser
     action_parser = argparse.ArgumentParser(description=__doc__,
