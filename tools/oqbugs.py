@@ -39,12 +39,22 @@ RE_REVIEWER = re.compile('\[r=(.*?)\]')
 
 CACHE_DIR = os.path.expanduser("~/.launchpadlib/cache/")
 
+PROJECT_NAME = 'OpenQuake'
+
 
 def launchpad_login():
+    """ returns a Launchpad instance """
     return Launchpad.login_with('OpenQuake Bug Bot', 'production',
                 CACHE_DIR)
 
+
 def milestone_interval(launchpad):
+    """ 
+        * fetches current openquake's version
+        * returns current milestone date_targeted attribute
+        * returns the first inactive milestone
+    """
+
     cur_milestone_ver = '.'.join(
             [str(datum) for datum in __version__[:3]])
 
@@ -52,10 +62,9 @@ def milestone_interval(launchpad):
         name=cur_milestone_ver)
     for  milestone in cur_milestone.series_target.all_milestones:
         if not milestone.is_active:
-            prev_milestone_inactive =  milestone
- 
-    return (cur_milestone.date_targeted, prev_milestone_inactive.date_targeted)
+            prev_milestone_inactive = milestone
 
+    return (cur_milestone.date_targeted, prev_milestone_inactive.date_targeted)
 
 
 class CommitsOutput(object):
@@ -97,6 +106,10 @@ class CommitsOutput(object):
 
 # A serie of ArgumentParser action(s) that are triggered by parse_args()
 def fix_apply(launchpad, commit_lines, status_type):
+    """ 
+        convenience wrapper function to pass parameters to FixApply 
+        argparse action
+    """
     class FixApply(argparse.Action):
         """ Changes the status of a bug to Fix Committed when it is in
             the master repository (i.e. merged)
@@ -119,9 +132,14 @@ def fix_apply(launchpad, commit_lines, status_type):
 
 
 def changelog(launchpad, commit_lines):
+    """ 
+        convenience wrapper function to pass parameters to ChangeLog 
+        argparse action
+    """
     class ChangeLog(argparse.Action):
         """
-            Prints on screen the ChangeLog since a time
+            Prints on screen the ChangeLog since a time or between milestones
+            releases
         """
         def __call__(self, parser, namespace, values, option_string=None):
 
@@ -227,7 +245,11 @@ def filter_reviewers(reviewers):
 def launchpad_lookup(lp, bugs):
     """ looks up a list of bugs in launchpad """
     try:
-        return [lp.bugs[bug] for bug in bugs]
+        bug_instances = [lp.bugs[bug] for bug in bugs if bug]
+        return [bug_instance for bug_instance in bug_instances
+                if bug_instance.bug_tasks[0].milestone
+                and (
+                PROJECT_NAME in bug_instance.bug_tasks[0].milestone.title)]
     # Sometimes launchpad does not fetch the correct bug, we have to handle
     # this situation
     except KeyError, e:
