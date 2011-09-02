@@ -529,6 +529,36 @@ class DbTestMixin(TestMixin):
         oqp.imls = self.IMLS
         oqp.poes = [0.01, 0.10]
         oqp.realizations = 1
+        oqp.width_of_mfd_bin = 0.1
+        oqp.treat_grid_source_as = 'Point Sources'
+        oqp.treat_area_source_as = 'Point Sources'
+        oqp.subduction_rupture_floating_type = 'Along strike and down dip'
+        oqp.subduction_rupture_aspect_ratio = 1.5
+        oqp.subduction_fault_surface_discretization = 0.5
+        oqp.subduction_fault_rupture_offset = 10.0
+        oqp.subduction_fault_magnitude_scaling_sigma = 0.0
+        oqp.subduction_fault_magnitude_scaling_relationship = \
+            'W&C 1994 Mag-Length Rel.'
+        oqp.standard_deviation_type = 'total'
+        oqp.sadigh_site_type = 'Rock'
+        oqp.rupture_floating_type = 'Along strike and down dip'
+        oqp.rupture_aspect_ratio = 1.5
+        oqp.reference_depth_to_2pt5km_per_sec_param = 5.0
+        oqp.quantile_levels = [0.25, 0.50]
+        oqp.maximum_distance = 200
+        oqp.include_subductive_fault = True
+        oqp.include_subduction_fault_source = True
+        oqp.include_grid_sources = True
+        oqp.include_fault_source = True
+        oqp.include_area_sources = True
+        oqp.fault_surface_discretization = 1.0
+        oqp.fault_rupture_offset = 5.0
+        oqp.fault_magnitude_scaling_sigma = 0.0
+        oqp.fault_magnitude_scaling_relationship = 'W&C 1994 Mag-Length Rel.'
+        oqp.compute_mean_hazard_curve = True
+        oqp.area_source_magnitude_scaling_relationship = \
+            'W&C 1994 Mag-Length Rel.'
+        oqp.area_source_discretization = 0.1
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqp.save()
