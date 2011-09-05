@@ -422,6 +422,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'rupture', u'Rupture'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -463,6 +464,20 @@ class OqJob(models.Model):
         db_table = 'uiapi\".\"oq_job'
 
 
+class JobStats(models.Model):
+    '''
+    Capture various statistics about a job.
+    '''
+    oq_job = models.ForeignKey('OqJob')
+    start_time = models.DateTimeField(editable=False)
+    stop_time = models.DateTimeField(editable=False)
+    # The number of total sites in job
+    num_sites = models.IntegerField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"job_stats'
+
+
 class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
@@ -471,7 +486,6 @@ class OqParams(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
-
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     upload = models.ForeignKey('Upload', null=True)
@@ -490,6 +504,7 @@ class OqParams(models.Model):
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
+    damping = models.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
        (u'none', u'None'),
        (u'onesided', u'One-sided'),
@@ -506,6 +521,8 @@ class OqParams(models.Model):
     realizations = models.IntegerField(null=True)
     histories = models.IntegerField(null=True)
     gm_correlated = models.BooleanField(null=True)
+    gmf_calculation_number = models.IntegerField(null=True)
+    rupture_surface_discretization = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     # We can specify a (region and region_grid_spacing) or sites, but not both.
@@ -799,7 +816,7 @@ class ExposureData(models.Model):
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     value = models.FloatField()
-    vulnerability_function = models.ForeignKey("VulnerabilityFunction")
+    vf_ref = models.TextField()
     structure_type = models.TextField(null=True)
     retrofitting_cost = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
