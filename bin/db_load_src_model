@@ -22,15 +22,10 @@ import sys
 import datetime
 
 from openquake import flags
-from openquake.utils import db
 from openquake.utils.db import loader as db_loader
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('db_name', 'openquake', 'Name of database to connect to')
-flags.DEFINE_string('host', 'localhost', 'Host name/IP of the database server')
-flags.DEFINE_string('user', None, 'DB user to connect as')
-flags.DEFINE_string('password', '', 'Password for the specified DB user')
 flags.DEFINE_string('source_model', None,
     'Path to the source model to load into the DB')
 
@@ -39,22 +34,16 @@ if __name__ == "__main__":
     # set flags from the command line args
     FLAGS(sys.argv)
 
-    if not all([FLAGS.user, FLAGS.source_model]):
-        error_msg = """You must specify a db user and a path to a source\
- model.
+    if not all([FLAGS.source_model]):
+        error_msg = """You must specify a path to a source model.
 
 For example:
-    $ python bin/db_load_src_model --user=some_user \
---source_model=path/to/source.xml"""
+    $ python bin/db_load_src_model --source_model=path/to/source.xml"""
         print error_msg
         sys.exit(0)
 
     else:
-        engine = db.create_engine(
-            FLAGS.db_name, FLAGS.user, password=FLAGS.password,
-            host=FLAGS.host)
-
-        src_loader = db_loader.SourceModelLoader(FLAGS.source_model, engine)
+        src_loader = db_loader.SourceModelLoader(FLAGS.source_model)
 
         started_at = datetime.datetime.now()
 
@@ -63,8 +52,6 @@ For example:
         elapsed_time = (datetime.datetime.now() - started_at)
         print ">> Time spent %ss, %sms" % (
             str(elapsed_time.seconds), str(elapsed_time.microseconds / 1000))
-
-        src_loader.close()
 
         print "Total sources inserted: %s" % len(results)
         print "Results: %s" % results

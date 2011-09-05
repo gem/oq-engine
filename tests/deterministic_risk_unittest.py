@@ -22,11 +22,9 @@ This module tests the risk side of the deterministic event based calculation.
 """
 
 import json
-import mock
 import unittest
 
 from openquake import flags
-from openquake import job
 from openquake import kvs
 from openquake import shapes
 from openquake.risk.job import deterministic as risk_job_det
