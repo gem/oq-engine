@@ -101,11 +101,6 @@ def init_logs_stdout(level):
 
     LOG.setLevel(logging_level)
 
-    # capture java logging (this is what celeryd does with the workers, we use
-    # exactly the same system for bin/openquakes and the likes)
-    if not isinstance(sys.stdout, LoggingProxy):
-        redirect_stdouts_to_logger(LOG)
-
 
 def init_logs_amqp(level):
     """Init Python and Java logging to log to AMQP"""
